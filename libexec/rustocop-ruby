@@ -1,0 +1,263 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "json"
+require_relative "../lib/rustocop/version"
+
+class RustocopFallback
+  TRAILING_WHITESPACE_COP = "Layout/TrailingWhitespace"
+  TRAILING_WHITESPACE_MESSAGE = "Trailing whitespace detected."
+
+  Result = Struct.new(:path, :offenses, keyword_init: true)
+
+  def self.call(argv, stdin: $stdin, stdout: $stdout, stderr: $stderr)
+    new(argv, stdin:, stdout:, stderr:).call
+  end
+
+  def initialize(argv, stdin:, stdout:, stderr:)
+    @argv = argv.dup
+    @stdin = stdin
+    @stdout = stdout
+    @stderr = stderr
+  end
+
+  def call
+    options = parse_options
+    return options if options.is_a?(Integer)
+
+    results = inspect_targets(options)
+    offense_count = results.sum { |result| result.offenses.length }
+
+    if options.fetch(:format) == "json"
+      stdout.write(JSON.generate(json_report(results, offense_count)))
+    else
+      write_simple_report(results, offense_count)
+    end
+
+    corrected_exit_status(options, offense_count)
+  rescue Errno::ENOENT => e
+    stderr.puts "rustocop: #{e.message}"
+    2
+  end
+
+  private
+
+  attr_reader :argv, :stdin, :stdout, :stderr
+
+  def parse_options
+    options = { autocorrect: false, files: [], format: "simple", only: nil, stdin_path: nil }
+
+    until argv.empty?
+      arg = argv.shift
+
+      case arg
+      when "--version"
+        stdout.puts Rustocop::VERSION
+        return 0
+      when "-V"
+        stdout.puts "#{Rustocop::VERSION} (rustocop ruby fallback, RuboCop-compatible JSON formatter)"
+        return 0
+      when "-A", "-a", "--autocorrect", "--autocorrect-all", "--auto-correct", "--auto-correct-all"
+        options[:autocorrect] = true
+      when "--format", "-f"
+        options[:format] = require_value(arg)
+      when /\A--format=(.+)\z/
+        options[:format] = Regexp.last_match(1)
+      when "--only"
+        options[:only] = require_value(arg)
+      when /\A--only=(.+)\z/
+        options[:only] = Regexp.last_match(1)
+      when "--stdin"
+        options[:stdin_path] = require_value(arg)
+      when /\A--stdin=(.+)\z/
+        options[:stdin_path] = Regexp.last_match(1)
+      when "--force-exclusion", "--no-server"
+        next
+      when "--cache"
+        argv.shift unless argv.empty? || argv.first.start_with?("-")
+      when "--"
+        options[:files].concat(argv)
+        argv.clear
+      else
+        if arg.start_with?("-")
+          stderr.puts "rustocop: unsupported option #{arg}"
+          return 2
+        end
+
+        options[:files] << arg
+      end
+    end
+
+    unless %w[json simple].include?(options[:format])
+      stderr.puts "rustocop: unsupported formatter #{options[:format]}"
+      return 2
+    end
+
+    options
+  end
+
+  def require_value(option)
+    return argv.shift unless argv.empty?
+
+    raise ArgumentError, "missing value for #{option}"
+  rescue ArgumentError => e
+    stderr.puts "rustocop: #{e.message}"
+    exit 2
+  end
+
+  def inspect_targets(options)
+    if options[:stdin_path]
+      return [inspect_content(expand_path(options[:stdin_path]), stdin.read, options)]
+    end
+
+    files = options[:files].empty? ? Dir["**/*.rb"] : expand_targets(options[:files])
+    files.map { |path| inspect_file(path, options) }
+  end
+
+  def inspect_file(path, options)
+    content = File.read(path)
+    result = inspect_content(expand_path(path), content, options)
+
+    if options[:autocorrect] && result.offenses.any?
+      File.write(path, remove_trailing_whitespace(content))
+    end
+
+    result
+  end
+
+  def inspect_content(path, content, options)
+    offenses = supports_trailing_whitespace?(options[:only]) ? trailing_whitespace_offenses(content, options[:autocorrect]) : []
+    Result.new(path:, offenses:)
+  end
+
+  def expand_targets(targets)
+    targets.flat_map do |target|
+      if File.directory?(target)
+        Dir[File.join(target, "**/*.rb")].reject { |path| path.split(File::SEPARATOR).include?("target") }
+      else
+        target
+      end
+    end
+  end
+
+  def supports_trailing_whitespace?(only)
+    return true unless only
+
+    only.split(",").map(&:strip).include?(TRAILING_WHITESPACE_COP)
+  end
+
+  def trailing_whitespace_offenses(content, corrected)
+    offenses = []
+
+    content.each_line.with_index(1) do |line, line_number|
+      logical_line = line.delete_suffix("\n").delete_suffix("\r")
+      trailing = logical_line[/[ \t]+\z/]
+      next unless trailing
+
+      start_column = logical_line.length - trailing.length + 1
+      offenses << offense(line_number, start_column, trailing.length, corrected)
+    end
+
+    offenses
+  end
+
+  def remove_trailing_whitespace(content)
+    content.each_line.map do |line|
+      ending = line.end_with?("\r\n") ? "\r\n" : line.end_with?("\n") ? "\n" : ""
+      body = ending.empty? ? line : line.delete_suffix(ending)
+
+      "#{body.sub(/[ \t]+\z/, "")}#{ending}"
+    end.join
+  end
+
+  def offense(line_number, start_column, length, corrected)
+    {
+      "severity" => "convention",
+      "message" => TRAILING_WHITESPACE_MESSAGE,
+      "cop_name" => TRAILING_WHITESPACE_COP,
+      "corrected" => corrected,
+      "correctable" => true,
+      "location" => {
+        "start_line" => line_number,
+        "start_column" => start_column,
+        "last_line" => line_number,
+        "last_column" => start_column + length - 1,
+        "length" => length,
+        "line" => line_number,
+        "column" => start_column
+      }
+    }
+  end
+
+  def json_report(results, offense_count)
+    {
+      "metadata" => {
+        "rubocop_version" => ENV.fetch("RUSTOCOP_VERSION", Rustocop::VERSION),
+        "ruby_engine" => ENV.fetch("RUSTOCOP_RUBY_ENGINE", RUBY_ENGINE),
+        "ruby_version" => ENV.fetch("RUSTOCOP_RUBY_VERSION", RUBY_VERSION),
+        "ruby_patchlevel" => ENV.fetch("RUSTOCOP_RUBY_PATCHLEVEL", RUBY_PATCHLEVEL.to_s),
+        "ruby_platform" => ENV.fetch("RUSTOCOP_RUBY_PLATFORM", RUBY_PLATFORM)
+      },
+      "files" => results.map { |result| { "path" => result.path, "offenses" => result.offenses } },
+      "summary" => {
+        "offense_count" => offense_count,
+        "target_file_count" => results.length,
+        "inspected_file_count" => results.length
+      }
+    }
+  end
+
+  def write_simple_report(results, offense_count)
+    corrected_count = results.sum { |result| result.offenses.count { |offense| offense.fetch("corrected") } }
+
+    results.each do |result|
+      next if result.offenses.empty?
+
+      stdout.puts "== #{result.path} =="
+      result.offenses.each do |offense|
+        location = offense.fetch("location")
+        correction_label = offense.fetch("corrected") ? "Corrected" : "Correctable"
+
+        stdout.puts format(
+          "C:%3d:%3d: [%s] %s: %s",
+          location.fetch("line"),
+          location.fetch("column"),
+          correction_label,
+          offense.fetch("cop_name"),
+          offense.fetch("message")
+        )
+      end
+    end
+
+    stdout.puts
+    stdout.puts "#{results.length} #{pluralize("file", results.length)} inspected, " \
+                "#{offense_count} #{pluralize("offense", offense_count)} detected" \
+                "#{correction_summary(offense_count, corrected_count)}"
+  end
+
+  def correction_summary(offense_count, corrected_count)
+    if corrected_count.positive?
+      ", #{corrected_count} #{pluralize("offense", corrected_count)} corrected"
+    elsif offense_count.positive?
+      ", #{offense_count} #{pluralize("offense", offense_count)} autocorrectable"
+    else
+      ""
+    end
+  end
+
+  def corrected_exit_status(options, offense_count)
+    return 0 if offense_count.zero? || options[:autocorrect]
+
+    1
+  end
+
+  def pluralize(word, count)
+    count == 1 ? word : "#{word}s"
+  end
+
+  def expand_path(path)
+    File.expand_path(path)
+  end
+end
+
+exit RustocopFallback.call(ARGV)
