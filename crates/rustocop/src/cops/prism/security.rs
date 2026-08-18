@@ -21,8 +21,10 @@ impl Cop for YamlLoad {
 
     fn on_call(&self, node: &CallNode<'_>, context: &mut Context) {
         if context.target_ruby_version().at_least(3, 1)
-            || call_name(node) != b"load"
-            || !root_constant(node.receiver(), b"YAML")
+            || !CallMatcher::new(node)
+                .named(b"load")
+                .on_root_constant(b"YAML")
+                .matches()
         {
             return;
         }
@@ -118,8 +120,10 @@ impl Cop for JsonLoad {
 
     fn on_call(&self, node: &CallNode<'_>, context: &mut Context) {
         let method = call_name(node);
-        if !matches!(method, b"load" | b"restore")
-            || !root_constant(node.receiver(), b"JSON")
+        if !CallMatcher::new(node)
+            .named_any(&[b"load", b"restore"])
+            .on_root_constant(b"JSON")
+            .matches()
             || has_keyword(node, b"create_additions")
         {
             return;
@@ -149,7 +153,11 @@ impl Cop for MarshalLoad {
 
     fn on_call(&self, node: &CallNode<'_>, context: &mut Context) {
         let method = call_name(node);
-        if !matches!(method, b"load" | b"restore") || !root_constant(node.receiver(), b"Marshal") {
+        if !CallMatcher::new(node)
+            .named_any(&[b"load", b"restore"])
+            .on_root_constant(b"Marshal")
+            .matches()
+        {
             return;
         }
 
@@ -220,10 +228,17 @@ impl Cop for IoMethods {
 
     fn on_call(&self, node: &CallNode<'_>, context: &mut Context) {
         let method = call_name(node);
-        if !matches!(
-            method,
-            b"read" | b"binread" | b"write" | b"binwrite" | b"foreach" | b"readlines"
-        ) || !constant_read(node.receiver(), b"IO")
+        if !CallMatcher::new(node)
+            .named_any(&[
+                b"read",
+                b"binread",
+                b"write",
+                b"binwrite",
+                b"foreach",
+                b"readlines",
+            ])
+            .on_constant_read(b"IO")
+            .matches()
         {
             return;
         }

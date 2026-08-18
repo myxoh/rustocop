@@ -64,8 +64,10 @@ impl Cop for ProcLiteral {
     }
 
     fn on_call(&self, node: &CallNode<'_>, context: &mut Context) {
-        if call_name(node) != b"new"
-            || !root_constant(node.receiver(), b"Proc")
+        if !CallMatcher::new(node)
+            .named(b"new")
+            .on_root_constant(b"Proc")
+            .matches()
             || node.block().is_none()
         {
             return;
@@ -131,7 +133,11 @@ impl Cop for Strip {
 
     fn on_call(&self, node: &CallNode<'_>, context: &mut Context) {
         let outer = call_name(node);
-        if !matches!(outer, b"lstrip" | b"rstrip") || node.arguments().is_some() {
+        if !CallMatcher::new(node)
+            .named_any(&[b"lstrip", b"rstrip"])
+            .without_arguments()
+            .matches()
+        {
             return;
         }
         let Some(inner) = node.receiver().and_then(|receiver| receiver.as_call_node()) else {
@@ -142,7 +148,11 @@ impl Cop for Strip {
         } else {
             b"lstrip"
         };
-        if call_name(&inner) != expected_inner || inner.arguments().is_some() {
+        if !CallMatcher::new(&inner)
+            .named(expected_inner)
+            .without_arguments()
+            .matches()
+        {
             return;
         }
         let (Some(start), Some(end)) = (inner.message_loc(), node.message_loc()) else {

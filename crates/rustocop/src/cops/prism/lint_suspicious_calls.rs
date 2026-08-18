@@ -108,7 +108,11 @@ impl Cop for HashCompareByIdentity {
         else {
             return;
         };
-        if call_name(&key_call) != b"object_id" || key_call.arguments().is_some() {
+        if !CallMatcher::new(&key_call)
+            .named(b"object_id")
+            .without_arguments()
+            .matches()
+        {
             return;
         }
         context.report(
@@ -136,11 +140,13 @@ impl Cop for RandOne {
         let Some(call) = node.as_call_node() else {
             return;
         };
-        if call_name(&call) != b"rand"
-            || !(call.receiver().is_none() || root_constant(call.receiver(), b"Kernel"))
-            || call
-                .arguments()
-                .is_none_or(|arguments| arguments.arguments().len() != 1)
+        let receiver_matches =
+            call.receiver().is_none() || root_constant(call.receiver(), b"Kernel");
+        if !CallMatcher::new(&call)
+            .named(b"rand")
+            .with_argument_count(1)
+            .matches()
+            || !receiver_matches
         {
             return;
         }

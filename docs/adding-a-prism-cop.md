@@ -56,10 +56,28 @@ This keeps every cop out of correction bookkeeping.
 
 ## Reusable matchers
 
-`cops/prism/matchers.rs` exposes focused helpers for recurring patterns: call
-names and first arguments, root constants, keyword presence, source slices, and
-common literal classification. The coordinator imports this matcher surface for
-all cop modules. Reuse it before spelling out an equivalent tree walk in a cop.
+`cops/prism/matchers.rs` exposes focused helpers for recurring patterns: first
+arguments, root constants, keyword presence, source slices, and common literal
+classification. The coordinator imports this matcher surface for all cop
+modules. Reuse it before spelling out an equivalent tree walk in a cop.
+
+Call-based cops can express their structural requirements with the
+allocation-free `CallMatcher` DSL:
+
+```rust
+if !CallMatcher::new(node)
+    .named(b"load")
+    .on_root_constant(b"Example")
+    .with_argument_count(1)
+    .matches()
+{
+    return;
+}
+```
+
+Keep semantic conditions, source reconstruction, and diagnostic ranges in the
+cop itself. The matcher is for method names, receiver shapes, and argument
+counts—not a place to hide the reason a rule reports an offense.
 
 Extract a new matcher when the same semantic question appears in multiple cops
 and can be answered without configuration or side effects. Keep a helper in its
@@ -74,8 +92,7 @@ Likely next shared capabilities, as parity work requires them, are:
 
 1. a read-only cop configuration view on `Context`;
 2. path context for file-sensitive cops;
-3. call-pattern matchers for receiver, method, and argument-count combinations;
-4. a declarative registry once repeated registration metadata justifies it.
+3. a declarative registry once repeated registration metadata justifies it.
 
 Configuration and path context unlock more upstream cases than additional
 syntax shortcuts, so they should come before a large matcher DSL.

@@ -345,7 +345,11 @@ impl Cop for StringMethods {
     }
 
     fn on_call(&self, node: &CallNode<'_>, context: &mut Context) {
-        if call_name(node) != b"intern" || node.arguments().is_some() {
+        if !CallMatcher::new(node)
+            .named(b"intern")
+            .without_arguments()
+            .matches()
+        {
             return;
         }
         let Some(selector) = node.message_loc() else {

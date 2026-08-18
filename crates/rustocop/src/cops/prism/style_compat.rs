@@ -193,7 +193,11 @@ impl Cop for RedundantFileExtensionInRequire {
     }
 
     fn on_call(&self, node: &CallNode<'_>, context: &mut Context) {
-        if node.receiver().is_some() || !matches!(call_name(node), b"require" | b"require_relative")
+        if !CallMatcher::new(node)
+            .named_any(&[b"require", b"require_relative"])
+            .without_receiver()
+            .with_argument_count(1)
+            .matches()
         {
             return;
         }

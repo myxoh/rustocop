@@ -153,7 +153,11 @@ impl Cop for RedundantSortBy {
     }
 
     fn on_call(&self, node: &CallNode<'_>, context: &mut Context) {
-        if call_name(node) != b"sort_by" || node.receiver().is_none() || node.arguments().is_some()
+        if !CallMatcher::new(node)
+            .named(b"sort_by")
+            .with_receiver()
+            .without_arguments()
+            .matches()
         {
             return;
         }

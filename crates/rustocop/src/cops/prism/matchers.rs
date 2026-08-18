@@ -1,5 +1,69 @@
 use ruby_prism::{CallNode, Location, Node};
 
+/// An allocation-free DSL for the structural part of call-based cops.
+/// Semantic conditions stay in the cop beside the resulting diagnostic.
+pub(super) struct CallMatcher<'call, 'pr> {
+    call: &'call CallNode<'pr>,
+    matches: bool,
+}
+
+impl<'call, 'pr> CallMatcher<'call, 'pr> {
+    pub(super) fn new(call: &'call CallNode<'pr>) -> Self {
+        Self {
+            call,
+            matches: true,
+        }
+    }
+
+    pub(super) fn named(mut self, name: &[u8]) -> Self {
+        self.matches &= call_name(self.call) == name;
+        self
+    }
+
+    pub(super) fn named_any(mut self, names: &[&[u8]]) -> Self {
+        self.matches &= names.contains(&call_name(self.call));
+        self
+    }
+
+    pub(super) fn on_root_constant(mut self, name: &[u8]) -> Self {
+        self.matches &= root_constant(self.call.receiver(), name);
+        self
+    }
+
+    pub(super) fn on_constant_read(mut self, name: &[u8]) -> Self {
+        self.matches &= constant_read(self.call.receiver(), name);
+        self
+    }
+
+    pub(super) fn without_receiver(mut self) -> Self {
+        self.matches &= self.call.receiver().is_none();
+        self
+    }
+
+    pub(super) fn with_receiver(mut self) -> Self {
+        self.matches &= self.call.receiver().is_some();
+        self
+    }
+
+    pub(super) fn without_arguments(mut self) -> Self {
+        self.matches &= self.call.arguments().is_none();
+        self
+    }
+
+    pub(super) fn with_argument_count(mut self, expected: usize) -> Self {
+        let actual = self
+            .call
+            .arguments()
+            .map_or(0, |arguments| arguments.arguments().len());
+        self.matches &= actual == expected;
+        self
+    }
+
+    pub(super) fn matches(self) -> bool {
+        self.matches
+    }
+}
+
 pub(super) fn call_name<'pr>(node: &CallNode<'pr>) -> &'pr [u8] {
     node.name().as_slice()
 }
@@ -175,4 +239,55 @@ pub(super) fn immutable_literal(node: &Node<'_>) -> bool {
         || node.as_nil_node().is_some()
         || node.as_regular_expression_node().is_some()
         || node.as_range_node().is_some()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ruby_prism::parse;
+
+    fn first_call_matches(source: &[u8], predicate: impl FnOnce(&CallNode<'_>) -> bool) -> bool {
+        let parsed = parse(source);
+        let program = parsed.node().as_program_node().unwrap();
+        let call = program
+            .statements()
+            .body()
+            .first()
+            .unwrap()
+            .as_call_node()
+            .unwrap();
+        predicate(&call)
+    }
+
+    #[test]
+    fn matches_call_name_root_receiver_and_argument_count() {
+        assert!(first_call_matches(b"JSON.load(document)", |call| {
+            CallMatcher::new(call)
+                .named_any(&[b"load", b"restore"])
+                .on_root_constant(b"JSON")
+                .with_argument_count(1)
+                .matches()
+        }));
+    }
+
+    #[test]
+    fn rejects_nested_constants_when_root_constant_is_required() {
+        assert!(!first_call_matches(b"Other::JSON.load(document)", |call| {
+            CallMatcher::new(call)
+                .named(b"load")
+                .on_root_constant(b"JSON")
+                .matches()
+        }));
+    }
+
+    #[test]
+    fn distinguishes_implicit_calls_from_calls_with_receivers() {
+        assert!(first_call_matches(b"require('example')", |call| {
+            CallMatcher::new(call)
+                .named(b"require")
+                .without_receiver()
+                .with_argument_count(1)
+                .matches()
+        }));
+    }
 }
