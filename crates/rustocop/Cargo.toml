@@ -5,3 +5,12 @@ edition = "2021"
 license = "MIT"
 
 [dependencies]
+ruby-prism = "1.9.0"
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+cognitive_complexity = "deny"
+too_many_arguments = "deny"
+too_many_lines = "deny"

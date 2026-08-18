@@ -1,0 +1,39 @@
+rubocop_version: 1.87.0
+upstream_rspec:
+  examples: 28479
+  failures: 0
+  pending: 6
+captured_cases: 28623
+diagnostic_baseline:
+  passed_cases: 13439
+  passing_cops: 28
+  total_cops: 606
+fully_compatible_cops:
+  - Layout/SpaceAfterColon
+  - Lint/BigDecimalNew
+  - Lint/EmptyEnsure
+  - Lint/EmptyExpression
+  - Lint/FlipFlop
+  - Lint/IdentityComparison
+  - Lint/ToJSON
+  - Lint/TrailingCommaInAttributeDeclaration
+  - Lint/UselessElseWithoutRescue
+  - Security/Eval
+  - Security/MarshalLoad
+  - Style/BeginBlock
+  - Style/CharacterLiteral
+  - Style/ColonMethodDefinition
+  - Style/DoubleCopDisableDirective
+  - Style/EmptyLambdaParameter
+  - Style/EndBlock
+  - Style/FileTouch
+  - Style/GlobalStdStream
+  - Style/InlineComment
+  - Style/MinMax
+  - Style/Not
+  - Style/RedundantFileExtensionInRequire
+  - Style/StringChars
+  - Style/StringMethods
+  - Style/SuperWithArgsParentheses
+  - Style/TrailingCommaInBlockArgs
+  - Style/WhileUntilDo

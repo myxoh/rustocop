@@ -1,0 +1,55 @@
+# Architecture
+
+Rustocop has one inspection pipeline and two kinds of cop implementation. The
+pipeline owns I/O, configuration, reporting, and correction ordering. Cops only
+inspect the source representation they are given and emit offenses.
+
+```text
+CLI / file discovery
+        |
+        v
+line_cops::before_prism  (safe textual corrections)
+        |
+        v
+one Prism parse per file
+        |
+        +--> registered AST cops share Context and tree
+        |
+        v
+line_cops::after_prism   (read-only compatibility cops)
+        |
+        v
+sort offenses / apply non-overlapping corrections / format report
+```
+
+## Module boundaries
+
+- `main.rs` is the application shell: arguments, targets, inspection
+  orchestration, and output compatibility.
+- `prism_engine.rs` owns the shared parse, traversal context, cop registry, and
+  correction application. `prism_engine/{lint,security,style}.rs` contain AST
+  cops grouped by RuboCop department.
+- `line_cops/mod.rs` is the only entry point to textual cops.
+  `line_cops/{layout,lint,style,bundler,metrics,extensions}.rs` own their
+  departments; `helpers.rs` contains shared, side-effect-free text helpers.
+- Specs and the extracted upstream corpus are the compatibility contract. A cop
+  is not considered verified because it merely recognizes representative text.
+
+Prism is parsed exactly once for each inspected source. Adding AST cops should
+register another visitor against that shared tree, never parse the file again.
+
+## Enforced limits
+
+`rake quality:architecture` enforces these ceilings:
+
+- 600 lines for a Rust module, with explicit transitional ceilings of 800 for
+  `main.rs` and 600 for the Prism coordinator.
+- 200 lines per function, cognitive complexity 30, and at most eight arguments.
+- no unsafe Rust.
+
+These are hard stop-lines, not targets. New modules should normally stay below
+400 lines, functions below 60 lines, cognitive complexity below 15, and accept
+at most five arguments. Split by responsibility before reaching a ceiling.
+
+The architecture task is a prerequisite of the default spec task, so CI and
+local `bundle exec rake` runs reject structural regressions.

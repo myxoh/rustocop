@@ -20,6 +20,7 @@ def run_rustocop(*args, stdin: nil, env: {}, chdir: nil)
 end
 
 def run_rubocop(*args, stdin: nil, chdir: nil)
+  args = ["--cache", "false", *args] unless args.any? { |arg| arg == "--cache" || arg.start_with?("--cache=") }
   options = { stdin_data: stdin }
   options[:chdir] = chdir if chdir
   stdout, stderr, status = Open3.capture3(RbConfig.ruby, Gem.bin_path("rubocop", "rubocop"), *args, options)

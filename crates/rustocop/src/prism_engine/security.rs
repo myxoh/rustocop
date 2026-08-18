@@ -1,0 +1,224 @@
+use super::*;
+
+pub(super) fn cops() -> Vec<Box<dyn Cop>> {
+    vec![
+        Box::new(Eval),
+        Box::new(CompoundHash),
+        Box::new(JsonLoad),
+        Box::new(MarshalLoad),
+        Box::new(Open),
+        Box::new(IoMethods),
+    ]
+}
+
+struct Eval;
+
+impl Cop for Eval {
+    fn name(&self) -> &'static str {
+        "Security/Eval"
+    }
+
+    fn on_call(&self, node: &CallNode<'_>, context: &mut Context) {
+        if call_name(node) != b"eval" || !eval_receiver(node.receiver()) {
+            return;
+        }
+
+        let Some(code) = first_argument(node) else {
+            return;
+        };
+        if code.as_string_node().is_some() || recursive_literal_string(&code) {
+            return;
+        }
+
+        if let Some(selector) = node.message_loc() {
+            context.add_offense(
+                self.name(),
+                "The use of `eval` is a serious security risk.".to_string(),
+                selector,
+                None,
+            );
+        }
+    }
+}
+
+struct JsonLoad;
+
+struct CompoundHash;
+
+impl Cop for CompoundHash {
+    fn name(&self) -> &'static str {
+        "Security/CompoundHash"
+    }
+
+    fn on_node<'pr>(
+        &self,
+        node: &Node<'pr>,
+        ancestors: &[Node<'pr>],
+        _source: &str,
+        context: &mut Context,
+    ) {
+        let Some(call) = node.as_call_node() else {
+            return;
+        };
+        if !matches!(call_name(&call), b"^" | b"+" | b"*" | b"|") || first_argument(&call).is_none()
+        {
+            return;
+        }
+        let inside_hash_method = ancestors.iter().rev().any(|ancestor| {
+            ancestor.as_def_node().is_some_and(|definition| {
+                definition.name().as_slice() == b"hash" && definition.parameters().is_none()
+            })
+        });
+        let nested_combinator = ancestors.iter().rev().any(|ancestor| {
+            ancestor
+                .as_call_node()
+                .is_some_and(|parent| matches!(call_name(&parent), b"^" | b"+" | b"*" | b"|"))
+        });
+        if inside_hash_method && !nested_combinator {
+            context.add_offense(
+                self.name(),
+                "Use `[...].hash` instead of combining hash values manually.".to_string(),
+                call.location(),
+                None,
+            );
+        }
+    }
+}
+
+impl Cop for JsonLoad {
+    fn name(&self) -> &'static str {
+        "Security/JSONLoad"
+    }
+
+    fn on_call(&self, node: &CallNode<'_>, context: &mut Context) {
+        let method = call_name(node);
+        if !matches!(method, b"load" | b"restore")
+            || !root_constant(node.receiver(), b"JSON")
+            || has_keyword(node, b"create_additions")
+        {
+            return;
+        }
+
+        if let Some(selector) = node.message_loc() {
+            context.add_offense(
+                self.name(),
+                format!(
+                    "Prefer `JSON.parse` over `JSON.{}`.",
+                    String::from_utf8_lossy(method)
+                ),
+                selector,
+                Some((node.message_loc().expect("call selector"), "parse")),
+            );
+        }
+    }
+}
+
+struct MarshalLoad;
+
+impl Cop for MarshalLoad {
+    fn name(&self) -> &'static str {
+        "Security/MarshalLoad"
+    }
+
+    fn on_call(&self, node: &CallNode<'_>, context: &mut Context) {
+        let method = call_name(node);
+        if !matches!(method, b"load" | b"restore") || !root_constant(node.receiver(), b"Marshal") {
+            return;
+        }
+
+        let Some(argument) = first_argument(node) else {
+            return;
+        };
+        if marshal_dump(&argument) {
+            return;
+        }
+
+        if let Some(selector) = node.message_loc() {
+            context.add_offense(
+                self.name(),
+                format!("Avoid using `Marshal.{}`.", String::from_utf8_lossy(method)),
+                selector,
+                None,
+            );
+        }
+    }
+}
+
+struct Open;
+
+impl Cop for Open {
+    fn name(&self) -> &'static str {
+        "Security/Open"
+    }
+
+    fn on_call(&self, node: &CallNode<'_>, context: &mut Context) {
+        if call_name(node) != b"open" {
+            return;
+        }
+
+        let receiver = node.receiver();
+        let receiver_name = if receiver.is_none() {
+            "Kernel#"
+        } else if root_constant(receiver, b"URI") {
+            "URI."
+        } else {
+            return;
+        };
+
+        let Some(argument) = first_argument(node) else {
+            return;
+        };
+        if safe_open_argument(&argument) {
+            return;
+        }
+
+        if let Some(selector) = node.message_loc() {
+            context.add_offense(
+                self.name(),
+                format!(
+                    "The use of `{}open` is a serious security risk.",
+                    receiver_name
+                ),
+                selector,
+                None,
+            );
+        }
+    }
+}
+
+struct IoMethods;
+
+impl Cop for IoMethods {
+    fn name(&self) -> &'static str {
+        "Security/IoMethods"
+    }
+
+    fn on_call(&self, node: &CallNode<'_>, context: &mut Context) {
+        let method = call_name(node);
+        if !matches!(
+            method,
+            b"read" | b"binread" | b"write" | b"binwrite" | b"foreach" | b"readlines"
+        ) || !constant_read(node.receiver(), b"IO")
+        {
+            return;
+        }
+
+        if first_argument(node).is_some_and(|argument| string_starts_with_pipe(&argument)) {
+            return;
+        }
+
+        let Some(receiver_location) = node.receiver().map(|receiver| receiver.location()) else {
+            return;
+        };
+        context.add_offense(
+            self.name(),
+            format!(
+                "`File.{}` is safer than `IO.{}`.",
+                String::from_utf8_lossy(method),
+                String::from_utf8_lossy(method)
+            ),
+            node.location(),
+            Some((receiver_location, "File")),
+        );
+    }
+}

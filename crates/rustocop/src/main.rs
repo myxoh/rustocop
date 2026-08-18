@@ -1,11 +1,121 @@
 use std::env;
+use std::ffi::OsStr;
 use std::fs;
 use std::io::{self, Read};
 use std::path::{Path, PathBuf};
 use std::process;
 
+mod line_cops;
+mod prism_engine;
+
 const TRAILING_WHITESPACE_COP: &str = "Layout/TrailingWhitespace";
-const TRAILING_WHITESPACE_MESSAGE: &str = "Trailing whitespace detected.";
+
+const SUPPORTED_COPS: &[&str] = &[
+    "Bundler/OrderedGems",
+    "Rails/DefaultScope",
+    "Rails/FilePath",
+    "Rails/ApplicationJob",
+    "Rails/ReversibleMigration",
+    "Metrics/BlockLength",
+    "Metrics/MethodLength",
+    "Metrics/AbcSize",
+    "Layout/LineLength",
+    "Layout/ExtraSpacing",
+    "Layout/EndAlignment",
+    "Layout/FirstHashElementIndentation",
+    "Layout/IndentationConsistency",
+    "Layout/IndentationWidth",
+    "Layout/TrailingWhitespace",
+    "Layout/SpaceAfterColon",
+    "Style/HashSyntax",
+    "Style/ColonMethodDefinition",
+    "Style/DoubleCopDisableDirective",
+    "Style/EmptyLambdaParameter",
+    "Style/EndBlock",
+    "Style/InlineComment",
+    "Style/KeywordParametersOrder",
+    "Style/RedundantBegin",
+    "Style/IfUnlessModifier",
+    "Style/CaseLikeIf",
+    "Style/ConditionalAssignment",
+    "Style/EmptyCaseCondition",
+    "Style/EmptyElse",
+    "Style/GuardClause",
+    "Style/HashLikeCase",
+    "Style/ClassMethodsDefinitions",
+    "Style/EndlessMethod",
+    "Style/FrozenStringLiteralComment",
+    "Style/Documentation",
+    "Style/TrailingCommaInArrayLiteral",
+    "Style/TrailingCommaInArguments",
+    "Style/TrailingCommaInHashLiteral",
+    "Style/ItAssignment",
+    "Style/NumberedParameters",
+    "Style/StringLiterals",
+    "Style/CharacterLiteral",
+    "Style/BeginBlock",
+    "Style/DefWithParentheses",
+    "Style/MethodCallWithoutArgsParentheses",
+    "Style/NilComparison",
+    "Style/Not",
+    "Style/RedundantArrayConstructor",
+    "Style/RedundantFreeze",
+    "Style/Semicolon",
+    "Style/StringChars",
+    "Style/StringMethods",
+    "Style/UnlessElse",
+    "Style/FileTouch",
+    "Style/GlobalStdStream",
+    "Style/MinMax",
+    "Style/RedundantFileExtensionInRequire",
+    "Style/SuperWithArgsParentheses",
+    "Style/TrailingCommaInBlockArgs",
+    "Style/WhileUntilDo",
+    "Naming/PredicatePrefix",
+    "Naming/AccessorMethodName",
+    "Lint/MissingSuper",
+    "Lint/EmptyBlock",
+    "Lint/UnusedMethodArgument",
+    "Lint/Debugger",
+    "Lint/BooleanSymbol",
+    "Lint/BigDecimalNew",
+    "Lint/EmptyEnsure",
+    "Lint/EmptyExpression",
+    "Lint/FlipFlop",
+    "Lint/FloatComparison",
+    "Lint/IdentityComparison",
+    "Lint/SelfAssignment",
+    "Lint/ToJSON",
+    "Lint/TrailingCommaInAttributeDeclaration",
+    "Lint/UselessElseWithoutRescue",
+    "Security/CompoundHash",
+    "Security/Eval",
+    "Security/JSONLoad",
+    "Security/MarshalLoad",
+    "Security/Open",
+    "Security/IoMethods",
+    "RSpec/NestedGroups",
+    "RSpec/EmptyExampleGroup",
+    "RSpec/MessageChain",
+    "RSpec/MultipleExpectations",
+    "RSpec/ExampleLength",
+    "RSpec/VariableName",
+    "RSpec/MultipleMemoizedHelpers",
+    "RSpec/Focus",
+    "RSpec/PendingWithoutReason",
+    "RSpec/ScatteredSetup",
+    "RSpec/SpecFilePathSuffix",
+    "RSpec/SpecFilePathFormat",
+];
+
+const DEFAULT_DISABLED_COPS: &[&str] = &[
+    "Style/Documentation",
+    "Security/IoMethods",
+    "RSpec/MessageChain",
+    "RSpec/MultipleExpectations",
+    "RSpec/MultipleMemoizedHelpers",
+    "RSpec/PendingWithoutReason",
+];
 
 #[derive(Debug)]
 struct Options {
@@ -16,6 +126,12 @@ struct Options {
     stdin_path: Option<String>,
 }
 
+#[derive(Clone, Debug)]
+struct SourceLine {
+    body: String,
+    ending: String,
+}
+
 #[derive(Debug)]
 struct InspectionResult {
     path: String,
@@ -24,9 +140,14 @@ struct InspectionResult {
 
 #[derive(Debug)]
 struct Offense {
+    cop_name: &'static str,
+    message: String,
     corrected: bool,
+    correctable: bool,
     line: usize,
     column: usize,
+    last_line: usize,
+    last_column: usize,
     length: usize,
 }
 
@@ -34,6 +155,7 @@ enum Command {
     Run(Options),
     Version,
     VerboseVersion,
+    ShowCops,
 }
 
 fn main() {
@@ -46,6 +168,11 @@ fn main() {
                 "{} (rustocop native, RuboCop-compatible JSON formatter)",
                 rustocop_version()
             );
+        }
+        Ok(Command::ShowCops) => {
+            for cop in SUPPORTED_COPS {
+                println!("{}", cop);
+            }
         }
         Ok(Command::Run(options)) => match inspect_targets(&options) {
             Ok(results) => {
@@ -60,7 +187,7 @@ fn main() {
                     write_simple_report(&results, offense_count);
                 }
 
-                process::exit(corrected_exit_status(&options, offense_count));
+                process::exit(exit_status(&options, &results));
             }
             Err(error) => {
                 eprintln!("rustocop: {}", error);
@@ -89,12 +216,20 @@ fn parse_args(mut args: Vec<String>) -> Result<Command, String> {
         match arg.as_str() {
             "--version" => return Ok(Command::Version),
             "-V" => return Ok(Command::VerboseVersion),
+            "--show-cops" => return Ok(Command::ShowCops),
             "-A" | "-a" | "--autocorrect" | "--autocorrect-all" | "--auto-correct"
             | "--auto-correct-all" => options.autocorrect = true,
             "--format" | "-f" => options.format = take_value(&mut args, &arg)?,
             "--only" => options.only = Some(take_value(&mut args, &arg)?),
             "--stdin" => options.stdin_path = Some(take_value(&mut args, &arg)?),
-            "--force-exclusion" | "--no-server" => {}
+            "--config" | "-c" | "--require" | "--plugin" => {
+                let _ = take_value(&mut args, &arg)?;
+            }
+            "--force-exclusion"
+            | "--no-server"
+            | "--display-cop-names"
+            | "--extra-details"
+            | "--parallel" => {}
             "--cache" => {
                 if args.first().is_some_and(|value| !value.starts_with('-')) {
                     args.remove(0);
@@ -117,6 +252,9 @@ fn parse_args(mut args: Vec<String>) -> Result<Command, String> {
                 options.stdin_path =
                     Some(arg.strip_prefix("--stdin=").unwrap_or_default().to_string());
             }
+            _ if arg.starts_with("--config=")
+                || arg.starts_with("--require=")
+                || arg.starts_with("--plugin=") => {}
             _ if arg.starts_with('-') => return Err(format!("unsupported option {}", arg)),
             _ => options.files.push(arg),
         }
@@ -141,11 +279,11 @@ fn inspect_targets(options: &Options) -> io::Result<Vec<InspectionResult>> {
     if let Some(path) = &options.stdin_path {
         let mut content = String::new();
         io::stdin().read_to_string(&mut content)?;
-        return Ok(vec![inspect_content(
-            &expanded_path(path),
-            &content,
-            options,
-        )]);
+        let (offenses, _) = inspect_content(&expanded_path(path), &content, options);
+        return Ok(vec![InspectionResult {
+            path: expanded_path(path),
+            offenses,
+        }]);
     }
 
     let files = if options.files.is_empty() {
@@ -162,13 +300,17 @@ fn inspect_targets(options: &Options) -> io::Result<Vec<InspectionResult>> {
 
 fn inspect_file(path: &str, options: &Options) -> io::Result<InspectionResult> {
     let content = fs::read_to_string(path)?;
-    let result = inspect_content(&expanded_path(path), &content, options);
+    let absolute_path = expanded_path(path);
+    let (offenses, corrected_content) = inspect_content(&absolute_path, &content, options);
 
-    if options.autocorrect && !result.offenses.is_empty() {
-        fs::write(path, remove_trailing_whitespace(&content))?;
+    if options.autocorrect && corrected_content != content {
+        fs::write(path, corrected_content)?;
     }
 
-    Ok(result)
+    Ok(InspectionResult {
+        path: absolute_path,
+        offenses,
+    })
 }
 
 fn expand_targets(targets: &[String]) -> io::Result<Vec<String>> {
@@ -187,34 +329,6 @@ fn expand_targets(targets: &[String]) -> io::Result<Vec<String>> {
     Ok(files)
 }
 
-fn remove_trailing_whitespace(content: &str) -> String {
-    let mut corrected = String::with_capacity(content.len());
-
-    for raw_line in content.split_inclusive('\n') {
-        let (body, ending) = if let Some(body) = raw_line.strip_suffix("\r\n") {
-            (body, "\r\n")
-        } else if let Some(body) = raw_line.strip_suffix('\n') {
-            (body, "\n")
-        } else {
-            (raw_line, "")
-        };
-
-        corrected
-            .push_str(body.trim_end_matches(|character| character == ' ' || character == '\t'));
-        corrected.push_str(ending);
-    }
-
-    corrected
-}
-
-fn corrected_exit_status(options: &Options, offense_count: usize) -> i32 {
-    if offense_count == 0 || options.autocorrect {
-        0
-    } else {
-        1
-    }
-}
-
 fn discover_ruby_files() -> io::Result<Vec<String>> {
     let mut files = Vec::new();
     discover_ruby_files_under(Path::new("."), &mut files)?;
@@ -228,16 +342,13 @@ fn discover_ruby_files_under(path: &Path, files: &mut Vec<String>) -> io::Result
         let file_name = entry.file_name();
         let file_name = file_name.to_string_lossy();
 
-        if file_name.starts_with('.') || file_name == "target" {
+        if should_skip_entry(&entry_path, &file_name) {
             continue;
         }
 
         if entry_path.is_dir() {
             discover_ruby_files_under(&entry_path, files)?;
-        } else if entry_path
-            .extension()
-            .is_some_and(|extension| extension == "rb")
-        {
+        } else if is_ruby_target(&entry_path) {
             files.push(entry_path.to_string_lossy().to_string());
         }
     }
@@ -245,54 +356,197 @@ fn discover_ruby_files_under(path: &Path, files: &mut Vec<String>) -> io::Result
     Ok(())
 }
 
-fn inspect_content(path: &str, content: &str, options: &Options) -> InspectionResult {
-    let offenses = if supports_trailing_whitespace(options.only.as_deref()) {
-        trailing_whitespace_offenses(content, options.autocorrect)
-    } else {
-        Vec::new()
-    };
+fn should_skip_entry(path: &Path, file_name: &str) -> bool {
+    if file_name.starts_with('.') || matches!(file_name, "node_modules" | "target" | "tmp") {
+        return true;
+    }
 
-    InspectionResult {
-        path: path.to_string(),
-        offenses,
+    let text = path.to_string_lossy();
+    text.contains("vendor/gems") || text.contains("vendor/bundle")
+}
+
+fn is_ruby_target(path: &Path) -> bool {
+    if path
+        .extension()
+        .and_then(OsStr::to_str)
+        .is_some_and(|extension| matches!(extension, "rb" | "rake" | "gemspec"))
+    {
+        return true;
+    }
+
+    path.file_name()
+        .and_then(OsStr::to_str)
+        .is_some_and(|name| {
+            matches!(
+                name,
+                "Gemfile" | "Rakefile" | "Guardfile" | "Dangerfile" | "config.ru"
+            )
+        })
+}
+
+fn inspect_content(path: &str, content: &str, options: &Options) -> (Vec<Offense>, String) {
+    let mut lines = split_source(content);
+    let original_lines = lines.clone();
+    let mut offenses = Vec::new();
+
+    line_cops::before_prism(path, &mut lines, options, &mut offenses);
+
+    // Every file is parsed once. All AST-based cops share this Prism tree and
+    // the corrections they produce are applied together after traversal.
+    let prism_source = join_source(&lines);
+    let prism_inspection = prism_engine::inspect(&prism_source, options.autocorrect, &|cop| {
+        cop_enabled(options, cop)
+    });
+    offenses.extend(
+        prism_inspection
+            .findings
+            .into_iter()
+            .map(|finding| prism_offense(&prism_source, finding)),
+    );
+
+    line_cops::after_prism(path, &original_lines, options, &mut offenses);
+
+    offenses.sort_by(|left, right| {
+        left.line
+            .cmp(&right.line)
+            .then(left.column.cmp(&right.column))
+            .then(left.cop_name.cmp(right.cop_name))
+    });
+
+    (offenses, prism_inspection.corrected_source)
+}
+
+fn prism_offense(source: &str, finding: prism_engine::Finding) -> Offense {
+    let (line, column) = source_position(source, finding.start_offset);
+    let mut last_offset = finding
+        .end_offset
+        .saturating_sub(1)
+        .max(finding.start_offset);
+    while last_offset > finding.start_offset && !source.is_char_boundary(last_offset) {
+        last_offset -= 1;
+    }
+    let (last_line, last_column) = source_position(source, last_offset);
+
+    Offense {
+        cop_name: finding.cop_name,
+        message: finding.message,
+        corrected: finding.corrected,
+        correctable: finding.correctable,
+        line,
+        column,
+        last_line,
+        last_column,
+        length: finding
+            .end_offset
+            .saturating_sub(finding.start_offset)
+            .max(1),
     }
 }
 
-fn supports_trailing_whitespace(only: Option<&str>) -> bool {
-    match only {
-        None => true,
-        Some(value) => value
-            .split(',')
-            .map(str::trim)
-            .any(|cop| cop == TRAILING_WHITESPACE_COP),
+fn source_position(source: &str, offset: usize) -> (usize, usize) {
+    let mut offset = offset.min(source.len());
+    while offset > 0 && !source.is_char_boundary(offset) {
+        offset -= 1;
     }
+    let prefix = &source[..offset];
+    let line = prefix.bytes().filter(|byte| *byte == b'\n').count() + 1;
+    let line_start = prefix.rfind('\n').map_or(0, |index| index + 1);
+    let column = source[line_start..offset].chars().count() + 1;
+    (line, column)
 }
 
-fn trailing_whitespace_offenses(content: &str, corrected: bool) -> Vec<Offense> {
+fn split_source(content: &str) -> Vec<SourceLine> {
+    if content.is_empty() {
+        return Vec::new();
+    }
+
     content
         .split_inclusive('\n')
-        .enumerate()
-        .filter_map(|(index, raw_line)| {
-            let line = raw_line.trim_end_matches('\n').trim_end_matches('\r');
-            let length = line
-                .chars()
-                .rev()
-                .take_while(|character| *character == ' ' || *character == '\t')
-                .count();
-
-            if length == 0 {
-                return None;
+        .map(|raw_line| {
+            if let Some(body) = raw_line.strip_suffix("\r\n") {
+                SourceLine {
+                    body: body.to_string(),
+                    ending: "\r\n".to_string(),
+                }
+            } else if let Some(body) = raw_line.strip_suffix('\n') {
+                SourceLine {
+                    body: body.to_string(),
+                    ending: "\n".to_string(),
+                }
+            } else {
+                SourceLine {
+                    body: raw_line.to_string(),
+                    ending: String::new(),
+                }
             }
-
-            let column = line.chars().count() - length + 1;
-            Some(Offense {
-                corrected,
-                line: index + 1,
-                column,
-                length,
-            })
         })
         .collect()
+}
+
+fn join_source(lines: &[SourceLine]) -> String {
+    let mut content = String::new();
+
+    for line in lines {
+        content.push_str(&line.body);
+        content.push_str(&line.ending);
+    }
+
+    content
+}
+
+fn push_offense(
+    offenses: &mut Vec<Offense>,
+    cop_name: &'static str,
+    message: &str,
+    line: usize,
+    column: usize,
+    length: usize,
+    correctable: bool,
+    corrected: bool,
+) {
+    offenses.push(Offense {
+        cop_name,
+        message: message.to_string(),
+        corrected,
+        correctable,
+        line,
+        column: column.max(1),
+        last_line: line,
+        last_column: column.max(1) + length.max(1) - 1,
+        length: length.max(1),
+    });
+}
+
+fn cop_enabled(options: &Options, cop: &str) -> bool {
+    let Some(only) = &options.only else {
+        return !DEFAULT_DISABLED_COPS.contains(&cop);
+    };
+
+    only.split(',').map(str::trim).any(|requested| {
+        requested == cop
+            || (!DEFAULT_DISABLED_COPS.contains(&cop)
+                && cop
+                    .strip_prefix(requested)
+                    .is_some_and(|suffix| suffix.starts_with('/')))
+    })
+}
+
+fn exit_status(options: &Options, results: &[InspectionResult]) -> i32 {
+    let mut offense_count = 0;
+    let mut uncorrected_count = 0;
+
+    for offense in results.iter().flat_map(|result| &result.offenses) {
+        offense_count += 1;
+        if !offense.corrected {
+            uncorrected_count += 1;
+        }
+    }
+
+    if offense_count == 0 || (options.autocorrect && uncorrected_count == 0) {
+        0
+    } else {
+        1
+    }
 }
 
 fn json_report(results: &[InspectionResult], offense_count: usize) -> String {
@@ -332,17 +586,22 @@ fn json_file(result: &InspectionResult) -> String {
 }
 
 fn json_offense(offense: &Offense) -> String {
-    let last_column = offense.column + offense.length - 1;
-
+    let severity = if offense.cop_name.starts_with("Lint/") {
+        "warning"
+    } else {
+        "convention"
+    };
     format!(
-        "{{\"severity\":\"convention\",\"message\":\"{}\",\"cop_name\":\"{}\",\"corrected\":{},\"correctable\":true,\"location\":{{\"start_line\":{},\"start_column\":{},\"last_line\":{},\"last_column\":{},\"length\":{},\"line\":{},\"column\":{}}}}}",
-        json_escape(TRAILING_WHITESPACE_MESSAGE),
-        json_escape(TRAILING_WHITESPACE_COP),
+        "{{\"severity\":\"{}\",\"message\":\"{}\",\"cop_name\":\"{}\",\"corrected\":{},\"correctable\":{},\"location\":{{\"start_line\":{},\"start_column\":{},\"last_line\":{},\"last_column\":{},\"length\":{},\"line\":{},\"column\":{}}}}}",
+        severity,
+        json_escape(&offense.message),
+        json_escape(offense.cop_name),
         offense.corrected,
+        offense.correctable,
         offense.line,
         offense.column,
-        offense.line,
-        last_column,
+        offense.last_line,
+        offense.last_column,
         offense.length,
         offense.line,
         offense.column
@@ -355,6 +614,11 @@ fn write_simple_report(results: &[InspectionResult], offense_count: usize) {
         .flat_map(|result| &result.offenses)
         .filter(|offense| offense.corrected)
         .count();
+    let correctable_count = results
+        .iter()
+        .flat_map(|result| &result.offenses)
+        .filter(|offense| offense.correctable && !offense.corrected)
+        .count();
 
     for result in results {
         if result.offenses.is_empty() {
@@ -365,18 +629,19 @@ fn write_simple_report(results: &[InspectionResult], offense_count: usize) {
 
         for offense in &result.offenses {
             let correction_label = if offense.corrected {
-                "Corrected"
+                Some("Corrected")
+            } else if offense.correctable {
+                Some("Correctable")
             } else {
-                "Correctable"
+                None
             };
+            let label = correction_label
+                .map(|label| format!(" [{}]", label))
+                .unwrap_or_default();
 
             println!(
-                "C:{:>3}:{:>3}: [{}] {}: {}",
-                offense.line,
-                offense.column,
-                correction_label,
-                TRAILING_WHITESPACE_COP,
-                TRAILING_WHITESPACE_MESSAGE
+                "C:{:>3}:{:>3}:{} {}: {}",
+                offense.line, offense.column, label, offense.cop_name, offense.message
             );
         }
     }
@@ -396,11 +661,13 @@ fn write_simple_report(results: &[InspectionResult], offense_count: usize) {
             corrected_count,
             pluralize("offense", corrected_count)
         );
-    } else if offense_count > 0 {
+    }
+
+    if correctable_count > 0 {
         print!(
             ", {} {} autocorrectable",
-            offense_count,
-            pluralize("offense", offense_count)
+            correctable_count,
+            pluralize("offense", correctable_count)
         );
     }
 

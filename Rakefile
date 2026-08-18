@@ -7,6 +7,14 @@ require "rspec/core/rake_task"
 
 RSpec::Core::RakeTask.new(:spec)
 
+namespace :quality do
+  desc "Enforce module size and Rust complexity ceilings"
+  task :architecture do
+    ruby "script/check_architecture.rb"
+    sh "cargo", "clippy", "--manifest-path", "crates/rustocop/Cargo.toml", "--all-targets"
+  end
+end
+
 namespace :build do
   desc "Build the Rust native binary into libexec/rustocop-native"
   task :native do
@@ -23,6 +31,6 @@ namespace :build do
   end
 end
 
-task spec: "build:native"
+task spec: ["build:native", "quality:architecture"]
 
 task default: :spec

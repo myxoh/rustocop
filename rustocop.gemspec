@@ -10,7 +10,7 @@ Gem::Specification.new do |spec|
 
   spec.summary = "A RuboCop-compatible linter powered by a Rust native binary."
   spec.description = "rustocop aims to preserve RuboCop's CLI and formatter contracts while moving lint execution into Rust."
-  spec.homepage = "https://github.com/rustocop/rustocop"
+  spec.homepage = "https://github.com/myxoh/rustocop"
   spec.license = "MIT"
   spec.required_ruby_version = ">= 3.1"
 
@@ -27,6 +27,7 @@ Gem::Specification.new do |spec|
     "crates/rustocop/Cargo.toml",
     "crates/rustocop/Cargo.lock",
     "crates/rustocop/src/**/*",
+    "docs/**/*",
     "exe/*",
     "lib/**/*",
     "libexec/*"

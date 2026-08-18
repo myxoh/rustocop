@@ -1,0 +1,1 @@
+MyApp::JSON.load(payload)

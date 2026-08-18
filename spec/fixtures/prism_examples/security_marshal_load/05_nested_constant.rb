@@ -1,0 +1,1 @@
+MyApp::Marshal.load(payload)
