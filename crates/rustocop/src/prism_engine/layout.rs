@@ -53,12 +53,12 @@ impl SpaceAfterColon {
             return;
         }
 
-        context.add_offense_offsets(
+        context.insert(
             self.name(),
-            "Space missing after colon.".to_string(),
-            offset,
+            "Space missing after colon.",
+            (offset, offset + 1),
             offset + 1,
-            Some((offset + 1, offset + 1, " ".to_string())),
+            " ",
         );
     }
 }

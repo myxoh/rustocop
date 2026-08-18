@@ -1,34 +1,91 @@
 # rustocop
 
-`rustocop` is a RuboCop-compatible gem backed by a Rust native binary.
+`rustocop` is an unfinished, Rust-backed attempt at making local RuboCop runs
+less painfully slow.
 
 > [!IMPORTANT]
-> **This project was vibe coded.** It was built through iterative human
-> direction and AI coding agents, with upstream specs used as the primary
-> correctness check. The code has not received the kind of sustained human
-> review expected of a mature production linter.
+> **This project was vibe coded.** I am not a Rust expert, and there has not
+> been much human review. Treat it accordingly.
 
 ## Intent and project status
 
-Rustocop is an open-source experiment: how much of RuboCop's behavior can be
-reproduced with a Rust engine and one shared Prism parse per Ruby file, and what
-performance is possible without giving up an executable compatibility contract?
+RuboCop performance sucks on a large local codebase, and I couldn't be arsed to
+properly become a Rust expert before trying to make it faster. So this project
+is being vibed into a RuboCop-compatible local linter instead.
 
-The goal is evidence-backed compatibility, not a loose collection of
-RuboCop-like regexes. Every built-in cop is classified as **verified**,
-**heuristic**, or **missing**, and only complete captured upstream diagnostic
-and correction contracts qualify as verified.
+The useful version of this project is good enough to run locally for fast
+feedback before CI runs real RuboCop and catches anything rustocop missed or got
+wrong. It is not currently supposed to replace RuboCop as the final lint or
+security gate.
 
-This is not an official RuboCop project, is not yet a drop-in replacement, and
-should not be trusted as the sole lint or security gate for production code.
-Expect incomplete configuration handling, false positives, false negatives,
-and breaking changes while parity work is underway. Contributions that improve
-correctness, test coverage, architecture, or reproducible benchmarks are
-welcome.
+Maybe enough interest, use, and scrutiny will eventually turn this into a real
+linter. Until then, expect missing cops, incomplete configuration support,
+false positives, false negatives, and breaking changes.
 
-The gem name and executable are `rustocop`. RuboCop is the compatibility target:
-the specs compare selected `rustocop` output against the real `rubocop` gem so
-we can grow behavior cop by cop without guessing at formatter details.
+We do at least run this against RuboCop's own specs. Every built-in cop is listed
+as **verified**, **heuristic**, or **missing**. Verified means its captured
+diagnostics and corrections pass; it does not mean the whole project is ready
+to replace RuboCop.
+
+## Using it locally
+
+For now, run rustocop from a checkout. You need Ruby 3.1 or newer, Bundler, and a
+working Rust toolchain.
+
+```sh
+git clone https://github.com/myxoh/rustocop.git
+cd rustocop
+bundle install
+bundle exec rake build:native
+```
+
+Run it against a Ruby project by passing the project path:
+
+```sh
+/path/to/rustocop/exe/rustocop /path/to/your/ruby-project
+```
+
+From inside this repository, the equivalent development command is:
+
+```sh
+bundle exec ruby exe/rustocop /path/to/your/ruby-project
+```
+
+Common commands:
+
+```sh
+# Run one cop
+exe/rustocop --only Style/ArrayJoin /path/to/project
+
+# Run a department
+exe/rustocop --only Style /path/to/project
+
+# Pass the target config. Only part of RuboCop's config is understood so far.
+exe/rustocop --config /path/to/project/.rubocop.yml /path/to/project
+
+# Apply available corrections; use this on a clean working tree
+exe/rustocop -A /path/to/project
+
+# Produce RuboCop-style JSON
+exe/rustocop --format json /path/to/project
+
+# See every cop rustocop currently advertises
+exe/rustocop --show-cops
+```
+
+The intended setup is deliberately boring:
+
+```sh
+# Fast local feedback
+/path/to/rustocop/exe/rustocop .
+
+# Authoritative CI check
+bundle exec rubocop
+```
+
+Do not remove RuboCop from CI just because rustocop is fast on your machine.
+Check the [support matrix](docs/cop-support.md) before depending on a cop, and be
+especially cautious with anything marked heuristic.
 
 ## Current support
 
@@ -41,7 +98,7 @@ we can grow behavior cop by cop without guessing at formatter details.
 - Native checks for the RuboCop, Rails, RSpec, Bundler, Layout, Metrics, Naming,
   Style, and Lint cops listed in the project seed config. Singulate-specific
   cops are intentionally excluded.
-- A shared Prism parse and AST visitor powers 33 built-in cops across Layout,
+- A shared Prism parse and AST visitor powers 40 built-in cops across Layout,
   Lint, Security, and Style. The committed differential corpus contains 500 Ruby
   files (25 per cop) and compares JSON output directly with RuboCop.
 - `--show-cops` prints the native support registry.
@@ -65,8 +122,8 @@ and applied as one batch. The differential compatibility suite runs 20 cops
 against 500 generated and committed Ruby fixture files, both cop-by-cop and as a
 single corpus, and compares their JSON reports directly with RuboCop.
 
-The current RuboCop 1.87 matrix contains 28 upstream-spec-verified cops, 51
-heuristic native implementations, and 527 missing built-in cops. A cop is only
+The current RuboCop 1.87 matrix contains 35 upstream-spec-verified cops, 51
+heuristic native implementations, and 520 missing built-in cops. A cop is only
 “verified” after all captured upstream diagnostics and correction assertions
 for that cop pass.
 

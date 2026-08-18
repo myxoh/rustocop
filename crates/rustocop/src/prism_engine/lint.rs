@@ -6,10 +6,42 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
         Box::new(EmptyExpression),
         Box::new(FlipFlop),
         Box::new(FloatComparison),
+        Box::new(FloatOutOfRange),
         Box::new(IdentityComparison),
         Box::new(SelfAssignment),
         Box::new(ToJson),
     ]
+}
+
+struct FloatOutOfRange;
+
+impl Cop for FloatOutOfRange {
+    fn name(&self) -> &'static str {
+        "Lint/FloatOutOfRange"
+    }
+
+    fn on_node<'pr>(
+        &self,
+        node: &Node<'pr>,
+        _ancestors: &[Node<'pr>],
+        source: &str,
+        context: &mut Context,
+    ) {
+        let Some(float) = node.as_float_node() else {
+            return;
+        };
+        let location = float.location();
+        let literal = source_at(source, &location);
+        let nonzero_mantissa = literal
+            .split(['e', 'E'])
+            .next()
+            .is_some_and(|mantissa| mantissa.bytes().any(|byte| matches!(byte, b'1'..=b'9')));
+        if !(float.value().is_infinite() || float.value() == 0.0 && nonzero_mantissa) {
+            return;
+        }
+
+        context.report(self.name(), "Float out of range.", location);
+    }
 }
 
 struct IdentityComparison;
@@ -49,20 +81,16 @@ impl Cop for IdentityComparison {
         let bang = if operator == b"!=" { "!" } else { "" };
         let operator = String::from_utf8_lossy(operator);
         let location = comparison.location();
-        context.add_offense_offsets(
+        context.replace(
             self.name(),
             format!("Use `{bang}equal?` instead of `{operator}` when comparing `object_id`."),
-            location.start_offset(),
-            location.end_offset(),
-            Some((
-                location.start_offset(),
-                location.end_offset(),
-                format!(
-                    "{bang}{}.equal?({})",
-                    source_at(source, &left_receiver.location()),
-                    source_at(source, &right_receiver.location())
-                ),
-            )),
+            &location,
+            &location,
+            format!(
+                "{bang}{}.equal?({})",
+                source_at(source, &left_receiver.location()),
+                source_at(source, &right_receiver.location())
+            ),
         );
     }
 }
@@ -90,19 +118,15 @@ impl Cop for BooleanSymbol {
         }
 
         let location = symbol.location();
-        context.add_offense_offsets(
+        context.replace(
             self.name(),
             format!(
                 "Symbol with a boolean name - you probably meant to use `{}`.",
                 String::from_utf8_lossy(value)
             ),
-            location.start_offset(),
-            location.end_offset(),
-            Some((
-                location.start_offset(),
-                location.end_offset(),
-                String::from_utf8_lossy(value).into_owned(),
-            )),
+            &location,
+            &location,
+            String::from_utf8_lossy(value).into_owned(),
         );
     }
 }
@@ -125,11 +149,10 @@ impl Cop for EmptyExpression {
             return;
         };
         if parentheses.body().is_none() {
-            context.add_offense(
+            context.report(
                 self.name(),
-                "Avoid empty expressions.".to_string(),
+                "Avoid empty expressions.",
                 parentheses.location(),
-                None,
             );
         }
     }
@@ -152,11 +175,10 @@ impl Cop for FlipFlop {
         let Some(flip_flop) = node.as_flip_flop_node() else {
             return;
         };
-        context.add_offense(
+        context.report(
             self.name(),
-            "Avoid the use of flip-flop operators.".to_string(),
+            "Avoid the use of flip-flop operators.",
             flip_flop.location(),
-            None,
         );
     }
 }
@@ -191,7 +213,7 @@ impl Cop for FloatComparison {
         } else {
             "Avoid equality comparisons of floats as they are unreliable."
         };
-        context.add_offense(self.name(), message.to_string(), node.location(), None);
+        context.report(self.name(), message, node.location());
     }
 }
 
@@ -214,12 +236,7 @@ impl Cop for SelfAssignment {
         };
         let value = write.value();
         if source_at(source, &write.name_loc()) == source_at(source, &value.location()) {
-            context.add_offense(
-                self.name(),
-                "Self-assignment detected.".to_string(),
-                write.location(),
-                None,
-            );
+            context.report(self.name(), "Self-assignment detected.", write.location());
         }
     }
 }
@@ -247,13 +264,12 @@ impl Cop for ToJson {
 
         let name = definition.name_loc();
         let location = definition.location();
-        context.add_offense_offsets(
+        context.insert(
             self.name(),
-            "`#to_json` requires an optional argument to be parsable via JSON.generate(obj)."
-                .to_string(),
-            location.start_offset(),
-            location.end_offset(),
-            Some((name.end_offset(), name.end_offset(), "(*_args)".to_string())),
+            "`#to_json` requires an optional argument to be parsable via JSON.generate(obj).",
+            location,
+            name.end_offset(),
+            "(*_args)",
         );
     }
 }

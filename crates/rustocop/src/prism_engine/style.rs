@@ -45,12 +45,12 @@ impl Cop for CharacterLiteral {
         } else {
             format!("\"{content}\"")
         };
-        context.add_offense_offsets(
+        context.replace(
             self.name(),
-            "Do not use the character literal - use string literal instead.".to_string(),
-            location.start_offset(),
-            location.end_offset(),
-            Some((location.start_offset(), location.end_offset(), replacement)),
+            "Do not use the character literal - use string literal instead.",
+            &location,
+            &location,
+            replacement,
         );
     }
 }
@@ -78,13 +78,11 @@ impl Cop for DefWithParentheses {
         if definition.parameters().is_some() || definition.operator_loc().is_some() {
             return;
         }
-        context.add_offense_offsets(
+        context.remove(
             self.name(),
-            "Omit the parentheses in defs when the method doesn't accept any arguments."
-                .to_string(),
-            open.start_offset(),
-            close.end_offset(),
-            Some((open.start_offset(), close.end_offset(), String::new())),
+            "Omit the parentheses in defs when the method doesn't accept any arguments.",
+            (open.start_offset(), close.end_offset()),
+            (open.start_offset(), close.end_offset()),
         );
     }
 }
@@ -104,12 +102,11 @@ impl Cop for MethodCallWithoutArgsParentheses {
         {
             return;
         }
-        context.add_offense_offsets(
+        context.remove(
             self.name(),
-            "Do not use parentheses for method calls with no arguments.".to_string(),
-            open.start_offset(),
-            close.end_offset(),
-            Some((open.start_offset(), close.end_offset(), String::new())),
+            "Do not use parentheses for method calls with no arguments.",
+            (open.start_offset(), close.end_offset()),
+            (open.start_offset(), close.end_offset()),
         );
     }
 }
@@ -133,16 +130,15 @@ impl Cop for NilComparison {
         let Some(selector) = node.message_loc() else {
             return;
         };
-        context.add_offense_offsets(
+        context.replace(
             self.name(),
-            "Prefer the use of the `nil?` predicate.".to_string(),
-            selector.start_offset(),
-            selector.end_offset(),
-            Some((
+            "Prefer the use of the `nil?` predicate.",
+            selector,
+            (
                 receiver.location().end_offset(),
                 node.location().end_offset(),
-                ".nil?".to_string(),
-            )),
+            ),
+            ".nil?",
         );
     }
 }
@@ -186,12 +182,12 @@ impl Cop for NotKeyword {
                 format!("!{}", receiver_source)
             };
             let location = call.location();
-            context.add_offense_offsets(
+            context.replace(
                 self.name(),
-                "Use `!` instead of `not`.".to_string(),
-                selector.start_offset(),
-                selector.end_offset(),
-                Some((location.start_offset(), location.end_offset(), replacement)),
+                "Use `!` instead of `not`.",
+                selector,
+                location,
+                replacement,
             );
         }
     }
@@ -230,16 +226,12 @@ impl Cop for RedundantArrayConstructor {
             return;
         };
         let node_location = call.location();
-        context.add_offense_offsets(
+        context.replace(
             self.name(),
-            "Remove the redundant `Array` constructor.".to_string(),
-            selector.start_offset(),
-            selector.end_offset(),
-            Some((
-                node_location.start_offset(),
-                node_location.end_offset(),
-                source_at(source, &argument.location()).to_string(),
-            )),
+            "Remove the redundant `Array` constructor.",
+            selector,
+            node_location,
+            source_at(source, &argument.location()),
         );
     }
 }
@@ -268,16 +260,12 @@ impl Cop for RedundantFreeze {
             return;
         }
         let location = call.location();
-        context.add_offense_offsets(
+        context.replace(
             self.name(),
-            "Do not freeze immutable objects, as freezing them has no effect.".to_string(),
-            location.start_offset(),
-            location.end_offset(),
-            Some((
-                location.start_offset(),
-                location.end_offset(),
-                source_at(source, &receiver.location()).to_string(),
-            )),
+            "Do not freeze immutable objects, as freezing them has no effect.",
+            &location,
+            &location,
+            source_at(source, &receiver.location()),
         );
     }
 }
@@ -300,12 +288,12 @@ impl Cop for Semicolon {
             return;
         }
         for offset in semicolon_offsets(source) {
-            context.add_offense_offsets(
+            context.replace(
                 self.name(),
-                "Do not use semicolons to terminate expressions.".to_string(),
-                offset,
-                offset + 1,
-                Some((offset, offset + 1, "\n".to_string())),
+                "Do not use semicolons to terminate expressions.",
+                (offset, offset + 1),
+                (offset, offset + 1),
+                "\n",
             );
         }
     }
@@ -345,12 +333,12 @@ impl Cop for StringChars {
         };
         let end = call.location().end_offset();
         let current = &source[selector.start_offset()..end];
-        context.add_offense_offsets(
+        context.replace(
             self.name(),
             format!("Use `chars` instead of `{current}`."),
-            selector.start_offset(),
-            end,
-            Some((selector.start_offset(), end, "chars".to_string())),
+            (selector.start_offset(), end),
+            (selector.start_offset(), end),
+            "chars",
         );
     }
 }
@@ -376,17 +364,12 @@ impl Cop for UnlessElse {
             return;
         }
         let location = unless_node.location();
-        context.add_offense_offsets(
+        context.replace(
             self.name(),
-            "Do not use `unless` with `else`. Rewrite these with the positive case first."
-                .to_string(),
-            location.start_offset(),
-            location.end_offset(),
-            Some((
-                location.start_offset(),
-                location.end_offset(),
-                correct_unless_else(source_at(source, &location)),
-            )),
+            "Do not use `unless` with `else`. Rewrite these with the positive case first.",
+            &location,
+            &location,
+            correct_unless_else(source_at(source, &location)),
         );
     }
 }
@@ -408,11 +391,10 @@ impl Cop for BeginBlock {
         let Some(pre_execution) = node.as_pre_execution_node() else {
             return;
         };
-        context.add_offense(
+        context.report(
             self.name(),
-            "Avoid the use of `BEGIN` blocks.".to_string(),
+            "Avoid the use of `BEGIN` blocks.",
             pre_execution.keyword_loc(),
-            None,
         );
     }
 }
@@ -431,16 +413,12 @@ impl Cop for StringMethods {
         let Some(selector) = node.message_loc() else {
             return;
         };
-        context.add_offense_offsets(
+        context.replace(
             self.name(),
-            "Prefer `to_sym` over `intern`.".to_string(),
-            selector.start_offset(),
-            selector.end_offset(),
-            Some((
-                selector.start_offset(),
-                selector.end_offset(),
-                "to_sym".to_string(),
-            )),
+            "Prefer `to_sym` over `intern`.",
+            &selector,
+            &selector,
+            "to_sym",
         );
     }
 }

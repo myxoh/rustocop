@@ -71,6 +71,11 @@ const SUPPORTED_COPS: &[&str] = &[
     "Style/SuperWithArgsParentheses",
     "Style/TrailingCommaInBlockArgs",
     "Style/WhileUntilDo",
+    "Style/ArrayJoin",
+    "Style/NestedFileDirname",
+    "Style/Proc",
+    "Style/StderrPuts",
+    "Style/Strip",
     "Naming/PredicatePrefix",
     "Naming/AccessorMethodName",
     "Lint/MissingSuper",
@@ -83,6 +88,7 @@ const SUPPORTED_COPS: &[&str] = &[
     "Lint/EmptyExpression",
     "Lint/FlipFlop",
     "Lint/FloatComparison",
+    "Lint/FloatOutOfRange",
     "Lint/IdentityComparison",
     "Lint/SelfAssignment",
     "Lint/ToJSON",
@@ -94,6 +100,7 @@ const SUPPORTED_COPS: &[&str] = &[
     "Security/MarshalLoad",
     "Security/Open",
     "Security/IoMethods",
+    "Security/YAMLLoad",
     "RSpec/NestedGroups",
     "RSpec/EmptyExampleGroup",
     "RSpec/MessageChain",
@@ -124,6 +131,7 @@ struct Options {
     format: String,
     only: Option<String>,
     stdin_path: Option<String>,
+    target_ruby_version: prism_engine::RubyVersion,
 }
 
 #[derive(Clone, Debug)]
@@ -208,6 +216,7 @@ fn parse_args(mut args: Vec<String>) -> Result<Command, String> {
         format: "simple".to_string(),
         only: None,
         stdin_path: None,
+        target_ruby_version: prism_engine::RubyVersion::default(),
     };
 
     while !args.is_empty() {
@@ -222,7 +231,11 @@ fn parse_args(mut args: Vec<String>) -> Result<Command, String> {
             "--format" | "-f" => options.format = take_value(&mut args, &arg)?,
             "--only" => options.only = Some(take_value(&mut args, &arg)?),
             "--stdin" => options.stdin_path = Some(take_value(&mut args, &arg)?),
-            "--config" | "-c" | "--require" | "--plugin" => {
+            "--config" | "-c" => {
+                let path = take_value(&mut args, &arg)?;
+                options.target_ruby_version = target_ruby_version_from_config(&path);
+            }
+            "--require" | "--plugin" => {
                 let _ = take_value(&mut args, &arg)?;
             }
             "--force-exclusion"
@@ -252,9 +265,11 @@ fn parse_args(mut args: Vec<String>) -> Result<Command, String> {
                 options.stdin_path =
                     Some(arg.strip_prefix("--stdin=").unwrap_or_default().to_string());
             }
-            _ if arg.starts_with("--config=")
-                || arg.starts_with("--require=")
-                || arg.starts_with("--plugin=") => {}
+            _ if arg.starts_with("--config=") => {
+                let path = arg.strip_prefix("--config=").unwrap_or_default();
+                options.target_ruby_version = target_ruby_version_from_config(path);
+            }
+            _ if arg.starts_with("--require=") || arg.starts_with("--plugin=") => {}
             _ if arg.starts_with('-') => return Err(format!("unsupported option {}", arg)),
             _ => options.files.push(arg),
         }
@@ -273,6 +288,20 @@ fn take_value(args: &mut Vec<String>, option: &str) -> Result<String, String> {
     }
 
     Ok(args.remove(0))
+}
+
+fn target_ruby_version_from_config(path: &str) -> prism_engine::RubyVersion {
+    fs::read_to_string(path)
+        .ok()
+        .and_then(|source| target_ruby_version_from_source(&source))
+        .unwrap_or_default()
+}
+
+fn target_ruby_version_from_source(source: &str) -> Option<prism_engine::RubyVersion> {
+    source.lines().find_map(|line| {
+        let value = line.trim().strip_prefix("TargetRubyVersion:")?;
+        prism_engine::RubyVersion::parse(value.split('#').next()?.trim())
+    })
 }
 
 fn inspect_targets(options: &Options) -> io::Result<Vec<InspectionResult>> {
@@ -394,9 +423,12 @@ fn inspect_content(path: &str, content: &str, options: &Options) -> (Vec<Offense
     // Every file is parsed once. All AST-based cops share this Prism tree and
     // the corrections they produce are applied together after traversal.
     let prism_source = join_source(&lines);
-    let prism_inspection = prism_engine::inspect(&prism_source, options.autocorrect, &|cop| {
-        cop_enabled(options, cop)
-    });
+    let prism_inspection = prism_engine::inspect(
+        &prism_source,
+        options.autocorrect,
+        options.target_ruby_version,
+        &|cop| cop_enabled(options, cop),
+    );
     offenses.extend(
         prism_inspection
             .findings
@@ -721,4 +753,27 @@ fn json_escape(value: &str) -> String {
     }
 
     escaped
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn reads_target_ruby_version_from_rubocop_config() {
+        let config = "AllCops:\n  TargetRubyVersion: 3.1 # compatibility target\n";
+
+        assert_eq!(
+            target_ruby_version_from_source(config),
+            Some(prism_engine::RubyVersion::new(3, 1))
+        );
+    }
+
+    #[test]
+    fn ignores_unrelated_configuration() {
+        assert_eq!(
+            target_ruby_version_from_source("AllCops:\n  NewCops: enable\n"),
+            None
+        );
+    }
 }

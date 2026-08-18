@@ -26,9 +26,9 @@ sort offenses / apply non-overlapping corrections / format report
 
 - `main.rs` is the application shell: arguments, targets, inspection
   orchestration, and output compatibility.
-- `prism_engine.rs` owns the shared parse, traversal context, cop registry, and
-  correction application. `prism_engine/{lint,security,style}.rs` contain AST
-  cops grouped by RuboCop department.
+- `prism_engine.rs` owns the shared parse, traversal, registry, and reusable
+  Prism node matchers. `prism_engine/diagnostic.rs` owns findings, byte-range
+  normalization, and correction ordering. Department modules contain AST cops.
 - `line_cops/mod.rs` is the only entry point to textual cops.
   `line_cops/{layout,lint,style,bundler,metrics,extensions}.rs` own their
   departments; `helpers.rs` contains shared, side-effect-free text helpers.
@@ -37,6 +37,8 @@ sort offenses / apply non-overlapping corrections / format report
 
 Prism is parsed exactly once for each inspected source. Adding AST cops should
 register another visitor against that shared tree, never parse the file again.
+See [Adding a Prism cop](adding-a-prism-cop.md) for the authoring API and a
+minimal implementation template.
 
 ## Enforced limits
 

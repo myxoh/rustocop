@@ -65,12 +65,12 @@ impl Cop for MinMax {
         }
         let receiver = source_at(source, &min_receiver.location());
         let offender = &source[offense_start..offense_end];
-        context.add_offense_offsets(
+        context.replace(
             self.name(),
             format!("Use `{receiver}.minmax` instead of `{offender}`."),
-            offense_start,
-            offense_end,
-            Some((offense_start, offense_end, format!("{receiver}.minmax"))),
+            (offense_start, offense_end),
+            (offense_start, offense_end),
+            format!("{receiver}.minmax"),
         );
     }
 }
@@ -120,18 +120,14 @@ impl Cop for FileTouch {
 
         let argument = source_at(source, &filename.location());
         let location = call.location();
-        context.add_offense_offsets(
+        context.replace(
             self.name(),
             format!(
                 "Use `FileUtils.touch({argument})` instead of `File.open` in append mode with empty block."
             ),
-            location.start_offset(),
-            location.end_offset(),
-            Some((
-                location.start_offset(),
-                location.end_offset(),
-                format!("FileUtils.touch({argument})"),
-            )),
+            &location,
+            &location,
+            format!("FileUtils.touch({argument})"),
         );
     }
 }
@@ -179,16 +175,12 @@ impl Cop for GlobalStdStream {
 
         let constant = String::from_utf8_lossy(constant);
         let global = String::from_utf8_lossy(global);
-        context.add_offense_offsets(
+        context.replace(
             self.name(),
             format!("Use `{global}` instead of `{constant}`."),
-            location.start_offset(),
-            location.end_offset(),
-            Some((
-                location.start_offset(),
-                location.end_offset(),
-                global.into_owned(),
-            )),
+            &location,
+            &location,
+            global.into_owned(),
         );
     }
 }
@@ -214,12 +206,11 @@ impl Cop for RedundantFileExtensionInRequire {
         }
         let end = string.location().end_offset().saturating_sub(1);
         let start = end.saturating_sub(3);
-        context.add_offense_offsets(
+        context.remove(
             self.name(),
-            "Redundant `.rb` file extension detected.".to_string(),
-            start,
-            end,
-            Some((start, end, String::new())),
+            "Redundant `.rb` file extension detected.",
+            (start, end),
+            (start, end),
         );
     }
 }
@@ -249,16 +240,12 @@ impl Cop for SuperWithArgsParentheses {
         }
         let location = super_node.location();
         let arguments = source_at(source, &arguments.location());
-        context.add_offense_offsets(
+        context.replace(
             self.name(),
-            "Use parentheses for `super` with arguments.".to_string(),
-            location.start_offset(),
-            location.end_offset(),
-            Some((
-                location.start_offset(),
-                location.end_offset(),
-                format!("super({arguments})"),
-            )),
+            "Use parentheses for `super` with arguments.",
+            &location,
+            &location,
+            format!("super({arguments})"),
         );
     }
 }
@@ -300,12 +287,11 @@ impl Cop for TrailingCommaInBlockArgs {
         }
         let comma =
             parameters.location().start_offset() + first_pipe + 1 + arguments.trim_end().len() - 1;
-        context.add_offense_offsets(
+        context.remove(
             self.name(),
-            "Useless trailing comma present in block arguments.".to_string(),
-            comma,
-            comma + 1,
-            Some((comma, comma + 1, String::new())),
+            "Useless trailing comma present in block arguments.",
+            (comma, comma + 1),
+            (comma, comma + 1),
         );
     }
 }
@@ -350,12 +336,11 @@ impl Cop for WhileUntilDo {
         if !source_at(source, &loop_location).contains('\n') {
             return;
         }
-        context.add_offense_offsets(
+        context.remove(
             self.name(),
             format!("Do not use `do` with multi-line `{kind}`."),
-            keyword.start_offset(),
-            keyword.end_offset(),
-            Some((predicate_end, keyword.end_offset(), String::new())),
+            &keyword,
+            (predicate_end, keyword.end_offset()),
         );
     }
 }

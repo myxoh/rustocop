@@ -45,6 +45,45 @@ variation.
 There is no measurable architecture-refactor regression in this run. The
 largest workload improved in both absolute median time and relative speedup.
 
+## Peak memory
+
+Peak resident memory was measured separately with macOS `/usr/bin/time -l` on
+the same files, 20 cops, configuration, JSON formatter, and sequential process
+model. Each size had one warmup and seven measured runs, alternating rustocop
+and RuboCop. Normalized JSON output was identical before measurement.
+
+| Files | Rustocop median / p95 RSS | RuboCop + Prism median / p95 RSS | RuboCop / rustocop |
+| ---: | ---: | ---: | ---: |
+| 1 | 1.98 / 1.98 MiB | 87.23 / 87.67 MiB | 43.96× |
+| 25 | 2.53 / 2.58 MiB | 87.86 / 90.48 MiB | 34.71× |
+| 100 | 2.91 / 2.98 MiB | 88.03 / 90.05 MiB | 30.29× |
+| 500 | 3.67 / 3.77 MiB | 89.08 / 89.20 MiB | 24.26× |
+
+The nearly flat curves show that fixed runtime and startup cost dominate this
+corpus. From one to 500 files, rustocop's peak RSS increased by about 1.69 MiB;
+RuboCop's increased by about 1.85 MiB. This does not imply that arbitrary Ruby
+files cost only a few KiB each: the committed corpus totals just 9,090 source
+bytes. Large files, large literals, and more complex syntax need a separate
+sustained-memory benchmark.
+
+This is a useful baseline for parallelization. A thread pool should retain much
+of rustocop's shared process footprint, while adding worker stacks and multiple
+simultaneously live Prism trees. A process pool would repeat more of the fixed
+footprint per worker. File-level threads are therefore the better first design,
+but worker-count defaults should be validated on a corpus of realistically sized
+application files rather than inferred from this small fixture set.
+
+Reproduce the memory measurement with:
+
+```sh
+bundle exec ruby script/benchmark_memory.rb
+```
+
+The raw report is written to
+`tmp/performance-verification/memory-benchmark.json`.
+
+## Timing interpretation
+
 ```mermaid
 xychart-beta
     title "End-to-end speedup over RuboCop + Prism"

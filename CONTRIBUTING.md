@@ -25,6 +25,10 @@
 5. Corrections use Prism byte offsets and must be non-overlapping. Add an
    autocorrection regression case for every correctable cop.
 
+The [Prism cop authoring guide](docs/adding-a-prism-cop.md) documents the shared
+matcher and diagnostic APIs. Extend those APIs only for a recurring concept,
+not to hide logic that belongs to one cop.
+
 ## Keep complexity bounded
 
 1. Run `bundle exec rake quality:architecture` before submitting a change.

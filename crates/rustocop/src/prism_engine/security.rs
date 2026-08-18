@@ -8,7 +8,35 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
         Box::new(MarshalLoad),
         Box::new(Open),
         Box::new(IoMethods),
+        Box::new(YamlLoad),
     ]
+}
+
+struct YamlLoad;
+
+impl Cop for YamlLoad {
+    fn name(&self) -> &'static str {
+        "Security/YAMLLoad"
+    }
+
+    fn on_call(&self, node: &CallNode<'_>, context: &mut Context) {
+        if context.target_ruby_version().at_least(3, 1)
+            || call_name(node) != b"load"
+            || !root_constant(node.receiver(), b"YAML")
+        {
+            return;
+        }
+        let Some(selector) = node.message_loc() else {
+            return;
+        };
+        context.replace(
+            self.name(),
+            "Prefer using `YAML.safe_load` over `YAML.load`.",
+            &selector,
+            &selector,
+            "safe_load",
+        );
+    }
 }
 
 struct Eval;
@@ -31,11 +59,10 @@ impl Cop for Eval {
         }
 
         if let Some(selector) = node.message_loc() {
-            context.add_offense(
+            context.report(
                 self.name(),
-                "The use of `eval` is a serious security risk.".to_string(),
+                "The use of `eval` is a serious security risk.",
                 selector,
-                None,
             );
         }
     }
@@ -75,11 +102,10 @@ impl Cop for CompoundHash {
                 .is_some_and(|parent| matches!(call_name(&parent), b"^" | b"+" | b"*" | b"|"))
         });
         if inside_hash_method && !nested_combinator {
-            context.add_offense(
+            context.report(
                 self.name(),
-                "Use `[...].hash` instead of combining hash values manually.".to_string(),
+                "Use `[...].hash` instead of combining hash values manually.",
                 call.location(),
-                None,
             );
         }
     }
@@ -100,14 +126,15 @@ impl Cop for JsonLoad {
         }
 
         if let Some(selector) = node.message_loc() {
-            context.add_offense(
+            context.replace(
                 self.name(),
                 format!(
                     "Prefer `JSON.parse` over `JSON.{}`.",
                     String::from_utf8_lossy(method)
                 ),
-                selector,
-                Some((node.message_loc().expect("call selector"), "parse")),
+                &selector,
+                &selector,
+                "parse",
             );
         }
     }
@@ -134,11 +161,10 @@ impl Cop for MarshalLoad {
         }
 
         if let Some(selector) = node.message_loc() {
-            context.add_offense(
+            context.report(
                 self.name(),
                 format!("Avoid using `Marshal.{}`.", String::from_utf8_lossy(method)),
                 selector,
-                None,
             );
         }
     }
@@ -173,14 +199,13 @@ impl Cop for Open {
         }
 
         if let Some(selector) = node.message_loc() {
-            context.add_offense(
+            context.report(
                 self.name(),
                 format!(
                     "The use of `{}open` is a serious security risk.",
                     receiver_name
                 ),
                 selector,
-                None,
             );
         }
     }
@@ -210,7 +235,7 @@ impl Cop for IoMethods {
         let Some(receiver_location) = node.receiver().map(|receiver| receiver.location()) else {
             return;
         };
-        context.add_offense(
+        context.replace(
             self.name(),
             format!(
                 "`File.{}` is safer than `IO.{}`.",
@@ -218,7 +243,8 @@ impl Cop for IoMethods {
                 String::from_utf8_lossy(method)
             ),
             node.location(),
-            Some((receiver_location, "File")),
+            receiver_location,
+            "File",
         );
     }
 }

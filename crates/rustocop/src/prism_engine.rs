@@ -1,16 +1,22 @@
 use ruby_prism::{parse, CallNode, Location, Node, Visit};
 
+mod diagnostic;
 mod layout;
 mod lint;
 mod security;
 mod style;
 mod style_compat;
+mod style_rewrites;
+
+use diagnostic::Context;
+pub use diagnostic::{Finding, Inspection, RubyVersion};
 
 pub const PRISM_COPS: &[&str] = &[
     "Lint/BooleanSymbol",
     "Lint/EmptyExpression",
     "Lint/FlipFlop",
     "Lint/FloatComparison",
+    "Lint/FloatOutOfRange",
     "Lint/IdentityComparison",
     "Lint/SelfAssignment",
     "Lint/ToJSON",
@@ -21,6 +27,7 @@ pub const PRISM_COPS: &[&str] = &[
     "Security/MarshalLoad",
     "Security/Open",
     "Security/IoMethods",
+    "Security/YAMLLoad",
     "Style/CharacterLiteral",
     "Style/BeginBlock",
     "Style/DefWithParentheses",
@@ -40,95 +47,12 @@ pub const PRISM_COPS: &[&str] = &[
     "Style/SuperWithArgsParentheses",
     "Style/TrailingCommaInBlockArgs",
     "Style/WhileUntilDo",
+    "Style/ArrayJoin",
+    "Style/NestedFileDirname",
+    "Style/Proc",
+    "Style/StderrPuts",
+    "Style/Strip",
 ];
-
-#[derive(Debug)]
-pub struct Finding {
-    pub cop_name: &'static str,
-    pub message: String,
-    pub correctable: bool,
-    pub corrected: bool,
-    pub start_offset: usize,
-    pub end_offset: usize,
-}
-
-#[derive(Debug)]
-pub struct Inspection {
-    pub findings: Vec<Finding>,
-    pub corrected_source: String,
-}
-
-#[derive(Debug)]
-struct Edit {
-    start_offset: usize,
-    end_offset: usize,
-    replacement: String,
-}
-
-pub(super) struct Context {
-    autocorrect: bool,
-    findings: Vec<Finding>,
-    edits: Vec<Edit>,
-}
-
-impl Context {
-    pub(super) fn add_offense(
-        &mut self,
-        cop_name: &'static str,
-        message: String,
-        location: Location<'_>,
-        correction: Option<(Location<'_>, &str)>,
-    ) {
-        let correctable = correction.is_some();
-        let corrected = self.autocorrect && correctable;
-
-        if let Some((edit_location, replacement)) = correction.filter(|_| self.autocorrect) {
-            self.edits.push(Edit {
-                start_offset: edit_location.start_offset(),
-                end_offset: edit_location.end_offset(),
-                replacement: replacement.to_string(),
-            });
-        }
-
-        self.findings.push(Finding {
-            cop_name,
-            message,
-            correctable,
-            corrected,
-            start_offset: location.start_offset(),
-            end_offset: location.end_offset(),
-        });
-    }
-
-    pub(super) fn add_offense_offsets(
-        &mut self,
-        cop_name: &'static str,
-        message: String,
-        start_offset: usize,
-        end_offset: usize,
-        correction: Option<(usize, usize, String)>,
-    ) {
-        let correctable = correction.is_some();
-        let corrected = self.autocorrect && correctable;
-
-        if let Some((edit_start, edit_end, replacement)) = correction.filter(|_| self.autocorrect) {
-            self.edits.push(Edit {
-                start_offset: edit_start,
-                end_offset: edit_end,
-                replacement,
-            });
-        }
-
-        self.findings.push(Finding {
-            cop_name,
-            message,
-            correctable,
-            corrected,
-            start_offset,
-            end_offset,
-        });
-    }
-}
 
 pub(super) trait Cop {
     fn name(&self) -> &'static str;
@@ -159,7 +83,8 @@ impl Registry {
             .chain(layout::cops())
             .chain(security::cops())
             .chain(style::cops())
-            .chain(style_compat::cops());
+            .chain(style_compat::cops())
+            .chain(style_rewrites::cops());
 
         Self {
             cops: cops.filter(|cop| enabled(cop.name())).collect(),
@@ -193,18 +118,19 @@ impl<'pr> Visit<'pr> for Runner<'_, 'pr> {
     }
 }
 
-pub fn inspect(source: &str, autocorrect: bool, enabled: &dyn Fn(&str) -> bool) -> Inspection {
+pub fn inspect(
+    source: &str,
+    autocorrect: bool,
+    target_ruby_version: RubyVersion,
+    enabled: &dyn Fn(&str) -> bool,
+) -> Inspection {
     let parsed = parse(source.as_bytes());
     let registry = Registry::enabled(enabled);
     debug_assert!(registry
         .cops
         .iter()
         .all(|cop| PRISM_COPS.contains(&cop.name())));
-    let mut context = Context {
-        autocorrect,
-        findings: Vec::new(),
-        edits: Vec::new(),
-    };
+    let mut context = Context::new(autocorrect, target_ruby_version);
 
     let mut runner = Runner {
         registry: &registry,
@@ -214,36 +140,7 @@ pub fn inspect(source: &str, autocorrect: bool, enabled: &dyn Fn(&str) -> bool) 
     };
     runner.visit(&parsed.node());
 
-    context
-        .findings
-        .sort_by_key(|finding| (finding.start_offset, finding.end_offset, finding.cop_name));
-
-    let corrected_source = apply_edits(source, context.edits);
-
-    Inspection {
-        findings: context.findings,
-        corrected_source,
-    }
-}
-
-fn apply_edits(source: &str, mut edits: Vec<Edit>) -> String {
-    edits.sort_by_key(|edit| (edit.start_offset, edit.end_offset));
-
-    let mut accepted = Vec::with_capacity(edits.len());
-    let mut previous_end = 0;
-    for edit in edits {
-        if edit.start_offset < previous_end || edit.end_offset > source.len() {
-            continue;
-        }
-        previous_end = edit.end_offset;
-        accepted.push(edit);
-    }
-
-    let mut corrected = source.to_string();
-    for edit in accepted.into_iter().rev() {
-        corrected.replace_range(edit.start_offset..edit.end_offset, &edit.replacement);
-    }
-    corrected
+    context.finish(source)
 }
 
 pub(super) fn call_name<'pr>(node: &CallNode<'pr>) -> &'pr [u8] {
@@ -494,9 +391,12 @@ mod tests {
 
     #[test]
     fn parses_once_and_dispatches_to_enabled_cops() {
-        let inspection = inspect("eval(code)\nJSON.load(payload)\n", false, &|cop| {
-            matches!(cop, "Security/Eval" | "Security/JSONLoad")
-        });
+        let inspection = inspect(
+            "eval(code)\nJSON.load(payload)\n",
+            false,
+            RubyVersion::default(),
+            &|cop| matches!(cop, "Security/Eval" | "Security/JSONLoad"),
+        );
 
         assert_eq!(inspection.findings.len(), 2);
         assert_eq!(inspection.findings[0].cop_name, "Security/Eval");
@@ -505,9 +405,12 @@ mod tests {
 
     #[test]
     fn applies_non_overlapping_autocorrections_from_the_shared_tree() {
-        let inspection = inspect("JSON.load(payload)\nIO.read(path)\n", true, &|cop| {
-            matches!(cop, "Security/JSONLoad" | "Security/IoMethods")
-        });
+        let inspection = inspect(
+            "JSON.load(payload)\nIO.read(path)\n",
+            true,
+            RubyVersion::default(),
+            &|cop| matches!(cop, "Security/JSONLoad" | "Security/IoMethods"),
+        );
 
         assert_eq!(
             inspection.corrected_source,
@@ -526,7 +429,7 @@ mod tests {
             "test { |a, b,| a + b }\n",
             "while cond do\nend\n",
         );
-        let inspection = inspect(source, true, &|cop| {
+        let inspection = inspect(source, true, RubyVersion::default(), &|cop| {
             matches!(
                 cop,
                 "Layout/SpaceAfterColon"
@@ -554,11 +457,48 @@ mod tests {
 
     #[test]
     fn replaces_empty_append_file_open_block() {
-        let inspection = inspect("File.open(filename, 'a') {}\n", true, &|cop| {
-            cop == "Style/FileTouch"
-        });
+        let inspection = inspect(
+            "File.open(filename, 'a') {}\n",
+            true,
+            RubyVersion::default(),
+            &|cop| cop == "Style/FileTouch",
+        );
 
         assert_eq!(inspection.findings.len(), 1);
         assert_eq!(inspection.corrected_source, "FileUtils.touch(filename)\n");
+    }
+
+    #[test]
+    fn public_prism_registry_matches_every_registered_cop() {
+        let registry = Registry::enabled(&|_| true);
+        let mut registered = registry
+            .cops
+            .iter()
+            .map(|cop| cop.name())
+            .collect::<Vec<_>>();
+        let mut published = PRISM_COPS.to_vec();
+        registered.sort_unstable();
+        published.sort_unstable();
+
+        assert_eq!(registered, published);
+    }
+
+    #[test]
+    fn target_ruby_version_is_available_to_cops() {
+        let ruby_30 = inspect(
+            "YAML.load(payload)\n",
+            false,
+            RubyVersion::new(3, 0),
+            &|cop| cop == "Security/YAMLLoad",
+        );
+        let ruby_31 = inspect(
+            "YAML.load(payload)\n",
+            false,
+            RubyVersion::new(3, 1),
+            &|cop| cop == "Security/YAMLLoad",
+        );
+
+        assert_eq!(ruby_30.findings.len(), 1);
+        assert!(ruby_31.findings.is_empty());
     }
 }

@@ -8,8 +8,8 @@ Gem::Specification.new do |spec|
   spec.authors = ["rustocop contributors"]
   spec.email = ["contributors@example.com"]
 
-  spec.summary = "A RuboCop-compatible linter powered by a Rust native binary."
-  spec.description = "rustocop aims to preserve RuboCop's CLI and formatter contracts while moving lint execution into Rust."
+  spec.summary = "A fast, unfinished local RuboCop substitute backed by Rust."
+  spec.description = "Vibe-coded local linting for faster feedback, with real RuboCop still expected to run in CI."
   spec.homepage = "https://github.com/myxoh/rustocop"
   spec.license = "MIT"
   spec.required_ruby_version = ">= 3.1"
