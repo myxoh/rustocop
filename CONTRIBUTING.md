@@ -26,9 +26,10 @@
 5. Corrections use Prism byte offsets and must be non-overlapping. Add an
    autocorrection regression case for every correctable cop.
 
-The [Prism cop authoring guide](docs/adding-a-prism-cop.md) documents the shared
-matcher and diagnostic APIs. Extend those APIs only for a recurring concept,
-not to hide logic that belongs to one cop.
+Start with [Building a cop](docs/building-a-cop.md) for the complete workflow.
+The [Prism cop DSL reference](docs/adding-a-prism-cop.md) documents the shared
+callback, matcher, context, and diagnostic APIs. Extend those APIs only for a
+recurring concept, not to hide logic that belongs to one cop.
 
 ## Add a cop
 

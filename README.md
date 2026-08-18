@@ -181,7 +181,9 @@ separate required gate before a cop can be marked fully upstream-compatible.
 
 ## Development
 
-Read [the architecture](docs/architecture.md) and
+Read [Building a cop](docs/building-a-cop.md), the
+[Prism cop DSL reference](docs/adding-a-prism-cop.md),
+[the architecture](docs/architecture.md), and
 [the rules of engagement](CONTRIBUTING.md) before adding cops. The default spec
 task enforces the documented module and function complexity ceilings.
 

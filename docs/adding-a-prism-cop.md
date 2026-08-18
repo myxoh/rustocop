@@ -1,8 +1,34 @@
-# Adding a Prism cop
+# Prism cop DSL reference
 
 Prism cops share one parsed tree, one traversal, and one diagnostic context per
 file. A cop should recognize a syntax pattern and report its intent; it should
 not parse source, manage correction flags, mutate files, or construct findings.
+
+For the complete newcomer workflow—from reading the upstream RuboCop spec to
+promoting support—start with [Building a cop](building-a-cop.md).
+
+## Callback DSL
+
+Every concise cop is declared once inside `define_cops!`:
+
+| Form | Handler signature | Use it for |
+| --- | --- | --- |
+| `call(handler)` | `fn(&CallNode, &mut CopContext)` | One method-call shape |
+| `node(as_if_node, handler)` | `fn(&IfNode, &mut CopContext)` | One typed Prism node |
+| `any_node(handler)` | `fn(&Node, &mut CopContext)` | Several intentional node kinds |
+| `source(handler)` | `fn(&mut CopContext)` | Lexical or file-level rules |
+
+One module can register related cops together:
+
+```rust
+define_cops! {
+    First => "Style/First" => call(check_first),
+    Second => "Lint/Second" => node(as_if_node, check_second),
+}
+```
+
+The generated marker types are stateless and `Sync`. Per-file state belongs in
+the callback/context, never in a cop instance.
 
 ## Start a cop
 
@@ -71,7 +97,7 @@ generator read the runtime registry.
 Every concise callback receives a cop-scoped `CopContext`. It exposes:
 
 - `source()` and the safe `source_file()` geometry helpers;
-- `path()`, `parent()`, `ancestors()`, and common ancestry queries;
+- `path()`, `parent()`, `ancestors()`, `nearest_call()`, and `inside_method()`;
 - target Ruby version and typed cop configuration;
 - reporting and higher-level correction intents.
 
@@ -91,8 +117,9 @@ with AST nodes and raw offsets only when detecting source punctuation.
 - `remove` is a replacement with empty text.
 - `insert` inserts text at a byte offset.
 - `replace_selector` replaces a call's method name.
-- `replace_node`, `remove_node`, `insert_before`, and `insert_after` express
-  common AST correction intents without repeating offsets.
+- `replace_call`, `remove_call`, `replace_node`, `remove_node`, `insert_before`,
+  and `insert_after` express common AST correction intents without repeating
+  offsets.
 - `remove_list_element` owns adjacent separators, while `wrap_node` and
   `remove_statement` handle two other common structural corrections.
 
@@ -125,6 +152,19 @@ if !match_call(node)
 }
 ```
 
+The chainable matcher vocabulary is:
+
+| Question | Methods |
+| --- | --- |
+| Method name | `named`, `named_any` |
+| Receiver | `without_receiver`, `with_receiver`, `on_root_constant`, `on_constant_read`, `on_implicit_or_root_constant`, `on_receiver_call_named` |
+| Arguments | `without_arguments`, `with_arguments`, `with_argument_count`, `with_only_argument_matching`, `with_first_argument_matching`, `with_keyword` |
+| Call shape | `with_block`, `without_block`, `with_operator` |
+
+End every chain with `matches()`. These checks compose with logical AND; use a
+small predicate closure for an argument's node shape and keep configuration or
+business rules outside the matcher.
+
 Keep semantic conditions, source reconstruction, and diagnostic ranges in the
 cop itself. The matcher is for method names, receiver shapes, and argument
 counts—not a place to hide the reason a rule reports an offense.
@@ -148,6 +188,9 @@ context.config_values("AllowedMethods");
 context.config_map("PreferredMethods");
 context.policy().enforced_style("compact");
 context.policy().allows_method(call_name(node));
+context.policy().allows_receiver(receiver_name);
+context.policy().included_path(context.path());
+context.policy().excluded_path(context.path());
 ```
 
 The shared policy also handles allowed patterns and receivers plus cop and
