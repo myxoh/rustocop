@@ -56,7 +56,7 @@ This keeps every cop out of correction bookkeeping.
 
 ## Reusable matchers
 
-`prism_engine/matchers.rs` exposes focused helpers for recurring patterns: call
+`cops/prism/matchers.rs` exposes focused helpers for recurring patterns: call
 names and first arguments, root constants, keyword presence, source slices, and
 common literal classification. The coordinator imports this matcher surface for
 all cop modules. Reuse it before spelling out an equivalent tree walk in a cop.

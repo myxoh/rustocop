@@ -1,0 +1,5 @@
+cop	line	column	last_line	last_column	correctable	corrected	message
+Security/JSONLoad	1	6	1	9	true	true	Prefer `JSON.parse` over `JSON.load`.
+Security/IoMethods	2	1	2	13	true	true	`File.read` is safer than `IO.read`.
+Style/ArrayFirstLast	3	6	3	8	true	true	Use `first`.
+Style/RedundantArrayFlatten	4	6	4	13	true	true	Remove the redundant `flatten`.

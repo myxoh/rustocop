@@ -22,8 +22,15 @@ paths = manifest.map(&:last).then do |groups|
 end
 raise "expected 500 files" unless paths.length == 500
 
-config_path = File.join(output_root, "rubocop-prism.yml")
-File.write(config_path, <<~YAML)
+base_config_path = File.join(output_root, "rubocop-whitequark.yml")
+File.write(base_config_path, <<~YAML)
+  AllCops:
+    ParserEngine: parser_whitequark
+    TargetRubyVersion: 3.4
+    NewCops: enable
+YAML
+prism_config_path = File.join(output_root, "rubocop-prism.yml")
+File.write(prism_config_path, <<~YAML)
   AllCops:
     ParserEngine: parser_prism
     TargetRubyVersion: 3.4
@@ -70,46 +77,49 @@ results = []
 
 sizes.each do |size|
   selected = paths.first(size)
-  rust_command = [native, *common, "--config", config_path, *selected]
-  rubocop_command = [*rubocop, *common, "--config", config_path, *selected]
+  commands = {
+    "rustocop" => [native, *common, "--config", prism_config_path, *selected],
+    "rubocop" => [*rubocop, *common, "--config", base_config_path, *selected],
+    "rubocop_prism" => [*rubocop, *common, "--config", prism_config_path, *selected]
+  }
 
-  rust_report = normalize(command_result(rust_command))
-  rubocop_report = normalize(command_result(rubocop_command))
-  raise "output mismatch at #{size} files" unless rust_report == rubocop_report
-
-  warmups.fetch(size).times do |iteration|
-    commands = iteration.even? ? [rust_command, rubocop_command] : [rubocop_command, rust_command]
-    commands.each { |command| duration(command) }
+  reports = commands.transform_values { |command| normalize(command_result(command)) }
+  reports.each do |name, report|
+    raise "#{name} output mismatch at #{size} files" unless report == reports.fetch("rustocop")
   end
 
-  samples = { "rustocop" => [], "rubocop_prism" => [] }
+  warmups.fetch(size).times do |iteration|
+    commands.keys.rotate(iteration % commands.length).each do |name|
+      duration(commands.fetch(name))
+    end
+  end
+
+  samples = commands.to_h { |name, _command| [name, []] }
   runs.fetch(size).times do |iteration|
-    order = iteration.even? ? %w[rustocop rubocop_prism] : %w[rubocop_prism rustocop]
-    order.each do |name|
-      command = name == "rustocop" ? rust_command : rubocop_command
-      samples.fetch(name) << duration(command)
+    commands.keys.rotate(iteration % commands.length).each do |name|
+      samples.fetch(name) << duration(commands.fetch(name))
     end
   end
 
   medians = samples.transform_values { |values| percentile(values, 0.5) }
+  measurement = lambda do |name|
+    {
+      "median_seconds" => medians.fetch(name),
+      "mean_seconds" => samples.fetch(name).sum.fdiv(runs.fetch(size)),
+      "p95_seconds" => percentile(samples.fetch(name), 0.95),
+      "files_per_second" => size.fdiv(medians.fetch(name))
+    }
+  end
   results << {
     "files" => size,
     "runs" => runs.fetch(size),
     "warmups" => warmups.fetch(size),
     "verified_equal" => true,
-    "rustocop" => {
-      "median_seconds" => medians.fetch("rustocop"),
-      "mean_seconds" => samples.fetch("rustocop").sum.fdiv(runs.fetch(size)),
-      "p95_seconds" => percentile(samples.fetch("rustocop"), 0.95),
-      "files_per_second" => size.fdiv(medians.fetch("rustocop"))
-    },
-    "rubocop_prism" => {
-      "median_seconds" => medians.fetch("rubocop_prism"),
-      "mean_seconds" => samples.fetch("rubocop_prism").sum.fdiv(runs.fetch(size)),
-      "p95_seconds" => percentile(samples.fetch("rubocop_prism"), 0.95),
-      "files_per_second" => size.fdiv(medians.fetch("rubocop_prism"))
-    },
-    "speedup" => medians.fetch("rubocop_prism").fdiv(medians.fetch("rustocop"))
+    "rustocop" => measurement.call("rustocop"),
+    "rubocop" => measurement.call("rubocop"),
+    "rubocop_prism" => measurement.call("rubocop_prism"),
+    "speedup_vs_rubocop" => medians.fetch("rubocop").fdiv(medians.fetch("rustocop")),
+    "speedup_vs_rubocop_prism" => medians.fetch("rubocop_prism").fdiv(medians.fetch("rustocop"))
   }
 end
 
@@ -120,7 +130,7 @@ report = {
     "prism_version" => "1.9.0",
     "ruby_version" => RUBY_VERSION,
     "target_ruby_version" => "3.4",
-    "parser_engine" => "parser_prism",
+    "parser_engines" => { "rubocop" => "parser_whitequark", "rubocop_prism" => "parser_prism" },
     "cops" => cops,
     "corpus_files" => paths.length,
     "cache" => false,
@@ -133,14 +143,16 @@ report = {
 json_path = File.join(output_root, "rubocop-prism-benchmark.json")
 File.write(json_path, JSON.pretty_generate(report))
 
-puts "files\trustocop_ms\trubocop_prism_ms\tspeedup\tverified"
+puts "files\trustocop_ms\trubocop_ms\trubocop_prism_ms\tspeedups\tverified"
 results.each do |result|
   puts format(
-    "%d\t%.3f\t%.3f\t%.2fx\t%s",
+    "%d\t%.3f\t%.3f\t%.3f\t%.2fx/%.2fx\t%s",
     result.fetch("files"),
     result.dig("rustocop", "median_seconds") * 1000,
+    result.dig("rubocop", "median_seconds") * 1000,
     result.dig("rubocop_prism", "median_seconds") * 1000,
-    result.fetch("speedup"),
+    result.fetch("speedup_vs_rubocop"),
+    result.fetch("speedup_vs_rubocop_prism"),
     result.fetch("verified_equal")
   )
 end

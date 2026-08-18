@@ -1,0 +1,2 @@
+cop	line	column	last_line	last_column	correctable	corrected	message
+Bundler/OrderedGems	3	1	3	14	true	true	Gems should be sorted in an alphabetical order within their section of the Gemfile.

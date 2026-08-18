@@ -1,0 +1,2 @@
+cop	line	column	last_line	last_column	correctable	corrected	message
+Rails/ApplicationJob	1	17	1	31	false	false	Jobs should subclass `ApplicationJob`.

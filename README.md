@@ -27,6 +27,33 @@ as **verified**, **heuristic**, or **missing**. Verified means its captured
 diagnostics and corrections pass; it does not mean the whole project is ready
 to replace RuboCop.
 
+## Performance
+
+On the committed 500-file, 20-cop compatibility corpus, rustocop is currently
+about 54–56 times faster than RuboCop. Every timed variant produced identical
+normalized JSON before measurement.
+
+| Files | rustocop | RuboCop (Parser) | RuboCop + Prism | Speedup vs Parser / Prism |
+| ---: | ---: | ---: | ---: | ---: |
+| 1 | 2.92 ms | 457.72 ms | 447.56 ms | 156.86× / 153.38× |
+| 25 | 3.31 ms | 450.07 ms | 451.64 ms | 136.05× / 136.53× |
+| 100 | 4.45 ms | 465.00 ms | 457.08 ms | 104.57× / 102.78× |
+| 500 | **9.45 ms** | **524.49 ms** | **516.26 ms** | **55.51× / 54.64×** |
+
+This uses RuboCop 1.87.0 with caching and server mode disabled. “RuboCop
+(Parser)” explicitly selects `parser_whitequark`; “RuboCop + Prism” selects
+`parser_prism`. RuboCop itself defaults to Prism for a Ruby 3.4 target, so the
+explicit setting is necessary to make this a real parser comparison.
+
+The fixtures total only 9,090 bytes, so this mostly measures startup,
+orchestration, and many tiny file reads—not performance on a representative
+application. See the [full methodology and results](docs/performance.md), or
+reproduce the comparison with:
+
+```sh
+bundle exec ruby script/benchmark_rubocop_prism.rb
+```
+
 ## Using it locally
 
 For now, run rustocop from a checkout. You need Ruby 3.1 or newer, Bundler, and a

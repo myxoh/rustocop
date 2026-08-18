@@ -1,0 +1,253 @@
+use super::helpers::*;
+use super::{push_offense, Offense, SourceLine};
+use crate::config::InspectionConfig;
+
+pub(super) fn before_prism(
+    lines: &mut [SourceLine],
+    options: &InspectionConfig,
+    offenses: &mut Vec<Offense>,
+) {
+    check_empty_ensure(lines, options, offenses);
+    check_small_line_cops(lines, options, offenses);
+}
+
+pub(super) fn after_prism(
+    lines: &[SourceLine],
+    options: &InspectionConfig,
+    offenses: &mut Vec<Offense>,
+) {
+    super::lint_semantic::check(lines, options, offenses);
+}
+
+fn check_empty_ensure(
+    lines: &mut [SourceLine],
+    options: &InspectionConfig,
+    offenses: &mut Vec<Offense>,
+) {
+    let cop = "Lint/EmptyEnsure";
+    if !options.cop_enabled(cop) {
+        return;
+    }
+
+    for index in 0..lines.len() {
+        if !lines[index].body.trim_start().starts_with("ensure") {
+            continue;
+        }
+
+        let has_statement = lines[index + 1..]
+            .iter()
+            .take_while(|candidate| {
+                !matches!(candidate.body.trim(), "end" | "rescue" | "else" | "ensure")
+            })
+            .any(|candidate| {
+                let body = candidate.body.trim();
+                !body.is_empty() && !body.starts_with('#')
+            });
+        if !has_statement {
+            let indentation = leading_spaces(&lines[index].body);
+            push_offense(
+                offenses,
+                cop,
+                "Empty `ensure` block detected.",
+                index + 1,
+                indentation + 1,
+                "ensure".len(),
+                true,
+                options.autocorrect,
+            );
+            if options.autocorrect {
+                lines[index]
+                    .body
+                    .replace_range(indentation..indentation + "ensure".len(), "");
+            }
+        }
+    }
+}
+
+fn check_small_line_cops(
+    lines: &mut [SourceLine],
+    options: &InspectionConfig,
+    offenses: &mut Vec<Offense>,
+) {
+    let mut begin_without_rescue = Vec::new();
+
+    for (index, line) in lines.iter_mut().enumerate() {
+        let original = line.body.clone();
+        let trimmed = original.trim_start();
+        let indentation = leading_spaces(&original);
+
+        if trimmed == "begin" {
+            begin_without_rescue.push(true);
+        } else if trimmed.starts_with("rescue") {
+            if let Some(begin) = begin_without_rescue.last_mut() {
+                *begin = false;
+            }
+        } else if trimmed == "end" {
+            begin_without_rescue.pop();
+        } else if trimmed == "else"
+            && begin_without_rescue.last().copied() == Some(true)
+            && options.cop_enabled("Lint/UselessElseWithoutRescue")
+        {
+            push_offense(
+                offenses,
+                "Lint/UselessElseWithoutRescue",
+                "`else` without `rescue` is useless.",
+                index + 1,
+                indentation + 1,
+                4,
+                false,
+                false,
+            );
+        }
+
+        if options.cop_enabled("Lint/TrailingCommaInAttributeDeclaration")
+            && ["attr_reader", "attr_writer", "attr_accessor"]
+                .iter()
+                .any(|keyword| trimmed.starts_with(keyword))
+            && trimmed.ends_with(',')
+        {
+            let comma = original.rfind(',').expect("trailing comma");
+            push_offense(
+                offenses,
+                "Lint/TrailingCommaInAttributeDeclaration",
+                "Avoid leaving a trailing comma in attribute declarations.",
+                index + 1,
+                comma + 1,
+                1,
+                true,
+                options.autocorrect,
+            );
+            if options.autocorrect {
+                line.body.remove(comma);
+            }
+        }
+
+        if options.cop_enabled("Style/EndBlock") && trimmed.starts_with("END ") {
+            push_offense(
+                offenses,
+                "Style/EndBlock",
+                "Avoid the use of `END` blocks. Use `Kernel#at_exit` instead.",
+                index + 1,
+                indentation + 1,
+                3,
+                true,
+                options.autocorrect,
+            );
+            if options.autocorrect {
+                line.body
+                    .replace_range(indentation..indentation + 3, "at_exit");
+            }
+        }
+
+        if options.cop_enabled("Style/ColonMethodDefinition") && trimmed.starts_with("def ") {
+            if let Some(relative) = trimmed[4..].find("::") {
+                let column = indentation + 4 + relative;
+                push_offense(
+                    offenses,
+                    "Style/ColonMethodDefinition",
+                    "Do not use `::` for defining class methods.",
+                    index + 1,
+                    column + 1,
+                    2,
+                    true,
+                    options.autocorrect,
+                );
+                if options.autocorrect {
+                    line.body.replace_range(column..column + 2, ".");
+                }
+            }
+        }
+
+        if options.cop_enabled("Style/EmptyLambdaParameter") {
+            if let Some(start) = original.find("-> ()") {
+                push_offense(
+                    offenses,
+                    "Style/EmptyLambdaParameter",
+                    "Omit parentheses for the empty lambda parameters.",
+                    index + 1,
+                    start + 4,
+                    2,
+                    true,
+                    options.autocorrect,
+                );
+                if options.autocorrect {
+                    line.body.replace_range(start + 2..start + 5, "");
+                }
+            }
+        }
+
+        if options.cop_enabled("Lint/BigDecimalNew") {
+            if let Some(new_start) = original.find("BigDecimal.new") {
+                let selector = new_start + "BigDecimal.".len();
+                push_offense(
+                    offenses,
+                    "Lint/BigDecimalNew",
+                    "`BigDecimal.new()` is deprecated. Use `BigDecimal()` instead.",
+                    index + 1,
+                    selector + 1,
+                    3,
+                    true,
+                    options.autocorrect,
+                );
+                if options.autocorrect {
+                    line.body.replace_range(selector - 1..selector + 3, "");
+                    if line.body[0..new_start].ends_with("::") {
+                        line.body.replace_range(new_start - 2..new_start, "");
+                    }
+                }
+            }
+        }
+
+        if options.cop_enabled("Style/InlineComment") {
+            if let Some(comment) = original.find('#') {
+                let text = &original[comment..];
+                if !original[..comment].trim().is_empty() && !text.starts_with("# rubocop:") {
+                    push_offense(
+                        offenses,
+                        "Style/InlineComment",
+                        "Avoid trailing inline comments.",
+                        index + 1,
+                        comment + 1,
+                        text.chars().count(),
+                        false,
+                        false,
+                    );
+                }
+            }
+        }
+
+        if options.cop_enabled("Style/DoubleCopDisableDirective") {
+            let directive = if original.matches("# rubocop:disable ").count() > 1 {
+                Some("disable")
+            } else if original.matches("# rubocop:todo ").count() > 1 {
+                Some("todo")
+            } else {
+                None
+            };
+            if let Some(directive) = directive {
+                let marker = format!("# rubocop:{} ", directive);
+                let start = original.find(&marker).expect("duplicate directive");
+                push_offense(
+                    offenses,
+                    "Style/DoubleCopDisableDirective",
+                    "More than one disable comment on one line.",
+                    index + 1,
+                    start + 1,
+                    original[start..].chars().count(),
+                    true,
+                    options.autocorrect,
+                );
+                if options.autocorrect {
+                    let names = original[start..]
+                        .split(&marker)
+                        .filter(|name| !name.is_empty())
+                        .map(str::trim)
+                        .collect::<Vec<_>>()
+                        .join(", ");
+                    line.body
+                        .replace_range(start.., &format!("{}{}", marker, names));
+                }
+            }
+        }
+    }
+}

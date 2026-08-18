@@ -1,0 +1,4 @@
+cop	line	column	last_line	last_column	correctable	corrected	message
+Layout/ExtraSpacing	1	7	1	8	true	false	Unnecessary spacing detected.
+Security/Eval	1	11	1	14	false	false	The use of `eval` is a serious security risk.
+Security/JSONLoad	2	6	2	9	true	false	Prefer `JSON.parse` over `JSON.load`.

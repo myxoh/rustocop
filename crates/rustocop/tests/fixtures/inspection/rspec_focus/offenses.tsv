@@ -1,0 +1,2 @@
+cop	line	column	last_line	last_column	correctable	corrected	message
+RSpec/Focus	2	3	2	16	false	false	Focused spec found.

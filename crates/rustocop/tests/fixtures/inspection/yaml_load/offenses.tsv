@@ -1,0 +1,2 @@
+cop	line	column	last_line	last_column	correctable	corrected	message
+Security/YAMLLoad	1	6	1	9	true	false	Prefer using `YAML.safe_load` over `YAML.load`.

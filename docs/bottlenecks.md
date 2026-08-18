@@ -3,7 +3,7 @@
 This document records measured and code-level performance bottlenecks for later
 optimization. It is a backlog, not a claim that the current implementation is
 slow: on the committed 500-file compatibility corpus, sequential Rustocop is
-currently about 53 times faster than RuboCop with Prism. This document also
+currently about 55 times faster than RuboCop with Prism. This document also
 keeps addressed bottlenecks visible so later changes do not accidentally
 reintroduce them.
 
@@ -21,14 +21,14 @@ mode.
 
 | Enabled cops | 500-file median |
 | ---: | ---: |
-| None | 9.32 ms |
-| 1 | 9.46 ms |
-| 5 | 9.89 ms |
-| 20 | 9.74 ms |
+| None | 7.81 ms |
+| 1 | 8.00 ms |
+| 5 | 8.11 ms |
+| 20 | 8.44 ms |
 
 The end-to-end process floor on one tiny file remains approximately 3 ms. The
-20-cop median was 19.28 ms before the execution-plan refactor and is now 9.74
-ms, a 1.98-times improvement. At this corpus size, the former per-file registry
+20-cop median was 19.28 ms before the execution-plan refactor and is now 8.44
+ms, a 2.28-times improvement. At this corpus size, the former per-file registry
 and source-representation overhead had obscured traversal dispatch cost.
 
 Raw benchmark reports are generated under `tmp/performance-verification/` by:
@@ -45,7 +45,8 @@ bundle exec ruby script/benchmark_cop_scaling.rb
 Status: addressed on 2026-08-18 and covered by unit, parallel-parity, and full
 upstream-corpus tests.
 
-`prism_engine::inspect` constructs `Registry::enabled` for every source file.
+The former Prism inspection entrypoint constructed `Registry::enabled` for
+every source file.
 This allocates all registered cop objects, calls the enabled predicate for each
 one, retains the selected cops, and destroys the registry after that file. Cop
 selection does not normally change within one command, so most of this work is
@@ -129,8 +130,8 @@ Implemented:
 
 Confidence: measured.
 
-Automatic parallel execution currently improves the 500-file corpus from 8.88
-ms to 7.80 ms, a 1.14-times speedup. At 25 files it is slightly slower than
+Automatic parallel execution currently improves the 500-file corpus from 9.68
+ms to 8.52 ms, a 1.14-times speedup. At 25 files it is slightly slower than
 sequential execution. The earlier 2.29-times speedup largely compensated for
 per-file setup that the run-level execution plan has now removed.
 Thread startup, atomic queue access, allocation, and file-open overhead dominate
