@@ -1,4 +1,4 @@
-# Performance against RuboCop with Parser and Prism
+# Performance against RuboCop with Prism
 
 Re-measured after the package-boundary refactor on 2026-08-18
 against RuboCop 1.87.0 and Prism 1.9.0. This is an interim benchmark over the
@@ -6,39 +6,35 @@ committed 500-file compatibility corpus and its 20 shared cops. It is not the
 final 606-cop benchmark.
 
 Every size was verified by comparing normalized JSON reports before timing.
-All three variants were identical at every size. Rustocop was built in release
-mode; the two RuboCop variants explicitly selected their parser engines:
+Both tools were identical at every size. Rustocop was built in release mode;
+RuboCop explicitly selected Prism to keep the benchmark configuration stable:
 
 ```yaml
 AllCops:
-  ParserEngine: parser_whitequark # base RuboCop measurement
-  # ParserEngine: parser_prism    # RuboCop + Prism measurement
+  ParserEngine: parser_prism
   TargetRubyVersion: 3.4
   NewCops: enable
 ```
 
-RuboCop 1.87 defaults to Prism for a Ruby 3.4 target, so explicitly selecting
-`parser_whitequark` is required for a distinct base-parser comparison. All
-variants ran with caching and server mode disabled and used the JSON formatter.
-Timed output was discarded. Commands were rotated between variants, with 2–3
+Both tools ran with caching and server mode disabled and used the JSON
+formatter. Timed output was discarded. Commands were alternated, with 2–3
 warmups followed by 7–30 measured runs depending on corpus size.
 
 ## Results
 
-| Files | Runs | Rustocop median / p95 | RuboCop Parser median / p95 | RuboCop Prism median / p95 | Speedup vs Parser / Prism |
-| ---: | ---: | ---: | ---: | ---: | ---: |
-| 1 | 30 | 2.918 / 3.745 ms | 457.718 / 650.142 ms | 447.560 / 594.765 ms | 156.86× / 153.38× |
-| 25 | 20 | 3.308 / 3.605 ms | 450.066 / 459.468 ms | 451.635 / 457.558 ms | 136.05× / 136.53× |
-| 100 | 12 | 4.447 / 4.938 ms | 465.004 / 493.982 ms | 457.083 / 466.280 ms | 104.57× / 102.78× |
-| 500 | 7 | 9.448 / 12.166 ms | 524.489 / 539.847 ms | 516.258 / 533.897 ms | 55.51× / 54.64× |
+| Files | Runs | Rustocop median / p95 | RuboCop Prism median / p95 | Speedup |
+| ---: | ---: | ---: | ---: | ---: |
+| 1 | 30 | 2.918 / 3.745 ms | 447.560 / 594.765 ms | 153.38× |
+| 25 | 20 | 3.308 / 3.605 ms | 451.635 / 457.558 ms | 136.53× |
+| 100 | 12 | 4.447 / 4.938 ms | 457.083 / 466.280 ms | 102.78× |
+| 500 | 7 | 9.448 / 12.166 ms | 516.258 / 533.897 ms | 54.64× |
 
 ## Interpretation
 
-The one-file result is dominated by process startup. At 500 files, Prism makes
-RuboCop about 2% faster than the Parser-gem engine, while rustocop remains about
-55 times faster than either RuboCop configuration. The benchmark does not show
-that parsing itself is 54 times faster: this tiny corpus measures the complete
-CLI, configuration, file, traversal, and formatting paths together.
+The one-file result is dominated by process startup. At 500 files, rustocop is
+about 55 times faster than RuboCop. The benchmark does not show that parsing
+itself is 55 times faster: this tiny corpus measures the complete CLI,
+configuration, file, traversal, and formatting paths together.
 
 ## Peak memory
 
@@ -116,10 +112,10 @@ xychart-beta
 ```
 
 At 500 files, median throughput was approximately 52,921 files/second for
-Rustocop, 953 for RuboCop with Parser, and 968 for RuboCop with Prism. The
-corpus is deliberately small—500 files totaling 9,090 bytes—so these figures
-primarily measure CLI startup, configuration, parsing, dispatch, and formatter
-overhead rather than sustained performance on large application files.
+Rustocop and 968 for RuboCop with Prism. The corpus is deliberately small—500
+files totaling 9,090 bytes—so these figures primarily measure CLI startup,
+configuration, parsing, dispatch, and formatter overhead rather than sustained
+performance on large application files.
 
 Environment: Apple M5 Pro (15 cores), 24 GB RAM, macOS arm64, Ruby 3.4.9,
 Rust 1.96.0. The raw report is generated under

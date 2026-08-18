@@ -149,3 +149,19 @@ fixture_test!(
     false,
     RubyVersion::default()
 );
+fixture_test!(
+    applies_source_rule_corrections,
+    "source_rule_autocorrect",
+    "/project/source_rules.rb",
+    "Style/SymbolLiteral,Style/ArrayIntersectWithSingleElement,Style/EnvHome,Style/WhenThen",
+    true,
+    RubyVersion::default()
+);
+fixture_test!(
+    reports_source_rule_diagnostics,
+    "source_rule_diagnostics",
+    "/project/source_rules.rb",
+    "Lint/DuplicateElsifCondition,Lint/EnsureReturn,Naming/ClassAndModuleCamelCase",
+    false,
+    RubyVersion::default()
+);

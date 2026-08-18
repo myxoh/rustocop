@@ -1,0 +1,4 @@
+cop	line	column	last_line	last_column	correctable	corrected	message
+Naming/ClassAndModuleCamelCase	1	7	1	14	false	false	Use CamelCase for classes and modules.
+Lint/DuplicateElsifCondition	5	11	5	20	false	false	Duplicate `elsif` condition detected.
+Lint/EnsureReturn	8	5	8	16	false	false	Do not return from an `ensure` block.

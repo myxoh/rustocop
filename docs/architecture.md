@@ -57,7 +57,7 @@ run-level InspectionPlan
         +--> text::before_prism  (safe textual corrections, when enabled)
         |
         +--> one Prism parse per file
-        |        (all enabled AST cops share Context and tree)
+        |        (source-wide hooks run once; AST cops share Context and tree)
         |
         +--> text::after_prism   (read-only compatibility cops, when enabled)
         |

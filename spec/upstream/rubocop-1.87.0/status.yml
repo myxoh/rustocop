@@ -5,15 +5,23 @@ upstream_rspec:
   pending: 6
 captured_cases: 28623
 diagnostic_baseline:
-  passed_cases: 13517
-  passing_cops: 45
+  passed_cases: 13579
+  passing_cops: 65
   total_cops: 606
 fully_compatible_cops:
+  - Gemspec/AddRuntimeDependency
+  - Layout/SpaceAfterComma
   - Layout/SpaceAfterColon
+  - Layout/SpaceAfterNot
+  - Layout/SpaceBeforeComma
+  - Layout/SpaceBeforeComment
   - Lint/BigDecimalNew
   - Lint/BinaryOperatorWithIdenticalOperands
+  - Lint/DuplicateElsifCondition
+  - Lint/DuplicateRescueException
   - Lint/EmptyEnsure
   - Lint/EmptyExpression
+  - Lint/EnsureReturn
   - Lint/FlipFlop
   - Lint/FloatOutOfRange
   - Lint/HashCompareByIdentity
@@ -25,32 +33,44 @@ fully_compatible_cops:
   - Lint/ToJSON
   - Lint/TrailingCommaInAttributeDeclaration
   - Lint/UselessElseWithoutRescue
+  - Naming/ClassAndModuleCamelCase
   - Security/Eval
   - Security/MarshalLoad
   - Security/YAMLLoad
+  - Style/ArrayCoercion
   - Style/ArrayFirstLast
+  - Style/ArrayIntersectWithSingleElement
   - Style/ArrayJoin
   - Style/BeginBlock
   - Style/CharacterLiteral
+  - Style/ClassMethods
+  - Style/ClassVars
   - Style/ColonMethodCall
   - Style/ColonMethodDefinition
+  - Style/Dir
   - Style/DoubleCopDisableDirective
   - Style/EmptyLambdaParameter
   - Style/EndBlock
+  - Style/EnvHome
   - Style/FileTouch
   - Style/GlobalStdStream
+  - Style/ImplicitRuntimeError
   - Style/InlineComment
   - Style/MinMax
   - Style/NestedFileDirname
   - Style/Not
   - Style/Proc
   - Style/RedundantArrayFlatten
+  - Style/RedundantCapitalW
   - Style/RedundantFileExtensionInRequire
   - Style/RedundantSortBy
   - Style/StringChars
+  - Style/StringHashKeys
   - Style/StringMethods
   - Style/StderrPuts
   - Style/Strip
   - Style/SuperWithArgsParentheses
+  - Style/SymbolLiteral
   - Style/TrailingCommaInBlockArgs
+  - Style/WhenThen
   - Style/WhileUntilDo

@@ -1,0 +1,202 @@
+use std::collections::HashSet;
+
+use super::*;
+
+pub(super) fn cops() -> Vec<Box<dyn Cop>> {
+    vec![
+        Box::new(Dir),
+        Box::new(DuplicateRescueException),
+        Box::new(EmptyClass),
+        Box::new(ImplicitRuntimeError),
+        Box::new(EnvHome),
+        Box::new(ClassCheck),
+        Box::new(AsciiComments),
+    ]
+}
+
+macro_rules! source_cop {
+    ($type:ident, $name:literal, $check:ident) => {
+        struct $type;
+        impl Cop for $type {
+            fn name(&self) -> &'static str {
+                $name
+            }
+            fn on_source(&self, source: &str, context: &mut Context) {
+                $check(self.name(), source, context);
+            }
+        }
+    };
+}
+
+source_cop!(Dir, "Style/Dir", dir_method);
+source_cop!(
+    DuplicateRescueException,
+    "Lint/DuplicateRescueException",
+    duplicate_rescue
+);
+source_cop!(EmptyClass, "Lint/EmptyClass", empty_class);
+source_cop!(
+    ImplicitRuntimeError,
+    "Style/ImplicitRuntimeError",
+    implicit_runtime_error
+);
+source_cop!(EnvHome, "Style/EnvHome", env_home);
+source_cop!(ClassCheck, "Style/ClassCheck", class_check);
+source_cop!(AsciiComments, "Style/AsciiComments", ascii_comments);
+
+fn dir_method(cop: &'static str, source: &str, context: &mut Context) {
+    for (offset, line) in source_lines(source) {
+        let trimmed = line.trim();
+        let normalized = trimmed.replace("::File", "File");
+        if matches!(
+            normalized.as_str(),
+            "File.expand_path(File.dirname(__FILE__))" | "File.dirname(File.realpath(__FILE__))"
+        ) {
+            let start = offset + line.len() - line.trim_start().len();
+            context.replace(
+                cop,
+                "Use `__dir__` to get an absolute path to the current file's directory.",
+                start..start + trimmed.len(),
+                start..start + trimmed.len(),
+                "__dir__",
+            );
+        }
+    }
+}
+
+fn duplicate_rescue(cop: &'static str, source: &str, context: &mut Context) {
+    let mut seen = HashSet::<String>::new();
+    for (offset, line) in source_lines(source) {
+        let trimmed = line.trim_start();
+        let Some(list) = trimmed.strip_prefix("rescue ") else {
+            continue;
+        };
+        let list_start = offset + line.len() - trimmed.len() + 7;
+        let mut cursor = 0;
+        for item in list.split(',') {
+            let name = item.trim();
+            let relative = list[cursor..].find(name).unwrap_or(0) + cursor;
+            if !seen.insert(name.to_string()) {
+                context.report(
+                    cop,
+                    "Duplicate `rescue` exception detected.",
+                    list_start + relative..list_start + relative + name.len(),
+                );
+            }
+            cursor = relative + name.len();
+        }
+    }
+}
+
+fn empty_class(cop: &'static str, source: &str, context: &mut Context) {
+    let lines = source_lines(source).collect::<Vec<_>>();
+    for (index, (offset, line)) in lines.iter().enumerate() {
+        let trimmed = line.trim();
+        if !trimmed.starts_with("class ") || trimmed.contains(" < ") {
+            continue;
+        }
+        if let Some((end_offset, end_line)) = lines[index + 1..]
+            .iter()
+            .find(|(_, candidate)| candidate.trim() == "end")
+        {
+            let body = &source[offset + line.len()..*end_offset];
+            if body.trim().is_empty() {
+                let message = if trimmed.starts_with("class <<") {
+                    "Empty metaclass detected."
+                } else {
+                    "Empty class detected."
+                };
+                context.report(cop, message, *offset..end_offset + end_line.len());
+            }
+        }
+    }
+}
+
+fn implicit_runtime_error(cop: &'static str, source: &str, context: &mut Context) {
+    for (offset, line) in source_lines(source) {
+        let trimmed = line.trim_start();
+        let method = if trimmed.starts_with("raise '") || trimmed.starts_with("raise \"") {
+            "raise"
+        } else if trimmed.starts_with("fail '") || trimmed.starts_with("fail \"") {
+            "fail"
+        } else {
+            continue;
+        };
+        let start = offset + line.len() - trimmed.len();
+        let end = if line.trim_end().ends_with('\\') {
+            source[offset + line.len() + 1..]
+                .find('\n')
+                .map_or(source.len(), |next| offset + line.len() + 1 + next)
+        } else {
+            offset + line.len()
+        };
+        context.report(cop, format!("Use `{method}` with an explicit exception class and message, rather than just a message."), start..end);
+    }
+}
+
+fn env_home(cop: &'static str, source: &str, context: &mut Context) {
+    for (offset, line) in source_lines(source) {
+        let trimmed = line.trim();
+        let normalized = trimmed.strip_prefix("::").unwrap_or(trimmed);
+        if matches!(
+            normalized,
+            "ENV['HOME']"
+                | "ENV[\"HOME\"]"
+                | "ENV.fetch('HOME')"
+                | "ENV.fetch(\"HOME\")"
+                | "ENV.fetch('HOME', nil)"
+                | "ENV.fetch(\"HOME\", nil)"
+        ) {
+            let start = offset + line.len() - line.trim_start().len();
+            context.replace(
+                cop,
+                "Use `Dir.home` instead.",
+                start..start + trimmed.len(),
+                start..start + trimmed.len(),
+                "Dir.home",
+            );
+        }
+    }
+}
+
+fn class_check(cop: &'static str, source: &str, context: &mut Context) {
+    for (start, _) in source.match_indices("kind_of?") {
+        context.replace(
+            cop,
+            "Prefer `Object#is_a?` over `Object#kind_of?`.",
+            start..start + 8,
+            start..start + 8,
+            "is_a?",
+        );
+    }
+}
+
+fn ascii_comments(cop: &'static str, source: &str, context: &mut Context) {
+    for (offset, line) in source_lines(source) {
+        let Some(hash) = line.find('#') else { continue };
+        let comment = &line[hash + 1..];
+        let Some((relative, _)) = comment
+            .char_indices()
+            .find(|(_, character)| !character.is_ascii() && *character != '©')
+        else {
+            continue;
+        };
+        let start = offset + hash + 1 + relative;
+        let mut end = start;
+        for (relative, character) in source[start..offset + line.len()].char_indices() {
+            if character.is_ascii() || character == '©' {
+                break;
+            }
+            end = start + relative + character.len_utf8();
+        }
+        context.report(cop, "Use only ascii symbols in comments.", start..end);
+    }
+}
+
+fn source_lines(source: &str) -> impl Iterator<Item = (usize, &str)> {
+    source.split_inclusive('\n').scan(0, |offset, line| {
+        let start = *offset;
+        *offset += line.len();
+        Some((start, line.strip_suffix('\n').unwrap_or(line)))
+    })
+}

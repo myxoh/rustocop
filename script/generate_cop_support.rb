@@ -16,7 +16,7 @@ def rust_string_constant(path, name)
 end
 
 supported_cops = rust_string_constant(
-  File.join(ROOT, "crates", "rustocop", "src", "main.rs"),
+  File.join(ROOT, "crates", "rustocop", "src", "catalog.rs"),
   "SUPPORTED_COPS"
 )
 upstream_status = YAML.safe_load(

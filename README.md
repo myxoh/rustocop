@@ -30,20 +30,17 @@ to replace RuboCop.
 ## Performance
 
 On the committed 500-file, 20-cop compatibility corpus, rustocop is currently
-about 54–56 times faster than RuboCop. Every timed variant produced identical
+about 55 times faster than RuboCop with Prism. Both tools produced identical
 normalized JSON before measurement.
 
-| Files | rustocop | RuboCop (Parser) | RuboCop + Prism | Speedup vs Parser / Prism |
-| ---: | ---: | ---: | ---: | ---: |
-| 1 | 2.92 ms | 457.72 ms | 447.56 ms | 156.86× / 153.38× |
-| 25 | 3.31 ms | 450.07 ms | 451.64 ms | 136.05× / 136.53× |
-| 100 | 4.45 ms | 465.00 ms | 457.08 ms | 104.57× / 102.78× |
-| 500 | **9.45 ms** | **524.49 ms** | **516.26 ms** | **55.51× / 54.64×** |
+| Files | rustocop | RuboCop (Prism) | Speedup |
+| ---: | ---: | ---: | ---: |
+| 1 | 2.92 ms | 447.56 ms | 153.38× |
+| 25 | 3.31 ms | 451.64 ms | 136.53× |
+| 100 | 4.45 ms | 457.08 ms | 102.78× |
+| 500 | **9.45 ms** | **516.26 ms** | **54.64×** |
 
-This uses RuboCop 1.87.0 with caching and server mode disabled. “RuboCop
-(Parser)” explicitly selects `parser_whitequark`; “RuboCop + Prism” selects
-`parser_prism`. RuboCop itself defaults to Prism for a Ruby 3.4 target, so the
-explicit setting is necessary to make this a real parser comparison.
+This uses RuboCop 1.87.0 with Prism, caching disabled, and server mode disabled.
 
 The fixtures total only 9,090 bytes, so this mostly measures startup,
 orchestration, and many tiny file reads—not performance on a representative
@@ -155,8 +152,8 @@ and applied as one batch. The differential compatibility suite runs 20 cops
 against 500 generated and committed Ruby fixture files, both cop-by-cop and as a
 single corpus, and compares their JSON reports directly with RuboCop.
 
-The current RuboCop 1.87 matrix contains 45 upstream-spec-verified cops, 51
-heuristic native implementations, and 510 missing built-in cops. A cop is only
+The current RuboCop 1.87 matrix contains 65 upstream-spec-verified cops, 58
+heuristic native implementations, and 483 missing built-in cops. A cop is only
 “verified” after all captured upstream diagnostics and correction assertions
 for that cop pass.
 

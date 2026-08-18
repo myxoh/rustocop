@@ -7,7 +7,10 @@ not parse source, manage correction flags, mutate files, or construct findings.
 ## Minimal cop
 
 Add the cop to the department module's `cops()` list and implement `Cop`. Use
-`on_call` when calls are the only relevant node type, otherwise use `on_node`.
+`on_call` when calls are the only relevant node type, `on_node` for other AST
+nodes, and `on_source` for a rule that must inspect the complete file exactly
+once. Source-wide rules still share the existing parse and correction context;
+they must not read the file or parse it again.
 
 ```rust
 struct Example;

@@ -115,7 +115,10 @@ workers = Array.new(options[:jobs]) do
             native, "-A", "--format", "json", "--only", test_case.fetch("cop"),
             "--config", test_case.fetch("config_path"), source_path
           )
-          correction_passed = correction_status.success? && correction_stderr.empty? &&
+          acceptable_status = correction_status.success? ||
+                              (test_case.fetch("asserts_no_correction", false) &&
+                               correction_status.exitstatus == 1)
+          correction_passed = acceptable_status && correction_stderr.empty? &&
                               File.binread(source_path) == expected_correction
         end
         passed &&= correction_passed

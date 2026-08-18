@@ -7,6 +7,9 @@ mod lint_control_flow;
 mod lint_suspicious_calls;
 mod matchers;
 mod security;
+mod source_rules;
+mod source_rules_layout;
+mod source_rules_misc;
 mod style;
 mod style_calls;
 mod style_collections;
@@ -70,10 +73,39 @@ pub const PRISM_COPS: &[&str] = &[
     "Style/RedundantSortBy",
     "Style/StderrPuts",
     "Style/Strip",
+    "Bundler/DuplicatedGem",
+    "Gemspec/AddRuntimeDependency",
+    "Layout/EmptyLines",
+    "Layout/SpaceAfterComma",
+    "Layout/SpaceAfterNot",
+    "Layout/SpaceAfterSemicolon",
+    "Layout/SpaceBeforeComma",
+    "Layout/SpaceBeforeComment",
+    "Layout/SpaceBeforeSemicolon",
+    "Lint/DuplicateElsifCondition",
+    "Lint/DuplicateRescueException",
+    "Lint/EmptyClass",
+    "Lint/EnsureReturn",
+    "Naming/ClassAndModuleCamelCase",
+    "Style/ArrayCoercion",
+    "Style/ArrayIntersectWithSingleElement",
+    "Style/AsciiComments",
+    "Style/ClassCheck",
+    "Style/ClassMethods",
+    "Style/ClassVars",
+    "Style/Dir",
+    "Style/EnvHome",
+    "Style/ImplicitRuntimeError",
+    "Style/RedundantCapitalW",
+    "Style/StringHashKeys",
+    "Style/SymbolLiteral",
+    "Style/WhenThen",
 ];
 
 pub(super) trait Cop: Sync {
     fn name(&self) -> &'static str;
+
+    fn on_source(&self, _source: &str, _context: &mut Context) {}
 
     fn on_node<'pr>(
         &self,
@@ -116,6 +148,9 @@ impl Engine {
     ) -> Inspection {
         let parsed = parse(source.as_bytes());
         let mut context = Context::new(autocorrect, target_ruby_version);
+        for cop in &self.registry.cops {
+            cop.on_source(source, &mut context);
+        }
         let mut runner = Runner {
             registry: &self.registry,
             context: &mut context,
@@ -140,7 +175,10 @@ impl Registry {
             .chain(style_collections::cops())
             .chain(style_compat::cops())
             .chain(style_rewrites::cops())
-            .chain(style_source::cops());
+            .chain(style_source::cops())
+            .chain(source_rules::cops())
+            .chain(source_rules_layout::cops())
+            .chain(source_rules_misc::cops());
 
         Self {
             cops: cops.filter(|cop| enabled(cop.name())).collect(),
