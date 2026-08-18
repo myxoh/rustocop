@@ -1,5 +1,7 @@
 use super::helpers::*;
-use crate::*;
+use super::{push_offense, Offense, SourceLine};
+use crate::cop_registry::TRAILING_WHITESPACE_COP;
+use crate::{cop_enabled, Options};
 
 pub(super) fn before_prism(
     lines: &mut [SourceLine],

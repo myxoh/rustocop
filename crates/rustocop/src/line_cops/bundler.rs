@@ -1,5 +1,7 @@
 use super::helpers::*;
-use crate::*;
+use super::{push_offense, Offense, SourceLine};
+use crate::{cop_enabled, Options};
+use std::path::Path;
 
 pub(super) fn before_prism(
     path: &str,

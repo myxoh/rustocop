@@ -5,7 +5,11 @@ pipeline owns I/O, configuration, reporting, and correction ordering. Cops only
 inspect the source representation they are given and emit offenses.
 
 ```text
-CLI / file discovery
+CLI / cop selection / file discovery
+        |
+        v
+run-level InspectionPlan
+  (immutable enabled-cop set + shared Prism registry)
         |
         +--> optional fixed-size file worker pool
         |        (one complete file per worker)
@@ -27,8 +31,14 @@ sort offenses / apply non-overlapping corrections / format report
 
 ## Module boundaries
 
-- `main.rs` is the application shell: arguments, targets, inspection
-  orchestration, and output compatibility.
+- `main.rs` is the application shell: targets and output compatibility.
+- `cop_registry.rs` is the native support inventory. `cop_selection.rs`
+  resolves `--only` against it once into an immutable enabled-cop set.
+  `inspection.rs` builds the run-level plan, owns file I/O, and chooses between
+  the full compatibility pipeline and the allocation-light Prism-only path.
+- `diagnostic.rs` translates Prism byte ranges into RuboCop-compatible
+  locations using a per-source newline index. `source_lines.rs` owns the
+  mutable line representation used by textual cops.
 - `prism_engine.rs` owns the shared parse, traversal, and registry.
   `prism_engine/matchers.rs` owns side-effect-free Prism questions reused by
   multiple cop families. `prism_engine/diagnostic.rs` owns findings, byte-range
@@ -43,6 +53,8 @@ sort offenses / apply non-overlapping corrections / format report
 
 Prism is parsed exactly once for each inspected source. Adding AST cops should
 register another visitor against that shared tree, never parse the file again.
+The stateless registry is built once per command and shared immutably by every
+file worker.
 See [Adding a Prism cop](adding-a-prism-cop.md) for the authoring API and a
 minimal implementation template.
 
@@ -69,3 +81,6 @@ at most five arguments. Split by responsibility before reaching a ceiling.
 
 The architecture task is a prerequisite of the default spec task, so CI and
 local `bundle exec rake` runs reject structural regressions.
+
+Measured optimization opportunities and the required invariants for addressing
+them are tracked in [Known performance bottlenecks](bottlenecks.md).

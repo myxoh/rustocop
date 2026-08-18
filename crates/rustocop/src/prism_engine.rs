@@ -3,6 +3,8 @@ use ruby_prism::{parse, CallNode, Node, Visit};
 mod diagnostic;
 mod layout;
 mod lint;
+mod lint_control_flow;
+mod lint_suspicious_calls;
 mod matchers;
 mod security;
 mod style;
@@ -23,7 +25,12 @@ pub const PRISM_COPS: &[&str] = &[
     "Lint/FloatComparison",
     "Lint/FloatOutOfRange",
     "Lint/IdentityComparison",
+    "Lint/BinaryOperatorWithIdenticalOperands",
+    "Lint/HashCompareByIdentity",
+    "Lint/Loop",
+    "Lint/RandOne",
     "Lint/RegexpAsCondition",
+    "Lint/SafeNavigationWithEmpty",
     "Lint/SelfAssignment",
     "Lint/ToJSON",
     "Layout/SpaceAfterColon",
@@ -64,7 +71,7 @@ pub const PRISM_COPS: &[&str] = &[
     "Style/Strip",
 ];
 
-pub(super) trait Cop {
+pub(super) trait Cop: Sync {
     fn name(&self) -> &'static str;
 
     fn on_node<'pr>(
@@ -86,10 +93,45 @@ struct Registry {
     cops: Vec<Box<dyn Cop>>,
 }
 
+pub struct Engine {
+    registry: Registry,
+}
+
+impl Engine {
+    pub fn new(enabled: &dyn Fn(&str) -> bool) -> Self {
+        let registry = Registry::enabled(enabled);
+        debug_assert!(registry
+            .cops
+            .iter()
+            .all(|cop| PRISM_COPS.contains(&cop.name())));
+        Self { registry }
+    }
+
+    pub fn inspect(
+        &self,
+        source: &str,
+        autocorrect: bool,
+        target_ruby_version: RubyVersion,
+    ) -> Inspection {
+        let parsed = parse(source.as_bytes());
+        let mut context = Context::new(autocorrect, target_ruby_version);
+        let mut runner = Runner {
+            registry: &self.registry,
+            context: &mut context,
+            source,
+            ancestors: Vec::new(),
+        };
+        runner.visit(&parsed.node());
+        context.finish(source)
+    }
+}
+
 impl Registry {
     fn enabled(enabled: &dyn Fn(&str) -> bool) -> Self {
         let cops = lint::cops()
             .into_iter()
+            .chain(lint_control_flow::cops())
+            .chain(lint_suspicious_calls::cops())
             .chain(layout::cops())
             .chain(security::cops())
             .chain(style::cops())
@@ -131,29 +173,14 @@ impl<'pr> Visit<'pr> for Runner<'_, 'pr> {
     }
 }
 
-pub fn inspect(
+#[cfg(test)]
+fn inspect(
     source: &str,
     autocorrect: bool,
     target_ruby_version: RubyVersion,
     enabled: &dyn Fn(&str) -> bool,
 ) -> Inspection {
-    let parsed = parse(source.as_bytes());
-    let registry = Registry::enabled(enabled);
-    debug_assert!(registry
-        .cops
-        .iter()
-        .all(|cop| PRISM_COPS.contains(&cop.name())));
-    let mut context = Context::new(autocorrect, target_ruby_version);
-
-    let mut runner = Runner {
-        registry: &registry,
-        context: &mut context,
-        source,
-        ancestors: Vec::new(),
-    };
-    runner.visit(&parsed.node());
-
-    context.finish(source)
+    Engine::new(enabled).inspect(source, autocorrect, target_ruby_version)
 }
 
 #[cfg(test)]
@@ -314,5 +341,38 @@ mod tests {
 
         assert!(inspection.findings.is_empty());
         assert_eq!(inspection.corrected_source, "arr[0][-1]\n");
+    }
+
+    #[test]
+    fn runs_verified_suspicious_call_and_control_flow_cops() {
+        let source = concat!(
+            "a.x == a.x\n",
+            "hash.key?(value.object_id)\n",
+            "rand(1)\n",
+            "return unless value&.empty?\n",
+            "begin\n  work\nend while active\n",
+        );
+        let inspection = inspect(source, true, RubyVersion::default(), &|cop| {
+            matches!(
+                cop,
+                "Lint/BinaryOperatorWithIdenticalOperands"
+                    | "Lint/HashCompareByIdentity"
+                    | "Lint/RandOne"
+                    | "Lint/SafeNavigationWithEmpty"
+                    | "Lint/Loop"
+            )
+        });
+
+        assert_eq!(inspection.findings.len(), 5);
+        assert_eq!(
+            inspection.corrected_source,
+            concat!(
+                "a.x == a.x\n",
+                "hash.key?(value.object_id)\n",
+                "rand(1)\n",
+                "return unless value && value.empty?\n",
+                "loop do\n  work\nbreak unless active\nend\n",
+            )
+        );
     }
 }

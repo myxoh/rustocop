@@ -1,4 +1,4 @@
-use crate::SourceLine;
+use crate::source_lines::SourceLine;
 
 pub(super) fn trailing_whitespace_len(value: &str) -> usize {
     value

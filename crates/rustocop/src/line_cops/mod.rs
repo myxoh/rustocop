@@ -6,7 +6,9 @@ mod lint;
 mod metrics;
 mod style;
 
-use crate::{Offense, Options, SourceLine};
+pub(crate) use crate::diagnostic::{push_offense, Offense};
+pub(crate) use crate::source_lines::SourceLine;
+use crate::Options;
 
 pub(crate) fn before_prism(
     path: &str,

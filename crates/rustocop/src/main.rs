@@ -6,130 +6,18 @@ use std::path::{Path, PathBuf};
 use std::process;
 
 mod cli;
+mod cop_registry;
+mod cop_selection;
+mod diagnostic;
 mod file_runner;
+mod inspection;
 mod line_cops;
 mod prism_engine;
+mod source_lines;
 
-const TRAILING_WHITESPACE_COP: &str = "Layout/TrailingWhitespace";
-
-const SUPPORTED_COPS: &[&str] = &[
-    "Bundler/OrderedGems",
-    "Rails/DefaultScope",
-    "Rails/FilePath",
-    "Rails/ApplicationJob",
-    "Rails/ReversibleMigration",
-    "Metrics/BlockLength",
-    "Metrics/MethodLength",
-    "Metrics/AbcSize",
-    "Layout/LineLength",
-    "Layout/ExtraSpacing",
-    "Layout/EndAlignment",
-    "Layout/FirstHashElementIndentation",
-    "Layout/IndentationConsistency",
-    "Layout/IndentationWidth",
-    "Layout/TrailingWhitespace",
-    "Layout/SpaceAfterColon",
-    "Style/HashSyntax",
-    "Style/ColonMethodDefinition",
-    "Style/DoubleCopDisableDirective",
-    "Style/EmptyLambdaParameter",
-    "Style/EndBlock",
-    "Style/InlineComment",
-    "Style/KeywordParametersOrder",
-    "Style/RedundantBegin",
-    "Style/IfUnlessModifier",
-    "Style/CaseLikeIf",
-    "Style/ConditionalAssignment",
-    "Style/EmptyCaseCondition",
-    "Style/EmptyElse",
-    "Style/GuardClause",
-    "Style/HashLikeCase",
-    "Style/ClassMethodsDefinitions",
-    "Style/EndlessMethod",
-    "Style/FrozenStringLiteralComment",
-    "Style/Documentation",
-    "Style/TrailingCommaInArrayLiteral",
-    "Style/TrailingCommaInArguments",
-    "Style/TrailingCommaInHashLiteral",
-    "Style/ItAssignment",
-    "Style/NumberedParameters",
-    "Style/StringLiterals",
-    "Style/CharacterLiteral",
-    "Style/BeginBlock",
-    "Style/DefWithParentheses",
-    "Style/MethodCallWithoutArgsParentheses",
-    "Style/NilComparison",
-    "Style/Not",
-    "Style/RedundantArrayConstructor",
-    "Style/RedundantFreeze",
-    "Style/Semicolon",
-    "Style/StringChars",
-    "Style/StringMethods",
-    "Style/UnlessElse",
-    "Style/FileTouch",
-    "Style/GlobalStdStream",
-    "Style/MinMax",
-    "Style/RedundantFileExtensionInRequire",
-    "Style/SuperWithArgsParentheses",
-    "Style/TrailingCommaInBlockArgs",
-    "Style/WhileUntilDo",
-    "Style/ArrayFirstLast",
-    "Style/ArrayJoin",
-    "Style/ColonMethodCall",
-    "Style/NestedFileDirname",
-    "Style/Proc",
-    "Style/RedundantArrayFlatten",
-    "Style/RedundantSortBy",
-    "Style/StderrPuts",
-    "Style/Strip",
-    "Naming/PredicatePrefix",
-    "Naming/AccessorMethodName",
-    "Lint/MissingSuper",
-    "Lint/EmptyBlock",
-    "Lint/UnusedMethodArgument",
-    "Lint/Debugger",
-    "Lint/BooleanSymbol",
-    "Lint/BigDecimalNew",
-    "Lint/EmptyEnsure",
-    "Lint/EmptyExpression",
-    "Lint/FlipFlop",
-    "Lint/FloatComparison",
-    "Lint/FloatOutOfRange",
-    "Lint/IdentityComparison",
-    "Lint/RegexpAsCondition",
-    "Lint/SelfAssignment",
-    "Lint/ToJSON",
-    "Lint/TrailingCommaInAttributeDeclaration",
-    "Lint/UselessElseWithoutRescue",
-    "Security/CompoundHash",
-    "Security/Eval",
-    "Security/JSONLoad",
-    "Security/MarshalLoad",
-    "Security/Open",
-    "Security/IoMethods",
-    "Security/YAMLLoad",
-    "RSpec/NestedGroups",
-    "RSpec/EmptyExampleGroup",
-    "RSpec/MessageChain",
-    "RSpec/MultipleExpectations",
-    "RSpec/ExampleLength",
-    "RSpec/VariableName",
-    "RSpec/MultipleMemoizedHelpers",
-    "RSpec/Focus",
-    "RSpec/PendingWithoutReason",
-    "RSpec/ScatteredSetup",
-    "RSpec/SpecFilePathSuffix",
-    "RSpec/SpecFilePathFormat",
-];
-
-const DEFAULT_DISABLED_COPS: &[&str] = &[
-    "Style/Documentation",
-    "Security/IoMethods",
-    "RSpec/MessageChain",
-    "RSpec/MultipleExpectations",
-    "RSpec/MultipleMemoizedHelpers",
-    "RSpec/PendingWithoutReason",
-];
+use cop_registry::SUPPORTED_COPS;
+use diagnostic::Offense;
+use inspection::{InspectionPlan, InspectionResult};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum Parallelism {
@@ -143,35 +31,10 @@ struct Options {
     autocorrect: bool,
     files: Vec<String>,
     format: String,
-    only: Option<String>,
+    cops: cop_selection::CopSelection,
     stdin_path: Option<String>,
     target_ruby_version: prism_engine::RubyVersion,
     parallelism: Parallelism,
-}
-
-#[derive(Clone, Debug)]
-struct SourceLine {
-    body: String,
-    ending: String,
-}
-
-#[derive(Debug)]
-struct InspectionResult {
-    path: String,
-    offenses: Vec<Offense>,
-}
-
-#[derive(Debug)]
-struct Offense {
-    cop_name: &'static str,
-    message: String,
-    corrected: bool,
-    correctable: bool,
-    line: usize,
-    column: usize,
-    last_line: usize,
-    last_column: usize,
-    length: usize,
 }
 
 enum Command {
@@ -225,10 +88,11 @@ fn main() {
 }
 
 fn inspect_targets(options: &Options) -> io::Result<Vec<InspectionResult>> {
+    let plan = InspectionPlan::new(options);
     if let Some(path) = &options.stdin_path {
         let mut content = String::new();
         io::stdin().read_to_string(&mut content)?;
-        let (offenses, _) = inspect_content(&expanded_path(path), &content, options);
+        let (offenses, _) = plan.inspect_content(&expanded_path(path), &content, options);
         return Ok(vec![InspectionResult {
             path: expanded_path(path),
             offenses,
@@ -241,22 +105,7 @@ fn inspect_targets(options: &Options) -> io::Result<Vec<InspectionResult>> {
         expand_targets(&options.files)?
     };
 
-    file_runner::inspect_files(&files, options)
-}
-
-fn inspect_file(path: &str, options: &Options) -> io::Result<InspectionResult> {
-    let content = fs::read_to_string(path)?;
-    let absolute_path = expanded_path(path);
-    let (offenses, corrected_content) = inspect_content(&absolute_path, &content, options);
-
-    if options.autocorrect && corrected_content != content {
-        fs::write(path, corrected_content)?;
-    }
-
-    Ok(InspectionResult {
-        path: absolute_path,
-        offenses,
-    })
+    file_runner::inspect_files(&files, options, &plan)
 }
 
 fn expand_targets(targets: &[String]) -> io::Result<Vec<String>> {
@@ -330,154 +179,8 @@ fn is_ruby_target(path: &Path) -> bool {
         })
 }
 
-fn inspect_content(path: &str, content: &str, options: &Options) -> (Vec<Offense>, String) {
-    let mut lines = split_source(content);
-    let original_lines = lines.clone();
-    let mut offenses = Vec::new();
-
-    line_cops::before_prism(path, &mut lines, options, &mut offenses);
-
-    // Every file is parsed once. All AST-based cops share this Prism tree and
-    // the corrections they produce are applied together after traversal.
-    let prism_source = join_source(&lines);
-    let prism_inspection = prism_engine::inspect(
-        &prism_source,
-        options.autocorrect,
-        options.target_ruby_version,
-        &|cop| cop_enabled(options, cop),
-    );
-    offenses.extend(
-        prism_inspection
-            .findings
-            .into_iter()
-            .map(|finding| prism_offense(&prism_source, finding)),
-    );
-
-    line_cops::after_prism(path, &original_lines, options, &mut offenses);
-
-    offenses.sort_by(|left, right| {
-        left.line
-            .cmp(&right.line)
-            .then(left.column.cmp(&right.column))
-            .then(left.cop_name.cmp(right.cop_name))
-    });
-
-    (offenses, prism_inspection.corrected_source)
-}
-
-fn prism_offense(source: &str, finding: prism_engine::Finding) -> Offense {
-    let (line, column) = source_position(source, finding.start_offset);
-    let mut last_offset = finding
-        .end_offset
-        .saturating_sub(1)
-        .max(finding.start_offset);
-    while last_offset > finding.start_offset && !source.is_char_boundary(last_offset) {
-        last_offset -= 1;
-    }
-    let (last_line, last_column) = source_position(source, last_offset);
-
-    Offense {
-        cop_name: finding.cop_name,
-        message: finding.message,
-        corrected: finding.corrected,
-        correctable: finding.correctable,
-        line,
-        column,
-        last_line,
-        last_column,
-        length: finding
-            .end_offset
-            .saturating_sub(finding.start_offset)
-            .max(1),
-    }
-}
-
-fn source_position(source: &str, offset: usize) -> (usize, usize) {
-    let mut offset = offset.min(source.len());
-    while offset > 0 && !source.is_char_boundary(offset) {
-        offset -= 1;
-    }
-    let prefix = &source[..offset];
-    let line = prefix.bytes().filter(|byte| *byte == b'\n').count() + 1;
-    let line_start = prefix.rfind('\n').map_or(0, |index| index + 1);
-    let column = source[line_start..offset].chars().count() + 1;
-    (line, column)
-}
-
-fn split_source(content: &str) -> Vec<SourceLine> {
-    if content.is_empty() {
-        return Vec::new();
-    }
-
-    content
-        .split_inclusive('\n')
-        .map(|raw_line| {
-            if let Some(body) = raw_line.strip_suffix("\r\n") {
-                SourceLine {
-                    body: body.to_string(),
-                    ending: "\r\n".to_string(),
-                }
-            } else if let Some(body) = raw_line.strip_suffix('\n') {
-                SourceLine {
-                    body: body.to_string(),
-                    ending: "\n".to_string(),
-                }
-            } else {
-                SourceLine {
-                    body: raw_line.to_string(),
-                    ending: String::new(),
-                }
-            }
-        })
-        .collect()
-}
-
-fn join_source(lines: &[SourceLine]) -> String {
-    let mut content = String::new();
-
-    for line in lines {
-        content.push_str(&line.body);
-        content.push_str(&line.ending);
-    }
-
-    content
-}
-
-fn push_offense(
-    offenses: &mut Vec<Offense>,
-    cop_name: &'static str,
-    message: &str,
-    line: usize,
-    column: usize,
-    length: usize,
-    correctable: bool,
-    corrected: bool,
-) {
-    offenses.push(Offense {
-        cop_name,
-        message: message.to_string(),
-        corrected,
-        correctable,
-        line,
-        column: column.max(1),
-        last_line: line,
-        last_column: column.max(1) + length.max(1) - 1,
-        length: length.max(1),
-    });
-}
-
 fn cop_enabled(options: &Options, cop: &str) -> bool {
-    let Some(only) = &options.only else {
-        return !DEFAULT_DISABLED_COPS.contains(&cop);
-    };
-
-    only.split(',').map(str::trim).any(|requested| {
-        requested == cop
-            || (!DEFAULT_DISABLED_COPS.contains(&cop)
-                && cop
-                    .strip_prefix(requested)
-                    .is_some_and(|suffix| suffix.starts_with('/')))
-    })
+    options.cops.enabled(cop)
 }
 
 fn exit_status(options: &Options, results: &[InspectionResult]) -> i32 {

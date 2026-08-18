@@ -104,7 +104,7 @@ especially cautious with anything marked heuristic.
 - Native checks for the RuboCop, Rails, RSpec, Bundler, Layout, Metrics, Naming,
   Style, and Lint cops listed in the project seed config. Singulate-specific
   cops are intentionally excluded.
-- A shared Prism parse and AST visitor powers 40 built-in cops across Layout,
+- A shared Prism parse and AST visitor powers 50 built-in cops across Layout,
   Lint, Security, and Style. The committed differential corpus contains 500 Ruby
   files (25 per cop) and compares JSON output directly with RuboCop.
 - `--show-cops` prints the native support registry.
@@ -128,8 +128,8 @@ and applied as one batch. The differential compatibility suite runs 20 cops
 against 500 generated and committed Ruby fixture files, both cop-by-cop and as a
 single corpus, and compares their JSON reports directly with RuboCop.
 
-The current RuboCop 1.87 matrix contains 40 upstream-spec-verified cops, 51
-heuristic native implementations, and 515 missing built-in cops. A cop is only
+The current RuboCop 1.87 matrix contains 45 upstream-spec-verified cops, 51
+heuristic native implementations, and 510 missing built-in cops. A cop is only
 “verified” after all captured upstream diagnostics and correction assertions
 for that cop pass.
 

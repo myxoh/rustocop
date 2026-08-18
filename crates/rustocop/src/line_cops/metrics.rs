@@ -1,5 +1,6 @@
 use super::helpers::*;
-use crate::*;
+use super::{push_offense, Offense, SourceLine};
+use crate::{cop_enabled, Options};
 
 pub(super) fn after_prism(lines: &[SourceLine], options: &Options, offenses: &mut Vec<Offense>) {
     check_metrics(lines, options, offenses);

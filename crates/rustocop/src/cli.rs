@@ -1,5 +1,6 @@
 use std::fs;
 
+use crate::cop_selection::CopSelection;
 use crate::prism_engine::RubyVersion;
 use crate::{Command, Options, Parallelism};
 
@@ -8,7 +9,7 @@ pub(super) fn parse_args(mut args: Vec<String>) -> Result<Command, String> {
         autocorrect: false,
         files: Vec::new(),
         format: "simple".to_string(),
-        only: None,
+        cops: CopSelection::default_enabled(),
         stdin_path: None,
         target_ruby_version: RubyVersion::default(),
         parallelism: Parallelism::Sequential,
@@ -23,7 +24,7 @@ pub(super) fn parse_args(mut args: Vec<String>) -> Result<Command, String> {
             "-A" | "-a" | "--autocorrect" | "--autocorrect-all" | "--auto-correct"
             | "--auto-correct-all" => options.autocorrect = true,
             "--format" | "-f" => options.format = take_value(&mut args, &arg)?,
-            "--only" => options.only = Some(take_value(&mut args, &arg)?),
+            "--only" => options.cops = CopSelection::only(&take_value(&mut args, &arg)?),
             "--stdin" => options.stdin_path = Some(take_value(&mut args, &arg)?),
             "--parallel" => options.parallelism = Parallelism::Automatic,
             "--no-parallel" => options.parallelism = Parallelism::Sequential,
@@ -55,7 +56,7 @@ pub(super) fn parse_args(mut args: Vec<String>) -> Result<Command, String> {
                     .to_string();
             }
             _ if arg.starts_with("--only=") => {
-                options.only = Some(arg.strip_prefix("--only=").unwrap_or_default().to_string());
+                options.cops = CopSelection::only(arg.strip_prefix("--only=").unwrap_or_default());
             }
             _ if arg.starts_with("--stdin=") => {
                 options.stdin_path =

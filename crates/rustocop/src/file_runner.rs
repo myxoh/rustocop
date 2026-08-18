@@ -5,11 +5,13 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::thread;
 
-use crate::{inspect_file, InspectionResult, Options, Parallelism};
+use crate::inspection::{InspectionPlan, InspectionResult};
+use crate::{Options, Parallelism};
 
 pub(super) fn inspect_files(
     files: &[String],
     options: &Options,
+    plan: &InspectionPlan,
 ) -> io::Result<Vec<InspectionResult>> {
     let parallelism = if options.autocorrect && contains_duplicate_files(files) {
         Parallelism::Sequential
@@ -20,7 +22,7 @@ pub(super) fn inspect_files(
     if worker_count <= 1 {
         return files
             .iter()
-            .map(|path| inspect_file(path, options))
+            .map(|path| plan.inspect_file(path, options))
             .collect();
     }
 
@@ -36,7 +38,7 @@ pub(super) fn inspect_files(
                         let Some(path) = files.get(index) else {
                             return Ok(results);
                         };
-                        results.push((index, inspect_file(path, options)?));
+                        results.push((index, plan.inspect_file(path, options)?));
                     }
                 })
             })
@@ -85,7 +87,7 @@ mod tests {
             autocorrect: false,
             files: Vec::new(),
             format: "json".to_string(),
-            only: Some("Lint/EmptyExpression".to_string()),
+            cops: crate::cop_selection::CopSelection::only("Lint/EmptyExpression"),
             stdin_path: None,
             target_ruby_version: crate::prism_engine::RubyVersion::default(),
             parallelism,
@@ -108,8 +110,12 @@ mod tests {
         let files = ["03_offense.rb", "01_offense.rb", "02_offense.rb"]
             .map(|name| format!("{fixture_root}/{name}"));
 
-        let sequential = inspect_files(&files, &options(Parallelism::Sequential)).unwrap();
-        let parallel = inspect_files(&files, &options(Parallelism::Fixed(3))).unwrap();
+        let sequential_options = options(Parallelism::Sequential);
+        let parallel_options = options(Parallelism::Fixed(3));
+        let sequential_plan = InspectionPlan::new(&sequential_options);
+        let parallel_plan = InspectionPlan::new(&parallel_options);
+        let sequential = inspect_files(&files, &sequential_options, &sequential_plan).unwrap();
+        let parallel = inspect_files(&files, &parallel_options, &parallel_plan).unwrap();
         let sequential_offenses = sequential.iter().map(|result| result.offenses.len()).sum();
         let parallel_offenses = parallel.iter().map(|result| result.offenses.len()).sum();
 

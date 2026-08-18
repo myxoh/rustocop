@@ -1,6 +1,6 @@
 # Performance against RuboCop with Prism
 
-Re-measured after the department/module architecture refactor on 2026-08-18
+Re-measured after the run-level execution-plan refactor on 2026-08-18
 against RuboCop 1.87.0 and Prism 1.9.0. This is an interim benchmark over the
 committed 500-file compatibility corpus and its 20 shared cops. It is not the
 final 606-cop benchmark.
@@ -24,10 +24,10 @@ with 2–3 warmups followed by 7–30 measured runs depending on corpus size.
 
 | Files | Runs | Rustocop median / p95 | RuboCop + Prism median / p95 | Speedup | JSON parity |
 | ---: | ---: | ---: | ---: | ---: | :---: |
-| 1 | 30 | 2.803 / 3.349 ms | 411.387 / 432.495 ms | 146.77× | Yes |
-| 25 | 20 | 3.623 / 8.091 ms | 423.469 / 434.432 ms | 116.88× | Yes |
-| 100 | 12 | 5.730 / 7.213 ms | 435.759 / 445.500 ms | 76.05× | Yes |
-| 500 | 7 | 16.514 / 17.921 ms | 485.991 / 488.674 ms | 29.43× | Yes |
+| 1 | 30 | 2.952 / 4.013 ms | 449.744 / 508.379 ms | 152.35× | Yes |
+| 25 | 20 | 3.289 / 3.691 ms | 443.559 / 469.054 ms | 134.86× | Yes |
+| 100 | 12 | 4.444 / 4.716 ms | 471.668 / 485.648 ms | 106.14× | Yes |
+| 500 | 7 | 9.868 / 11.670 ms | 525.664 / 574.000 ms | 53.27× | Yes |
 
 ## Differential from the pre-refactor run
 
@@ -37,13 +37,16 @@ variation.
 
 | Files | Rustocop median | RuboCop + Prism median | Relative speedup |
 | ---: | ---: | ---: | ---: |
-| 1 | −2.67% | −6.79% | −4.22% |
-| 25 | −2.89% | −6.38% | −3.59% |
-| 100 | −22.65% | −20.61% | +2.65% |
-| 500 | −17.33% | −13.74% | +4.36% |
+| 1 | +5.32% | +9.32% | +3.80% |
+| 25 | −9.22% | +4.74% | +15.38% |
+| 100 | −22.44% | +8.24% | +39.57% |
+| 500 | −40.24% | +8.16% | +81.01% |
 
-There is no measurable architecture-refactor regression in this run. The
-largest workload improved in both absolute median time and relative speedup.
+The one-file result remains dominated by startup noise. At 500 files, building
+cop selection and the Prism registry once per command, bypassing the textual
+line representation for Prism-only runs, and indexing source lines once per
+file reduced Rustocop's median by 40.24% despite RuboCop being slower in this
+measurement.
 
 ## Peak memory
 
@@ -92,14 +95,14 @@ produced byte-identical JSON.
 
 | Files | Sequential | 2 workers | 4 workers | 8 workers | Automatic |
 | ---: | ---: | ---: | ---: | ---: | ---: |
-| 25 | 3.195 ms | 2.937 ms / 1.09× | 2.894 ms / 1.10× | 2.983 ms / 1.07× | 3.021 ms / 1.06× |
-| 100 | 5.094 ms | 4.292 ms / 1.19× | 3.484 ms / 1.46× | 3.631 ms / 1.40× | 3.762 ms / 1.35× |
-| 500 | 18.034 ms | 12.659 ms / 1.42× | 8.954 ms / 2.01× | 8.586 ms / 2.10× | 8.087 ms / 2.23× |
+| 25 | 3.062 ms | 2.977 ms / 1.03× | 3.227 ms / 0.95× | 3.184 ms / 0.96× | 3.189 ms / 0.96× |
+| 100 | 3.626 ms | 3.509 ms / 1.03× | 3.080 ms / 1.18× | 3.516 ms / 1.03× | 3.639 ms / 1.00× |
+| 500 | 8.875 ms | 7.751 ms / 1.15× | 7.054 ms / 1.26× | 7.884 ms / 1.13× | 7.795 ms / 1.14× |
 
-The 500-file corpus improved by 2.23× in automatic mode while adding little
-resident memory. At 25 tiny files, gains were negligible because thread startup
-and fixed CLI work dominate. Parallel mode remains opt-in so small invocations
-do not pay that overhead by default.
+The execution plan removed enough serial per-file work that parallelism now has
+less to recover: four workers are fastest at 500 files (1.26×), while automatic
+mode provides 1.14×. At 25 tiny files, worker startup outweighs useful work.
+Parallel mode remains opt-in so small invocations do not pay that overhead.
 
 Reproduce with:
 
@@ -117,11 +120,11 @@ xychart-beta
     title "End-to-end speedup over RuboCop + Prism"
     x-axis "Ruby files" [1, 25, 100, 500]
     y-axis "Speedup (times)" 0 --> 160
-    bar [146.77, 116.88, 76.05, 29.43]
+    bar [152.35, 134.86, 106.14, 53.27]
 ```
 
-At 500 files, median throughput was approximately 30,277 files/second for
-Rustocop and 1,029 files/second for RuboCop. The corpus is deliberately small—500
+At 500 files, median throughput was approximately 50,669 files/second for
+Rustocop and 951 files/second for RuboCop. The corpus is deliberately small—500
 files totaling 9,090 bytes—so these figures primarily measure CLI startup,
 configuration, parsing, dispatch, and formatter overhead rather than sustained
 performance on large application files.
