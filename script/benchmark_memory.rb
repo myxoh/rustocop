@@ -73,17 +73,21 @@ results = sizes.map do |size|
   selected = paths.first(size)
   commands = {
     "rustocop" => [native, *common, "--config", config_path, *selected],
+    "rustocop_parallel" => [native, *common, "--parallel", "--config", config_path, *selected],
     "rubocop_prism" => [*rubocop, *common, "--config", config_path, *selected]
   }
 
-  raise "output mismatch at #{size} files" unless normalized_report(commands.fetch("rustocop")) ==
-                                                normalized_report(commands.fetch("rubocop_prism"))
+  expected = normalized_report(commands.fetch("rustocop"))
+  commands.each do |name, command|
+    raise "output mismatch for #{name} at #{size} files" unless normalized_report(command) == expected
+  end
 
   commands.each_value { |command| peak_rss_bytes(command) }
-  samples = { "rustocop" => [], "rubocop_prism" => [] }
+  samples = commands.to_h { |name, _command| [name, []] }
   runs.times do |iteration|
-    order = iteration.even? ? %w[rustocop rubocop_prism] : %w[rubocop_prism rustocop]
-    order.each { |name| samples.fetch(name) << peak_rss_bytes(commands.fetch(name)) }
+    commands.keys.rotate(iteration % commands.length).each do |name|
+      samples.fetch(name) << peak_rss_bytes(commands.fetch(name))
+    end
   end
 
   medians = samples.transform_values { |values| percentile(values, 0.5) }
@@ -94,6 +98,10 @@ results = sizes.map do |size|
     "rustocop" => {
       "median_peak_rss_bytes" => medians.fetch("rustocop"),
       "p95_peak_rss_bytes" => percentile(samples.fetch("rustocop"), 0.95)
+    },
+    "rustocop_parallel" => {
+      "median_peak_rss_bytes" => medians.fetch("rustocop_parallel"),
+      "p95_peak_rss_bytes" => percentile(samples.fetch("rustocop_parallel"), 0.95)
     },
     "rubocop_prism" => {
       "median_peak_rss_bytes" => medians.fetch("rubocop_prism"),
@@ -115,7 +123,7 @@ report = {
     "cache" => false,
     "server" => false,
     "formatter" => "json",
-    "process_model" => "single process, sequential files",
+    "process_models" => ["single process, sequential files", "single process, file worker threads"],
     "measurement" => "macOS /usr/bin/time -l maximum resident set size"
   },
   "results" => results
@@ -124,12 +132,13 @@ report = {
 json_path = File.join(output_root, "memory-benchmark.json")
 File.write(json_path, JSON.pretty_generate(report))
 
-puts "files\trustocop_mib\trubocop_prism_mib\tratio\tverified"
+puts "files\trustocop_mib\tparallel_mib\trubocop_prism_mib\tratio\tverified"
 results.each do |result|
   puts format(
-    "%d\t%.2f\t%.2f\t%.2fx\t%s",
+    "%d\t%.2f\t%.2f\t%.2f\t%.2fx\t%s",
     result.fetch("files"),
     result.dig("rustocop", "median_peak_rss_bytes").fdiv(1024**2),
+    result.dig("rustocop_parallel", "median_peak_rss_bytes").fdiv(1024**2),
     result.dig("rubocop_prism", "median_peak_rss_bytes").fdiv(1024**2),
     result.fetch("rss_ratio"),
     result.fetch("verified_equal")

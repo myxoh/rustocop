@@ -69,6 +69,12 @@ exe/rustocop -A /path/to/project
 # Produce RuboCop-style JSON
 exe/rustocop --format json /path/to/project
 
+# Inspect files in parallel using the machine's available CPU count
+exe/rustocop --parallel /path/to/project
+
+# Or set the worker count explicitly
+exe/rustocop --jobs 4 /path/to/project
+
 # See every cop rustocop currently advertises
 exe/rustocop --show-cops
 ```
@@ -122,8 +128,8 @@ and applied as one batch. The differential compatibility suite runs 20 cops
 against 500 generated and committed Ruby fixture files, both cop-by-cop and as a
 single corpus, and compares their JSON reports directly with RuboCop.
 
-The current RuboCop 1.87 matrix contains 35 upstream-spec-verified cops, 51
-heuristic native implementations, and 520 missing built-in cops. A cop is only
+The current RuboCop 1.87 matrix contains 40 upstream-spec-verified cops, 51
+heuristic native implementations, and 515 missing built-in cops. A cop is only
 “verified” after all captured upstream diagnostics and correction assertions
 for that cop pass.
 

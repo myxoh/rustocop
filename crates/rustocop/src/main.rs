@@ -5,6 +5,8 @@ use std::io::{self, Read};
 use std::path::{Path, PathBuf};
 use std::process;
 
+mod cli;
+mod file_runner;
 mod line_cops;
 mod prism_engine;
 
@@ -71,9 +73,13 @@ const SUPPORTED_COPS: &[&str] = &[
     "Style/SuperWithArgsParentheses",
     "Style/TrailingCommaInBlockArgs",
     "Style/WhileUntilDo",
+    "Style/ArrayFirstLast",
     "Style/ArrayJoin",
+    "Style/ColonMethodCall",
     "Style/NestedFileDirname",
     "Style/Proc",
+    "Style/RedundantArrayFlatten",
+    "Style/RedundantSortBy",
     "Style/StderrPuts",
     "Style/Strip",
     "Naming/PredicatePrefix",
@@ -90,6 +96,7 @@ const SUPPORTED_COPS: &[&str] = &[
     "Lint/FloatComparison",
     "Lint/FloatOutOfRange",
     "Lint/IdentityComparison",
+    "Lint/RegexpAsCondition",
     "Lint/SelfAssignment",
     "Lint/ToJSON",
     "Lint/TrailingCommaInAttributeDeclaration",
@@ -124,7 +131,14 @@ const DEFAULT_DISABLED_COPS: &[&str] = &[
     "RSpec/PendingWithoutReason",
 ];
 
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum Parallelism {
+    Sequential,
+    Automatic,
+    Fixed(usize),
+}
+
+#[derive(Clone, Debug)]
 struct Options {
     autocorrect: bool,
     files: Vec<String>,
@@ -132,6 +146,7 @@ struct Options {
     only: Option<String>,
     stdin_path: Option<String>,
     target_ruby_version: prism_engine::RubyVersion,
+    parallelism: Parallelism,
 }
 
 #[derive(Clone, Debug)]
@@ -167,7 +182,7 @@ enum Command {
 }
 
 fn main() {
-    match parse_args(env::args().skip(1).collect()) {
+    match cli::parse_args(env::args().skip(1).collect()) {
         Ok(Command::Version) => {
             println!("{}", rustocop_version());
         }
@@ -209,101 +224,6 @@ fn main() {
     }
 }
 
-fn parse_args(mut args: Vec<String>) -> Result<Command, String> {
-    let mut options = Options {
-        autocorrect: false,
-        files: Vec::new(),
-        format: "simple".to_string(),
-        only: None,
-        stdin_path: None,
-        target_ruby_version: prism_engine::RubyVersion::default(),
-    };
-
-    while !args.is_empty() {
-        let arg = args.remove(0);
-
-        match arg.as_str() {
-            "--version" => return Ok(Command::Version),
-            "-V" => return Ok(Command::VerboseVersion),
-            "--show-cops" => return Ok(Command::ShowCops),
-            "-A" | "-a" | "--autocorrect" | "--autocorrect-all" | "--auto-correct"
-            | "--auto-correct-all" => options.autocorrect = true,
-            "--format" | "-f" => options.format = take_value(&mut args, &arg)?,
-            "--only" => options.only = Some(take_value(&mut args, &arg)?),
-            "--stdin" => options.stdin_path = Some(take_value(&mut args, &arg)?),
-            "--config" | "-c" => {
-                let path = take_value(&mut args, &arg)?;
-                options.target_ruby_version = target_ruby_version_from_config(&path);
-            }
-            "--require" | "--plugin" => {
-                let _ = take_value(&mut args, &arg)?;
-            }
-            "--force-exclusion"
-            | "--no-server"
-            | "--display-cop-names"
-            | "--extra-details"
-            | "--parallel" => {}
-            "--cache" => {
-                if args.first().is_some_and(|value| !value.starts_with('-')) {
-                    args.remove(0);
-                }
-            }
-            "--" => {
-                options.files.extend(args);
-                break;
-            }
-            _ if arg.starts_with("--format=") => {
-                options.format = arg
-                    .strip_prefix("--format=")
-                    .unwrap_or_default()
-                    .to_string();
-            }
-            _ if arg.starts_with("--only=") => {
-                options.only = Some(arg.strip_prefix("--only=").unwrap_or_default().to_string());
-            }
-            _ if arg.starts_with("--stdin=") => {
-                options.stdin_path =
-                    Some(arg.strip_prefix("--stdin=").unwrap_or_default().to_string());
-            }
-            _ if arg.starts_with("--config=") => {
-                let path = arg.strip_prefix("--config=").unwrap_or_default();
-                options.target_ruby_version = target_ruby_version_from_config(path);
-            }
-            _ if arg.starts_with("--require=") || arg.starts_with("--plugin=") => {}
-            _ if arg.starts_with('-') => return Err(format!("unsupported option {}", arg)),
-            _ => options.files.push(arg),
-        }
-    }
-
-    if options.format != "json" && options.format != "simple" {
-        return Err(format!("unsupported formatter {}", options.format));
-    }
-
-    Ok(Command::Run(options))
-}
-
-fn take_value(args: &mut Vec<String>, option: &str) -> Result<String, String> {
-    if args.is_empty() {
-        return Err(format!("missing value for {}", option));
-    }
-
-    Ok(args.remove(0))
-}
-
-fn target_ruby_version_from_config(path: &str) -> prism_engine::RubyVersion {
-    fs::read_to_string(path)
-        .ok()
-        .and_then(|source| target_ruby_version_from_source(&source))
-        .unwrap_or_default()
-}
-
-fn target_ruby_version_from_source(source: &str) -> Option<prism_engine::RubyVersion> {
-    source.lines().find_map(|line| {
-        let value = line.trim().strip_prefix("TargetRubyVersion:")?;
-        prism_engine::RubyVersion::parse(value.split('#').next()?.trim())
-    })
-}
-
 fn inspect_targets(options: &Options) -> io::Result<Vec<InspectionResult>> {
     if let Some(path) = &options.stdin_path {
         let mut content = String::new();
@@ -321,10 +241,7 @@ fn inspect_targets(options: &Options) -> io::Result<Vec<InspectionResult>> {
         expand_targets(&options.files)?
     };
 
-    files
-        .iter()
-        .map(|path| inspect_file(path, options))
-        .collect()
+    file_runner::inspect_files(&files, options)
 }
 
 fn inspect_file(path: &str, options: &Options) -> io::Result<InspectionResult> {
@@ -753,27 +670,4 @@ fn json_escape(value: &str) -> String {
     }
 
     escaped
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn reads_target_ruby_version_from_rubocop_config() {
-        let config = "AllCops:\n  TargetRubyVersion: 3.1 # compatibility target\n";
-
-        assert_eq!(
-            target_ruby_version_from_source(config),
-            Some(prism_engine::RubyVersion::new(3, 1))
-        );
-    }
-
-    #[test]
-    fn ignores_unrelated_configuration() {
-        assert_eq!(
-            target_ruby_version_from_source("AllCops:\n  NewCops: enable\n"),
-            None
-        );
-    }
 }

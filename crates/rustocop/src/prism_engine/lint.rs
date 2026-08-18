@@ -8,9 +8,50 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
         Box::new(FloatComparison),
         Box::new(FloatOutOfRange),
         Box::new(IdentityComparison),
+        Box::new(RegexpAsCondition),
         Box::new(SelfAssignment),
         Box::new(ToJson),
     ]
+}
+
+struct RegexpAsCondition;
+
+impl Cop for RegexpAsCondition {
+    fn name(&self) -> &'static str {
+        "Lint/RegexpAsCondition"
+    }
+
+    fn on_node<'pr>(
+        &self,
+        node: &Node<'pr>,
+        ancestors: &[Node<'pr>],
+        _source: &str,
+        context: &mut Context,
+    ) {
+        if (node.as_match_last_line_node().is_none()
+            && node.as_interpolated_match_last_line_node().is_none())
+            || !ancestors.iter().any(conditional_node)
+        {
+            return;
+        }
+
+        let location = node.location();
+        context.insert(
+            self.name(),
+            "Do not use regexp literal as a condition. The regexp literal matches `$_` implicitly.",
+            &location,
+            location.end_offset(),
+            " =~ $_",
+        );
+    }
+}
+
+fn conditional_node(node: &Node<'_>) -> bool {
+    node.as_if_node().is_some()
+        || node.as_unless_node().is_some()
+        || node.as_while_node().is_some()
+        || node.as_until_node().is_some()
+        || node.as_for_node().is_some()
 }
 
 struct FloatOutOfRange;

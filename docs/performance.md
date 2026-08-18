@@ -52,16 +52,17 @@ the same files, 20 cops, configuration, JSON formatter, and sequential process
 model. Each size had one warmup and seven measured runs, alternating rustocop
 and RuboCop. Normalized JSON output was identical before measurement.
 
-| Files | Rustocop median / p95 RSS | RuboCop + Prism median / p95 RSS | RuboCop / rustocop |
+| Files | Rustocop sequential median / p95 | Rustocop parallel median / p95 | RuboCop + Prism median / p95 |
 | ---: | ---: | ---: | ---: |
-| 1 | 1.98 / 1.98 MiB | 87.23 / 87.67 MiB | 43.96× |
-| 25 | 2.53 / 2.58 MiB | 87.86 / 90.48 MiB | 34.71× |
-| 100 | 2.91 / 2.98 MiB | 88.03 / 90.05 MiB | 30.29× |
-| 500 | 3.67 / 3.77 MiB | 89.08 / 89.20 MiB | 24.26× |
+| 1 | 2.05 / 2.05 MiB | 2.05 / 2.05 MiB | 87.22 / 88.27 MiB |
+| 25 | 2.55 / 2.61 MiB | 2.81 / 2.86 MiB | 87.48 / 88.05 MiB |
+| 100 | 3.02 / 3.02 MiB | 3.14 / 3.19 MiB | 87.89 / 89.78 MiB |
+| 500 | 3.70 / 3.72 MiB | 4.16 / 4.25 MiB | 89.30 / 92.45 MiB |
 
 The nearly flat curves show that fixed runtime and startup cost dominate this
-corpus. From one to 500 files, rustocop's peak RSS increased by about 1.69 MiB;
-RuboCop's increased by about 1.85 MiB. This does not imply that arbitrary Ruby
+corpus. At 500 files, automatic parallel execution added about 0.46 MiB over
+sequential rustocop and still used less than one twentieth of RuboCop's peak
+RSS. This does not imply that arbitrary Ruby
 files cost only a few KiB each: the committed corpus totals just 9,090 source
 bytes. Large files, large literals, and more complex syntax need a separate
 sustained-memory benchmark.
@@ -81,6 +82,33 @@ bundle exec ruby script/benchmark_memory.rb
 
 The raw report is written to
 `tmp/performance-verification/memory-benchmark.json`.
+
+## File-level parallelization
+
+`--parallel` uses the machine's available CPU count; `--jobs N` sets a fixed
+worker count. The runner assigns complete files to scoped threads and restores
+discovery order before formatting. Sequential and every parallel variant below
+produced byte-identical JSON.
+
+| Files | Sequential | 2 workers | 4 workers | 8 workers | Automatic |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 25 | 3.195 ms | 2.937 ms / 1.09× | 2.894 ms / 1.10× | 2.983 ms / 1.07× | 3.021 ms / 1.06× |
+| 100 | 5.094 ms | 4.292 ms / 1.19× | 3.484 ms / 1.46× | 3.631 ms / 1.40× | 3.762 ms / 1.35× |
+| 500 | 18.034 ms | 12.659 ms / 1.42× | 8.954 ms / 2.01× | 8.586 ms / 2.10× | 8.087 ms / 2.23× |
+
+The 500-file corpus improved by 2.23× in automatic mode while adding little
+resident memory. At 25 tiny files, gains were negligible because thread startup
+and fixed CLI work dominate. Parallel mode remains opt-in so small invocations
+do not pay that overhead by default.
+
+Reproduce with:
+
+```sh
+bundle exec ruby script/benchmark_parallel.rb
+```
+
+The raw report is written to
+`tmp/performance-verification/parallel-benchmark.json`.
 
 ## Timing interpretation
 

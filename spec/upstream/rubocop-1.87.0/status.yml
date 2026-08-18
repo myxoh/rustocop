@@ -5,8 +5,8 @@ upstream_rspec:
   pending: 6
 captured_cases: 28623
 diagnostic_baseline:
-  passed_cases: 13461
-  passing_cops: 35
+  passed_cases: 13489
+  passing_cops: 40
   total_cops: 606
 fully_compatible_cops:
   - Layout/SpaceAfterColon
@@ -16,15 +16,18 @@ fully_compatible_cops:
   - Lint/FlipFlop
   - Lint/FloatOutOfRange
   - Lint/IdentityComparison
+  - Lint/RegexpAsCondition
   - Lint/ToJSON
   - Lint/TrailingCommaInAttributeDeclaration
   - Lint/UselessElseWithoutRescue
   - Security/Eval
   - Security/MarshalLoad
   - Security/YAMLLoad
+  - Style/ArrayFirstLast
   - Style/ArrayJoin
   - Style/BeginBlock
   - Style/CharacterLiteral
+  - Style/ColonMethodCall
   - Style/ColonMethodDefinition
   - Style/DoubleCopDisableDirective
   - Style/EmptyLambdaParameter
@@ -36,7 +39,9 @@ fully_compatible_cops:
   - Style/NestedFileDirname
   - Style/Not
   - Style/Proc
+  - Style/RedundantArrayFlatten
   - Style/RedundantFileExtensionInRequire
+  - Style/RedundantSortBy
   - Style/StringChars
   - Style/StringMethods
   - Style/StderrPuts

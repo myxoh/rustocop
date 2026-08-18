@@ -7,6 +7,9 @@ inspect the source representation they are given and emit offenses.
 ```text
 CLI / file discovery
         |
+        +--> optional fixed-size file worker pool
+        |        (one complete file per worker)
+        |
         v
 line_cops::before_prism  (safe textual corrections)
         |
@@ -26,9 +29,12 @@ sort offenses / apply non-overlapping corrections / format report
 
 - `main.rs` is the application shell: arguments, targets, inspection
   orchestration, and output compatibility.
-- `prism_engine.rs` owns the shared parse, traversal, registry, and reusable
-  Prism node matchers. `prism_engine/diagnostic.rs` owns findings, byte-range
-  normalization, and correction ordering. Department modules contain AST cops.
+- `prism_engine.rs` owns the shared parse, traversal, and registry.
+  `prism_engine/matchers.rs` owns side-effect-free Prism questions reused by
+  multiple cop families. `prism_engine/diagnostic.rs` owns findings, byte-range
+  normalization, and correction ordering. Department and behavior-focused
+  modules contain AST cops; source-oriented Style cops stay in `style_source.rs`
+  rather than adding scanner state to the coordinator.
 - `line_cops/mod.rs` is the only entry point to textual cops.
   `line_cops/{layout,lint,style,bundler,metrics,extensions}.rs` own their
   departments; `helpers.rs` contains shared, side-effect-free text helpers.
@@ -39,6 +45,14 @@ Prism is parsed exactly once for each inspected source. Adding AST cops should
 register another visitor against that shared tree, never parse the file again.
 See [Adding a Prism cop](adding-a-prism-cop.md) for the authoring API and a
 minimal implementation template.
+
+`--parallel` distributes complete files across scoped worker threads. A file is
+never split between workers, and cops within that file continue to share one
+Prism tree. Results are restored to discovery order before formatting, so
+parallel execution must produce byte-for-byte identical output to sequential
+execution. `--jobs N` sets an explicit worker count. Autocorrection falls back
+to sequential execution if multiple requested paths resolve to the same file,
+preventing concurrent writes to one correction target.
 
 ## Enforced limits
 

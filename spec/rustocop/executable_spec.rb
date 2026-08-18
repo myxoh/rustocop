@@ -94,4 +94,37 @@ RSpec.describe "rustocop executable" do
     expect(advertised_cops).to include(*expected_cops)
     expect(advertised_cops.grep(%r{\ASingulateCops/})).to be_empty
   end
+
+  it "preserves output order when inspecting files in parallel" do
+    files = Dir[File.join(ROOT, "spec/fixtures/rubocop_builtin_examples/lint_empty_expression/*.rb")].first(10)
+    arguments = ["--format", "json", "--only", "Lint/EmptyExpression", *files]
+
+    sequential = run_rustocop(*arguments)
+    parallel = run_rustocop("--jobs", "4", *arguments)
+
+    expect(parallel.stderr).to eq("")
+    expect(parallel.status.exitstatus).to eq(sequential.status.exitstatus)
+    expect(parallel.stdout).to eq(sequential.stdout)
+  end
+
+  it "rejects an invalid parallel worker count" do
+    result = run_rustocop("--jobs", "0", "--stdin", "example.rb", stdin: "puts :ok\n")
+
+    expect(result.stderr).to eq("rustocop: invalid worker count 0\n")
+    expect(result.status.exitstatus).to eq(2)
+  end
+
+  it "autocorrects distinct files safely in parallel" do
+    Dir.mktmpdir("rustocop-parallel-correction") do |directory|
+      files = 6.times.map do |index|
+        File.join(directory, "example_#{index}.rb").tap { |path| File.write(path, "{key:1}\n") }
+      end
+
+      result = run_rustocop("-A", "--jobs", "4", "--only", "Layout/SpaceAfterColon", *files)
+
+      expect(result.stderr).to eq("")
+      expect(result.status.exitstatus).to eq(0)
+      expect(files.map { |path| File.read(path) }).to all(eq("{key: 1}\n"))
+    end
+  end
 end
