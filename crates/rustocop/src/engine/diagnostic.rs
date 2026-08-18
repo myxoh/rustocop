@@ -25,6 +25,9 @@ pub(crate) fn sort_offenses(offenses: &mut [Offense]) {
 
 fn prism_offense(source: &str, index: &SourceIndex, finding: prism::Finding) -> Offense {
     let (line, column) = index.position(source, finding.start_offset);
+    let empty_location = finding.start_offset == 0 && finding.end_offset == 0;
+    let ends_at_newline = finding.end_offset > finding.start_offset
+        && source.as_bytes().get(finding.end_offset - 1) == Some(&b'\n');
     let mut last_offset = finding
         .end_offset
         .saturating_sub(1)
@@ -32,7 +35,14 @@ fn prism_offense(source: &str, index: &SourceIndex, finding: prism::Finding) -> 
     while last_offset > finding.start_offset && !source.is_char_boundary(last_offset) {
         last_offset -= 1;
     }
-    let (last_line, last_column) = index.position(source, last_offset);
+    let (last_line, last_column) = if empty_location {
+        (1, 0)
+    } else if ends_at_newline {
+        let (line, _) = index.position(source, finding.end_offset);
+        (line, 0)
+    } else {
+        index.position(source, last_offset)
+    };
     Offense {
         cop_name: finding.cop_name,
         message: finding.message,
@@ -91,5 +101,36 @@ mod tests {
         assert_eq!(index.position(source, 2), (1, 2));
         assert_eq!(index.position(source, 3), (2, 1));
         assert_eq!(index.position(source, 8), (2, 6));
+    }
+
+    #[test]
+    fn preserves_empty_and_newline_terminated_ranges() {
+        let empty = prism_offense(
+            "",
+            &SourceIndex::new(""),
+            prism::Finding {
+                cop_name: "Lint/EmptyFile",
+                message: "Empty file detected.".to_string(),
+                correctable: false,
+                corrected: false,
+                start_offset: 0,
+                end_offset: 0,
+            },
+        );
+        assert_eq!((empty.last_line, empty.last_column), (1, 0));
+
+        let newline = prism_offense(
+            "comment\n",
+            &SourceIndex::new("comment\n"),
+            prism::Finding {
+                cop_name: "Style/BlockComments",
+                message: "Block comment.".to_string(),
+                correctable: false,
+                corrected: false,
+                start_offset: 0,
+                end_offset: 8,
+            },
+        );
+        assert_eq!((newline.last_line, newline.last_column), (2, 0));
     }
 }

@@ -2,49 +2,17 @@ use std::collections::HashSet;
 
 use super::*;
 
-pub(super) fn cops() -> Vec<Box<dyn Cop>> {
-    vec![
-        Box::new(Dir),
-        Box::new(DuplicateRescueException),
-        Box::new(EmptyClass),
-        Box::new(ImplicitRuntimeError),
-        Box::new(EnvHome),
-        Box::new(ClassCheck),
-        Box::new(AsciiComments),
-    ]
+declare_source_cops! {
+    Dir => "Style/Dir" => dir_method,
+    DuplicateRescueException => "Lint/DuplicateRescueException" => duplicate_rescue,
+    EmptyClass => "Lint/EmptyClass" => empty_class,
+    ImplicitRuntimeError => "Style/ImplicitRuntimeError" => implicit_runtime_error,
+    EnvHome => "Style/EnvHome" => env_home,
+    ClassCheck => "Style/ClassCheck" => class_check,
+    AsciiComments => "Style/AsciiComments" => ascii_comments,
 }
 
-macro_rules! source_cop {
-    ($type:ident, $name:literal, $check:ident) => {
-        struct $type;
-        impl Cop for $type {
-            fn name(&self) -> &'static str {
-                $name
-            }
-            fn on_source(&self, source: &str, context: &mut Context) {
-                $check(self.name(), source, context);
-            }
-        }
-    };
-}
-
-source_cop!(Dir, "Style/Dir", dir_method);
-source_cop!(
-    DuplicateRescueException,
-    "Lint/DuplicateRescueException",
-    duplicate_rescue
-);
-source_cop!(EmptyClass, "Lint/EmptyClass", empty_class);
-source_cop!(
-    ImplicitRuntimeError,
-    "Style/ImplicitRuntimeError",
-    implicit_runtime_error
-);
-source_cop!(EnvHome, "Style/EnvHome", env_home);
-source_cop!(ClassCheck, "Style/ClassCheck", class_check);
-source_cop!(AsciiComments, "Style/AsciiComments", ascii_comments);
-
-fn dir_method(cop: &'static str, source: &str, context: &mut Context) {
+fn dir_method(source: &str, context: &mut Reporter<'_>) {
     for (offset, line) in source_lines(source) {
         let trimmed = line.trim();
         let normalized = trimmed.replace("::File", "File");
@@ -54,7 +22,6 @@ fn dir_method(cop: &'static str, source: &str, context: &mut Context) {
         ) {
             let start = offset + line.len() - line.trim_start().len();
             context.replace(
-                cop,
                 "Use `__dir__` to get an absolute path to the current file's directory.",
                 start..start + trimmed.len(),
                 start..start + trimmed.len(),
@@ -64,7 +31,7 @@ fn dir_method(cop: &'static str, source: &str, context: &mut Context) {
     }
 }
 
-fn duplicate_rescue(cop: &'static str, source: &str, context: &mut Context) {
+fn duplicate_rescue(source: &str, context: &mut Reporter<'_>) {
     let mut seen = HashSet::<String>::new();
     for (offset, line) in source_lines(source) {
         let trimmed = line.trim_start();
@@ -78,7 +45,6 @@ fn duplicate_rescue(cop: &'static str, source: &str, context: &mut Context) {
             let relative = list[cursor..].find(name).unwrap_or(0) + cursor;
             if !seen.insert(name.to_string()) {
                 context.report(
-                    cop,
                     "Duplicate `rescue` exception detected.",
                     list_start + relative..list_start + relative + name.len(),
                 );
@@ -88,7 +54,7 @@ fn duplicate_rescue(cop: &'static str, source: &str, context: &mut Context) {
     }
 }
 
-fn empty_class(cop: &'static str, source: &str, context: &mut Context) {
+fn empty_class(source: &str, context: &mut Reporter<'_>) {
     let lines = source_lines(source).collect::<Vec<_>>();
     for (index, (offset, line)) in lines.iter().enumerate() {
         let trimmed = line.trim();
@@ -106,13 +72,13 @@ fn empty_class(cop: &'static str, source: &str, context: &mut Context) {
                 } else {
                     "Empty class detected."
                 };
-                context.report(cop, message, *offset..end_offset + end_line.len());
+                context.report(message, *offset..end_offset + end_line.len());
             }
         }
     }
 }
 
-fn implicit_runtime_error(cop: &'static str, source: &str, context: &mut Context) {
+fn implicit_runtime_error(source: &str, context: &mut Reporter<'_>) {
     for (offset, line) in source_lines(source) {
         let trimmed = line.trim_start();
         let method = if trimmed.starts_with("raise '") || trimmed.starts_with("raise \"") {
@@ -130,11 +96,11 @@ fn implicit_runtime_error(cop: &'static str, source: &str, context: &mut Context
         } else {
             offset + line.len()
         };
-        context.report(cop, format!("Use `{method}` with an explicit exception class and message, rather than just a message."), start..end);
+        context.report(format!("Use `{method}` with an explicit exception class and message, rather than just a message."), start..end);
     }
 }
 
-fn env_home(cop: &'static str, source: &str, context: &mut Context) {
+fn env_home(source: &str, context: &mut Reporter<'_>) {
     for (offset, line) in source_lines(source) {
         let trimmed = line.trim();
         let normalized = trimmed.strip_prefix("::").unwrap_or(trimmed);
@@ -149,7 +115,6 @@ fn env_home(cop: &'static str, source: &str, context: &mut Context) {
         ) {
             let start = offset + line.len() - line.trim_start().len();
             context.replace(
-                cop,
                 "Use `Dir.home` instead.",
                 start..start + trimmed.len(),
                 start..start + trimmed.len(),
@@ -159,10 +124,9 @@ fn env_home(cop: &'static str, source: &str, context: &mut Context) {
     }
 }
 
-fn class_check(cop: &'static str, source: &str, context: &mut Context) {
+fn class_check(source: &str, context: &mut Reporter<'_>) {
     for (start, _) in source.match_indices("kind_of?") {
         context.replace(
-            cop,
             "Prefer `Object#is_a?` over `Object#kind_of?`.",
             start..start + 8,
             start..start + 8,
@@ -171,7 +135,7 @@ fn class_check(cop: &'static str, source: &str, context: &mut Context) {
     }
 }
 
-fn ascii_comments(cop: &'static str, source: &str, context: &mut Context) {
+fn ascii_comments(source: &str, context: &mut Reporter<'_>) {
     for (offset, line) in source_lines(source) {
         let Some(hash) = line.find('#') else { continue };
         let comment = &line[hash + 1..];
@@ -189,7 +153,7 @@ fn ascii_comments(cop: &'static str, source: &str, context: &mut Context) {
             }
             end = start + relative + character.len_utf8();
         }
-        context.report(cop, "Use only ascii symbols in comments.", start..end);
+        context.report("Use only ascii symbols in comments.", start..end);
     }
 }
 

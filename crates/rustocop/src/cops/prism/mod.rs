@@ -1,12 +1,18 @@
 use ruby_prism::{parse, CallNode, Node, Visit};
+use std::sync::Arc;
 
+mod additional_rules;
+mod additional_rules_literals;
+mod additional_rules_more;
 mod diagnostic;
+mod dsl;
 mod layout;
 mod lint;
 mod lint_control_flow;
 mod lint_suspicious_calls;
 mod matchers;
 mod security;
+mod source_helpers;
 mod source_rules;
 mod source_rules_layout;
 mod source_rules_misc;
@@ -17,12 +23,43 @@ mod style_compat;
 mod style_rewrites;
 mod style_source;
 
-use crate::config::RubyVersion;
-use diagnostic::Context;
+use crate::config::{CopConfig, RubyVersion};
+use diagnostic::{Context, Reporter};
 pub(crate) use diagnostic::{Finding, Inspection};
+use dsl::*;
 use matchers::*;
 
 pub const PRISM_COPS: &[&str] = &[
+    "Bundler/InsecureProtocolSource",
+    "Gemspec/AttributeAssignment",
+    "Gemspec/RubyVersionGlobalsUsage",
+    "Layout/LeadingEmptyLines",
+    "Layout/SpaceAfterMethodName",
+    "Layout/SpaceInsideRangeLiteral",
+    "Lint/DisjunctiveAssignmentInConstructor",
+    "Lint/DuplicateRequire",
+    "Lint/EachWithObjectArgument",
+    "Lint/EmptyFile",
+    "Lint/NestedPercentLiteral",
+    "Lint/OrAssignmentToConstant",
+    "Lint/OrderedMagicComments",
+    "Lint/RefinementImportMethods",
+    "Lint/RescueException",
+    "Lint/TripleQuotes",
+    "Lint/UriEscapeUnescape",
+    "Lint/UriRegexp",
+    "Lint/UselessDefined",
+    "Style/AutoResourceCleanup",
+    "Style/BlockComments",
+    "Style/EmptyBlockParameter",
+    "Style/EmptyHeredoc",
+    "Style/InPatternThen",
+    "Style/NumericLiteralPrefix",
+    "Style/OpenStructUse",
+    "Style/PreferredHashMethods",
+    "Style/RedundantConstantBase",
+    "Style/RedundantRegexpConstructor",
+    "Style/StabbyLambdaParentheses",
     "Lint/BooleanSymbol",
     "Lint/EmptyExpression",
     "Lint/FlipFlop",
@@ -145,9 +182,10 @@ impl Engine {
         source: &str,
         autocorrect: bool,
         target_ruby_version: RubyVersion,
+        cop_config: Arc<CopConfig>,
     ) -> Inspection {
         let parsed = parse(source.as_bytes());
-        let mut context = Context::new(autocorrect, target_ruby_version);
+        let mut context = Context::new(autocorrect, target_ruby_version, cop_config);
         for cop in &self.registry.cops {
             cop.on_source(source, &mut context);
         }
@@ -166,6 +204,9 @@ impl Registry {
     fn enabled(enabled: &dyn Fn(&str) -> bool) -> Self {
         let cops = lint::cops()
             .into_iter()
+            .chain(additional_rules::cops())
+            .chain(additional_rules_literals::cops())
+            .chain(additional_rules_more::cops())
             .chain(lint_control_flow::cops())
             .chain(lint_suspicious_calls::cops())
             .chain(layout::cops())
@@ -219,7 +260,12 @@ fn inspect(
     target_ruby_version: RubyVersion,
     enabled: &dyn Fn(&str) -> bool,
 ) -> Inspection {
-    Engine::new(enabled).inspect(source, autocorrect, target_ruby_version)
+    Engine::new(enabled).inspect(
+        source,
+        autocorrect,
+        target_ruby_version,
+        Arc::new(CopConfig::default()),
+    )
 }
 
 #[cfg(test)]

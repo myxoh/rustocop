@@ -38,7 +38,7 @@ src/
     diagnostic.rs  Prism finding-to-offense location conversion
     source.rs      mutable textual source representation
   cops/
-    prism/         shared Prism registry, traversal, matchers, and AST cops
+    prism/         shared Prism registry, authoring DSL, matchers, and AST cops
     text/          textual compatibility cops grouped by department
 ```
 

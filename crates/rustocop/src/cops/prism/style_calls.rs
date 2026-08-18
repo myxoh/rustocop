@@ -1,34 +1,24 @@
 use super::*;
 
-pub(super) fn cops() -> Vec<Box<dyn Cop>> {
-    vec![Box::new(ColonMethodCall)]
-}
+declare_cops!(ColonMethodCall);
+define_call_cop!(ColonMethodCall => "Style/ColonMethodCall" => colon_method_call);
 
-struct ColonMethodCall;
-
-impl Cop for ColonMethodCall {
-    fn name(&self) -> &'static str {
-        "Style/ColonMethodCall"
+fn colon_method_call(node: &CallNode<'_>, reporter: &mut Reporter<'_>) {
+    let method = call_name(node);
+    if !match_call(node).with_operator(b"::").matches()
+        || method.first().is_some_and(u8::is_ascii_uppercase)
+        || root_constant(node.receiver(), b"Java")
+    {
+        return;
     }
+    let Some(operator) = node.call_operator_loc() else {
+        return;
+    };
 
-    fn on_call(&self, node: &CallNode<'_>, context: &mut Context) {
-        let Some(operator) = node.call_operator_loc() else {
-            return;
-        };
-        let method = call_name(node);
-        if operator.as_slice() != b"::"
-            || method.first().is_some_and(u8::is_ascii_uppercase)
-            || root_constant(node.receiver(), b"Java")
-        {
-            return;
-        }
-
-        context.replace(
-            self.name(),
-            "Do not use `::` for method calls.",
-            &operator,
-            &operator,
-            ".",
-        );
-    }
+    reporter.replace(
+        "Do not use `::` for method calls.",
+        &operator,
+        &operator,
+        ".",
+    );
 }

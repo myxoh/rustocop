@@ -193,7 +193,7 @@ impl Cop for RedundantFileExtensionInRequire {
     }
 
     fn on_call(&self, node: &CallNode<'_>, context: &mut Context) {
-        if !CallMatcher::new(node)
+        if !match_call(node)
             .named_any(&[b"require", b"require_relative"])
             .without_receiver()
             .with_argument_count(1)
@@ -201,7 +201,7 @@ impl Cop for RedundantFileExtensionInRequire {
         {
             return;
         }
-        let Some(string) = first_argument(node).and_then(|argument| argument.as_string_node())
+        let Some(string) = only_argument(node).and_then(|argument| argument.as_string_node())
         else {
             return;
         };

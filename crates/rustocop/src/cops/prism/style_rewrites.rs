@@ -28,23 +28,20 @@ impl Cop for ArrayJoin {
             return;
         };
         let (Some(receiver), Some(argument), Some(selector)) =
-            (call.receiver(), first_argument(&call), call.message_loc())
+            (call.receiver(), only_argument(&call), call.message_loc())
         else {
             return;
         };
         if call_name(&call) != b"*"
             || receiver.as_array_node().is_none()
             || argument.as_string_node().is_none()
-            || call
-                .arguments()
-                .is_none_or(|arguments| arguments.arguments().len() != 1)
         {
             return;
         }
         let replacement = format!(
             "{}.join({})",
-            source_at(source, &receiver.location()),
-            source_at(source, &argument.location())
+            node_source(source, &receiver),
+            node_source(source, &argument)
         );
         context.replace(
             self.name(),
@@ -64,11 +61,11 @@ impl Cop for ProcLiteral {
     }
 
     fn on_call(&self, node: &CallNode<'_>, context: &mut Context) {
-        if !CallMatcher::new(node)
+        if !match_call(node)
             .named(b"new")
             .on_root_constant(b"Proc")
+            .with_block()
             .matches()
-            || node.block().is_none()
         {
             return;
         }
@@ -133,14 +130,14 @@ impl Cop for Strip {
 
     fn on_call(&self, node: &CallNode<'_>, context: &mut Context) {
         let outer = call_name(node);
-        if !CallMatcher::new(node)
+        if !match_call(node)
             .named_any(&[b"lstrip", b"rstrip"])
             .without_arguments()
             .matches()
         {
             return;
         }
-        let Some(inner) = node.receiver().and_then(|receiver| receiver.as_call_node()) else {
+        let Some(inner) = receiver_call(node) else {
             return;
         };
         let expected_inner = if outer == b"lstrip" {
@@ -148,7 +145,7 @@ impl Cop for Strip {
         } else {
             b"lstrip"
         };
-        if !CallMatcher::new(&inner)
+        if !match_call(&inner)
             .named(expected_inner)
             .without_arguments()
             .matches()
@@ -208,12 +205,12 @@ impl Cop for NestedFileDirname {
         if !file_dirname_call(&call) || nested_in_file_dirname(&call, ancestors) {
             return;
         }
-        let Some(mut argument) = first_argument(&call) else {
+        let Some(mut argument) = only_argument(&call) else {
             return;
         };
         let mut depth = 1;
         while let Some(inner) = argument.as_call_node().filter(file_dirname_call) {
-            let Some(next) = first_argument(&inner) else {
+            let Some(next) = only_argument(&inner) else {
                 break;
             };
             depth += 1;
@@ -226,7 +223,7 @@ impl Cop for NestedFileDirname {
             return;
         };
         let offense = selector.start_offset()..call.location().end_offset();
-        let argument = source_at(source, &argument.location());
+        let argument = node_source(source, &argument);
         context.replace(
             self.name(),
             format!("Use `dirname({argument}, {depth})` instead."),
@@ -238,21 +235,19 @@ impl Cop for NestedFileDirname {
 }
 
 fn file_dirname_call(call: &CallNode<'_>) -> bool {
-    call_name(call) == b"dirname"
-        && root_constant(call.receiver(), b"File")
-        && call
-            .arguments()
-            .is_some_and(|arguments| arguments.arguments().len() == 1)
+    match_call(call)
+        .named(b"dirname")
+        .on_root_constant(b"File")
+        .with_argument_count(1)
+        .matches()
 }
 
 fn nested_in_file_dirname(call: &CallNode<'_>, ancestors: &[Node<'_>]) -> bool {
     ancestors.iter().rev().any(|ancestor| {
         ancestor.as_call_node().is_some_and(|parent| {
             file_dirname_call(&parent)
-                && first_argument(&parent).is_some_and(|argument| {
-                    argument.location().start_offset() == call.location().start_offset()
-                        && argument.location().end_offset() == call.location().end_offset()
-                })
+                && only_argument(&parent)
+                    .is_some_and(|argument| same_location(&argument, &call.as_node()))
         })
     })
 }

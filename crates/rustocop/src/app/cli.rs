@@ -1,6 +1,10 @@
 use std::fs;
 
-use crate::config::{CopSelection, InspectionConfig, Parallelism, RubyVersion, RunOptions};
+use std::sync::Arc;
+
+use crate::config::{
+    CopConfig, CopSelection, InspectionConfig, Parallelism, RubyVersion, RunOptions,
+};
 
 pub(super) enum Command {
     Run(RunOptions),
@@ -19,6 +23,7 @@ pub(super) fn parse_args(mut args: Vec<String>) -> Result<Command, String> {
             autocorrect: false,
             cops: CopSelection::default_enabled(),
             target_ruby_version: RubyVersion::default(),
+            cop_config: Arc::new(CopConfig::default()),
         },
     };
 
@@ -43,7 +48,7 @@ pub(super) fn parse_args(mut args: Vec<String>) -> Result<Command, String> {
             }
             "--config" | "-c" => {
                 let path = take_value(&mut args, &arg)?;
-                options.inspection.target_ruby_version = target_ruby_version_from_config(&path);
+                apply_config(&mut options.inspection, &path);
             }
             "--require" | "--plugin" => {
                 let _ = take_value(&mut args, &arg)?;
@@ -74,7 +79,7 @@ pub(super) fn parse_args(mut args: Vec<String>) -> Result<Command, String> {
             }
             _ if arg.starts_with("--config=") => {
                 let path = arg.strip_prefix("--config=").unwrap_or_default();
-                options.inspection.target_ruby_version = target_ruby_version_from_config(path);
+                apply_config(&mut options.inspection, path);
             }
             _ if arg.starts_with("--jobs=") => {
                 let value = arg.strip_prefix("--jobs=").unwrap_or_default();
@@ -107,11 +112,12 @@ fn parse_jobs(value: &str) -> Result<usize, String> {
         .ok_or_else(|| format!("invalid worker count {value}"))
 }
 
-fn target_ruby_version_from_config(path: &str) -> RubyVersion {
-    fs::read_to_string(path)
-        .ok()
-        .and_then(|source| target_ruby_version_from_source(&source))
-        .unwrap_or_default()
+fn apply_config(config: &mut InspectionConfig, path: &str) {
+    let Some(source) = fs::read_to_string(path).ok() else {
+        return;
+    };
+    config.target_ruby_version = target_ruby_version_from_source(&source).unwrap_or_default();
+    config.cop_config = Arc::new(CopConfig::from_source(&source));
 }
 
 fn target_ruby_version_from_source(source: &str) -> Option<RubyVersion> {

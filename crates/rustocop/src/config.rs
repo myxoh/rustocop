@@ -1,4 +1,5 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
 
 use crate::catalog::{DEFAULT_DISABLED_COPS, SUPPORTED_COPS};
 
@@ -23,6 +24,49 @@ pub(crate) struct InspectionConfig {
     pub(crate) autocorrect: bool,
     pub(crate) cops: CopSelection,
     pub(crate) target_ruby_version: RubyVersion,
+    pub(crate) cop_config: Arc<CopConfig>,
+}
+
+#[derive(Clone, Debug, Default)]
+pub(crate) struct CopConfig {
+    values: HashMap<String, HashMap<String, String>>,
+}
+
+impl CopConfig {
+    pub(crate) fn from_source(source: &str) -> Self {
+        let mut values = HashMap::<String, HashMap<String, String>>::new();
+        let mut section = None;
+        for line in source.lines() {
+            if !line.starts_with(char::is_whitespace) {
+                section = line
+                    .strip_suffix(':')
+                    .filter(|name| name.contains('/'))
+                    .map(str::to_string);
+                continue;
+            }
+            let Some(section) = section.as_ref() else {
+                continue;
+            };
+            let Some((key, value)) = line.trim().split_once(':') else {
+                continue;
+            };
+            let value = value
+                .split('#')
+                .next()
+                .unwrap_or_default()
+                .trim()
+                .trim_matches(['\'', '"']);
+            values
+                .entry(section.clone())
+                .or_default()
+                .insert(key.to_string(), value.to_string());
+        }
+        Self { values }
+    }
+
+    pub(crate) fn value(&self, cop: &str, key: &str) -> Option<&str> {
+        self.values.get(cop)?.get(key).map(String::as_str)
+    }
 }
 
 impl InspectionConfig {
@@ -115,5 +159,19 @@ mod tests {
         let selection = CopSelection::only("Style/Documentation");
         assert!(selection.enabled("Style/Documentation"));
         assert!(!selection.enabled("Style/HashSyntax"));
+    }
+
+    #[test]
+    fn reads_scoped_cop_configuration_values() {
+        let config = CopConfig::from_source(
+            "Style/Example:\n  EnforcedStyle: custom\nOther/Rule:\n  Allowed: false\n",
+        );
+
+        assert_eq!(
+            config.value("Style/Example", "EnforcedStyle"),
+            Some("custom")
+        );
+        assert_eq!(config.value("Other/Rule", "Allowed"), Some("false"));
+        assert_eq!(config.value("Style/Example", "Allowed"), None);
     }
 }

@@ -2,74 +2,23 @@ use std::collections::{HashMap, HashSet};
 
 use super::*;
 
-pub(super) fn cops() -> Vec<Box<dyn Cop>> {
-    vec![
-        Box::new(SymbolLiteral),
-        Box::new(AddRuntimeDependency),
-        Box::new(ArrayIntersect),
-        Box::new(WhenThen),
-        Box::new(ClassAndModuleCamelCase),
-        Box::new(ArrayCoercion),
-        Box::new(ClassMethods),
-        Box::new(RedundantCapitalW),
-        Box::new(DuplicateElsifCondition),
-        Box::new(EnsureReturn),
-        Box::new(ClassVars),
-        Box::new(DuplicatedGem),
-        Box::new(StringHashKeys),
-    ]
+declare_source_cops! {
+    SymbolLiteral => "Style/SymbolLiteral" => symbol_literals,
+    AddRuntimeDependency => "Gemspec/AddRuntimeDependency" => add_runtime_dependency,
+    ArrayIntersect => "Style/ArrayIntersectWithSingleElement" => array_intersect,
+    WhenThen => "Style/WhenThen" => when_then,
+    ClassAndModuleCamelCase => "Naming/ClassAndModuleCamelCase" => camel_case,
+    ArrayCoercion => "Style/ArrayCoercion" => array_coercion,
+    ClassMethods => "Style/ClassMethods" => class_methods,
+    RedundantCapitalW => "Style/RedundantCapitalW" => redundant_capital_w,
+    DuplicateElsifCondition => "Lint/DuplicateElsifCondition" => duplicate_elsif,
+    EnsureReturn => "Lint/EnsureReturn" => ensure_return,
+    ClassVars => "Style/ClassVars" => class_vars,
+    DuplicatedGem => "Bundler/DuplicatedGem" => duplicated_gem,
+    StringHashKeys => "Style/StringHashKeys" => string_hash_keys,
 }
 
-macro_rules! source_cop {
-    ($type:ident, $name:literal, $check:ident) => {
-        struct $type;
-        impl Cop for $type {
-            fn name(&self) -> &'static str {
-                $name
-            }
-
-            fn on_source(&self, source: &str, context: &mut Context) {
-                $check(self.name(), source, context);
-            }
-        }
-    };
-}
-
-source_cop!(SymbolLiteral, "Style/SymbolLiteral", symbol_literals);
-source_cop!(
-    AddRuntimeDependency,
-    "Gemspec/AddRuntimeDependency",
-    add_runtime_dependency
-);
-source_cop!(
-    ArrayIntersect,
-    "Style/ArrayIntersectWithSingleElement",
-    array_intersect
-);
-source_cop!(WhenThen, "Style/WhenThen", when_then);
-source_cop!(
-    ClassAndModuleCamelCase,
-    "Naming/ClassAndModuleCamelCase",
-    camel_case
-);
-source_cop!(ArrayCoercion, "Style/ArrayCoercion", array_coercion);
-source_cop!(ClassMethods, "Style/ClassMethods", class_methods);
-source_cop!(
-    RedundantCapitalW,
-    "Style/RedundantCapitalW",
-    redundant_capital_w
-);
-source_cop!(
-    DuplicateElsifCondition,
-    "Lint/DuplicateElsifCondition",
-    duplicate_elsif
-);
-source_cop!(EnsureReturn, "Lint/EnsureReturn", ensure_return);
-source_cop!(ClassVars, "Style/ClassVars", class_vars);
-source_cop!(DuplicatedGem, "Bundler/DuplicatedGem", duplicated_gem);
-source_cop!(StringHashKeys, "Style/StringHashKeys", string_hash_keys);
-
-fn symbol_literals(cop: &'static str, source: &str, context: &mut Context) {
+fn symbol_literals(source: &str, context: &mut Reporter<'_>) {
     for start in find_all(source, ":\"") {
         let Some(relative_end) = source[start + 2..].find('"') else {
             continue;
@@ -83,7 +32,6 @@ fn symbol_literals(cop: &'static str, source: &str, context: &mut Context) {
                 .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
         {
             context.replace(
-                cop,
                 "Do not use strings for word-like symbol literals.",
                 start..end,
                 start..end,
@@ -93,13 +41,12 @@ fn symbol_literals(cop: &'static str, source: &str, context: &mut Context) {
     }
 }
 
-fn add_runtime_dependency(cop: &'static str, source: &str, context: &mut Context) {
+fn add_runtime_dependency(source: &str, context: &mut Reporter<'_>) {
     for dot in find_all(source, ".add_runtime_dependency") {
         let start = dot + 1;
         let end = start + "add_runtime_dependency".len();
         if source.as_bytes().get(end) == Some(&b'(') {
             context.replace(
-                cop,
                 "Use `add_dependency` instead of `add_runtime_dependency`.",
                 start..end,
                 start..end,
@@ -109,7 +56,7 @@ fn add_runtime_dependency(cop: &'static str, source: &str, context: &mut Context
     }
 }
 
-fn array_intersect(cop: &'static str, source: &str, context: &mut Context) {
+fn array_intersect(source: &str, context: &mut Reporter<'_>) {
     for start in find_all(source, ".intersect?(") {
         if start > 0 && source.as_bytes()[start - 1] == b'&' {
             continue;
@@ -135,7 +82,6 @@ fn array_intersect(cop: &'static str, source: &str, context: &mut Context) {
         };
         if let Some(element) = element {
             context.replace(
-                cop,
                 "Use `include?(element)` instead of `intersect?([element])`.",
                 start + 1..end,
                 start..end,
@@ -145,7 +91,7 @@ fn array_intersect(cop: &'static str, source: &str, context: &mut Context) {
     }
 }
 
-fn when_then(cop: &'static str, source: &str, context: &mut Context) {
+fn when_then(source: &str, context: &mut Reporter<'_>) {
     for (offset, line) in source_lines(source) {
         let trimmed = line.trim_start();
         if !trimmed.starts_with("when ") {
@@ -157,7 +103,6 @@ fn when_then(cop: &'static str, source: &str, context: &mut Context) {
         }
         let prefix = line[..=semi].trim_start();
         context.replace(
-            cop,
             format!(
                 "Do not use `{prefix}`. Use `{} then` instead.",
                 prefix.trim_end_matches(';')
@@ -169,7 +114,7 @@ fn when_then(cop: &'static str, source: &str, context: &mut Context) {
     }
 }
 
-fn camel_case(cop: &'static str, source: &str, context: &mut Context) {
+fn camel_case(source: &str, context: &mut Reporter<'_>) {
     for (offset, line) in source_lines(source) {
         let trimmed = line.trim_start();
         let keyword = if trimmed.starts_with("class ") {
@@ -190,7 +135,6 @@ fn camel_case(cop: &'static str, source: &str, context: &mut Context) {
         });
         if invalid {
             context.report(
-                cop,
                 "Use CamelCase for classes and modules.",
                 offset + name_start..offset + name_start + name.len(),
             );
@@ -198,7 +142,7 @@ fn camel_case(cop: &'static str, source: &str, context: &mut Context) {
     }
 }
 
-fn array_coercion(cop: &'static str, source: &str, context: &mut Context) {
+fn array_coercion(source: &str, context: &mut Reporter<'_>) {
     for start in find_all(source, "[*") {
         let Some(end_rel) = source[start + 2..].find(']') else {
             continue;
@@ -207,7 +151,6 @@ fn array_coercion(cop: &'static str, source: &str, context: &mut Context) {
         let value = &source[start + 2..end - 1];
         if !value.contains(',') {
             context.replace(
-                cop,
                 format!("Use `Array({value})` instead of `[*{value}]`."),
                 start..end,
                 start..end,
@@ -223,7 +166,6 @@ fn array_coercion(cop: &'static str, source: &str, context: &mut Context) {
         let pattern = format!("] unless {value}.is_a?(Array)");
         if rest == format!("{value}{pattern}") {
             context.replace(
-                cop,
                 format!("Use `Array({value})` instead of explicit `Array` check."),
                 offset..offset + line.len(),
                 offset..offset + line.len(),
@@ -233,7 +175,7 @@ fn array_coercion(cop: &'static str, source: &str, context: &mut Context) {
     }
 }
 
-fn class_methods(cop: &'static str, source: &str, context: &mut Context) {
+fn class_methods(source: &str, context: &mut Reporter<'_>) {
     let mut owner: Option<String> = None;
     for (offset, line) in source_lines(source) {
         let trimmed = line.trim();
@@ -260,7 +202,6 @@ fn class_methods(cop: &'static str, source: &str, context: &mut Context) {
                 .next()
                 .unwrap_or_default();
             context.replace(
-                cop,
                 format!("Use `self.{method}` instead of `{owner_name}.{method}`."),
                 receiver.clone(),
                 receiver,
@@ -270,7 +211,7 @@ fn class_methods(cop: &'static str, source: &str, context: &mut Context) {
     }
 }
 
-fn redundant_capital_w(cop: &'static str, source: &str, context: &mut Context) {
+fn redundant_capital_w(source: &str, context: &mut Reporter<'_>) {
     for start in find_all(source, "%W") {
         let Some(open) = source.as_bytes().get(start + 2).copied() else {
             continue;
@@ -288,7 +229,6 @@ fn redundant_capital_w(cop: &'static str, source: &str, context: &mut Context) {
         let body = &source[start + 3..end - 1];
         if !body.contains("#{") && !body.contains('\\') {
             context.replace(
-                cop,
                 "Do not use `%W` unless interpolation is needed. If not, use `%w`.",
                 start..end,
                 start + 1..start + 2,
@@ -298,7 +238,7 @@ fn redundant_capital_w(cop: &'static str, source: &str, context: &mut Context) {
     }
 }
 
-fn duplicate_elsif(cop: &'static str, source: &str, context: &mut Context) {
+fn duplicate_elsif(source: &str, context: &mut Reporter<'_>) {
     let mut seen = HashSet::new();
     for (offset, line) in source_lines(source) {
         let trimmed = line.trim_start();
@@ -309,7 +249,6 @@ fn duplicate_elsif(cop: &'static str, source: &str, context: &mut Context) {
             let start = offset + line.len() - trimmed.len() + 6;
             if !seen.insert(condition.to_string()) {
                 context.report(
-                    cop,
                     "Duplicate `elsif` condition detected.",
                     start..start + condition.len(),
                 );
@@ -320,7 +259,7 @@ fn duplicate_elsif(cop: &'static str, source: &str, context: &mut Context) {
     }
 }
 
-fn ensure_return(cop: &'static str, source: &str, context: &mut Context) {
+fn ensure_return(source: &str, context: &mut Reporter<'_>) {
     let mut in_ensure = false;
     for (offset, line) in source_lines(source) {
         let trimmed = line.trim();
@@ -334,7 +273,6 @@ fn ensure_return(cop: &'static str, source: &str, context: &mut Context) {
         if in_ensure && (trimmed == "return" || trimmed.starts_with("return ")) {
             let start = offset + line.len() - line.trim_start().len();
             context.report(
-                cop,
                 "Do not return from an `ensure` block.",
                 start..offset + line.len(),
             );
@@ -342,7 +280,7 @@ fn ensure_return(cop: &'static str, source: &str, context: &mut Context) {
     }
 }
 
-fn class_vars(cop: &'static str, source: &str, context: &mut Context) {
+fn class_vars(source: &str, context: &mut Reporter<'_>) {
     for start in find_all(source, "@@") {
         let end = start
             + source[start..]
@@ -356,7 +294,6 @@ fn class_vars(cop: &'static str, source: &str, context: &mut Context) {
             let offense_start = if setter { start - 1 } else { start };
             let name = &source[offense_start..end];
             context.report(
-                cop,
                 format!("Replace class var {name} with a class instance var."),
                 offense_start..end,
             );
@@ -364,7 +301,7 @@ fn class_vars(cop: &'static str, source: &str, context: &mut Context) {
     }
 }
 
-fn duplicated_gem(cop: &'static str, source: &str, context: &mut Context) {
+fn duplicated_gem(source: &str, context: &mut Reporter<'_>) {
     let mut first = HashMap::<String, (usize, usize)>::new();
     for (offset, line) in source_lines(source) {
         let trimmed = line.trim_start();
@@ -383,7 +320,7 @@ fn duplicated_gem(cop: &'static str, source: &str, context: &mut Context) {
         if let Some((first_line, first_indent)) = first.get(name).copied() {
             if first_indent == 0 || first_indent == indent {
                 let start = offset + indent;
-                context.report(cop, format!("Gem `{name}` requirements already given on line {first_line} of the Gemfile."), start..offset + line.len());
+                context.report(format!("Gem `{name}` requirements already given on line {first_line} of the Gemfile."), start..offset + line.len());
             }
         } else {
             first.insert(
@@ -397,7 +334,7 @@ fn duplicated_gem(cop: &'static str, source: &str, context: &mut Context) {
     }
 }
 
-fn string_hash_keys(cop: &'static str, source: &str, context: &mut Context) {
+fn string_hash_keys(source: &str, context: &mut Reporter<'_>) {
     if source.contains("popen(")
         || source.contains("capture3(")
         || source.contains("pipeline(")
@@ -423,7 +360,6 @@ fn string_hash_keys(cop: &'static str, source: &str, context: &mut Context) {
             format!(":\"{value}\"")
         };
         context.replace(
-            cop,
             "Prefer symbols instead of strings as hash keys.",
             start..end,
             start..end,

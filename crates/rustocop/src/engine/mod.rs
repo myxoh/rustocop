@@ -68,6 +68,7 @@ impl InspectionPlan {
             &prism_source,
             options.autocorrect,
             options.target_ruby_version,
+            options.cop_config.clone(),
         );
         append_prism_offenses(&mut offenses, &prism_source, prism_inspection.findings);
         text::after_prism(path, &original_lines, options, &mut offenses);
@@ -80,9 +81,12 @@ impl InspectionPlan {
         content: &str,
         options: &InspectionConfig,
     ) -> (Vec<Offense>, String) {
-        let inspection =
-            self.prism
-                .inspect(content, options.autocorrect, options.target_ruby_version);
+        let inspection = self.prism.inspect(
+            content,
+            options.autocorrect,
+            options.target_ruby_version,
+            options.cop_config.clone(),
+        );
         let mut offenses = Vec::with_capacity(inspection.findings.len());
         append_prism_offenses(&mut offenses, content, inspection.findings);
         sort_offenses(&mut offenses);

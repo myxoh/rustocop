@@ -76,7 +76,7 @@ impl BinaryOperatorWithIdenticalOperands {
         source: &str,
         context: &mut Context,
     ) {
-        if source_at(source, &left.location()) != source_at(source, &right.location()) {
+        if !same_source(source, &left, &right) {
             return;
         }
         context.report(
@@ -108,7 +108,7 @@ impl Cop for HashCompareByIdentity {
         else {
             return;
         };
-        if !CallMatcher::new(&key_call)
+        if !match_call(&key_call)
             .named(b"object_id")
             .without_arguments()
             .matches()
@@ -140,17 +140,15 @@ impl Cop for RandOne {
         let Some(call) = node.as_call_node() else {
             return;
         };
-        let receiver_matches =
-            call.receiver().is_none() || root_constant(call.receiver(), b"Kernel");
-        if !CallMatcher::new(&call)
+        if !match_call(&call)
             .named(b"rand")
+            .on_implicit_or_root_constant(b"Kernel")
             .with_argument_count(1)
             .matches()
-            || !receiver_matches
         {
             return;
         }
-        let Some(argument) = first_argument(&call) else {
+        let Some(argument) = only_argument(&call) else {
             return;
         };
         let one = argument

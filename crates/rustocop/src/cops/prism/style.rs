@@ -164,9 +164,9 @@ impl Cop for NotKeyword {
         if call_name(&call) == b"!" && selector.as_slice() == b"not" {
             let receiver_source = call
                 .receiver()
-                .map(|receiver| source_at(source, &receiver.location()))
+                .map(|receiver| node_source(source, &receiver))
                 .unwrap_or_default();
-            let call_source = source_at(source, &call.location());
+            let call_source = node_source(source, &call.as_node());
             let replacement = if call_source.starts_with("not(") {
                 format!("!({})", receiver_source)
             } else if let Some((left, right)) = receiver_source.split_once(" < ") {
@@ -229,7 +229,7 @@ impl Cop for RedundantArrayConstructor {
             "Remove the redundant `Array` constructor.",
             selector,
             node_location,
-            source_at(source, &argument.location()),
+            node_source(source, &argument),
         );
     }
 }
@@ -263,7 +263,7 @@ impl Cop for RedundantFreeze {
             "Do not freeze immutable objects, as freezing them has no effect.",
             &location,
             &location,
-            source_at(source, &receiver.location()),
+            node_source(source, &receiver),
         );
     }
 }
@@ -288,7 +288,7 @@ impl Cop for StringChars {
         let Some(argument) = first_argument(&call) else {
             return;
         };
-        let argument_source = source_at(source, &argument.location());
+        let argument_source = node_source(source, &argument);
         if call_name(&call) != b"split"
             || !matches!(argument_source, "''" | "\"\"" | "//")
             || call
@@ -337,30 +337,23 @@ impl Cop for BeginBlock {
     }
 }
 
-struct StringMethods;
+define_call_cop!(StringMethods => "Style/StringMethods" => string_methods);
 
-impl Cop for StringMethods {
-    fn name(&self) -> &'static str {
-        "Style/StringMethods"
+fn string_methods(node: &CallNode<'_>, reporter: &mut Reporter<'_>) {
+    if !match_call(node)
+        .named(b"intern")
+        .without_arguments()
+        .matches()
+    {
+        return;
     }
-
-    fn on_call(&self, node: &CallNode<'_>, context: &mut Context) {
-        if !CallMatcher::new(node)
-            .named(b"intern")
-            .without_arguments()
-            .matches()
-        {
-            return;
-        }
-        let Some(selector) = node.message_loc() else {
-            return;
-        };
-        context.replace(
-            self.name(),
-            "Prefer `to_sym` over `intern`.",
-            &selector,
-            &selector,
-            "to_sym",
-        );
-    }
+    let Some(selector) = node.message_loc() else {
+        return;
+    };
+    reporter.replace(
+        "Prefer `to_sym` over `intern`.",
+        &selector,
+        &selector,
+        "to_sym",
+    );
 }

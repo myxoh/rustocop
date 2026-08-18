@@ -25,15 +25,10 @@ impl Cop for ArrayFirstLast {
         let Some(call) = node.as_call_node() else {
             return;
         };
-        let Some(argument) = first_argument(&call) else {
+        let Some(argument) = only_argument(&call) else {
             return;
         };
-        if call_name(&call) != b"[]"
-            || call
-                .arguments()
-                .is_none_or(|arguments| arguments.arguments().len() != 1)
-            || chained_bracket_call(&call, ancestors)
-        {
+        if call_name(&call) != b"[]" || chained_bracket_call(&call, ancestors) {
             return;
         }
         let Some(value) = argument
@@ -79,22 +74,17 @@ impl Cop for ArrayFirstLast {
 }
 
 fn chained_bracket_call(call: &CallNode<'_>, ancestors: &[Node<'_>]) -> bool {
-    if call
-        .receiver()
-        .and_then(|receiver| receiver.as_call_node())
-        .is_some_and(|receiver| call_name(&receiver) == b"[]")
-    {
+    if receiver_call(call).is_some_and(|receiver| call_name(&receiver) == b"[]") {
         return true;
     }
 
-    let location = call.location();
+    let call_node = call.as_node();
     ancestors.iter().rev().any(|ancestor| {
         ancestor.as_call_node().is_some_and(|parent| {
             matches!(call_name(&parent), b"[]" | b"[]=")
-                && parent.receiver().is_some_and(|receiver| {
-                    receiver.location().start_offset() == location.start_offset()
-                        && receiver.location().end_offset() == location.end_offset()
-                })
+                && parent
+                    .receiver()
+                    .is_some_and(|receiver| same_location(&receiver, &call_node))
         })
     })
 }
@@ -110,7 +100,7 @@ impl Cop for RedundantArrayFlatten {
         if call_name(node) != b"join" || !join_without_separator(node) {
             return;
         }
-        let Some(flatten) = node.receiver().and_then(|receiver| receiver.as_call_node()) else {
+        let Some(flatten) = receiver_call(node) else {
             return;
         };
         if call_name(&flatten) != b"flatten"
@@ -153,7 +143,7 @@ impl Cop for RedundantSortBy {
     }
 
     fn on_call(&self, node: &CallNode<'_>, context: &mut Context) {
-        if !CallMatcher::new(node)
+        if !match_call(node)
             .named(b"sort_by")
             .with_receiver()
             .without_arguments()

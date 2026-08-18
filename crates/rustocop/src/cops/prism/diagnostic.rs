@@ -1,7 +1,8 @@
 use ruby_prism::Location;
 use std::ops::Range;
+use std::sync::Arc;
 
-use crate::config::RubyVersion;
+use crate::config::{CopConfig, RubyVersion};
 
 #[derive(Debug)]
 pub struct Finding {
@@ -55,15 +56,28 @@ struct Edit {
 pub(crate) struct Context {
     autocorrect: bool,
     target_ruby_version: RubyVersion,
+    cop_config: Arc<CopConfig>,
     findings: Vec<Finding>,
     edits: Vec<Edit>,
 }
 
+/// A diagnostic context already scoped to one cop. Rule helpers use this
+/// instead of accepting and forwarding a separate cop-name argument.
+pub(super) struct Reporter<'context> {
+    cop_name: &'static str,
+    context: &'context mut Context,
+}
+
 impl Context {
-    pub(super) fn new(autocorrect: bool, target_ruby_version: RubyVersion) -> Self {
+    pub(super) fn new(
+        autocorrect: bool,
+        target_ruby_version: RubyVersion,
+        cop_config: Arc<CopConfig>,
+    ) -> Self {
         Self {
             autocorrect,
             target_ruby_version,
+            cop_config,
             findings: Vec::new(),
             edits: Vec::new(),
         }
@@ -71,6 +85,17 @@ impl Context {
 
     pub(super) fn target_ruby_version(&self) -> RubyVersion {
         self.target_ruby_version
+    }
+
+    fn config_value(&self, cop_name: &str, key: &str) -> Option<&str> {
+        self.cop_config.value(cop_name, key)
+    }
+
+    pub(super) fn reporter(&mut self, cop_name: &'static str) -> Reporter<'_> {
+        Reporter {
+            cop_name,
+            context: self,
+        }
     }
 
     pub(super) fn report(
@@ -154,6 +179,55 @@ impl Context {
     }
 }
 
+impl Reporter<'_> {
+    pub(super) fn target_ruby_version(&self) -> RubyVersion {
+        self.context.target_ruby_version()
+    }
+
+    pub(super) fn config_value(&self, key: &str) -> Option<&str> {
+        self.context.config_value(self.cop_name, key)
+    }
+
+    pub(super) fn related_config_value(&self, cop_name: &str, key: &str) -> Option<&str> {
+        self.context.config_value(cop_name, key)
+    }
+
+    pub(super) fn report(&mut self, message: impl Into<String>, offense: impl ByteRange) {
+        self.context.report(self.cop_name, message, offense);
+    }
+
+    pub(super) fn replace(
+        &mut self,
+        message: impl Into<String>,
+        offense: impl ByteRange,
+        edit: impl ByteRange,
+        replacement: impl Into<String>,
+    ) {
+        self.context
+            .replace(self.cop_name, message, offense, edit, replacement);
+    }
+
+    pub(super) fn remove(
+        &mut self,
+        message: impl Into<String>,
+        offense: impl ByteRange,
+        edit: impl ByteRange,
+    ) {
+        self.context.remove(self.cop_name, message, offense, edit);
+    }
+
+    pub(super) fn insert(
+        &mut self,
+        message: impl Into<String>,
+        offense: impl ByteRange,
+        offset: usize,
+        text: impl Into<String>,
+    ) {
+        self.context
+            .insert(self.cop_name, message, offense, offset, text);
+    }
+}
+
 fn apply_edits(source: &str, mut edits: Vec<Edit>) -> String {
     edits.sort_by_key(|edit| (edit.range.start, edit.range.end));
 
@@ -178,9 +252,17 @@ fn apply_edits(source: &str, mut edits: Vec<Edit>) -> String {
 mod tests {
     use super::*;
 
+    fn context(autocorrect: bool) -> Context {
+        Context::new(
+            autocorrect,
+            RubyVersion::default(),
+            Arc::new(CopConfig::default()),
+        )
+    }
+
     #[test]
     fn reports_uncorrectable_findings_without_changing_source() {
-        let mut context = Context::new(true, RubyVersion::default());
+        let mut context = context(true);
         context.report("Lint/Example", "Example offense.", 1..3);
 
         let inspection = context.finish("abcd");
@@ -192,7 +274,7 @@ mod tests {
 
     #[test]
     fn records_correctability_without_applying_disabled_corrections() {
-        let mut context = Context::new(false, RubyVersion::default());
+        let mut context = context(false);
         context.replace("Style/Example", "Example offense.", (1, 3), 1..3, "X");
 
         let inspection = context.finish("abcd");
@@ -204,7 +286,7 @@ mod tests {
 
     #[test]
     fn applies_each_correction_intent() {
-        let mut context = Context::new(true, RubyVersion::default());
+        let mut context = context(true);
         context.insert("Layout/Example", "Insert.", (0, 1), 1, " ");
         context.replace("Style/Example", "Replace.", (1, 2), (1, 2), "B");
         context.remove("Style/Example", "Remove.", 3..4, 3..4);
@@ -213,5 +295,24 @@ mod tests {
 
         assert_eq!(inspection.corrected_source, "a Bc");
         assert!(inspection.findings.iter().all(|finding| finding.corrected));
+    }
+
+    #[test]
+    fn reporter_scopes_every_intent_to_one_cop() {
+        let mut context = context(true);
+        {
+            let mut reporter = context.reporter("Style/Example");
+            reporter.report("Report.", 0..1);
+            reporter.replace("Replace.", 1..2, 1..2, "B");
+            reporter.insert("Insert.", 2..3, 2, "!");
+        }
+
+        let inspection = context.finish("abc");
+
+        assert_eq!(inspection.corrected_source, "aB!c");
+        assert!(inspection
+            .findings
+            .iter()
+            .all(|finding| finding.cop_name == "Style/Example"));
     }
 }

@@ -20,8 +20,9 @@ impl Cop for YamlLoad {
     }
 
     fn on_call(&self, node: &CallNode<'_>, context: &mut Context) {
-        if context.target_ruby_version().at_least(3, 1)
-            || !CallMatcher::new(node)
+        let mut reporter = context.reporter(self.name());
+        if reporter.target_ruby_version().at_least(3, 1)
+            || !match_call(node)
                 .named(b"load")
                 .on_root_constant(b"YAML")
                 .matches()
@@ -31,8 +32,7 @@ impl Cop for YamlLoad {
         let Some(selector) = node.message_loc() else {
             return;
         };
-        context.replace(
-            self.name(),
+        reporter.replace(
             "Prefer using `YAML.safe_load` over `YAML.load`.",
             &selector,
             &selector,
@@ -120,7 +120,7 @@ impl Cop for JsonLoad {
 
     fn on_call(&self, node: &CallNode<'_>, context: &mut Context) {
         let method = call_name(node);
-        if !CallMatcher::new(node)
+        if !match_call(node)
             .named_any(&[b"load", b"restore"])
             .on_root_constant(b"JSON")
             .matches()
@@ -153,7 +153,7 @@ impl Cop for MarshalLoad {
 
     fn on_call(&self, node: &CallNode<'_>, context: &mut Context) {
         let method = call_name(node);
-        if !CallMatcher::new(node)
+        if !match_call(node)
             .named_any(&[b"load", b"restore"])
             .on_root_constant(b"Marshal")
             .matches()
@@ -228,7 +228,7 @@ impl Cop for IoMethods {
 
     fn on_call(&self, node: &CallNode<'_>, context: &mut Context) {
         let method = call_name(node);
-        if !CallMatcher::new(node)
+        if !match_call(node)
             .named_any(&[
                 b"read",
                 b"binread",

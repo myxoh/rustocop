@@ -7,6 +7,12 @@ pub(super) struct CallMatcher<'call, 'pr> {
     matches: bool,
 }
 
+/// Starts a structural call match without exposing the matcher type at every
+/// call site.
+pub(super) fn match_call<'call, 'pr>(call: &'call CallNode<'pr>) -> CallMatcher<'call, 'pr> {
+    CallMatcher::new(call)
+}
+
 impl<'call, 'pr> CallMatcher<'call, 'pr> {
     pub(super) fn new(call: &'call CallNode<'pr>) -> Self {
         Self {
@@ -35,6 +41,11 @@ impl<'call, 'pr> CallMatcher<'call, 'pr> {
         self
     }
 
+    pub(super) fn on_implicit_or_root_constant(mut self, name: &[u8]) -> Self {
+        self.matches &= self.call.receiver().is_none() || root_constant(self.call.receiver(), name);
+        self
+    }
+
     pub(super) fn without_receiver(mut self) -> Self {
         self.matches &= self.call.receiver().is_none();
         self
@@ -51,11 +62,17 @@ impl<'call, 'pr> CallMatcher<'call, 'pr> {
     }
 
     pub(super) fn with_argument_count(mut self, expected: usize) -> Self {
-        let actual = self
-            .call
-            .arguments()
-            .map_or(0, |arguments| arguments.arguments().len());
-        self.matches &= actual == expected;
+        self.matches &= argument_count(self.call) == expected;
+        self
+    }
+
+    pub(super) fn with_block(mut self) -> Self {
+        self.matches &= self.call.block().is_some();
+        self
+    }
+
+    pub(super) fn with_operator(mut self, operator: &[u8]) -> Self {
+        self.matches &= call_operator_is(self.call, operator);
         self
     }
 
@@ -70,6 +87,30 @@ pub(super) fn call_name<'pr>(node: &CallNode<'pr>) -> &'pr [u8] {
 
 pub(super) fn first_argument<'pr>(node: &CallNode<'pr>) -> Option<Node<'pr>> {
     node.arguments()?.arguments().first()
+}
+
+pub(super) fn only_argument<'pr>(node: &CallNode<'pr>) -> Option<Node<'pr>> {
+    let arguments = node.arguments()?.arguments();
+    (arguments.len() == 1).then(|| arguments.first()).flatten()
+}
+
+pub(super) fn argument_count(node: &CallNode<'_>) -> usize {
+    node.arguments()
+        .map_or(0, |arguments| arguments.arguments().len())
+}
+
+pub(super) fn receiver_call<'pr>(node: &CallNode<'pr>) -> Option<CallNode<'pr>> {
+    node.receiver()?.as_call_node()
+}
+
+pub(super) fn call_operator_is(node: &CallNode<'_>, expected: &[u8]) -> bool {
+    node.call_operator_loc()
+        .is_some_and(|location| location.as_slice() == expected)
+}
+
+pub(super) fn same_location(left: &Node<'_>, right: &Node<'_>) -> bool {
+    left.location().start_offset() == right.location().start_offset()
+        && left.location().end_offset() == right.location().end_offset()
 }
 
 pub(super) fn eval_receiver(receiver: Option<Node<'_>>) -> bool {
@@ -197,6 +238,14 @@ pub(super) fn source_at<'source>(source: &'source str, location: &Location<'_>) 
     &source[location.start_offset()..location.end_offset()]
 }
 
+pub(super) fn node_source<'source>(source: &'source str, node: &Node<'_>) -> &'source str {
+    source_at(source, &node.location())
+}
+
+pub(super) fn same_source(source: &str, left: &Node<'_>, right: &Node<'_>) -> bool {
+    node_source(source, left) == node_source(source, right)
+}
+
 pub(super) fn literal_zero(node: Option<&Node<'_>>) -> bool {
     let Some(node) = node else {
         return false;
@@ -242,52 +291,5 @@ pub(super) fn immutable_literal(node: &Node<'_>) -> bool {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use ruby_prism::parse;
-
-    fn first_call_matches(source: &[u8], predicate: impl FnOnce(&CallNode<'_>) -> bool) -> bool {
-        let parsed = parse(source);
-        let program = parsed.node().as_program_node().unwrap();
-        let call = program
-            .statements()
-            .body()
-            .first()
-            .unwrap()
-            .as_call_node()
-            .unwrap();
-        predicate(&call)
-    }
-
-    #[test]
-    fn matches_call_name_root_receiver_and_argument_count() {
-        assert!(first_call_matches(b"JSON.load(document)", |call| {
-            CallMatcher::new(call)
-                .named_any(&[b"load", b"restore"])
-                .on_root_constant(b"JSON")
-                .with_argument_count(1)
-                .matches()
-        }));
-    }
-
-    #[test]
-    fn rejects_nested_constants_when_root_constant_is_required() {
-        assert!(!first_call_matches(b"Other::JSON.load(document)", |call| {
-            CallMatcher::new(call)
-                .named(b"load")
-                .on_root_constant(b"JSON")
-                .matches()
-        }));
-    }
-
-    #[test]
-    fn distinguishes_implicit_calls_from_calls_with_receivers() {
-        assert!(first_call_matches(b"require('example')", |call| {
-            CallMatcher::new(call)
-                .named(b"require")
-                .without_receiver()
-                .with_argument_count(1)
-                .matches()
-        }));
-    }
-}
+#[path = "matchers_tests.rs"]
+mod tests;

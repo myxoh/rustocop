@@ -80,7 +80,8 @@ fn contains_duplicate_files(files: &[String]) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::{CopSelection, InspectionConfig, RubyVersion};
+    use crate::config::{CopConfig, CopSelection, InspectionConfig, RubyVersion};
+    use std::sync::Arc;
 
     fn options(parallelism: Parallelism) -> RunOptions {
         RunOptions {
@@ -92,6 +93,7 @@ mod tests {
                 autocorrect: false,
                 cops: CopSelection::only("Lint/EmptyExpression"),
                 target_ruby_version: RubyVersion::default(),
+                cop_config: Arc::new(CopConfig::default()),
             },
         }
     }

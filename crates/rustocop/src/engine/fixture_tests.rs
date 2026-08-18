@@ -1,8 +1,9 @@
 use std::fs;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use super::InspectionPlan;
-use crate::config::{CopSelection, InspectionConfig, RubyVersion};
+use crate::config::{CopConfig, CopSelection, InspectionConfig, RubyVersion};
 use crate::model::Offense;
 
 fn run_fixture(
@@ -19,6 +20,7 @@ fn run_fixture(
         autocorrect,
         cops: CopSelection::only(cops),
         target_ruby_version: ruby_version,
+        cop_config: Arc::new(CopConfig::default()),
     };
     let plan = InspectionPlan::new(&options);
 
@@ -163,5 +165,13 @@ fixture_test!(
     "/project/source_rules.rb",
     "Lint/DuplicateElsifCondition,Lint/EnsureReturn,Naming/ClassAndModuleCamelCase",
     false,
+    RubyVersion::default()
+);
+fixture_test!(
+    applies_additional_rule_batch,
+    "additional_rules",
+    "/project/additional_rules.rb",
+    "Style/PreferredHashMethods,Style/EmptyBlockParameter,Lint/UriEscapeUnescape,Style/OpenStructUse",
+    true,
     RubyVersion::default()
 );

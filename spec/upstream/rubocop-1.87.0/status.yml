@@ -5,20 +5,31 @@ upstream_rspec:
   pending: 6
 captured_cases: 28623
 diagnostic_baseline:
-  passed_cases: 13579
-  passing_cops: 65
+  passed_cases: 13709
+  passing_cops: 96
   total_cops: 606
 fully_compatible_cops:
+  - Bundler/InsecureProtocolSource
+  - Gemspec/AttributeAssignment
   - Gemspec/AddRuntimeDependency
+  - Gemspec/RubyVersionGlobalsUsage
+  - Layout/EmptyLines
+  - Layout/LeadingEmptyLines
+  - Layout/SpaceAfterMethodName
   - Layout/SpaceAfterComma
   - Layout/SpaceAfterColon
   - Layout/SpaceAfterNot
   - Layout/SpaceBeforeComma
   - Layout/SpaceBeforeComment
+  - Layout/SpaceInsideRangeLiteral
   - Lint/BigDecimalNew
   - Lint/BinaryOperatorWithIdenticalOperands
   - Lint/DuplicateElsifCondition
   - Lint/DuplicateRescueException
+  - Lint/DuplicateRequire
+  - Lint/DisjunctiveAssignmentInConstructor
+  - Lint/EachWithObjectArgument
+  - Lint/EmptyFile
   - Lint/EmptyEnsure
   - Lint/EmptyExpression
   - Lint/EnsureReturn
@@ -27,12 +38,21 @@ fully_compatible_cops:
   - Lint/HashCompareByIdentity
   - Lint/IdentityComparison
   - Lint/Loop
+  - Lint/NestedPercentLiteral
+  - Lint/OrAssignmentToConstant
+  - Lint/OrderedMagicComments
   - Lint/RandOne
+  - Lint/RefinementImportMethods
   - Lint/RegexpAsCondition
+  - Lint/RescueException
   - Lint/SafeNavigationWithEmpty
   - Lint/ToJSON
   - Lint/TrailingCommaInAttributeDeclaration
+  - Lint/TripleQuotes
+  - Lint/UriEscapeUnescape
+  - Lint/UriRegexp
   - Lint/UselessElseWithoutRescue
+  - Lint/UselessDefined
   - Naming/ClassAndModuleCamelCase
   - Security/Eval
   - Security/MarshalLoad
@@ -41,7 +61,9 @@ fully_compatible_cops:
   - Style/ArrayFirstLast
   - Style/ArrayIntersectWithSingleElement
   - Style/ArrayJoin
+  - Style/AutoResourceCleanup
   - Style/BeginBlock
+  - Style/BlockComments
   - Style/CharacterLiteral
   - Style/ClassMethods
   - Style/ClassVars
@@ -50,24 +72,33 @@ fully_compatible_cops:
   - Style/Dir
   - Style/DoubleCopDisableDirective
   - Style/EmptyLambdaParameter
+  - Style/EmptyBlockParameter
+  - Style/EmptyHeredoc
   - Style/EndBlock
   - Style/EnvHome
   - Style/FileTouch
   - Style/GlobalStdStream
   - Style/ImplicitRuntimeError
   - Style/InlineComment
+  - Style/InPatternThen
   - Style/MinMax
   - Style/NestedFileDirname
   - Style/Not
+  - Style/NumericLiteralPrefix
+  - Style/OpenStructUse
+  - Style/PreferredHashMethods
   - Style/Proc
   - Style/RedundantArrayFlatten
   - Style/RedundantCapitalW
+  - Style/RedundantConstantBase
   - Style/RedundantFileExtensionInRequire
+  - Style/RedundantRegexpConstructor
   - Style/RedundantSortBy
   - Style/StringChars
   - Style/StringHashKeys
   - Style/StringMethods
   - Style/StderrPuts
+  - Style/StabbyLambdaParentheses
   - Style/Strip
   - Style/SuperWithArgsParentheses
   - Style/SymbolLiteral

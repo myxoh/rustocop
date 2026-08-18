@@ -63,7 +63,7 @@ fn json_file(result: &InspectionResult) -> String {
 }
 
 fn json_offense(offense: &Offense) -> String {
-    let severity = if offense.cop_name.starts_with("Lint/") {
+    let severity = if warning_cop(offense.cop_name) {
         "warning"
     } else {
         "convention"
@@ -83,6 +83,14 @@ fn json_offense(offense: &Offense) -> String {
         offense.line,
         offense.column
     )
+}
+
+fn warning_cop(cop_name: &str) -> bool {
+    cop_name.starts_with("Lint/")
+        || matches!(
+            cop_name,
+            "Bundler/InsecureProtocolSource" | "Gemspec/RubyVersionGlobalsUsage"
+        )
 }
 
 fn write_simple_report(results: &[InspectionResult], offense_count: usize) {

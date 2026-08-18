@@ -1,60 +1,19 @@
 use super::*;
 
-pub(super) fn cops() -> Vec<Box<dyn Cop>> {
-    vec![
-        Box::new(EmptyLines),
-        Box::new(SpaceBeforeComment),
-        Box::new(SpaceAfterSemicolon),
-        Box::new(SpaceAfterComma),
-        Box::new(SpaceBeforeSemicolon),
-        Box::new(SpaceAfterNot),
-        Box::new(SpaceBeforeComma),
-    ]
+declare_source_cops! {
+    EmptyLines => "Layout/EmptyLines" => empty_lines,
+    SpaceBeforeComment => "Layout/SpaceBeforeComment" => space_before_comment,
+    SpaceAfterSemicolon => "Layout/SpaceAfterSemicolon" => space_after_semicolon,
+    SpaceAfterComma => "Layout/SpaceAfterComma" => space_after_comma,
+    SpaceBeforeSemicolon => "Layout/SpaceBeforeSemicolon" => space_before_semicolon,
+    SpaceAfterNot => "Layout/SpaceAfterNot" => space_after_not,
+    SpaceBeforeComma => "Layout/SpaceBeforeComma" => space_before_comma,
 }
 
-macro_rules! source_cop {
-    ($type:ident, $name:literal, $check:ident) => {
-        struct $type;
-        impl Cop for $type {
-            fn name(&self) -> &'static str {
-                $name
-            }
-            fn on_source(&self, source: &str, context: &mut Context) {
-                $check(self.name(), source, context);
-            }
-        }
-    };
-}
-
-source_cop!(EmptyLines, "Layout/EmptyLines", empty_lines);
-source_cop!(
-    SpaceBeforeComment,
-    "Layout/SpaceBeforeComment",
-    space_before_comment
-);
-source_cop!(
-    SpaceAfterSemicolon,
-    "Layout/SpaceAfterSemicolon",
-    space_after_semicolon
-);
-source_cop!(SpaceAfterComma, "Layout/SpaceAfterComma", space_after_comma);
-source_cop!(
-    SpaceBeforeSemicolon,
-    "Layout/SpaceBeforeSemicolon",
-    space_before_semicolon
-);
-source_cop!(SpaceAfterNot, "Layout/SpaceAfterNot", space_after_not);
-source_cop!(
-    SpaceBeforeComma,
-    "Layout/SpaceBeforeComma",
-    space_before_comma
-);
-
-fn empty_lines(cop: &'static str, source: &str, context: &mut Context) {
+fn empty_lines(source: &str, context: &mut Reporter<'_>) {
     for (start, _) in source.match_indices("\n\n\n") {
         if !inside_quoted_text(source, start + 2) {
             context.remove(
-                cop,
                 "Extra blank line detected.",
                 start + 2..start + 3,
                 start + 2..start + 3,
@@ -63,7 +22,7 @@ fn empty_lines(cop: &'static str, source: &str, context: &mut Context) {
     }
 }
 
-fn space_before_comment(cop: &'static str, source: &str, context: &mut Context) {
+fn space_before_comment(source: &str, context: &mut Reporter<'_>) {
     for (offset, line) in source_lines(source) {
         let Some(hash) = line.find('#') else { continue };
         if hash == 0
@@ -73,7 +32,6 @@ fn space_before_comment(cop: &'static str, source: &str, context: &mut Context) 
             continue;
         }
         context.insert(
-            cop,
             "Put a space before an end-of-line comment.",
             offset + hash..offset + line.len(),
             offset + hash,
@@ -82,21 +40,15 @@ fn space_before_comment(cop: &'static str, source: &str, context: &mut Context) 
     }
 }
 
-fn space_after_semicolon(cop: &'static str, source: &str, context: &mut Context) {
-    spacing_after(cop, source, context, b';', "Space missing after semicolon.");
+fn space_after_semicolon(source: &str, context: &mut Reporter<'_>) {
+    spacing_after(source, context, b';', "Space missing after semicolon.");
 }
 
-fn space_after_comma(cop: &'static str, source: &str, context: &mut Context) {
-    spacing_after(cop, source, context, b',', "Space missing after comma.");
+fn space_after_comma(source: &str, context: &mut Reporter<'_>) {
+    spacing_after(source, context, b',', "Space missing after comma.");
 }
 
-fn spacing_after(
-    cop: &'static str,
-    source: &str,
-    context: &mut Context,
-    token: u8,
-    message: &'static str,
-) {
+fn spacing_after(source: &str, context: &mut Reporter<'_>, token: u8, message: &'static str) {
     let bytes = source.as_bytes();
     for index in 0..bytes.len() {
         if bytes[index] != token {
@@ -116,36 +68,30 @@ fn spacing_after(
         {
             continue;
         }
-        context.insert(cop, message, index..index + 1, index + 1, " ");
+        context.insert(message, index..index + 1, index + 1, " ");
     }
 }
 
-fn space_before_semicolon(cop: &'static str, source: &str, context: &mut Context) {
-    spacing_before(cop, source, context, b';', "Space found before semicolon.");
+fn space_before_semicolon(source: &str, context: &mut Reporter<'_>) {
+    spacing_before(source, context, b';', "Space found before semicolon.");
 }
 
-fn space_before_comma(cop: &'static str, source: &str, context: &mut Context) {
-    spacing_before(cop, source, context, b',', "Space found before comma.");
+fn space_before_comma(source: &str, context: &mut Reporter<'_>) {
+    spacing_before(source, context, b',', "Space found before comma.");
 }
 
-fn spacing_before(
-    cop: &'static str,
-    source: &str,
-    context: &mut Context,
-    token: u8,
-    message: &'static str,
-) {
+fn spacing_before(source: &str, context: &mut Reporter<'_>, token: u8, message: &'static str) {
     let bytes = source.as_bytes();
     for index in 1..bytes.len() {
         if bytes[index] != token || bytes[index - 1] != b' ' || inside_quoted_text(source, index) {
             continue;
         }
         let start = source[..index].trim_end_matches(' ').len();
-        context.remove(cop, message, start..index, start..index);
+        context.remove(message, start..index, start..index);
     }
 }
 
-fn space_after_not(cop: &'static str, source: &str, context: &mut Context) {
+fn space_after_not(source: &str, context: &mut Reporter<'_>) {
     for (start, _) in source.match_indices('!') {
         if source
             .as_bytes()
@@ -161,7 +107,6 @@ fn space_after_not(cop: &'static str, source: &str, context: &mut Context) {
             .find('\n')
             .map_or(source.len(), |offset| end + offset);
         context.replace(
-            cop,
             "Do not leave space between `!` and its argument.",
             start..expression_end,
             start..expression_end,

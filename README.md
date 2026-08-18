@@ -152,8 +152,8 @@ and applied as one batch. The differential compatibility suite runs 20 cops
 against 500 generated and committed Ruby fixture files, both cop-by-cop and as a
 single corpus, and compares their JSON reports directly with RuboCop.
 
-The current RuboCop 1.87 matrix contains 65 upstream-spec-verified cops, 58
-heuristic native implementations, and 483 missing built-in cops. A cop is only
+The current RuboCop 1.87 matrix contains 96 upstream-spec-verified cops, 57
+heuristic native implementations, and 453 missing built-in cops. A cop is only
 “verified” after all captured upstream diagnostics and correction assertions
 for that cop pass.
 
