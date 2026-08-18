@@ -5,7 +5,11 @@ require "json"
 module UpstreamCopCapture
   def expect_offense(...)
     offenses = rustocop_without_investigation_capture { super }
-    capture_upstream_case(@processed_source.raw_source, offenses)
+    capture_upstream_case(
+      @processed_source.raw_source,
+      offenses,
+      file: @processed_source.buffer.name
+    )
     offenses
   end
 

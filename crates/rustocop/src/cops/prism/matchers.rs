@@ -57,7 +57,12 @@ impl<'call, 'pr> CallMatcher<'call, 'pr> {
     }
 
     pub(super) fn without_arguments(mut self) -> Self {
-        self.matches &= self.call.arguments().is_none();
+        self.matches &= argument_count(self.call) == 0;
+        self
+    }
+
+    pub(super) fn with_arguments(mut self) -> Self {
+        self.matches &= argument_count(self.call) > 0;
         self
     }
 
@@ -68,6 +73,44 @@ impl<'call, 'pr> CallMatcher<'call, 'pr> {
 
     pub(super) fn with_block(mut self) -> Self {
         self.matches &= self.call.block().is_some();
+        self
+    }
+
+    #[allow(dead_code)]
+    pub(super) fn without_block(mut self) -> Self {
+        self.matches &= self.call.block().is_none();
+        self
+    }
+
+    #[allow(dead_code)]
+    pub(super) fn with_keyword(mut self, keyword: &[u8]) -> Self {
+        self.matches &= has_keyword(self.call, keyword);
+        self
+    }
+
+    #[allow(dead_code)]
+    pub(super) fn with_only_argument_matching(
+        mut self,
+        predicate: impl FnOnce(&Node<'pr>) -> bool,
+    ) -> Self {
+        self.matches &= only_argument(self.call).as_ref().is_some_and(predicate);
+        self
+    }
+
+    #[allow(dead_code)]
+    pub(super) fn with_first_argument_matching(
+        mut self,
+        predicate: impl FnOnce(&Node<'pr>) -> bool,
+    ) -> Self {
+        self.matches &= first_argument(self.call).as_ref().is_some_and(predicate);
+        self
+    }
+
+    #[allow(dead_code)]
+    pub(super) fn on_receiver_call_named(mut self, name: &[u8]) -> Self {
+        self.matches &= receiver_call(self.call)
+            .as_ref()
+            .is_some_and(|receiver| call_name(receiver) == name);
         self
     }
 
@@ -101,6 +144,33 @@ pub(super) fn argument_count(node: &CallNode<'_>) -> usize {
 
 pub(super) fn receiver_call<'pr>(node: &CallNode<'pr>) -> Option<CallNode<'pr>> {
     node.receiver()?.as_call_node()
+}
+
+#[allow(dead_code)]
+pub(super) fn static_string(node: &Node<'_>) -> Option<Vec<u8>> {
+    node.as_string_node()
+        .map(|string| string.unescaped().to_vec())
+}
+
+#[allow(dead_code)]
+pub(super) fn static_symbol(node: &Node<'_>) -> Option<Vec<u8>> {
+    node.as_symbol_node()
+        .map(|symbol| symbol.unescaped().to_vec())
+}
+
+#[allow(dead_code)]
+pub(super) fn constant_path<'pr>(node: &Node<'pr>) -> Option<Vec<&'pr [u8]>> {
+    if let Some(constant) = node.as_constant_read_node() {
+        return Some(vec![constant.name().as_slice()]);
+    }
+    let path = node.as_constant_path_node()?;
+    let mut parts = path
+        .parent()
+        .as_ref()
+        .and_then(constant_path)
+        .unwrap_or_default();
+    parts.push(path.name()?.as_slice());
+    Some(parts)
 }
 
 pub(super) fn call_operator_is(node: &CallNode<'_>, expected: &[u8]) -> bool {

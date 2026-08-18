@@ -14,36 +14,21 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
     ]
 }
 
-struct RegexpAsCondition;
+define_any_node_cop!(RegexpAsCondition => "Lint/RegexpAsCondition" => regexp_as_condition);
 
-impl Cop for RegexpAsCondition {
-    fn name(&self) -> &'static str {
-        "Lint/RegexpAsCondition"
+fn regexp_as_condition(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
+    if (node.as_match_last_line_node().is_none()
+        && node.as_interpolated_match_last_line_node().is_none())
+        || !context.ancestors().iter().any(conditional_node)
+    {
+        return;
     }
 
-    fn on_node<'pr>(
-        &self,
-        node: &Node<'pr>,
-        ancestors: &[Node<'pr>],
-        _source: &str,
-        context: &mut Context,
-    ) {
-        if (node.as_match_last_line_node().is_none()
-            && node.as_interpolated_match_last_line_node().is_none())
-            || !ancestors.iter().any(conditional_node)
-        {
-            return;
-        }
-
-        let location = node.location();
-        context.insert(
-            self.name(),
-            "Do not use regexp literal as a condition. The regexp literal matches `$_` implicitly.",
-            &location,
-            location.end_offset(),
-            " =~ $_",
-        );
-    }
+    context.insert_after(
+        node,
+        "Do not use regexp literal as a condition. The regexp literal matches `$_` implicitly.",
+        " =~ $_",
+    );
 }
 
 fn conditional_node(node: &Node<'_>) -> bool {

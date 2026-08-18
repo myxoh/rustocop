@@ -1,3 +1,4 @@
+use super::source_helpers::source_lines;
 use super::*;
 
 declare_source_cops! {
@@ -113,14 +114,6 @@ fn space_after_not(source: &str, context: &mut Reporter<'_>) {
             format!("!{}", &source[end..expression_end]),
         );
     }
-}
-
-fn source_lines(source: &str) -> impl Iterator<Item = (usize, &str)> {
-    source.split_inclusive('\n').scan(0, |offset, line| {
-        let start = *offset;
-        *offset += line.len();
-        Some((start, line.strip_suffix('\n').unwrap_or(line)))
-    })
 }
 
 fn inside_quoted_text(source: &str, offset: usize) -> bool {

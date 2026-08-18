@@ -4,6 +4,24 @@ Prism cops share one parsed tree, one traversal, and one diagnostic context per
 file. A cop should recognize a syntax pattern and report its intent; it should
 not parse source, manage correction flags, mutate files, or construct findings.
 
+## Start a cop
+
+Generate the module, registry wiring, and focused fixture shell:
+
+```sh
+ruby script/new_cop.rb Style/Example call
+ruby script/new_cop.rb Lint/Example node --node-cast as_if_node
+ruby script/new_cop.rb Style/SeveralShapes any_node
+ruby script/new_cop.rb Layout/Example source
+ruby script/new_cop.rb Bundler/Example call --fixture-path /project/Gemfile --autocorrect
+```
+
+Use `--dry-run` to inspect the generated source, fixture templates, and test
+registration. The generator wires the fixture into the Rust test suite
+automatically. Use `--fixture-path` for path-sensitive cops and `--autocorrect`
+when the fixture should compare `corrected.rb`. The implementation and fixture
+contents must still come from RuboCop's upstream spec.
+
 ## Minimal cop
 
 For a call-only cop, declare its registration and handler with the shared DSL.
@@ -11,48 +29,72 @@ The handler receives a reporter already scoped to the cop, so it cannot
 accidentally attribute a diagnostic to another rule:
 
 ```rust
-declare_cops!(Example);
-define_call_cop!(Example => "Style/Example" => example);
+define_cops! {
+    Example => "Style/Example" => call(example),
+}
 
-fn example(node: &CallNode<'_>, reporter: &mut Reporter<'_>) {
+fn example(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     if !match_call(node).named(b"old_name").without_arguments().matches() {
         return;
     }
-    let Some(selector) = node.message_loc() else { return };
-
-    reporter.replace("Prefer `new_name`.", &selector, &selector, "new_name");
+    context.replace_selector(node, "Prefer `new_name`.", "new_name");
 }
 ```
 
-For several source-wide rules, one declaration handles their registry, marker
-types, names, and reporter scoping:
+The same declaration supports typed Prism nodes and source-wide callbacks:
 
 ```rust
-declare_source_cops! {
-    FirstRule => "Style/FirstRule" => first_rule,
-    SecondRule => "Lint/SecondRule" => second_rule,
+define_cops! {
+    Conditional => "Style/Conditional" => node(as_if_node, conditional),
+    FileHeader => "Layout/FileHeader" => source(file_header),
 }
 
-fn first_rule(source: &str, reporter: &mut Reporter<'_>) {
-    // Inspect the already-loaded source exactly once.
+fn file_header(context: &mut CopContext<'_, '_>) {
+    for (offset, line) in context.source_file().lines() {
+        // Inspect the already-loaded source exactly once.
+    }
 }
 ```
 
-Implement `Cop` directly when a rule needs arbitrary `on_node` traversal or
-ancestor access. Then use `declare_cops!(FirstCop, SecondCop)` for its registry.
-Every cop name must also be added to `PRISM_COPS`; a registry test fails if the
-public list and implementations drift apart.
+Use `any_node(handler)` when one cop intentionally handles several node types.
+Reserve `source(handler)` for genuinely lexical or file-level rules. If the
+answer depends on whether text is Ruby code, a string, a comment, a regexp, a
+heredoc, or a particular expression, use `call`, typed `node`, or `any_node`.
+Implement `Cop` directly only for genuinely unusual traversal behavior.
+
+Cop names are discovered from the actual registry. Do not edit a separate
+Prism or supported-cop inventory. `--show-cops` and the support-document
+generator read the runtime registry.
+
+## Cop context
+
+Every concise callback receives a cop-scoped `CopContext`. It exposes:
+
+- `source()` and the safe `source_file()` geometry helpers;
+- `path()`, `parent()`, `ancestors()`, and common ancestry queries;
+- target Ruby version and typed cop configuration;
+- reporting and higher-level correction intents.
+
+`source_file()` provides safe slicing, node/location text, offset-aware lines,
+physical line ranges, and surrounding-whitespace ranges. Prefer it over raw
+source indexing when a cop works with byte geometry.
 
 ## Reporting and correction intents
 
-`Reporter` accepts a Prism `Location`, a borrowed `&Location`, a Rust byte
+`CopContext` accepts a Prism `Location`, a borrowed `&Location`, a Rust byte
 range, or an `(start, end)` byte-offset pair. Prefer locations while working
 with AST nodes and raw offsets only when detecting source punctuation.
 
 - `report` records an offense with no correction.
+- `report_call`, `report_selector`, and `report_node` select common AST ranges.
 - `replace` replaces one byte range with text.
 - `remove` is a replacement with empty text.
 - `insert` inserts text at a byte offset.
+- `replace_selector` replaces a call's method name.
+- `replace_node`, `remove_node`, `insert_before`, and `insert_after` express
+  common AST correction intents without repeating offsets.
+- `remove_list_element` owns adjacent separators, while `wrap_node` and
+  `remove_statement` handle two other common structural corrections.
 
 The context derives `correctable` and `corrected`, sorts findings, ignores
 overlapping or out-of-bounds edits, and applies accepted edits in reverse order.
@@ -65,6 +107,9 @@ This keeps every cop out of correction bookkeeping.
 `node_source`, source equality, location equality, and common literal
 classification. Prefer `only_argument` when a rule requires exactly one
 argument; `first_argument` deliberately accepts calls with additional values.
+The matcher can also require argument presence, inspect the first or only
+argument with a predicate, and match the receiver when it is another named
+call.
 
 Call-based cops can express their structural requirements with the
 allocation-free call matcher DSL:
@@ -93,24 +138,44 @@ Both `Context` and a scoped `Reporter` expose the configured target Ruby
 version for syntax and API behavior that changed between Ruby releases. Keep
 version checks in the cop that owns the behavior.
 
-`reporter.config_value("EnforcedStyle")` reads an option from the current cop's
-configuration. Use `related_config_value` only when RuboCop explicitly defines
-one cop's behavior in terms of another cop's configuration. The configuration
-view is read-only and shared across every file in the run.
+Configuration is parsed once and shared across every file in the run. Prefer
+typed access over string comparisons:
 
-Likely next shared capabilities, as parity work requires them, are:
+```rust
+context.config_bool("CountComments", false);
+context.config_usize("Max", 10);
+context.config_values("AllowedMethods");
+context.config_map("PreferredMethods");
+context.policy().enforced_style("compact");
+context.policy().allows_method(call_name(node));
+```
 
-1. path context for file-sensitive cops;
-2. typed configuration accessors once repeated option families justify them;
-3. configuration-aware matcher predicates once repeated cases justify them.
+The shared policy also handles allowed patterns and receivers plus cop and
+`AllCops` path inclusion/exclusion. Use `related_config_value` only when
+RuboCop explicitly defines one cop in terms of another cop's configuration.
 
-Configuration and path context unlock more upstream cases than additional
-syntax shortcuts, so they should come before a large matcher DSL.
+The matcher library includes call receiver/name/argument/keyword/block shapes,
+static string and symbol extraction, constant paths, source equality, and
+literal classification. Keep the DSL structural: the reason an offense exists
+should remain visible in the cop function.
 
 ## Validation
 
 Start with the upstream RuboCop spec for the cop. Test diagnostic byte ranges,
 messages where asserted, configuration branches, and every autocorrection. Run
-the project gates in `CONTRIBUTING.md`, plus the extracted upstream contract for
-the cop. Changes to traversal, diagnostics, correction ordering, or the registry
-require the full upstream suite.
+the focused contract with:
+
+```sh
+ruby script/verify_cop.rb Style/Example
+```
+
+It builds the current native binary, checks every captured diagnostic and
+correction case for that cop, writes a categorized JSON report, and regenerates
+the support matrix from the runtime registry. It does not promote a cop to
+Verified until the full upstream comparison has also passed. Changes to
+traversal, diagnostics, correction ordering, or the registry still require the
+full upstream suite described in `CONTRIBUTING.md`.
+
+The verifier rejects unknown cops or an empty captured contract instead of
+treating zero executed cases as success. On failure it prints the first
+expected/actual mismatch before pointing to the complete JSON report.

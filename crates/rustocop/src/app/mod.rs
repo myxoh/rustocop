@@ -20,7 +20,11 @@ pub(crate) fn run(args: Vec<String>) -> i32 {
             0
         }
         Ok(cli::Command::ShowCops) => {
-            for cop in SUPPORTED_COPS {
+            let mut cops = SUPPORTED_COPS.to_vec();
+            cops.extend(crate::cops::prism::cop_names());
+            cops.sort_unstable();
+            cops.dedup();
+            for cop in cops {
                 println!("{cop}");
             }
             0

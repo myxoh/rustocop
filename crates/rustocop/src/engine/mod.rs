@@ -23,11 +23,13 @@ pub(crate) struct InspectionPlan {
 
 impl InspectionPlan {
     pub(crate) fn new(options: &InspectionConfig) -> Self {
+        let prism = prism::Engine::new(&|cop| options.cop_enabled(cop));
+        let text_cops_enabled = SUPPORTED_COPS
+            .iter()
+            .any(|cop| options.cop_enabled(cop) && !prism.implements(cop));
         Self {
-            prism: prism::Engine::new(&|cop| options.cop_enabled(cop)),
-            text_cops_enabled: SUPPORTED_COPS
-                .iter()
-                .any(|cop| !prism::PRISM_COPS.contains(cop) && options.cop_enabled(cop)),
+            prism,
+            text_cops_enabled,
         }
     }
 
@@ -55,7 +57,7 @@ impl InspectionPlan {
         options: &InspectionConfig,
     ) -> (Vec<Offense>, String) {
         if !self.text_cops_enabled {
-            return self.inspect_prism_only(content, options);
+            return self.inspect_prism_only(path, content, options);
         }
 
         let mut lines = source::split(content);
@@ -65,6 +67,7 @@ impl InspectionPlan {
 
         let prism_source = source::join(&lines);
         let prism_inspection = self.prism.inspect(
+            path,
             &prism_source,
             options.autocorrect,
             options.target_ruby_version,
@@ -78,10 +81,12 @@ impl InspectionPlan {
 
     fn inspect_prism_only(
         &self,
+        path: &str,
         content: &str,
         options: &InspectionConfig,
     ) -> (Vec<Offense>, String) {
         let inspection = self.prism.inspect(
+            path,
             content,
             options.autocorrect,
             options.target_ruby_version,

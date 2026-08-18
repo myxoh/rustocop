@@ -15,42 +15,26 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
     ]
 }
 
-struct CharacterLiteral;
+define_node_cop!(CharacterLiteral => "Style/CharacterLiteral" => as_string_node => character_literal);
 
-impl Cop for CharacterLiteral {
-    fn name(&self) -> &'static str {
-        "Style/CharacterLiteral"
+fn character_literal(string: &ruby_prism::StringNode<'_>, context: &mut CopContext<'_, '_>) {
+    let location = string.location();
+    let text = context.source_file().at(&location);
+    if !text.starts_with('?') || !(2..=3).contains(&text.len()) {
+        return;
     }
-
-    fn on_node<'pr>(
-        &self,
-        node: &Node<'pr>,
-        _ancestors: &[Node<'pr>],
-        source: &str,
-        context: &mut Context,
-    ) {
-        let Some(string) = node.as_string_node() else {
-            return;
-        };
-        let location = string.location();
-        let text = source_at(source, &location);
-        if !text.starts_with('?') || !(2..=3).contains(&text.len()) {
-            return;
-        }
-        let content = &text[1..];
-        let replacement = if content.len() == 1 && content != "'" {
-            format!("'{content}'")
-        } else {
-            format!("\"{content}\"")
-        };
-        context.replace(
-            self.name(),
-            "Do not use the character literal - use string literal instead.",
-            &location,
-            &location,
-            replacement,
-        );
-    }
+    let content = &text[1..];
+    let replacement = if content.len() == 1 && content != "'" {
+        format!("'{content}'")
+    } else {
+        format!("\"{content}\"")
+    };
+    context.replace(
+        "Do not use the character literal - use string literal instead.",
+        &location,
+        &location,
+        replacement,
+    );
 }
 
 struct DefWithParentheses;
@@ -339,21 +323,23 @@ impl Cop for BeginBlock {
 
 define_call_cop!(StringMethods => "Style/StringMethods" => string_methods);
 
-fn string_methods(node: &CallNode<'_>, reporter: &mut Reporter<'_>) {
-    if !match_call(node)
-        .named(b"intern")
-        .without_arguments()
-        .matches()
-    {
+fn string_methods(node: &CallNode<'_>, reporter: &mut CopContext<'_, '_>) {
+    if !match_call(node).without_arguments().matches() {
         return;
     }
-    let Some(selector) = node.message_loc() else {
+    let Ok(method) = std::str::from_utf8(call_name(node)) else {
         return;
     };
-    reporter.replace(
-        "Prefer `to_sym` over `intern`.",
-        &selector,
-        &selector,
-        "to_sym",
+    let preferred = reporter
+        .config_map("PreferredMethods")
+        .and_then(|methods| methods.get(method))
+        .map(String::as_str)
+        .or_else(|| (method == "intern").then_some("to_sym"))
+        .map(str::to_string);
+    let Some(preferred) = preferred else { return };
+    reporter.replace_selector(
+        node,
+        format!("Prefer `{preferred}` over `{method}`."),
+        &preferred,
     );
 }

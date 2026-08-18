@@ -43,6 +43,7 @@ File.foreach(options[:corpus]) do |line|
   per_cop[cop] += 1
   cases << test_case
 end
+abort "no captured upstream cases matched the requested cops" if cases.empty?
 
 config_root = File.join(root, "tmp/upstream-rubocop-configs")
 FileUtils.mkdir_p(config_root)
@@ -103,6 +104,7 @@ workers = Array.new(options[:jobs]) do
         if expected_correction.is_a?(Hash) && expected_correction.key?("$hex")
           expected_correction = [expected_correction.fetch("$hex")].pack("H*")
         end
+        expected_correction = expected_correction.b
         expected_correction = source if test_case.fetch("asserts_no_correction", false)
 
         Dir.mktmpdir("rustocop-upstream-case") do |directory|

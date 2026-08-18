@@ -4,6 +4,7 @@ use std::sync::Arc;
 mod additional_rules;
 mod additional_rules_literals;
 mod additional_rules_more;
+mod cop_context;
 mod diagnostic;
 mod dsl;
 mod layout;
@@ -11,7 +12,10 @@ mod lint;
 mod lint_control_flow;
 mod lint_suspicious_calls;
 mod matchers;
+mod parity_calls;
+mod parity_source;
 mod security;
+mod source_file;
 mod source_helpers;
 mod source_rules;
 mod source_rules_layout;
@@ -24,120 +28,12 @@ mod style_rewrites;
 mod style_source;
 
 use crate::config::{CopConfig, RubyVersion};
+use cop_context::{CopContext, CopPolicy};
 use diagnostic::{Context, Reporter};
 pub(crate) use diagnostic::{Finding, Inspection};
 use dsl::*;
 use matchers::*;
-
-pub const PRISM_COPS: &[&str] = &[
-    "Bundler/InsecureProtocolSource",
-    "Gemspec/AttributeAssignment",
-    "Gemspec/RubyVersionGlobalsUsage",
-    "Layout/LeadingEmptyLines",
-    "Layout/SpaceAfterMethodName",
-    "Layout/SpaceInsideRangeLiteral",
-    "Lint/DisjunctiveAssignmentInConstructor",
-    "Lint/DuplicateRequire",
-    "Lint/EachWithObjectArgument",
-    "Lint/EmptyFile",
-    "Lint/NestedPercentLiteral",
-    "Lint/OrAssignmentToConstant",
-    "Lint/OrderedMagicComments",
-    "Lint/RefinementImportMethods",
-    "Lint/RescueException",
-    "Lint/TripleQuotes",
-    "Lint/UriEscapeUnescape",
-    "Lint/UriRegexp",
-    "Lint/UselessDefined",
-    "Style/AutoResourceCleanup",
-    "Style/BlockComments",
-    "Style/EmptyBlockParameter",
-    "Style/EmptyHeredoc",
-    "Style/InPatternThen",
-    "Style/NumericLiteralPrefix",
-    "Style/OpenStructUse",
-    "Style/PreferredHashMethods",
-    "Style/RedundantConstantBase",
-    "Style/RedundantRegexpConstructor",
-    "Style/StabbyLambdaParentheses",
-    "Lint/BooleanSymbol",
-    "Lint/EmptyExpression",
-    "Lint/FlipFlop",
-    "Lint/FloatComparison",
-    "Lint/FloatOutOfRange",
-    "Lint/IdentityComparison",
-    "Lint/BinaryOperatorWithIdenticalOperands",
-    "Lint/HashCompareByIdentity",
-    "Lint/Loop",
-    "Lint/RandOne",
-    "Lint/RegexpAsCondition",
-    "Lint/SafeNavigationWithEmpty",
-    "Lint/SelfAssignment",
-    "Lint/ToJSON",
-    "Layout/SpaceAfterColon",
-    "Security/Eval",
-    "Security/CompoundHash",
-    "Security/JSONLoad",
-    "Security/MarshalLoad",
-    "Security/Open",
-    "Security/IoMethods",
-    "Security/YAMLLoad",
-    "Style/CharacterLiteral",
-    "Style/BeginBlock",
-    "Style/DefWithParentheses",
-    "Style/MethodCallWithoutArgsParentheses",
-    "Style/NilComparison",
-    "Style/Not",
-    "Style/RedundantArrayConstructor",
-    "Style/RedundantFreeze",
-    "Style/Semicolon",
-    "Style/StringChars",
-    "Style/StringMethods",
-    "Style/UnlessElse",
-    "Style/FileTouch",
-    "Style/GlobalStdStream",
-    "Style/MinMax",
-    "Style/RedundantFileExtensionInRequire",
-    "Style/SuperWithArgsParentheses",
-    "Style/TrailingCommaInBlockArgs",
-    "Style/WhileUntilDo",
-    "Style/ArrayFirstLast",
-    "Style/ArrayJoin",
-    "Style/ColonMethodCall",
-    "Style/NestedFileDirname",
-    "Style/Proc",
-    "Style/RedundantArrayFlatten",
-    "Style/RedundantSortBy",
-    "Style/StderrPuts",
-    "Style/Strip",
-    "Bundler/DuplicatedGem",
-    "Gemspec/AddRuntimeDependency",
-    "Layout/EmptyLines",
-    "Layout/SpaceAfterComma",
-    "Layout/SpaceAfterNot",
-    "Layout/SpaceAfterSemicolon",
-    "Layout/SpaceBeforeComma",
-    "Layout/SpaceBeforeComment",
-    "Layout/SpaceBeforeSemicolon",
-    "Lint/DuplicateElsifCondition",
-    "Lint/DuplicateRescueException",
-    "Lint/EmptyClass",
-    "Lint/EnsureReturn",
-    "Naming/ClassAndModuleCamelCase",
-    "Style/ArrayCoercion",
-    "Style/ArrayIntersectWithSingleElement",
-    "Style/AsciiComments",
-    "Style/ClassCheck",
-    "Style/ClassMethods",
-    "Style/ClassVars",
-    "Style/Dir",
-    "Style/EnvHome",
-    "Style/ImplicitRuntimeError",
-    "Style/RedundantCapitalW",
-    "Style/StringHashKeys",
-    "Style/SymbolLiteral",
-    "Style/WhenThen",
-];
+use source_file::SourceFile;
 
 pub(super) trait Cop: Sync {
     fn name(&self) -> &'static str;
@@ -170,22 +66,23 @@ pub struct Engine {
 impl Engine {
     pub fn new(enabled: &dyn Fn(&str) -> bool) -> Self {
         let registry = Registry::enabled(enabled);
-        debug_assert!(registry
-            .cops
-            .iter()
-            .all(|cop| PRISM_COPS.contains(&cop.name())));
         Self { registry }
+    }
+
+    pub(crate) fn implements(&self, cop_name: &str) -> bool {
+        self.registry.cops.iter().any(|cop| cop.name() == cop_name)
     }
 
     pub fn inspect(
         &self,
+        path: &str,
         source: &str,
         autocorrect: bool,
         target_ruby_version: RubyVersion,
         cop_config: Arc<CopConfig>,
     ) -> Inspection {
         let parsed = parse(source.as_bytes());
-        let mut context = Context::new(autocorrect, target_ruby_version, cop_config);
+        let mut context = Context::new(autocorrect, path, target_ruby_version, cop_config);
         for cop in &self.registry.cops {
             cop.on_source(source, &mut context);
         }
@@ -200,6 +97,17 @@ impl Engine {
     }
 }
 
+pub(crate) fn cop_names() -> Vec<&'static str> {
+    let mut names = Registry::enabled(&|_| true)
+        .cops
+        .into_iter()
+        .map(|cop| cop.name())
+        .collect::<Vec<_>>();
+    names.sort_unstable();
+    names.dedup();
+    names
+}
+
 impl Registry {
     fn enabled(enabled: &dyn Fn(&str) -> bool) -> Self {
         let cops = lint::cops()
@@ -210,6 +118,8 @@ impl Registry {
             .chain(lint_control_flow::cops())
             .chain(lint_suspicious_calls::cops())
             .chain(layout::cops())
+            .chain(parity_calls::cops())
+            .chain(parity_source::cops())
             .chain(security::cops())
             .chain(style::cops())
             .chain(style_calls::cops())
@@ -261,6 +171,7 @@ fn inspect(
     enabled: &dyn Fn(&str) -> bool,
 ) -> Inspection {
     Engine::new(enabled).inspect(
+        "example.rb",
         source,
         autocorrect,
         target_ruby_version,
@@ -352,18 +263,10 @@ mod tests {
     }
 
     #[test]
-    fn public_prism_registry_matches_every_registered_cop() {
-        let registry = Registry::enabled(&|_| true);
-        let mut registered = registry
-            .cops
-            .iter()
-            .map(|cop| cop.name())
-            .collect::<Vec<_>>();
-        let mut published = PRISM_COPS.to_vec();
-        registered.sort_unstable();
-        published.sort_unstable();
-
-        assert_eq!(registered, published);
+    fn public_prism_registry_is_sorted_and_unique() {
+        let names = cop_names();
+        assert!(names.windows(2).all(|pair| pair[0] < pair[1]));
+        assert!(names.contains(&"Security/Eval"));
     }
 
     #[test]
@@ -457,6 +360,65 @@ mod tests {
                 "rand(1)\n",
                 "return unless value && value.empty?\n",
                 "loop do\n  work\nbreak unless active\nend\n",
+            )
+        );
+    }
+
+    #[test]
+    fn registers_the_twenty_cop_parity_batch() {
+        let names = cop_names();
+        for cop in [
+            "Bundler/GemVersion",
+            "Layout/InitialIndentation",
+            "Layout/MultilineArrayLineBreaks",
+            "Lint/DuplicateMagicComment",
+            "Lint/EmptyInterpolation",
+            "Lint/ErbNewArguments",
+            "Lint/HashNewWithKeywordArgumentsAsDefault",
+            "Lint/InterpolationCheck",
+            "Lint/LambdaWithoutLiteralBlock",
+            "Lint/RequireRangeParentheses",
+            "Lint/RequireRelativeSelfPath",
+            "Lint/SharedMutableDefault",
+            "Lint/TopLevelReturnWithArgument",
+            "Naming/AsciiIdentifiers",
+            "Style/MultilineIfThen",
+            "Style/OptionalArguments",
+            "Style/OptionalBooleanParameter",
+            "Style/ReturnNil",
+            "Style/Send",
+            "Style/VariableInterpolation",
+        ] {
+            assert!(names.contains(&cop), "missing {cop}");
+        }
+    }
+
+    #[test]
+    fn corrects_representative_parity_batch_offenses_together() {
+        let source = concat!(
+            "return nil\n",
+            "send(:work)\n",
+            "Hash.new(key: :value)\n",
+            "lambda(&callback)\n",
+        );
+        let inspection = inspect(source, true, RubyVersion::default(), &|cop| {
+            matches!(
+                cop,
+                "Style/ReturnNil"
+                    | "Style/Send"
+                    | "Lint/HashNewWithKeywordArgumentsAsDefault"
+                    | "Lint/LambdaWithoutLiteralBlock"
+            )
+        });
+
+        assert_eq!(inspection.findings.len(), 4);
+        assert_eq!(
+            inspection.corrected_source,
+            concat!(
+                "return\n",
+                "send(:work)\n",
+                "Hash.new({key: :value})\n",
+                "callback\n",
             )
         );
     }

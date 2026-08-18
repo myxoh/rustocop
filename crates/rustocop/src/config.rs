@@ -1,7 +1,9 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::sync::Arc;
 
-use crate::catalog::{DEFAULT_DISABLED_COPS, SUPPORTED_COPS};
+use regex::Regex;
+
+use crate::catalog::DEFAULT_DISABLED_COPS;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum Parallelism {
@@ -29,44 +31,167 @@ pub(crate) struct InspectionConfig {
 
 #[derive(Clone, Debug, Default)]
 pub(crate) struct CopConfig {
-    values: HashMap<String, HashMap<String, String>>,
+    values: HashMap<String, HashMap<String, ConfigValue>>,
+    // Precompiled once per run for the authoring policy API.
+    #[allow(dead_code)]
+    patterns: HashMap<String, HashMap<String, Vec<Regex>>>,
+}
+
+#[derive(Clone, Debug)]
+enum ConfigValue {
+    Scalar(String),
+    List(Vec<String>),
+    Map(HashMap<String, String>),
 }
 
 impl CopConfig {
     pub(crate) fn from_source(source: &str) -> Self {
-        let mut values = HashMap::<String, HashMap<String, String>>::new();
+        let mut values = HashMap::<String, HashMap<String, ConfigValue>>::new();
         let mut section = None;
+        let mut container_key: Option<String> = None;
         for line in source.lines() {
             if !line.starts_with(char::is_whitespace) {
                 section = line
                     .strip_suffix(':')
-                    .filter(|name| name.contains('/'))
+                    .filter(|name| name.contains('/') || *name == "AllCops")
                     .map(str::to_string);
+                container_key = None;
                 continue;
             }
             let Some(section) = section.as_ref() else {
                 continue;
             };
+            let trimmed = line.trim();
+            let indentation = line.len() - line.trim_start().len();
+            if let Some(item) = trimmed.strip_prefix("- ") {
+                if let Some(key) = container_key.as_ref() {
+                    let entry = values
+                        .entry(section.clone())
+                        .or_default()
+                        .entry(key.clone())
+                        .or_insert_with(|| ConfigValue::List(Vec::new()));
+                    if !matches!(entry, ConfigValue::List(_)) {
+                        *entry = ConfigValue::List(Vec::new());
+                    }
+                    if let ConfigValue::List(items) = entry {
+                        items.push(clean_config_scalar(item));
+                    }
+                }
+                continue;
+            }
+            if indentation > 2 {
+                if let (Some(container), Some((key, value))) =
+                    (container_key.as_ref(), trimmed.split_once(':'))
+                {
+                    let entry = values
+                        .entry(section.clone())
+                        .or_default()
+                        .entry(container.clone())
+                        .or_insert_with(|| ConfigValue::Map(HashMap::new()));
+                    if !matches!(entry, ConfigValue::Map(_)) {
+                        *entry = ConfigValue::Map(HashMap::new());
+                    }
+                    if let ConfigValue::Map(entries) = entry {
+                        entries.insert(key.to_string(), clean_config_scalar(value));
+                    }
+                }
+                continue;
+            }
             let Some((key, value)) = line.trim().split_once(':') else {
                 continue;
             };
-            let value = value
-                .split('#')
-                .next()
-                .unwrap_or_default()
-                .trim()
-                .trim_matches(['\'', '"']);
+            let value = value.split('#').next().unwrap_or_default().trim();
+            let parsed = if value.is_empty() {
+                container_key = Some(key.to_string());
+                ConfigValue::List(Vec::new())
+            } else if value.starts_with('[') && value.ends_with(']') {
+                container_key = None;
+                ConfigValue::List(
+                    value[1..value.len() - 1]
+                        .split(',')
+                        .map(clean_config_scalar)
+                        .filter(|item| !item.is_empty())
+                        .collect(),
+                )
+            } else {
+                container_key = None;
+                ConfigValue::Scalar(clean_config_scalar(value))
+            };
             values
                 .entry(section.clone())
                 .or_default()
-                .insert(key.to_string(), value.to_string());
+                .insert(key.to_string(), parsed);
         }
-        Self { values }
+        let patterns = values
+            .iter()
+            .map(|(cop, entries)| {
+                let entries = entries
+                    .iter()
+                    .filter(|(key, _value)| key.contains("Pattern"))
+                    .filter_map(|(key, value)| {
+                        let ConfigValue::List(patterns) = value else {
+                            return None;
+                        };
+                        Some((
+                            key.clone(),
+                            patterns
+                                .iter()
+                                .filter_map(|pattern| Regex::new(pattern).ok())
+                                .collect(),
+                        ))
+                    })
+                    .collect();
+                (cop.clone(), entries)
+            })
+            .collect();
+        Self { values, patterns }
     }
 
     pub(crate) fn value(&self, cop: &str, key: &str) -> Option<&str> {
-        self.values.get(cop)?.get(key).map(String::as_str)
+        match self.values.get(cop)?.get(key)? {
+            ConfigValue::Scalar(value) => Some(value),
+            ConfigValue::List(_) | ConfigValue::Map(_) => None,
+        }
     }
+
+    pub(crate) fn bool(&self, cop: &str, key: &str) -> Option<bool> {
+        match self.value(cop, key)? {
+            "true" => Some(true),
+            "false" => Some(false),
+            _ => None,
+        }
+    }
+
+    #[allow(dead_code)]
+    pub(crate) fn usize(&self, cop: &str, key: &str) -> Option<usize> {
+        self.value(cop, key)?.parse().ok()
+    }
+
+    pub(crate) fn values(&self, cop: &str, key: &str) -> &[String] {
+        match self.values.get(cop).and_then(|values| values.get(key)) {
+            Some(ConfigValue::List(values)) => values,
+            _ => &[],
+        }
+    }
+
+    #[allow(dead_code)]
+    pub(crate) fn patterns(&self, cop: &str, key: &str) -> &[Regex] {
+        self.patterns
+            .get(cop)
+            .and_then(|patterns| patterns.get(key))
+            .map_or(&[], Vec::as_slice)
+    }
+
+    pub(crate) fn map(&self, cop: &str, key: &str) -> Option<&HashMap<String, String>> {
+        match self.values.get(cop)?.get(key)? {
+            ConfigValue::Map(values) => Some(values),
+            ConfigValue::Scalar(_) | ConfigValue::List(_) => None,
+        }
+    }
+}
+
+fn clean_config_scalar(value: &str) -> String {
+    value.trim().trim_matches(['\'', '"']).to_string()
 }
 
 impl InspectionConfig {
@@ -107,7 +232,7 @@ impl Default for RubyVersion {
 
 #[derive(Clone, Debug)]
 pub(crate) struct CopSelection {
-    enabled: HashSet<&'static str>,
+    requested: Option<Vec<String>>,
 }
 
 impl CopSelection {
@@ -121,25 +246,23 @@ impl CopSelection {
     }
 
     pub(crate) fn enabled(&self, cop: &str) -> bool {
-        self.enabled.contains(cop)
+        match &self.requested {
+            None => !DEFAULT_DISABLED_COPS.contains(&cop),
+            Some(requested) => requested.iter().any(|selection| {
+                selection == cop
+                    || (!DEFAULT_DISABLED_COPS.contains(&cop)
+                        && cop
+                            .strip_prefix(selection)
+                            .is_some_and(|suffix| suffix.starts_with('/')))
+            }),
+        }
     }
 
     fn from_only(requested: Option<&[&str]>) -> Self {
-        let enabled = SUPPORTED_COPS
-            .iter()
-            .copied()
-            .filter(|cop| match requested {
-                None => !DEFAULT_DISABLED_COPS.contains(cop),
-                Some(requested) => requested.iter().any(|selection| {
-                    selection == cop
-                        || (!DEFAULT_DISABLED_COPS.contains(cop)
-                            && cop
-                                .strip_prefix(selection)
-                                .is_some_and(|suffix| suffix.starts_with('/')))
-                }),
-            })
-            .collect();
-        Self { enabled }
+        Self {
+            requested: requested
+                .map(|values| values.iter().map(|value| (*value).to_string()).collect()),
+        }
     }
 }
 
@@ -173,5 +296,30 @@ mod tests {
         );
         assert_eq!(config.value("Other/Rule", "Allowed"), Some("false"));
         assert_eq!(config.value("Style/Example", "Allowed"), None);
+    }
+
+    #[test]
+    fn reads_typed_scalars_and_block_or_inline_lists() {
+        let config = CopConfig::from_source(
+            "Style/Example:\n  Enabled: true\n  Max: 12\n  AllowedMethods:\n    - map\n    - 'each'\n  AllowedPatterns: [foo, 'bar']\n  PreferredMethods:\n    intern: to_sym\n",
+        );
+
+        assert_eq!(config.bool("Style/Example", "Enabled"), Some(true));
+        assert_eq!(config.usize("Style/Example", "Max"), Some(12));
+        assert_eq!(
+            config.values("Style/Example", "AllowedMethods"),
+            ["map", "each"]
+        );
+        assert_eq!(
+            config.values("Style/Example", "AllowedPatterns"),
+            ["foo", "bar"]
+        );
+        assert_eq!(
+            config
+                .map("Style/Example", "PreferredMethods")
+                .and_then(|methods| methods.get("intern"))
+                .map(String::as_str),
+            Some("to_sym")
+        );
     }
 }

@@ -1,7 +1,8 @@
-use ruby_prism::Location;
+use ruby_prism::{Location, Node};
 use std::ops::Range;
 use std::sync::Arc;
 
+use super::{CopContext, CopPolicy};
 use crate::config::{CopConfig, RubyVersion};
 
 #[derive(Debug)]
@@ -55,6 +56,7 @@ struct Edit {
 
 pub(crate) struct Context {
     autocorrect: bool,
+    path: Arc<str>,
     target_ruby_version: RubyVersion,
     cop_config: Arc<CopConfig>,
     findings: Vec<Finding>,
@@ -71,11 +73,13 @@ pub(super) struct Reporter<'context> {
 impl Context {
     pub(super) fn new(
         autocorrect: bool,
+        path: impl Into<Arc<str>>,
         target_ruby_version: RubyVersion,
         cop_config: Arc<CopConfig>,
     ) -> Self {
         Self {
             autocorrect,
+            path: path.into(),
             target_ruby_version,
             cop_config,
             findings: Vec::new(),
@@ -96,6 +100,22 @@ impl Context {
             cop_name,
             context: self,
         }
+    }
+
+    pub(super) fn cop_context<'context, 'pr>(
+        &'context mut self,
+        cop_name: &'static str,
+        source: &'pr str,
+        ancestors: &'pr [Node<'pr>],
+    ) -> CopContext<'context, 'pr> {
+        CopContext::new(
+            Reporter {
+                cop_name,
+                context: self,
+            },
+            source,
+            ancestors,
+        )
     }
 
     pub(super) fn report(
@@ -180,12 +200,47 @@ impl Context {
 }
 
 impl Reporter<'_> {
+    #[allow(dead_code)]
+    pub(super) fn path(&self) -> &str {
+        &self.context.path
+    }
     pub(super) fn target_ruby_version(&self) -> RubyVersion {
         self.context.target_ruby_version()
     }
 
     pub(super) fn config_value(&self, key: &str) -> Option<&str> {
         self.context.config_value(self.cop_name, key)
+    }
+
+    pub(super) fn config_bool(&self, key: &str, default: bool) -> bool {
+        self.context
+            .cop_config
+            .bool(self.cop_name, key)
+            .unwrap_or(default)
+    }
+
+    #[allow(dead_code)]
+    pub(super) fn config_usize(&self, key: &str, default: usize) -> usize {
+        self.context
+            .cop_config
+            .usize(self.cop_name, key)
+            .unwrap_or(default)
+    }
+
+    #[allow(dead_code)]
+    pub(super) fn config_values(&self, key: &str) -> &[String] {
+        self.context.cop_config.values(self.cop_name, key)
+    }
+
+    pub(super) fn config_map(
+        &self,
+        key: &str,
+    ) -> Option<&std::collections::HashMap<String, String>> {
+        self.context.cop_config.map(self.cop_name, key)
+    }
+
+    pub(super) fn policy(&self) -> CopPolicy<'_> {
+        CopPolicy::new(&self.context.cop_config, self.cop_name)
     }
 
     pub(super) fn related_config_value(&self, cop_name: &str, key: &str) -> Option<&str> {
@@ -255,6 +310,7 @@ mod tests {
     fn context(autocorrect: bool) -> Context {
         Context::new(
             autocorrect,
+            "example.rb",
             RubyVersion::default(),
             Arc::new(CopConfig::default()),
         )

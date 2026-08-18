@@ -1,9 +1,10 @@
 use super::*;
 
-declare_cops!(ColonMethodCall);
-define_call_cop!(ColonMethodCall => "Style/ColonMethodCall" => colon_method_call);
+define_cops! {
+    ColonMethodCall => "Style/ColonMethodCall" => call(colon_method_call),
+}
 
-fn colon_method_call(node: &CallNode<'_>, reporter: &mut Reporter<'_>) {
+fn colon_method_call(node: &CallNode<'_>, reporter: &mut CopContext<'_, '_>) {
     let method = call_name(node);
     if !match_call(node).with_operator(b"::").matches()
         || method.first().is_some_and(u8::is_ascii_uppercase)

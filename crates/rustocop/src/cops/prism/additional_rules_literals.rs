@@ -1,15 +1,16 @@
 use super::source_helpers::*;
 use super::*;
 
-declare_source_cops! {
-    EmptyFile => "Lint/EmptyFile" => empty_file,
-    NumericLiteralPrefix => "Style/NumericLiteralPrefix" => numeric_literal_prefix,
-    NestedPercentLiteral => "Lint/NestedPercentLiteral" => nested_percent_literal,
-    RescueException => "Lint/RescueException" => rescue_exception,
-    OpenStructUse => "Style/OpenStructUse" => open_struct_use,
+define_cops! {
+    EmptyFile => "Lint/EmptyFile" => source(empty_file),
+    NumericLiteralPrefix => "Style/NumericLiteralPrefix" => source(numeric_literal_prefix),
+    NestedPercentLiteral => "Lint/NestedPercentLiteral" => source(nested_percent_literal),
+    RescueException => "Lint/RescueException" => source(rescue_exception),
+    OpenStructUse => "Style/OpenStructUse" => source(open_struct_use),
 }
 
-fn empty_file(source: &str, reporter: &mut Reporter<'_>) {
+fn empty_file(reporter: &mut CopContext<'_, '_>) {
+    let source = reporter.source();
     let empty =
         source.is_empty() || (!source.ends_with('\n') && source.trim_start().starts_with('#'));
     if empty {
@@ -17,7 +18,8 @@ fn empty_file(source: &str, reporter: &mut Reporter<'_>) {
     }
 }
 
-fn numeric_literal_prefix(source: &str, reporter: &mut Reporter<'_>) {
+fn numeric_literal_prefix(reporter: &mut CopContext<'_, '_>) {
+    let source = reporter.source();
     let zero_only = reporter.config_value("EnforcedOctalStyle") == Some("zero_only");
     let bytes = source.as_bytes();
     let mut index = 0;
@@ -63,7 +65,8 @@ fn numeric_literal_prefix(source: &str, reporter: &mut Reporter<'_>) {
     }
 }
 
-fn nested_percent_literal(source: &str, reporter: &mut Reporter<'_>) {
+fn nested_percent_literal(reporter: &mut CopContext<'_, '_>) {
+    let source = reporter.source();
     for (offset, line) in source_lines(source) {
         let trimmed = line.trim();
         let nested = trimmed.starts_with("%i[") && trimmed[3..].contains("%i[")
@@ -75,7 +78,8 @@ fn nested_percent_literal(source: &str, reporter: &mut Reporter<'_>) {
     }
 }
 
-fn rescue_exception(source: &str, reporter: &mut Reporter<'_>) {
+fn rescue_exception(reporter: &mut CopContext<'_, '_>) {
+    let source = reporter.source();
     for (offset, line) in source_lines(source) {
         let trimmed = line.trim_start();
         let exceptions = trimmed
@@ -91,7 +95,8 @@ fn rescue_exception(source: &str, reporter: &mut Reporter<'_>) {
     }
 }
 
-fn open_struct_use(source: &str, reporter: &mut Reporter<'_>) {
+fn open_struct_use(reporter: &mut CopContext<'_, '_>) {
+    let source = reporter.source();
     for name in ["::OpenStruct", "OpenStruct"] {
         for start in all_offsets(source, name) {
             if name == "OpenStruct" && start >= 2 && &source[start - 2..start] == "::" {

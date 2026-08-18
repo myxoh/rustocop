@@ -5,6 +5,7 @@ edition = "2021"
 license = "MIT"
 
 [dependencies]
+regex = "1.13.1"
 ruby-prism = "1.9.0"
 
 [lints.rust]

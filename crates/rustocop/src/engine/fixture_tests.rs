@@ -71,6 +71,8 @@ macro_rules! fixture_test {
     };
 }
 
+// New-cop generator registrations are inserted directly below this line.
+
 fixture_test!(
     reports_security_calls,
     "security_offenses",

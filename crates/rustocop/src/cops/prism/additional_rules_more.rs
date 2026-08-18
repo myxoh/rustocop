@@ -18,7 +18,8 @@ declare_source_cops! {
 }
 
 fn stabby_lambda_parentheses(source: &str, reporter: &mut Reporter<'_>) {
-    let no_parentheses = reporter.config_value("EnforcedStyle") == Some("require_no_parentheses");
+    let no_parentheses =
+        reporter.policy().enforced_style("require_parentheses") == "require_no_parentheses";
     for start in all_offsets(source, "->") {
         let arguments = start + 2;
         if no_parentheses {
@@ -137,7 +138,7 @@ fn triple_quotes(source: &str, reporter: &mut Reporter<'_>) {
 }
 
 fn preferred_hash_methods(source: &str, reporter: &mut Reporter<'_>) {
-    let rules = if reporter.config_value("EnforcedStyle") == Some("verbose") {
+    let rules = if reporter.policy().enforced_style("short") == "verbose" {
         [
             (
                 "key?",

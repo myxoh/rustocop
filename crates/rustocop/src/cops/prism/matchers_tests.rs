@@ -60,6 +60,24 @@ fn matches_receiver_block_and_operator_shapes() {
 }
 
 #[test]
+fn matches_argument_presence_content_and_receiver_calls() {
+    assert!(first_call_matches(b"items.sort.first(2)", |call| {
+        match_call(call)
+            .named(b"first")
+            .with_arguments()
+            .with_first_argument_matching(|argument| argument.as_integer_node().is_some())
+            .on_receiver_call_named(b"sort")
+            .matches()
+    }));
+    assert!(!first_call_matches(b"items.sort.first", |call| {
+        match_call(call).with_arguments().matches()
+    }));
+    assert!(first_call_matches(b"example()", |call| {
+        match_call(call).without_arguments().matches()
+    }));
+}
+
+#[test]
 fn exact_argument_helpers_do_not_treat_the_first_of_many_as_the_only_one() {
     assert!(first_call_matches(b"example(first, second)", |call| {
         argument_count(call) == 2 && first_argument(call).is_some() && only_argument(call).is_none()
@@ -98,4 +116,22 @@ fn reads_and_compares_node_source_without_offset_boilerplate() {
 
     assert_eq!(node_source("value == value", &left), "value");
     assert!(same_source("value == value", &left, &right));
+}
+
+#[test]
+fn matches_keywords_predicates_literals_and_constant_paths() {
+    assert!(first_call_matches(
+        b"Example::Client.load('value', safe: true)",
+        |call| {
+            let argument = first_argument(call).unwrap();
+            let receiver = call.receiver().unwrap();
+            match_call(call)
+                .with_keyword(b"safe")
+                .without_block()
+                .matches()
+                && static_string(&argument) == Some(b"value".to_vec())
+                && constant_path(&receiver)
+                    == Some(vec![b"Example".as_slice(), b"Client".as_slice()])
+        }
+    ));
 }

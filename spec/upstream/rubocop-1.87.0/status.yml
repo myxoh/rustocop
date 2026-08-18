@@ -5,16 +5,19 @@ upstream_rspec:
   pending: 6
 captured_cases: 28623
 diagnostic_baseline:
-  passed_cases: 13709
-  passing_cops: 96
+  passed_cases: 13790
+  passing_cops: 116
   total_cops: 606
 fully_compatible_cops:
+  - Bundler/GemVersion
   - Bundler/InsecureProtocolSource
   - Gemspec/AttributeAssignment
   - Gemspec/AddRuntimeDependency
   - Gemspec/RubyVersionGlobalsUsage
   - Layout/EmptyLines
+  - Layout/InitialIndentation
   - Layout/LeadingEmptyLines
+  - Layout/MultilineArrayLineBreaks
   - Layout/SpaceAfterMethodName
   - Layout/SpaceAfterComma
   - Layout/SpaceAfterColon
@@ -28,15 +31,21 @@ fully_compatible_cops:
   - Lint/DuplicateRescueException
   - Lint/DuplicateRequire
   - Lint/DisjunctiveAssignmentInConstructor
+  - Lint/DuplicateMagicComment
   - Lint/EachWithObjectArgument
   - Lint/EmptyFile
+  - Lint/EmptyInterpolation
   - Lint/EmptyEnsure
   - Lint/EmptyExpression
+  - Lint/ErbNewArguments
   - Lint/EnsureReturn
   - Lint/FlipFlop
   - Lint/FloatOutOfRange
   - Lint/HashCompareByIdentity
+  - Lint/HashNewWithKeywordArgumentsAsDefault
   - Lint/IdentityComparison
+  - Lint/InterpolationCheck
+  - Lint/LambdaWithoutLiteralBlock
   - Lint/Loop
   - Lint/NestedPercentLiteral
   - Lint/OrAssignmentToConstant
@@ -44,15 +53,20 @@ fully_compatible_cops:
   - Lint/RandOne
   - Lint/RefinementImportMethods
   - Lint/RegexpAsCondition
+  - Lint/RequireRangeParentheses
+  - Lint/RequireRelativeSelfPath
   - Lint/RescueException
   - Lint/SafeNavigationWithEmpty
+  - Lint/SharedMutableDefault
   - Lint/ToJSON
+  - Lint/TopLevelReturnWithArgument
   - Lint/TrailingCommaInAttributeDeclaration
   - Lint/TripleQuotes
   - Lint/UriEscapeUnescape
   - Lint/UriRegexp
   - Lint/UselessElseWithoutRescue
   - Lint/UselessDefined
+  - Naming/AsciiIdentifiers
   - Naming/ClassAndModuleCamelCase
   - Security/Eval
   - Security/MarshalLoad
@@ -82,10 +96,13 @@ fully_compatible_cops:
   - Style/InlineComment
   - Style/InPatternThen
   - Style/MinMax
+  - Style/MultilineIfThen
   - Style/NestedFileDirname
   - Style/Not
   - Style/NumericLiteralPrefix
   - Style/OpenStructUse
+  - Style/OptionalArguments
+  - Style/OptionalBooleanParameter
   - Style/PreferredHashMethods
   - Style/Proc
   - Style/RedundantArrayFlatten
@@ -94,6 +111,8 @@ fully_compatible_cops:
   - Style/RedundantFileExtensionInRequire
   - Style/RedundantRegexpConstructor
   - Style/RedundantSortBy
+  - Style/ReturnNil
+  - Style/Send
   - Style/StringChars
   - Style/StringHashKeys
   - Style/StringMethods
@@ -103,5 +122,6 @@ fully_compatible_cops:
   - Style/SuperWithArgsParentheses
   - Style/SymbolLiteral
   - Style/TrailingCommaInBlockArgs
+  - Style/VariableInterpolation
   - Style/WhenThen
   - Style/WhileUntilDo

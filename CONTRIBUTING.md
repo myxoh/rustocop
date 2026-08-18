@@ -17,9 +17,10 @@
 2. Prefer an AST cop when correctness depends on Ruby syntax, scope, receiver,
    or byte locations. Keep a textual cop only when line semantics are the actual
    RuboCop contract or while it is explicitly tracked as compatibility debt.
-3. Add cops to their RuboCop department module. Cross-department utilities must
-   be pure helpers; they must not know about CLI flags, filesystem discovery, or
-   output formatting.
+3. Start new cops with `script/new_cop.rb`; it creates a focused module and
+   performs composition-root wiring. Cross-department utilities must be pure
+   helpers; they must not know about CLI flags, filesystem discovery, or output
+   formatting.
 4. The inspection coordinator decides ordering. Individual cops emit findings
    and corrections; they do not write files or print output.
 5. Corrections use Prism byte offsets and must be non-overlapping. Add an
@@ -28,6 +29,22 @@
 The [Prism cop authoring guide](docs/adding-a-prism-cop.md) documents the shared
 matcher and diagnostic APIs. Extend those APIs only for a recurring concept,
 not to hide logic that belongs to one cop.
+
+## Add a cop
+
+```sh
+ruby script/new_cop.rb Style/Example call
+# implement from RuboCop's spec and complete the generated fixture
+ruby script/verify_cop.rb Style/Example
+```
+
+The supported callback kinds are `call`, `node`, `any_node`, and `source`.
+Node callbacks accept `--node-cast as_if_node` (or another Prism cast). Use
+`any_node` only when one cop genuinely handles several node kinds, and reserve
+`source` for lexical or file-level rules; syntax-aware cops belong on Prism
+nodes. The generated cop name is discovered from the runtime registry, so there
+is no public cop list to edit. Use `--dry-run` to preview the generated source
+and fixture templates.
 
 ## Keep complexity bounded
 

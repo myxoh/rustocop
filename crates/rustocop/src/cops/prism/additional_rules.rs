@@ -92,7 +92,7 @@ fn insecure_protocol_source(source: &str, reporter: &mut Reporter<'_>) {
             );
         }
     }
-    if reporter.config_value("AllowHttpProtocol") == Some("false") {
+    if !reporter.config_bool("AllowHttpProtocol", true) {
         for start in all_offsets(source, "'http://rubygems.org'") {
             let end = start + "'http://rubygems.org'".len();
             reporter.replace(

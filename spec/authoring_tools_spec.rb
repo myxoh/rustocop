@@ -1,0 +1,44 @@
+# frozen_string_literal: true
+
+RSpec.describe "cop authoring tools" do
+  def run_script(name, *arguments, env: {})
+    Open3.capture3(env, RbConfig.ruby, File.join(ROOT, "script", name), *arguments)
+  end
+
+  it "previews any-node scaffolding and the complete fixture format" do
+    stdout, stderr, status = run_script(
+      "new_cop.rb",
+      "Style/GeneratedExample",
+      "any_node",
+      "--autocorrect",
+      "--fixture-path",
+      "/project/Gemfile",
+      "--dry-run"
+    )
+
+    expect(status).to be_success
+    expect(stderr).to eq("")
+    expect(stdout).to include(
+      'GeneratedExample => "Style/GeneratedExample" => any_node(check)',
+      "fn check(node: &Node<'_>",
+      "last_line\tlast_column\tcorrectable\tcorrected",
+      "checks_style_generated_example",
+      '"/project/Gemfile"',
+      "true"
+    )
+    expect(File).not_to exist(File.join(ROOT, "crates/rustocop/src/cops/prism/style_generated_example.rs"))
+  end
+
+  it "rejects an empty upstream contract" do
+    native = File.join(ROOT, "libexec", "rustocop-native")
+    _stdout, stderr, status = run_script(
+      "compare_upstream_cop_specs.rb",
+      "--only",
+      "Style/DefinitelyNotACop",
+      env: { "RUSTOCOP_NATIVE_PATH" => native }
+    )
+
+    expect(status).not_to be_success
+    expect(stderr).to include("no captured upstream cases matched the requested cops")
+  end
+end

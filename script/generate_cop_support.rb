@@ -7,18 +7,10 @@ require "yaml"
 ROOT = File.expand_path("..", __dir__)
 OUTPUT = File.join(ROOT, "docs", "cop-support.md")
 
-def rust_string_constant(path, name)
-  source = File.read(path)
-  body = source.match(/#{Regexp.escape(name)}:\s*&\[&str\]\s*=\s*&\[(.*?)\];/m)&.[](1)
-  raise "could not find #{name} in #{path}" unless body
+native = ENV.fetch("RUSTOCOP_NATIVE_PATH", File.join(ROOT, "libexec", "rustocop-native"))
+raise "native Rustocop executable not found at #{native}" unless File.executable?(native)
 
-  body.scan(/"([^"]+)"/).flatten
-end
-
-supported_cops = rust_string_constant(
-  File.join(ROOT, "crates", "rustocop", "src", "catalog.rs"),
-  "SUPPORTED_COPS"
-)
+supported_cops = IO.popen([native, "--show-cops"], &:readlines).map(&:strip).reject(&:empty?)
 upstream_status = YAML.safe_load(
   File.read(File.join(ROOT, "spec", "upstream", "rubocop-1.87.0", "status.yml"))
 )

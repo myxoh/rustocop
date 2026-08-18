@@ -38,7 +38,7 @@ src/
     diagnostic.rs  Prism finding-to-offense location conversion
     source.rs      mutable textual source representation
   cops/
-    prism/         shared Prism registry, authoring DSL, matchers, and AST cops
+    prism/         discovered registry, CopContext, source geometry, DSL, and AST cops
     text/          textual compatibility cops grouped by department
 ```
 
@@ -90,7 +90,8 @@ function-level complexity and argument limits.
 Every inspected file is parsed exactly once. Adding an AST cop registers a
 stateless visitor in `cops/prism`; it must never open or parse the source
 independently. See [Adding a Prism cop](adding-a-prism-cop.md) for the authoring
-API.
+API. Registry names come from implementations rather than a parallel public
+list, and generated scaffolding performs the composition-root wiring.
 
 `--parallel` distributes complete files across scoped worker threads. Results
 are restored to discovery order before formatting, so parallel and sequential

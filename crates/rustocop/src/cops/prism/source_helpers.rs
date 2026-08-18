@@ -1,9 +1,5 @@
 pub(super) fn source_lines(source: &str) -> impl Iterator<Item = (usize, &str)> {
-    source.split_inclusive('\n').scan(0, |offset, line| {
-        let start = *offset;
-        *offset += line.len();
-        Some((start, line.strip_suffix('\n').unwrap_or(line)))
-    })
+    super::SourceFile::new(source).lines()
 }
 
 pub(super) fn line_end(source: &str, start: usize) -> usize {
