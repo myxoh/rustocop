@@ -29,8 +29,7 @@ fn check_endless_method(
                 index + 1,
                 leading_spaces(&line.body) + 1,
                 trimmed.len(),
-                false,
-                false,
+                (false, false),
             );
         }
     }
@@ -63,8 +62,7 @@ fn check_documentation(
                 index + 1,
                 leading_spaces(&line.body) + 1,
                 trimmed.len(),
-                false,
-                false,
+                (false, false),
             );
         }
     }
@@ -88,8 +86,7 @@ fn check_trailing_commas(
                 index,
                 lines[index - 1].body.chars().count(),
                 1,
-                true,
-                false,
+                (true, false),
             );
         }
     }
@@ -113,8 +110,7 @@ fn check_numbered_parameters(
                 index + 1,
                 column,
                 2,
-                false,
-                false,
+                (false, false),
             );
         }
     }
@@ -138,8 +134,7 @@ fn check_string_literals(
                 index + 1,
                 column,
                 1,
-                true,
-                false,
+                (true, false),
             );
         }
     }

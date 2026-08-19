@@ -1,5 +1,8 @@
 use super::*;
 
+mod helpers;
+use helpers::*;
+
 define_cops! {
     AssignmentIndentation => "Layout/AssignmentIndentation" => source(assignment_indentation),
     BeginEndAlignment => "Layout/BeginEndAlignment" => source(begin_end_alignment),
@@ -258,17 +261,6 @@ fn space_before_first_arg(context: &mut CopContext<'_, '_>) {
             }
         }
     }
-}
-
-fn aligned_argument_column(source: &str, current_offset: usize, column: usize) -> bool {
-    SourceFile::new(source).lines().any(|(offset, line)| {
-        offset != current_offset
-            && line.len() > column
-            && line
-                .as_bytes()
-                .get(column)
-                .is_some_and(|byte| !byte.is_ascii_whitespace())
-    })
 }
 
 fn space_inside_string_interpolation(context: &mut CopContext<'_, '_>) {

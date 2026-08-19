@@ -1,9 +1,11 @@
-use super::catalog_cop::{custom, replace, report};
+use super::catalog_cop::{custom, report};
 use super::*;
 use std::collections::HashSet;
 
+mod registry;
+
 pub(super) fn cops() -> Vec<Box<dyn Cop>> {
-    vec![
+    let mut cops = vec![
         custom("Style/SelectByKind", select_by_kind),
         report(
             "Style/TernaryParentheses",
@@ -29,42 +31,9 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
         ),
         custom("Lint/Void", void_expression),
         custom("Style/OperatorMethodCall", operator_method_call),
-        replace(
-            "Style/NegativeArrayIndex",
-            ".fetch(-1)",
-            "[-1]",
-            "Prefer negative array indexing over `fetch`.",
-        ),
-        replace(
-            "Style/RedundantFormat",
-            "format('%s', value)",
-            "value.to_s",
-            "Use `to_s` instead of formatting a single `%s` value.",
-        ),
-        replace(
-            "Style/RedundantParentheses",
-            "return(value)",
-            "return value",
-            "Don't use parentheses around a return value.",
-        ),
-        custom("Lint/DuplicateMethods", duplicate_methods),
-        custom(
-            "Style/AccessModifierDeclarations",
-            access_modifier_declarations,
-        ),
-        replace(
-            "Lint/RedundantTypeConversion",
-            "String(value.to_s)",
-            "value.to_s",
-            "Redundant type conversion detected.",
-        ),
-        report(
-            "Lint/LiteralInInterpolation",
-            "#{'",
-            "Literal interpolation detected.",
-        ),
-        custom("Style/SafeNavigation", safe_navigation),
-    ]
+    ];
+    cops.extend(registry::cops());
+    cops
 }
 
 fn useless_access_modifier(context: &mut CopContext<'_, '_>) {

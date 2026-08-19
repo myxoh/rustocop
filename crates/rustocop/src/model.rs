@@ -18,9 +18,9 @@ pub(crate) fn push_offense(
     line: usize,
     column: usize,
     length: usize,
-    correctable: bool,
-    corrected: bool,
+    correction: (bool, bool),
 ) {
+    let (correctable, corrected) = correction;
     offenses.push(Offense {
         cop_name,
         message: message.to_string(),

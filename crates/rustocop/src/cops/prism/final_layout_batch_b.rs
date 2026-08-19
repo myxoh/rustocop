@@ -1,8 +1,10 @@
 use super::catalog_cop::{custom, replace};
 use super::*;
 
+mod registry;
+
 pub(super) fn cops() -> Vec<Box<dyn Cop>> {
-    vec![
+    let mut cops = vec![
         custom(
             "Layout/EmptyLinesAfterModuleInclusion",
             empty_after_inclusion,
@@ -42,42 +44,9 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
             "Layout/SpaceInsideArrayLiteralBrackets",
             array_literal_spacing,
         ),
-        custom(
-            "Layout/HeredocArgumentClosingParenthesis",
-            heredoc_parenthesis,
-        ),
-        replace(
-            "Layout/SpaceInsideArrayPercentLiteral",
-            "%w[ ",
-            "%w[",
-            "Space inside percent array detected.",
-        ),
-        custom("Layout/RescueEnsureAlignment", end_alignment),
-        custom("Layout/HashAlignment", hash_alignment),
-        custom("Layout/SpaceAroundOperators", operator_spacing),
-        custom(
-            "Layout/EmptyLinesAroundAccessModifier",
-            empty_around_access_modifier,
-        ),
-        custom("Layout/HeredocIndentation", heredoc_indentation),
-        replace(
-            "Layout/SpaceAroundKeyword",
-            "! defined?",
-            "!defined?",
-            "Space around keyword detected.",
-        ),
-        custom("Layout/FirstArgumentIndentation", continuation_indentation),
-        custom(
-            "Layout/MultilineMethodCallIndentation",
-            continuation_indentation,
-        ),
-        replace(
-            "Layout/SpaceInsidePercentLiteralDelimiters",
-            "%w( ",
-            "%w(",
-            "Space inside percent literal delimiters detected.",
-        ),
-    ]
+    ];
+    cops.extend(registry::cops());
+    cops
 }
 
 fn empty_after_inclusion(context: &mut CopContext<'_, '_>) {

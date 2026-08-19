@@ -10,14 +10,12 @@ fn array_trailing_comma(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
     };
     check_trailing_comma(
         &array.location(),
-        array
-            .elements()
-            .last()
-            .map(|element| element.location().start_offset()),
-        array
-            .elements()
-            .last()
-            .map(|element| element.location().end_offset()),
+        array.elements().last().map(|element| {
+            (
+                element.location().start_offset(),
+                element.location().end_offset(),
+            )
+        }),
         &array
             .elements()
             .iter()
@@ -36,12 +34,12 @@ fn hash_trailing_comma(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
     };
     check_trailing_comma(
         &hash.location(),
-        hash.elements()
-            .last()
-            .map(|element| element.location().start_offset()),
-        hash.elements()
-            .last()
-            .map(|element| element.location().end_offset()),
+        hash.elements().last().map(|element| {
+            (
+                element.location().start_offset(),
+                element.location().end_offset(),
+            )
+        }),
         &hash
             .elements()
             .iter()
@@ -56,8 +54,7 @@ fn hash_trailing_comma(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
 
 fn check_trailing_comma(
     location: &ruby_prism::Location<'_>,
-    last_element_start: Option<usize>,
-    last_element_end: Option<usize>,
+    last_element: Option<(usize, usize)>,
     element_starts: &[usize],
     kind: &str,
     missing_message: &str,
@@ -75,7 +72,7 @@ fn check_trailing_comma(
         return;
     }
     let close = location.end_offset().saturating_sub(1);
-    let Some(last_end) = last_element_end else {
+    let Some((last_start, last_end)) = last_element else {
         return;
     };
     let tail = &context.source()[last_end..close];
@@ -135,7 +132,7 @@ fn check_trailing_comma(
         let at = last_end;
         context.insert(
             missing_message,
-            last_element_start.unwrap_or(at.saturating_sub(1))..at,
+            last_start..at,
             at,
             ",",
         );

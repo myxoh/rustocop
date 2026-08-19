@@ -29,8 +29,7 @@ fn check_rails(
                 index + 1,
                 text.find("default_scope").unwrap_or(0) + 1,
                 "default_scope".len(),
-                false,
-                false,
+                (false, false),
             );
         }
 
@@ -44,8 +43,7 @@ fn check_rails(
                 index + 1,
                 text.find("Rails.root").unwrap_or(0) + 1,
                 "Rails.root".len(),
-                false,
-                false,
+                (false, false),
             );
         }
 
@@ -60,8 +58,7 @@ fn check_rails(
                 index + 1,
                 text.find("ActiveJob::Base").unwrap_or(0) + 1,
                 "ActiveJob::Base".len(),
-                false,
-                false,
+                (false, false),
             );
         }
 
@@ -84,8 +81,7 @@ fn check_rails(
                 index + 1,
                 leading_spaces(&line.body) + 1,
                 line.body.trim().len(),
-                false,
-                false,
+                (false, false),
             );
         }
     }
@@ -109,23 +105,7 @@ fn check_rspec(
     for (index, line) in lines.iter().enumerate() {
         let trimmed = line.body.trim();
 
-        if options.cop_enabled("RSpec/Focus")
-            && (trimmed.starts_with("fdescribe")
-                || trimmed.starts_with("fcontext")
-                || trimmed.starts_with("fit")
-                || trimmed.contains("focus: true"))
-        {
-            push_offense(
-                offenses,
-                "RSpec/Focus",
-                "Focused spec found.",
-                index + 1,
-                leading_spaces(&line.body) + 1,
-                trimmed.len(),
-                false,
-                false,
-            );
-        }
+        check_rspec_focus(index, line, trimmed, options, offenses);
 
         if is_rspec_group_start(trimmed) {
             let depth = group_stack.len() + 1;
@@ -137,8 +117,7 @@ fn check_rspec(
                     index + 1,
                     leading_spaces(&line.body) + 1,
                     trimmed.len(),
-                    false,
-                    false,
+                    (false, false),
                 );
             }
 
@@ -163,8 +142,7 @@ fn check_rspec(
                 index + 1,
                 line.body.find("receive_message_chain").unwrap_or(0) + 1,
                 "receive_message_chain".len(),
-                false,
-                false,
+                (false, false),
             );
         } else if options.cop_enabled("RSpec/PendingWithoutReason")
             && pending_without_reason(trimmed)
@@ -176,8 +154,7 @@ fn check_rspec(
                 index + 1,
                 leading_spaces(&line.body) + 1,
                 trimmed.len(),
-                false,
-                false,
+                (false, false),
             );
         } else if trimmed.starts_with("before")
             || trimmed.starts_with("after")
@@ -193,8 +170,7 @@ fn check_rspec(
                         index + 1,
                         leading_spaces(&line.body) + 1,
                         trimmed.len(),
-                        false,
-                        false,
+                        (false, false),
                     );
                 }
             }
@@ -211,8 +187,7 @@ fn check_rspec(
                         index + 1,
                         leading_spaces(&line.body) + 1,
                         trimmed.len(),
-                        false,
-                        false,
+                        (false, false),
                     );
                 }
             }
@@ -226,67 +201,100 @@ fn check_rspec(
                         index + 1,
                         line.body.find(name).unwrap_or(0) + 1,
                         name.len(),
-                        false,
-                        false,
+                        (false, false),
                     );
                 }
             }
         }
 
         if trimmed == "end" {
-            if let Some(example) = example_stack.pop() {
-                let length = lines[example.start + 1..index]
-                    .iter()
-                    .filter(|line| !line.body.trim().is_empty())
-                    .count();
-                let expectations = lines[example.start + 1..index]
-                    .iter()
-                    .filter(|line| {
-                        line.body.contains("expect(") || line.body.contains("is_expected")
-                    })
-                    .count();
+            close_rspec_block(
+                index,
+                lines,
+                options,
+                offenses,
+                &mut group_stack,
+                &mut example_stack,
+            );
+        }
+    }
+}
 
-                if options.cop_enabled("RSpec/ExampleLength") && length > 15 {
-                    push_offense(
-                        offenses,
-                        "RSpec/ExampleLength",
-                        &format!("Example has too many lines. [{}/15]", length),
-                        example.start + 1,
-                        leading_spaces(&lines[example.start].body) + 1,
-                        lines[example.start].body.trim().len(),
-                        false,
-                        false,
-                    );
-                }
-                if options.cop_enabled("RSpec/MultipleExpectations") && expectations > 1 {
-                    push_offense(
-                        offenses,
-                        "RSpec/MultipleExpectations",
-                        "Example has too many expectations.",
-                        example.start + 1,
-                        leading_spaces(&lines[example.start].body) + 1,
-                        lines[example.start].body.trim().len(),
-                        false,
-                        false,
-                    );
-                }
-                continue;
-            }
+fn check_rspec_focus(
+    index: usize,
+    line: &SourceLine,
+    trimmed: &str,
+    options: &InspectionConfig,
+    offenses: &mut Vec<Offense>,
+) {
+    let focused = trimmed.starts_with("fdescribe")
+        || trimmed.starts_with("fcontext")
+        || trimmed.starts_with("fit")
+        || trimmed.contains("focus: true");
+    if options.cop_enabled("RSpec/Focus") && focused {
+        push_offense(
+            offenses,
+            "RSpec/Focus",
+            "Focused spec found.",
+            index + 1,
+            leading_spaces(&line.body) + 1,
+            trimmed.len(),
+            (false, false),
+        );
+    }
+}
 
-            if let Some(group) = group_stack.pop() {
-                if options.cop_enabled("RSpec/EmptyExampleGroup") && group.examples == 0 {
-                    push_offense(
-                        offenses,
-                        "RSpec/EmptyExampleGroup",
-                        "Empty example group detected.",
-                        group.start + 1,
-                        leading_spaces(&lines[group.start].body) + 1,
-                        lines[group.start].body.trim().len(),
-                        false,
-                        false,
-                    );
-                }
-            }
+fn close_rspec_block(
+    index: usize,
+    lines: &[SourceLine],
+    options: &InspectionConfig,
+    offenses: &mut Vec<Offense>,
+    groups: &mut Vec<SpecGroup>,
+    examples: &mut Vec<ExampleBlock>,
+) {
+    if let Some(example) = examples.pop() {
+        let body = &lines[example.start + 1..index];
+        let length = body
+            .iter()
+            .filter(|line| !line.body.trim().is_empty())
+            .count();
+        let expectations = body
+            .iter()
+            .filter(|line| line.body.contains("expect(") || line.body.contains("is_expected"))
+            .count();
+        if options.cop_enabled("RSpec/ExampleLength") && length > 15 {
+            push_offense(
+                offenses,
+                "RSpec/ExampleLength",
+                &format!("Example has too many lines. [{length}/15]"),
+                example.start + 1,
+                leading_spaces(&lines[example.start].body) + 1,
+                lines[example.start].body.trim().len(),
+                (false, false),
+            );
+        }
+        if options.cop_enabled("RSpec/MultipleExpectations") && expectations > 1 {
+            push_offense(
+                offenses,
+                "RSpec/MultipleExpectations",
+                "Example has too many expectations.",
+                example.start + 1,
+                leading_spaces(&lines[example.start].body) + 1,
+                lines[example.start].body.trim().len(),
+                (false, false),
+            );
+        }
+    } else if let Some(group) = groups.pop() {
+        if options.cop_enabled("RSpec/EmptyExampleGroup") && group.examples == 0 {
+            push_offense(
+                offenses,
+                "RSpec/EmptyExampleGroup",
+                "Empty example group detected.",
+                group.start + 1,
+                leading_spaces(&lines[group.start].body) + 1,
+                lines[group.start].body.trim().len(),
+                (false, false),
+            );
         }
     }
 }
@@ -300,8 +308,7 @@ fn check_rspec_file_path(path: &str, options: &InspectionConfig, offenses: &mut 
             1,
             1,
             1,
-            false,
-            false,
+            (false, false),
         );
     }
 
@@ -316,8 +323,7 @@ fn check_rspec_file_path(path: &str, options: &InspectionConfig, offenses: &mut 
             1,
             1,
             1,
-            false,
-            false,
+            (false, false),
         );
     }
 }

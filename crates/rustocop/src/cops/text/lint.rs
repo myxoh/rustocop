@@ -52,8 +52,7 @@ fn check_empty_ensure(
                 index + 1,
                 indentation + 1,
                 "ensure".len(),
-                true,
-                options.autocorrect,
+                (true, options.autocorrect),
             );
             if options.autocorrect {
                 lines[index]
@@ -76,68 +75,17 @@ fn check_small_line_cops(
         let trimmed = original.trim_start();
         let indentation = leading_spaces(&original);
 
-        if trimmed == "begin" {
-            begin_without_rescue.push(true);
-        } else if trimmed.starts_with("rescue") {
-            if let Some(begin) = begin_without_rescue.last_mut() {
-                *begin = false;
-            }
-        } else if trimmed == "end" {
-            begin_without_rescue.pop();
-        } else if trimmed == "else"
-            && begin_without_rescue.last().copied() == Some(true)
-            && options.cop_enabled("Lint/UselessElseWithoutRescue")
-        {
-            push_offense(
-                offenses,
-                "Lint/UselessElseWithoutRescue",
-                "`else` without `rescue` is useless.",
-                index + 1,
-                indentation + 1,
-                4,
-                false,
-                false,
-            );
-        }
+        check_useless_else(
+            trimmed,
+            index,
+            indentation,
+            &mut begin_without_rescue,
+            options,
+            offenses,
+        );
+        check_trailing_attribute_comma(index, line, &original, options, offenses);
 
-        if options.cop_enabled("Lint/TrailingCommaInAttributeDeclaration")
-            && ["attr_reader", "attr_writer", "attr_accessor"]
-                .iter()
-                .any(|keyword| trimmed.starts_with(keyword))
-            && trimmed.ends_with(',')
-        {
-            let comma = original.rfind(',').expect("trailing comma");
-            push_offense(
-                offenses,
-                "Lint/TrailingCommaInAttributeDeclaration",
-                "Avoid leaving a trailing comma in attribute declarations.",
-                index + 1,
-                comma + 1,
-                1,
-                true,
-                options.autocorrect,
-            );
-            if options.autocorrect {
-                line.body.remove(comma);
-            }
-        }
-
-        if options.cop_enabled("Style/EndBlock") && trimmed.starts_with("END ") {
-            push_offense(
-                offenses,
-                "Style/EndBlock",
-                "Avoid the use of `END` blocks. Use `Kernel#at_exit` instead.",
-                index + 1,
-                indentation + 1,
-                3,
-                true,
-                options.autocorrect,
-            );
-            if options.autocorrect {
-                line.body
-                    .replace_range(indentation..indentation + 3, "at_exit");
-            }
-        }
+        check_end_block(index, line, trimmed, indentation, options, offenses);
 
         if options.cop_enabled("Style/ColonMethodDefinition") && trimmed.starts_with("def ") {
             if let Some(relative) = trimmed[4..].find("::") {
@@ -149,8 +97,7 @@ fn check_small_line_cops(
                     index + 1,
                     column + 1,
                     2,
-                    true,
-                    options.autocorrect,
+                    (true, options.autocorrect),
                 );
                 if options.autocorrect {
                     line.body.replace_range(column..column + 2, ".");
@@ -167,8 +114,7 @@ fn check_small_line_cops(
                     index + 1,
                     start + 4,
                     2,
-                    true,
-                    options.autocorrect,
+                    (true, options.autocorrect),
                 );
                 if options.autocorrect {
                     line.body.replace_range(start + 2..start + 5, "");
@@ -186,8 +132,7 @@ fn check_small_line_cops(
                     index + 1,
                     selector + 1,
                     3,
-                    true,
-                    options.autocorrect,
+                    (true, options.autocorrect),
                 );
                 if options.autocorrect {
                     line.body.replace_range(selector - 1..selector + 3, "");
@@ -209,8 +154,7 @@ fn check_small_line_cops(
                         index + 1,
                         comment + 1,
                         text.chars().count(),
-                        false,
-                        false,
+                        (false, false),
                     );
                 }
             }
@@ -234,8 +178,7 @@ fn check_small_line_cops(
                     index + 1,
                     start + 1,
                     original[start..].chars().count(),
-                    true,
-                    options.autocorrect,
+                    (true, options.autocorrect),
                 );
                 if options.autocorrect {
                     let names = original[start..]
@@ -249,5 +192,94 @@ fn check_small_line_cops(
                 }
             }
         }
+    }
+}
+
+fn check_end_block(
+    index: usize,
+    line: &mut SourceLine,
+    trimmed: &str,
+    indentation: usize,
+    options: &InspectionConfig,
+    offenses: &mut Vec<Offense>,
+) {
+    if !options.cop_enabled("Style/EndBlock") || !trimmed.starts_with("END ") {
+        return;
+    }
+    push_offense(
+        offenses,
+        "Style/EndBlock",
+        "Avoid the use of `END` blocks. Use `Kernel#at_exit` instead.",
+        index + 1,
+        indentation + 1,
+        3,
+        (true, options.autocorrect),
+    );
+    if options.autocorrect {
+        line.body
+            .replace_range(indentation..indentation + 3, "at_exit");
+    }
+}
+
+fn check_useless_else(
+    trimmed: &str,
+    index: usize,
+    indentation: usize,
+    begin_without_rescue: &mut Vec<bool>,
+    options: &InspectionConfig,
+    offenses: &mut Vec<Offense>,
+) {
+    if trimmed == "begin" {
+        begin_without_rescue.push(true);
+    } else if trimmed.starts_with("rescue") {
+        if let Some(begin) = begin_without_rescue.last_mut() {
+            *begin = false;
+        }
+    } else if trimmed == "end" {
+        begin_without_rescue.pop();
+    } else if trimmed == "else"
+        && begin_without_rescue.last().copied() == Some(true)
+        && options.cop_enabled("Lint/UselessElseWithoutRescue")
+    {
+        push_offense(
+            offenses,
+            "Lint/UselessElseWithoutRescue",
+            "`else` without `rescue` is useless.",
+            index + 1,
+            indentation + 1,
+            4,
+            (false, false),
+        );
+    }
+}
+
+fn check_trailing_attribute_comma(
+    index: usize,
+    line: &mut SourceLine,
+    original: &str,
+    options: &InspectionConfig,
+    offenses: &mut Vec<Offense>,
+) {
+    let trimmed = original.trim_start();
+    if !options.cop_enabled("Lint/TrailingCommaInAttributeDeclaration")
+        || !["attr_reader", "attr_writer", "attr_accessor"]
+            .iter()
+            .any(|keyword| trimmed.starts_with(keyword))
+        || !trimmed.ends_with(',')
+    {
+        return;
+    }
+    let comma = original.rfind(',').expect("trailing comma");
+    push_offense(
+        offenses,
+        "Lint/TrailingCommaInAttributeDeclaration",
+        "Avoid leaving a trailing comma in attribute declarations.",
+        index + 1,
+        comma + 1,
+        1,
+        (true, options.autocorrect),
+    );
+    if options.autocorrect {
+        line.body.remove(comma);
     }
 }

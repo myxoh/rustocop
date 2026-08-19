@@ -26,6 +26,8 @@ shared leaf modules:
 src/
   main.rs          process entrypoint only
   config.rs        run options, cop selection, Ruby version
+  config/
+    selection.rs   cop selection and Ruby-version value objects
   model.rs         source lines and formatter-independent offenses
   app/
     cli.rs         argument and RuboCop-config parsing
@@ -110,10 +112,11 @@ to the same file.
 
 ## Complexity limits
 
-Rust modules have an enforced 400-line ceiling, and the process entrypoint has
-a 50-line ceiling. There are no exceptions for cop-family or composition-root
-modules. Functions should normally remain below 60 lines, cognitive complexity 15, and five arguments. The
-enforced Clippy limits are 200 lines, cognitive complexity 30, and eight
+Rust modules have an enforced 350-line ceiling, cop modules may declare at most
+16 cops, and the process entrypoint has a 50-line ceiling. There are no
+exceptions for cop-family or composition-root modules. Functions should
+normally remain below 60 lines, cognitive complexity 15, and five arguments.
+The enforced Clippy limits are 120 lines, cognitive complexity 25, and seven
 arguments. Do not raise a limit to land a feature.
 
 Measured optimization opportunities and their invariants are tracked in

@@ -7,6 +7,9 @@ use super::correction_engine::{accepted_corrections, apply_edits, Correction, Ed
 use super::{CopContext, CopPolicy};
 use crate::config::{CopConfig, RubyVersion};
 
+mod reporter;
+pub(super) use reporter::Reporter;
+
 #[derive(Debug)]
 pub struct Finding {
     pub cop_name: &'static str,
@@ -58,13 +61,6 @@ pub(crate) struct Context {
     cop_config: Arc<CopConfig>,
     findings: Vec<Finding>,
     corrections: Vec<Correction>,
-}
-
-/// A diagnostic context already scoped to one cop. Rule helpers use this
-/// instead of accepting and forwarding a separate cop-name argument.
-pub(super) struct Reporter<'context> {
-    cop_name: &'static str,
-    context: &'context mut Context,
 }
 
 impl Context {
@@ -263,127 +259,6 @@ impl Context {
             findings: self.findings,
             corrected_source: apply_edits(source, edits),
         }
-    }
-}
-
-impl Reporter<'_> {
-    pub(super) fn autocorrect_enabled(&self) -> bool {
-        self.context.autocorrect
-    }
-
-    #[allow(dead_code)]
-    pub(super) fn path(&self) -> &str {
-        &self.context.path
-    }
-    pub(super) fn target_ruby_version(&self) -> RubyVersion {
-        self.context.target_ruby_version()
-    }
-
-    pub(super) fn config_value(&self, key: &str) -> Option<&str> {
-        self.context.config_value(self.cop_name, key)
-    }
-
-    pub(super) fn config_bool(&self, key: &str, default: bool) -> bool {
-        self.context
-            .cop_config
-            .bool(self.cop_name, key)
-            .unwrap_or(default)
-    }
-
-    #[allow(dead_code)]
-    pub(super) fn config_usize(&self, key: &str, default: usize) -> usize {
-        self.context
-            .cop_config
-            .usize(self.cop_name, key)
-            .unwrap_or(default)
-    }
-
-    #[allow(dead_code)]
-    pub(super) fn config_values(&self, key: &str) -> &[String] {
-        self.context.cop_config.values(self.cop_name, key)
-    }
-
-    pub(super) fn config_map(
-        &self,
-        key: &str,
-    ) -> Option<&std::collections::HashMap<String, String>> {
-        self.context.cop_config.map(self.cop_name, key)
-    }
-
-    pub(super) fn policy(&self) -> CopPolicy<'_> {
-        CopPolicy::new(&self.context.cop_config, self.cop_name)
-    }
-
-    pub(super) fn related_config_value(&self, cop_name: &str, key: &str) -> Option<&str> {
-        self.context.config_value(cop_name, key)
-    }
-
-    pub(super) fn related_config_map(
-        &self,
-        cop_name: &str,
-        key: &str,
-    ) -> Option<&std::collections::HashMap<String, String>> {
-        self.context.cop_config.map(cop_name, key)
-    }
-
-    pub(super) fn report(&mut self, message: impl Into<String>, offense: impl ByteRange) {
-        self.context.report(self.cop_name, message, offense);
-    }
-
-    pub(super) fn replace(
-        &mut self,
-        message: impl Into<String>,
-        offense: impl ByteRange,
-        edit: impl ByteRange,
-        replacement: impl Into<String>,
-    ) {
-        self.context
-            .replace(self.cop_name, message, offense, edit, replacement);
-    }
-
-    /// Records one atomic correction. Either every edit is accepted or none
-    /// are, so a finding is never marked corrected after a partial rewrite.
-    pub(super) fn replace_many(
-        &mut self,
-        message: impl Into<String>,
-        offense: impl ByteRange,
-        edits: Vec<(Range<usize>, String)>,
-    ) {
-        self.context
-            .replace_many(self.cop_name, message, offense, edits);
-    }
-
-    pub(super) fn remove(
-        &mut self,
-        message: impl Into<String>,
-        offense: impl ByteRange,
-        edit: impl ByteRange,
-    ) {
-        self.context.remove(self.cop_name, message, offense, edit);
-    }
-
-    pub(super) fn insert(
-        &mut self,
-        message: impl Into<String>,
-        offense: impl ByteRange,
-        offset: usize,
-        text: impl Into<String>,
-    ) {
-        self.context
-            .insert(self.cop_name, message, offense, offset, text);
-    }
-
-    /// Records an offense that cannot be corrected in isolation but is
-    /// resolved by the supplied broader correction transaction.
-    pub(super) fn replace_indirectly(
-        &mut self,
-        message: impl Into<String>,
-        offense: impl ByteRange,
-        edit: impl ByteRange,
-        replacement: impl Into<String>,
-    ) {
-        self.context
-            .replace_indirectly(self.cop_name, message, offense, edit, replacement);
     }
 }
 

@@ -50,9 +50,10 @@ and fixture templates.
 ## Keep complexity bounded
 
 1. Run `bundle exec rake quality:architecture` before submitting a change.
-2. Treat 400 module lines, 60 function lines, cognitive complexity 15, and five
-   arguments as review triggers. The enforced ceilings in
-   `docs/architecture.md` are emergency brakes, not allowances.
+2. Treat 60 function lines, cognitive complexity 15, and five arguments as
+   review triggers. Hard ceilings are 350 lines and 16 cops per module, 120
+   lines per function, cognitive complexity 25, and seven arguments. These are
+   emergency brakes, not allowances.
 3. Split around concepts (department, traversal phase, registry, formatter), not
    arbitrary line ranges. Do not create a generic `utils` or `misc` module.
 4. Do not raise a size or Clippy threshold to land a feature. A threshold change

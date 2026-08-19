@@ -165,23 +165,9 @@ fn correct_existing_eval_location(context: &mut CopContext<'_, '_>) -> bool {
 fn check_eval_calls(context: &mut CopContext<'_, '_>) {
     for (line_number, (offset, line)) in context.source_file().lines().enumerate() {
         let trimmed = line.trim_start();
-        let Some(method_at) = [
-            "::Kernel.eval",
-            "Kernel.eval",
-            "class_eval",
-            "module_eval",
-            "instance_eval",
-            "eval",
-        ]
-        .into_iter()
-        .find_map(|name| trimmed.find(name).map(|at| (name, at))) else {
+        let Some((method, at)) = eval_method(trimmed) else {
             continue;
         };
-        let (method, at) = method_at;
-        if method == "eval" && at > 0 && trimmed.as_bytes().get(at.saturating_sub(1)) == Some(&b'.')
-        {
-            continue;
-        }
         let call = &trimmed[at..];
         if call.trim_end().ends_with(" do") || call.contains(" do |") {
             continue;
@@ -293,5 +279,23 @@ fn check_eval_calls(context: &mut CopContext<'_, '_>) {
             call_end
         };
         context.insert(message, call_start..call_end, insert, addition);
+    }
+}
+
+fn eval_method(line: &str) -> Option<(&str, usize)> {
+    let (method, at) = [
+        "::Kernel.eval",
+        "Kernel.eval",
+        "class_eval",
+        "module_eval",
+        "instance_eval",
+        "eval",
+    ]
+    .into_iter()
+    .find_map(|name| line.find(name).map(|at| (name, at)))?;
+    if method == "eval" && at > 0 && line.as_bytes().get(at - 1) == Some(&b'.') {
+        None
+    } else {
+        Some((method, at))
     }
 }

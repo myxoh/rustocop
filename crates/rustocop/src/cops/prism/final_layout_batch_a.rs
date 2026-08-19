@@ -1,8 +1,10 @@
-use super::catalog_cop::{custom, replace, report};
+use super::catalog_cop::{custom, replace};
 use super::*;
 
+mod registry;
+
 pub(super) fn cops() -> Vec<Box<dyn Cop>> {
-    vec![
+    let mut cops = vec![
         custom("Layout/LineContinuationSpacing", line_continuation_spacing),
         custom(
             "Layout/MultilineMethodDefinitionBraceLayout",
@@ -26,38 +28,9 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
         ),
         custom("Layout/MultilineHashBraceLayout", hash_brace_layout),
         custom("Layout/CaseIndentation", case_indentation),
-        custom("Layout/MultilineArrayBraceLayout", array_brace_layout),
-        custom("Layout/EmptyLineAfterGuardClause", empty_after_guard),
-        custom(
-            "Layout/LineEndStringConcatenationIndentation",
-            align_continuation,
-        ),
-        custom("Layout/MultilineAssignmentLayout", multiline_assignment),
-        custom("Layout/SpaceInsideBlockBraces", space_inside_block),
-        replace(
-            "Layout/SpaceInsideHashLiteralBraces",
-            "{  ",
-            "{ ",
-            "Extra space inside hash braces detected.",
-        ),
-        custom("Layout/ArgumentAlignment", align_continuation),
-        custom("Layout/FirstArrayElementIndentation", align_continuation),
-        replace(
-            "Layout/LineContinuationLeadingSpace",
-            "\n .",
-            "\n.",
-            "Line continuation should not have leading space.",
-        ),
-        custom(
-            "Layout/MultilineMethodCallBraceLayout",
-            method_call_brace_layout,
-        ),
-        report(
-            "Layout/MultilineBlockLayout",
-            " { |",
-            "Multi-line block argument must be on a separate line.",
-        ),
-    ]
+    ];
+    cops.extend(registry::cops());
+    cops
 }
 
 fn array_brace_layout(context: &mut CopContext<'_, '_>) {

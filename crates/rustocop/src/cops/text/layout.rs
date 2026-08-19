@@ -73,8 +73,7 @@ fn check_trailing_whitespace(
                 index + 1,
                 column,
                 length,
-                correctable,
-                corrected,
+                (correctable, corrected),
             );
 
             if corrected {
@@ -189,8 +188,7 @@ fn check_line_length(
                 index + 1,
                 max + 1,
                 length - max,
-                false,
-                false,
+                (false, false),
             );
         }
     }
@@ -216,8 +214,7 @@ fn check_extra_spacing(
                 index + 1,
                 column,
                 2,
-                true,
-                false,
+                (true, false),
             );
         }
     }
@@ -249,8 +246,7 @@ fn check_indentation(
                     index + 1,
                     1,
                     indent.max(1),
-                    false,
-                    false,
+                    (false, false),
                 );
             }
         }
@@ -283,8 +279,7 @@ fn check_end_alignment(
                         index + 1,
                         indent + 1,
                         3,
-                        false,
-                        false,
+                        (false, false),
                     );
                 }
             }
@@ -322,8 +317,7 @@ fn check_first_hash_element_indentation(
                 index + 2,
                 1,
                 leading_spaces(next).max(1),
-                false,
-                false,
+                (false, false),
             );
         }
     }

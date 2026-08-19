@@ -1,8 +1,10 @@
 use super::catalog_cop::{custom, replace, report};
 use super::*;
 
+mod registry;
+
 pub(super) fn cops() -> Vec<Box<dyn Cop>> {
-    vec![
+    let mut cops = vec![
         custom("Style/ParenthesesAroundCondition", parentheses_condition),
         replace(
             "Style/RescueStandardError",
@@ -22,37 +24,9 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
         custom("Style/YodaCondition", yoda_condition),
         custom("Lint/EmptyConditionalBody", empty_conditional),
         custom("Style/RedundantReturn", redundant_return),
-        report(
-            "Lint/NoReturnInBeginEndBlocks",
-            "begin\n  return",
-            "Do not return from an explicit `begin` block.",
-        ),
-        report(
-            "Lint/RescueType",
-            "rescue '",
-            "Rescue an exception class rather than a string literal.",
-        ),
-        custom("Lint/DuplicateBranch", identical_branches),
-        replace(
-            "Style/RedundantCondition",
-            "condition ? true : false",
-            "condition",
-            "Use the condition directly.",
-        ),
-        report(
-            "Style/SoleNestedConditional",
-            "else\n  if ",
-            "Consider merging nested conditions.",
-        ),
-        report(
-            "Style/IfWithBooleanLiteralBranches",
-            "if predicate?\n  true",
-            "Use a boolean expression instead of an if with boolean branches.",
-        ),
-        custom("Style/OneLineConditional", one_line_conditional),
-        custom("Lint/UnreachableCode", unreachable_code),
-        custom("Lint/LiteralAsCondition", literal_condition),
-    ]
+    ];
+    cops.extend(registry::cops());
+    cops
 }
 
 fn negated_if_else(context: &mut CopContext<'_, '_>) {

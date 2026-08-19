@@ -2,6 +2,8 @@ use std::collections::HashMap;
 
 use super::*;
 
+mod scope_rules;
+
 define_cops! {
     DuplicatedGroup => "Bundler/DuplicatedGroup" => source(duplicated_group),
     DevelopmentDependencies => "Gemspec/DevelopmentDependencies" => source(development_dependencies),
@@ -9,8 +11,8 @@ define_cops! {
     DuplicateMatchPattern => "Lint/DuplicateMatchPattern" => source(duplicate_match_pattern),
     ConstantName => "Naming/ConstantName" => source(constant_name),
     ConstantVisibility => "Style/ConstantVisibility" => source(constant_visibility),
-    RedundantSelfAssignment => "Style/RedundantSelfAssignment" => source(redundant_self_assignment),
-    TopLevelMethodDefinition => "Style/TopLevelMethodDefinition" => source(top_level_method_definition),
+    RedundantSelfAssignment => "Style/RedundantSelfAssignment" => source(scope_rules::redundant_self_assignment),
+    TopLevelMethodDefinition => "Style/TopLevelMethodDefinition" => source(scope_rules::top_level_method_definition),
 }
 
 fn duplicated_group(context: &mut CopContext<'_, '_>) {
@@ -298,91 +300,5 @@ fn constant_visibility(context: &mut CopContext<'_, '_>) {
             format!("Explicitly make `{name}` public or private using either `#public_constant` or `#private_constant`."),
             offset + indent..offset + line.len(),
         );
-    }
-}
-
-fn redundant_self_assignment(context: &mut CopContext<'_, '_>) {
-    let mutating = [
-        "concat",
-        "collect!",
-        "compact!",
-        "delete",
-        "delete_if",
-        "fill",
-        "flatten!",
-        "insert",
-        "keep_if",
-        "map!",
-        "merge!",
-        "prepend",
-        "push",
-        "reject!",
-        "replace",
-        "reverse!",
-        "rotate!",
-        "select!",
-        "shift",
-        "shuffle!",
-        "slice!",
-        "sort!",
-        "sort_by!",
-        "store",
-        "uniq!",
-        "unshift",
-        "update",
-    ];
-    for (offset, line) in context.source_file().lines() {
-        let trimmed = line.trim();
-        let Some((left, right)) = trimmed.split_once(" = ") else {
-            continue;
-        };
-        if !right.starts_with(&format!("{left}.")) && !right.starts_with(&format!("{left}&.")) {
-            continue;
-        }
-        let separator = if right[left.len()..].starts_with("&.") {
-            2
-        } else {
-            1
-        };
-        let method = right[left.len() + separator..]
-            .split(['(', ' ', '{'])
-            .next()
-            .unwrap_or_default();
-        if !mutating.contains(&method) {
-            continue;
-        }
-        let equals = offset + line.find('=').unwrap_or(0);
-        let edit_start = offset + line.find(left).unwrap_or(0);
-        context.remove(
-            format!("Redundant self assignment detected. Method `{method}` modifies its receiver in place."),
-            equals..equals + 1,
-            edit_start..equals + 2,
-        );
-    }
-}
-
-fn top_level_method_definition(context: &mut CopContext<'_, '_>) {
-    let lines = context.source_file().lines().collect::<Vec<_>>();
-    let mut index = 0;
-    while index < lines.len() {
-        let (offset, line) = lines[index];
-        if line.starts_with("def ") {
-            context.report(
-                "Do not define methods at the top-level.",
-                offset..offset + line.len(),
-            );
-        } else if line.starts_with("define_method(") {
-            let mut end = offset + line.len();
-            if line.contains(" do") || line.ends_with("do") {
-                for (candidate_offset, candidate) in &lines[index + 1..] {
-                    if candidate.trim() == "end" {
-                        end = candidate_offset + candidate.len();
-                        break;
-                    }
-                }
-            }
-            context.report("Do not define methods at the top-level.", offset..end);
-        }
-        index += 1;
     }
 }

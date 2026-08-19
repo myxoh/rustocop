@@ -46,8 +46,7 @@ fn check_frozen_string_literal_comment(
                 index + 1,
                 1,
                 lines[index].body.chars().count().max(1),
-                true,
-                corrected,
+                (true, corrected),
             );
 
             if corrected {
@@ -79,8 +78,7 @@ fn check_hash_syntax(
                 index + 1,
                 column,
                 2,
-                true,
-                false,
+                (true, false),
             );
         }
     }
@@ -105,8 +103,7 @@ fn check_redundant_begin(
                 index + 1,
                 leading_spaces(&line.body) + 1,
                 5,
-                false,
-                false,
+                (false, false),
             );
         }
     }
@@ -138,8 +135,7 @@ fn check_if_unless_modifier(
                 index + 1,
                 leading_spaces(&lines[index].body) + 1,
                 first.len(),
-                false,
-                false,
+                (false, false),
             );
         }
     }
@@ -180,8 +176,7 @@ fn check_conditional_assignment(
                 index + 1,
                 leading_spaces(&lines[index].body) + 1,
                 first.len(),
-                false,
-                false,
+                (false, false),
             );
         }
     }
@@ -202,8 +197,7 @@ fn check_empty_else(lines: &[SourceLine], options: &InspectionConfig, offenses: 
                 index + 1,
                 leading_spaces(&lines[index].body) + 1,
                 4,
-                true,
-                false,
+                (true, false),
             );
         }
     }
@@ -233,8 +227,7 @@ fn check_guard_clause(
                 index + 1,
                 leading_spaces(&lines[index].body) + 1,
                 first.len(),
-                false,
-                false,
+                (false, false),
             );
         }
     }
@@ -274,8 +267,7 @@ fn check_hash_like_case(
                 index + 1,
                 leading_spaces(&lines[index].body) + 1,
                 lines[index].body.trim().len(),
-                false,
-                false,
+                (false, false),
             );
         }
     }

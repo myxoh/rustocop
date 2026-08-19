@@ -3,15 +3,8 @@ use std::sync::Arc;
 
 use regex::Regex;
 
-const DEFAULT_DISABLED_COPS: &[&str] = &[
-    "RSpec/MessageChain",
-    "RSpec/MultipleExpectations",
-    "RSpec/MultipleMemoizedHelpers",
-    "RSpec/PendingWithoutReason",
-    "Security/IoMethods",
-    "Style/Copyright",
-    "Style/Documentation",
-];
+mod selection;
+pub(crate) use selection::{CopSelection, RubyVersion};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum Parallelism {
@@ -54,6 +47,12 @@ enum ConfigValue {
 
 impl CopConfig {
     pub(crate) fn from_source(source: &str) -> Self {
+        let values = Self::parse_values(source);
+        let patterns = Self::compile_patterns(&values);
+        Self { values, patterns }
+    }
+
+    fn parse_values(source: &str) -> HashMap<String, HashMap<String, ConfigValue>> {
         let mut values = HashMap::<String, HashMap<String, ConfigValue>>::new();
         let mut section = None;
         let mut container_key: Option<String> = None;
@@ -63,10 +62,7 @@ impl CopConfig {
             let line = source_lines[line_index];
             line_index += 1;
             if !line.starts_with(char::is_whitespace) {
-                section = line
-                    .strip_suffix(':')
-                    .filter(|name| name.contains('/') || *name == "AllCops")
-                    .map(str::to_string);
+                section = config_section(line);
                 container_key = None;
                 continue;
             }
@@ -125,12 +121,7 @@ impl CopConfig {
             let Some((key, value)) = line.trim().split_once(':') else {
                 continue;
             };
-            let raw_value = value.trim();
-            let value = if raw_value.starts_with(['\'', '"']) {
-                raw_value
-            } else {
-                raw_value.split('#').next().unwrap_or_default().trim()
-            };
+            let value = config_scalar_source(value);
             if value == "|" || value == ">" {
                 let base_indentation = indentation;
                 let mut block = Vec::new();
@@ -179,7 +170,13 @@ impl CopConfig {
                 .or_default()
                 .insert(key.to_string(), parsed);
         }
-        let patterns = values
+        values
+    }
+
+    fn compile_patterns(
+        values: &HashMap<String, HashMap<String, ConfigValue>>,
+    ) -> HashMap<String, HashMap<String, Vec<Regex>>> {
+        values
             .iter()
             .map(|(cop, entries)| {
                 let entries = entries
@@ -200,8 +197,7 @@ impl CopConfig {
                     .collect();
                 (cop.clone(), entries)
             })
-            .collect();
-        Self { values, patterns }
+            .collect()
     }
 
     pub(crate) fn value(&self, cop: &str, key: &str) -> Option<&str> {
@@ -247,6 +243,21 @@ impl CopConfig {
     }
 }
 
+fn config_scalar_source(value: &str) -> &str {
+    let value = value.trim();
+    if value.starts_with(['\'', '"']) {
+        value
+    } else {
+        value.split('#').next().unwrap_or_default().trim()
+    }
+}
+
+fn config_section(line: &str) -> Option<String> {
+    line.strip_suffix(':')
+        .filter(|name| name.contains('/') || *name == "AllCops")
+        .map(str::to_string)
+}
+
 fn clean_config_scalar(value: &str) -> String {
     value.trim().trim_matches(['\'', '"']).to_string()
 }
@@ -254,80 +265,6 @@ fn clean_config_scalar(value: &str) -> String {
 impl InspectionConfig {
     pub(crate) fn cop_enabled(&self, cop: &str) -> bool {
         self.cops.enabled(cop)
-    }
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(crate) struct RubyVersion {
-    major: u16,
-    minor: u16,
-}
-
-impl RubyVersion {
-    pub(crate) fn new(major: u16, minor: u16) -> Self {
-        Self { major, minor }
-    }
-
-    pub(crate) fn parse(value: &str) -> Option<Self> {
-        let mut parts = value.trim_matches(['\'', '"']).split('.');
-        Some(Self::new(
-            parts.next()?.parse().ok()?,
-            parts.next()?.parse().ok()?,
-        ))
-    }
-
-    pub(crate) fn at_least(self, major: u16, minor: u16) -> bool {
-        (self.major, self.minor) >= (major, minor)
-    }
-
-    pub(crate) fn major(self) -> u16 {
-        self.major
-    }
-
-    pub(crate) fn minor(self) -> u16 {
-        self.minor
-    }
-}
-
-impl Default for RubyVersion {
-    fn default() -> Self {
-        Self::new(2, 7)
-    }
-}
-
-#[derive(Clone, Debug)]
-pub(crate) struct CopSelection {
-    requested: Option<Vec<String>>,
-}
-
-impl CopSelection {
-    pub(crate) fn default_enabled() -> Self {
-        Self::from_only(None)
-    }
-
-    pub(crate) fn only(value: &str) -> Self {
-        let requested: Vec<_> = value.split(',').map(str::trim).collect();
-        Self::from_only(Some(&requested))
-    }
-
-    pub(crate) fn enabled(&self, cop: &str) -> bool {
-        match &self.requested {
-            None => !DEFAULT_DISABLED_COPS.contains(&cop),
-            Some(requested) => requested.iter().any(|selection| {
-                selection == cop
-                    || (!DEFAULT_DISABLED_COPS.contains(&cop)
-                        && cop
-                            .strip_prefix(selection)
-                            .is_some_and(|suffix| suffix.starts_with('/')))
-            }),
-        }
-    }
-
-    fn from_only(requested: Option<&[&str]>) -> Self {
-        Self {
-            requested: requested
-                .map(|values| values.iter().map(|value| (*value).to_string()).collect()),
-        }
     }
 }
 

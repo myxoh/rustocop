@@ -148,6 +148,14 @@ fn redundant_sort(context: &mut CopContext<'_, '_>) {
 
 fn tally_method(context: &mut CopContext<'_, '_>) {
     let source = context.source();
+    if replace_simple_tally(context) {
+        return;
+    }
+    replace_each_with_object_tally(context, source);
+}
+
+fn replace_simple_tally(context: &mut CopContext<'_, '_>) -> bool {
+    let source = context.source();
     for standalone in [
         "group_by(&:itself).transform_values(&:count)",
         "group_by(&:itself).transform_values(&:size)",
@@ -160,7 +168,7 @@ fn tally_method(context: &mut CopContext<'_, '_>) {
                 0..standalone.len(),
                 "tally",
             );
-            return;
+            return true;
         }
     }
     for suffix in [
@@ -176,7 +184,7 @@ fn tally_method(context: &mut CopContext<'_, '_>) {
                 start..start + suffix.len(),
                 ".tally",
             );
-            return;
+            return true;
         }
     }
     let safe_suffix = "&.group_by(&:itself)&.transform_values(&:count)";
@@ -187,8 +195,12 @@ fn tally_method(context: &mut CopContext<'_, '_>) {
             start..start + safe_suffix.len(),
             "&.tally",
         );
-        return;
+        return true;
     }
+    false
+}
+
+fn replace_each_with_object_tally(context: &mut CopContext<'_, '_>, source: &str) {
     if source.contains("each_with_object(::Hash.new(0))") {
         let rewritten = source.replace("::Hash.new(0)", "Hash.new(0)");
         let Some(start) = rewritten.find(".each_with_object(Hash.new(0))") else {

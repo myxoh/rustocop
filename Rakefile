@@ -11,9 +11,9 @@ namespace :quality do
   desc "Enforce module size and Rust complexity ceilings"
   task :architecture do
     ruby "script/check_architecture.rb"
-    sh "cargo", "clippy", "--manifest-path", "crates/rustocop/Cargo.toml", "--all-targets"
+    sh "cargo", "clippy", "--manifest-path", "crates/rustocop/Cargo.toml",
+       "--all-targets", "--", "-D", "warnings"
   end
-
 
   desc "Reject regressions in a completed full upstream compatibility report"
   task :compatibility_baseline do

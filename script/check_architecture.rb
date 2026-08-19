@@ -5,14 +5,16 @@
 LIMITS = {
   "crates/rustocop/src/main.rs" => 50
 }.freeze
-DEFAULT_RUST_LIMIT = 400
+DEFAULT_RUST_LIMIT = 350
+MAX_COPS_PER_MODULE = 16
 SOURCE_ROOT = "crates/rustocop/src"
 ROOT_MODULES = %w[config.rs main.rs model.rs].freeze
-PACKAGE_DIRECTORIES = %w[app cops engine].freeze
+PACKAGE_DIRECTORIES = %w[app config cops engine].freeze
 
 DEPENDENCY_RULES = {
   "#{SOURCE_ROOT}/cops/" => %w[app engine],
   "#{SOURCE_ROOT}/engine/" => %w[app],
+  "#{SOURCE_ROOT}/config/" => %w[app cops engine model],
   "#{SOURCE_ROOT}/config.rs" => %w[app cops engine model],
   "#{SOURCE_ROOT}/model.rs" => %w[app config cops engine]
 }.freeze
@@ -24,6 +26,14 @@ failures = rust_files.filter_map do |path|
   next if lines <= limit
 
   "#{path}: #{lines} lines (maximum #{limit})"
+end
+
+cop_declaration = /=>\s*"[A-Z][^"]+\/[^"]+"|(?:replace|report|custom)\(\s*"[A-Z][^"]+\/[^"]+"/m
+rust_files.grep(%r{/cops/}).each do |path|
+  cop_count = File.read(path).scan(cop_declaration).length
+  next if cop_count <= MAX_COPS_PER_MODULE
+
+  failures << "#{path}: #{cop_count} cops (maximum #{MAX_COPS_PER_MODULE})"
 end
 
 root_modules = Dir.glob("#{SOURCE_ROOT}/*.rs").map { |path| File.basename(path) }.sort

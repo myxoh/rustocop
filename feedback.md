@@ -10,8 +10,9 @@ Reviewed on 2026-08-18 against the current working tree.
   by capability-oriented `source_semantics.rs` and `lexical_rules.rs` modules.
 - Reusable delimiter, definition, and argument scanning lives in the tested
   `source_syntax.rs` infrastructure module.
-- The architecture ceiling now enforces 400 lines without cop-family or
-  composition-root exceptions. The Prism composition tests live separately.
+- The architecture ceiling now enforces 350 lines and at most 16 declarations
+  per cop module, without composition-root exceptions. The Prism composition
+  tests live separately.
 - `script/new_cop.rb --family <module>` can add a cop to an existing cohesive
   family without creating another module and registration entry.
 - Prism families are declared and registered through one `cop_modules!` list;

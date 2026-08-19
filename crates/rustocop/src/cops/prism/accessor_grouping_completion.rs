@@ -14,6 +14,12 @@ fn accessor_grouping(context: &mut CopContext<'_, '_>) {
 }
 
 fn separated_accessors(context: &mut CopContext<'_, '_>, lines: &[(usize, &str)]) {
+    separate_parenthesized_accessors(context);
+    separate_multiline_accessors(context, lines);
+    separate_inline_accessors(context, lines);
+}
+
+fn separate_parenthesized_accessors(context: &mut CopContext<'_, '_>) {
     for accessor in ["attr_reader", "attr_writer", "attr_accessor"] {
         let needle = format!("{accessor}(");
         let mut search = 0usize;
@@ -35,6 +41,9 @@ fn separated_accessors(context: &mut CopContext<'_, '_>, lines: &[(usize, &str)]
             search = end;
         }
     }
+}
+
+fn separate_multiline_accessors(context: &mut CopContext<'_, '_>, lines: &[(usize, &str)]) {
     for (index, (offset, line)) in lines.iter().enumerate() {
         let trimmed = line.trim_start();
         let Some(accessor) = ["attr_reader", "attr_writer", "attr_accessor"]
@@ -76,6 +85,9 @@ fn separated_accessors(context: &mut CopContext<'_, '_>, lines: &[(usize, &str)]
             &context.source()[start..end],
         );
     }
+}
+
+fn separate_inline_accessors(context: &mut CopContext<'_, '_>, lines: &[(usize, &str)]) {
     let mut preceding_comment = false;
     for (offset, line) in lines {
         let trimmed = line.trim_start();
@@ -140,55 +152,55 @@ fn separated_accessors(context: &mut CopContext<'_, '_>, lines: &[(usize, &str)]
     }
 }
 
-fn grouped_accessors(context: &mut CopContext<'_, '_>, lines: &[(usize, &str)]) {
-    type AccessorLine<'a> = (usize, usize, &'a str, String);
-    let flush = |group: &mut Vec<(usize, usize, &str, String)>,
-                 context: &mut CopContext<'_, '_>| {
-        if group.len() < 2 {
-            group.clear();
-            return;
-        }
-        let accessor = group[0].2;
-        let mut attributes = Vec::new();
-        for (_, _, _, values) in group.iter() {
-            for attribute in values.split(',').map(str::trim) {
-                if !attributes.contains(&attribute) {
-                    attributes.push(attribute);
-                }
-            }
-        }
-        let anchor = group
-            .iter()
-            .position(|entry| entry.3.contains('*'))
-            .unwrap_or(0);
-        let first_start = group[anchor].0;
-        let first_end = group[anchor].1;
-        let mut edits = vec![(
-            first_start..first_end,
-            format!("{accessor} {}", attributes.join(", ")),
-        )];
-        for (index, (start, end, _, _)) in group.iter().enumerate() {
-            if index == anchor {
-                continue;
-            }
-            let line_start = context.source_file().line_start(*start);
-            let preceded_by_blank = line_start >= 2
-                && context.source().as_bytes().get(line_start - 1) == Some(&b'\n')
-                && context.source().as_bytes().get(line_start - 2) == Some(&b'\n');
-            let removal_start = line_start - usize::from(preceded_by_blank);
-            let removal_end =
-                *end + usize::from(context.source().as_bytes().get(*end) == Some(&b'\n'));
-            edits.push((removal_start..removal_end, String::new()));
-        }
-        for (start, end, _, _) in group.iter() {
-            context.replace_many(
-                format!("Group together all `{accessor}` attributes."),
-                *start..*end,
-                edits.clone(),
-            );
-        }
+type AccessorLine<'a> = (usize, usize, &'a str, String);
+
+fn flush_accessor_group(
+    group: &mut Vec<AccessorLine<'_>>,
+    context: &mut CopContext<'_, '_>,
+) {
+    if group.len() < 2 {
         group.clear();
-    };
+        return;
+    }
+    let accessor = group[0].2;
+    let mut attributes = Vec::new();
+    for (_, _, _, values) in group.iter() {
+        for attribute in values.split(',').map(str::trim) {
+            if !attributes.contains(&attribute) {
+                attributes.push(attribute);
+            }
+        }
+    }
+    let anchor = group.iter().position(|entry| entry.3.contains('*')).unwrap_or(0);
+    let first_start = group[anchor].0;
+    let first_end = group[anchor].1;
+    let mut edits = vec![(
+        first_start..first_end,
+        format!("{accessor} {}", attributes.join(", ")),
+    )];
+    for (index, (start, end, _, _)) in group.iter().enumerate() {
+        if index == anchor {
+            continue;
+        }
+        let line_start = context.source_file().line_start(*start);
+        let preceded_by_blank = line_start >= 2
+            && context.source().as_bytes().get(line_start - 1) == Some(&b'\n')
+            && context.source().as_bytes().get(line_start - 2) == Some(&b'\n');
+        let removal_start = line_start - usize::from(preceded_by_blank);
+        let removal_end = *end + usize::from(context.source().as_bytes().get(*end) == Some(&b'\n'));
+        edits.push((removal_start..removal_end, String::new()));
+    }
+    for (start, end, _, _) in group.iter() {
+        context.replace_many(
+            format!("Group together all `{accessor}` attributes."),
+            *start..*end,
+            edits.clone(),
+        );
+    }
+    group.clear();
+}
+
+fn grouped_accessors(context: &mut CopContext<'_, '_>, lines: &[(usize, &str)]) {
     let mut groups: [Vec<AccessorLine<'_>>; 18] = Default::default();
     let mut visibility = 0usize;
     let mut eigenclass = 0usize;
@@ -223,7 +235,7 @@ fn grouped_accessors(context: &mut CopContext<'_, '_>, lines: &[(usize, &str)]) 
                         || previous.starts_with("annotation_method ")
                 });
             if typed_or_commented {
-                flush(&mut groups[group_index], context);
+                flush_accessor_group(&mut groups[group_index], context);
                 groups[group_index].push((
                     start,
                     offset + line.split('#').next().unwrap_or(line).trim_end().len(),
@@ -235,7 +247,7 @@ fn grouped_accessors(context: &mut CopContext<'_, '_>, lines: &[(usize, &str)]) 
                         .trim()
                         .to_string(),
                 ));
-                flush(&mut groups[group_index], context);
+                flush_accessor_group(&mut groups[group_index], context);
                 continue;
             }
             if trimmed
@@ -253,7 +265,7 @@ fn grouped_accessors(context: &mut CopContext<'_, '_>, lines: &[(usize, &str)]) 
                         .trim()
                         .to_string(),
                 ));
-                flush(&mut groups[group_index], context);
+                flush_accessor_group(&mut groups[group_index], context);
                 continue;
             }
             groups[group_index].push((
@@ -283,6 +295,6 @@ fn grouped_accessors(context: &mut CopContext<'_, '_>, lines: &[(usize, &str)]) 
         }
     }
     for group in &mut groups {
-        flush(group, context);
+        flush_accessor_group(group, context);
     }
 }

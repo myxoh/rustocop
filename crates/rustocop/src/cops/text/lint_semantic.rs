@@ -30,8 +30,7 @@ fn check_accessor_method_name(
                 index + 1,
                 line.body.find("def").unwrap_or(0) + 5,
                 name.len(),
-                false,
-                false,
+                (false, false),
             );
         }
     }
@@ -76,8 +75,7 @@ fn check_unused_method_argument(
                 index + 1,
                 line.find(&arg).unwrap_or(0) + 1,
                 arg.len(),
-                false,
-                false,
+                (false, false),
             );
         }
         index = end + 1;
@@ -107,8 +105,7 @@ fn check_debugger(lines: &[SourceLine], options: &InspectionConfig, offenses: &m
                     index + 1,
                     position + 1,
                     debugger.len(),
-                    false,
-                    false,
+                    (false, false),
                 );
             }
         }

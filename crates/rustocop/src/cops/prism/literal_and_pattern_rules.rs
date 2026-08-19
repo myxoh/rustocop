@@ -2,6 +2,9 @@ use std::collections::HashSet;
 
 use super::*;
 
+mod branch_rules;
+use branch_rules::*;
+
 define_cops! {
     EmptyInPattern => "Lint/EmptyInPattern" => node(as_in_node, empty_in_pattern),
     DuplicateCaseCondition => "Lint/DuplicateCaseCondition" => node(as_case_node, duplicate_case_condition),
@@ -311,49 +314,4 @@ fn empty_in_pattern(node: &ruby_prism::InNode<'_>, context: &mut CopContext<'_, 
         return;
     }
     context.report("Avoid `in` branches without a body.", offense);
-}
-
-fn branch_trailing_source<'source>(
-    context: &'source CopContext<'_, '_>,
-    start: usize,
-) -> &'source str {
-    let source = context.source();
-    let tail = source.get(start..).unwrap_or_default();
-    let mut length = 0;
-    for line in tail.split_inclusive('\n') {
-        let trimmed = line.trim_start();
-        if length > 0
-            && (trimmed.starts_with("in ")
-                || trimmed.starts_with("else")
-                || trimmed.starts_with("end"))
-        {
-            break;
-        }
-        length += line.len();
-        if !trimmed.is_empty() && !trimmed.starts_with('#') && length > line.len() {
-            break;
-        }
-    }
-    &tail[..length]
-}
-
-fn file_null(node: &ruby_prism::StringNode<'_>, context: &mut CopContext<'_, '_>) {
-    if context
-        .parent()
-        .is_some_and(|parent| parent.as_array_node().is_some() || parent.as_assoc_node().is_some())
-    {
-        return;
-    }
-    let value = String::from_utf8_lossy(node.unescaped());
-    let lower = value.to_ascii_lowercase();
-    let null = lower == "/dev/null" || lower == "nul:" || lower == "nul";
-    if !null || lower == "nul" && !context.source().to_ascii_lowercase().contains("/dev/null") {
-        return;
-    }
-    context.replace(
-        format!("Use `File::NULL` instead of `{value}`."),
-        node.location(),
-        node.location(),
-        "File::NULL",
-    );
 }
