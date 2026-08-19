@@ -5,10 +5,37 @@ upstream_rspec:
   pending: 6
 captured_cases: 28623
 diagnostic_baseline:
-  passed_cases: 15454
-  passing_cops: 316
+  passed_cases: 15883
+  passing_cops: 346
   total_cops: 606
 fully_compatible_cops:
+  - Bundler/DuplicatedGem
+  - Bundler/GemFilename
+  - Bundler/OrderedGems
+  - Gemspec/RequireMFA
+  - Lint/EmptyBlock
+  - Lint/MissingSuper
+  - Lint/SuppressedExceptionInNumberConversion
+  - Metrics/MethodLength
+  - Naming/PredicatePrefix
+  - Security/CompoundHash
+  - Style/CaseLikeIf
+  - Style/ClassMethodsDefinitions
+  - Style/CommandLiteral
+  - Style/CommentAnnotation
+  - Style/CommentedKeyword
+  - Style/Copyright
+  - Style/EvalWithLocation
+  - Style/ExplicitBlockArgument
+  - Style/ItAssignment
+  - Style/KeywordParametersOrder
+  - Style/MethodCallWithoutArgsParentheses
+  - Style/MultipleComparison
+  - Style/NumericLiterals
+  - Style/RedundantFreeze
+  - Style/Semicolon
+  - Style/TrailingCommaInArrayLiteral
+  - Style/TrailingCommaInHashLiteral
   - Bundler/GemVersion
   - Bundler/InsecureProtocolSource
   - Gemspec/AttributeAssignment

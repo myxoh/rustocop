@@ -322,6 +322,14 @@ impl Reporter<'_> {
         self.context.config_value(cop_name, key)
     }
 
+    pub(super) fn related_config_map(
+        &self,
+        cop_name: &str,
+        key: &str,
+    ) -> Option<&std::collections::HashMap<String, String>> {
+        self.context.cop_config.map(cop_name, key)
+    }
+
     pub(super) fn report(&mut self, message: impl Into<String>, offense: impl ByteRange) {
         self.context.report(self.cop_name, message, offense);
     }

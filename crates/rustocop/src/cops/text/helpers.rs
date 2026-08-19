@@ -14,17 +14,6 @@ pub(super) fn trim_trailing_spaces(value: &mut String) {
     }
 }
 
-pub(super) fn gem_name(line: &str) -> Option<String> {
-    let trimmed = line.trim_start();
-    let rest = trimmed.strip_prefix("gem ")?;
-    let quote = rest
-        .chars()
-        .find(|character| *character == '"' || *character == '\'')?;
-    let start = rest.find(quote)? + 1;
-    let end = rest[start..].find(quote)? + start;
-    Some(rest[start..end].to_string())
-}
-
 pub(super) fn strip_comment(line: &str) -> &str {
     line.split('#').next().unwrap_or(line)
 }
@@ -59,31 +48,6 @@ pub(super) fn starts_block(trimmed: &str) -> bool {
         || trimmed.starts_with("begin")
         || trimmed.ends_with(" do")
         || trimmed.contains(" do |")
-}
-
-pub(super) fn optional_keyword_before_required_keyword(signature: &str) -> bool {
-    let Some(start) = signature.find('(') else {
-        return false;
-    };
-    let Some(end) = signature.rfind(')') else {
-        return false;
-    };
-
-    let mut saw_optional = false;
-    for arg in signature[start + 1..end].split(',').map(str::trim) {
-        if !arg.contains(':') {
-            continue;
-        }
-
-        let optional = arg.contains(": ") || arg.contains(":=");
-        if optional {
-            saw_optional = true;
-        } else if saw_optional {
-            return true;
-        }
-    }
-
-    false
 }
 
 pub(super) fn assignment_name(trimmed: &str) -> Option<String> {

@@ -128,9 +128,10 @@ especially cautious with anything marked heuristic.
 - Native checks for the RuboCop, Rails, RSpec, Bundler, Layout, Metrics, Naming,
   Style, and Lint cops listed in the project seed config. Singulate-specific
   cops are intentionally excluded.
-- A shared Prism parse and AST visitor powers 50 built-in cops across Layout,
-  Lint, Security, and Style. The committed differential corpus contains 500 Ruby
-  files (25 per cop) and compares JSON output directly with RuboCop.
+- A shared Prism parse and AST visitor powers the native cop registry. Against
+  RuboCop 1.87, 343 built-in cops are verified and another 26 have heuristic
+  implementations. Verification uses 28,623 captured upstream diagnostic and
+  correction cases rather than only the smaller performance corpus.
 - `--show-cops` prints the native support registry.
 - [The complete built-in cop support matrix](docs/cop-support.md) records every
   RuboCop 1.87 cop as verified, heuristic, or missing. Regenerate it with
@@ -139,9 +140,8 @@ especially cautious with anything marked heuristic.
   reproducible end-to-end timings and JSON parity checks for the shared
   500-file, 20-cop corpus.
 
-The Rails/RSpec/metrics and remaining line-oriented cops are lightweight native
-implementations. Many are still heuristic and are documented that way rather
-than presented as full compatibility.
+The remaining heuristic implementations are documented that way rather than
+presented as full compatibility.
 
 ## Native architecture
 

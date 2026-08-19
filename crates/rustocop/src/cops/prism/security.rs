@@ -79,25 +79,92 @@ impl Cop for CompoundHash {
         "Security/CompoundHash"
     }
 
+    fn on_source(&self, source: &str, context: &mut Context) {
+        let mut inside_hash = false;
+        for (offset, line) in SourceFile::new(source).lines() {
+            let trimmed = line.trim();
+            if trimmed.starts_with("def hash") {
+                inside_hash = true;
+                continue;
+            }
+            if inside_hash && trimmed == "end" {
+                inside_hash = false;
+                continue;
+            }
+            if inside_hash
+                && [" ^= ", " += ", " *= ", " |= "]
+                    .iter()
+                    .any(|op| line.contains(op))
+            {
+                let indent = line.len() - line.trim_start().len();
+                context.report(
+                    self.name(),
+                    "Use `[...].hash` instead of combining hash values manually.",
+                    offset + indent..offset + line.len(),
+                );
+            }
+        }
+    }
+
     fn on_node<'pr>(
         &self,
         node: &Node<'pr>,
         ancestors: &[Node<'pr>],
-        _source: &str,
+        source: &str,
         context: &mut Context,
     ) {
         let Some(call) = node.as_call_node() else {
             return;
         };
-        if !matches!(call_name(&call), b"^" | b"+" | b"*" | b"|") || first_argument(&call).is_none()
+        if call_name(&call) == b"hash"
+            && ancestors
+                .iter()
+                .any(|ancestor| ancestor.as_array_node().is_some())
+            && ancestors.iter().any(|ancestor| {
+                ancestor.as_call_node().is_some_and(|outer| {
+                    call_name(&outer) == b"hash"
+                        && outer
+                            .receiver()
+                            .is_some_and(|receiver| receiver.as_array_node().is_some())
+                })
+            })
         {
+            context.report(
+                self.name(),
+                "Calling .hash on elements of a hashed array is redundant.",
+                call.location(),
+            );
             return;
         }
         let inside_hash_method = ancestors.iter().rev().any(|ancestor| {
             ancestor.as_def_node().is_some_and(|definition| {
                 definition.name().as_slice() == b"hash" && definition.parameters().is_none()
+            }) || ancestor.as_call_node().is_some_and(|call| {
+                matches!(
+                    call_name(&call),
+                    b"define_method" | b"define_singleton_method"
+                ) && first_argument(&call)
+                    .is_some_and(|argument| node_source(source, &argument) == ":hash")
             })
         });
+        if call_name(&call) == b"hash"
+            && inside_hash_method
+            && call
+                .receiver()
+                .and_then(|receiver| receiver.as_array_node())
+                .is_some_and(|array| array.elements().len() == 1)
+        {
+            context.report(
+                self.name(),
+                "Delegate hash directly without wrapping in an array when only using a single value.",
+                call.location(),
+            );
+            return;
+        }
+        if !matches!(call_name(&call), b"^" | b"+" | b"*" | b"|") || first_argument(&call).is_none()
+        {
+            return;
+        }
         let nested_combinator = ancestors.iter().rev().any(|ancestor| {
             ancestor
                 .as_call_node()

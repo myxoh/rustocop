@@ -81,6 +81,14 @@ impl<'context, 'pr> CopContext<'context, 'pr> {
         self.reporter.related_config_value(cop_name, key)
     }
 
+    pub(super) fn related_config_map(
+        &self,
+        cop_name: &str,
+        key: &str,
+    ) -> Option<&std::collections::HashMap<String, String>> {
+        self.reporter.related_config_map(cop_name, key)
+    }
+
     pub(super) fn config_bool(&self, key: &str, default: bool) -> bool {
         self.reporter.config_bool(key, default)
     }

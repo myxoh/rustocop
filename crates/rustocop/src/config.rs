@@ -49,7 +49,11 @@ impl CopConfig {
         let mut values = HashMap::<String, HashMap<String, ConfigValue>>::new();
         let mut section = None;
         let mut container_key: Option<String> = None;
-        for line in source.lines() {
+        let source_lines = source.lines().collect::<Vec<_>>();
+        let mut line_index = 0;
+        while line_index < source_lines.len() {
+            let line = source_lines[line_index];
+            line_index += 1;
             if !line.starts_with(char::is_whitespace) {
                 section = line
                     .strip_suffix(':')
@@ -105,7 +109,7 @@ impl CopConfig {
                         *entry = ConfigValue::Map(HashMap::new());
                     }
                     if let ConfigValue::Map(entries) = entry {
-                        entries.insert(key.to_string(), clean_config_scalar(value));
+                        entries.insert(clean_config_scalar(key), clean_config_scalar(value));
                     }
                 }
                 continue;
@@ -113,7 +117,39 @@ impl CopConfig {
             let Some((key, value)) = line.trim().split_once(':') else {
                 continue;
             };
-            let value = value.split('#').next().unwrap_or_default().trim();
+            let raw_value = value.trim();
+            let value = if raw_value.starts_with(['\'', '"']) {
+                raw_value
+            } else {
+                raw_value.split('#').next().unwrap_or_default().trim()
+            };
+            if value == "|" || value == ">" {
+                let base_indentation = indentation;
+                let mut block = Vec::new();
+                while line_index < source_lines.len() {
+                    let candidate = source_lines[line_index];
+                    let candidate_indentation = candidate.len() - candidate.trim_start().len();
+                    if candidate.trim().is_empty() {
+                        block.push(String::new());
+                        line_index += 1;
+                        continue;
+                    }
+                    if candidate_indentation <= base_indentation {
+                        break;
+                    }
+                    block.push(candidate.trim_start().to_string());
+                    line_index += 1;
+                }
+                let separator = if value == ">" { " " } else { "\n" };
+                let mut scalar = block.join(separator);
+                scalar.push('\n');
+                container_key = None;
+                values
+                    .entry(section.clone())
+                    .or_default()
+                    .insert(key.to_string(), ConfigValue::Scalar(scalar));
+                continue;
+            }
             let parsed = if value.is_empty() {
                 container_key = Some(key.to_string());
                 ConfigValue::List(Vec::new())
@@ -280,68 +316,5 @@ impl CopSelection {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn expands_departments_without_enabling_default_disabled_cops() {
-        let selection = CopSelection::only("Style");
-        assert!(selection.enabled("Style/HashSyntax"));
-        assert!(!selection.enabled("Style/Documentation"));
-    }
-
-    #[test]
-    fn explicitly_enables_default_disabled_cops() {
-        let selection = CopSelection::only("Style/Documentation");
-        assert!(selection.enabled("Style/Documentation"));
-        assert!(!selection.enabled("Style/HashSyntax"));
-    }
-
-    #[test]
-    fn reads_scoped_cop_configuration_values() {
-        let config = CopConfig::from_source(
-            "Style/Example:\n  EnforcedStyle: custom\nOther/Rule:\n  Allowed: false\n",
-        );
-
-        assert_eq!(
-            config.value("Style/Example", "EnforcedStyle"),
-            Some("custom")
-        );
-        assert_eq!(config.value("Other/Rule", "Allowed"), Some("false"));
-        assert_eq!(config.value("Style/Example", "Allowed"), None);
-    }
-
-    #[test]
-    fn reads_typed_scalars_and_block_or_inline_lists() {
-        let config = CopConfig::from_source(
-            "Style/Example:\n  Enabled: true\n  Max: 12\n  AllowedMethods:\n    - map\n    - 'each'\n  AllowedPatterns: [foo, 'bar']\n  PreferredMethods:\n    intern: to_sym\n",
-        );
-
-        assert_eq!(config.bool("Style/Example", "Enabled"), Some(true));
-        assert_eq!(config.usize("Style/Example", "Max"), Some(12));
-        assert_eq!(
-            config.values("Style/Example", "AllowedMethods"),
-            ["map", "each"]
-        );
-        assert_eq!(
-            config.values("Style/Example", "AllowedPatterns"),
-            ["foo", "bar"]
-        );
-        assert_eq!(
-            config
-                .map("Style/Example", "PreferredMethods")
-                .and_then(|methods| methods.get("intern"))
-                .map(String::as_str),
-            Some("to_sym")
-        );
-    }
-
-    #[test]
-    fn reads_serialized_regexp_lists() {
-        let config = CopConfig::from_source(
-            "Lint/Example:\n  AllowedPatterns:\n  - \"$regexp\": min\n    options: 0\n",
-        );
-
-        assert!(config.patterns("Lint/Example", "AllowedPatterns")[0].is_match("minutes"));
-    }
-}
+#[path = "engine/config_tests.rs"]
+mod tests;

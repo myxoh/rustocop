@@ -59,11 +59,23 @@ pub(super) fn accepted_corrections(
                 .any(|range| ranges_overlap(&edit.range, range))
         });
         if conflicts {
-            if correction.edits.iter().all(|edit| {
-                accepted_containers
-                    .iter()
-                    .any(|range| range.start <= edit.range.start && edit.range.end <= range.end)
-            }) {
+            let duplicates_accepted = accepted.iter().any(|accepted: &Correction| {
+                accepted.edits.len() == correction.edits.len()
+                    && accepted
+                        .edits
+                        .iter()
+                        .zip(&correction.edits)
+                        .all(|(left, right)| {
+                            left.range == right.range && left.replacement == right.replacement
+                        })
+            });
+            if duplicates_accepted
+                || correction.edits.iter().all(|edit| {
+                    accepted_containers
+                        .iter()
+                        .any(|range| range.start <= edit.range.start && edit.range.end <= range.end)
+                })
+            {
                 subsumed.push(correction.finding_index);
             }
             continue;

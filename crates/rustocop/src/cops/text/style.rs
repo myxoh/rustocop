@@ -16,10 +16,8 @@ pub(super) fn after_prism(
     offenses: &mut Vec<Offense>,
 ) {
     check_hash_syntax(lines, options, offenses);
-    check_keyword_parameters_order(lines, options, offenses);
     check_redundant_begin(lines, options, offenses);
     check_if_unless_modifier(lines, options, offenses);
-    check_case_like_if(lines, options, offenses);
     check_conditional_assignment(lines, options, offenses);
     check_empty_else(lines, options, offenses);
     check_guard_clause(lines, options, offenses);
@@ -88,37 +86,6 @@ fn check_hash_syntax(
     }
 }
 
-fn check_keyword_parameters_order(
-    lines: &[SourceLine],
-    options: &InspectionConfig,
-    offenses: &mut Vec<Offense>,
-) {
-    let cop = "Style/KeywordParametersOrder";
-    if !options.cop_enabled(cop) {
-        return;
-    }
-
-    for (index, line) in lines.iter().enumerate() {
-        let trimmed = line.body.trim();
-        if !trimmed.starts_with("def ") || !trimmed.contains('(') {
-            continue;
-        }
-
-        if optional_keyword_before_required_keyword(trimmed) {
-            push_offense(
-                offenses,
-                cop,
-                "Place required keyword parameters before optional keyword parameters.",
-                index + 1,
-                line.body.find("def").unwrap_or(0) + 1,
-                trimmed.len(),
-                false,
-                false,
-            );
-        }
-    }
-}
-
 fn check_redundant_begin(
     lines: &[SourceLine],
     options: &InspectionConfig,
@@ -174,46 +141,6 @@ fn check_if_unless_modifier(
                 false,
                 false,
             );
-        }
-    }
-}
-
-fn check_case_like_if(
-    lines: &[SourceLine],
-    options: &InspectionConfig,
-    offenses: &mut Vec<Offense>,
-) {
-    let cop = "Style/CaseLikeIf";
-    if !options.cop_enabled(cop) {
-        return;
-    }
-
-    let mut chain_start = None;
-    let mut comparisons = 0;
-
-    for (index, line) in lines.iter().enumerate() {
-        let trimmed = line.body.trim();
-        if trimmed.starts_with("if ") || trimmed.starts_with("elsif ") {
-            if trimmed.contains(" == ") || trimmed.contains(".is_a?") {
-                chain_start.get_or_insert(index);
-                comparisons += 1;
-            }
-        } else if trimmed == "end" {
-            if comparisons >= 3 {
-                let start = chain_start.unwrap_or(index);
-                push_offense(
-                    offenses,
-                    cop,
-                    "Convert `if` with multiple branches to `case`.",
-                    start + 1,
-                    leading_spaces(&lines[start].body) + 1,
-                    lines[start].body.trim().len(),
-                    false,
-                    false,
-                );
-            }
-            chain_start = None;
-            comparisons = 0;
         }
     }
 }

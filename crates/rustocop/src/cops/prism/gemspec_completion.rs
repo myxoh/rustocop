@@ -5,6 +5,77 @@ use super::*;
 define_cops! {
     OrderedDependencies => "Gemspec/OrderedDependencies" => source(ordered_dependencies),
     DuplicatedAssignment => "Gemspec/DuplicatedAssignment" => source(duplicated_assignment),
+    RequireMFA => "Gemspec/RequireMFA" => source(require_mfa),
+}
+
+fn require_mfa(context: &mut CopContext<'_, '_>) {
+    let source = context.source();
+    if !source.contains("Gem::Specification.new") {
+        return;
+    }
+    let message = "`metadata['rubygems_mfa_required']` must be set to `'true'`.";
+    if source.contains("rubygems_mfa_required") {
+        if source.contains("rubygems_mfa_required'] = 'true'")
+            || source.contains("rubygems_mfa_required' => 'true'")
+            || source.contains("rubygems_mfa_required: 'true'")
+        {
+            return;
+        }
+        if let Some(value) = source.find("'false'") {
+            context.replace(message, value..value + 7, value..value + 7, "'true'");
+        }
+        return;
+    }
+    if source.contains(".metadata = ") && !source.contains(".metadata = {") {
+        context.report(message, 0..source.trim_end().len());
+        return;
+    }
+    let insertion = if let Some(metadata) = source.find(".metadata = {") {
+        let close = source[metadata..]
+            .find('}')
+            .map_or(source.len(), |close| metadata + close);
+        if source[metadata + ".metadata = {".len()..close]
+            .trim()
+            .is_empty()
+        {
+            close
+        } else {
+            source[..close].trim_end().len()
+        }
+    } else if let Some(metadata) = source.rfind(".metadata[") {
+        source[metadata..]
+            .find('\n')
+            .map_or(source.len(), |newline| metadata + newline + 1)
+    } else {
+        source
+            .find('\n')
+            .map_or(source.len(), |newline| newline + 1)
+    };
+    let mut prefix = String::new();
+    if source.contains(".metadata = {") {
+        let before = source[..insertion].trim_end();
+        if !before.ends_with('{') && !before.ends_with(',') {
+            prefix.push(',');
+        }
+    }
+    prefix.push_str("\nspec.metadata['rubygems_mfa_required'] = 'true'");
+    if source.contains(".metadata = {") {
+        prefix = prefix.replace(
+            "spec.metadata['rubygems_mfa_required'] = 'true'",
+            "'rubygems_mfa_required' => 'true'",
+        );
+    }
+    let replacement = if source.contains(".metadata = {") {
+        prefix.trim_start_matches('\n').to_string()
+    } else {
+        format!("{}\n", prefix.trim_start_matches('\n'))
+    };
+    context.replace(
+        message,
+        0..source.trim_end().len(),
+        insertion..insertion,
+        replacement,
+    );
 }
 
 #[derive(Clone)]

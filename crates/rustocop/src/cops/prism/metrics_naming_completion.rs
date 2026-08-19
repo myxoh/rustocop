@@ -6,6 +6,84 @@ define_cops! {
     CollectionLiteralLength => "Metrics/CollectionLiteralLength" => any_node(collection_literal_length),
     BinaryOperatorParameterName => "Naming/BinaryOperatorParameterName" => node(as_def_node, binary_operator_parameter_name),
     BlockParameterName => "Naming/BlockParameterName" => source(block_parameter_name),
+    PredicatePrefix => "Naming/PredicatePrefix" => any_node(predicate_prefix),
+}
+
+fn predicate_prefix(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
+    let (name, location) = if let Some(definition) = node.as_def_node() {
+        (
+            String::from_utf8_lossy(definition.name().as_slice()).into_owned(),
+            definition.name_loc(),
+        )
+    } else if let Some(call) = node.as_call_node() {
+        let method = String::from_utf8_lossy(call_name(&call));
+        if !context
+            .config_values("MethodDefinitionMacros")
+            .iter()
+            .any(|configured| configured == &method)
+        {
+            return;
+        }
+        let Some(argument) = first_argument(&call) else {
+            return;
+        };
+        let Some(symbol) = argument.as_symbol_node() else {
+            return;
+        };
+        (
+            String::from_utf8_lossy(symbol.unescaped()).into_owned(),
+            symbol.location(),
+        )
+    } else {
+        return;
+    };
+    if name.ends_with(['=', '?'])
+        || context
+            .config_values("AllowedMethods")
+            .iter()
+            .any(|allowed| allowed == &name)
+    {
+        return;
+    }
+    let Some(prefix) = context
+        .config_values("NamePrefix")
+        .iter()
+        .find(|prefix| name.starts_with(prefix.as_str()))
+    else {
+        return;
+    };
+    let base = name
+        .strip_prefix(prefix)
+        .unwrap_or(&name)
+        .trim_end_matches('?');
+    if base
+        .as_bytes()
+        .first()
+        .is_none_or(|byte| !byte.is_ascii_alphabetic() && *byte != b'_')
+    {
+        return;
+    }
+    if context.config_value("UseSorbetSigs") == Some("true")
+        || context.config_bool("UseSorbetSigs", false)
+    {
+        let before = &context.source()[..location.start_offset()];
+        let recent = before
+            .rsplit_once("sig")
+            .map_or("", |(_, signature)| signature);
+        if !recent.contains("T::Boolean") {
+            return;
+        }
+    }
+    let forbidden = context
+        .config_values("ForbiddenPrefixes")
+        .iter()
+        .any(|forbidden| forbidden == prefix);
+    let replacement = if forbidden {
+        format!("{base}?")
+    } else {
+        format!("{}?", name.trim_end_matches('?'))
+    };
+    context.report(format!("Rename `{name}` to `{replacement}`."), location);
 }
 
 fn parameter_lists(node: &ruby_prism::DefNode<'_>, context: &mut CopContext<'_, '_>) {

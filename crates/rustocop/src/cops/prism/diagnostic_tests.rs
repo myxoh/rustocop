@@ -101,6 +101,24 @@ fn containing_correction_wins_over_nested_correction() {
 }
 
 #[test]
+fn identical_multi_edit_corrections_mark_each_finding_corrected() {
+    let mut context = context(true);
+    for offense in [0..1, 2..3] {
+        let mut reporter = context.reporter("Style/Example");
+        reporter.replace_many(
+            "Group values.",
+            offense,
+            vec![(0..1, "A".to_string()), (2..3, String::new())],
+        );
+    }
+
+    let inspection = context.finish("abc");
+
+    assert_eq!(inspection.corrected_source, "Ab");
+    assert!(inspection.findings.iter().all(|finding| finding.corrected));
+}
+
+#[test]
 fn correction_transactions_are_atomic() {
     let mut context = context(true);
     {

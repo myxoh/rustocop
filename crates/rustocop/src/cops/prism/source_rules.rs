@@ -302,6 +302,12 @@ fn class_vars(source: &str, context: &mut Reporter<'_>) {
 }
 
 fn duplicated_gem(source: &str, context: &mut Reporter<'_>) {
+    if std::path::Path::new(context.path())
+        .file_name()
+        .is_none_or(|name| name != "Gemfile")
+    {
+        return;
+    }
     let mut first = HashMap::<String, (usize, usize)>::new();
     for (offset, line) in source_lines(source) {
         let trimmed = line.trim_start();
@@ -318,7 +324,7 @@ fn duplicated_gem(source: &str, context: &mut Reporter<'_>) {
         let name = &trimmed[quote + 1..quote + 1 + end_quote];
         let indent = line.len() - trimmed.len();
         if let Some((first_line, first_indent)) = first.get(name).copied() {
-            if first_indent == 0 || first_indent == indent {
+            if first_indent == 0 {
                 let start = offset + indent;
                 context.report(format!("Gem `{name}` requirements already given on line {first_line} of the Gemfile."), start..offset + line.len());
             }

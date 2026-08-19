@@ -1,185 +1,68 @@
 ---
 rubocop_version: 1.87.0
-generated_from: tmp/rubocop-1.87.0-compatibility-316.json
-remaining_cops: 290
+generated_from: tmp/rubocop-1.87.0-compatibility-new.json
+remaining_cops: 263
 states:
-  heuristic: 39
-  missing: 251
+  heuristic: 26
+  missing: 237
 lanes:
-  finish_existing: 39
-  structural_batch: 95
-  engine_capability: 156
+  finish_existing: 26
+  structural_batch: 83
+  engine_capability: 154
 capabilities:
-  project_context: 10
-  ast_structural: 117
-  scope_and_symbols: 43
-  metrics_engine: 8
+  ast_structural: 98
+  metrics_engine: 7
+  scope_and_symbols: 40
   layout_engine: 71
   file_metadata_and_lexing: 4
+  project_context: 6
   control_flow: 26
   regexp_semantics: 11
 cops:
-- cop: Bundler/DuplicatedGem
-  state: heuristic
-  lane: finish_existing
-  capability: project_context
-  passing_cases: 2
-  total_cases: 10
-  failing_cases: 8
-  autocorrect: false
-  problem_documented: false
-- cop: Bundler/OrderedGems
-  state: heuristic
-  lane: finish_existing
-  capability: project_context
-  passing_cases: 9
-  total_cases: 17
-  failing_cases: 8
-  autocorrect: true
-  problem_documented: false
-- cop: Security/CompoundHash
+- cop: Style/AccessorGrouping
   state: heuristic
   lane: finish_existing
   capability: ast_structural
-  passing_cases: 13
-  total_cases: 21
-  failing_cases: 8
-  autocorrect: false
+  passing_cases: 26
+  total_cases: 26
+  failing_cases: 0
+  autocorrect: true
   problem_documented: false
-- cop: Style/KeywordParametersOrder
+- cop: Style/IfInsideElse
   state: heuristic
   lane: finish_existing
   capability: ast_structural
-  passing_cases: 2
-  total_cases: 10
-  failing_cases: 8
-  autocorrect: true
-  problem_documented: false
-- cop: Lint/MissingSuper
-  state: heuristic
-  lane: finish_existing
-  capability: scope_and_symbols
-  passing_cases: 11
-  total_cases: 22
-  failing_cases: 11
-  autocorrect: false
-  problem_documented: false
-- cop: Style/Semicolon
-  state: heuristic
-  lane: finish_existing
-  capability: ast_structural
-  passing_cases: 22
-  total_cases: 33
-  failing_cases: 11
-  autocorrect: true
-  problem_documented: false
-- cop: Metrics/MethodLength
-  state: heuristic
-  lane: finish_existing
-  capability: metrics_engine
-  passing_cases: 19
-  total_cases: 31
-  failing_cases: 12
-  autocorrect: false
-  problem_documented: false
-- cop: Style/ClassMethodsDefinitions
-  state: heuristic
-  lane: finish_existing
-  capability: ast_structural
-  passing_cases: 3
-  total_cases: 16
-  failing_cases: 13
-  autocorrect: true
-  problem_documented: false
-- cop: Style/ItAssignment
-  state: heuristic
-  lane: finish_existing
-  capability: scope_and_symbols
-  passing_cases: 10
+  passing_cases: 23
   total_cases: 23
-  failing_cases: 13
-  autocorrect: false
-  problem_documented: false
-- cop: Style/MethodCallWithoutArgsParentheses
-  state: heuristic
-  lane: finish_existing
-  capability: ast_structural
-  passing_cases: 21
-  total_cases: 34
-  failing_cases: 13
+  failing_cases: 0
   autocorrect: true
   problem_documented: false
-- cop: Lint/EmptyBlock
+- cop: Style/MultilineTernaryOperator
   state: heuristic
   lane: finish_existing
   capability: ast_structural
-  passing_cases: 3
+  passing_cases: 17
   total_cases: 17
-  failing_cases: 14
-  autocorrect: false
-  problem_documented: false
-- cop: Style/TrailingCommaInHashLiteral
-  state: heuristic
-  lane: finish_existing
-  capability: ast_structural
-  passing_cases: 27
-  total_cases: 41
-  failing_cases: 14
+  failing_cases: 0
   autocorrect: true
   problem_documented: false
 - cop: Metrics/AbcSize
   state: heuristic
   lane: finish_existing
   capability: metrics_engine
-  passing_cases: 10
+  passing_cases: 21
   total_cases: 25
-  failing_cases: 15
+  failing_cases: 4
   autocorrect: false
-  problem_documented: false
-- cop: Style/CaseLikeIf
-  state: heuristic
-  lane: finish_existing
-  capability: ast_structural
-  passing_cases: 23
-  total_cases: 38
-  failing_cases: 15
-  autocorrect: true
-  problem_documented: false
-- cop: Style/TrailingCommaInArrayLiteral
-  state: heuristic
-  lane: finish_existing
-  capability: ast_structural
-  passing_cases: 33
-  total_cases: 48
-  failing_cases: 15
-  autocorrect: true
   problem_documented: false
 - cop: Metrics/BlockLength
   state: heuristic
   lane: finish_existing
   capability: metrics_engine
-  passing_cases: 21
+  passing_cases: 29
   total_cases: 37
-  failing_cases: 16
+  failing_cases: 8
   autocorrect: false
-  problem_documented: false
-- cop: Naming/PredicatePrefix
-  state: heuristic
-  lane: finish_existing
-  capability: scope_and_symbols
-  passing_cases: 8
-  total_cases: 24
-  failing_cases: 16
-  autocorrect: false
-  problem_documented: false
-- cop: Style/RedundantFreeze
-  state: heuristic
-  lane: finish_existing
-  capability: ast_structural
-  passing_cases: 44
-  total_cases: 62
-  failing_cases: 18
-  autocorrect: true
   problem_documented: false
 - cop: Naming/AccessorMethodName
   state: heuristic
@@ -388,75 +271,12 @@ cops:
   failing_cases: 12
   autocorrect: true
   problem_documented: false
-- cop: Style/IfInsideElse
-  state: missing
-  lane: structural_batch
-  capability: ast_structural
-  passing_cases: 10
-  total_cases: 23
-  failing_cases: 13
-  autocorrect: true
-  problem_documented: false
-- cop: Style/Copyright
-  state: missing
-  lane: structural_batch
-  capability: ast_structural
-  passing_cases: 7
-  total_cases: 21
-  failing_cases: 14
-  autocorrect: true
-  problem_documented: false
-- cop: Style/CommentedKeyword
-  state: missing
-  lane: structural_batch
-  capability: ast_structural
-  passing_cases: 32
-  total_cases: 47
-  failing_cases: 15
-  autocorrect: true
-  problem_documented: false
-- cop: Style/ExplicitBlockArgument
-  state: missing
-  lane: structural_batch
-  capability: ast_structural
-  passing_cases: 6
-  total_cases: 21
-  failing_cases: 15
-  autocorrect: true
-  problem_documented: false
-- cop: Style/MultilineTernaryOperator
-  state: missing
-  lane: structural_batch
-  capability: ast_structural
-  passing_cases: 2
-  total_cases: 17
-  failing_cases: 15
-  autocorrect: true
-  problem_documented: false
-- cop: Style/MultipleComparison
-  state: missing
-  lane: structural_batch
-  capability: ast_structural
-  passing_cases: 18
-  total_cases: 34
-  failing_cases: 16
-  autocorrect: true
-  problem_documented: false
 - cop: Lint/SafeNavigationConsistency
   state: missing
   lane: structural_batch
   capability: ast_structural
   passing_cases: 26
   total_cases: 43
-  failing_cases: 17
-  autocorrect: true
-  problem_documented: false
-- cop: Style/AccessorGrouping
-  state: missing
-  lane: structural_batch
-  capability: ast_structural
-  passing_cases: 9
-  total_cases: 26
   failing_cases: 17
   autocorrect: true
   problem_documented: false
@@ -478,15 +298,6 @@ cops:
   failing_cases: 17
   autocorrect: true
   problem_documented: false
-- cop: Style/NumericLiterals
-  state: missing
-  lane: structural_batch
-  capability: ast_structural
-  passing_cases: 11
-  total_cases: 28
-  failing_cases: 17
-  autocorrect: true
-  problem_documented: false
 - cop: Style/RaiseArgs
   state: missing
   lane: structural_batch
@@ -505,15 +316,6 @@ cops:
   failing_cases: 18
   autocorrect: false
   problem_documented: false
-- cop: Lint/SuppressedExceptionInNumberConversion
-  state: missing
-  lane: structural_batch
-  capability: ast_structural
-  passing_cases: 8
-  total_cases: 26
-  failing_cases: 18
-  autocorrect: true
-  problem_documented: false
 - cop: Lint/UnusedBlockArgument
   state: missing
   lane: structural_batch
@@ -521,33 +323,6 @@ cops:
   passing_cases: 12
   total_cases: 30
   failing_cases: 18
-  autocorrect: true
-  problem_documented: false
-- cop: Style/CommandLiteral
-  state: missing
-  lane: structural_batch
-  capability: ast_structural
-  passing_cases: 16
-  total_cases: 35
-  failing_cases: 19
-  autocorrect: true
-  problem_documented: false
-- cop: Style/CommentAnnotation
-  state: missing
-  lane: structural_batch
-  capability: ast_structural
-  passing_cases: 12
-  total_cases: 31
-  failing_cases: 19
-  autocorrect: true
-  problem_documented: false
-- cop: Style/EvalWithLocation
-  state: missing
-  lane: structural_batch
-  capability: ast_structural
-  passing_cases: 8
-  total_cases: 27
-  failing_cases: 19
   autocorrect: true
   problem_documented: false
 - cop: Lint/AmbiguousRange
@@ -1234,15 +1009,6 @@ cops:
   failing_cases: 2
   autocorrect: true
   problem_documented: true
-- cop: Bundler/GemFilename
-  state: missing
-  lane: engine_capability
-  capability: project_context
-  passing_cases: 7
-  total_cases: 15
-  failing_cases: 8
-  autocorrect: false
-  problem_documented: false
 - cop: Gemspec/DevelopmentDependencies
   state: missing
   lane: engine_capability
@@ -1251,15 +1017,6 @@ cops:
   total_cases: 13
   failing_cases: 8
   autocorrect: false
-  problem_documented: false
-- cop: Gemspec/RequireMFA
-  state: missing
-  lane: engine_capability
-  capability: project_context
-  passing_cases: 7
-  total_cases: 15
-  failing_cases: 8
-  autocorrect: true
   problem_documented: false
 - cop: Layout/DefEndAlignment
   state: missing

@@ -8,8 +8,6 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
         Box::new(NilComparison),
         Box::new(NotKeyword),
         Box::new(RedundantArrayConstructor),
-        Box::new(RedundantFreeze),
-        Box::new(StringChars),
         Box::new(StringMethods),
     ]
 }
@@ -43,19 +41,79 @@ impl Cop for MethodCallWithoutArgsParentheses {
         "Style/MethodCallWithoutArgsParentheses"
     }
 
-    fn on_call(&self, node: &CallNode<'_>, context: &mut Context) {
+    fn on_node<'pr>(
+        &self,
+        node: &Node<'pr>,
+        ancestors: &[Node<'pr>],
+        source: &str,
+        context: &mut Context,
+    ) {
+        let Some(node) = node.as_call_node() else {
+            return;
+        };
+        let mut context = context.cop_context(self.name(), source, ancestors);
         let (Some(open), Some(close)) = (node.opening_loc(), node.closing_loc()) else {
             return;
         };
-        if node.arguments().is_some() || call_name(node).first().is_some_and(u8::is_ascii_uppercase)
+        if context
+            .source()
+            .as_bytes()
+            .get(open.start_offset().saturating_sub(1))
+            == Some(&b'.')
         {
             return;
         }
+        if context.source()[..open.start_offset()]
+            .trim_end()
+            .ends_with("not")
+        {
+            return;
+        }
+        let name = call_name(&node);
+        if node.arguments().is_some()
+            || name.is_empty()
+            || name.first().is_some_and(u8::is_ascii_uppercase)
+            || context.policy().allows_method(name)
+        {
+            return;
+        }
+        if name == b"it"
+            && node.receiver().is_none()
+            && context.ancestors().iter().any(|ancestor| {
+                ancestor
+                    .as_block_node()
+                    .is_some_and(|block| block.parameters().is_none())
+            })
+        {
+            return;
+        }
+        if node.receiver().is_none() {
+            let line_start = context
+                .source_file()
+                .line_start(node.location().start_offset());
+            let before = &context.source()[line_start..node.location().start_offset()];
+            let name = String::from_utf8_lossy(name);
+            if before.trim_end().ends_with(&format!("{name} ="))
+                || before.trim_end().ends_with(&format!("{name} ||="))
+            {
+                return;
+            }
+            if before.split_once('=').is_some_and(|(assigned, _)| {
+                assigned.split(',').any(|variable| variable.trim() == name)
+            }) {
+                return;
+            }
+            if context.source()[..node.location().start_offset()]
+                .lines()
+                .any(|line| line.trim_start().starts_with(&format!("{name} =")))
+            {
+                return;
+            }
+        }
         context.remove(
-            self.name(),
             "Do not use parentheses for method calls with no arguments.",
-            (open.start_offset(), close.end_offset()),
-            (open.start_offset(), close.end_offset()),
+            open.start_offset()..close.end_offset(),
+            open.start_offset()..close.end_offset(),
         );
     }
 }
@@ -248,84 +306,6 @@ impl Cop for RedundantArrayConstructor {
             offense,
             node_location,
             replacement,
-        );
-    }
-}
-
-struct RedundantFreeze;
-
-impl Cop for RedundantFreeze {
-    fn name(&self) -> &'static str {
-        "Style/RedundantFreeze"
-    }
-
-    fn on_node<'pr>(
-        &self,
-        node: &Node<'pr>,
-        _ancestors: &[Node<'pr>],
-        source: &str,
-        context: &mut Context,
-    ) {
-        let Some(call) = node.as_call_node() else {
-            return;
-        };
-        let Some(receiver) = call.receiver() else {
-            return;
-        };
-        if call_name(&call) != b"freeze" || !immutable_literal(&receiver) {
-            return;
-        }
-        let location = call.location();
-        context.replace(
-            self.name(),
-            "Do not freeze immutable objects, as freezing them has no effect.",
-            &location,
-            &location,
-            node_source(source, &receiver),
-        );
-    }
-}
-
-struct StringChars;
-
-impl Cop for StringChars {
-    fn name(&self) -> &'static str {
-        "Style/StringChars"
-    }
-
-    fn on_node<'pr>(
-        &self,
-        node: &Node<'pr>,
-        _ancestors: &[Node<'pr>],
-        source: &str,
-        context: &mut Context,
-    ) {
-        let Some(call) = node.as_call_node() else {
-            return;
-        };
-        let Some(argument) = first_argument(&call) else {
-            return;
-        };
-        let argument_source = node_source(source, &argument);
-        if call_name(&call) != b"split"
-            || !matches!(argument_source, "''" | "\"\"" | "//")
-            || call
-                .arguments()
-                .is_none_or(|arguments| arguments.arguments().len() != 1)
-        {
-            return;
-        }
-        let Some(selector) = call.message_loc() else {
-            return;
-        };
-        let end = call.location().end_offset();
-        let current = &source[selector.start_offset()..end];
-        context.replace(
-            self.name(),
-            format!("Use `chars` instead of `{current}`."),
-            (selector.start_offset(), end),
-            (selector.start_offset(), end),
-            "chars",
         );
     }
 }
