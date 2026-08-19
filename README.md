@@ -13,19 +13,40 @@ RuboCop performance sucks on a large local codebase, and I couldn't be arsed to
 properly become a Rust expert before trying to make it faster. So this project
 is being vibed into a RuboCop-compatible local linter instead.
 
-The useful version of this project is good enough to run locally for fast
-feedback before CI runs real RuboCop and catches anything rustocop missed or got
-wrong. It is not currently supposed to replace RuboCop as the final lint or
-security gate.
+The intended useful version of this project is good enough to run locally for
+fast feedback before CI runs real RuboCop. The current build has not earned
+that status: real-project comparisons have exposed severe false positives,
+configuration incompatibility, and incomplete cop behavior. It must not replace
+RuboCop as the final lint or security gate.
 
 Maybe enough interest, use, and scrutiny will eventually turn this into a real
 linter. Until then, expect incomplete cop and configuration compatibility,
 false positives, false negatives, and breaking changes.
 
-We do at least run this against RuboCop's own specs. Every built-in cop is listed
-as **verified**, **heuristic**, or **missing**. Verified means its captured
-diagnostics and corrections pass; it does not mean the whole project is ready
-to replace RuboCop.
+The repository contains native registry entries for all 606 RuboCop built-in
+cops, but that is an implementation inventory, not a correctness claim. The old
+**verified**, **heuristic**, and **missing** labels describe captured-suite
+results only. They do not count toward the qualification ledger below.
+
+## Cop qualification progress
+
+Qualification restarted from zero on 2026-08-19. No cop inherits credit from
+the previous captured-spec status. A cop is qualified only after satisfying all
+five independent checks against the pinned source revisions.
+
+| Check | Evidence required for each cop | Passed cops | Progress | RuboCop source | Rustocop source |
+| --- | --- | ---: | ---: | --- | --- |
+| 1. Manual source verification | Manually compare the Ruby and Rust implementations and record the review. | 0 / 606 | 0% | `e5b788dba181ad94de30cfbad661c5d6aa08a4e5` | `6618213c1ff6fdd651af4e58b0ccf77af0e49890` |
+| 2. Ported upstream unit tests | Pass the unit tests ported from the original Ruby cop. | 0 / 606 | 0% | `e5b788dba181ad94de30cfbad661c5d6aa08a4e5` | `6618213c1ff6fdd651af4e58b0ccf77af0e49890` |
+| 3. Edge-case fixtures | Pass at least four independently designed edge-case fixtures for that cop. | 0 / 606 | 0% | `e5b788dba181ad94de30cfbad661c5d6aa08a4e5` | `6618213c1ff6fdd651af4e58b0ccf77af0e49890` |
+| 4. Real-world true positives | Match RuboCop on at least two genuine offenses from real projects. | 0 / 606 | 0% | `e5b788dba181ad94de30cfbad661c5d6aa08a4e5` | `6618213c1ff6fdd651af4e58b0ccf77af0e49890` |
+| 5. Real-world true negatives | Stay silent, like RuboCop, on at least two plausible non-offenses from real projects. | 0 / 606 | 0% | `e5b788dba181ad94de30cfbad661c5d6aa08a4e5` | `6618213c1ff6fdd651af4e58b0ccf77af0e49890` |
+| **Fully qualified** | **Pass all five checks above.** | **0 / 606** | **0%** | `e5b788dba181ad94de30cfbad661c5d6aa08a4e5` | `6618213c1ff6fdd651af4e58b0ccf77af0e49890` |
+
+The RuboCop reference is tag `v1.87.0`. The Rustocop reference is the native
+implementation baseline immediately before this qualification reset. Future
+reviews must record new revisions explicitly so evidence cannot silently be
+carried across implementation changes.
 
 ## Performance
 
@@ -178,22 +199,19 @@ especially cautious with anything marked heuristic.
 - Native checks for the RuboCop, Rails, RSpec, Bundler, Layout, Metrics, Naming,
   Style, and Lint cops listed in the project seed config. Singulate-specific
   cops are intentionally excluded.
-- A shared Prism parse and AST visitor powers the native cop registry. Against
-  RuboCop 1.87, 361 built-in cops are verified and the other 245 have heuristic
-  implementations. Verification uses 28,623 captured upstream diagnostic and
-  correction cases rather than only the smaller performance corpus. Hardened
-  cops additionally pass the adversarial evidence recorded in
-  `spec/hardening/status.yml`; the support matrix reports that count separately.
+- A shared Prism parse and AST visitor powers the native cop registry. The
+  previous captured-suite classification reported 361 cops as verified and 245
+  as heuristic, but those historical labels grant no credit in the new
+  five-check qualification ledger.
 - `--show-cops` prints the native support registry.
-- [The complete built-in cop support matrix](docs/cop-support.md) records every
-  RuboCop 1.87 cop as verified, heuristic, or missing. Regenerate it with
-  `bundle exec ruby script/generate_cop_support.rb`.
+- [The legacy captured-suite support matrix](docs/cop-support.md) records the
+  old verified, heuristic, and missing classification. It is retained as
+  engineering evidence, not as the current qualification record.
 - [The RuboCop + Prism performance verification](docs/performance.md) records
   reproducible end-to-end timings and JSON parity checks for the shared
   500-file, 20-cop corpus.
 
-The remaining heuristic implementations are documented that way rather than
-presented as full compatibility.
+No native cop is currently presented as fully qualified.
 
 ## Native architecture
 
@@ -204,10 +222,9 @@ and applied as one batch. The differential compatibility suite runs 20 cops
 against 500 generated and committed Ruby fixture files, both cop-by-cop and as a
 single corpus, and compares their JSON reports directly with RuboCop.
 
-The current RuboCop 1.87 matrix contains 361 upstream-spec-verified cops, 245
-heuristic native implementations, and no missing built-in cops. A cop is only
-“verified” after all captured upstream diagnostics and correction assertions
-for that cop pass.
+The native registry contains entries for all 606 RuboCop 1.87 built-ins. The
+qualification ledger intentionally starts at zero regardless of previous
+captured diagnostic or correction results.
 
 ## Upstream RuboCop contract
 
@@ -220,7 +237,9 @@ declared by RuboCop itself.
 The capture harness executes RuboCop's test DSL and records the resulting
 source, configuration, path, Ruby version, offenses, and correction. It does
 not infer expectations by scraping spec source. All 606 registered built-in
-cops have executable captured cases.
+cops have executable captured cases. This is useful historical evidence, but it
+does not satisfy any new qualification check until that cop is explicitly
+reviewed and recorded under the five-check process.
 
 ```sh
 bundle exec ruby script/extract_upstream_cop_specs.rb
