@@ -13,7 +13,7 @@ define_cops! {
 
 impl RescueStandardErrorRule<'_, '_, '_> {
     fn on_resbody(&mut self, node: &RescueNode<'_>) {
-        match self.policy().enforced_style("implicit") {
+        match self.policy().enforced_style("explicit") {
             "implicit" => {
                 if let Some(error) = rescue_standard_error(node) {
                     self.offense_for_implicit_enforced_style(node, &error);

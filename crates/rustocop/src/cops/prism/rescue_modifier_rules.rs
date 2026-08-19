@@ -116,10 +116,20 @@ fn last_heredoc_end(node: &Node<'_>) -> Option<usize> {
         .filter_map(|argument| {
             argument
                 .as_string_node()
+                .filter(|string| {
+                    string
+                        .opening_loc()
+                        .is_some_and(|opening| opening.as_slice().starts_with(b"<<"))
+                })
                 .and_then(|string| string.closing_loc())
                 .or_else(|| {
                     argument
                         .as_interpolated_string_node()
+                        .filter(|string| {
+                            string
+                                .opening_loc()
+                                .is_some_and(|opening| opening.as_slice().starts_with(b"<<"))
+                        })
                         .and_then(|string| string.closing_loc())
                 })
                 .map(|closing| closing.end_offset())
