@@ -5,7 +5,7 @@ matrix_start: 547
 matrix_end: 606
 rubocop_version: 1.87.0
 rubocop_commit: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
-rustocop_commit: pending
+rustocop_commit: 7b7f2c6efd24a2305aeba8a62d05c1c2d9b93007
 cops:
   Style/ZeroLengthPredicate:
     matrix_position: 606
