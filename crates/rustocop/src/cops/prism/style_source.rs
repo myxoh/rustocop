@@ -25,7 +25,7 @@ impl Cop for Semicolon {
             let cop_context = context.cop_context(self.name(), source, _ancestors);
             cop_context.config_bool("AllowAsExpressionSeparator", false)
         };
-        for offset in semicolon_offsets(source) {
+        for offset in semicolon_offsets(node, source, allow_separators) {
             let line_start = source[..offset].rfind('\n').map_or(0, |at| at + 1);
             let line_end = source[offset..]
                 .find('\n')
@@ -35,30 +35,6 @@ impl Cop for Semicolon {
                 continue;
             }
             let line_source = &source[line_start..line_end];
-            let header_terminated = line_source.trim_start().starts_with("def ")
-                && line_source
-                    .split_once(';')
-                    .is_some_and(|(header, _)| header.split_whitespace().count() == 2);
-            if header_terminated {
-                continue;
-            }
-            if prefix.trim_start().starts_with("def ")
-                && prefix.trim_end().ends_with(')')
-                && prefix.matches('(').count() == 1
-                && !prefix.contains(';')
-            {
-                continue;
-            }
-            let structural_header = {
-                let header = prefix.trim();
-                (header.starts_with("module ") || header.starts_with("class "))
-                    && header.split_whitespace().count() == 2
-            };
-            if source[offset + 1..line_end].trim_start().starts_with("end")
-                && (source[line_start..line_end].matches(';').count() == 1 || structural_header)
-            {
-                continue;
-            }
             let replacement = if prefix.trim().is_empty()
                 || prefix.trim_end().ends_with('{')
                 || source[offset + 1..line_end].trim().is_empty()
@@ -68,17 +44,14 @@ impl Cop for Semicolon {
             } else {
                 "\n"
             };
-            if matches!(prefix.trim_end(), value if value.ends_with("..") || value.ends_with("..."))
-            {
-                let indent = &source
-                    [line_start..line_start + line_source.len() - line_source.trim_start().len()];
-                let expression = prefix.trim();
+            if let Some(range) = endless_range_ending_at(node, offset) {
+                let expression = &source[range.clone()];
                 context.replace(
                     self.name(),
                     "Do not use semicolons to terminate expressions.",
                     (offset, offset + 1),
-                    (line_start, offset + 1),
-                    format!("{indent}({expression})"),
+                    (range.start, offset + 1),
+                    format!("({expression})"),
                 );
                 continue;
             }
@@ -116,15 +89,126 @@ impl Cop for Semicolon {
     }
 }
 
-fn semicolon_offsets(source: &str) -> Vec<usize> {
+fn line_start(source: &str, offset: usize) -> usize {
+    source[..offset].rfind('\n').map_or(0, |at| at + 1)
+}
+
+fn endless_range_ending_at(root: &Node<'_>, offset: usize) -> Option<std::ops::Range<usize>> {
+    struct Finder {
+        offset: usize,
+        found: Option<std::ops::Range<usize>>,
+    }
+
+    impl<'pr> Visit<'pr> for Finder {
+        fn visit_range_node(&mut self, node: &ruby_prism::RangeNode<'pr>) {
+            let location = node.location();
+            if node.right().is_none() && location.end_offset() == self.offset {
+                self.found = Some(location.start_offset()..location.end_offset());
+            }
+            ruby_prism::visit_range_node(self, node);
+        }
+    }
+
+    let mut finder = Finder {
+        offset,
+        found: None,
+    };
+    finder.visit(root);
+    finder.found
+}
+
+fn semicolon_offsets(root: &Node<'_>, source: &str, allow_separators: bool) -> Vec<usize> {
+    #[derive(Default)]
+    struct LiteralContent {
+        ranges: Vec<std::ops::Range<usize>>,
+    }
+
+    impl LiteralContent {
+        fn push(&mut self, location: ruby_prism::Location<'_>) {
+            self.ranges
+                .push(location.start_offset()..location.end_offset());
+        }
+    }
+
+    impl<'pr> Visit<'pr> for LiteralContent {
+        fn visit_string_node(&mut self, node: &ruby_prism::StringNode<'pr>) {
+            self.push(node.content_loc());
+        }
+
+        fn visit_symbol_node(&mut self, node: &ruby_prism::SymbolNode<'pr>) {
+            if let Some(value) = node.value_loc() {
+                self.push(value);
+            }
+        }
+
+        fn visit_regular_expression_node(
+            &mut self,
+            node: &ruby_prism::RegularExpressionNode<'pr>,
+        ) {
+            self.push(node.content_loc());
+        }
+
+        fn visit_match_last_line_node(&mut self, node: &ruby_prism::MatchLastLineNode<'pr>) {
+            self.push(node.content_loc());
+        }
+
+        fn visit_x_string_node(&mut self, node: &ruby_prism::XStringNode<'pr>) {
+            self.push(node.content_loc());
+        }
+    }
+
+    let mut literals = LiteralContent::default();
+    literals.visit(root);
+    literals.ranges.sort_by_key(|range| range.start);
+
+    struct MultiExpressionLines<'src> {
+        source: &'src str,
+        starts: std::collections::HashSet<usize>,
+    }
+
+    impl<'pr> Visit<'pr> for MultiExpressionLines<'_> {
+        fn visit_statements_node(&mut self, node: &ruby_prism::StatementsNode<'pr>) {
+            let mut seen = std::collections::HashSet::new();
+            for statement in node.body().iter() {
+                let location = statement.location();
+                let final_offset = location.end_offset().saturating_sub(1);
+                let start = line_start(self.source, final_offset);
+                if !seen.insert(start) {
+                    self.starts.insert(start);
+                }
+            }
+            ruby_prism::visit_statements_node(self, node);
+        }
+    }
+
+    let mut multi_expression_lines = MultiExpressionLines {
+        source,
+        starts: std::collections::HashSet::new(),
+    };
+    if !allow_separators {
+        multi_expression_lines.visit(root);
+    }
+
     let bytes = source.as_bytes();
     let mut offsets = Vec::new();
     let mut index = 0;
-    let mut quote = None;
-    let mut escaped = false;
     let mut comment = false;
+    let mut literal_index = 0;
 
     while index < bytes.len() {
+        while literals
+            .ranges
+            .get(literal_index)
+            .is_some_and(|range| range.end <= index)
+        {
+            literal_index += 1;
+        }
+        if let Some(range) = literals.ranges.get(literal_index) {
+            if range.start <= index && index < range.end {
+                index = range.end;
+                continue;
+            }
+        }
         let byte = bytes[index];
         if comment {
             if byte == b'\n' {
@@ -133,37 +217,55 @@ fn semicolon_offsets(source: &str) -> Vec<usize> {
             index += 1;
             continue;
         }
-        if let Some(delimiter) = quote {
-            if delimiter == b'"' && byte == b'#' && bytes.get(index + 1) == Some(&b'{') {
-                if let Some(end) = source[index + 2..].find('}') {
-                    let expression_end = index + 2 + end;
-                    offsets.extend(
-                        source[index + 2..expression_end]
-                            .match_indices(';')
-                            .map(|(relative, _)| index + 2 + relative),
-                    );
-                    index = expression_end + 1;
-                    continue;
+        match byte {
+            b'#' if bytes.get(index + 1) != Some(&b'{') => comment = true,
+            b';' => {
+                let start = line_start(source, index);
+                let end = source[index..]
+                    .find('\n')
+                    .map_or(source.len(), |at| index + at);
+                let prefix = &source[start..index];
+                let suffix = &source[index + 1..end];
+                let trailing = suffix.trim().is_empty() || suffix.trim_start().starts_with('#');
+                let leading = prefix.trim().is_empty();
+                let before_closing_brace = suffix.trim_start().starts_with('}')
+                    && suffix
+                        .trim_start()
+                        .strip_prefix('}')
+                        .is_some_and(|rest| {
+                            rest.trim().is_empty()
+                                || rest.trim_start().starts_with('#')
+                                || prefix.contains("#{")
+                        });
+                let opener = prefix.trim_end().strip_suffix('{').map(str::trim_end);
+                let after_opening_brace = opener.is_some_and(|before| {
+                    (!before.is_empty()
+                        && before
+                            .bytes()
+                            .all(|byte| byte == b'_' || byte.is_ascii_alphanumeric()))
+                        || before.ends_with("->")
+                        || before.ends_with('#')
+                });
+                if trailing || leading || before_closing_brace || after_opening_brace {
+                    offsets.push(index);
                 }
             }
-            if escaped {
-                escaped = false;
-            } else if byte == b'\\' {
-                escaped = true;
-            } else if byte == delimiter {
-                quote = None;
-            }
-            index += 1;
-            continue;
-        }
-        match byte {
-            b'\'' | b'"' => quote = Some(byte),
-            b'#' => comment = true,
-            b';' => offsets.push(index),
             _ => {}
         }
         index += 1;
     }
+    for start in multi_expression_lines.starts {
+        let end = source[start..]
+            .find('\n')
+            .map_or(source.len(), |at| start + at);
+        offsets.extend(
+            source[start..end]
+                .match_indices(';')
+                .map(|(relative, _)| start + relative),
+        );
+    }
+    offsets.sort_unstable();
+    offsets.dedup();
     offsets
 }
 

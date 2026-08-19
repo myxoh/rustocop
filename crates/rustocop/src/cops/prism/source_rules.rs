@@ -6,10 +6,8 @@ mod project_files;
 use project_files::*;
 
 declare_source_cops! {
-    SymbolLiteral => "Style/SymbolLiteral" => symbol_literals,
     AddRuntimeDependency => "Gemspec/AddRuntimeDependency" => add_runtime_dependency,
     ArrayIntersect => "Style/ArrayIntersectWithSingleElement" => array_intersect,
-    WhenThen => "Style/WhenThen" => when_then,
     ClassAndModuleCamelCase => "Naming/ClassAndModuleCamelCase" => camel_case,
     ArrayCoercion => "Style/ArrayCoercion" => array_coercion,
     ClassMethods => "Style/ClassMethods" => class_methods,
@@ -18,30 +16,6 @@ declare_source_cops! {
     EnsureReturn => "Lint/EnsureReturn" => ensure_return,
     ClassVars => "Style/ClassVars" => class_vars,
     DuplicatedGem => "Bundler/DuplicatedGem" => duplicated_gem,
-    StringHashKeys => "Style/StringHashKeys" => string_hash_keys,
-}
-
-fn symbol_literals(source: &str, context: &mut Reporter<'_>) {
-    for start in find_all(source, ":\"") {
-        let Some(relative_end) = source[start + 2..].find('"') else {
-            continue;
-        };
-        let end = start + 2 + relative_end + 1;
-        let word = &source[start + 2..end - 1];
-        if !word.is_empty()
-            && word.as_bytes()[0].is_ascii_alphabetic()
-            && word
-                .bytes()
-                .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
-        {
-            context.replace(
-                "Do not use strings for word-like symbol literals.",
-                start..end,
-                start..end,
-                format!(":{word}"),
-            );
-        }
-    }
 }
 
 fn add_runtime_dependency(source: &str, context: &mut Reporter<'_>) {
@@ -91,29 +65,6 @@ fn array_intersect(source: &str, context: &mut Reporter<'_>) {
                 format!(".include?({element})"),
             );
         }
-    }
-}
-
-fn when_then(source: &str, context: &mut Reporter<'_>) {
-    for (offset, line) in source_lines(source) {
-        let trimmed = line.trim_start();
-        if !trimmed.starts_with("when ") {
-            continue;
-        }
-        let Some(semi) = line.find(';') else { continue };
-        if line[..semi].contains(" then ") {
-            continue;
-        }
-        let prefix = line[..=semi].trim_start();
-        context.replace(
-            format!(
-                "Do not use `{prefix}`. Use `{} then` instead.",
-                prefix.trim_end_matches(';')
-            ),
-            offset + semi..offset + semi + 1,
-            offset + semi..offset + semi + 1,
-            " then",
-        );
     }
 }
 

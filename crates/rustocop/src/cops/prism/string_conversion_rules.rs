@@ -6,7 +6,201 @@ define_cops! {
     ImplicitStringConcatenation => "Lint/ImplicitStringConcatenation" => node(as_interpolated_string_node, implicit_string_concatenation),
     RedundantInterpolation => "Style/RedundantInterpolation" => node(as_interpolated_string_node, redundant_interpolation),
     RedundantInterpolationUnfreeze => "Style/RedundantInterpolationUnfreeze" => call(redundant_interpolation_unfreeze),
+    StringLiterals => "Style/StringLiterals" => any_node(string_literals),
+    StringHashKeys => "Style/StringHashKeys" => node(as_assoc_node, string_hash_keys),
     StringLiteralsInInterpolation => "Style/StringLiteralsInInterpolation" => node(as_string_node, string_literals_in_interpolation),
+}
+
+fn string_hash_keys(node: &ruby_prism::AssocNode<'_>, context: &mut CopContext<'_, '_>) {
+    let Some(key) = node.key().as_string_node() else {
+        return;
+    };
+    if environment_or_replacement_hash(context) {
+        return;
+    }
+    let Ok(value) = std::str::from_utf8(key.unescaped()) else {
+        return;
+    };
+    context.replace(
+        "Prefer symbols instead of strings as hash keys.",
+        key.location(),
+        key.location(),
+        ruby_symbol_inspect(value),
+    );
+}
+
+fn environment_or_replacement_hash(context: &CopContext<'_, '_>) -> bool {
+    let mut hash_depth = 0;
+    let mut array_depth = 0;
+    for ancestor in context.ancestors().iter().rev() {
+        if ancestor.as_hash_node().is_some() || ancestor.as_keyword_hash_node().is_some() {
+            hash_depth += 1;
+            continue;
+        }
+        if ancestor.as_array_node().is_some() {
+            array_depth += 1;
+            continue;
+        }
+        let Some(call) = ancestor.as_call_node() else {
+            continue;
+        };
+        if hash_depth != 1 {
+            return false;
+        }
+        let name = call_name(&call);
+        if matches!(name, b"gsub" | b"gsub!") {
+            return array_depth == 0;
+        }
+        if name == b"popen" && root_constant(call.receiver(), b"IO") {
+            return array_depth == 0;
+        }
+        if root_constant(call.receiver(), b"Open3") {
+            if matches!(name, b"capture2" | b"capture2e" | b"capture3" | b"popen2" | b"popen2e" | b"popen3") {
+                return array_depth == 0;
+            }
+            if matches!(name, b"pipeline" | b"pipeline_r" | b"pipeline_rw" | b"pipeline_start" | b"pipeline_w") {
+                return array_depth == 1;
+            }
+        }
+        if matches!(name, b"spawn" | b"system")
+            && (call.receiver().is_none() || root_constant(call.receiver(), b"Kernel"))
+        {
+            return array_depth == 0;
+        }
+        return false;
+    }
+    false
+}
+
+fn ruby_symbol_inspect(value: &str) -> String {
+    let identifier = |text: &str| {
+        let mut characters = text.chars();
+        characters
+            .next()
+            .is_some_and(|character| character == '_' || character.is_alphabetic())
+            && characters.all(|character| character == '_' || character.is_alphanumeric())
+    };
+    let method = value
+        .strip_suffix(['!', '?', '='])
+        .filter(|method| identifier(method));
+    let bare = identifier(value)
+        || method.is_some()
+        || matches!(
+            value,
+            "|" | "^" | "&" | "<=>" | "==" | "===" | "=~" | ">" | ">=" | "<" | "<="
+                | "<<" | ">>" | "+" | "-" | "*" | "/" | "%" | "**" | "~" | "+@" | "-@"
+                | "[]" | "[]=" | "`" | "!" | "!=" | "!~"
+        );
+    if bare {
+        format!(":{value}")
+    } else {
+        format!(":{}", ruby_inspect_string(value))
+    }
+}
+
+fn string_literals(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
+    if let Some(interpolated) = node.as_interpolated_string_node() {
+        check_consistent_continued_string(&interpolated, context);
+        return;
+    }
+    let Some(string) = node.as_string_node() else {
+        return;
+    };
+    if context.config_bool("ConsistentQuotesInMultiline", false)
+        && context.parent().is_some_and(|parent| {
+            parent
+                .as_interpolated_string_node()
+                .is_some_and(|parent| parent.opening_loc().is_none())
+        })
+    {
+        return;
+    }
+    if context
+        .ancestors()
+        .iter()
+        .any(|ancestor| ancestor.as_embedded_statements_node().is_some())
+    {
+        return;
+    }
+    let (Some(opening), Some(closing)) = (string.opening_loc(), string.closing_loc()) else {
+        return;
+    };
+    if opening.as_slice().len() != 1 || closing.as_slice() != opening.as_slice() {
+        return;
+    }
+    let style = context.policy().enforced_style("single_quotes");
+    let source = context.source_file().at(&string.location());
+    let wrong = if style == "single_quotes" {
+        opening.as_slice() == b"\"" && !double_quotes_required(source)
+    } else if style == "double_quotes" {
+        opening.as_slice() == b"'" && !single_quote_preserves_semantics(source)
+    } else {
+        false
+    };
+    if !wrong {
+        return;
+    }
+    let message = if style == "single_quotes" {
+        "Prefer single-quoted strings when you don't need string interpolation or special symbols."
+    } else {
+        "Prefer double-quoted strings unless you need single quotes to avoid extra backslashes for escaping."
+    };
+    if context.config_bool("ConsistentQuotesInMultiline", false) && source.contains('\n') {
+        context.report(message, string.location());
+        return;
+    }
+    let content = String::from_utf8_lossy(string.unescaped());
+    let replacement = if style == "single_quotes" {
+        format!("'{}'", content.replace('\\', "\\\\").replace("\\\"", "\""))
+    } else {
+        ruby_inspect_string(&content)
+    };
+    context.replace(message, string.location(), string.location(), replacement);
+}
+
+fn check_consistent_continued_string(
+    node: &InterpolatedStringNode<'_>,
+    context: &mut CopContext<'_, '_>,
+) {
+    if !context.config_bool("ConsistentQuotesInMultiline", false) || node.opening_loc().is_some() {
+        return;
+    }
+    let parts = node.parts().iter().collect::<Vec<_>>();
+    if parts.is_empty() || parts.iter().any(|part| part.as_string_node().is_none()) {
+        return;
+    }
+    let quotes = parts
+        .iter()
+        .filter_map(|part| part.as_string_node()?.opening_loc())
+        .map(|opening| opening.as_slice().first().copied())
+        .collect::<Vec<_>>();
+    if quotes.len() != parts.len() {
+        return;
+    }
+    if quotes.windows(2).any(|pair| pair[0] != pair[1]) {
+        context.report("Inconsistent quote style.", node.location());
+        return;
+    }
+    let style = context.policy().enforced_style("single_quotes");
+    let wrong = if style == "single_quotes" && quotes[0] == Some(b'"') {
+        parts.iter().all(|part| {
+            !double_quotes_required(context.source_file().node(part))
+        })
+    } else if style == "double_quotes" && quotes[0] == Some(b'\'') {
+        parts.iter().all(|part| {
+            !single_quote_preserves_semantics(context.source_file().node(part))
+        })
+    } else {
+        false
+    };
+    if wrong {
+        let message = if style == "single_quotes" {
+            "Prefer single-quoted strings when you don't need string interpolation or special symbols."
+        } else {
+            "Prefer double-quoted strings unless you need single quotes to avoid extra backslashes for escaping."
+        };
+        context.report(message, node.location());
+    }
 }
 
 fn implicit_string_concatenation(
@@ -126,30 +320,67 @@ fn string_literals_in_interpolation(
         return;
     };
     let style = context.policy().enforced_style("single_quotes");
-    let (current, preferred, description) = if style == "single_quotes" {
-        (b'"', '\'', "single-quoted")
+    let (current, description) = if style == "single_quotes" {
+        (b'"', "single-quoted")
     } else if style == "double_quotes" {
-        (b'\'', '"', "double-quoted")
+        (b'\'', "double-quoted")
     } else {
         return;
     };
     if opening.as_slice() != [current] || closing.as_slice() != [current] {
         return;
     }
-    context.replace_many(
+    let source = context.source_file().at(&node.location());
+    if style == "single_quotes" && double_quotes_required(source)
+        || style == "double_quotes" && single_quote_preserves_semantics(source)
+    {
+        return;
+    }
+    let content = String::from_utf8_lossy(node.unescaped());
+    let replacement = if style == "single_quotes" {
+        format!("'{}'", content.replace('\\', "\\\\").replace("\\\"", "\""))
+    } else {
+        ruby_inspect_string(&content)
+    };
+    context.replace(
         format!("Prefer {description} strings inside interpolations."),
         node.location(),
-        vec![
-            (
-                opening.start_offset()..opening.end_offset(),
-                preferred.to_string(),
-            ),
-            (
-                closing.start_offset()..closing.end_offset(),
-                preferred.to_string(),
-            ),
-        ],
+        node.location(),
+        replacement,
     );
+}
+
+fn double_quotes_required(source: &str) -> bool {
+    if source.contains('\'') {
+        return true;
+    }
+    let bytes = source.as_bytes();
+    let mut index = 0;
+    while index < bytes.len() {
+        if bytes[index] != b'\\' {
+            index += 1;
+            continue;
+        }
+        let start = index;
+        while index < bytes.len() && bytes[index] == b'\\' {
+            index += 1;
+        }
+        if (index - start) % 2 == 1
+            && !bytes.get(index).is_some_and(|byte| matches!(byte, b'\\' | b'"'))
+        {
+            return true;
+        }
+    }
+    false
+}
+
+fn single_quote_preserves_semantics(source: &str) -> bool {
+    let bytes = source.as_bytes();
+    source.contains('"')
+        || bytes.windows(2).any(|pair| {
+            pair[0] == b'\\' && !matches!(pair[1], b'\'' | b'\\')
+                || pair[0] == b'#' && matches!(pair[1], b'@' | b'{' | b'$')
+        })
 }
 
 fn redundant_interpolation_unfreeze(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {

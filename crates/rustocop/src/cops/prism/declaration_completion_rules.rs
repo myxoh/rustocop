@@ -51,50 +51,69 @@ fn class_factory_inheritance(
     if call.name().as_slice() != method || !root_constant(call.receiver(), factory) {
         return;
     }
-    let class_name = context.source_file().node(&node.constant_path());
     let superclass_location = superclass.location();
-    let base_end = call.closing_loc().map_or_else(
-        || {
-            call.block()
-                .map_or(superclass_location.end_offset(), |block| {
-                    block.location().start_offset()
-                })
-        },
-        |closing| closing.end_offset(),
-    );
-    let raw_base = context.source()[superclass_location.start_offset()..base_end].trim_end();
-    let base = if call.opening_loc().is_none() {
-        let selector_end = call
-            .message_loc()
-            .map_or(superclass_location.start_offset(), |selector| {
-                selector.end_offset()
-            });
-        let prefix = &context.source()[superclass_location.start_offset()..selector_end];
-        let arguments = context.source()[selector_end..base_end].trim();
-        format!("{prefix}({arguments})")
-    } else {
-        raw_base.to_string()
-    };
     let file = context.source_file();
-    let body = node
-        .body()
-        .and_then(|body| body.as_statements_node())
-        .and_then(|statements| statements.body().first())
-        .map(|first| {
-            context.source()[file.line_start(first.location().start_offset())
-                ..file.line_start(node.end_keyword_loc().start_offset())]
-                .trim_end_matches('\n')
-                .to_string()
-        })
-        .unwrap_or_default();
-    let replacement = if call.block().is_some() {
-        format!("{class_name} = {base} do\nend")
-    } else if body.trim().is_empty() {
-        format!("{class_name} = {base}")
+    let mut edits = vec![
+        (
+            node.class_keyword_loc().start_offset()..node.constant_path().location().start_offset(),
+            String::new(),
+        ),
+        (
+            node.inheritance_operator_loc()
+                .expect("class with a superclass has an inheritance operator")
+                .start_offset()
+                ..node
+                    .inheritance_operator_loc()
+                    .expect("class with a superclass has an inheritance operator")
+                    .end_offset(),
+            "=".to_string(),
+        ),
+    ];
+
+    if let Some(block) = call.block().and_then(|block| block.as_block_node()) {
+        let closing = block.closing_loc();
+        let line_start = file.line_start(closing.start_offset());
+        let removal_start = context.source()[line_start..closing.start_offset()]
+            .trim_end_matches([' ', '\t'])
+            .len()
+            + line_start;
+        edits.push((removal_start..closing.end_offset(), String::new()));
+    } else if node.body().is_none() {
+        let class_end = node.end_keyword_loc();
+        let removal = if file.line_start(node.class_keyword_loc().start_offset())
+            == file.line_start(class_end.start_offset())
+        {
+            superclass_location.end_offset()..node.location().end_offset()
+        } else {
+            file.line_range(class_end.start_offset())
+        };
+        edits.push((removal, String::new()));
+    } else if call.opening_loc().is_none() {
+        let selector = call
+            .message_loc()
+            .expect("Struct.new and Data.define have a selector");
+        let arguments = call
+            .arguments()
+            .map(|arguments| {
+                arguments
+                    .arguments()
+                    .iter()
+                    .map(|argument| file.node(&argument))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            })
+            .unwrap_or_default();
+        edits.push((
+            selector.end_offset()..superclass_location.end_offset(),
+            format!("({arguments}) do"),
+        ));
     } else {
-        format!("{class_name} = {base} do\n{body}\nend")
-    };
-    context.replace(message, &superclass_location, node.location(), replacement);
+        edits.push((
+            superclass_location.end_offset()..superclass_location.end_offset(),
+            " do".to_string(),
+        ));
+    }
+    context.replace_many(message, &superclass_location, edits);
 }
 
 fn attr(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {

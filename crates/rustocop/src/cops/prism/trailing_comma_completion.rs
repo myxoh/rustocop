@@ -8,18 +8,23 @@ fn array_trailing_comma(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
     let Some(array) = node.as_array_node() else {
         return;
     };
+    let Some(opening) = array.opening_loc() else {
+        return;
+    };
+    if context.source_file().at(&opening) != "[" {
+        return;
+    }
     check_trailing_comma(
         &array.location(),
-        array.elements().last().map(|element| {
-            (
-                element.location().start_offset(),
-                element.location().end_offset(),
-            )
-        }),
         &array
             .elements()
             .iter()
-            .map(|element| element.location().start_offset())
+            .map(|element| {
+                (
+                    element.location().start_offset(),
+                    element.location().end_offset(),
+                )
+            })
             .collect::<Vec<_>>(),
         "array",
         "Put a comma after the last item of a multiline array.",
@@ -34,16 +39,15 @@ fn hash_trailing_comma(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
     };
     check_trailing_comma(
         &hash.location(),
-        hash.elements().last().map(|element| {
-            (
-                element.location().start_offset(),
-                element.location().end_offset(),
-            )
-        }),
         &hash
             .elements()
             .iter()
-            .map(|element| element.location().start_offset())
+            .map(|element| {
+                (
+                    element.location().start_offset(),
+                    element.location().end_offset(),
+                )
+            })
             .collect::<Vec<_>>(),
         "hash",
         "Put a comma after the last item of a multiline hash.",
@@ -54,8 +58,7 @@ fn hash_trailing_comma(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
 
 fn check_trailing_comma(
     location: &ruby_prism::Location<'_>,
-    last_element: Option<(usize, usize)>,
-    element_starts: &[usize],
+    elements: &[(usize, usize)],
     kind: &str,
     missing_message: &str,
     extra_message: &str,
@@ -65,14 +68,8 @@ fn check_trailing_comma(
     if source.len() < 2 {
         return;
     }
-    if ["%w", "%W", "%i", "%I"]
-        .iter()
-        .any(|prefix| source.starts_with(prefix))
-    {
-        return;
-    }
     let close = location.end_offset().saturating_sub(1);
-    let Some((last_start, last_end)) = last_element else {
+    let Some(&(last_start, last_end)) = elements.last() else {
         return;
     };
     let tail = &context.source()[last_end..close];
@@ -88,23 +85,28 @@ fn check_trailing_comma(
     {
         comma = false;
     }
-    let multiline = source.contains('\n');
+    let close_begins_line = context.source()
+        [context.source_file().line_start(close)..close]
+        .trim()
+        .is_empty();
+    let multiline = source.contains('\n') && !(elements.len() == 1 && !close_begins_line);
     let style = context
         .config_value("EnforcedStyleForMultiline")
         .unwrap_or("no_comma");
-    let item_lines = element_starts
-        .iter()
-        .map(|start| context.source_file().line_start(*start))
-        .collect::<std::collections::HashSet<_>>();
+    let elements_on_separate_lines = elements
+        .windows(2)
+        .all(|pair| {
+            !context.source_file().same_line(
+                pair[0].1.saturating_sub(1),
+                pair[1].0,
+            )
+        })
+        && !context
+            .source_file()
+            .same_line(last_end.saturating_sub(1), close);
     let required = match style {
-        "comma" => tail.contains('\n') && multiline && item_lines.len() == element_starts.len(),
-        "consistent_comma" => {
-            item_lines.len() > 1
-                || element_starts.first().is_some_and(|first| {
-                    context.source_file().line_start(*first)
-                        != context.source_file().line_start(location.start_offset())
-                })
-        }
+        "comma" => multiline && elements_on_separate_lines,
+        "consistent_comma" => multiline,
         "diff_comma" => {
             let after_item = if comma {
                 &tail[leading + 1..]
@@ -130,9 +132,17 @@ fn check_trailing_comma(
         context.remove(message, at..at + 1, at..at + 1);
     } else if !comma && required {
         let at = last_end;
+        let last_source = &context.source()[last_start..last_end];
+        let final_line = last_source.rfind('\n').map_or(0, |offset| offset + 1);
+        let offense_start = last_start
+            + final_line
+            + last_source[final_line..]
+                .bytes()
+                .take_while(|byte| byte.is_ascii_whitespace())
+                .count();
         context.insert(
             missing_message,
-            last_start..at,
+            offense_start..at,
             at,
             ",",
         );

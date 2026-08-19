@@ -21,11 +21,6 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
             "Use the condition directly.",
         ),
         report(
-            "Style/SoleNestedConditional",
-            "else\n  if ",
-            "Consider merging nested conditions.",
-        ),
-        report(
             "Style/IfWithBooleanLiteralBranches",
             "if predicate?\n  true",
             "Use a boolean expression instead of an if with boolean branches.",

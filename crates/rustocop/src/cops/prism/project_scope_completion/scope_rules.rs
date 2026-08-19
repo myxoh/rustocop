@@ -32,26 +32,3 @@ pub(super) fn redundant_self_assignment(context: &mut CopContext<'_, '_>) {
         );
     }
 }
-
-pub(super) fn top_level_method_definition(context: &mut CopContext<'_, '_>) {
-    let lines = context.source_file().lines().collect::<Vec<_>>();
-    for (index, (offset, line)) in lines.iter().copied().enumerate() {
-        if line.starts_with("def ") {
-            context.report(
-                "Do not define methods at the top-level.",
-                offset..offset + line.len(),
-            );
-        } else if line.starts_with("define_method(") {
-            let mut end = offset + line.len();
-            if line.contains(" do") || line.ends_with("do") {
-                for (candidate_offset, candidate) in &lines[index + 1..] {
-                    if candidate.trim() == "end" {
-                        end = candidate_offset + candidate.len();
-                        break;
-                    }
-                }
-            }
-            context.report("Do not define methods at the top-level.", offset..end);
-        }
-    }
-}

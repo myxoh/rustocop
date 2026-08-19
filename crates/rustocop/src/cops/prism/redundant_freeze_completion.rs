@@ -129,7 +129,10 @@ impl Cop for StringChars {
         let Some(selector) = call.message_loc() else {
             return;
         };
-        let end = call.location().end_offset();
+        let end = call.closing_loc().map_or_else(
+            || argument.location().end_offset(),
+            |closing| closing.end_offset(),
+        );
         let current = &source[selector.start_offset()..end];
         context.replace(
             self.name(),

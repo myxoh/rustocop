@@ -12,7 +12,26 @@ define_cops! {
     ConstantName => "Naming/ConstantName" => source(constant_name),
     ConstantVisibility => "Style/ConstantVisibility" => source(constant_visibility),
     RedundantSelfAssignment => "Style/RedundantSelfAssignment" => source(scope_rules::redundant_self_assignment),
-    TopLevelMethodDefinition => "Style/TopLevelMethodDefinition" => source(scope_rules::top_level_method_definition),
+    TopLevelMethodDefinition => "Style/TopLevelMethodDefinition" => any_node(top_level_method_definition),
+}
+
+fn top_level_method_definition(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
+    let method_definition = node.as_def_node().is_some();
+    let dynamic_definition = node
+        .as_call_node()
+        .is_some_and(|call| call.name().as_slice() == b"define_method");
+    if !method_definition && !dynamic_definition {
+        return;
+    }
+    if context.ancestors().iter().any(|ancestor| {
+        ancestor.as_program_node().is_none() && ancestor.as_statements_node().is_none()
+    }) {
+        return;
+    }
+    context.report(
+        "Do not define methods at the top-level.",
+        &node.location(),
+    );
 }
 
 fn duplicated_group(context: &mut CopContext<'_, '_>) {

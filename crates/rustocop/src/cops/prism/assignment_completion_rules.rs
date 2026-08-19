@@ -1,44 +1,88 @@
 use super::*;
 
 define_cops! {
-    SwapValues => "Style/SwapValues" => source(swap_values),
+    SwapValues => "Style/SwapValues" => node(as_statements_node, swap_values),
 }
 
-fn swap_values(context: &mut CopContext<'_, '_>) {
-    let source = context.source();
-    let assignments = context
-        .source_file()
-        .lines()
-        .enumerate()
-        .filter_map(|(index, (start, line))| {
-            let code = line.split('#').next().unwrap_or_default().trim();
-            let (left, right) = code.split_once(" = ")?;
-            (!left.contains(',') && !right.contains(',')).then_some((
-                index + 1,
-                start,
-                code,
-                left,
-                right,
-            ))
-        })
-        .collect::<Vec<_>>();
-    if assignments.len() != 3 {
-        return;
+struct SimpleAssignment<'pr> {
+    location: ruby_prism::Location<'pr>,
+    lhs: String,
+    rhs: Node<'pr>,
+}
+
+fn swap_values(node: &ruby_prism::StatementsNode<'_>, context: &mut CopContext<'_, '_>) {
+    let statements = node.body().iter().collect::<Vec<_>>();
+    for window in statements.windows(3) {
+        let Some(temporary) = simple_assignment(&window[0], context) else {
+            continue;
+        };
+        let Some(x_assignment) = simple_assignment(&window[1], context) else {
+            continue;
+        };
+        let Some(y_assignment) = simple_assignment(&window[2], context) else {
+            continue;
+        };
+        let file = context.source_file();
+        let temporary_value = file.node(&temporary.rhs);
+        let x_value = file.node(&x_assignment.rhs);
+        let y_value = file.node(&y_assignment.rhs);
+        if x_assignment.lhs != temporary_value
+            || y_assignment.lhs != x_value
+            || y_value != temporary.lhs
+        {
+            continue;
+        }
+
+        let replacement = format!(
+            "{}, {} = {}, {}",
+            x_assignment.lhs, y_assignment.lhs, y_assignment.lhs, x_assignment.lhs
+        );
+        let x_line = source_line(context.source(), x_assignment.location.start_offset());
+        let y_line = source_line(context.source(), y_assignment.location.start_offset());
+        let edit = file.line_start(temporary.location.start_offset())
+            ..file.line_end(y_assignment.location.end_offset());
+        context.replace(
+            format!(
+                "Replace this and assignments at lines {x_line} and {y_line} with `{replacement}`."
+            ),
+            temporary.location,
+            edit,
+            replacement,
+        );
     }
-    let (first_line, first_start, first_code, temporary, first_value) = assignments[0];
-    let (second_line, _, _, second_left, second_value) = assignments[1];
-    let (third_line, _, _, third_left, third_value) = assignments[2];
-    if second_left != first_value || third_left != second_value || third_value != temporary {
-        return;
-    }
-    let replacement = format!("{second_left}, {third_left} = {third_left}, {second_left}");
-    context.replace(
-        format!(
-            "Replace this and assignments at lines {second_line} and {third_line} with `{replacement}`."
-        ),
-        first_start..first_start + first_code.len(),
-        0..source.len(),
-        format!("{replacement}\n"),
-    );
-    let _ = first_line;
+}
+
+fn simple_assignment<'pr>(
+    node: &Node<'pr>,
+    context: &CopContext<'_, '_>,
+) -> Option<SimpleAssignment<'pr>> {
+    let file = context.source_file();
+    let (location, name, rhs) = if let Some(write) = node.as_local_variable_write_node() {
+        (write.location(), write.name_loc(), write.value())
+    } else if let Some(write) = node.as_instance_variable_write_node() {
+        (write.location(), write.name_loc(), write.value())
+    } else if let Some(write) = node.as_class_variable_write_node() {
+        (write.location(), write.name_loc(), write.value())
+    } else if let Some(write) = node.as_global_variable_write_node() {
+        (write.location(), write.name_loc(), write.value())
+    } else if let Some(write) = node.as_constant_write_node() {
+        (write.location(), write.name_loc(), write.value())
+    } else if let Some(write) = node.as_constant_path_write_node() {
+        (write.location(), write.target().location(), write.value())
+    } else {
+        return None;
+    };
+    Some(SimpleAssignment {
+        lhs: file.at(&name).to_string(),
+        location,
+        rhs,
+    })
+}
+
+fn source_line(source: &str, offset: usize) -> usize {
+    source[..offset.min(source.len())]
+        .bytes()
+        .filter(|byte| *byte == b'\n')
+        .count()
+        + 1
 }

@@ -230,7 +230,7 @@ impl Cop for SuperWithArgsParentheses {
         &self,
         node: &Node<'pr>,
         _ancestors: &[Node<'pr>],
-        source: &str,
+        _source: &str,
         context: &mut Context,
     ) {
         let Some(super_node) = node.as_super_node() else {
@@ -242,14 +242,35 @@ impl Cop for SuperWithArgsParentheses {
         if super_node.lparen_loc().is_some() || arguments.arguments().is_empty() {
             return;
         }
-        let location = super_node.location();
-        let arguments = source_at(source, &arguments.location());
-        context.replace(
+        let argument_nodes = arguments.arguments();
+        let Some(first) = argument_nodes.first() else {
+            return;
+        };
+        let Some(last) = argument_nodes.last() else {
+            return;
+        };
+        let last_end = super_node
+            .block()
+            .and_then(|block| block.as_block_argument_node())
+            .map_or(last.location().end_offset(), |block| {
+                block.location().end_offset()
+            });
+        let keyword = super_node.keyword_loc();
+        let offense = keyword.start_offset()..last_end;
+        context.replace_many(
             self.name(),
             "Use parentheses for `super` with arguments.",
-            &location,
-            &location,
-            format!("super({arguments})"),
+            offense,
+            vec![
+                (
+                    keyword.end_offset()..first.location().start_offset(),
+                    "(".to_string(),
+                ),
+                (
+                    last_end..last_end,
+                    ")".to_string(),
+                ),
+            ],
         );
     }
 }
@@ -274,6 +295,15 @@ impl Cop for TrailingCommaInBlockArgs {
         let Some(parameters) = block.parameters() else {
             return;
         };
+        let Some(block_parameters) = parameters.as_block_parameters_node() else {
+            return;
+        };
+        let Some(parameter_nodes) = block_parameters.parameters() else {
+            return;
+        };
+        if block_argument_count(&parameter_nodes) <= 1 {
+            return;
+        }
         let text = source_at(source, &parameters.location());
         let Some(first_pipe) = text.find('|') else {
             return;
@@ -285,10 +315,6 @@ impl Cop for TrailingCommaInBlockArgs {
         if arguments.contains(';') || !arguments.trim_end().ends_with(',') {
             return;
         }
-        let without_comma = arguments.trim_end().strip_suffix(',').unwrap_or(arguments);
-        if !without_comma.contains(',') {
-            return;
-        }
         let comma =
             parameters.location().start_offset() + first_pipe + 1 + arguments.trim_end().len() - 1;
         context.remove(
@@ -298,6 +324,36 @@ impl Cop for TrailingCommaInBlockArgs {
             (comma, comma + 1),
         );
     }
+}
+
+fn block_argument_count(parameters: &ruby_prism::ParametersNode<'_>) -> usize {
+    parameters
+        .requireds()
+        .iter()
+        .chain(parameters.posts().iter())
+        .map(|parameter| required_block_argument_count(&parameter))
+        .sum::<usize>()
+        + parameters.optionals().len()
+        + parameters
+            .keywords()
+            .iter()
+            .filter(|parameter| parameter.as_optional_keyword_parameter_node().is_some())
+            .count()
+}
+
+fn required_block_argument_count(parameter: &Node<'_>) -> usize {
+    if parameter.as_required_parameter_node().is_some() {
+        return 1;
+    }
+    let Some(group) = parameter.as_multi_target_node() else {
+        return 0;
+    };
+    group
+        .lefts()
+        .iter()
+        .chain(group.rights().iter())
+        .map(|target| required_block_argument_count(&target))
+        .sum()
 }
 
 struct WhileUntilDo;

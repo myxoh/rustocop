@@ -57,9 +57,9 @@ fn prism_offense(source: &str, index: &SourceIndex, finding: prism::Finding) -> 
         column,
         last_line,
         last_column,
-        length: finding
-            .end_offset
-            .saturating_sub(finding.start_offset)
+        length: source
+            .get(finding.start_offset..finding.end_offset)
+            .map_or(0, |range| range.chars().count())
             .max(1),
     }
 }

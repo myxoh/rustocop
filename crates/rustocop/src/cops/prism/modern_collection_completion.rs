@@ -4,8 +4,8 @@ define_cops! {
     ArrayIntersect => "Style/ArrayIntersect" => source(array_intersect),
     RedundantMinMaxBy => "Style/RedundantMinMaxBy" => source(redundant_min_max_by),
     RedundantSort => "Style/RedundantSort" => source(redundant_sort),
-    TallyMethod => "Style/TallyMethod" => source(tally_method),
-    ZeroLengthPredicate => "Style/ZeroLengthPredicate" => source(zero_length_predicate),
+    TallyMethod => "Style/TallyMethod" => call(tally_method),
+    ZeroLengthPredicate => "Style/ZeroLengthPredicate" => call(zero_length_predicate),
 }
 
 fn array_intersect(context: &mut CopContext<'_, '_>) {
@@ -146,186 +146,378 @@ fn redundant_sort(context: &mut CopContext<'_, '_>) {
     }
 }
 
-fn tally_method(context: &mut CopContext<'_, '_>) {
-    let source = context.source();
-    if replace_simple_tally(context) {
+fn tally_method(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
+    if !context.target_ruby_version().at_least(2, 7) {
         return;
     }
-    replace_each_with_object_tally(context, source);
-}
-
-fn replace_simple_tally(context: &mut CopContext<'_, '_>) -> bool {
-    let source = context.source();
-    for standalone in [
-        "group_by(&:itself).transform_values(&:count)",
-        "group_by(&:itself).transform_values(&:size)",
-        "group_by(&:itself).transform_values(&:length)",
-    ] {
-        if source.trim_end() == standalone {
-            context.replace(
-                "Use `tally` instead of `group_by` and `transform_values`.",
-                0.."group_by".len(),
-                0..standalone.len(),
-                "tally",
-            );
-            return true;
-        }
-    }
-    for suffix in [
-        ".group_by(&:itself).transform_values(&:count)",
-        ".group_by(&:itself).transform_values(&:size)",
-        ".group_by(&:itself).transform_values(&:length)",
-        ".group_by { |item| item }.transform_values(&:count)",
-    ] {
-        if let Some(start) = source.find(suffix) {
-            context.replace(
-                "Use `tally` instead of `group_by` and `transform_values`.",
-                start + 1..start + 1 + "group_by".len(),
-                start..start + suffix.len(),
-                ".tally",
-            );
-            return true;
-        }
-    }
-    let safe_suffix = "&.group_by(&:itself)&.transform_values(&:count)";
-    if let Some(start) = source.find(safe_suffix) {
-        context.replace(
-            "Use `tally` instead of `group_by` and `transform_values`.",
-            start + 2..start + 2 + "group_by".len(),
-            start..start + safe_suffix.len(),
-            "&.tally",
-        );
-        return true;
-    }
-    false
-}
-
-fn replace_each_with_object_tally(context: &mut CopContext<'_, '_>, source: &str) {
-    if source.contains("each_with_object(::Hash.new(0))") {
-        let rewritten = source.replace("::Hash.new(0)", "Hash.new(0)");
-        let Some(start) = rewritten.find(".each_with_object(Hash.new(0))") else {
+    if call_name(node) == b"each_with_object" && each_with_object_tally(node, context) {
+        let Some(selector) = node.message_loc() else {
             return;
         };
-        let end = source.trim_end().len();
         context.replace(
             "Use `tally` instead of `each_with_object`.",
-            start + 1..start + 1 + "each_with_object".len(),
-            start..end,
-            ".tally",
+            &selector,
+            selector.start_offset()..node.location().end_offset(),
+            "tally",
         );
-        return;
-    }
-    let needle = ".each_with_object(Hash.new(0))";
-    let mut search = 0;
-    while let Some(relative) = source[search..].find(needle) {
-        let start = search + relative;
-        let block_start = start + needle.len();
-        let end = if source[block_start..].trim_start().starts_with('{') {
-            let Some(end_relative) = source[start..].find('}') else {
-                break;
-            };
-            start + end_relative + 1
-        } else if source[block_start..].trim_start().starts_with("do") {
-            let Some(end_relative) = source[block_start..].find("\nend") else {
-                break;
-            };
-            block_start + end_relative + "\nend".len()
-        } else {
-            search = block_start;
-            continue;
+    } else if call_name(node) == b"transform_values" && transform_values_tally(node) {
+        let Some(group_by) = node.receiver().and_then(|receiver| receiver.as_call_node()) else {
+            return;
         };
-        let block = &source[start + needle.len()..end];
-        if !block.contains("+= 1") {
-            search = end;
-            continue;
-        }
-        if block.contains(';') {
-            search = end;
-            continue;
-        }
-        let same_key = if let Some(parameters) = block
-            .split_once('|')
-            .and_then(|(_, rest)| rest.split_once('|'))
-        {
-            let names = parameters.0.split(',').map(str::trim).collect::<Vec<_>>();
-            names.len() == 2 && block.contains(&format!("{}[{}]", names[1], names[0]))
-        } else {
-            block.contains("_2[_1]")
+        let Some(selector) = group_by.message_loc() else {
+            return;
         };
-        if !same_key {
-            search = end;
-            continue;
-        }
-        let body_expression = block
-            .split('|')
-            .nth(2)
-            .unwrap_or(block)
-            .trim()
-            .trim_start_matches('{')
-            .trim_start_matches("do")
-            .trim_end_matches('}')
-            .trim_end_matches("end")
-            .trim();
-        if body_expression
-            .lines()
-            .filter(|line| !line.trim().is_empty())
-            .count()
-            != 1
-        {
-            search = end;
-            continue;
-        }
         context.replace(
-            "Use `tally` instead of `each_with_object`.",
-            start + 1..start + 1 + "each_with_object".len(),
-            start..end,
-            ".tally",
-        );
-        search = end;
-    }
-    let standalone = "each_with_object(Hash.new(0))";
-    if source.starts_with(standalone) && source.contains("+= 1") {
-        let end = source.trim_end().len();
-        context.replace(
-            "Use `tally` instead of `each_with_object`.",
-            0.."each_with_object".len(),
-            0..end,
+            "Use `tally` instead of `group_by` and `transform_values`.",
+            &selector,
+            selector.start_offset()..node.location().end_offset(),
             "tally",
         );
     }
 }
 
-fn zero_length_predicate(context: &mut CopContext<'_, '_>) {
-    for (offset, line) in context.source_file().lines() {
-        let code = line.trim();
-        let patterns = [
-            ".length == 0",
-            ".size == 0",
-            ".count == 0",
-            ".length.zero?",
-            ".size.zero?",
-            ".count.zero?",
-        ];
-        let Some(pattern) = patterns.into_iter().find(|pattern| code.ends_with(pattern)) else {
-            continue;
-        };
-        let receiver = &code[..code.len() - pattern.len()];
-        let method = pattern
-            .trim_start_matches('.')
-            .trim_end_matches(" == 0")
-            .trim_end_matches(".zero?");
-        let replacement = format!("{receiver}.empty?");
-        let start = offset + line.find(code).unwrap_or(0);
-        let original = if pattern.ends_with(".zero?") {
-            format!("{method}.zero?")
-        } else {
-            format!("{method} == 0")
-        };
-        context.replace(
-            format!("Use `empty?` instead of `{original}`."),
-            start..start + code.len(),
-            start..start + code.len(),
-            replacement,
-        );
+fn each_with_object_tally(node: &CallNode<'_>, context: &CopContext<'_, '_>) -> bool {
+    if argument_count(node) != 1 {
+        return false;
     }
+    let Some(initializer) = only_argument(node).and_then(|argument| argument.as_call_node()) else {
+        return false;
+    };
+    if call_name(&initializer) != b"new" || argument_count(&initializer) != 1 {
+        return false;
+    }
+    let hash_receiver = initializer
+        .receiver()
+        .is_some_and(|receiver| matches!(context.source_file().node(&receiver), "Hash" | "::Hash"));
+    let zero = only_argument(&initializer)
+        .and_then(|argument| argument.as_integer_node())
+        .is_some_and(|integer| TryInto::<i32>::try_into(integer.value()).ok() == Some(0));
+    let Some(block) = node.block().and_then(|block| block.as_block_node()) else {
+        return false;
+    };
+    let Some(body) = block.body().and_then(single_expression) else {
+        return false;
+    };
+    let Some(write) = body.as_index_operator_write_node() else {
+        return false;
+    };
+    if write.binary_operator().as_slice() != b"+"
+        || !write
+            .value()
+            .as_integer_node()
+            .is_some_and(|integer| TryInto::<i32>::try_into(integer.value()).ok() == Some(1))
+        || write
+            .arguments()
+            .is_none_or(|arguments| arguments.arguments().len() != 1)
+    {
+        return false;
+    }
+    let Some(receiver) = write
+        .receiver()
+        .and_then(|receiver| receiver.as_local_variable_read_node())
+    else {
+        return false;
+    };
+    let Some(key) = write
+        .arguments()
+        .and_then(|arguments| arguments.arguments().first())
+        .and_then(|argument| argument.as_local_variable_read_node())
+    else {
+        return false;
+    };
+    hash_receiver && zero && tally_block_parameters(&block, receiver.name().as_slice(), key.name().as_slice())
+}
+
+fn tally_block_parameters(block: &ruby_prism::BlockNode<'_>, hash: &[u8], element: &[u8]) -> bool {
+    let Some(parameters) = block.parameters() else {
+        return false;
+    };
+    if let Some(numbered) = parameters.as_numbered_parameters_node() {
+        return numbered.maximum() == 2 && hash == b"_2" && element == b"_1";
+    }
+    let Some(parameters) = parameters
+        .as_block_parameters_node()
+        .and_then(|parameters| parameters.parameters())
+    else {
+        return false;
+    };
+    if parameters.requireds().len() != 2
+        || !parameters.optionals().is_empty()
+        || parameters.rest().is_some()
+        || !parameters.posts().is_empty()
+        || !parameters.keywords().is_empty()
+        || parameters.keyword_rest().is_some()
+        || parameters.block().is_some()
+    {
+        return false;
+    }
+    let Some(first) = parameters
+        .requireds()
+        .first()
+        .and_then(|parameter| parameter.as_required_parameter_node())
+    else {
+        return false;
+    };
+    let Some(second) = parameters
+        .requireds()
+        .last()
+        .and_then(|parameter| parameter.as_required_parameter_node())
+    else {
+        return false;
+    };
+    first.name().as_slice() == element && second.name().as_slice() == hash
+}
+
+fn transform_values_tally(node: &CallNode<'_>) -> bool {
+    if argument_count(node) != 0 {
+        return false;
+    }
+    let Some(group_by) = node.receiver().and_then(|receiver| receiver.as_call_node()) else {
+        return false;
+    };
+    call_name(&group_by) == b"group_by"
+        && argument_count(&group_by) == 0
+        && group_by_identity(&group_by)
+        && transform_counts(node)
+}
+
+fn group_by_identity(node: &CallNode<'_>) -> bool {
+    let Some(block) = node.block() else {
+        return false;
+    };
+    if let Some(argument) = block.as_block_argument_node() {
+        return argument
+            .expression()
+            .and_then(|expression| expression.as_symbol_node())
+            .is_some_and(|symbol| symbol.unescaped() == b"itself");
+    }
+    block
+        .as_block_node()
+        .is_some_and(|block| identity_block(&block))
+}
+
+fn identity_block(block: &ruby_prism::BlockNode<'_>) -> bool {
+    let (Some(parameters), Some(body)) = (block.parameters(), block.body().and_then(single_expression))
+    else {
+        return false;
+    };
+    if let Some(numbered) = parameters.as_numbered_parameters_node() {
+        return numbered.maximum() == 1
+            && body
+                .as_local_variable_read_node()
+                .is_some_and(|read| read.name().as_slice() == b"_1");
+    }
+    if parameters.as_it_parameters_node().is_some() {
+        return body.as_it_local_variable_read_node().is_some();
+    }
+    let Some(parameters) = parameters
+        .as_block_parameters_node()
+        .and_then(|parameters| parameters.parameters())
+    else {
+        return false;
+    };
+    if parameters.requireds().len() != 1
+        || !parameters.optionals().is_empty()
+        || parameters.rest().is_some()
+        || !parameters.posts().is_empty()
+        || !parameters.keywords().is_empty()
+        || parameters.keyword_rest().is_some()
+        || parameters.block().is_some()
+    {
+        return false;
+    }
+    let Some(parameter) = parameters
+        .requireds()
+        .first()
+        .and_then(|parameter| parameter.as_required_parameter_node())
+    else {
+        return false;
+    };
+    body.as_local_variable_read_node()
+        .is_some_and(|read| read.name().as_slice() == parameter.name().as_slice())
+}
+
+fn transform_counts(node: &CallNode<'_>) -> bool {
+    let Some(block) = node.block() else {
+        return false;
+    };
+    if let Some(argument) = block.as_block_argument_node() {
+        return argument
+            .expression()
+            .and_then(|expression| expression.as_symbol_node())
+            .is_some_and(|symbol| counting_method(symbol.unescaped()));
+    }
+    let Some(block) = block.as_block_node() else {
+        return false;
+    };
+    let Some(body) = block.body().and_then(single_expression) else {
+        return false;
+    };
+    let Some(count) = body.as_call_node() else {
+        return false;
+    };
+    if !counting_method(call_name(&count)) || argument_count(&count) != 0 {
+        return false;
+    }
+    block_parameter_is_receiver(&block, count.receiver())
+}
+
+fn block_parameter_is_receiver(
+    block: &ruby_prism::BlockNode<'_>,
+    receiver: Option<Node<'_>>,
+) -> bool {
+    let (Some(parameters), Some(receiver)) = (block.parameters(), receiver) else {
+        return false;
+    };
+    if let Some(numbered) = parameters.as_numbered_parameters_node() {
+        return numbered.maximum() == 1
+            && receiver
+                .as_local_variable_read_node()
+                .is_some_and(|read| read.name().as_slice() == b"_1");
+    }
+    if parameters.as_it_parameters_node().is_some() {
+        return receiver.as_it_local_variable_read_node().is_some();
+    }
+    let Some(parameters) = parameters
+        .as_block_parameters_node()
+        .and_then(|parameters| parameters.parameters())
+    else {
+        return false;
+    };
+    if parameters.requireds().len() != 1 {
+        return false;
+    }
+    let Some(parameter) = parameters
+        .requireds()
+        .first()
+        .and_then(|parameter| parameter.as_required_parameter_node())
+    else {
+        return false;
+    };
+    receiver
+        .as_local_variable_read_node()
+        .is_some_and(|read| read.name().as_slice() == parameter.name().as_slice())
+}
+
+fn single_expression(node: Node<'_>) -> Option<Node<'_>> {
+    let statements = node.as_statements_node()?;
+    (statements.body().len() == 1)
+        .then(|| statements.body().first())
+        .flatten()
+}
+
+fn counting_method(name: &[u8]) -> bool {
+    matches!(name, b"count" | b"size" | b"length")
+}
+
+fn zero_length_predicate(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
+    if !matches!(call_name(node), b"length" | b"size")
+        || argument_count(node) != 0
+        || node.receiver().is_none()
+    {
+        return;
+    }
+    let Some(parent) = context.parent().and_then(Node::as_call_node) else {
+        return;
+    };
+    if non_polymorphic_collection(node, context) {
+        return;
+    }
+
+    if call_name(&parent) == b"zero?"
+        && argument_count(&parent) == 0
+        && parent.receiver().is_some_and(|receiver| same_call(&receiver, node))
+    {
+        let Some(selector) = node.message_loc() else {
+            return;
+        };
+        let offense = selector.start_offset()..parent.location().end_offset();
+        let current = context.source_file().slice(offense.clone()).unwrap_or_default();
+        context.replace(
+            format!("Use `empty?` instead of `{current}`."),
+            offense.clone(),
+            offense,
+            "empty?",
+        );
+        return;
+    }
+
+    let operator = call_name(&parent);
+    if !matches!(operator, b"==" | b"<" | b">" | b"!=") {
+        return;
+    }
+    let (Some(left), Some(right)) = (parent.receiver(), only_argument(&parent)) else {
+        return;
+    };
+    let length_on_left = same_call(&left, node);
+    let length_on_right = same_call(&right, node);
+    if !length_on_left && !length_on_right {
+        return;
+    }
+    let other = if length_on_left { &right } else { &left };
+    let Some(integer) = integer_value(other) else {
+        return;
+    };
+    let zero = matches!(
+        (length_on_left, operator, integer),
+        (true, b"==", 0) | (false, b"==", 0) | (true, b"<", 1) | (false, b">", 1)
+    );
+    let nonzero = !call_operator_is(node, b"&.")
+        && matches!(
+            (length_on_left, operator, integer),
+            (true, b">", 0) | (true, b"!=", 0) | (false, b"<", 0) | (false, b"!=", 0)
+        );
+    if !zero && !nonzero {
+        return;
+    }
+
+    let receiver = node.receiver().expect("receiver checked above");
+    let receiver_source = context.source_file().node(&receiver);
+    let call_operator = node
+        .call_operator_loc()
+        .map_or(".", |location| context.source_file().at(&location));
+    let replacement = format!(
+        "{}{receiver_source}{call_operator}empty?",
+        if nonzero { "!" } else { "" }
+    );
+    let method = String::from_utf8_lossy(call_name(node));
+    let operator = String::from_utf8_lossy(operator);
+    let current = if length_on_left {
+        format!("{method} {operator} {integer}")
+    } else {
+        format!("{integer} {operator} {method}")
+    };
+    let preferred = if nonzero { "!empty?" } else { "empty?" };
+    context.replace_call(
+        &parent,
+        format!("Use `{preferred}` instead of `{current}`."),
+        replacement,
+    );
+}
+
+fn same_call(node: &Node<'_>, expected: &CallNode<'_>) -> bool {
+    node.as_call_node().is_some_and(|call| {
+        call.location().start_offset() == expected.location().start_offset()
+            && call.location().end_offset() == expected.location().end_offset()
+    })
+}
+
+fn integer_value(node: &Node<'_>) -> Option<i32> {
+    TryInto::<i32>::try_into(node.as_integer_node()?.value()).ok()
+}
+
+fn non_polymorphic_collection(node: &CallNode<'_>, context: &CopContext<'_, '_>) -> bool {
+    if call_name(node) != b"size" {
+        return false;
+    }
+    let Some(receiver) = node.receiver() else {
+        return false;
+    };
+    let source = context.source_file().node(&receiver);
+    let source = source.strip_prefix("::").unwrap_or(source);
+    source.starts_with("File.stat(")
+        || ["File", "Tempfile", "StringIO"].iter().any(|constant| {
+            source.starts_with(&format!("{constant}.new"))
+                || source.starts_with(&format!("{constant}.open"))
+        })
 }

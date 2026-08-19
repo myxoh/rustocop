@@ -125,6 +125,10 @@ impl<'context, 'pr> CopContext<'context, 'pr> {
         self.reporter.config_values(key)
     }
 
+    pub(super) fn config_contains(&self, key: &str) -> bool {
+        self.reporter.config_contains(key)
+    }
+
     pub(super) fn config_map(
         &self,
         key: &str,

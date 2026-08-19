@@ -45,6 +45,10 @@ impl Reporter<'_> {
         self.context.cop_config.values(self.cop_name, key)
     }
 
+    pub(in super::super) fn config_contains(&self, key: &str) -> bool {
+        self.context.cop_config.contains(self.cop_name, key)
+    }
+
     pub(in super::super) fn config_map(
         &self,
         key: &str,

@@ -21,7 +21,6 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
             ".map { |x| if ",
             "Use `filter_map` instead of `map` followed by `compact`.",
         ),
-        custom("Style/YodaCondition", yoda_condition),
         custom("Lint/EmptyConditionalBody", empty_conditional),
         custom("Style/RedundantReturn", redundant_return),
     ];
@@ -138,45 +137,6 @@ fn identical_branches(context: &mut CopContext<'_, '_>) {
                 "Move identical branch contents out of the conditional.",
                 window[0].0..window[4].0 + window[4].1.len(),
             );
-        }
-    }
-}
-
-fn yoda_condition(context: &mut CopContext<'_, '_>) {
-    let style = context
-        .policy()
-        .enforced_style("forbid_for_all_comparison_operators")
-        .to_string();
-    if style.starts_with("require_") {
-        return;
-    }
-    for (offset, line) in context.source_file().lines() {
-        for operator in [" == ", " != ", " < ", " > "] {
-            let Some(at) = line.find(operator) else {
-                continue;
-            };
-            let left = line[..at].split_whitespace().last().unwrap_or("");
-            let right = line[at + operator.len()..]
-                .split_whitespace()
-                .next()
-                .unwrap_or("");
-            if style == "forbid_for_equality_operators_only" && !matches!(operator, " == " | " != ")
-            {
-                continue;
-            }
-            if (left.starts_with(['\'', '"']) || left.bytes().all(|byte| byte.is_ascii_digit()))
-                && !left.contains("#{")
-                && right
-                    .bytes()
-                    .next()
-                    .is_some_and(|byte| byte.is_ascii_lowercase())
-            {
-                context.report(
-                    "Reverse the order of the operands in this comparison.",
-                    offset + line.find(left).unwrap_or(0)
-                        ..offset + at + operator.len() + right.len(),
-                );
-            }
         }
     }
 }

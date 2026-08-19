@@ -25,31 +25,34 @@ fn send_with_literal_method_name(node: &CallNode<'_>, context: &mut CopContext<'
         return;
     }
     let method = String::from_utf8_lossy(&method);
-    let remaining = arguments
-        .iter()
-        .skip(1)
-        .map(|argument| context.source_file().node(argument))
-        .collect::<Vec<_>>()
-        .join(", ");
-    let replacement = if remaining.is_empty() {
-        method.to_string()
-    } else if node.opening_loc().is_some() {
-        format!("{method}({remaining})")
-    } else {
-        format!("{method} {remaining}")
-    };
-    let start = node
-        .message_loc()
-        .map_or(node.location().start_offset(), |selector| {
-            selector.start_offset()
-        });
-    let offense = start..node.location().end_offset();
-    context.replace(
-        format!("Use `{method}` method call directly instead."),
-        offense.clone(),
-        offense,
-        replacement,
+    let selector = node.message_loc().expect("send dispatch has a selector");
+    let send_end = node.closing_loc().map_or_else(
+        || {
+            arguments.last().map_or(selector.end_offset(), |argument| {
+                argument.location().end_offset()
+            })
+        },
+        |closing| closing.end_offset(),
     );
+    let offense = selector.start_offset()..send_end;
+    let message = format!("Use `{method}` method call directly instead.");
+    if arguments.len() == 1 {
+        context.replace(message, offense.clone(), offense, method);
+    } else {
+        let first = arguments[0].location();
+        let second = arguments[1].location();
+        context.replace_many(
+            message,
+            offense,
+            vec![
+                (
+                    selector.start_offset()..selector.end_offset(),
+                    method.to_string(),
+                ),
+                (first.start_offset()..second.start_offset(), String::new()),
+            ],
+        );
+    }
 }
 
 fn direct_method_name(name: &[u8]) -> bool {
@@ -109,8 +112,5 @@ fn direct_method_name(name: &[u8]) -> bool {
             | b"yield"
             | b"BEGIN"
             | b"END"
-            | b"__FILE__"
-            | b"__LINE__"
-            | b"__ENCODING__"
     )
 }

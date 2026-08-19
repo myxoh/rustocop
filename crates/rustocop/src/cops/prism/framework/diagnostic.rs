@@ -140,7 +140,7 @@ impl Context {
         );
     }
 
-    fn replace_many(
+    pub(super) fn replace_many(
         &mut self,
         cop_name: &'static str,
         message: impl Into<String>,

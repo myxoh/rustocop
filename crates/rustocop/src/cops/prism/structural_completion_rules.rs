@@ -77,32 +77,27 @@ fn static_class(node: &ClassNode<'_>, context: &mut CopContext<'_, '_>) {
     let Some(body) = node.body().and_then(|body| body.as_statements_node()) else {
         return;
     };
-    let mut has_class_method = false;
+    let mut singleton_methods = Vec::new();
     let mut singleton_classes = Vec::new();
     for statement in &body.body() {
         if let Some(definition) = statement.as_def_node() {
-            if definition
-                .receiver()
-                .is_some_and(|receiver| receiver.as_self_node().is_some())
-            {
-                has_class_method = true;
-            } else {
+            if definition.receiver().is_none() {
                 return;
             }
+            singleton_methods.push(definition);
         } else if let Some(singleton) = statement.as_singleton_class_node() {
-            let Some(statements) = singleton.body().and_then(|body| body.as_statements_node())
-            else {
-                return;
-            };
-            if statements.body().is_empty()
-                || statements
-                    .body()
-                    .iter()
-                    .any(|entry| entry.as_def_node().is_none())
+            if singleton
+                .body()
+                .and_then(|body| body.as_statements_node())
+                .is_some_and(|statements| {
+                    statements
+                        .body()
+                        .iter()
+                        .any(|entry| entry.as_def_node().is_none() && !is_assignment(&entry))
+                })
             {
                 return;
             }
-            has_class_method = true;
             singleton_classes.push(singleton);
         } else if let Some(call) = statement.as_call_node() {
             if call.name().as_slice() != b"extend" {
@@ -111,9 +106,6 @@ fn static_class(node: &ClassNode<'_>, context: &mut CopContext<'_, '_>) {
         } else if !is_assignment(&statement) {
             return;
         }
-    }
-    if !has_class_method {
-        return;
     }
     let location = node.location();
     let header_end = node.constant_path().location().end_offset();
@@ -131,12 +123,12 @@ fn static_class(node: &ClassNode<'_>, context: &mut CopContext<'_, '_>) {
             format!("\n{}module_function\n", " ".repeat(indentation)),
         ),
     ];
-    let class_source = &context.source()[location.start_offset()..location.end_offset()];
-    let mut search = location.start_offset();
-    while let Some(relative) = context.source()[search..location.end_offset()].find("def self.") {
-        let start = search + relative + 4;
-        edits.push((start..start + 5, String::new()));
-        search = start + 5;
+    for definition in singleton_methods {
+        let receiver = definition.receiver().expect("singleton method receiver");
+        edits.push((
+            receiver.location().start_offset()..definition.name_loc().start_offset(),
+            String::new(),
+        ));
     }
     for singleton in singleton_classes {
         edits.push((
@@ -149,7 +141,6 @@ fn static_class(node: &ClassNode<'_>, context: &mut CopContext<'_, '_>) {
             String::new(),
         ));
     }
-    let _ = class_source;
     context.replace_many(
         "Prefer modules to classes with only class methods.",
         &location,
@@ -164,9 +155,17 @@ fn is_assignment(node: &Node<'_>) -> bool {
         || node.as_instance_variable_write_node().is_some()
         || node.as_class_variable_write_node().is_some()
         || node.as_global_variable_write_node().is_some()
+        || node.as_multi_write_node().is_some()
 }
 
 fn trailing_body_on_class(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
+    let location = node.location();
+    if context.source_file().same_line(
+        location.start_offset(),
+        location.end_offset().saturating_sub(1),
+    ) {
+        return;
+    }
     let parts = if let Some(class) = node.as_class_node() {
         class_parts(&class)
     } else if let Some(class) = node.as_singleton_class_node() {
@@ -178,6 +177,7 @@ fn trailing_body_on_class(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
         return;
     };
     report_trailing_body(
+        node.location().start_offset(),
         header_end,
         body,
         "Place the first line of class body on its own line.",
@@ -186,10 +186,18 @@ fn trailing_body_on_class(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
 }
 
 fn trailing_body_on_module(node: &ModuleNode<'_>, context: &mut CopContext<'_, '_>) {
+    let location = node.location();
+    if context.source_file().same_line(
+        location.start_offset(),
+        location.end_offset().saturating_sub(1),
+    ) {
+        return;
+    }
     let Some(body) = node.body() else {
         return;
     };
     report_trailing_body(
+        node.location().start_offset(),
         node.constant_path().location().end_offset(),
         body,
         "Place the first line of module body on its own line.",
@@ -234,7 +242,10 @@ fn yoda_expression(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
 }
 
 fn yoda_literal(node: &Node<'_>) -> bool {
-    immutable_literal(node)
+    node.as_integer_node().is_some()
+        || node.as_float_node().is_some()
+        || node.as_rational_node().is_some()
+        || node.as_imaginary_node().is_some()
         || node.as_constant_read_node().is_some()
         || node.as_constant_path_node().is_some()
 }
@@ -286,7 +297,8 @@ fn render_yoda_node(node: &Node<'_>, file: SourceFile<'_>) -> String {
     file.node(node).to_string()
 }
 
-fn report_trailing_body(
+pub(super) fn report_trailing_body(
+    definition_start: usize,
     header_end: usize,
     body: Node<'_>,
     message: &str,
@@ -300,20 +312,34 @@ fn report_trailing_body(
     };
     let first_location = first.location();
     let file = context.source_file();
-    if !file.same_line(header_end, first_location.start_offset()) {
+    if !file.same_line(definition_start, first_location.start_offset()) {
         return;
     }
-    let line_start = file.line_start(header_end);
     let line_end = file.line_end(first_location.end_offset());
-    let indentation = file.indentation(header_end).len();
-    let replacement = format!(" \n{}", " ".repeat(indentation + 2));
-    let suffix = &context.source()[first_location.end_offset()..line_end];
+    let indentation = file.column(definition_start);
+    let indentation_width = context
+        .related_config_value("Layout/IndentationWidth", "Width")
+        .and_then(|width| width.parse::<usize>().ok())
+        .unwrap_or(2);
+    let mut replacement = context.source()[header_end..first_location.start_offset()].to_string();
+    if let Some(semicolon) = replacement.find(';') {
+        replacement.remove(semicolon);
+    }
+    replacement.push('\n');
+    replacement.push_str(&" ".repeat(indentation + indentation_width));
     let mut edits = vec![(header_end..first_location.start_offset(), replacement)];
-    if let Some(comment) = suffix.find('#') {
-        let comment_start = first_location.end_offset() + comment;
+    let parsed = ruby_prism::parse(context.source().as_bytes());
+    if let Some(comment_start) = parsed
+        .comments()
+        .map(|comment| comment.location().start_offset())
+        .find(|start| first_location.end_offset() <= *start && *start < line_end)
+    {
         let comment_text = context.source()[comment_start..line_end].trim_end();
-        edits.push((line_start..line_start, format!("{comment_text}\n")));
-        edits.push((first_location.end_offset()..line_end, " ".to_string()));
+        edits.push((
+            definition_start..definition_start,
+            format!("{comment_text}\n{}", " ".repeat(indentation)),
+        ));
+        edits.push((comment_start..line_end, String::new()));
     }
     context.replace_many(message, &first_location, edits);
 }

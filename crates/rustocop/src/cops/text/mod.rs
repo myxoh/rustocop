@@ -58,8 +58,6 @@ pub(crate) const LEGACY_COP_NAMES: &[&str] = &[
     "Style/InlineComment",
     "Style/NumberedParameters",
     "Style/RedundantBegin",
-    "Style/StringLiterals",
-    "Style/TrailingCommaInArguments",
 ];
 
 pub(crate) fn before_prism(

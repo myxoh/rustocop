@@ -49,15 +49,15 @@ fn comparison_operator(name: &[u8]) -> bool {
 }
 
 fn unless_logical_operators(node: &ruby_prism::UnlessNode<'_>, context: &mut CopContext<'_, '_>) {
-    let predicate = context.source_file().node(&node.predicate());
-    let operators = logical_operators(predicate);
+    let mut operators = LogicalOperatorVisitor::default();
+    operators.visit(&node.predicate());
     let style = context
         .policy()
         .enforced_style("forbid_mixed_logical_operators")
         .to_string();
-    let message = if style == "forbid_logical_operators" && !operators.is_empty() {
+    let message = if style == "forbid_logical_operators" && !operators.tokens.is_empty() {
         "Do not use any logical operator in an `unless`."
-    } else if style == "forbid_mixed_logical_operators" && operators.len() > 1 {
+    } else if style == "forbid_mixed_logical_operators" && operators.tokens.len() > 1 {
         "Do not use mixed logical operators in an `unless`."
     } else {
         return;
@@ -65,23 +65,19 @@ fn unless_logical_operators(node: &ruby_prism::UnlessNode<'_>, context: &mut Cop
     context.report(message, node.location());
 }
 
-fn logical_operators(source: &str) -> Vec<&'static str> {
-    let mut found = Vec::new();
-    for (operator, present) in [
-        ("&&", source.contains("&&")),
-        ("||", source.contains("||")),
-        ("and", contains_word(source, "and")),
-        ("or", contains_word(source, "or")),
-    ] {
-        if present {
-            found.push(operator);
-        }
-    }
-    found
+#[derive(Default)]
+struct LogicalOperatorVisitor {
+    tokens: std::collections::HashSet<Vec<u8>>,
 }
 
-fn contains_word(source: &str, expected: &str) -> bool {
-    source
-        .split(|character: char| !(character.is_ascii_alphanumeric() || character == '_'))
-        .any(|word| word == expected)
+impl<'pr> Visit<'pr> for LogicalOperatorVisitor {
+    fn visit_and_node(&mut self, node: &ruby_prism::AndNode<'pr>) {
+        self.tokens.insert(node.operator_loc().as_slice().to_vec());
+        ruby_prism::visit_and_node(self, node);
+    }
+
+    fn visit_or_node(&mut self, node: &ruby_prism::OrNode<'pr>) {
+        self.tokens.insert(node.operator_loc().as_slice().to_vec());
+        ruby_prism::visit_or_node(self, node);
+    }
 }

@@ -79,6 +79,19 @@ cases.each do |test_case|
   test_case["config_path"] = config_paths.fetch(digest)
 end
 
+# Some upstream examples vary process-global state (for example,
+# Encoding.default_external) that is not represented in the executable input.
+# If otherwise identical captured inputs consequently have multiple asserted
+# corrections, any of those upstream-produced corrections is a valid match.
+correction_alternatives = cases.each_with_object(Hash.new { |hash, key| hash[key] = [] }) do |test_case, grouped|
+  next unless test_case.key?("correction") && !test_case.fetch("asserts_no_correction", false)
+
+  key = JSON.generate([
+    test_case.fetch("cop"), test_case.fetch("source"), test_case.fetch("path"), test_case.fetch("config")
+  ])
+  grouped[key] << test_case.fetch("correction")
+end
+
 queue = Queue.new
 cases.each { |test_case| queue << test_case }
 results = []
@@ -148,8 +161,19 @@ workers = Array.new(options[:jobs]) do
                               (test_case.fetch("asserts_no_correction", false) &&
                                correction_status.exitstatus == 1)
           actual_correction = File.binread(source_path)
+          correction_key = JSON.generate([
+            test_case.fetch("cop"), test_case.fetch("source"), test_case.fetch("path"),
+            test_case.fetch("config")
+          ])
+          alternatives = correction_alternatives.fetch(correction_key, []).map do |correction|
+            if correction.is_a?(Hash) && correction.key?("$hex")
+              [correction.fetch("$hex")].pack("H*")
+            else
+              correction.b
+            end
+          end
           correction_passed = acceptable_status && correction_stderr.empty? &&
-                              actual_correction == expected_correction
+                              ([expected_correction] + alternatives).include?(actual_correction)
         end
         passed &&= correction_passed
       end
@@ -190,7 +214,8 @@ by_cop = results.group_by { |result| result.fetch("cop") }.sort.to_h.transform_v
     "passed" => passed,
     "total" => cop_results.length,
     "status" => passed == cop_results.length ? "passing" : "failing",
-    "first_failure" => cop_results.find { |result| !result.fetch("passed") }
+    "first_failure" => cop_results.find { |result| !result.fetch("passed") },
+    "failures" => cop_results.reject { |result| result.fetch("passed") }
   }
 end
 summary = {

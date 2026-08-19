@@ -5,20 +5,16 @@ define_cops! {
 }
 
 fn trivial_accessors(node: &ruby_prism::DefNode<'_>, context: &mut CopContext<'_, '_>) {
-    if !inside_class_scope(context.ancestors())
-        || context.policy().allows_method(node.name().as_slice())
-    {
+    if !inside_class_scope(context.ancestors()) || allowed_method(node.name().as_slice(), context) {
         return;
     }
     let class_method = node.receiver().is_some();
-    if class_method
-        && (context.config_bool("IgnoreClassMethods", false)
-            || node
-                .receiver()
-                .is_none_or(|receiver| receiver.as_self_node().is_none()))
-    {
+    if class_method && context.config_bool("IgnoreClassMethods", false) {
         return;
     }
+    let correctable_class_method = node
+        .receiver()
+        .is_some_and(|receiver| receiver.as_self_node().is_some());
     let name = String::from_utf8_lossy(node.name().as_slice()).into_owned();
     if name == "initialize" {
         return;
@@ -81,7 +77,11 @@ fn trivial_accessors(node: &ruby_prism::DefNode<'_>, context: &mut CopContext<'_
         .source_file()
         .slice(context.source_file().line_start(keyword.start_offset())..keyword.start_offset())
         .unwrap_or_default();
-    if !candidate.conventional || !exact_name || !prefix.trim().is_empty() {
+    if !candidate.conventional
+        || !exact_name
+        || !prefix.trim().is_empty()
+        || class_method && !correctable_class_method
+    {
         context.report(message, &keyword);
         return;
     }
@@ -92,6 +92,18 @@ fn trivial_accessors(node: &ruby_prism::DefNode<'_>, context: &mut CopContext<'_
         accessor
     };
     context.replace(message, &keyword, node.location(), replacement);
+}
+
+fn allowed_method(method: &[u8], context: &CopContext<'_, '_>) -> bool {
+    const DEFAULT_ALLOWED_METHODS: &[&[u8]] = &[
+        b"to_ary", b"to_a", b"to_c", b"to_enum", b"to_h", b"to_hash", b"to_i", b"to_int",
+        b"to_io", b"to_open", b"to_path", b"to_proc", b"to_r", b"to_regexp", b"to_str",
+        b"to_s", b"to_sym",
+    ];
+
+    context.policy().allows_method(method)
+        || (!context.config_contains("AllowedMethods")
+            && DEFAULT_ALLOWED_METHODS.contains(&method))
 }
 
 struct AccessorCandidate<'pr> {

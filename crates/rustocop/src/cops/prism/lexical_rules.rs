@@ -15,7 +15,7 @@ define_cops! {
     AsciiIdentifiers => "Naming/AsciiIdentifiers" => source(ascii_identifiers),
     MultilineIfThen => "Style/MultilineIfThen" => source(multiline_if_then),
     ReturnNil => "Style/ReturnNil" => source(return_nil),
-    VariableInterpolation => "Style/VariableInterpolation" => source(variable_interpolation),
+    VariableInterpolation => "Style/VariableInterpolation" => node(as_embedded_variable_node, variable_interpolation),
 }
 
 fn initial_indentation(context: &mut CopContext<'_, '_>) {

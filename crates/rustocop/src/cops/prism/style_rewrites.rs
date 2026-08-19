@@ -91,7 +91,8 @@ impl Cop for StderrPuts {
     }
 
     fn on_call(&self, node: &CallNode<'_>, context: &mut Context) {
-        if call_name(node) != b"puts" || first_argument(node).is_none() {
+        if call_name(node) != b"puts" || node.is_safe_navigation() || first_argument(node).is_none()
+        {
             return;
         }
         let Some(receiver) = node.receiver() else {
@@ -149,32 +150,24 @@ impl Cop for Strip {
             .named(expected_inner)
             .without_arguments()
             .matches()
+            || inner.block().is_some()
         {
             return;
         }
-        let (Some(start), Some(end)) = (inner.message_loc(), node.message_loc()) else {
+        let (Some(start), Some(selector)) = (inner.message_loc(), node.message_loc()) else {
             return;
         };
+        let end = node.closing_loc().unwrap_or(selector);
+        let message_chain = start
+            .join(&end)
+            .expect("locations from one call chain can be joined");
         let offense = start.start_offset()..end.end_offset();
-        let message_chain = if node
-            .call_operator_loc()
-            .is_some_and(|operator| operator.as_slice() == b"&.")
-        {
-            format!(
-                "{}&.{}",
-                String::from_utf8_lossy(start.as_slice()),
-                String::from_utf8_lossy(outer)
-            )
-        } else {
-            format!(
-                "{}.{}",
-                String::from_utf8_lossy(start.as_slice()),
-                String::from_utf8_lossy(outer)
-            )
-        };
         context.replace(
             self.name(),
-            format!("Use `strip` instead of `{message_chain}`."),
+            format!(
+                "Use `strip` instead of `{}`.",
+                String::from_utf8_lossy(message_chain.as_slice())
+            ),
             offense.clone(),
             offense,
             "strip",

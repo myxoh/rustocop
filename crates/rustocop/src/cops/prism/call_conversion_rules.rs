@@ -186,13 +186,12 @@ fn unpack_first(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     let Some(unpack) = node.receiver().and_then(|receiver| receiver.as_call_node()) else {
         return;
     };
-    if call_name(&unpack) != b"unpack" || argument_count(&unpack) == 0 {
+    if call_name(&unpack) != b"unpack" || argument_count(&unpack) != 1 {
         return;
     }
     let Some(selector) = unpack.message_loc() else {
         return;
     };
-    let arguments = joined_arguments(&unpack, context.source_file(), ", ");
     let current = context
         .source_file()
         .slice(selector.start_offset()..node.location().end_offset())
@@ -200,12 +199,19 @@ fn unpack_first(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     let first_format = first_argument(&unpack)
         .map(|argument| context.source_file().node(&argument))
         .unwrap_or_default();
-    let replacement = format!("unpack1({arguments})");
-    context.replace(
+    context.replace_many(
         format!("Use `unpack1({first_format})` instead of `{current}`."),
         selector.start_offset()..node.location().end_offset(),
-        selector.start_offset()..node.location().end_offset(),
-        replacement,
+        vec![
+            (
+                selector.start_offset()..selector.end_offset(),
+                "unpack1".to_string(),
+            ),
+            (
+                unpack.location().end_offset()..node.location().end_offset(),
+                String::new(),
+            ),
+        ],
     );
 }
 

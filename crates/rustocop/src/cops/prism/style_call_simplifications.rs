@@ -21,6 +21,7 @@ fn single_argument_dig(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     };
     if argument.as_splat_node().is_some()
         || argument.as_forwarding_arguments_node().is_some()
+        || argument.as_hash_node().is_some()
         || argument.as_keyword_hash_node().is_some()
     {
         return;
@@ -43,17 +44,31 @@ fn single_argument_dig(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     let receiver = node.receiver().expect("receiver checked above");
     let receiver_source = context.source_file().node(&receiver);
     let argument_source = context.source_file().node(&argument);
-    let original = context.source_file().at(&node.location());
+    let send_range = node.location().start_offset()
+        ..node.closing_loc().map_or_else(
+            || {
+                node.arguments().map_or_else(
+                    || {
+                        node.message_loc()
+                            .map_or(node.location().end_offset(), |loc| loc.end_offset())
+                    },
+                    |arguments| arguments.location().end_offset(),
+                )
+            },
+            |closing| closing.end_offset(),
+        );
+    let original = &context.source()[send_range.clone()];
     let message = format!("Use `{receiver_source}[{argument_source}]` instead of `{original}`.");
     if inside_dig && context.autocorrect_enabled() {
         return;
     }
     if inside_dig {
-        context.report_call(node, message);
+        context.report(message, send_range);
     } else {
-        context.replace_call(
-            node,
+        context.replace(
             message,
+            send_range.clone(),
+            send_range,
             format!("{receiver_source}[{argument_source}]"),
         );
     }

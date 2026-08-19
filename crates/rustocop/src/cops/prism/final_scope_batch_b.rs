@@ -1,11 +1,10 @@
-use super::catalog_cop::{custom, replace, report};
+use super::catalog_cop::{custom, report};
 use super::*;
 use std::collections::{HashMap, HashSet};
 
 pub(super) fn cops() -> Vec<Box<dyn Cop>> {
     vec![
         custom("Naming/MemoizedInstanceVariableName", memoized_variable),
-        custom("Style/TrailingUnderscoreVariable", trailing_underscore),
         custom("Naming/FileName", file_name),
         custom("Style/ParallelAssignment", parallel_assignment),
         report(
@@ -16,16 +15,136 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
         custom("Naming/VariableNumber", variable_number),
         custom("Naming/VariableName", variable_name),
         custom("Lint/UselessAssignment", useless_assignment),
-        replace(
-            "Style/SelfAssignment",
-            "value = value",
-            "value",
-            "Redundant self assignment detected.",
-        ),
+        Box::new(SelfAssignment),
         custom("Naming/MethodName", method_name),
         custom("Style/MutableConstant", mutable_constant),
         custom("Naming/PredicateMethod", predicate_method),
     ]
+}
+
+struct SelfAssignment;
+
+#[derive(Clone, Copy)]
+enum SelfAssignmentVariable {
+    Local,
+    Instance,
+    Class,
+}
+
+impl Cop for SelfAssignment {
+    fn name(&self) -> &'static str {
+        "Style/SelfAssignment"
+    }
+
+    fn on_node<'pr>(
+        &self,
+        node: &Node<'pr>,
+        ancestors: &[Node<'pr>],
+        source: &str,
+        context: &mut Context,
+    ) {
+        let (name, operator, value, variable) = if let Some(write) = node.as_local_variable_write_node() {
+            (
+                write.name().as_slice(),
+                write.operator_loc(),
+                write.value(),
+                SelfAssignmentVariable::Local,
+            )
+        } else if let Some(write) = node.as_instance_variable_write_node() {
+            (
+                write.name().as_slice(),
+                write.operator_loc(),
+                write.value(),
+                SelfAssignmentVariable::Instance,
+            )
+        } else if let Some(write) = node.as_class_variable_write_node() {
+            (
+                write.name().as_slice(),
+                write.operator_loc(),
+                write.value(),
+                SelfAssignmentVariable::Class,
+            )
+        } else {
+            return;
+        };
+
+        let Some((shorthand, new_rhs)) = self_assignment_rhs(&value, name, variable) else {
+            return;
+        };
+        let mut cop_context = context.cop_context(self.name(), source, ancestors);
+        cop_context.replace_many(
+            format!("Use self-assignment shorthand `{shorthand}=`."),
+            node.location(),
+            vec![
+                (operator.start_offset()..operator.start_offset(), shorthand.to_string()),
+                (
+                    value.location().start_offset()..value.location().end_offset(),
+                    source_at(source, &new_rhs.location()).to_string(),
+                ),
+            ],
+        );
+    }
+}
+
+fn self_assignment_rhs<'pr>(
+    value: &Node<'pr>,
+    name: &[u8],
+    variable: SelfAssignmentVariable,
+) -> Option<(&'static str, Node<'pr>)> {
+    if let Some(call) = value.as_call_node() {
+        const OPERATORS: &[(&[u8], &str)] = &[
+            (b"+", "+"),
+            (b"-", "-"),
+            (b"*", "*"),
+            (b"**", "**"),
+            (b"/", "/"),
+            (b"%", "%"),
+            (b"^", "^"),
+            (b"<<", "<<"),
+            (b">>", ">>"),
+            (b"|", "|"),
+            (b"&", "&"),
+        ];
+        let shorthand = OPERATORS
+            .iter()
+            .find_map(|(method, shorthand)| (call.name().as_slice() == *method).then_some(*shorthand))?;
+        let receiver = call.receiver()?;
+        if !same_assignment_variable(&receiver, name, variable) {
+            return None;
+        }
+        let arguments = call.arguments()?;
+        let mut arguments = arguments.arguments().iter();
+        let argument = arguments.next()?;
+        return arguments.next().is_none().then_some((shorthand, argument));
+    }
+
+    if let Some(boolean) = value.as_or_node() {
+        return same_assignment_variable(&boolean.left(), name, variable)
+            .then(|| ("||", boolean.right()));
+    }
+    if let Some(boolean) = value.as_and_node() {
+        return same_assignment_variable(&boolean.left(), name, variable)
+            .then(|| ("&&", boolean.right()));
+    }
+    None
+}
+
+fn same_assignment_variable(
+    node: &Node<'_>,
+    name: &[u8],
+    variable: SelfAssignmentVariable,
+) -> bool {
+    match variable {
+        SelfAssignmentVariable::Local => node
+            .as_local_variable_read_node()
+            .is_some_and(|read| read.name().as_slice() == name),
+        SelfAssignmentVariable::Instance => node
+            .as_instance_variable_read_node()
+            .is_some_and(|read| read.name().as_slice() == name),
+        SelfAssignmentVariable::Class => node
+            .as_class_variable_read_node()
+            .is_some_and(|read| read.name().as_slice() == name),
+    }
 }
 
 fn memoized_variable(context: &mut CopContext<'_, '_>) {
@@ -105,33 +224,6 @@ fn parallel_assignment(context: &mut CopContext<'_, '_>) {
             "Do not use parallel assignment.",
             offset..offset + line.len(),
         );
-    }
-}
-
-fn trailing_underscore(context: &mut CopContext<'_, '_>) {
-    for (offset, line) in context.source_file().lines() {
-        if let Some(first) = line.find('|') {
-            if let Some(close) = line[first + 1..].find('|').map(|at| first + 1 + at) {
-                let arguments = line[first + 1..close]
-                    .split(',')
-                    .map(str::trim)
-                    .collect::<Vec<_>>();
-                if let Some(last_used) = arguments
-                    .iter()
-                    .rposition(|argument| !argument.starts_with('_'))
-                {
-                    for argument in &arguments[last_used + 1..] {
-                        let start =
-                            offset + first + 1 + line[first + 1..close].find(argument).unwrap_or(0);
-                        context.remove(
-                            "Omit trailing unused block arguments.",
-                            start..start + argument.len(),
-                            start.saturating_sub(2)..start + argument.len(),
-                        );
-                    }
-                }
-            }
-        }
     }
 }
 

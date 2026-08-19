@@ -7,7 +7,7 @@ define_cops!(
     BarePercentLiterals => "Style/BarePercentLiterals" => any_node(bare_percent_literals),
     DocumentDynamicEvalDefinition => "Style/DocumentDynamicEvalDefinition" => call(document_dynamic_eval_definition),
     ModuleFunction => "Style/ModuleFunction" => source(module_function),
-    SingleLineBlockParams => "Style/SingleLineBlockParams" => source(single_line_block_params),
+    SingleLineBlockParams => "Style/SingleLineBlockParams" => node(as_block_node, single_line_block_params),
 );
 
 fn department_name(context: &mut CopContext<'_, '_>) {
@@ -159,92 +159,134 @@ fn module_function(context: &mut CopContext<'_, '_>) {
     }
 }
 
-fn single_line_block_params(context: &mut CopContext<'_, '_>) {
-    let source = context.source();
-    for (line_start, line) in context.source_file().lines() {
-        let Some(open_brace) = line.find('{') else {
-            continue;
-        };
-        let Some(close_brace) = line.rfind('}') else {
-            continue;
-        };
-        let before = &line[..open_brace];
-        let (method, expected): (&str, &[&str]) = if before.contains(".reduce") {
-            ("reduce", &["a", "e"])
-        } else if before.contains(".test") {
-            ("test", &["x", "y"])
-        } else {
-            continue;
-        };
-        let block = &line[open_brace + 1..close_brace];
-        let Some(first_pipe) = block.find('|') else {
-            continue;
-        };
-        let Some(second_pipe) = block[first_pipe + 1..].find('|') else {
-            continue;
-        };
-        let second_pipe = first_pipe + 1 + second_pipe;
-        let parameters = &block[first_pipe + 1..second_pipe];
-        if parameters.contains('(') {
-            continue;
-        }
-        let actual = parameters
-            .split(',')
-            .map(str::trim)
-            .filter(|name| !name.is_empty())
-            .collect::<Vec<_>>();
-        if actual.len() > expected.len()
-            || actual
-                .iter()
-                .enumerate()
-                .all(|(index, name)| name.strip_prefix('_').unwrap_or(name) == expected[index])
-        {
-            continue;
-        }
-        let desired = actual
-            .iter()
-            .enumerate()
-            .map(|(index, name)| {
-                format!(
-                    "{}{}",
-                    if name.starts_with('_') { "_" } else { "" },
-                    expected[index]
-                )
-            })
-            .collect::<Vec<_>>();
-        let pipe_start = line_start + open_brace + 1 + first_pipe;
-        let pipe_end = line_start + open_brace + 1 + second_pipe + 1;
-        let mut edits = vec![(pipe_start..pipe_end, format!("|{}|", desired.join(", ")))];
-        let body_start = pipe_end;
-        let body_end = line_start + close_brace;
-        for (old, new) in actual.iter().zip(&desired) {
-            edits.extend(
-                identifier_ranges(source, body_start, body_end, old)
-                    .map(|range| (range, new.clone())),
-            );
-        }
-        context.replace_many(
-            format!("Name `{method}` block params `|{}|`.", desired.join(", ")),
-            pipe_start..pipe_end,
-            edits,
-        );
+fn single_line_block_params(node: &ruby_prism::BlockNode<'_>, context: &mut CopContext<'_, '_>) {
+    let location = node.location();
+    if !context.source_file().same_line(
+        location.start_offset(),
+        location.end_offset().saturating_sub(1),
+    ) {
+        return;
     }
+    let Some(call) = context
+        .ancestors()
+        .iter()
+        .rev()
+        .find_map(Node::as_call_node)
+    else {
+        return;
+    };
+    if call.receiver().is_none() {
+        return;
+    }
+    let method = String::from_utf8_lossy(call.name().as_slice());
+    let Some(expected) = configured_block_params(context, method.as_ref()) else {
+        return;
+    };
+    let Some(block_parameters) = node
+        .parameters()
+        .and_then(|parameters| parameters.as_block_parameters_node())
+    else {
+        return;
+    };
+    let Some(parameters) = block_parameters.parameters() else {
+        return;
+    };
+    if !block_parameters.locals().is_empty()
+        || !parameters.optionals().is_empty()
+        || parameters.rest().is_some()
+        || !parameters.posts().is_empty()
+        || !parameters.keywords().is_empty()
+        || parameters.keyword_rest().is_some()
+        || parameters.block().is_some()
+    {
+        return;
+    }
+    let required = parameters.requireds().iter().collect::<Vec<_>>();
+    let actual = required
+        .iter()
+        .map(|parameter| parameter.as_required_parameter_node())
+        .collect::<Option<Vec<_>>>();
+    let Some(actual) = actual else {
+        return;
+    };
+    if actual.is_empty() || actual.len() > expected.len() {
+        return;
+    }
+    let actual_names = actual
+        .iter()
+        .map(|parameter| String::from_utf8_lossy(parameter.name().as_slice()).into_owned())
+        .collect::<Vec<_>>();
+    if actual_names
+        .iter()
+        .zip(&expected)
+        .all(|(actual, expected)| actual.trim_start_matches('_') == expected)
+    {
+        return;
+    }
+
+    let desired = actual_names
+        .iter()
+        .zip(&expected)
+        .map(|(actual, expected)| {
+            format!(
+                "{}{expected}",
+                if actual.starts_with('_') { "_" } else { "" }
+            )
+        })
+        .collect::<Vec<_>>();
+    let replacements = actual_names
+        .iter()
+        .zip(&desired)
+        .map(|(actual, desired)| (actual.as_bytes().to_vec(), desired.clone()))
+        .collect::<std::collections::HashMap<_, _>>();
+    let mut reads = LocalReadEdits {
+        replacements: &replacements,
+        edits: Vec::new(),
+    };
+    if let Some(body) = node.body() {
+        ruby_prism::Visit::visit(&mut reads, &body);
+    }
+    let parameter_range =
+        block_parameters.location().start_offset()..block_parameters.location().end_offset();
+    let mut edits = vec![(parameter_range.clone(), format!("|{}|", desired.join(", ")))];
+    edits.extend(reads.edits);
+    context.replace_many(
+        format!("Name `{method}` block params `|{}|`.", desired.join(", ")),
+        parameter_range,
+        edits,
+    );
 }
 
-fn identifier_ranges<'source>(
-    source: &'source str,
-    start: usize,
-    end: usize,
-    identifier: &'source str,
-) -> impl Iterator<Item = std::ops::Range<usize>> + 'source {
-    source[start..end]
-        .match_indices(identifier)
-        .filter_map(move |(at, value)| {
-            let range = start + at..start + at + value.len();
-            let before = source[..range.start].chars().next_back();
-            let after = source[range.end..].chars().next();
-            (!before.is_some_and(|character| character.is_alphanumeric() || character == '_')
-                && !after.is_some_and(|character| character.is_alphanumeric() || character == '_'))
-            .then_some(range)
-        })
+fn configured_block_params(context: &CopContext<'_, '_>, method: &str) -> Option<Vec<String>> {
+    let mut current = None;
+    let mut parameters = Vec::new();
+    for item in context.config_values("Methods") {
+        if let Some(name) = item.strip_suffix(':') {
+            if current.as_deref() == Some(method) {
+                return Some(parameters);
+            }
+            current = Some(name.to_string());
+            parameters = Vec::new();
+        } else if current.is_some() {
+            parameters.push(item.clone());
+        }
+    }
+    (current.as_deref() == Some(method)).then_some(parameters)
+}
+
+struct LocalReadEdits<'a> {
+    replacements: &'a std::collections::HashMap<Vec<u8>, String>,
+    edits: Vec<(std::ops::Range<usize>, String)>,
+}
+
+impl<'pr> ruby_prism::Visit<'pr> for LocalReadEdits<'_> {
+    fn visit_local_variable_read_node(&mut self, node: &ruby_prism::LocalVariableReadNode<'pr>) {
+        if let Some(replacement) = self.replacements.get(node.name().as_slice()) {
+            let location = node.location();
+            self.edits.push((
+                location.start_offset()..location.end_offset(),
+                replacement.clone(),
+            ));
+        }
+    }
 }

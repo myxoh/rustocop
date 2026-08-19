@@ -30,17 +30,19 @@ impl Cop for BeginBlock {
 define_call_cop!(StringMethods => "Style/StringMethods" => string_methods);
 
 fn string_methods(node: &CallNode<'_>, reporter: &mut CopContext<'_, '_>) {
-    if !match_call(node).without_arguments().matches() {
-        return;
-    }
     let Ok(method) = std::str::from_utf8(call_name(node)) else {
         return;
     };
-    let preferred = reporter
-        .config_map("PreferredMethods")
+    let configured = reporter.config_map("PreferredMethods");
+    let reverses_default = configured.is_some_and(|methods| {
+        methods
+            .values()
+            .any(|preferred| preferred.as_str() == "intern")
+    });
+    let preferred = configured
         .and_then(|methods| methods.get(method))
         .map(String::as_str)
-        .or_else(|| (method == "intern").then_some("to_sym"))
+        .or_else(|| (method == "intern" && !reverses_default).then_some("to_sym"))
         .map(str::to_string);
     let Some(preferred) = preferred else { return };
     reporter.replace_selector(

@@ -37,6 +37,5 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
             "#{'",
             "Literal interpolation detected.",
         ),
-        custom("Style/SafeNavigation", safe_navigation),
     ]
 }

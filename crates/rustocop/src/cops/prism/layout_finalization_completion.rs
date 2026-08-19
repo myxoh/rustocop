@@ -6,7 +6,7 @@ define_cops! {
     SpaceAroundEqualsInParameterDefault => "Layout/SpaceAroundEqualsInParameterDefault" => source(space_around_parameter_equals),
     SpaceInLambdaLiteral => "Layout/SpaceInLambdaLiteral" => source(space_in_lambda_literal),
     TrailingEmptyLines => "Layout/TrailingEmptyLines" => source(trailing_empty_lines),
-    TrailingBodyOnMethodDefinition => "Style/TrailingBodyOnMethodDefinition" => source(trailing_method_body),
+    TrailingBodyOnMethodDefinition => "Style/TrailingBodyOnMethodDefinition" => node(as_def_node, trailing_method_body),
 }
 
 fn empty_comment(context: &mut CopContext<'_, '_>) {
@@ -224,66 +224,36 @@ fn trailing_empty_lines(context: &mut CopContext<'_, '_>) {
     );
 }
 
-fn trailing_method_body(context: &mut CopContext<'_, '_>) {
-    for (offset, line) in context.source_file().lines() {
-        let Some(definition) = line.find("def ") else {
-            continue;
-        };
-        let trimmed = &line[definition..];
-        if line.contains('(') && !line.contains(')') {
-            continue;
-        }
-        let delimiter = line[definition..]
-            .find(';')
-            .map(|at| definition + at)
-            .or_else(|| {
-                let signature_end = line.find(')').map(|close| close + 1).or_else(|| {
-                    trimmed[4..]
-                        .find(' ')
-                        .map(|at| line.len() - trimmed.len() + 4 + at)
-                });
-                signature_end.filter(|end| !line[*end..].trim().is_empty())
-            });
-        let Some(delimiter) = delimiter else { continue };
-        let after = delimiter + usize::from(line.as_bytes().get(delimiter) == Some(&b';'));
-        if line[after..].trim().is_empty() || line[after..].trim() == "end" {
-            continue;
-        }
-        let body_start = after + line[after..].len() - line[after..].trim_start().len();
-        if let Some(comment_relative) = line[body_start..].find(" #") {
-            let comment = &line[body_start + comment_relative + 1..];
-            let body = &line[body_start..body_start + comment_relative];
-            let indentation = &line[..definition];
-            let signature = &line[..delimiter];
-            context.replace(
-                "Place the first line of a multi-line method definition's body on its own line.",
-                offset + body_start..offset + body_start + body.len(),
-                offset..offset + line.len(),
-                format!("{indentation}{comment}\n{signature} \n{indentation}  {body} "),
-            );
-            continue;
-        }
-        let edit = if line.as_bytes().get(delimiter) == Some(&b';') {
-            delimiter..body_start
-        } else {
-            body_start..body_start
-        };
-        let body = line[body_start..]
-            .split(';')
-            .next()
-            .unwrap_or_default()
-            .trim_end();
-        context.replace(
-            "Place the first line of a multi-line method definition's body on its own line.",
-            offset + body_start..offset + body_start + body.len(),
-            offset + edit.start..offset + edit.end,
-            if line.as_bytes().get(delimiter) == Some(&b';') {
-                format!(" \n{}", " ".repeat(definition + 2))
-            } else {
-                "\n  ".to_string()
-            },
-        );
+fn trailing_method_body(node: &ruby_prism::DefNode<'_>, context: &mut CopContext<'_, '_>) {
+    if node.equal_loc().is_some() {
+        return;
     }
+    let location = node.location();
+    let file = context.source_file();
+    if file.same_line(location.start_offset(), location.end_offset().saturating_sub(1)) {
+        return;
+    }
+    let Some(body) = node.body() else {
+        return;
+    };
+    let header_end = node
+        .rparen_loc()
+        .map_or_else(
+            || {
+                node.parameters()
+                    .map_or(node.name_loc().end_offset(), |parameters| {
+                        parameters.location().end_offset()
+                    })
+            },
+            |rparen| rparen.end_offset(),
+        );
+    super::structural_completion_rules::report_trailing_body(
+        location.start_offset(),
+        header_end,
+        body,
+        "Place the first line of a multi-line method definition's body on its own line.",
+        context,
+    );
 }
 
 fn matching_paren_end(source: &str, open: usize) -> Option<usize> {

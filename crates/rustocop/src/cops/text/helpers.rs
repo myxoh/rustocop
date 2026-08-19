@@ -85,33 +85,6 @@ pub(super) fn find_numbered_parameter(line: &str) -> Option<usize> {
     None
 }
 
-pub(super) fn find_single_quoted_literal(line: &str) -> Option<usize> {
-    let mut escaped = false;
-    let mut in_double = false;
-
-    for (index, character) in line.char_indices() {
-        if escaped {
-            escaped = false;
-            continue;
-        }
-
-        if character == '\\' {
-            escaped = true;
-            continue;
-        }
-
-        if character == '"' {
-            in_double = !in_double;
-        } else if character == '\'' && !in_double {
-            return Some(index + 1);
-        } else if character == '#' && !in_double {
-            break;
-        }
-    }
-
-    None
-}
-
 pub(super) fn first_identifier(value: &str) -> Option<&str> {
     let end = value
         .find(|character: char| {

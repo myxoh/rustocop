@@ -22,7 +22,12 @@ define_cops! {
 }
 
 fn send(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
-    if match_call(node).named(b"send").with_arguments().matches() {
+    let has_block_argument = node
+        .block()
+        .is_some_and(|block| block.as_block_argument_node().is_some());
+    if match_call(node).named(b"send").with_arguments().matches()
+        || match_call(node).named(b"send").matches() && has_block_argument
+    {
         context.report_selector(
             node,
             "Prefer `Object#__send__` or `Object#public_send` to `send`.",

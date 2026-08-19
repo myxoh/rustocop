@@ -5,7 +5,7 @@ define_cops! {
     FileWrite => "Style/FileWrite" => source(file_write),
     IfWithSemicolon => "Style/IfWithSemicolon" => source(if_with_semicolon),
     MethodDefParentheses => "Style/MethodDefParentheses" => source(method_def_parentheses),
-    WhileUntilModifier => "Style/WhileUntilModifier" => source(while_until_modifier),
+    WhileUntilModifier => "Style/WhileUntilModifier" => any_node(while_until_modifier),
 }
 
 fn file_read(context: &mut CopContext<'_, '_>) {
@@ -194,40 +194,159 @@ fn method_def_parentheses(context: &mut CopContext<'_, '_>) {
     }
 }
 
-fn while_until_modifier(context: &mut CopContext<'_, '_>) {
-    let lines = context.source_file().lines().collect::<Vec<_>>();
-    for window in lines.windows(3) {
-        let (start, header) = window[0];
-        let (_, body) = window[1];
-        let (end_offset, end) = window[2];
-        let keyword = if header.trim_start().starts_with("while ") {
-            "while"
-        } else if header.trim_start().starts_with("until ") {
-            "until"
-        } else {
-            continue;
-        };
-        if end.trim() != "end" || body.trim().is_empty() {
-            continue;
-        }
-        let condition = header.trim_start()[keyword.len()..].trim();
-        if condition.contains(" = ") {
-            continue;
-        }
-        let replacement = format!("{} {keyword} {condition}", body.trim());
-        let maximum = context
-            .related_config_value("Layout/LineLength", "Max")
-            .and_then(|value| value.parse::<usize>().ok())
-            .unwrap_or(120);
-        if replacement.len() > maximum {
-            continue;
-        }
-        let finish = end_offset + end.len();
-        context.replace(
-            format!("Favor modifier `{keyword}` usage when having a single-line body."),
-            start..start + keyword.len(),
-            start..finish,
-            replacement,
-        );
+fn while_until_modifier(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
+    let parts = if let Some(loop_node) = node.as_while_node() {
+        Some((
+            "while",
+            loop_node.keyword_loc(),
+            loop_node.closing_loc(),
+            loop_node.predicate(),
+            loop_node.statements(),
+        ))
+    } else if let Some(loop_node) = node.as_until_node() {
+        Some((
+            "until",
+            loop_node.keyword_loc(),
+            loop_node.closing_loc(),
+            loop_node.predicate(),
+            loop_node.statements(),
+        ))
+    } else {
+        None
+    };
+    let Some((keyword, keyword_loc, Some(closing), predicate, Some(statements))) = parts else {
+        return;
+    };
+    let body_nodes = statements.body().iter().collect::<Vec<_>>();
+    if body_nodes.len() != 1 {
+        return;
+    }
+    let body = &body_nodes[0];
+    if conditional_body(body) || body.as_begin_node().is_some() {
+        return;
+    }
+    let expression = context.source_file().node(node);
+    if expression.lines().filter(|line| !line.trim().is_empty()).count() > 3 {
+        return;
+    }
+    let body_source = context.source_file().node(body);
+    if body_source.trim().is_empty() || body_source.contains('\n') || source_has_comment(body_source) {
+        return;
+    }
+    let mut assignment = LocalAssignmentVisitor::default();
+    assignment.visit(&predicate);
+    if assignment.found {
+        return;
+    }
+
+    let source = context.source();
+    let first_line_end = source[keyword_loc.start_offset()..]
+        .find('\n')
+        .map_or(source.len(), |offset| keyword_loc.start_offset() + offset);
+    let header_tail = &source[predicate.location().end_offset()..first_line_end];
+    let first_line_comment = header_tail
+        .find('#')
+        .map(|offset| header_tail[offset..].trim_end());
+    let last_line_end = source[closing.end_offset()..]
+        .find('\n')
+        .map_or(source.len(), |offset| closing.end_offset() + offset);
+    let code_after = &source[closing.end_offset()..last_line_end];
+    if code_after.trim_start().starts_with('#')
+        || first_line_comment.is_some() && !code_after.trim().is_empty()
+    {
+        return;
+    }
+
+    let condition = context.source_file().node(&predicate);
+    let mut replacement = format!("{body_source} {keyword} {condition}");
+    if parenthesize_modifier(context.parent()) {
+        replacement = format!("({replacement})");
+    }
+    if let Some(comment) = first_line_comment {
+        replacement.push(' ');
+        replacement.push_str(comment);
+    }
+
+    let line_start = context.source_file().line_start(keyword_loc.start_offset());
+    let code_before = &source[line_start..keyword_loc.start_offset()];
+    let line_length_enabled = context
+        .related_config_value("Layout/LineLength", "Enabled")
+        != Some("false");
+    let maximum = context
+        .related_config_value("Layout/LineLength", "Max")
+        .and_then(|value| value.parse::<usize>().ok())
+        .unwrap_or(120);
+    if line_length_enabled
+        && format!("{code_before}{replacement}{code_after}").chars().count() > maximum
+    {
+        return;
+    }
+    context.replace(
+        format!("Favor modifier `{keyword}` usage when having a single-line body."),
+        keyword_loc,
+        node.location(),
+        replacement,
+    );
+}
+
+fn conditional_body(node: &Node<'_>) -> bool {
+    node.as_if_node().is_some()
+        || node.as_unless_node().is_some()
+        || node.as_while_node().is_some()
+        || node.as_until_node().is_some()
+        || node.as_case_node().is_some()
+        || node.as_case_match_node().is_some()
+}
+
+fn source_has_comment(source: &str) -> bool {
+    source
+        .lines()
+        .any(|line| line.trim_start().starts_with('#') || line.contains(" #"))
+}
+
+fn parenthesize_modifier(parent: Option<&Node<'_>>) -> bool {
+    parent.is_some_and(|parent| {
+        parent.as_local_variable_write_node().is_some()
+            || parent.as_instance_variable_write_node().is_some()
+            || parent.as_class_variable_write_node().is_some()
+            || parent.as_constant_write_node().is_some()
+            || parent.as_constant_path_write_node().is_some()
+            || parent.as_array_node().is_some()
+            || parent.as_assoc_node().is_some()
+            || parent.as_and_node().is_some()
+            || parent.as_or_node().is_some()
+            || parent.as_call_node().is_some()
+    })
+}
+
+#[derive(Default)]
+struct LocalAssignmentVisitor {
+    found: bool,
+}
+
+impl<'pr> Visit<'pr> for LocalAssignmentVisitor {
+    fn visit_local_variable_write_node(&mut self, _node: &ruby_prism::LocalVariableWriteNode<'pr>) {
+        self.found = true;
+    }
+
+    fn visit_local_variable_and_write_node(
+        &mut self,
+        _node: &ruby_prism::LocalVariableAndWriteNode<'pr>,
+    ) {
+        self.found = true;
+    }
+
+    fn visit_local_variable_or_write_node(
+        &mut self,
+        _node: &ruby_prism::LocalVariableOrWriteNode<'pr>,
+    ) {
+        self.found = true;
+    }
+
+    fn visit_local_variable_operator_write_node(
+        &mut self,
+        _node: &ruby_prism::LocalVariableOperatorWriteNode<'pr>,
+    ) {
+        self.found = true;
     }
 }

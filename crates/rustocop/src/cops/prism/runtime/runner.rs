@@ -65,4 +65,25 @@ impl<'pr> Visit<'pr> for Runner<'_, 'pr> {
     fn visit_rescue_node(&mut self, node: &ruby_prism::RescueNode<'pr>) {
         visit_typed_branch!(self, node, as_rescue_node, ruby_prism::visit_rescue_node);
     }
+
+    fn visit_statements_node(&mut self, node: &ruby_prism::StatementsNode<'pr>) {
+        let already_entered = self.ancestors.last().is_some_and(|ancestor| {
+            ancestor.as_statements_node().is_some_and(|statements| {
+                statements.location().start_offset() == node.location().start_offset()
+                    && statements.location().end_offset() == node.location().end_offset()
+            })
+        });
+        if !already_entered {
+            let generic = node.as_node();
+            for cop in self
+                .registry
+                .node_cops
+                .iter()
+                .map(|index| &self.registry.cops[*index])
+            {
+                cop.on_node(&generic, &self.ancestors, self.source, self.context);
+            }
+        }
+        ruby_prism::visit_statements_node(self, node);
+    }
 }

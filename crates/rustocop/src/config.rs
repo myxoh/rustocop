@@ -229,6 +229,12 @@ impl CopConfig {
         }
     }
 
+    pub(crate) fn contains(&self, cop: &str, key: &str) -> bool {
+        self.values
+            .get(cop)
+            .is_some_and(|values| values.contains_key(key))
+    }
+
     #[allow(dead_code)]
     pub(crate) fn patterns(&self, cop: &str, key: &str) -> &[Regex] {
         self.patterns

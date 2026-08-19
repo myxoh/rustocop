@@ -48,7 +48,11 @@ fn slicing_with_range(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
         let Some(operator) = node.call_operator_loc() else {
             return;
         };
-        operator.start_offset()..node.location().end_offset()
+        let send_end = node.closing_loc().map_or_else(
+            || range.location().end_offset(),
+            |closing| closing.end_offset(),
+        );
+        operator.start_offset()..send_end
     };
     let current = context.source()[offense.clone()].to_string();
     if useless {

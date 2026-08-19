@@ -8,6 +8,7 @@ define_cops!(
     MultilineInPatternThen => "Style/MultilineInPatternThen" => node(as_in_node, multiline_in_pattern_then),
     MultilineIfModifier => "Style/MultilineIfModifier" => any_node(multiline_if_modifier),
     MultilineWhenThen => "Style/MultilineWhenThen" => node(as_when_node, multiline_when_then),
+    WhenThen => "Style/WhenThen" => node(as_when_node, when_then),
 );
 
 fn empty_when(node: &WhenNode<'_>, context: &mut CopContext<'_, '_>) {
@@ -201,6 +202,48 @@ fn multiline_when_then(node: &WhenNode<'_>, context: &mut CopContext<'_, '_>) {
         then_keyword,
         "Do not use `then` for multiline `when` statement.",
         context,
+    );
+}
+
+fn when_then(node: &WhenNode<'_>, context: &mut CopContext<'_, '_>) {
+    let Some(last_condition) = node.conditions().last() else {
+        return;
+    };
+    let Some(statements) = node.statements() else {
+        return;
+    };
+    let Some(first_statement) = statements.body().first() else {
+        return;
+    };
+    let Some(last_statement) = statements.body().last() else {
+        return;
+    };
+    let separator_gap = &context.source()
+        [last_condition.location().end_offset()..first_statement.location().start_offset()];
+    let Some(relative_separator) = separator_gap.find(';') else {
+        return;
+    };
+    if node.then_keyword_loc().is_some()
+        || !context.source_file().same_line(
+            node.keyword_loc().start_offset(),
+            last_statement.location().end_offset(),
+        )
+    {
+        return;
+    }
+    let separator_start = last_condition.location().end_offset() + relative_separator;
+    let separator = separator_start..separator_start + 1;
+    let expression = node
+        .conditions()
+        .iter()
+        .map(|condition| context.source_file().node(&condition))
+        .collect::<Vec<_>>()
+        .join(", ");
+    context.replace(
+        format!("Do not use `when {expression};`. Use `when {expression} then` instead."),
+        separator.clone(),
+        separator,
+        " then",
     );
 }
 

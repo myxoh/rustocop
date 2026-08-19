@@ -10,7 +10,6 @@ define_cops! {
     SafeNavigationChain => "Lint/SafeNavigationChain" => source(safe_navigation_chain),
     PredicateWithKind => "Style/PredicateWithKind" => source(predicate_with_kind),
     BlockDelimiters => "Style/BlockDelimiters" => source(block_delimiters),
-    SuperArguments => "Style/SuperArguments" => source(super_arguments),
     RedundantSafeNavigation => "Lint/RedundantSafeNavigation" => source(redundant_safe_navigation),
     Next => "Style/Next" => source(next_in_loop),
     AndOr => "Style/AndOr" => source(and_or),
@@ -187,53 +186,6 @@ fn block_delimiters(context: &mut CopContext<'_, '_>) {
             );
         }
     }
-}
-
-fn super_arguments(context: &mut CopContext<'_, '_>) {
-    let mut forwarded = None::<String>;
-    for (offset, line) in context.source_file().lines() {
-        let trimmed = line.trim();
-        if let Some(definition) = trimmed.strip_prefix("def ") {
-            forwarded = Some(forwarded_signature(definition));
-            continue;
-        }
-        if trimmed.starts_with("super(") && trimmed.ends_with(')') {
-            let args = &trimmed[6..trimmed.len() - 1];
-            if forwarded.as_deref() != Some(args) {
-                continue;
-            }
-            let start = offset + line.find(trimmed).unwrap_or(0);
-            context.replace(
-                "Call `super` without arguments and parentheses when the signature is identical.",
-                start..start + trimmed.len(),
-                start..start + trimmed.len(),
-                "super",
-            );
-        }
-    }
-}
-
-fn forwarded_signature(definition: &str) -> String {
-    let Some(open) = definition.find('(') else {
-        return String::new();
-    };
-    let Some(close) = definition.rfind(')') else {
-        return String::new();
-    };
-    definition[open + 1..close]
-        .split(',')
-        .map(|argument| {
-            let argument = argument.trim();
-            if let Some((name, _)) = argument.split_once('=') {
-                name.trim().to_string()
-            } else if argument.ends_with(':') && !argument.starts_with("**") {
-                format!("{argument} {}", argument.trim_end_matches(':'))
-            } else {
-                argument.to_string()
-            }
-        })
-        .collect::<Vec<_>>()
-        .join(", ")
 }
 
 fn redundant_safe_navigation(context: &mut CopContext<'_, '_>) {

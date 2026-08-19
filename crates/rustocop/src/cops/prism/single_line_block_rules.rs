@@ -28,7 +28,7 @@ fn inspect_block(node: &ruby_prism::BlockNode<'_>, context: &mut CopContext<'_, 
             || node.location().start_offset()..node.location().end_offset(),
             |ancestor| ancestor.location().start_offset()..ancestor.location().end_offset(),
         );
-    if redundant_line_break_prefers_single_line(context, offense.end - offense.start) {
+    if redundant_line_break_prefers_single_line(context, offense.start, node.body()) {
         return;
     }
     let header_end = node
@@ -48,7 +48,7 @@ fn inspect_lambda(node: &ruby_prism::LambdaNode<'_>, context: &mut CopContext<'_
         return;
     }
     let offense = node.location().start_offset()..node.location().end_offset();
-    if redundant_line_break_prefers_single_line(context, offense.end - offense.start) {
+    if redundant_line_break_prefers_single_line(context, offense.start, node.body()) {
         return;
     }
     let header_end = opening.end_offset();
@@ -108,13 +108,112 @@ fn heredoc_marker(source: &str) -> Option<&str> {
     (length > 0).then_some(&rest[..length])
 }
 
-fn redundant_line_break_prefers_single_line(context: &CopContext<'_, '_>, width: usize) -> bool {
-    context.related_config_value("Layout/RedundantLineBreak", "Enabled") == Some("true")
-        && context.related_config_value("Layout/RedundantLineBreak", "InspectBlocks")
-            == Some("true")
-        && width
-            <= context
+fn redundant_line_break_prefers_single_line(
+    context: &CopContext<'_, '_>,
+    block_start: usize,
+    body: Option<Node<'_>>,
+) -> bool {
+    if context.related_config_value("Layout/RedundantLineBreak", "Enabled") != Some("true")
+        || context.related_config_value("Layout/RedundantLineBreak", "InspectBlocks")
+            != Some("true")
+    {
+        return false;
+    }
+
+    let file = context.source_file();
+    let line = file.line_range(block_start);
+    let line_width = context.source()[line.clone()]
+        .trim_end_matches(['\r', '\n'])
+        .len();
+    let too_long = context.related_config_value("Layout/LineLength", "Enabled") != Some("false")
+        && line_width
+            > context
                 .related_config_value("Layout/LineLength", "Max")
                 .and_then(|value| value.parse().ok())
-                .unwrap_or(120)
+                .unwrap_or(120);
+    if too_long || line_has_comment(block_start, context) {
+        return false;
+    }
+
+    body.is_none_or(|body| !unsafe_to_collapse(&body))
+}
+
+fn line_has_comment(offset: usize, context: &CopContext<'_, '_>) -> bool {
+    let file = context.source_file();
+    ruby_prism::parse(context.source().as_bytes())
+        .comments()
+        .any(|comment| file.same_line(offset, comment.location().start_offset()))
+}
+
+fn unsafe_to_collapse(node: &Node<'_>) -> bool {
+    #[derive(Default)]
+    struct Suitability {
+        unsafe_content: bool,
+    }
+
+    impl<'pr> ruby_prism::Visit<'pr> for Suitability {
+        fn visit_if_node(&mut self, _node: &ruby_prism::IfNode<'pr>) {
+            self.unsafe_content = true;
+        }
+
+        fn visit_unless_node(&mut self, _node: &ruby_prism::UnlessNode<'pr>) {
+            self.unsafe_content = true;
+        }
+
+        fn visit_case_node(&mut self, _node: &ruby_prism::CaseNode<'pr>) {
+            self.unsafe_content = true;
+        }
+
+        fn visit_case_match_node(&mut self, _node: &ruby_prism::CaseMatchNode<'pr>) {
+            self.unsafe_content = true;
+        }
+
+        fn visit_begin_node(&mut self, _node: &ruby_prism::BeginNode<'pr>) {
+            self.unsafe_content = true;
+        }
+
+        fn visit_def_node(&mut self, _node: &ruby_prism::DefNode<'pr>) {
+            self.unsafe_content = true;
+        }
+
+        fn visit_rescue_node(&mut self, _node: &ruby_prism::RescueNode<'pr>) {
+            self.unsafe_content = true;
+        }
+
+        fn visit_rescue_modifier_node(&mut self, _node: &ruby_prism::RescueModifierNode<'pr>) {
+            self.unsafe_content = true;
+        }
+
+        fn visit_ensure_node(&mut self, _node: &ruby_prism::EnsureNode<'pr>) {
+            self.unsafe_content = true;
+        }
+
+        fn visit_string_node(&mut self, node: &ruby_prism::StringNode<'pr>) {
+            if node
+                .opening_loc()
+                .is_some_and(|opening| opening.as_slice().starts_with(b"<<"))
+                || node.unescaped().contains(&b'\n')
+            {
+                self.unsafe_content = true;
+            }
+        }
+
+        fn visit_interpolated_string_node(
+            &mut self,
+            node: &ruby_prism::InterpolatedStringNode<'pr>,
+        ) {
+            if node
+                .opening_loc()
+                .is_some_and(|opening| opening.as_slice().starts_with(b"<<"))
+            {
+                self.unsafe_content = true;
+            } else {
+                ruby_prism::visit_interpolated_string_node(self, node);
+            }
+        }
+    }
+
+    let mut suitability = Suitability::default();
+    ruby_prism::Visit::visit(&mut suitability, node);
+    suitability.unsafe_content
 }

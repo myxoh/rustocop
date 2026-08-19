@@ -4,7 +4,6 @@ use super::source_helpers::*;
 use super::*;
 
 declare_source_cops! {
-    StabbyLambdaParentheses => "Style/StabbyLambdaParentheses" => stabby_lambda_parentheses,
     LeadingEmptyLines => "Layout/LeadingEmptyLines" => leading_empty_lines,
     EmptyBlockParameter => "Style/EmptyBlockParameter" => empty_block_parameter,
     TripleQuotes => "Lint/TripleQuotes" => triple_quotes,
@@ -15,45 +14,6 @@ declare_source_cops! {
     RedundantRegexpConstructor => "Style/RedundantRegexpConstructor" => redundant_regexp_constructor,
     DuplicateRequire => "Lint/DuplicateRequire" => duplicate_require,
     UriRegexp => "Lint/UriRegexp" => uri_regexp,
-}
-
-fn stabby_lambda_parentheses(source: &str, reporter: &mut Reporter<'_>) {
-    let no_parentheses =
-        reporter.policy().enforced_style("require_parentheses") == "require_no_parentheses";
-    for start in all_offsets(source, "->") {
-        let arguments = start + 2;
-        if no_parentheses {
-            if source.as_bytes().get(arguments) != Some(&b'(') {
-                continue;
-            }
-            let Some(close) = source[arguments..].find(')') else {
-                continue;
-            };
-            let end = arguments + close + 1;
-            reporter.replace(
-                "Do not wrap stabby lambda arguments with parentheses.",
-                arguments..end,
-                arguments..end,
-                &source[arguments + 1..end - 1],
-            );
-            continue;
-        }
-        if source.as_bytes().get(arguments) == Some(&b'(') {
-            continue;
-        }
-        let Some(space) = source[arguments..].find(char::is_whitespace) else {
-            continue;
-        };
-        let end = arguments + space;
-        if end > arguments {
-            reporter.replace(
-                "Wrap stabby lambda arguments with parentheses.",
-                arguments..end,
-                arguments..end,
-                format!("({})", &source[arguments..end]),
-            );
-        }
-    }
 }
 
 fn leading_empty_lines(source: &str, reporter: &mut Reporter<'_>) {

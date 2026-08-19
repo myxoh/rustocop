@@ -1,39 +1,19 @@
 use super::*;
 
-pub(super) fn variable_interpolation(context: &mut CopContext<'_, '_>) {
-    let source = context.source();
-    for hash in all_offsets(source, "#") {
-        if source.as_bytes().get(hash + 1) == Some(&b'{') {
-            continue;
-        }
-        let Some(marker @ (b'$' | b'@')) = source.as_bytes().get(hash + 1).copied() else {
-            continue;
-        };
-        let start = hash + 1;
-        let mut end = start + 1;
-        if marker == b'@' && source.as_bytes().get(end) == Some(&b'@') {
-            end += 1;
-        }
-        while source
-            .as_bytes()
-            .get(end)
-            .is_some_and(|byte| identifier_byte(*byte))
-        {
-            end += 1;
-        }
-        if marker == b'$' && end == start + 1 && source.as_bytes().get(end).is_some() {
-            end += 1;
-        }
-        let variable = &source[start..end];
-        context.replace(
-            format!(
-                "Replace interpolated variable `{variable}` with expression `#{{{variable}}}`."
-            ),
-            start..end,
-            start..end,
-            format!("{{{variable}}}"),
-        );
-    }
+pub(super) fn variable_interpolation(
+    node: &ruby_prism::EmbeddedVariableNode<'_>,
+    context: &mut CopContext<'_, '_>,
+) {
+    let variable = node.variable();
+    let variable_source = context.source_file().node(&variable);
+    context.replace(
+        format!(
+            "Replace interpolated variable `{variable_source}` with expression `#{{{variable_source}}}`."
+        ),
+        variable.location(),
+        variable.location(),
+        format!("{{{variable_source}}}"),
+    );
 }
 
 pub(super) fn single_quoted_ranges(source: &str) -> Vec<std::ops::Range<usize>> {

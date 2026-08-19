@@ -13,11 +13,14 @@ fn signal_exception(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     {
         return;
     }
-    if method == b"fail" && node.receiver().is_none() && custom_fail_defined(context.source()) {
+    let style = context.policy().enforced_style("only_raise");
+    if style == "only_raise" && method == b"fail" && custom_fail_defined(context.source()) {
         return;
     }
-    let in_rescue = in_rescue_region(context.source(), node.location().start_offset());
-    let style = context.policy().enforced_style("semantic");
+    let in_rescue = context
+        .ancestors()
+        .iter()
+        .any(|ancestor| ancestor.as_rescue_node().is_some());
     let (replacement, message) = match style {
         "semantic" if method == b"raise" && !in_rescue => (
             "fail",
@@ -34,28 +37,24 @@ fn signal_exception(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     context.replace_selector(node, message, replacement);
 }
 
-fn in_rescue_region(source: &str, offset: usize) -> bool {
-    let mut boundary = None;
-    for (line_start, line) in super::source_helpers::source_lines(source) {
-        if line_start >= offset {
-            break;
-        }
-        let keyword = line.trim_start();
-        if keyword.starts_with("rescue") {
-            boundary = Some(true);
-        } else if keyword == "begin" || keyword.starts_with("def ") || keyword == "end" {
-            boundary = Some(false);
+fn custom_fail_defined(source: &str) -> bool {
+    #[derive(Default)]
+    struct FailDefinition {
+        found: bool,
+    }
+
+    impl<'pr> ruby_prism::Visit<'pr> for FailDefinition {
+        fn visit_def_node(&mut self, node: &ruby_prism::DefNode<'pr>) {
+            if node.name().as_slice() == b"fail" {
+                self.found = true;
+            } else {
+                ruby_prism::visit_def_node(self, node);
+            }
         }
     }
-    boundary == Some(true)
-}
 
-fn custom_fail_defined(source: &str) -> bool {
-    source.lines().any(|line| {
-        let definition = line.trim_start();
-        definition.starts_with("def fail(")
-            || definition.starts_with("def fail ")
-            || definition.starts_with("def self.fail(")
-            || definition.starts_with("def self.fail ")
-    })
+    let parsed = ruby_prism::parse(source.as_bytes());
+    let mut definition = FailDefinition::default();
+    ruby_prism::Visit::visit(&mut definition, &parsed.node());
+    definition.found
 }
