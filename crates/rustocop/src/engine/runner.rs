@@ -93,6 +93,7 @@ mod tests {
             config_path: None,
             inspection: InspectionConfig {
                 autocorrect: false,
+                cop_parallelism: Parallelism::Sequential,
                 cops: CopSelection::only("Lint/EmptyExpression"),
                 target_ruby_version: RubyVersion::default(),
                 cop_config: Arc::new(CopConfig::default()),

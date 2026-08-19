@@ -72,6 +72,7 @@ impl InspectionPlan {
             path,
             &prism_source,
             options.autocorrect,
+            options.cop_parallelism,
             options.target_ruby_version,
             options.cop_config.clone(),
         );
@@ -91,6 +92,7 @@ impl InspectionPlan {
             path,
             content,
             options.autocorrect,
+            options.cop_parallelism,
             options.target_ruby_version,
             options.cop_config.clone(),
         );

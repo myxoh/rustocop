@@ -18,6 +18,7 @@ fn run_fixture(
     let expected_offenses = fs::read_to_string(directory.join("offenses.tsv")).unwrap();
     let options = InspectionConfig {
         autocorrect,
+        cop_parallelism: crate::config::Parallelism::Sequential,
         cops: CopSelection::only(cops),
         target_ruby_version: ruby_version,
         cop_config: Arc::new(CopConfig::default()),

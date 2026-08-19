@@ -23,6 +23,7 @@ pub(super) fn parse_args(mut args: Vec<String>) -> Result<Command, String> {
         config_path: None,
         inspection: InspectionConfig {
             autocorrect: false,
+            cop_parallelism: Parallelism::Sequential,
             cops: CopSelection::default_enabled(),
             target_ruby_version: RubyVersion::default(),
             cop_config: Arc::new(CopConfig::default()),
@@ -44,8 +45,16 @@ pub(super) fn parse_args(mut args: Vec<String>) -> Result<Command, String> {
             "--stdin" => options.stdin_path = Some(take_value(&mut args, &arg)?),
             "--parallel" => options.parallelism = Parallelism::Automatic,
             "--no-parallel" => options.parallelism = Parallelism::Sequential,
+            "--parallel-cops" => options.inspection.cop_parallelism = Parallelism::Automatic,
+            "--no-parallel-cops" => {
+                options.inspection.cop_parallelism = Parallelism::Sequential;
+            }
             "--jobs" => {
                 options.parallelism =
+                    Parallelism::Fixed(parse_jobs(&take_value(&mut args, &arg)?)?);
+            }
+            "--cop-jobs" => {
+                options.inspection.cop_parallelism =
                     Parallelism::Fixed(parse_jobs(&take_value(&mut args, &arg)?)?);
             }
             "--config" | "-c" => {
@@ -90,6 +99,10 @@ pub(super) fn parse_args(mut args: Vec<String>) -> Result<Command, String> {
                 let value = arg.strip_prefix("--jobs=").unwrap_or_default();
                 options.parallelism = Parallelism::Fixed(parse_jobs(value)?);
             }
+            _ if arg.starts_with("--cop-jobs=") => {
+                let value = arg.strip_prefix("--cop-jobs=").unwrap_or_default();
+                options.inspection.cop_parallelism = Parallelism::Fixed(parse_jobs(value)?);
+            }
             _ if arg.starts_with("--require=") || arg.starts_with("--plugin=") => {
                 let (name, value) = arg.split_once('=').unwrap_or((&arg, ""));
                 options
@@ -103,6 +116,16 @@ pub(super) fn parse_args(mut args: Vec<String>) -> Result<Command, String> {
 
     if options.format != "json" && options.format != "simple" {
         return Err(format!("unsupported formatter {}", options.format));
+    }
+    if options.inspection.autocorrect
+        && options.inspection.cop_parallelism != Parallelism::Sequential
+    {
+        return Err("cop parallelism POC supports detection only".to_string());
+    }
+    if options.parallelism != Parallelism::Sequential
+        && options.inspection.cop_parallelism != Parallelism::Sequential
+    {
+        return Err("file and cop parallelism cannot be combined in the POC".to_string());
     }
     Ok(Command::Run(options))
 }
@@ -169,6 +192,11 @@ mod tests {
         };
         assert_eq!(automatic.parallelism, Parallelism::Automatic);
         assert_eq!(fixed.parallelism, Parallelism::Fixed(4));
+
+        let Command::Run(cops) = parse_args(vec!["--cop-jobs=3".to_string()]).unwrap() else {
+            panic!("expected run command");
+        };
+        assert_eq!(cops.inspection.cop_parallelism, Parallelism::Fixed(3));
     }
 
     #[test]
@@ -207,5 +235,23 @@ mod tests {
             .expect("missing config should fail");
 
         assert!(error.starts_with(&format!("could not read config {missing}:")));
+    }
+
+    #[test]
+    fn keeps_cop_parallelism_detection_only_and_separate_from_file_workers() {
+        let correction = parse_args(vec!["--parallel-cops".to_string(), "-A".to_string()]);
+        assert_eq!(
+            correction.err().as_deref(),
+            Some("cop parallelism POC supports detection only")
+        );
+
+        let nested = parse_args(vec![
+            "--parallel".to_string(),
+            "--parallel-cops".to_string(),
+        ]);
+        assert_eq!(
+            nested.err().as_deref(),
+            Some("file and cop parallelism cannot be combined in the POC")
+        );
     }
 }
