@@ -193,8 +193,15 @@ impl Cop for Open {
         let receiver = node.receiver();
         let receiver_name = if receiver.is_none() {
             "Kernel#"
-        } else if root_constant(receiver, b"URI") {
-            "URI."
+        } else if receiver
+            .as_ref()
+            .is_some_and(|node| node_is_root_constant(node, b"URI"))
+        {
+            if receiver.is_some_and(|node| node.as_constant_path_node().is_some()) {
+                "::URI."
+            } else {
+                "URI."
+            }
         } else {
             return;
         };
@@ -250,6 +257,10 @@ impl Cop for IoMethods {
         let Some(receiver_location) = node.receiver().map(|receiver| receiver.location()) else {
             return;
         };
+        let offense_end = node.closing_loc().map_or_else(
+            || node.location().end_offset(),
+            |closing| closing.end_offset(),
+        );
         context.replace(
             self.name(),
             format!(
@@ -257,7 +268,7 @@ impl Cop for IoMethods {
                 String::from_utf8_lossy(method),
                 String::from_utf8_lossy(method)
             ),
-            node.location(),
+            node.location().start_offset()..offense_end,
             receiver_location,
             "File",
         );

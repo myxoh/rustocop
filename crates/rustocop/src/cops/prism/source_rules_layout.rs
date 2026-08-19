@@ -58,12 +58,17 @@ fn spacing_after(source: &str, context: &mut Reporter<'_>, token: u8, message: &
         let Some(next) = bytes.get(index + 1).copied() else {
             continue;
         };
+        let no_space_inside_braces = token == b';'
+            && next == b'}'
+            && context.related_config_value("Layout/SpaceInsideBlockBraces", "EnforcedStyle")
+                == Some("no_space");
         let closing_brace_requires_space = next == b'}'
             && ((token == b',' && source[..index].trim_start().starts_with("{ "))
                 || (token == b';' && bytes.get(index.wrapping_sub(1)) == Some(&b' ')));
         if next == b'\n'
             || next == b' '
             || next == token
+            || no_space_inside_braces
             || (matches!(next, b')' | b']' | b'}' | b'|') && !closing_brace_requires_space)
             || inside_quoted_text(source, index)
         {
@@ -88,6 +93,13 @@ fn spacing_before(source: &str, context: &mut Reporter<'_>, token: u8, message: 
             continue;
         }
         let start = source[..index].trim_end_matches(' ').len();
+        if token == b';'
+            && source.as_bytes().get(start.wrapping_sub(1)) == Some(&b'{')
+            && context.related_config_value("Layout/SpaceInsideBlockBraces", "EnforcedStyle")
+                == Some("space")
+        {
+            continue;
+        }
         context.remove(message, start..index, start..index);
     }
 }

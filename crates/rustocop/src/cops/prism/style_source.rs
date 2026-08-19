@@ -82,7 +82,7 @@ impl Cop for UnlessElse {
     fn on_node<'pr>(
         &self,
         node: &Node<'pr>,
-        _ancestors: &[Node<'pr>],
+        ancestors: &[Node<'pr>],
         source: &str,
         context: &mut Context,
     ) {
@@ -93,9 +93,20 @@ impl Cop for UnlessElse {
             return;
         }
         let location = unless_node.location();
+        let message =
+            "Do not use `unless` with `else`. Rewrite these with the positive case first.";
+        if ancestors
+            .iter()
+            .any(|ancestor| ancestor.as_unless_node().is_some())
+        {
+            if !context.autocorrect_enabled() {
+                context.report(self.name(), message, &location);
+            }
+            return;
+        }
         context.replace(
             self.name(),
-            "Do not use `unless` with `else`. Rewrite these with the positive case first.",
+            message,
             &location,
             &location,
             correct_unless_else(source_at(source, &location)),
@@ -104,17 +115,59 @@ impl Cop for UnlessElse {
 }
 
 fn correct_unless_else(source: &str) -> String {
-    let Some((before_else, after_else)) = source.split_once("\nelse\n") else {
+    let lines = source.lines().collect::<Vec<_>>();
+    let Some(header) = lines.first() else {
         return source.replacen("unless", "if", 1);
     };
-    let Some((header, body)) = before_else.split_once('\n') else {
+    let mut depth = 1usize;
+    let mut outer_else = None;
+    for (index, line) in lines.iter().enumerate().skip(1) {
+        let code = line.trim_start();
+        if code.starts_with("else") && depth == 1 {
+            outer_else = Some(index);
+            break;
+        }
+        if starts_block(code) {
+            depth += 1;
+        }
+        if code == "end" || code.starts_with("end ") || code.starts_with("end#") {
+            depth = depth.saturating_sub(1);
+        }
+    }
+    let Some(outer_else) = outer_else else {
         return source.replacen("unless", "if", 1);
     };
-    let else_body = after_else.strip_suffix("\nend").unwrap_or(after_else);
-    format!(
-        "{}\n{}\nelse\n{}\nend",
-        header.replacen("unless", "if", 1),
-        else_body,
-        body
-    )
+
+    let (header_code, header_comment) = split_comment(header);
+    let (else_code, else_comment) = split_comment(lines[outer_else]);
+    let positive_header = format!(
+        "{}{}",
+        header_code.replacen("unless", "if", 1),
+        else_comment
+    );
+    let negative_else = format!("{else_code}{header_comment}");
+    let mut corrected = Vec::with_capacity(lines.len());
+    corrected.push(positive_header);
+    corrected.extend(
+        lines[outer_else + 1..lines.len() - 1]
+            .iter()
+            .map(|line| (*line).to_string()),
+    );
+    corrected.push(negative_else);
+    corrected.extend(lines[1..outer_else].iter().map(|line| (*line).to_string()));
+    corrected.push(lines.last().unwrap_or(&"end").to_string());
+    corrected.join("\n")
+}
+
+fn split_comment(line: &str) -> (&str, &str) {
+    line.find('#')
+        .map_or((line, ""), |index| (&line[..index], &line[index..]))
+}
+
+fn starts_block(code: &str) -> bool {
+    [
+        "if ", "if(", "unless ", "unless(", "case", "begin", "class ", "module ", "def ",
+    ]
+    .iter()
+    .any(|keyword| code.starts_with(keyword))
 }

@@ -25,10 +25,11 @@ fn inspect_stdin(
     options: &RunOptions,
     plan: &InspectionPlan,
 ) -> io::Result<Vec<InspectionResult>> {
-    let mut content = String::new();
-    io::stdin().read_to_string(&mut content)?;
+    let mut bytes = Vec::new();
+    io::stdin().read_to_end(&mut bytes)?;
+    let content = crate::engine::source::DecodedSource::from_bytes(&bytes)?;
     let path = engine::expanded_path(path);
-    let (offenses, _) = plan.inspect_content(&path, &content, &options.inspection);
+    let (offenses, _) = plan.inspect_content(&path, content.as_str(), &options.inspection);
     Ok(vec![InspectionResult { path, offenses }])
 }
 

@@ -74,12 +74,25 @@ impl CopConfig {
                         *entry = ConfigValue::List(Vec::new());
                     }
                     if let ConfigValue::List(items) = entry {
-                        items.push(clean_config_scalar(item));
+                        let item = item
+                            .split_once(':')
+                            .filter(|(nested_key, _)| clean_config_scalar(nested_key) == "$regexp")
+                            .map_or_else(
+                                || clean_config_scalar(item),
+                                |(_, pattern)| clean_config_scalar(pattern),
+                            );
+                        items.push(item);
                     }
                 }
                 continue;
             }
             if indentation > 2 {
+                if container_key
+                    .as_ref()
+                    .is_some_and(|key| key.contains("Pattern") && trimmed.starts_with("options:"))
+                {
+                    continue;
+                }
                 if let (Some(container), Some((key, value))) =
                     (container_key.as_ref(), trimmed.split_once(':'))
                 {
@@ -321,5 +334,14 @@ mod tests {
                 .map(String::as_str),
             Some("to_sym")
         );
+    }
+
+    #[test]
+    fn reads_serialized_regexp_lists() {
+        let config = CopConfig::from_source(
+            "Lint/Example:\n  AllowedPatterns:\n  - \"$regexp\": min\n    options: 0\n",
+        );
+
+        assert!(config.patterns("Lint/Example", "AllowedPatterns")[0].is_match("minutes"));
     }
 }

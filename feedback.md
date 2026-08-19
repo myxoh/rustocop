@@ -2,6 +2,19 @@
 
 Reviewed on 2026-08-18 against the current working tree.
 
+## Implemented follow-ups
+
+- Correction intents are now atomic transactions. A finding is marked
+  corrected only after all of its edits pass range and conflict validation.
+- The historical `parity_calls.rs` and `parity_source.rs` buckets were replaced
+  by capability-oriented `source_semantics.rs` and `lexical_rules.rs` modules.
+- Reusable delimiter, definition, and argument scanning lives in the tested
+  `source_syntax.rs` infrastructure module.
+- The default architecture ceiling now enforces 400 lines, with explicit
+  exceptions only for the Prism composition root and correction engine.
+- `script/new_cop.rb --family <module>` can add a cop to an existing cohesive
+  family without creating another module and registry chain entry.
+
 ## Short version
 
 Rustocop has a good execution core, unusually useful compatibility tooling, and

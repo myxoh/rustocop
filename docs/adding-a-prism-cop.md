@@ -102,8 +102,11 @@ Every concise callback receives a cop-scoped `CopContext`. It exposes:
 - reporting and higher-level correction intents.
 
 `source_file()` provides safe slicing, node/location text, offset-aware lines,
-physical line ranges, and surrounding-whitespace ranges. Prefer it over raw
-source indexing when a cop works with byte geometry.
+physical and full-line ranges, indentation text, and surrounding-whitespace
+ranges. Prefer it over raw source indexing when a cop works with byte geometry.
+For a correction that rewrites several pieces inside one node or statement
+body, use `SourceEdit` with `SourceFile::rewrite`; it validates and rebases the
+edits as one local rendering operation.
 
 ## Reporting and correction intents
 
@@ -201,6 +204,16 @@ The matcher library includes call receiver/name/argument/keyword/block shapes,
 static string and symbol extraction, constant paths, source equality, and
 literal classification. Keep the DSL structural: the reason an offense exists
 should remain visible in the cop function.
+
+`node_helpers.rs` owns extraction and rendering rather than predicates. Use
+`only_statement`, `only_statement_in`, or `single_expression` instead of
+reimplementing Prism body unwrapping; use `joined_arguments` when correction
+text needs a complete call argument list. `ModifierConditional::from_node`
+normalizes modifier-form `if`, `unless`, `while`, and `until` when a rule applies
+to all four shapes.
+
+The rationale and prioritized shared-capability backlog live in
+[Cop authoring leverage](cop-authoring-leverage.md).
 
 ## Validation
 

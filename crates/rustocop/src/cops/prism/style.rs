@@ -4,7 +4,6 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
     vec![
         Box::new(CharacterLiteral),
         Box::new(BeginBlock),
-        Box::new(DefWithParentheses),
         Box::new(MethodCallWithoutArgsParentheses),
         Box::new(NilComparison),
         Box::new(NotKeyword),
@@ -35,38 +34,6 @@ fn character_literal(string: &ruby_prism::StringNode<'_>, context: &mut CopConte
         &location,
         replacement,
     );
-}
-
-struct DefWithParentheses;
-
-impl Cop for DefWithParentheses {
-    fn name(&self) -> &'static str {
-        "Style/DefWithParentheses"
-    }
-
-    fn on_node<'pr>(
-        &self,
-        node: &Node<'pr>,
-        _ancestors: &[Node<'pr>],
-        _source: &str,
-        context: &mut Context,
-    ) {
-        let Some(definition) = node.as_def_node() else {
-            return;
-        };
-        let (Some(open), Some(close)) = (definition.lparen_loc(), definition.rparen_loc()) else {
-            return;
-        };
-        if definition.parameters().is_some() || definition.operator_loc().is_some() {
-            return;
-        }
-        context.remove(
-            self.name(),
-            "Omit the parentheses in defs when the method doesn't accept any arguments.",
-            (open.start_offset(), close.end_offset()),
-            (open.start_offset(), close.end_offset()),
-        );
-    }
 }
 
 struct MethodCallWithoutArgsParentheses;
@@ -100,28 +67,71 @@ impl Cop for NilComparison {
         "Style/NilComparison"
     }
 
-    fn on_call(&self, node: &CallNode<'_>, context: &mut Context) {
+    fn on_node<'pr>(
+        &self,
+        node: &Node<'pr>,
+        ancestors: &[Node<'pr>],
+        source: &str,
+        context: &mut Context,
+    ) {
+        let Some(node) = node.as_call_node() else {
+            return;
+        };
+        let mut context = context.cop_context(self.name(), source, ancestors);
         let Some(receiver) = node.receiver() else {
             return;
         };
-        if !matches!(call_name(node), b"==" | b"===")
-            || first_argument(node).is_none_or(|argument| argument.as_nil_node().is_none())
-        {
-            return;
+        if context.policy().enforced_style("predicate") == "comparison" {
+            if call_name(&node) != b"nil?" || argument_count(&node) != 0 {
+                return;
+            }
+            let Some(selector) = node.message_loc() else {
+                return;
+            };
+            let comparison = format!("{} == nil", context.source_file().node(&receiver));
+            if let Some(parent) = context
+                .parent()
+                .and_then(Node::as_call_node)
+                .filter(|parent| {
+                    call_name(parent) == b"!"
+                        && parent.receiver().is_some_and(|parent_receiver| {
+                            parent_receiver.location().start_offset()
+                                == node.location().start_offset()
+                                && parent_receiver.location().end_offset()
+                                    == node.location().end_offset()
+                        })
+                })
+            {
+                context.replace(
+                    "Prefer the use of the `==` comparison.",
+                    selector,
+                    parent.location(),
+                    format!("!({comparison})"),
+                );
+            } else {
+                context.replace(
+                    "Prefer the use of the `==` comparison.",
+                    selector,
+                    node.location(),
+                    comparison,
+                );
+            }
+        } else {
+            if !matches!(call_name(&node), b"==" | b"===")
+                || first_argument(&node).is_none_or(|argument| argument.as_nil_node().is_none())
+            {
+                return;
+            }
+            let Some(selector) = node.message_loc() else {
+                return;
+            };
+            context.replace(
+                "Prefer the use of the `nil?` predicate.",
+                selector,
+                receiver.location().end_offset()..node.location().end_offset(),
+                ".nil?",
+            );
         }
-        let Some(selector) = node.message_loc() else {
-            return;
-        };
-        context.replace(
-            self.name(),
-            "Prefer the use of the `nil?` predicate.",
-            selector,
-            (
-                receiver.location().end_offset(),
-                node.location().end_offset(),
-            ),
-            ".nil?",
-        );
     }
 }
 
@@ -192,28 +202,52 @@ impl Cop for RedundantArrayConstructor {
         let Some(call) = node.as_call_node() else {
             return;
         };
-        let Some(argument) = first_argument(&call) else {
-            return;
-        };
-        if call.receiver().is_some()
-            || call_name(&call) != b"Array"
-            || argument.as_array_node().is_none()
-            || call
-                .arguments()
-                .is_none_or(|arguments| arguments.arguments().len() != 1)
+        let arguments = call
+            .arguments()
+            .map(|arguments| arguments.arguments().iter().collect::<Vec<_>>())
+            .unwrap_or_default();
+        let (offense, replacement) = if call.receiver().is_none()
+            && call_name(&call) == b"Array"
+            && arguments.len() == 1
+            && arguments[0].as_array_node().is_some()
         {
-            return;
-        }
-        let Some(selector) = call.message_loc() else {
+            let Some(selector) = call.message_loc() else {
+                return;
+            };
+            (
+                selector.start_offset()..selector.end_offset(),
+                node_source(source, &arguments[0]).to_string(),
+            )
+        } else if call_name(&call) == b"new"
+            && root_constant(call.receiver(), b"Array")
+            && arguments.len() == 1
+            && arguments[0].as_array_node().is_some()
+            && call.block().is_none()
+        {
+            let receiver = call.receiver().expect("checked above");
+            let selector = call.message_loc().expect("new selector");
+            let offense = receiver.location().start_offset()..selector.end_offset();
+            (offense, node_source(source, &arguments[0]).to_string())
+        } else if call_name(&call) == b"[]" && root_constant(call.receiver(), b"Array") {
+            let receiver = call.receiver().expect("checked above");
+            let location = receiver.location();
+            let offense = location.start_offset()..location.end_offset();
+            let contents = arguments
+                .iter()
+                .map(|argument| node_source(source, argument))
+                .collect::<Vec<_>>()
+                .join(", ");
+            (offense, format!("[{contents}]"))
+        } else {
             return;
         };
         let node_location = call.location();
         context.replace(
             self.name(),
             "Remove the redundant `Array` constructor.",
-            selector,
+            offense,
             node_location,
-            node_source(source, &argument),
+            replacement,
         );
     }
 }

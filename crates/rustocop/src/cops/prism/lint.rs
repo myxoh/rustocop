@@ -132,7 +132,7 @@ impl Cop for BooleanSymbol {
         &self,
         node: &Node<'pr>,
         _ancestors: &[Node<'pr>],
-        _source: &str,
+        source: &str,
         context: &mut Context,
     ) {
         let Some(symbol) = node.as_symbol_node() else {
@@ -144,15 +144,31 @@ impl Cop for BooleanSymbol {
         }
 
         let location = symbol.location();
+        let raw = source_at(source, &location);
+        if raw.as_bytes() == value {
+            return;
+        }
+        let value = String::from_utf8_lossy(value);
+        let replacement = if raw.ends_with(':') {
+            format!("{value} =>")
+        } else {
+            value.to_string()
+        };
+        let edit = location.start_offset()..location.end_offset();
+        let offense = if raw.ends_with(':') {
+            symbol.value_loc().map_or_else(
+                || edit.clone(),
+                |value| value.start_offset()..value.end_offset(),
+            )
+        } else {
+            edit.clone()
+        };
         context.replace(
             self.name(),
-            format!(
-                "Symbol with a boolean name - you probably meant to use `{}`.",
-                String::from_utf8_lossy(value)
-            ),
-            &location,
-            &location,
-            String::from_utf8_lossy(value).into_owned(),
+            format!("Symbol with a boolean name - you probably meant to use `{value}`."),
+            offense,
+            edit,
+            replacement,
         );
     }
 }
@@ -216,6 +232,28 @@ impl Cop for FloatComparison {
         "Lint/FloatComparison"
     }
 
+    fn on_node<'pr>(
+        &self,
+        node: &Node<'pr>,
+        _ancestors: &[Node<'pr>],
+        _source: &str,
+        context: &mut Context,
+    ) {
+        if let Some(branch) = node.as_when_node() {
+            for condition in branch.conditions().iter() {
+                if float_expression(Some(&condition)) && !literal_zero(Some(&condition)) {
+                    context.report(
+                        self.name(),
+                        "Avoid float literal comparisons in case statements as they are unreliable.",
+                        condition.location(),
+                    );
+                }
+            }
+        } else if let Some(call) = node.as_call_node() {
+            self.on_call(&call, context);
+        }
+    }
+
     fn on_call(&self, node: &CallNode<'_>, context: &mut Context) {
         let method = call_name(node);
         if !matches!(method, b"==" | b"!=" | b"eql?" | b"equal?") {
@@ -227,6 +265,11 @@ impl Cop for FloatComparison {
         if node
             .arguments()
             .is_none_or(|arguments| arguments.arguments().len() != 1)
+            || node
+                .receiver()
+                .as_ref()
+                .is_some_and(|receiver| receiver.as_nil_node().is_some())
+            || argument.as_nil_node().is_some()
             || literal_zero(node.receiver().as_ref())
             || literal_zero(Some(&argument))
             || (!float_expression(node.receiver().as_ref()) && !float_expression(Some(&argument)))

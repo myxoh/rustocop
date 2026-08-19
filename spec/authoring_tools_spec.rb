@@ -41,4 +41,25 @@ RSpec.describe "cop authoring tools" do
     expect(status).not_to be_success
     expect(stderr).to include("no captured upstream cases matched the requested cops")
   end
+
+  it "previews appending a cop to a capability family" do
+    stdout, stderr, status = run_script(
+      "new_cop.rb",
+      "Style/GeneratedFamilyExample",
+      "call",
+      "--family",
+      "style_calls",
+      "--dry-run"
+    )
+
+    expect(status).to be_success
+    expect(stderr).to eq("")
+    expect(stdout).to include(
+      "crates/rustocop/src/cops/prism/style_calls.rs",
+      "Append to the existing define_cops! block",
+      'GeneratedFamilyExample => "Style/GeneratedFamilyExample" => call(generated_family_example)',
+      "fn generated_family_example(node: &CallNode<'_>",
+      "checks_style_generated_family_example"
+    )
+  end
 end

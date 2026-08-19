@@ -231,6 +231,14 @@ pub(super) fn has_keyword(node: &CallNode<'_>, expected: &[u8]) -> bool {
             argument
                 .as_keyword_hash_node()
                 .is_some_and(|hash| keyword_hash_contains(&hash, expected))
+                || argument.as_hash_node().is_some_and(|hash| {
+                    hash.elements().iter().any(|element| {
+                        element
+                            .as_assoc_node()
+                            .and_then(|association| association.key().as_symbol_node())
+                            .is_some_and(|symbol| symbol.unescaped() == expected)
+                    })
+                })
         })
     })
 }
@@ -339,6 +347,18 @@ pub(super) fn float_expression(node: Option<&Node<'_>>) -> bool {
     if node.as_float_node().is_some() {
         return true;
     }
+    if let Some(parentheses) = node.as_parentheses_node() {
+        return parentheses
+            .body()
+            .as_ref()
+            .is_some_and(|body| float_expression(Some(body)));
+    }
+    if let Some(statements) = node.as_statements_node() {
+        return statements
+            .body()
+            .iter()
+            .any(|statement| float_expression(Some(&statement)));
+    }
     node.as_call_node().is_some_and(|call| {
         matches!(call_name(&call), b"to_f" | b"fdiv" | b"Float")
             || matches!(call_name(&call), b"+" | b"-" | b"*" | b"**" | b"/" | b"%")
@@ -346,6 +366,13 @@ pub(super) fn float_expression(node: Option<&Node<'_>>) -> bool {
                     || first_argument(&call)
                         .as_ref()
                         .is_some_and(|argument| float_expression(Some(argument))))
+            || call.receiver().as_ref().is_some_and(|receiver| {
+                float_expression(Some(receiver))
+                    && !(matches!(
+                        call_name(&call),
+                        b"ceil" | b"floor" | b"round" | b"truncate" | b"to_i"
+                    ) && argument_count(&call) == 0)
+            })
     })
 }
 

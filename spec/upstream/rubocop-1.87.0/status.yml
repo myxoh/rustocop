@@ -5,8 +5,8 @@ upstream_rspec:
   pending: 6
 captured_cases: 28623
 diagnostic_baseline:
-  passed_cases: 13790
-  passing_cops: 116
+  passed_cases: 15156
+  passing_cops: 277
   total_cops: 606
 fully_compatible_cops:
   - Bundler/GemVersion
@@ -15,6 +15,7 @@ fully_compatible_cops:
   - Gemspec/AddRuntimeDependency
   - Gemspec/RubyVersionGlobalsUsage
   - Layout/EmptyLines
+  - Layout/ClosingHeredocIndentation
   - Layout/InitialIndentation
   - Layout/LeadingEmptyLines
   - Layout/MultilineArrayLineBreaks
@@ -22,17 +23,24 @@ fully_compatible_cops:
   - Layout/SpaceAfterComma
   - Layout/SpaceAfterColon
   - Layout/SpaceAfterNot
+  - Layout/SpaceAfterSemicolon
   - Layout/SpaceBeforeComma
   - Layout/SpaceBeforeComment
+  - Layout/SpaceBeforeSemicolon
   - Layout/SpaceInsideRangeLiteral
   - Lint/BigDecimalNew
   - Lint/BinaryOperatorWithIdenticalOperands
+  - Lint/BooleanSymbol
+  - Lint/CircularArgumentReference
   - Lint/DuplicateElsifCondition
   - Lint/DuplicateRescueException
   - Lint/DuplicateRequire
   - Lint/DisjunctiveAssignmentInConstructor
+  - Lint/DataDefineOverride
   - Lint/DuplicateMagicComment
   - Lint/EachWithObjectArgument
+  - Lint/EmptyInPattern
+  - Lint/EmptyClass
   - Lint/EmptyFile
   - Lint/EmptyInterpolation
   - Lint/EmptyEnsure
@@ -44,20 +52,29 @@ fully_compatible_cops:
   - Lint/HashCompareByIdentity
   - Lint/HashNewWithKeywordArgumentsAsDefault
   - Lint/IdentityComparison
+  - Lint/IneffectiveAccessModifier
+  - Lint/InheritException
   - Lint/InterpolationCheck
+  - Lint/ItWithoutArgumentsInBlock
   - Lint/LambdaWithoutLiteralBlock
   - Lint/Loop
+  - Lint/MixedRegexpCaptureTypes
   - Lint/NestedPercentLiteral
+  - Lint/NumberedParameterAssignment
   - Lint/OrAssignmentToConstant
   - Lint/OrderedMagicComments
   - Lint/RandOne
   - Lint/RefinementImportMethods
+  - Lint/RedundantDirGlobSort
   - Lint/RegexpAsCondition
+  - Lint/RequireParentheses
   - Lint/RequireRangeParentheses
   - Lint/RequireRelativeSelfPath
   - Lint/RescueException
   - Lint/SafeNavigationWithEmpty
+  - Lint/SendWithMixinArgument
   - Lint/SharedMutableDefault
+  - Lint/StructNewOverride
   - Lint/ToJSON
   - Lint/TopLevelReturnWithArgument
   - Lint/TrailingCommaInAttributeDeclaration
@@ -69,50 +86,78 @@ fully_compatible_cops:
   - Naming/AsciiIdentifiers
   - Naming/ClassAndModuleCamelCase
   - Security/Eval
+  - Security/IoMethods
+  - Security/JSONLoad
   - Security/MarshalLoad
+  - Security/Open
   - Security/YAMLLoad
   - Style/ArrayCoercion
   - Style/ArrayFirstLast
   - Style/ArrayIntersectWithSingleElement
   - Style/ArrayJoin
+  - Style/AsciiComments
   - Style/AutoResourceCleanup
   - Style/BeginBlock
   - Style/BlockComments
   - Style/CharacterLiteral
+  - Style/ClassCheck
   - Style/ClassMethods
   - Style/ClassVars
   - Style/ColonMethodCall
   - Style/ColonMethodDefinition
+  - Style/DateTime
+  - Style/DefWithParentheses
   - Style/Dir
+  - Style/DisableCopsWithinSourceCodeDirective
   - Style/DoubleCopDisableDirective
   - Style/EmptyLambdaParameter
+  - Style/Encoding
   - Style/EmptyBlockParameter
   - Style/EmptyHeredoc
   - Style/EndBlock
   - Style/EnvHome
+  - Style/ExactRegexpMatch
   - Style/FileTouch
+  - Style/FileNull
+  - Style/FileOpen
   - Style/GlobalStdStream
+  - Style/GlobalVars
+  - Style/HashLikeCase
   - Style/ImplicitRuntimeError
   - Style/InlineComment
   - Style/InPatternThen
+  - Style/IpAddresses
+  - Style/KeywordArgumentsMerging
   - Style/MinMax
+  - Style/MethodCalledOnDoEndBlock
+  - Style/MissingRespondToMissing
   - Style/MultilineIfThen
   - Style/NestedFileDirname
+  - Style/NestedParenthesizedCalls
+  - Style/NilComparison
   - Style/Not
   - Style/NumericLiteralPrefix
+  - Style/NumberedParameters
+  - Style/NumberedParametersLimit
   - Style/OpenStructUse
+  - Style/OptionHash
   - Style/OptionalArguments
   - Style/OptionalBooleanParameter
+  - Style/PercentQLiterals
   - Style/PreferredHashMethods
   - Style/Proc
   - Style/RedundantArrayFlatten
   - Style/RedundantCapitalW
   - Style/RedundantConstantBase
+  - Style/RedundantCurrentDirectoryInPath
   - Style/RedundantFileExtensionInRequire
+  - Style/RedundantHeredocDelimiterQuotes
   - Style/RedundantRegexpConstructor
   - Style/RedundantSortBy
   - Style/ReturnNil
+  - Style/SafeNavigationChainLength
   - Style/Send
+  - Style/SingleArgumentDig
   - Style/StringChars
   - Style/StringHashKeys
   - Style/StringMethods
@@ -122,6 +167,122 @@ fully_compatible_cops:
   - Style/SuperWithArgsParentheses
   - Style/SymbolLiteral
   - Style/TrailingCommaInBlockArgs
+  - Style/UnpackFirst
+  - Style/UnlessElse
   - Style/VariableInterpolation
   - Style/WhenThen
   - Style/WhileUntilDo
+  - Style/YAMLFileRead
+  - Migration/DepartmentName
+  - Lint/ElseLayout
+  - Lint/NonLocalExitFromIterator
+  - Style/BarePercentLiterals
+  - Style/DocumentDynamicEvalDefinition
+  - Style/EachWithObject
+  - Style/ModuleFunction
+  - Style/MultilineIfModifier
+  - Style/MultilineInPatternThen
+  - Style/MultilineMemoization
+  - Style/MultilineWhenThen
+  - Style/NegatedWhile
+  - Style/SingleLineBlockParams
+  - Style/StaticClass
+  - Style/TrailingBodyOnClass
+  - Style/TrailingBodyOnModule
+  - Style/YodaExpression
+  - Style/Attr
+  - Style/BitwisePredicate
+  - Style/DataInheritance
+  - Style/DirEmpty
+  - Style/RedundantStructKeywordInit
+  - Style/StructInheritance
+  - Style/SwapValues
+  - Lint/UnifiedInteger
+  - Style/CaseEquality
+  - Style/ExponentialNotation
+  - Style/OneClassPerFile
+  - Style/RedundantArgument
+  - Style/RedundantFetchBlock
+  - Style/ReverseFind
+  - Lint/RaiseException
+  - Lint/RedundantStringCoercion
+  - Lint/RedundantWithIndex
+  - Lint/RedundantWithObject
+  - Lint/UselessNumericOperation
+  - Style/EvenOdd
+  - Style/ExpandPathArguments
+  - Style/MapJoin
+  - Style/ComparableBetween
+  - Style/FloatDivision
+  - Style/MinMaxComparison
+  - Lint/RedundantRequireStatement
+  - Style/RedundantPercentQ
+  - Lint/NumberConversion
+  - Style/ClassEqualityComparison
+  - Style/LambdaCall
+  - Style/RandomWithOffset
+  - Style/SignalException
+  - Lint/UselessTimes
+  - Style/CollectionCompact
+  - Style/NilLambda
+  - Style/NumericPredicate
+  - Style/RedundantException
+  - Style/SendWithLiteralMethodName
+  - Style/SingleLineMethods
+  - Style/RedundantInterpolation
+  - Style/RedundantInterpolationUnfreeze
+  - Lint/EmptyWhen
+  - Lint/MixedCaseRange
+  - Lint/PercentStringArray
+  - Lint/PercentSymbolArray
+  - Lint/UselessDefaultValueArgument
+  - Style/ConcatArrayLiterals
+  - Style/NonNilCheck
+  - Style/ObjectThen
+  - Style/SlicingWithRange
+  - Style/StringLiteralsInInterpolation
+  - Style/TrailingMethodEndStatement
+  - Lint/DeprecatedClassMethods
+  - Lint/DuplicateCaseCondition
+  - Lint/FloatComparison
+  - Lint/UselessRescue
+  - Style/EmptyCaseCondition
+  - Style/HashLookupMethod
+  - Style/IfUnlessModifierOfIfUnless
+  - Style/NegatedIf
+  - Style/NegatedUnless
+  - Style/NestedTernaryOperator
+  - Style/RedundantEach
+  - Style/RedundantInitialize
+  - Lint/AmbiguousOperator
+  - Lint/AmbiguousOperatorPrecedence
+  - Lint/ParenthesesAsGroupedExpression
+  - Style/MixinUsage
+  - Style/MultilineBlockChain
+  - Layout/TrailingWhitespace
+  - Style/Alias
+  - Style/HashAsLastArrayItem
+  - Style/RedundantArrayConstructor
+  - Style/RequireOrder
+  - Style/PerlBackrefs
+  - Style/SingleLineDoEndBlock
+  - Lint/SuppressedException
+  - Style/EmptyMethod
+  - Style/UnlessLogicalOperators
+  - Style/ComparableClamp
+  - Style/EmptyStringInsideInterpolation
+  - Style/FileEmpty
+  - Lint/IncompatibleIoSelectWithFiberScheduler
+  - Lint/ToEnumArguments
+  - Lint/UnexpectedBlockArity
+  - Lint/HeredocMethodCallPosition
+  - Lint/NextWithoutAccumulator
+  - Lint/ImplicitStringConcatenation
+  - Lint/UselessSetterCall
+  - Style/BisectedAttrAccessor
+  - Lint/AmbiguousBlockAssociation
+  - Style/DigChain
+  - Style/ItBlockParameter
+  - Style/LineEndConcatenation
+  - Style/MixinGrouping
+  - Style/RedundantDoubleSplatHashBraces

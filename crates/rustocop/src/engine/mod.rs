@@ -11,7 +11,7 @@ mod diagnostic;
 #[cfg(test)]
 mod fixture_tests;
 mod runner;
-mod source;
+pub(crate) mod source;
 
 use diagnostic::{append_prism_offenses, sort_offenses};
 pub(crate) use runner::inspect_files;
@@ -38,11 +38,14 @@ impl InspectionPlan {
         path: &str,
         options: &InspectionConfig,
     ) -> io::Result<InspectionResult> {
-        let content = fs::read_to_string(path)?;
+        let original = fs::read(path)?;
+        let content = source::DecodedSource::from_bytes(&original)?;
         let absolute_path = expanded_path(path);
-        let (offenses, corrected_content) = self.inspect_content(&absolute_path, &content, options);
-        if options.autocorrect && corrected_content != content {
-            fs::write(path, corrected_content)?;
+        let (offenses, corrected_content) =
+            self.inspect_content(&absolute_path, content.as_str(), options);
+        let corrected_bytes = content.restore(&corrected_content);
+        if options.autocorrect && corrected_bytes != original {
+            fs::write(path, corrected_bytes)?;
         }
         Ok(InspectionResult {
             path: absolute_path,

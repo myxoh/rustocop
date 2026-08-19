@@ -106,7 +106,11 @@ module UpstreamCopCapture
       "ruby_version" => ruby_version.to_s,
       "parser_engine" => parser_engine.to_s,
       "cop_options" => defined?(cop_options) ? cop_options : {},
-      "config" => configuration.to_h,
+      # Some upstream specs construct the subject with a custom Config instead
+      # of overriding the shared `configuration` helper. Capture what the cop
+      # actually received so style and option-sensitive examples remain
+      # distinguishable in the differential corpus.
+      "config" => cop.config.to_h,
       "offenses" => offenses&.map { |offense| capture_offense(offense) }
     }
     test_case["correction"] = correction unless correction == :unspecified

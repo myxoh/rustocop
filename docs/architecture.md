@@ -68,6 +68,15 @@ sort offenses / apply non-overlapping corrections / format report
 Prism-only runs bypass line splitting, cloning, and rejoining. A run containing
 textual cops retains the compatibility pipeline and its correction ordering.
 
+## Correction transactions
+
+Each correctable finding owns one correction transaction containing one or
+more edits. Range validation and conflict resolution happen before edits are
+applied. A transaction is accepted atomically, and only then is its finding
+marked corrected; rejected or partially conflicting transactions remain
+correctable but uncorrected. This keeps diagnostics truthful and lets cops use
+coordinated edits without replacing an unnecessarily large source region.
+
 ## Layer rules
 
 - `app` may depend on every lower layer. It owns user-facing I/O, not lint
@@ -101,11 +110,12 @@ to the same file.
 
 ## Complexity limits
 
-Rust modules have an enforced 600-line emergency ceiling; new modules should
-normally remain below 400 lines. Functions should normally remain below 60
-lines, cognitive complexity 15, and five arguments. The enforced Clippy limits
-are 200 lines, cognitive complexity 30, and eight arguments. Do not raise a
-limit to land a feature.
+Rust modules have an enforced 400-line ceiling. The Prism composition root and
+correction engine have narrow, explicit exceptions while they are split along
+cohesive boundaries; new cop-family modules do not. Functions should normally
+remain below 60 lines, cognitive complexity 15, and five arguments. The
+enforced Clippy limits are 200 lines, cognitive complexity 30, and eight
+arguments. Do not raise a limit to land a feature.
 
 Measured optimization opportunities and their invariants are tracked in
 [Known performance bottlenecks](bottlenecks.md).

@@ -80,15 +80,25 @@ ruby script/new_cop.rb Bundler/Example call \
 
 # A genuinely file-level rule
 ruby script/new_cop.rb Layout/Example source
+
+# Add the cop to an existing capability-oriented family
+ruby script/new_cop.rb Style/Example call --family style_calls
 ```
 
-The generator creates and wires:
+Prefer `--family` when a cohesive module already owns the same kind of rule.
+Create a focused module when the cop introduces a distinct capability. The
+generator always creates cop-specific fixtures regardless of module choice.
+
+Without `--family`, the generator creates and wires:
 
 - a focused module under `crates/rustocop/src/cops/prism/`;
 - the module and registry entries in `prism/mod.rs`;
 - `input.rb` and `offenses.tsv` fixtures;
 - `corrected.rb` when `--autocorrect` is used;
 - a fixture test registration in `engine/fixture_tests.rs`.
+
+With `--family`, it appends the declaration and callback to that module and
+leaves the composition root unchanged.
 
 Cop names are discovered from the Prism registry. Do not add a second public
 inventory entry.
@@ -269,13 +279,31 @@ comparison:
 ```sh
 RUSTOCOP_NATIVE_PATH=crates/rustocop/target/debug/rustocop \
   ruby script/compare_upstream_cop_specs.rb \
+  --baseline spec/upstream/rubocop-1.87.0/status.yml \
   --report tmp/full-compatibility.json
 ```
 
-The full command currently exits nonzero because Rustocop does not yet support
-all 606 cops. Review its summary against the baseline in
-`spec/upstream/rubocop-1.87.0/status.yml`: previously passing cops and cases must
-not regress.
+The baseline option allows improvements while rejecting fewer passing cases,
+fewer passing cops, a changed corpus, or any regression in a Verified cop.
+After a full run, regenerate the implementation queue with:
+
+```sh
+RUSTOCOP_NATIVE_PATH=crates/rustocop/target/debug/rustocop \
+  bundle exec ruby script/generate_remaining_cop_plan.rb \
+  tmp/full-compatibility.json
+```
+
+This updates `docs/remaining-cops.md` and its machine-readable YAML companion.
+
+For layout cops, use `SourceFile`'s `line_start`, `line_end`, `line`,
+`line_range`, `full_line_range`, `indentation`, `indentation_text`, `same_line`,
+and character-aware `column` helpers. Use `SourceFile::rewrite` with
+`SourceEdit`s when constructing a correction from several edits inside one
+container. Keep Prism byte offsets for diagnostic and correction ranges; use
+`column` only when a rule needs display geometry.
+
+Before adding a local body, modifier, or argument helper, check
+[Cop authoring leverage](cop-authoring-leverage.md) and `node_helpers.rs`.
 
 ## 11. Promote support deliberately
 
@@ -308,4 +336,3 @@ Heuristic. Passing a few representative examples is not verification.
 - [ ] Ran the focused upstream verifier with corrections.
 - [ ] Ran Rust, Clippy, architecture, Ruby, and full-regression gates.
 - [ ] Updated status and regenerated support documentation only after passing.
-

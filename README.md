@@ -205,6 +205,24 @@ Regenerate the compatibility corpus after changing its case templates:
 bundle exec ruby script/generate_compatibility_corpus.rb
 ```
 
+Run the complete upstream differential with its non-regression gate, then
+regenerate the prioritized remaining-cop queue:
+
+```sh
+RUSTOCOP_NATIVE_PATH=crates/rustocop/target/debug/rustocop \
+  bundle exec ruby script/compare_upstream_cop_specs.rb \
+  --baseline spec/upstream/rubocop-1.87.0/status.yml \
+  --report tmp/full-compatibility.json
+
+RUSTOCOP_NATIVE_PATH=crates/rustocop/target/debug/rustocop \
+  bundle exec ruby script/generate_remaining_cop_plan.rb \
+  tmp/full-compatibility.json
+```
+
+The generated [remaining-cop plan](docs/remaining-cops.md) distinguishes partial
+implementations, quick structural additions, and cops blocked on shared engine
+capabilities.
+
 Build the native binary when Rust is installed:
 
 ```sh

@@ -69,6 +69,10 @@ impl<'context, 'pr> CopContext<'context, 'pr> {
         self.reporter.target_ruby_version()
     }
 
+    pub(super) fn autocorrect_enabled(&self) -> bool {
+        self.reporter.autocorrect_enabled()
+    }
+
     pub(super) fn config_value(&self, key: &str) -> Option<&str> {
         self.reporter.config_value(key)
     }
@@ -112,6 +116,28 @@ impl<'context, 'pr> CopContext<'context, 'pr> {
         replacement: impl Into<String>,
     ) {
         self.reporter.replace(message, offense, edit, replacement);
+    }
+
+    pub(super) fn replace_indirectly(
+        &mut self,
+        message: impl Into<String>,
+        offense: impl ByteRange,
+        edit: impl ByteRange,
+        replacement: impl Into<String>,
+    ) {
+        self.reporter
+            .replace_indirectly(message, offense, edit, replacement);
+    }
+
+    /// Applies several coordinated edits as one correction transaction.
+    /// Conflicts or invalid ranges reject the complete transaction.
+    pub(super) fn replace_many(
+        &mut self,
+        message: impl Into<String>,
+        offense: impl ByteRange,
+        edits: Vec<(std::ops::Range<usize>, String)>,
+    ) {
+        self.reporter.replace_many(message, offense, edits);
     }
 
     pub(super) fn remove(

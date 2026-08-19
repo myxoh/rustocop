@@ -17,10 +17,10 @@
 2. Prefer an AST cop when correctness depends on Ruby syntax, scope, receiver,
    or byte locations. Keep a textual cop only when line semantics are the actual
    RuboCop contract or while it is explicitly tracked as compatibility debt.
-3. Start new cops with `script/new_cop.rb`; it creates a focused module and
-   performs composition-root wiring. Cross-department utilities must be pure
-   helpers; they must not know about CLI flags, filesystem discovery, or output
-   formatting.
+3. Start new cops with `script/new_cop.rb`; it creates a focused module or
+   appends to a cohesive existing module with `--family`. Cross-department
+   utilities must be pure helpers; they must not know about CLI flags,
+   filesystem discovery, or output formatting.
 4. The inspection coordinator decides ordering. Individual cops emit findings
    and corrections; they do not write files or print output.
 5. Corrections use Prism byte offsets and must be non-overlapping. Add an
@@ -75,3 +75,8 @@ For parser, traversal, correction ordering, or registry changes, run the full
 upstream suite. Performance comparisons must use identical files, configuration,
 Ruby version, warmup, and process model; report medians and disclose whether
 RuboCop's Prism parser was enabled.
+
+Use `--baseline spec/upstream/rubocop-1.87.0/status.yml` for the full diagnostic
+run. The gate accepts improvements but rejects aggregate or Verified-cop
+regressions. Regenerate `docs/remaining-cops.md` from that complete report; the
+generator deliberately refuses focused or truncated reports.

@@ -1,31 +1,105 @@
 use ruby_prism::{parse, CallNode, Node, Visit};
 use std::sync::Arc;
 
+mod accessor_rules;
 mod additional_rules;
 mod additional_rules_literals;
 mod additional_rules_more;
+mod alias_rules;
+mod argument_and_inheritance_rules;
+mod assignment_completion_rules;
+mod block_arity_rules;
+mod block_association_rules;
+mod block_chain_rules;
+mod block_parameter_rules;
+mod branch_layout_rules;
+mod call_conversion_rules;
+mod class_comparison_rules;
+mod coercion_rules;
+mod collection_completion_rules;
+mod comparable_clamp_rules;
+mod compatibility_lexical_rules;
+mod conditional_semantics_rules;
 mod cop_context;
+mod correction_engine;
+mod declaration_completion_rules;
+mod declaration_semantics;
+mod deprecated_api_rules;
 mod diagnostic;
+mod dig_rules;
+mod double_splat_rules;
 mod dsl;
+mod empty_method_rules;
+mod enum_argument_rules;
+mod exception_argument_rules;
+mod fetch_completion_rules;
+mod file_predicate_rules;
+mod file_structure_rules;
+mod hash_array_rules;
+mod heredoc_call_rules;
+mod interpolation_condition_rules;
+mod io_scheduler_rules;
+mod it_parameter_rules;
+mod iteration_redundancy_rules;
 mod layout;
+mod lexical_completion;
+mod lexical_rules;
+mod line_concatenation_rules;
 mod lint;
+mod lint_builtin_overrides;
 mod lint_control_flow;
 mod lint_suspicious_calls;
+mod literal_and_pattern_rules;
+mod logical_condition_rules;
+mod lookup_completion_rules;
+mod map_join_rules;
 mod matchers;
-mod parity_calls;
-mod parity_source;
+mod method_layout_rules;
+mod method_signature_rules;
+mod mixin_grouping_rules;
+mod mixin_rules;
+mod nested_call_rules;
+mod nil_callable_rules;
+mod node_helpers;
+mod number_conversion_rules;
+mod numeric_operation_rules;
+mod numeric_predicate_rules;
+mod operator_ambiguity_rules;
+mod path_and_literal_rules;
+mod percent_string_rules;
+mod predicate_conversion_rules;
+mod prism_engine;
+mod random_rules;
+mod registry;
+mod require_order_rules;
+mod require_rules;
+mod rescue_rules;
+mod resource_and_precedence_rules;
+mod runner;
 mod security;
+mod self_rules;
+mod send_literal_rules;
+mod setter_rules;
+mod signal_exception_rules;
+mod single_line_block_rules;
 mod source_file;
 mod source_helpers;
 mod source_rules;
 mod source_rules_layout;
 mod source_rules_misc;
+mod source_semantics;
+mod source_syntax;
+mod string_conversion_rules;
+mod structural_completion_rules;
 mod style;
+mod style_call_simplifications;
 mod style_calls;
 mod style_collections;
 mod style_compat;
+mod style_global_vars;
 mod style_rewrites;
 mod style_source;
+mod ternary_rules;
 
 use crate::config::{CopConfig, RubyVersion};
 use cop_context::{CopContext, CopPolicy};
@@ -33,13 +107,15 @@ use diagnostic::{Context, Reporter};
 pub(crate) use diagnostic::{Finding, Inspection};
 use dsl::*;
 use matchers::*;
-use source_file::SourceFile;
+use node_helpers::*;
+pub use prism_engine::Engine;
+use registry::Registry;
+use runner::Runner;
+use source_file::{SourceEdit, SourceFile};
 
 pub(super) trait Cop: Sync {
     fn name(&self) -> &'static str;
-
     fn on_source(&self, _source: &str, _context: &mut Context) {}
-
     fn on_node<'pr>(
         &self,
         node: &Node<'pr>,
@@ -51,115 +127,112 @@ pub(super) trait Cop: Sync {
             self.on_call(&call, context);
         }
     }
-
     fn on_call(&self, _node: &CallNode<'_>, _context: &mut Context) {}
 }
 
-struct Registry {
-    cops: Vec<Box<dyn Cop>>,
-}
-
-pub struct Engine {
-    registry: Registry,
-}
-
-impl Engine {
-    pub fn new(enabled: &dyn Fn(&str) -> bool) -> Self {
-        let registry = Registry::enabled(enabled);
-        Self { registry }
-    }
-
-    pub(crate) fn implements(&self, cop_name: &str) -> bool {
-        self.registry.cops.iter().any(|cop| cop.name() == cop_name)
-    }
-
-    pub fn inspect(
-        &self,
-        path: &str,
-        source: &str,
-        autocorrect: bool,
-        target_ruby_version: RubyVersion,
-        cop_config: Arc<CopConfig>,
-    ) -> Inspection {
-        let parsed = parse(source.as_bytes());
-        let mut context = Context::new(autocorrect, path, target_ruby_version, cop_config);
-        for cop in &self.registry.cops {
-            cop.on_source(source, &mut context);
-        }
-        let mut runner = Runner {
-            registry: &self.registry,
-            context: &mut context,
-            source,
-            ancestors: Vec::new(),
-        };
-        runner.visit(&parsed.node());
-        context.finish(source)
-    }
-}
-
 pub(crate) fn cop_names() -> Vec<&'static str> {
-    let mut names = Registry::enabled(&|_| true)
-        .cops
-        .into_iter()
-        .map(|cop| cop.name())
-        .collect::<Vec<_>>();
-    names.sort_unstable();
-    names.dedup();
-    names
+    registry::cop_names()
 }
 
 impl Registry {
     fn enabled(enabled: &dyn Fn(&str) -> bool) -> Self {
-        let cops = lint::cops()
-            .into_iter()
-            .chain(additional_rules::cops())
-            .chain(additional_rules_literals::cops())
-            .chain(additional_rules_more::cops())
-            .chain(lint_control_flow::cops())
-            .chain(lint_suspicious_calls::cops())
-            .chain(layout::cops())
-            .chain(parity_calls::cops())
-            .chain(parity_source::cops())
-            .chain(security::cops())
-            .chain(style::cops())
-            .chain(style_calls::cops())
-            .chain(style_collections::cops())
-            .chain(style_compat::cops())
-            .chain(style_rewrites::cops())
-            .chain(style_source::cops())
-            .chain(source_rules::cops())
-            .chain(source_rules_layout::cops())
-            .chain(source_rules_misc::cops());
+        type Provider = fn() -> Vec<Box<dyn Cop>>;
+        let providers: &[Provider] = &[
+            lint::cops,
+            accessor_rules::cops,
+            additional_rules::cops,
+            additional_rules_literals::cops,
+            additional_rules_more::cops,
+            alias_rules::cops,
+            argument_and_inheritance_rules::cops,
+            assignment_completion_rules::cops,
+            block_association_rules::cops,
+            block_parameter_rules::cops,
+            block_chain_rules::cops,
+            block_arity_rules::cops,
+            branch_layout_rules::cops,
+            call_conversion_rules::cops,
+            class_comparison_rules::cops,
+            compatibility_lexical_rules::cops,
+            comparable_clamp_rules::cops,
+            collection_completion_rules::cops,
+            coercion_rules::cops,
+            conditional_semantics_rules::cops,
+            declaration_semantics::cops,
+            declaration_completion_rules::cops,
+            deprecated_api_rules::cops,
+            dig_rules::cops,
+            double_splat_rules::cops,
+            empty_method_rules::cops,
+            enum_argument_rules::cops,
+            exception_argument_rules::cops,
+            fetch_completion_rules::cops,
+            file_structure_rules::cops,
+            file_predicate_rules::cops,
+            hash_array_rules::cops,
+            heredoc_call_rules::cops,
+            iteration_redundancy_rules::cops,
+            interpolation_condition_rules::cops,
+            io_scheduler_rules::cops,
+            it_parameter_rules::cops,
+            lint_builtin_overrides::cops,
+            lint_control_flow::cops,
+            lint_suspicious_calls::cops,
+            layout::cops,
+            lexical_completion::cops,
+            line_concatenation_rules::cops,
+            literal_and_pattern_rules::cops,
+            logical_condition_rules::cops,
+            lookup_completion_rules::cops,
+            map_join_rules::cops,
+            method_layout_rules::cops,
+            method_signature_rules::cops,
+            mixin_grouping_rules::cops,
+            mixin_rules::cops,
+            nested_call_rules::cops,
+            nil_callable_rules::cops,
+            number_conversion_rules::cops,
+            numeric_operation_rules::cops,
+            numeric_predicate_rules::cops,
+            operator_ambiguity_rules::cops,
+            path_and_literal_rules::cops,
+            percent_string_rules::cops,
+            predicate_conversion_rules::cops,
+            random_rules::cops,
+            resource_and_precedence_rules::cops,
+            require_rules::cops,
+            require_order_rules::cops,
+            rescue_rules::cops,
+            lexical_rules::cops,
+            security::cops,
+            self_rules::cops,
+            send_literal_rules::cops,
+            setter_rules::cops,
+            signal_exception_rules::cops,
+            single_line_block_rules::cops,
+            style::cops,
+            style_call_simplifications::cops,
+            style_calls::cops,
+            style_collections::cops,
+            style_compat::cops,
+            style_global_vars::cops,
+            style_rewrites::cops,
+            style_source::cops,
+            structural_completion_rules::cops,
+            string_conversion_rules::cops,
+            source_rules::cops,
+            source_rules_layout::cops,
+            source_rules_misc::cops,
+            source_semantics::cops,
+            ternary_rules::cops,
+        ];
+        let cops = providers
+            .iter()
+            .flat_map(|provide| provide())
+            .filter(|cop| enabled(cop.name()))
+            .collect();
 
-        Self {
-            cops: cops.filter(|cop| enabled(cop.name())).collect(),
-        }
-    }
-}
-
-struct Runner<'registry, 'context> {
-    registry: &'registry Registry,
-    context: &'context mut Context,
-    source: &'context str,
-    ancestors: Vec<Node<'context>>,
-}
-
-impl<'pr> Visit<'pr> for Runner<'_, 'pr> {
-    fn visit_branch_node_enter(&mut self, node: Node<'pr>) {
-        for cop in &self.registry.cops {
-            cop.on_node(&node, &self.ancestors, self.source, self.context);
-        }
-        self.ancestors.push(node);
-    }
-
-    fn visit_branch_node_leave(&mut self) {
-        self.ancestors.pop();
-    }
-
-    fn visit_leaf_node_enter(&mut self, node: Node<'pr>) {
-        for cop in &self.registry.cops {
-            cop.on_node(&node, &self.ancestors, self.source, self.context);
-        }
+        Self { cops }
     }
 }
 

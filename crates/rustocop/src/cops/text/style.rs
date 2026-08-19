@@ -21,7 +21,6 @@ pub(super) fn after_prism(
     check_if_unless_modifier(lines, options, offenses);
     check_case_like_if(lines, options, offenses);
     check_conditional_assignment(lines, options, offenses);
-    check_empty_case_condition(lines, options, offenses);
     check_empty_else(lines, options, offenses);
     check_guard_clause(lines, options, offenses);
     check_hash_like_case(lines, options, offenses);
@@ -255,32 +254,6 @@ fn check_conditional_assignment(
                 leading_spaces(&lines[index].body) + 1,
                 first.len(),
                 false,
-                false,
-            );
-        }
-    }
-}
-
-fn check_empty_case_condition(
-    lines: &[SourceLine],
-    options: &InspectionConfig,
-    offenses: &mut Vec<Offense>,
-) {
-    let cop = "Style/EmptyCaseCondition";
-    if !options.cop_enabled(cop) {
-        return;
-    }
-
-    for (index, line) in lines.iter().enumerate() {
-        if line.body.trim() == "case" {
-            push_offense(
-                offenses,
-                cop,
-                "Do not use empty `case` condition, instead use an `if` expression.",
-                index + 1,
-                leading_spaces(&line.body) + 1,
-                4,
-                true,
                 false,
             );
         }

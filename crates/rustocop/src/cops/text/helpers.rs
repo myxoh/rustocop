@@ -4,12 +4,12 @@ pub(super) fn trailing_whitespace_len(value: &str) -> usize {
     value
         .chars()
         .rev()
-        .take_while(|character| *character == ' ' || *character == '\t')
+        .take_while(|character| matches!(character, ' ' | '\t' | '\u{3000}'))
         .count()
 }
 
 pub(super) fn trim_trailing_spaces(value: &mut String) {
-    while value.ends_with(' ') || value.ends_with('\t') {
+    while value.ends_with(' ') || value.ends_with('\t') || value.ends_with('\u{3000}') {
         value.pop();
     }
 }

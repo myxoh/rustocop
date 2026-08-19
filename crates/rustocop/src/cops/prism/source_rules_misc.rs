@@ -55,6 +55,7 @@ fn duplicate_rescue(source: &str, context: &mut Reporter<'_>) {
 }
 
 fn empty_class(source: &str, context: &mut Reporter<'_>) {
+    let allow_comments = context.config_bool("AllowComments", true);
     let lines = source_lines(source).collect::<Vec<_>>();
     for (index, (offset, line)) in lines.iter().enumerate() {
         let trimmed = line.trim();
@@ -66,13 +67,18 @@ fn empty_class(source: &str, context: &mut Reporter<'_>) {
             .find(|(_, candidate)| candidate.trim() == "end")
         {
             let body = &source[offset + line.len()..*end_offset];
-            if body.trim().is_empty() {
+            let contains_comment = body.lines().any(|line| line.trim_start().starts_with('#'));
+            let empty = body
+                .lines()
+                .all(|line| line.trim().is_empty() || line.trim_start().starts_with('#'));
+            if empty && !(allow_comments && contains_comment) {
                 let message = if trimmed.starts_with("class <<") {
                     "Empty metaclass detected."
                 } else {
                     "Empty class detected."
                 };
-                context.report(message, *offset..end_offset + end_line.len());
+                let start = offset + line.len() - line.trim_start().len();
+                context.report(message, start..end_offset + end_line.len());
             }
         }
     }
@@ -125,30 +131,40 @@ fn env_home(source: &str, context: &mut Reporter<'_>) {
 }
 
 fn class_check(source: &str, context: &mut Reporter<'_>) {
-    for (start, _) in source.match_indices("kind_of?") {
+    let (bad, good) = if context.policy().enforced_style("is_a?") == "kind_of?" {
+        ("is_a?", "kind_of?")
+    } else {
+        ("kind_of?", "is_a?")
+    };
+    for (start, _) in source.match_indices(bad) {
         context.replace(
-            "Prefer `Object#is_a?` over `Object#kind_of?`.",
-            start..start + 8,
-            start..start + 8,
-            "is_a?",
+            format!("Prefer `Object#{good}` over `Object#{bad}`."),
+            start..start + bad.len(),
+            start..start + bad.len(),
+            good,
         );
     }
 }
 
 fn ascii_comments(source: &str, context: &mut Reporter<'_>) {
+    let allowed = context.config_values("AllowedChars").to_vec();
     for (offset, line) in source_lines(source) {
         let Some(hash) = line.find('#') else { continue };
         let comment = &line[hash + 1..];
-        let Some((relative, _)) = comment
-            .char_indices()
-            .find(|(_, character)| !character.is_ascii() && *character != '©')
-        else {
+        let Some((relative, _)) = comment.char_indices().find(|(_, character)| {
+            !character.is_ascii()
+                && *character != '©'
+                && !allowed.iter().any(|item| item == &character.to_string())
+        }) else {
             continue;
         };
         let start = offset + hash + 1 + relative;
         let mut end = start;
         for (relative, character) in source[start..offset + line.len()].char_indices() {
-            if character.is_ascii() || character == '©' {
+            if character.is_ascii()
+                || character == '©'
+                || allowed.iter().any(|item| item == &character.to_string())
+            {
                 break;
             }
             end = start + relative + character.len_utf8();

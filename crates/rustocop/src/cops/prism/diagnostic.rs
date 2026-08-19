@@ -1,7 +1,9 @@
 use ruby_prism::{Location, Node};
+use std::cmp::Reverse;
 use std::ops::Range;
 use std::sync::Arc;
 
+use super::correction_engine::{accepted_corrections, apply_edits, Correction, Edit};
 use super::{CopContext, CopPolicy};
 use crate::config::{CopConfig, RubyVersion};
 
@@ -49,18 +51,13 @@ impl ByteRange for &Location<'_> {
     }
 }
 
-struct Edit {
-    range: Range<usize>,
-    replacement: String,
-}
-
 pub(crate) struct Context {
     autocorrect: bool,
     path: Arc<str>,
     target_ruby_version: RubyVersion,
     cop_config: Arc<CopConfig>,
     findings: Vec<Finding>,
-    edits: Vec<Edit>,
+    corrections: Vec<Correction>,
 }
 
 /// A diagnostic context already scoped to one cop. Rule helpers use this
@@ -83,12 +80,16 @@ impl Context {
             target_ruby_version,
             cop_config,
             findings: Vec::new(),
-            edits: Vec::new(),
+            corrections: Vec::new(),
         }
     }
 
     pub(super) fn target_ruby_version(&self) -> RubyVersion {
         self.target_ruby_version
+    }
+
+    pub(super) fn autocorrect_enabled(&self) -> bool {
+        self.autocorrect
     }
 
     fn config_value(&self, cop_name: &str, key: &str) -> Option<&str> {
@@ -139,10 +140,30 @@ impl Context {
             cop_name,
             message.into(),
             offense.offsets(),
-            Some(Edit {
+            Some(vec![Edit {
                 range: edit.offsets(),
                 replacement: replacement.into(),
-            }),
+            }]),
+        );
+    }
+
+    fn replace_many(
+        &mut self,
+        cop_name: &'static str,
+        message: impl Into<String>,
+        offense: impl ByteRange,
+        edits: Vec<(Range<usize>, String)>,
+    ) {
+        self.record(
+            cop_name,
+            message.into(),
+            offense.offsets(),
+            Some(
+                edits
+                    .into_iter()
+                    .map(|(range, replacement)| Edit { range, replacement })
+                    .collect(),
+            ),
         );
     }
 
@@ -172,34 +193,88 @@ impl Context {
         cop_name: &'static str,
         message: String,
         offense: Range<usize>,
-        edit: Option<Edit>,
+        correction: Option<Vec<Edit>>,
     ) {
-        let correctable = edit.is_some();
-        let corrected = self.autocorrect && correctable;
-        if self.autocorrect {
-            self.edits.extend(edit);
-        }
+        let correctable = correction.is_some();
+        self.record_with_correctability(cop_name, message, offense, correction, correctable);
+    }
+
+    fn record_with_correctability(
+        &mut self,
+        cop_name: &'static str,
+        message: String,
+        offense: Range<usize>,
+        correction: Option<Vec<Edit>>,
+        correctable: bool,
+    ) {
+        let finding_index = self.findings.len();
         self.findings.push(Finding {
             cop_name,
             message,
             correctable,
-            corrected,
+            corrected: false,
             start_offset: offense.start,
             end_offset: offense.end,
         });
+        if self.autocorrect {
+            if let Some(edits) = correction {
+                self.corrections.push(Correction {
+                    finding_index,
+                    edits,
+                });
+            }
+        }
+    }
+
+    fn replace_indirectly(
+        &mut self,
+        cop_name: &'static str,
+        message: impl Into<String>,
+        offense: impl ByteRange,
+        edit: impl ByteRange,
+        replacement: impl Into<String>,
+    ) {
+        self.record_with_correctability(
+            cop_name,
+            message.into(),
+            offense.offsets(),
+            Some(vec![Edit {
+                range: edit.offsets(),
+                replacement: replacement.into(),
+            }]),
+            false,
+        );
     }
 
     pub(super) fn finish(mut self, source: &str) -> Inspection {
-        self.findings
-            .sort_by_key(|finding| (finding.start_offset, finding.end_offset, finding.cop_name));
+        let (accepted, subsumed) = accepted_corrections(source, self.corrections);
+        let mut edits = Vec::new();
+        for correction in accepted {
+            self.findings[correction.finding_index].corrected = true;
+            edits.extend(correction.edits);
+        }
+        for finding_index in subsumed {
+            self.findings[finding_index].corrected = true;
+        }
+        self.findings.sort_by_key(|finding| {
+            (
+                finding.start_offset,
+                Reverse(finding.end_offset),
+                finding.cop_name,
+            )
+        });
         Inspection {
             findings: self.findings,
-            corrected_source: apply_edits(source, self.edits),
+            corrected_source: apply_edits(source, edits),
         }
     }
 }
 
 impl Reporter<'_> {
+    pub(super) fn autocorrect_enabled(&self) -> bool {
+        self.context.autocorrect
+    }
+
     #[allow(dead_code)]
     pub(super) fn path(&self) -> &str {
         &self.context.path
@@ -262,6 +337,18 @@ impl Reporter<'_> {
             .replace(self.cop_name, message, offense, edit, replacement);
     }
 
+    /// Records one atomic correction. Either every edit is accepted or none
+    /// are, so a finding is never marked corrected after a partial rewrite.
+    pub(super) fn replace_many(
+        &mut self,
+        message: impl Into<String>,
+        offense: impl ByteRange,
+        edits: Vec<(Range<usize>, String)>,
+    ) {
+        self.context
+            .replace_many(self.cop_name, message, offense, edits);
+    }
+
     pub(super) fn remove(
         &mut self,
         message: impl Into<String>,
@@ -281,94 +368,21 @@ impl Reporter<'_> {
         self.context
             .insert(self.cop_name, message, offense, offset, text);
     }
-}
 
-fn apply_edits(source: &str, mut edits: Vec<Edit>) -> String {
-    edits.sort_by_key(|edit| (edit.range.start, edit.range.end));
-
-    let mut accepted = Vec::with_capacity(edits.len());
-    let mut previous_end = 0;
-    for edit in edits {
-        if edit.range.start < previous_end || edit.range.end > source.len() {
-            continue;
-        }
-        previous_end = edit.range.end;
-        accepted.push(edit);
+    /// Records an offense that cannot be corrected in isolation but is
+    /// resolved by the supplied broader correction transaction.
+    pub(super) fn replace_indirectly(
+        &mut self,
+        message: impl Into<String>,
+        offense: impl ByteRange,
+        edit: impl ByteRange,
+        replacement: impl Into<String>,
+    ) {
+        self.context
+            .replace_indirectly(self.cop_name, message, offense, edit, replacement);
     }
-
-    let mut corrected = source.to_string();
-    for edit in accepted.into_iter().rev() {
-        corrected.replace_range(edit.range, &edit.replacement);
-    }
-    corrected
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn context(autocorrect: bool) -> Context {
-        Context::new(
-            autocorrect,
-            "example.rb",
-            RubyVersion::default(),
-            Arc::new(CopConfig::default()),
-        )
-    }
-
-    #[test]
-    fn reports_uncorrectable_findings_without_changing_source() {
-        let mut context = context(true);
-        context.report("Lint/Example", "Example offense.", 1..3);
-
-        let inspection = context.finish("abcd");
-
-        assert_eq!(inspection.corrected_source, "abcd");
-        assert!(!inspection.findings[0].correctable);
-        assert!(!inspection.findings[0].corrected);
-    }
-
-    #[test]
-    fn records_correctability_without_applying_disabled_corrections() {
-        let mut context = context(false);
-        context.replace("Style/Example", "Example offense.", (1, 3), 1..3, "X");
-
-        let inspection = context.finish("abcd");
-
-        assert_eq!(inspection.corrected_source, "abcd");
-        assert!(inspection.findings[0].correctable);
-        assert!(!inspection.findings[0].corrected);
-    }
-
-    #[test]
-    fn applies_each_correction_intent() {
-        let mut context = context(true);
-        context.insert("Layout/Example", "Insert.", (0, 1), 1, " ");
-        context.replace("Style/Example", "Replace.", (1, 2), (1, 2), "B");
-        context.remove("Style/Example", "Remove.", 3..4, 3..4);
-
-        let inspection = context.finish("abcd");
-
-        assert_eq!(inspection.corrected_source, "a Bc");
-        assert!(inspection.findings.iter().all(|finding| finding.corrected));
-    }
-
-    #[test]
-    fn reporter_scopes_every_intent_to_one_cop() {
-        let mut context = context(true);
-        {
-            let mut reporter = context.reporter("Style/Example");
-            reporter.report("Report.", 0..1);
-            reporter.replace("Replace.", 1..2, 1..2, "B");
-            reporter.insert("Insert.", 2..3, 2, "!");
-        }
-
-        let inspection = context.finish("abc");
-
-        assert_eq!(inspection.corrected_source, "aB!c");
-        assert!(inspection
-            .findings
-            .iter()
-            .all(|finding| finding.cop_name == "Style/Example"));
-    }
-}
+#[path = "diagnostic_tests.rs"]
+mod tests;

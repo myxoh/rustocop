@@ -11,6 +11,7 @@ FIXTURE_TESTS = File.join(ROOT, "crates/rustocop/src/engine/fixture_tests.rs")
 options = {
   autocorrect: false,
   dry_run: false,
+  family: nil,
   fixture_path: "/project/example.rb",
   node_cast: "as_call_node"
 }
@@ -22,6 +23,9 @@ OptionParser.new do |parser|
   end
   parser.on("--fixture-path PATH", "path exposed to the generated fixture") do |path|
     options[:fixture_path] = path
+  end
+  parser.on("--family MODULE", "append the cop to an existing Prism family module") do |family|
+    options[:family] = family
   end
   parser.on("--node-cast METHOD", "Prism Node cast for node cops") { |cast| options[:node_cast] = cast }
 end.parse!
@@ -37,17 +41,24 @@ if kind == "node" && !options.fetch(:node_cast).match?(/\Aas_[a-z0-9_]+_node\z/)
 end
 
 snake = short_name.gsub(/([a-z\d])([A-Z])/, '\1_\2').downcase
-module_name = "#{department.downcase}_#{snake}"
+fixture_name = "#{department.downcase}_#{snake}"
+module_name = options[:family] || fixture_name
+abort "family module must use snake_case" unless module_name.match?(/\A[a-z][a-z0-9_]*\z/)
 type_name = short_name.gsub(/[^A-Za-z0-9]/, "")
+callback_name = options[:family] ? snake : "check"
 path = File.join(PRISM_ROOT, "#{module_name}.rs")
-abort "#{path} already exists" if File.exist?(path)
-fixture = File.join(ROOT, "crates/rustocop/tests/fixtures/inspection", module_name)
+if options[:family]
+  abort "family module does not exist: #{path}" unless File.exist?(path)
+else
+  abort "#{path} already exists" if File.exist?(path)
+end
+fixture = File.join(ROOT, "crates/rustocop/tests/fixtures/inspection", fixture_name)
 abort "#{fixture} already exists" if File.exist?(fixture)
 
 callback = case kind
            when "call"
              <<~RUST
-               fn check(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
+               fn #{callback_name}(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
                    if !match_call(node).named(b"replace_me").matches() {
                        return;
                    }
@@ -58,20 +69,20 @@ callback = case kind
              node_type = options.fetch(:node_cast).delete_prefix("as_").delete_suffix("_node")
                .split("_").map(&:capitalize).join + "Node"
              <<~RUST
-               fn check(node: &ruby_prism::#{node_type}<'_>, context: &mut CopContext<'_, '_>) {
+               fn #{callback_name}(node: &ruby_prism::#{node_type}<'_>, context: &mut CopContext<'_, '_>) {
                    let _ = (node, context);
                }
              RUST
            when "any_node"
              <<~RUST
-               fn check(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
+               fn #{callback_name}(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
                    // Use this only when the cop genuinely handles several node kinds.
                    let _ = (node, context);
                }
              RUST
            when "source"
              <<~RUST
-               fn check(context: &mut CopContext<'_, '_>) {
+               fn #{callback_name}(context: &mut CopContext<'_, '_>) {
                    // Source callbacks are for genuinely lexical or file-level rules.
                    // Prefer `call` or typed `node` for Ruby syntax.
                    let source = context.source_file();
@@ -81,9 +92,9 @@ callback = case kind
            end
 
 declaration = if kind == "node"
-                "node(#{options.fetch(:node_cast)}, check)"
+                "node(#{options.fetch(:node_cast)}, #{callback_name})"
               else
-                "#{kind}(check)"
+                "#{kind}(#{callback_name})"
               end
 source = <<~RUST
   use super::*;
@@ -99,8 +110,8 @@ fixture_input = "# Replace this with upstream-derived offending and clean exampl
 fixture_header = "cop\tline\tcolumn\tlast_line\tlast_column\tcorrectable\tcorrected\tmessage\n"
 fixture_test = <<~RUST
   fixture_test!(
-      checks_#{module_name},
-      #{module_name.dump},
+      checks_#{fixture_name},
+      #{fixture_name.dump},
       #{options.fetch(:fixture_path).dump},
       #{cop_name.dump},
       #{options.fetch(:autocorrect)},
@@ -109,7 +120,14 @@ fixture_test = <<~RUST
 RUST
 if options[:dry_run]
   puts "# #{path}"
-  puts source
+  if options[:family]
+    puts "# Append to the existing define_cops! block:"
+    puts "    #{type_name} => #{cop_name.dump} => #{declaration},"
+    puts
+    puts callback
+  else
+    puts source
+  end
   puts "# #{File.join(fixture, "input.rb")}"
   puts fixture_input
   puts "# #{File.join(fixture, "offenses.tsv")}"
@@ -123,23 +141,36 @@ if options[:dry_run]
   exit
 end
 
-composition = File.read(COMPOSITION_ROOT)
-module_line = "mod #{module_name};\n"
-abort "composition module marker not found" unless composition.include?("mod source_helpers;\n")
-composition = composition.sub("mod source_helpers;\n", "#{module_line}mod source_helpers;\n")
-chain = "            .chain(#{module_name}::cops())\n"
-abort "registry chain marker not found" unless composition.include?("            .chain(lint_control_flow::cops())\n")
-composition = composition.sub(
-  "            .chain(lint_control_flow::cops())\n",
-  "#{chain}            .chain(lint_control_flow::cops())\n"
-)
+unless options[:family]
+  composition = File.read(COMPOSITION_ROOT)
+  module_line = "mod #{module_name};\n"
+  abort "composition module marker not found" unless composition.include?("mod source_helpers;\n")
+  composition = composition.sub("mod source_helpers;\n", "#{module_line}mod source_helpers;\n")
+  chain = "            .chain(#{module_name}::cops())\n"
+  abort "registry chain marker not found" unless composition.include?("            .chain(lint_control_flow::cops())\n")
+  composition = composition.sub(
+    "            .chain(lint_control_flow::cops())\n",
+    "#{chain}            .chain(lint_control_flow::cops())\n"
+  )
+end
 fixture_tests = File.read(FIXTURE_TESTS)
 fixture_marker = "// New-cop generator registrations are inserted directly below this line.\n"
 abort "fixture registration marker not found" unless fixture_tests.include?(fixture_marker)
 fixture_tests = fixture_tests.sub(fixture_marker, "#{fixture_marker}#{fixture_test}\n")
 
-File.write(path, source)
-File.write(COMPOSITION_ROOT, composition)
+if options[:family]
+  family_source = File.read(path)
+  declaration_end = family_source.index("\n}", family_source.index("define_cops! {") || 0)
+  abort "family module has no define_cops! block: #{path}" unless declaration_end
+  family_source.insert(
+    declaration_end + 1,
+    "    #{type_name} => #{cop_name.dump} => #{declaration},\n"
+  )
+  File.write(path, "#{family_source.rstrip}\n\n#{callback}")
+else
+  File.write(path, source)
+  File.write(COMPOSITION_ROOT, composition)
+end
 File.write(FIXTURE_TESTS, fixture_tests)
 FileUtils.mkdir_p(fixture)
 File.write(File.join(fixture, "input.rb"), fixture_input)

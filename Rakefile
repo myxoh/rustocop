@@ -13,6 +13,13 @@ namespace :quality do
     ruby "script/check_architecture.rb"
     sh "cargo", "clippy", "--manifest-path", "crates/rustocop/Cargo.toml", "--all-targets"
   end
+
+
+  desc "Reject regressions in a completed full upstream compatibility report"
+  task :compatibility_baseline do
+    report = ENV.fetch("REPORT", "tmp/rubocop-1.87.0-compatibility.json")
+    ruby "script/check_compatibility_baseline.rb", report
+  end
 end
 
 namespace :build do

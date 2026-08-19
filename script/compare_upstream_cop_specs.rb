@@ -8,6 +8,7 @@ require "optparse"
 require "thread"
 require "tmpdir"
 require "yaml"
+require_relative "../lib/rustocop/compatibility_baseline"
 
 root = File.expand_path("..", __dir__)
 options = {
@@ -16,6 +17,7 @@ options = {
   limit: nil,
   only: nil,
   corrections: false,
+  baseline: nil,
   report: File.join(root, "tmp/rubocop-1.87.0-compatibility.json")
 }
 
@@ -25,8 +27,15 @@ OptionParser.new do |parser|
   parser.on("--limit-per-cop COUNT", Integer) { |count| options[:limit] = count }
   parser.on("--only COPS", "comma-separated cop names") { |cops| options[:only] = cops.split(",") }
   parser.on("--corrections", "also verify asserted corrected source") { options[:corrections] = true }
+  parser.on("--baseline PATH", "reject regressions below an approved compatibility baseline") do |path|
+    options[:baseline] = File.expand_path(path)
+  end
   parser.on("--report PATH") { |path| options[:report] = File.expand_path(path) }
 end.parse!
+
+if options[:baseline] && (options[:only] || options[:limit] || options[:corrections])
+  abort "--baseline requires a complete diagnostic run without --only, --limit-per-cop, or --corrections"
+end
 
 native = ENV.fetch("RUSTOCOP_NATIVE_PATH", File.join(root, "libexec/rustocop-native"))
 abort "native Rustocop executable not found at #{native}" unless File.executable?(native)
@@ -44,6 +53,17 @@ File.foreach(options[:corpus]) do |line|
   cases << test_case
 end
 abort "no captured upstream cases matched the requested cops" if cases.empty?
+
+# RuboCop's callback order is an implementation detail and can differ between
+# Parser and Prism for nested nodes. Compatibility is about the diagnostics,
+# not the order in which the two engines discovered identical offenses.
+offense_order = lambda do |offense|
+  [
+    offense.fetch("line"), offense.fetch("column"), offense.fetch("last_line"),
+    offense.fetch("last_column"), offense.fetch("message"), offense.fetch("severity"),
+    offense.fetch("correctable") ? 1 : 0
+  ]
+end
 
 config_root = File.join(root, "tmp/upstream-rubocop-configs")
 FileUtils.mkdir_p(config_root)
@@ -97,15 +117,20 @@ workers = Array.new(options[:jobs]) do
           "message", "severity", "correctable", "line", "column", "last_line", "last_column"
         )
       end
-      passed = expected.nil? || (status.exitstatus == (expected.empty? ? 0 : 1) && actual == expected)
+      diagnostics_match = expected.nil? || actual.sort_by(&offense_order) == expected.sort_by(&offense_order)
+      passed = expected.nil? ||
+               (status.exitstatus == (expected.empty? ? 0 : 1) && diagnostics_match)
       correction_passed = nil
       if options[:corrections] && test_case.key?("correction")
-        expected_correction = test_case["correction"]
-        if expected_correction.is_a?(Hash) && expected_correction.key?("$hex")
-          expected_correction = [expected_correction.fetch("$hex")].pack("H*")
-        end
-        expected_correction = expected_correction.b
-        expected_correction = source if test_case.fetch("asserts_no_correction", false)
+        expected_correction = if test_case.fetch("asserts_no_correction", false)
+                                source
+                              else
+                                correction = test_case["correction"]
+                                if correction.is_a?(Hash) && correction.key?("$hex")
+                                  correction = [correction.fetch("$hex")].pack("H*")
+                                end
+                                correction.b
+                              end
 
         Dir.mktmpdir("rustocop-upstream-case") do |directory|
           relative_path = test_case.fetch("path").sub(%r{\A/+}, "").tr("\\", "/")
@@ -177,4 +202,17 @@ File.write(options[:report], JSON.pretty_generate(summary))
 puts "#{summary.fetch("passed_cases")}/#{summary.fetch("cases")} cases pass; " \
      "#{summary.fetch("passing_cops")}/#{summary.fetch("cops")} cops pass every selected case"
 puts "Report: #{options[:report]}"
+if options[:baseline]
+  baseline_errors = Rustocop::CompatibilityBaseline.errors(
+    summary,
+    YAML.safe_load(File.read(options[:baseline]))
+  )
+  if baseline_errors.empty?
+    puts "Compatibility baseline preserved."
+    exit 0
+  end
+  warn "Compatibility baseline regression:"
+  baseline_errors.each { |error| warn "  - #{error}" }
+  exit 1
+end
 exit(summary.fetch("passed_cases") == summary.fetch("cases") ? 0 : 1)
