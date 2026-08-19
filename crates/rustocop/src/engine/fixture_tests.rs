@@ -74,6 +74,15 @@ macro_rules! fixture_test {
 // New-cop generator registrations are inserted directly below this line.
 
 fixture_test!(
+    rejects_unscoped_guard_clause_exits,
+    "style_guard_clause_regression",
+    "/project/example.rb",
+    "Style/GuardClause",
+    false,
+    RubyVersion::default()
+);
+
+fixture_test!(
     reports_security_calls,
     "security_offenses",
     "/project/security.rb",

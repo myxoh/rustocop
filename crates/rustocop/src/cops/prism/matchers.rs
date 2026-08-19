@@ -56,6 +56,14 @@ impl<'call, 'pr> CallMatcher<'call, 'pr> {
         self
     }
 
+    pub(super) fn with_receiver_matching(
+        mut self,
+        predicate: impl FnOnce(Option<Node<'pr>>) -> bool,
+    ) -> Self {
+        self.matches &= predicate(self.call.receiver());
+        self
+    }
+
     pub(super) fn without_arguments(mut self) -> Self {
         self.matches &= argument_count(self.call) == 0;
         self
@@ -121,6 +129,15 @@ impl<'call, 'pr> CallMatcher<'call, 'pr> {
 
     pub(super) fn matches(self) -> bool {
         self.matches
+    }
+
+    pub(super) fn capture_first_argument(self) -> Option<Node<'pr>> {
+        self.matches.then(|| first_argument(self.call)).flatten()
+    }
+
+    #[allow(dead_code)]
+    pub(super) fn capture_only_argument(self) -> Option<Node<'pr>> {
+        self.matches.then(|| only_argument(self.call)).flatten()
     }
 }
 
@@ -322,69 +339,6 @@ pub(super) fn node_source<'source>(source: &'source str, node: &Node<'_>) -> &'s
 
 pub(super) fn same_source(source: &str, left: &Node<'_>, right: &Node<'_>) -> bool {
     node_source(source, left) == node_source(source, right)
-}
-
-pub(super) fn literal_zero(node: Option<&Node<'_>>) -> bool {
-    let Some(node) = node else {
-        return false;
-    };
-    if let Some(integer) = node.as_integer_node() {
-        return integer
-            .value()
-            .to_u32_digits()
-            .1
-            .iter()
-            .all(|digit| *digit == 0);
-    }
-    node.as_float_node()
-        .is_some_and(|float| float.value() == 0.0)
-}
-
-pub(super) fn float_expression(node: Option<&Node<'_>>) -> bool {
-    let Some(node) = node else {
-        return false;
-    };
-    if node.as_float_node().is_some() {
-        return true;
-    }
-    if let Some(parentheses) = node.as_parentheses_node() {
-        return parentheses
-            .body()
-            .as_ref()
-            .is_some_and(|body| float_expression(Some(body)));
-    }
-    if let Some(statements) = node.as_statements_node() {
-        return statements
-            .body()
-            .iter()
-            .any(|statement| float_expression(Some(&statement)));
-    }
-    node.as_call_node().is_some_and(|call| {
-        matches!(call_name(&call), b"to_f" | b"fdiv" | b"Float")
-            || matches!(call_name(&call), b"+" | b"-" | b"*" | b"**" | b"/" | b"%")
-                && (float_expression(call.receiver().as_ref())
-                    || first_argument(&call)
-                        .as_ref()
-                        .is_some_and(|argument| float_expression(Some(argument))))
-            || call.receiver().as_ref().is_some_and(|receiver| {
-                float_expression(Some(receiver))
-                    && !(matches!(
-                        call_name(&call),
-                        b"ceil" | b"floor" | b"round" | b"truncate" | b"to_i"
-                    ) && argument_count(&call) == 0)
-            })
-    })
-}
-
-pub(super) fn immutable_literal(node: &Node<'_>) -> bool {
-    node.as_integer_node().is_some()
-        || node.as_float_node().is_some()
-        || node.as_symbol_node().is_some()
-        || node.as_true_node().is_some()
-        || node.as_false_node().is_some()
-        || node.as_nil_node().is_some()
-        || node.as_regular_expression_node().is_some()
-        || node.as_range_node().is_some()
 }
 
 #[cfg(test)]

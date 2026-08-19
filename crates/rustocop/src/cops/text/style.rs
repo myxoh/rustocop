@@ -223,11 +223,9 @@ fn check_guard_clause(
         let first = lines[index].body.trim();
         let second = lines[index + 1].body.trim();
         let third = lines[index + 2].body.trim();
-        if first.starts_with("if ")
-            && third == "end"
-            && matches!(second, "return" | "break" | "next")
-            || second.starts_with("raise ")
-        {
+        let exits_scope =
+            matches!(second, "return" | "break" | "next") || second.starts_with("raise ");
+        if first.starts_with("if ") && third == "end" && exits_scope {
             push_offense(
                 offenses,
                 cop,

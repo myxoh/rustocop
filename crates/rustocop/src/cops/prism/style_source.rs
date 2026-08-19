@@ -167,102 +167,42 @@ fn semicolon_offsets(source: &str) -> Vec<usize> {
     offsets
 }
 
-struct UnlessElse;
+define_node_cop!(UnlessElse => "Style/UnlessElse" => as_unless_node => unless_else);
 
-impl Cop for UnlessElse {
-    fn name(&self) -> &'static str {
-        "Style/UnlessElse"
-    }
-
-    fn on_node<'pr>(
-        &self,
-        node: &Node<'pr>,
-        ancestors: &[Node<'pr>],
-        source: &str,
-        context: &mut Context,
-    ) {
-        let Some(unless_node) = node.as_unless_node() else {
-            return;
-        };
-        if unless_node.else_clause().is_none() {
-            return;
-        }
-        let location = unless_node.location();
-        let message =
-            "Do not use `unless` with `else`. Rewrite these with the positive case first.";
-        if ancestors
-            .iter()
-            .any(|ancestor| ancestor.as_unless_node().is_some())
-        {
-            if !context.autocorrect_enabled() {
-                context.report(self.name(), message, &location);
-            }
-            return;
-        }
-        context.replace(
-            self.name(),
-            message,
-            &location,
-            &location,
-            correct_unless_else(source_at(source, &location)),
-        );
-    }
-}
-
-fn correct_unless_else(source: &str) -> String {
-    let lines = source.lines().collect::<Vec<_>>();
-    let Some(header) = lines.first() else {
-        return source.replacen("unless", "if", 1);
+fn unless_else(node: &ruby_prism::UnlessNode<'_>, context: &mut CopContext<'_, '_>) {
+    let Some(else_clause) = node.else_clause() else {
+        return;
     };
-    let mut depth = 1usize;
-    let mut outer_else = None;
-    for (index, line) in lines.iter().enumerate().skip(1) {
-        let code = line.trim_start();
-        if code.starts_with("else") && depth == 1 {
-            outer_else = Some(index);
-            break;
+    let location = node.location();
+    let message = "Do not use `unless` with `else`. Rewrite these with the positive case first.";
+    if context
+        .ancestors()
+        .iter()
+        .any(|ancestor| ancestor.as_unless_node().is_some())
+    {
+        if !context.autocorrect_enabled() {
+            context.report(message, &location);
         }
-        if starts_block(code) {
-            depth += 1;
-        }
-        if code == "end" || code.starts_with("end ") || code.starts_with("end#") {
-            depth = depth.saturating_sub(1);
-        }
+        return;
     }
-    let Some(outer_else) = outer_else else {
-        return source.replacen("unless", "if", 1);
+    let Some(end_keyword) = node.end_keyword_loc() else {
+        context.report(message, &location);
+        return;
     };
-
-    let (header_code, header_comment) = split_comment(header);
-    let (else_code, else_comment) = split_comment(lines[outer_else]);
-    let positive_header = format!(
-        "{}{}",
-        header_code.replacen("unless", "if", 1),
-        else_comment
+    let body_start = node.then_keyword_loc().map_or_else(
+        || node.predicate().location().end_offset(),
+        |keyword| keyword.end_offset(),
     );
-    let negative_else = format!("{else_code}{header_comment}");
-    let mut corrected = Vec::with_capacity(lines.len());
-    corrected.push(positive_header);
-    corrected.extend(
-        lines[outer_else + 1..lines.len() - 1]
-            .iter()
-            .map(|line| (*line).to_string()),
+    let body = body_start..else_clause.else_keyword_loc().start_offset();
+    let alternative = else_clause.else_keyword_loc().end_offset()..end_keyword.start_offset();
+    let mut correction = CorrectionPlan::default();
+    correction.replace(
+        node.keyword_loc().start_offset()..node.keyword_loc().end_offset(),
+        "if",
     );
-    corrected.push(negative_else);
-    corrected.extend(lines[1..outer_else].iter().map(|line| (*line).to_string()));
-    corrected.push(lines.last().unwrap_or(&"end").to_string());
-    corrected.join("\n")
-}
-
-fn split_comment(line: &str) -> (&str, &str) {
-    line.find('#')
-        .map_or((line, ""), |index| (&line[..index], &line[index..]))
-}
-
-fn starts_block(code: &str) -> bool {
-    [
-        "if ", "if(", "unless ", "unless(", "case", "begin", "class ", "module ", "def ",
-    ]
-    .iter()
-    .any(|keyword| code.starts_with(keyword))
+    if correction.swap(context.source(), body, alternative) {
+        context.apply_correction(message, &location, correction);
+    } else {
+        context.report(message, &location);
+    }
 }

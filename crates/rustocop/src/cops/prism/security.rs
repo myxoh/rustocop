@@ -49,11 +49,11 @@ impl Cop for Eval {
     }
 
     fn on_call(&self, node: &CallNode<'_>, context: &mut Context) {
-        if call_name(node) != b"eval" || !eval_receiver(node.receiver()) {
-            return;
-        }
-
-        let Some(code) = first_argument(node) else {
+        let Some(code) = match_call(node)
+            .named(b"eval")
+            .with_receiver_matching(eval_receiver)
+            .capture_first_argument()
+        else {
             return;
         };
         if code.as_string_node().is_some() || recursive_literal_string(&code) {

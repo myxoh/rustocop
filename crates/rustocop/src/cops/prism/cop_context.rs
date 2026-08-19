@@ -1,8 +1,9 @@
 use ruby_prism::{CallNode, Node};
+use std::ops::Range;
 
 use super::diagnostic::{ByteRange, Reporter};
-use super::SourceFile;
-use crate::config::{CopConfig, RubyVersion};
+use super::{CopPolicy, SourceFile};
+use crate::config::RubyVersion;
 
 /// The complete, read-only inspection view available to a cop callback, plus
 /// its cop-scoped diagnostic reporter.
@@ -12,10 +13,33 @@ pub(super) struct CopContext<'context, 'pr> {
     ancestors: &'pr [Node<'pr>],
 }
 
-/// Common RuboCop configuration conventions shared by many cops.
-pub(super) struct CopPolicy<'config> {
-    config: &'config CopConfig,
-    cop_name: &'static str,
+/// A set of source edits that must be accepted or rejected together.
+///
+/// Cops use this for structural rewrites such as swapping conditional branches
+/// without rebuilding the surrounding Ruby source.
+#[derive(Default)]
+pub(super) struct CorrectionPlan {
+    edits: Vec<(Range<usize>, String)>,
+}
+
+impl CorrectionPlan {
+    pub(super) fn replace(&mut self, range: Range<usize>, replacement: impl Into<String>) {
+        self.edits.push((range, replacement.into()));
+    }
+
+    pub(super) fn swap(&mut self, source: &str, left: Range<usize>, right: Range<usize>) -> bool {
+        if left.end > right.start {
+            return false;
+        }
+        let (Some(left_source), Some(right_source)) =
+            (source.get(left.clone()), source.get(right.clone()))
+        else {
+            return false;
+        };
+        self.replace(left, right_source);
+        self.replace(right, left_source);
+        true
+    }
 }
 
 // This is the supported cop-authoring surface. Not every primitive needs an
@@ -146,6 +170,15 @@ impl<'context, 'pr> CopContext<'context, 'pr> {
         edits: Vec<(std::ops::Range<usize>, String)>,
     ) {
         self.reporter.replace_many(message, offense, edits);
+    }
+
+    pub(super) fn apply_correction(
+        &mut self,
+        message: impl Into<String>,
+        offense: impl ByteRange,
+        correction: CorrectionPlan,
+    ) {
+        self.replace_many(message, offense, correction.edits);
     }
 
     pub(super) fn remove(
@@ -284,99 +317,6 @@ impl<'context, 'pr> CopContext<'context, 'pr> {
     }
 }
 
-impl<'config> CopPolicy<'config> {
-    pub(super) fn new(config: &'config CopConfig, cop_name: &'static str) -> Self {
-        Self { config, cop_name }
-    }
-
-    pub(super) fn enforced_style(&self, default: &'config str) -> &'config str {
-        self.config
-            .value(self.cop_name, "EnforcedStyle")
-            .unwrap_or(default)
-    }
-
-    #[allow(dead_code)]
-    pub(super) fn allows_method(&self, method: &[u8]) -> bool {
-        self.allows_name("AllowedMethods", "AllowedPatterns", method)
-    }
-
-    #[allow(dead_code)]
-    pub(super) fn allows_receiver(&self, receiver: &[u8]) -> bool {
-        self.allows_name("AllowedReceivers", "AllowedReceiverPatterns", receiver)
-    }
-
-    #[allow(dead_code)]
-    pub(super) fn excluded_path(&self, path: &str) -> bool {
-        self.config
-            .values("AllCops", "Exclude")
-            .iter()
-            .chain(self.config.values(self.cop_name, "Exclude"))
-            .any(|pattern| glob_matches(pattern, path))
-    }
-
-    #[allow(dead_code)]
-    pub(super) fn included_path(&self, path: &str) -> bool {
-        let includes = self.config.values(self.cop_name, "Include");
-        includes.is_empty() || includes.iter().any(|pattern| glob_matches(pattern, path))
-    }
-
-    #[allow(dead_code)]
-    fn allows_name(&self, names_key: &str, patterns_key: &str, name: &[u8]) -> bool {
-        let Ok(name) = std::str::from_utf8(name) else {
-            return false;
-        };
-        self.config
-            .values(self.cop_name, names_key)
-            .iter()
-            .any(|allowed| allowed == name)
-            || self
-                .config
-                .patterns(self.cop_name, patterns_key)
-                .iter()
-                .any(|pattern| pattern.is_match(name))
-    }
-}
-
-#[allow(dead_code)]
-fn glob_matches(pattern: &str, path: &str) -> bool {
-    let pattern = pattern.as_bytes();
-    let path = path.as_bytes();
-    let mut previous = vec![false; path.len() + 1];
-    previous[0] = true;
-    for token in pattern {
-        let mut current = vec![false; path.len() + 1];
-        if *token == b'*' {
-            current[0] = previous[0];
-            for index in 1..=path.len() {
-                current[index] = previous[index] || current[index - 1];
-            }
-        } else {
-            for index in 1..=path.len() {
-                current[index] =
-                    previous[index - 1] && (*token == b'?' || *token == path[index - 1]);
-            }
-        }
-        previous = current;
-    }
-    previous[path.len()]
-}
-
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn applies_common_allow_style_and_path_policies() {
-        let config = CopConfig::from_source(
-            "AllCops:\n  Exclude:\n    - '**/vendor/**'\nStyle/Example:\n  EnforcedStyle: compact\n  AllowedMethods:\n    - map\n  AllowedPatterns:\n    - '^find_'\n  AllowedReceivers: [ENV]\n  Include:\n    - '**/*.rb'\n",
-        );
-        let policy = CopPolicy::new(&config, "Style/Example");
-
-        assert_eq!(policy.enforced_style("expanded"), "compact");
-        assert!(policy.allows_method(b"map"));
-        assert!(policy.allows_method(b"find_user"));
-        assert!(policy.allows_receiver(b"ENV"));
-        assert!(policy.included_path("app/example.rb"));
-        assert!(policy.excluded_path("app/vendor/example.rb"));
-    }
-}
+#[path = "cop_context_tests.rs"]
+mod tests;

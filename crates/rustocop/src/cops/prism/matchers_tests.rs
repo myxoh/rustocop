@@ -85,6 +85,23 @@ fn exact_argument_helpers_do_not_treat_the_first_of_many_as_the_only_one() {
 }
 
 #[test]
+fn captures_arguments_only_after_the_complete_call_shape_matches() {
+    assert!(first_call_matches(b"Kernel.eval(source)", |call| {
+        match_call(call)
+            .named(b"eval")
+            .with_receiver_matching(|receiver| root_constant(receiver, b"Kernel"))
+            .capture_first_argument()
+            .is_some_and(|argument| node_source("Kernel.eval(source)", &argument) == "source")
+    }));
+    assert!(first_call_matches(b"Kernel.load(source)", |call| {
+        match_call(call)
+            .named(b"eval")
+            .capture_first_argument()
+            .is_none()
+    }));
+}
+
+#[test]
 fn matches_implicit_or_named_root_receivers() {
     assert!(first_call_matches(b"rand(1)", |call| {
         match_call(call)

@@ -88,10 +88,6 @@ impl Context {
         self.target_ruby_version
     }
 
-    pub(super) fn autocorrect_enabled(&self) -> bool {
-        self.autocorrect
-    }
-
     fn config_value(&self, cop_name: &str, key: &str) -> Option<&str> {
         self.cop_config.value(cop_name, key)
     }

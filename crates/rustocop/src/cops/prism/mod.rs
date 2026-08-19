@@ -3,11 +3,13 @@ use std::sync::Arc;
 
 mod catalog_cop;
 mod cop_context;
+mod cop_policy;
 mod correction_engine;
 mod diagnostic;
 mod dsl;
 mod matchers;
 mod node_helpers;
+mod numeric_helpers;
 mod prism_engine;
 mod registry;
 mod runner;
@@ -163,12 +165,14 @@ cop_modules!(
 );
 
 use crate::config::{CopConfig, RubyVersion};
-use cop_context::{CopContext, CopPolicy};
+use cop_context::{CopContext, CorrectionPlan};
+use cop_policy::CopPolicy;
 use diagnostic::{Context, Reporter};
 pub(crate) use diagnostic::{Finding, Inspection};
 use dsl::*;
 use matchers::*;
 use node_helpers::*;
+use numeric_helpers::*;
 pub use prism_engine::Engine;
 use registry::Registry;
 use runner::Runner;

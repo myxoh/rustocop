@@ -31,6 +31,33 @@ fn applies_non_overlapping_autocorrections_from_the_shared_tree() {
 }
 
 #[test]
+fn swaps_unless_else_branches_with_their_inline_comments() {
+    let source = concat!(
+        "unless ready? # negative\n",
+        "  wait\n",
+        "else # positive\n",
+        "  run\n",
+        "end\n",
+    );
+    let inspection = inspect(source, true, RubyVersion::default(), &|cop| {
+        cop == "Style/UnlessElse"
+    });
+
+    assert_eq!(inspection.findings.len(), 1);
+    assert!(inspection.findings[0].corrected);
+    assert_eq!(
+        inspection.corrected_source,
+        concat!(
+            "if ready? # positive\n",
+            "  run\n",
+            "else # negative\n",
+            "  wait\n",
+            "end\n",
+        )
+    );
+}
+
+#[test]
 fn applies_compatibility_batch_corrections_from_one_tree() {
     let source = concat!(
         "{a:3}\n",
