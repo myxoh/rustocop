@@ -111,7 +111,7 @@ cop_modules!(
     layout_line_break_completion,
     layout_spacing_completion,
     layout_finalization_completion,
-    layout_body_completion,
+    layout_body_qualification,
     layout_geometry_completion,
     lexical_completion,
     line_concatenation_rules,

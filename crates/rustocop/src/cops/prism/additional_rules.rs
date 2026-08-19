@@ -84,8 +84,20 @@ fn block_comments(source: &str, reporter: &mut Reporter<'_>) {
 }
 
 fn insecure_protocol_source(source: &str, reporter: &mut Reporter<'_>) {
-    for symbol in [":gemcutter", ":rubygems", ":rubyforge"] {
-        for start in all_offsets(source, symbol) {
+    for (offset, line) in source_lines(source) {
+        let trimmed = line.trim_start();
+        let Some(argument) = trimmed
+            .strip_prefix("source ")
+            .or_else(|| trimmed.strip_prefix("source("))
+        else {
+            continue;
+        };
+        let leading = line.len() - trimmed.len();
+        for symbol in [":gemcutter", ":rubygems", ":rubyforge"] {
+            if !argument.starts_with(symbol) {
+                continue;
+            }
+            let start = offset + leading + trimmed.find(symbol).unwrap_or(0);
             let end = start + symbol.len();
             reporter.replace(
                 format!("The source `{symbol}` is deprecated because HTTP requests are insecure. Please change your source to 'https://rubygems.org' if possible, or 'http://rubygems.org' if not."),
@@ -94,16 +106,20 @@ fn insecure_protocol_source(source: &str, reporter: &mut Reporter<'_>) {
                 "'https://rubygems.org'",
             );
         }
-    }
-    if !reporter.config_bool("AllowHttpProtocol", true) {
-        for start in all_offsets(source, "'http://rubygems.org'") {
-            let end = start + "'http://rubygems.org'".len();
-            reporter.replace(
-                "Use `https://rubygems.org` instead of `http://rubygems.org`.",
-                start..end,
-                start..end,
-                "'https://rubygems.org'",
-            );
+        if !reporter.config_bool("AllowHttpProtocol", true) {
+            for literal in ["'http://rubygems.org'", "\"http://rubygems.org\""] {
+                if !argument.starts_with(literal) {
+                    continue;
+                }
+                let start = offset + leading + trimmed.find(literal).unwrap_or(0);
+                let end = start + literal.len();
+                reporter.replace(
+                    "Use `https://rubygems.org` instead of `http://rubygems.org`.",
+                    start..end,
+                    start..end,
+                    "'https://rubygems.org'",
+                );
+            }
         }
     }
 }
