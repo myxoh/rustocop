@@ -5,7 +5,7 @@ upstream_rspec:
   pending: 6
 captured_cases: 28623
 diagnostic_baseline:
-  passed_cases: 16229
+  passed_cases: 16243
   passing_cops: 364
   total_cops: 606
 fully_compatible_cops:

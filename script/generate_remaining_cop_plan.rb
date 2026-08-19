@@ -132,8 +132,8 @@ markdown = <<~MARKDOWN
   This is a work queue, not a compatibility claim; [the support matrix](cop-support.md)
   remains authoritative for user-facing support.
 
-  Of the #{entries.length} cops that are not yet Verified, #{document.dig("states", "heuristic")} have
-  partial native implementations and #{document.dig("states", "missing")} have no native implementation.
+  Of the #{entries.length} cops that are not yet Verified, #{document.fetch("states").fetch("heuristic", 0)} have
+  partial native implementations and #{document.fetch("states").fetch("missing", 0)} have no native implementation.
   The queue is generated only from a complete #{expected_cases}-case report and refuses partial input.
 
   ## Delivery lanes
