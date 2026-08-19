@@ -91,6 +91,8 @@ mod tests {
             parallelism,
             rubocop_loaders: Vec::new(),
             config_path: None,
+            include_non_native_cops: false,
+            non_native_cops: Vec::new(),
             inspection: InspectionConfig {
                 autocorrect: false,
                 cops: CopSelection::only("Lint/EmptyExpression"),

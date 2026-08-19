@@ -107,11 +107,81 @@ RSpec.describe "rustocop executable" do
     expect(parallel.stdout).to eq(sequential.stdout)
   end
 
+  it "discovers RuboCop configuration and runs the same enabled base cops" do
+    Dir.mktmpdir("rustocop-effective-config") do |directory|
+      File.write(File.join(directory, ".rubocop.yml"), <<~YAML)
+        AllCops:
+          DisabledByDefault: true
+          NewCops: disable
+
+        Layout/TrailingWhitespace:
+          Enabled: true
+
+        Style/StringLiterals:
+          Enabled: false
+      YAML
+      path = File.join(directory, "example.rb")
+      File.write(path, "'example'  \n")
+
+      rustocop = run_rustocop("--format", "json", path, chdir: directory)
+      fallback = run_rustocop(
+        "--format", "json", path, chdir: directory, env: { "RUSTOCOP_DISABLE_NATIVE" => "1" }
+      )
+      rubocop = run_rubocop("--format", "json", path, chdir: directory)
+
+      expect(rustocop.stderr).to eq("")
+      expect(rustocop.status.exitstatus).to eq(rubocop.status.exitstatus)
+      expect(normalize_rubocop_report(parsed_json(rustocop))).to eq(normalize_rubocop_report(parsed_json(rubocop)))
+      expect(normalize_rubocop_report(parsed_json(fallback))).to eq(normalize_rubocop_report(parsed_json(rubocop)))
+    end
+  end
+
+  it "warns about configured non-native cops and delegates them only when requested" do
+    Dir.mktmpdir("rustocop-non-native-config") do |directory|
+      custom_cop = File.join(ROOT, "benchmark/custom_cops/synthetic_file_header.rb")
+      File.write(File.join(directory, ".rubocop.yml"), <<~YAML)
+        require:
+          - #{custom_cop.inspect}
+
+        AllCops:
+          DisabledByDefault: true
+          NewCops: disable
+
+        Custom/SyntheticFileHeader:
+          Enabled: true
+      YAML
+      path = File.join(directory, "example.rb")
+      File.write(path, "puts :ok\n")
+
+      ignored = run_rustocop("--format", "json", path, chdir: directory)
+      included = run_rustocop(
+        "--included-non-native-cops", "--format", "json", path, chdir: directory
+      )
+
+      expect(ignored.stderr).to eq("#{Rustocop::RubocopConfiguration::WARNING}\n")
+      expect(parsed_json(ignored).dig("summary", "offense_count")).to eq(0)
+      expect(included.stderr).to eq("")
+      expect(parsed_json(included).fetch("files").flat_map { |file| file.fetch("offenses") })
+        .to contain_exactly(include("cop_name" => "Custom/SyntheticFileHeader"))
+    end
+  end
+
   it "rejects an invalid parallel worker count" do
     result = run_rustocop("--jobs", "0", "--stdin", "example.rb", stdin: "puts :ok\n")
 
     expect(result.stderr).to eq("rustocop: invalid worker count 0\n")
     expect(result.status.exitstatus).to eq(2)
+  end
+
+  it "inspects endless methods without panicking in the legacy lint pass" do
+    result = run_rustocop(
+      "--format", "json", "--only", "Lint/UnusedMethodArgument", "--stdin", "example.rb",
+      stdin: "def example(unused) = :ok\n"
+    )
+
+    expect(result.status.exitstatus).to eq(1)
+    expect(parsed_json(result).fetch("files").flat_map { |file| file.fetch("offenses") })
+      .to contain_exactly(include("cop_name" => "Lint/UnusedMethodArgument"))
   end
 
   it "delegates required custom cops while keeping built-in cops native" do

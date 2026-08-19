@@ -7,7 +7,7 @@ use crate::config::{
 };
 
 pub(super) enum Command {
-    Run(RunOptions),
+    Run(Box<RunOptions>),
     Version,
     VerboseVersion,
     ShowCops,
@@ -21,6 +21,8 @@ pub(super) fn parse_args(mut args: Vec<String>) -> Result<Command, String> {
         parallelism: Parallelism::Sequential,
         rubocop_loaders: Vec::new(),
         config_path: None,
+        include_non_native_cops: false,
+        non_native_cops: Vec::new(),
         inspection: InspectionConfig {
             autocorrect: false,
             cops: CopSelection::default_enabled(),
@@ -56,6 +58,13 @@ pub(super) fn parse_args(mut args: Vec<String>) -> Result<Command, String> {
             "--require" | "--plugin" => {
                 let value = take_value(&mut args, &arg)?;
                 options.rubocop_loaders.push((arg, value));
+            }
+            "--included-non-native-cops" => options.include_non_native_cops = true,
+            "--resolved-enabled-cops" => {
+                options.inspection.cops = CopSelection::only(&take_value(&mut args, &arg)?);
+            }
+            "--resolved-non-native-cops" => {
+                options.non_native_cops = cop_list(&take_value(&mut args, &arg)?);
             }
             "--force-exclusion" | "--no-server" | "--display-cop-names" | "--extra-details" => {}
             "--cache" => {
@@ -96,6 +105,18 @@ pub(super) fn parse_args(mut args: Vec<String>) -> Result<Command, String> {
                     .rubocop_loaders
                     .push((name.to_string(), value.to_string()));
             }
+            _ if arg.starts_with("--resolved-enabled-cops=") => {
+                options.inspection.cops = CopSelection::only(
+                    arg.strip_prefix("--resolved-enabled-cops=")
+                        .unwrap_or_default(),
+                );
+            }
+            _ if arg.starts_with("--resolved-non-native-cops=") => {
+                options.non_native_cops = cop_list(
+                    arg.strip_prefix("--resolved-non-native-cops=")
+                        .unwrap_or_default(),
+                );
+            }
             _ if arg.starts_with('-') => return Err(format!("unsupported option {arg}")),
             _ => options.files.push(arg),
         }
@@ -104,7 +125,16 @@ pub(super) fn parse_args(mut args: Vec<String>) -> Result<Command, String> {
     if options.format != "json" && options.format != "simple" {
         return Err(format!("unsupported formatter {}", options.format));
     }
-    Ok(Command::Run(options))
+    Ok(Command::Run(Box::new(options)))
+}
+
+fn cop_list(value: &str) -> Vec<String> {
+    value
+        .split(',')
+        .map(str::trim)
+        .filter(|name| !name.is_empty())
+        .map(str::to_string)
+        .collect()
 }
 
 fn take_value(args: &mut Vec<String>, option: &str) -> Result<String, String> {
@@ -197,6 +227,26 @@ mod tests {
                 ("--plugin".to_string(), "custom-plugin".to_string())
             ]
         );
+    }
+
+    #[test]
+    fn accepts_resolved_cop_sets_and_non_native_opt_in() {
+        let Command::Run(options) = parse_args(vec![
+            "--included-non-native-cops".to_string(),
+            "--resolved-enabled-cops=Layout/LineLength,Style/StringLiterals".to_string(),
+            "--resolved-non-native-cops=RSpec/Focus,Custom/Example".to_string(),
+        ])
+        .unwrap() else {
+            panic!("expected run command");
+        };
+
+        assert!(options.include_non_native_cops);
+        assert_eq!(
+            options.non_native_cops,
+            ["RSpec/Focus".to_string(), "Custom/Example".to_string()]
+        );
+        assert!(options.inspection.cops.enabled("Layout/LineLength"));
+        assert!(!options.inspection.cops.enabled("Lint/Debugger"));
     }
 
     #[test]
