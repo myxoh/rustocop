@@ -90,10 +90,12 @@ fn warning_cop(cop_name: &str) -> bool {
         || matches!(
             cop_name,
             "Bundler/DuplicatedGem"
+                | "Bundler/DuplicatedGroup"
                 | "Gemspec/RequireMFA"
                 | "Bundler/InsecureProtocolSource"
                 | "Gemspec/RubyVersionGlobalsUsage"
                 | "Gemspec/DuplicatedAssignment"
+                | "Gemspec/DeprecatedAttributeAssignment"
                 | "Layout/BeginEndAlignment"
         )
 }
