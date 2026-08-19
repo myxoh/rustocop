@@ -1,6 +1,6 @@
 #[derive(Debug)]
 pub(crate) struct Offense {
-    pub(crate) cop_name: &'static str,
+    pub(crate) cop_name: String,
     pub(crate) message: String,
     pub(crate) corrected: bool,
     pub(crate) correctable: bool,
@@ -55,7 +55,7 @@ pub(crate) fn push_offense(
 ) {
     let (correctable, corrected) = correction.flags();
     offenses.push(Offense {
-        cop_name,
+        cop_name: cop_name.to_string(),
         message: message.to_string(),
         corrected,
         correctable,

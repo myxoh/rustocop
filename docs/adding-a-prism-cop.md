@@ -17,6 +17,7 @@ Every concise cop is declared once inside `define_cops!`:
 | `node(as_if_node, handler)` | `fn(&IfNode, &mut CopContext)` | One typed Prism node |
 | `any_node(handler)` | `fn(&Node, &mut CopContext)` | Several intentional node kinds |
 | `source(handler)` | `fn(&mut CopContext)` | Lexical or file-level rules |
+| `parse_error(handler)` | `fn(&Diagnostic, &mut CopContext)` | Parser diagnostics already produced by Prism |
 
 One module can register related cops together:
 
@@ -216,8 +217,10 @@ text needs a complete call argument list. `ModifierConditional::from_node`
 normalizes modifier-form `if`, `unless`, `while`, and `until` when a rule applies
 to all four shapes.
 
-The rationale and prioritized shared-capability backlog live in
-[Cop authoring leverage](cop-authoring-leverage.md).
+Before adding a local body, modifier, argument, source-geometry, or call-shape
+helper, check `framework/node_helpers.rs`, `framework/matchers.rs`, and the
+existing family modules. Extract a shared helper when the same semantic
+question appears in multiple cops and its name makes that question clearer.
 
 ## Validation
 

@@ -41,6 +41,7 @@ Use this order of preference:
 | One Prism node kind | `node` | A typed Prism node |
 | A small set of node kinds | `any_node` | `&Node` |
 | Truly lexical or file-level behavior | `source` | `&mut CopContext` |
+| A parser diagnostic | `parse_error` | `&Diagnostic` |
 
 Most new cops should use `call` or typed `node`. Use `any_node` only when the
 same rule genuinely handles several AST shapes. Use `source` for contracts such
@@ -57,8 +58,9 @@ Preview everything the generator would create:
 ruby script/new_cop.rb Style/Example call --dry-run
 ```
 
-For a real missing cop, replace `Style/Example` with its RuboCop name and remove
-`--dry-run`:
+All 606 RuboCop 1.87 built-ins currently have a native implementation. Use the
+generator for a genuinely new cop; when improving parity for an existing cop,
+start from its current family module and fixture instead:
 
 ```sh
 ruby script/new_cop.rb Department/CopName call
@@ -302,8 +304,9 @@ and character-aware `column` helpers. Use `SourceFile::rewrite` with
 container. Keep Prism byte offsets for diagnostic and correction ranges; use
 `column` only when a rule needs display geometry.
 
-Before adding a local body, modifier, or argument helper, check
-[Cop authoring leverage](cop-authoring-leverage.md) and `node_helpers.rs`.
+Before adding a local body, modifier, argument, source-geometry, or call-shape
+helper, check `framework/node_helpers.rs`, `framework/matchers.rs`, and nearby
+family modules.
 
 ## 11. Promote support deliberately
 

@@ -231,10 +231,10 @@ should improve the named shared capability before adding cop implementations.
 | `Naming/VariableNumber` | heuristic | `finish_existing` | `scope_and_symbols` | 62/115 | No | No |
 | `Style/CollectionMethods` | heuristic | `finish_existing` | `ast_structural` | 14/68 | Yes | No |
 | `Lint/DuplicateBranch` | heuristic | `finish_existing` | `control_flow` | 76/131 | No | No |
+| `Style/GuardClause` | heuristic | `finish_existing` | `ast_structural` | 36/91 | Yes | No |
 | `Layout/SpaceAroundOperators` | heuristic | `finish_existing` | `layout_engine` | 41/99 | Yes | No |
 | `Layout/HashAlignment` | heuristic | `finish_existing` | `layout_engine` | 71/130 | Yes | No |
 | `Style/RedundantCondition` | heuristic | `finish_existing` | `control_flow` | 43/102 | Yes | No |
-| `Style/GuardClause` | heuristic | `finish_existing` | `ast_structural` | 31/91 | Yes | No |
 | `Style/AndOr` | heuristic | `finish_existing` | `ast_structural` | 16/78 | Yes | No |
 | `Naming/VariableName` | heuristic | `finish_existing` | `scope_and_symbols` | 54/118 | No | No |
 | `Style/SoleNestedConditional` | heuristic | `finish_existing` | `control_flow` | 9/74 | Yes | No |

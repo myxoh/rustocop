@@ -1,0 +1,7 @@
+AllCops:
+  ParserEngine: parser_prism
+  TargetRubyVersion: 3.4
+  NewCops: enable
+
+Custom/SyntheticFileHeader:
+  Enabled: true

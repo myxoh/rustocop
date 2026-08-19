@@ -74,6 +74,10 @@ impl CopSelection {
         }
     }
 
+    pub(crate) fn requested(&self) -> Option<&[String]> {
+        self.requested.as_deref()
+    }
+
     fn from_only(requested: Option<&[&str]>) -> Self {
         Self {
             requested: requested

@@ -19,6 +19,8 @@ pub(crate) struct RunOptions {
     pub(crate) format: String,
     pub(crate) stdin_path: Option<String>,
     pub(crate) parallelism: Parallelism,
+    pub(crate) rubocop_loaders: Vec<(String, String)>,
+    pub(crate) config_path: Option<String>,
     pub(crate) inspection: InspectionConfig,
 }
 

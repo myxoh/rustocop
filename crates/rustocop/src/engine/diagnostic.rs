@@ -19,7 +19,7 @@ pub(crate) fn sort_offenses(offenses: &mut [Offense]) {
         left.line
             .cmp(&right.line)
             .then(left.column.cmp(&right.column))
-            .then(left.cop_name.cmp(right.cop_name))
+            .then(left.cop_name.cmp(&right.cop_name))
     });
 }
 
@@ -49,7 +49,7 @@ fn prism_offense(source: &str, index: &SourceIndex, finding: prism::Finding) -> 
         index.position(source, last_offset)
     };
     Offense {
-        cop_name: finding.cop_name,
+        cop_name: finding.cop_name.to_string(),
         message: finding.message,
         corrected: finding.corrected,
         correctable: finding.correctable,

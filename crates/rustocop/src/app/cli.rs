@@ -19,6 +19,8 @@ pub(super) fn parse_args(mut args: Vec<String>) -> Result<Command, String> {
         format: "simple".to_string(),
         stdin_path: None,
         parallelism: Parallelism::Sequential,
+        rubocop_loaders: Vec::new(),
+        config_path: None,
         inspection: InspectionConfig {
             autocorrect: false,
             cops: CopSelection::default_enabled(),
@@ -49,9 +51,11 @@ pub(super) fn parse_args(mut args: Vec<String>) -> Result<Command, String> {
             "--config" | "-c" => {
                 let path = take_value(&mut args, &arg)?;
                 apply_config(&mut options.inspection, &path);
+                options.config_path = Some(path);
             }
             "--require" | "--plugin" => {
-                let _ = take_value(&mut args, &arg)?;
+                let value = take_value(&mut args, &arg)?;
+                options.rubocop_loaders.push((arg, value));
             }
             "--force-exclusion" | "--no-server" | "--display-cop-names" | "--extra-details" => {}
             "--cache" => {
@@ -80,12 +84,18 @@ pub(super) fn parse_args(mut args: Vec<String>) -> Result<Command, String> {
             _ if arg.starts_with("--config=") => {
                 let path = arg.strip_prefix("--config=").unwrap_or_default();
                 apply_config(&mut options.inspection, path);
+                options.config_path = Some(path.to_string());
             }
             _ if arg.starts_with("--jobs=") => {
                 let value = arg.strip_prefix("--jobs=").unwrap_or_default();
                 options.parallelism = Parallelism::Fixed(parse_jobs(value)?);
             }
-            _ if arg.starts_with("--require=") || arg.starts_with("--plugin=") => {}
+            _ if arg.starts_with("--require=") || arg.starts_with("--plugin=") => {
+                let (name, value) = arg.split_once('=').unwrap_or((&arg, ""));
+                options
+                    .rubocop_loaders
+                    .push((name.to_string(), value.to_string()));
+            }
             _ if arg.starts_with('-') => return Err(format!("unsupported option {arg}")),
             _ => options.files.push(arg),
         }
@@ -167,5 +177,27 @@ mod tests {
             parse_args(vec!["--jobs=0".to_string()]).err().as_deref(),
             Some("invalid worker count 0")
         );
+    }
+
+    #[test]
+    fn preserves_custom_cop_loaders_for_rubocop() {
+        let Command::Run(options) = parse_args(vec![
+            "--require".to_string(),
+            "custom/cop.rb".to_string(),
+            "--plugin=custom-plugin".to_string(),
+            "--config=custom.yml".to_string(),
+        ])
+        .unwrap() else {
+            panic!("expected run command");
+        };
+
+        assert_eq!(
+            options.rubocop_loaders,
+            [
+                ("--require".to_string(), "custom/cop.rb".to_string()),
+                ("--plugin".to_string(), "custom-plugin".to_string())
+            ]
+        );
+        assert_eq!(options.config_path.as_deref(), Some("custom.yml"));
     }
 }

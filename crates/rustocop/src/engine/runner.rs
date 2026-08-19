@@ -89,6 +89,8 @@ mod tests {
             format: "json".to_string(),
             stdin_path: None,
             parallelism,
+            rubocop_loaders: Vec::new(),
+            config_path: None,
             inspection: InspectionConfig {
                 autocorrect: false,
                 cops: CopSelection::only("Lint/EmptyExpression"),
@@ -129,7 +131,7 @@ mod tests {
                         result
                             .offenses
                             .iter()
-                            .map(|offense| (offense.cop_name, offense.line, offense.column))
+                            .map(|offense| (offense.cop_name.clone(), offense.line, offense.column))
                             .collect::<Vec<_>>(),
                     )
                 })

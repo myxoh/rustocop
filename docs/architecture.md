@@ -33,6 +33,7 @@ src/
     cli.rs         argument and RuboCop-config parsing
     targets.rs     target expansion, discovery, and stdin
     report.rs      JSON/simple formatting and exit status
+    mixed.rs       RuboCop delegation and merged reporting for custom Ruby cops
   engine/
     mod.rs         run-level InspectionPlan and file inspection pipeline
     runner.rs      deterministic file worker pool
@@ -73,6 +74,12 @@ sort offenses / apply non-overlapping corrections / format report
 
 Prism-only runs bypass line splitting, cloning, and rejoining. A run containing
 textual cops retains the compatibility pipeline and its correction ordering.
+When `--require` or `--plugin` selects unknown cops alongside native cops,
+`app/mixed.rs` runs the native inspection and one RuboCop subprocess
+concurrently, then merges their formatter-independent offenses. This boundary
+keeps Ruby plugin loading and JSON translation out of the engine and cop layers.
+Mixed mode currently rejects stdin and autocorrection because merging two
+independent correction streams would not be deterministic.
 
 ## Correction transactions
 

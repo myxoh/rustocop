@@ -114,6 +114,33 @@ RSpec.describe "rustocop executable" do
     expect(result.status.exitstatus).to eq(2)
   end
 
+  it "delegates required custom cops while keeping built-in cops native" do
+    files = Dir[File.join(ROOT, "spec/fixtures/rubocop_builtin_examples/lint_empty_expression/*.rb")].first(3)
+    custom_cop = File.join(ROOT, "benchmark/custom_cops/synthetic_file_header.rb")
+    config = File.join(ROOT, "benchmark/custom-cop-rubocop.yml")
+    arguments = [
+      "--no-parallel", "--format", "json", "--config", config,
+      "--require", custom_cop, "--only", "Lint/EmptyExpression,Custom/SyntheticFileHeader", *files
+    ]
+
+    mixed = run_rustocop(*arguments)
+    rubocop = run_rubocop(*arguments.reject { |argument| argument == "--no-parallel" }, "--no-server")
+
+    expect(mixed.stderr).to eq("")
+    expect(mixed.status.exitstatus).to eq(1)
+    expect(normalize_rubocop_report(parsed_json(mixed))).to eq(normalize_rubocop_report(parsed_json(rubocop)))
+  end
+
+  it "rejects autocorrection when native and custom cops are mixed" do
+    result = run_rustocop(
+      "-A", "--require", File.join(ROOT, "benchmark/custom_cops/synthetic_file_header.rb"),
+      "--only", "Lint/EmptyExpression,Custom/SyntheticFileHeader", __FILE__
+    )
+
+    expect(result.stderr).to eq("rustocop: mixed custom-cop runs do not yet support autocorrection\n")
+    expect(result.status.exitstatus).to eq(2)
+  end
+
   it "autocorrects distinct files safely in parallel" do
     Dir.mktmpdir("rustocop-parallel-correction") do |directory|
       files = 6.times.map do |index|

@@ -1,6 +1,7 @@
 use std::env;
 
 mod cli;
+mod mixed;
 mod report;
 mod targets;
 
@@ -29,6 +30,9 @@ pub(crate) fn run(args: Vec<String>) -> i32 {
 }
 
 fn run_inspection(options: &crate::config::RunOptions) -> i32 {
+    if let Some(custom_cops) = mixed::custom_cops(options) {
+        return mixed::run(options, &custom_cops);
+    }
     match targets::inspect(options) {
         Ok(results) => {
             report::write(options, &results);

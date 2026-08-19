@@ -1,6 +1,6 @@
 ---
 rubocop_version: 1.87.0
-generated_from: tmp/final-all-diagnostic-2.json
+generated_from: tmp/performance-optimization-full.json
 remaining_cops: 245
 states:
   heuristic: 245
@@ -1762,6 +1762,15 @@ cops:
   failing_cases: 55
   autocorrect: false
   problem_documented: false
+- cop: Style/GuardClause
+  state: heuristic
+  lane: finish_existing
+  capability: ast_structural
+  passing_cases: 36
+  total_cases: 91
+  failing_cases: 55
+  autocorrect: true
+  problem_documented: false
 - cop: Layout/SpaceAroundOperators
   state: heuristic
   lane: finish_existing
@@ -1787,15 +1796,6 @@ cops:
   passing_cases: 43
   total_cases: 102
   failing_cases: 59
-  autocorrect: true
-  problem_documented: false
-- cop: Style/GuardClause
-  state: heuristic
-  lane: finish_existing
-  capability: ast_structural
-  passing_cases: 31
-  total_cases: 91
-  failing_cases: 60
   autocorrect: true
   problem_documented: false
 - cop: Style/AndOr

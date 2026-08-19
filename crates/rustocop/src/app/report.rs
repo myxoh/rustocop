@@ -63,7 +63,7 @@ fn json_file(result: &InspectionResult) -> String {
 }
 
 fn json_offense(offense: &Offense) -> String {
-    let severity = if warning_cop(offense.cop_name) {
+    let severity = if warning_cop(&offense.cop_name) {
         "warning"
     } else {
         "convention"
@@ -72,7 +72,7 @@ fn json_offense(offense: &Offense) -> String {
         "{{\"severity\":\"{}\",\"message\":\"{}\",\"cop_name\":\"{}\",\"corrected\":{},\"correctable\":{},\"location\":{{\"start_line\":{},\"start_column\":{},\"last_line\":{},\"last_column\":{},\"length\":{},\"line\":{},\"column\":{}}}}}",
         severity,
         json_escape(&offense.message),
-        json_escape(offense.cop_name),
+        json_escape(&offense.cop_name),
         offense.corrected,
         offense.correctable,
         offense.line,

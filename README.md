@@ -30,15 +30,15 @@ to replace RuboCop.
 ## Performance
 
 On the committed 500-file, 20-cop compatibility corpus, rustocop is currently
-about 52 times faster than RuboCop with Prism. Both tools produced identical
+about 53 times faster than RuboCop with Prism. Both tools produced identical
 normalized JSON before measurement.
 
 | Files | rustocop | RuboCop (Prism) | Speedup |
 | ---: | ---: | ---: | ---: |
-| 1 | 2.99 ms | 397.69 ms | 133.23× |
-| 25 | 3.43 ms | 402.12 ms | 117.37× |
-| 100 | 4.24 ms | 413.29 ms | 97.43× |
-| 500 | **9.13 ms** | **471.83 ms** | **51.66×** |
+| 1 | 3.02 ms | 398.12 ms | 132.00× |
+| 25 | 3.46 ms | 402.18 ms | 116.24× |
+| 100 | 4.33 ms | 414.00 ms | 95.59× |
+| 500 | **8.96 ms** | **477.11 ms** | **53.27×** |
 
 This uses RuboCop 1.87.0 with Prism, caching disabled, and server mode disabled.
 
@@ -50,6 +50,24 @@ reproduce the comparison with:
 ```sh
 bundle exec ruby script/benchmark_rubocop_prism.rb
 ```
+
+### Ruby custom cops
+
+Rustocop can keep recognized built-in cops native while delegating explicitly
+selected Ruby custom cops to RuboCop. On the same 500 files, 20 native cops plus
+one custom cop took 456.12 ms, versus 9.07 ms for pure native Rustocop and
+478.47 ms for pure RuboCop.
+
+| 500-file mode | Median |
+| --- | ---: |
+| Pure native, 20 built-in cops | **9.07 ms** |
+| Mixed, 20 native + 1 Ruby custom cop | **456.12 ms** |
+| Pure RuboCop, all 21 cops | 478.47 ms |
+
+The mixed report exactly matched RuboCop, but the Ruby custom cop still imposed
+almost all of RuboCop's startup and parsing cost. See the [mixed custom-cop
+benchmark](benchmark/mixed-custom-cops.md) for entrypoint overhead, p95 results,
+and methodology.
 
 ### Real Rails projects
 
@@ -105,6 +123,10 @@ exe/rustocop --only Style /path/to/project
 # Pass the target config. Only part of RuboCop's config is understood so far.
 exe/rustocop --config /path/to/project/.rubocop.yml /path/to/project
 
+# Delegate an explicitly selected custom cop while built-in cops stay native
+exe/rustocop --require ./lib/rubocop/cop/custom/no_foo.rb \
+  --only Style/ArrayJoin,Custom/NoFoo /path/to/project
+
 # Apply available corrections; use this on a clean working tree
 exe/rustocop -A /path/to/project
 
@@ -120,6 +142,12 @@ exe/rustocop --jobs 4 /path/to/project
 # See every cop rustocop currently advertises
 exe/rustocop --show-cops
 ```
+
+Custom delegation requires `--require` or `--plugin` and an explicit `--only`
+list. Names advertised by `--show-cops` remain native; unknown names are passed
+to RuboCop. Mixed runs currently reject autocorrection and `--stdin`, because
+independent native and Ruby correction passes would not have safe ordering
+semantics.
 
 The intended setup is deliberately boring:
 
