@@ -17,20 +17,8 @@ define_cops! {
     Sample => "Style/Sample" => source(sample),
 }
 
-fn replace_token(context: &mut CopContext<'_, '_>, old: &str, new: &str, message: &str) {
-    for start in context.source_file().code_offsets(old) {
-        context.replace(
-            message,
-            start..start + old.len(),
-            start..start + old.len(),
-            new,
-        );
-    }
-}
-
 fn reduce_to_hash(context: &mut CopContext<'_, '_>) {
-    replace_token(
-        context,
+    context.replace_code(
         ".map { |key, value| [key, value] }.to_h",
         ".to_h",
         "Prefer `to_h` over `map.to_h` when the pairs are unchanged.",
@@ -38,8 +26,7 @@ fn reduce_to_hash(context: &mut CopContext<'_, '_>) {
 }
 
 fn hash_transform_keys(context: &mut CopContext<'_, '_>) {
-    replace_token(
-        context,
+    context.replace_code(
         ".map { |k, v| [yield(k), v] }.to_h",
         ".transform_keys { |k| yield(k) }",
         "Prefer `transform_keys` over `map.to_h`.",
@@ -47,8 +34,7 @@ fn hash_transform_keys(context: &mut CopContext<'_, '_>) {
 }
 
 fn hash_transform_values(context: &mut CopContext<'_, '_>) {
-    replace_token(
-        context,
+    context.replace_code(
         ".map { |k, v| [k, yield(v)] }.to_h",
         ".transform_values { |v| yield(v) }",
         "Prefer `transform_values` over `map.to_h`.",
@@ -56,14 +42,12 @@ fn hash_transform_values(context: &mut CopContext<'_, '_>) {
 }
 
 fn map_to_set(context: &mut CopContext<'_, '_>) {
-    replace_token(
-        context,
+    context.replace_code(
         ".map(&:to_s).to_set",
         ".to_set(&:to_s)",
         "Pass a block to `to_set` instead of calling `map.to_set`.",
     );
-    replace_token(
-        context,
+    context.replace_code(
         ".collect(&:to_s).to_set",
         ".to_set(&:to_s)",
         "Pass a block to `to_set` instead of calling `collect.to_set`.",
@@ -151,8 +135,7 @@ fn partition_double_select(context: &mut CopContext<'_, '_>) {
 
 fn redundant_filter_chain(context: &mut CopContext<'_, '_>) {
     for chain in [".select.select", ".filter.filter", ".reject.reject"] {
-        replace_token(
-            context,
+        context.replace_code(
             chain,
             chain.split('.').nth(1).map_or(chain, |method| {
                 if method == "select" {
@@ -169,14 +152,12 @@ fn redundant_filter_chain(context: &mut CopContext<'_, '_>) {
 }
 
 fn map_to_hash(context: &mut CopContext<'_, '_>) {
-    replace_token(
-        context,
+    context.replace_code(
         ".map(&:itself).to_h",
         ".to_h",
         "Pass a block to `to_h` instead of calling `map.to_h`.",
     );
-    replace_token(
-        context,
+    context.replace_code(
         ".collect(&:itself).to_h",
         ".to_h",
         "Pass a block to `to_h` instead of calling `collect.to_h`.",
@@ -184,8 +165,7 @@ fn map_to_hash(context: &mut CopContext<'_, '_>) {
 }
 
 fn hash_except(context: &mut CopContext<'_, '_>) {
-    replace_token(
-        context,
+    context.replace_code(
         ".reject { |key, _| keys.include?(key) }",
         ".except(*keys)",
         "Prefer `except` over `reject`.",
@@ -193,8 +173,7 @@ fn hash_except(context: &mut CopContext<'_, '_>) {
 }
 
 fn hash_slice(context: &mut CopContext<'_, '_>) {
-    replace_token(
-        context,
+    context.replace_code(
         ".select { |key, _| keys.include?(key) }",
         ".slice(*keys)",
         "Prefer `slice` over `select`.",
@@ -202,8 +181,7 @@ fn hash_slice(context: &mut CopContext<'_, '_>) {
 }
 
 fn map_into_array(context: &mut CopContext<'_, '_>) {
-    replace_token(
-        context,
+    context.replace_code(
         ".each_with_object([])",
         ".filter_map",
         "Prefer `filter_map` over `each_with_object` when building an array.",
@@ -220,8 +198,7 @@ fn collection_methods(context: &mut CopContext<'_, '_>) {
         (".select", ".find_all"),
     ] {
         if context.policy().enforced_style("preferred") == "preferred" {
-            replace_token(
-                context,
+            context.replace_code(
                 old,
                 new,
                 "Use the configured preferred collection method.",
@@ -231,14 +208,12 @@ fn collection_methods(context: &mut CopContext<'_, '_>) {
 }
 
 fn sample(context: &mut CopContext<'_, '_>) {
-    replace_token(
-        context,
+    context.replace_code(
         ".shuffle.first",
         ".sample",
         "Use `sample` instead of `shuffle.first`.",
     );
-    replace_token(
-        context,
+    context.replace_code(
         ".shuffle[0]",
         ".sample",
         "Use `sample` instead of `shuffle[0]`.",

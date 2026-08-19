@@ -57,19 +57,10 @@ impl Cop for CatalogCop {
         let mut context = context.cop_context(self.name, source, &[]);
         match self.rule {
             Rule::Replace { old, new, message } => {
-                for start in context.source_file().code_offsets(old) {
-                    context.replace(
-                        message,
-                        start..start + old.len(),
-                        start..start + old.len(),
-                        new,
-                    );
-                }
+                context.replace_code(old, new, message);
             }
             Rule::Report { needle, message } => {
-                for start in context.source_file().code_offsets(needle) {
-                    context.report(message, start..start + needle.len());
-                }
+                context.report_code(needle, message);
             }
             Rule::Custom(check) => check(&mut context),
         }

@@ -1,5 +1,5 @@
 use super::helpers::*;
-use super::{push_offense, Offense, SourceLine};
+use super::{push_offense, CorrectionStatus, Offense, SourceLine};
 use crate::config::InspectionConfig;
 
 pub(super) fn before_prism(
@@ -46,7 +46,7 @@ fn check_frozen_string_literal_comment(
                 index + 1,
                 1,
                 lines[index].body.chars().count().max(1),
-                (true, corrected),
+                CorrectionStatus::correctable(corrected),
             );
 
             if corrected {
@@ -78,7 +78,7 @@ fn check_hash_syntax(
                 index + 1,
                 column,
                 2,
-                (true, false),
+                CorrectionStatus::Pending,
             );
         }
     }
@@ -103,7 +103,7 @@ fn check_redundant_begin(
                 index + 1,
                 leading_spaces(&line.body) + 1,
                 5,
-                (false, false),
+                CorrectionStatus::Unavailable,
             );
         }
     }
@@ -135,7 +135,7 @@ fn check_if_unless_modifier(
                 index + 1,
                 leading_spaces(&lines[index].body) + 1,
                 first.len(),
-                (false, false),
+                CorrectionStatus::Unavailable,
             );
         }
     }
@@ -176,7 +176,7 @@ fn check_conditional_assignment(
                 index + 1,
                 leading_spaces(&lines[index].body) + 1,
                 first.len(),
-                (false, false),
+                CorrectionStatus::Unavailable,
             );
         }
     }
@@ -197,7 +197,7 @@ fn check_empty_else(lines: &[SourceLine], options: &InspectionConfig, offenses: 
                 index + 1,
                 leading_spaces(&lines[index].body) + 1,
                 4,
-                (true, false),
+                CorrectionStatus::Pending,
             );
         }
     }
@@ -227,7 +227,7 @@ fn check_guard_clause(
                 index + 1,
                 leading_spaces(&lines[index].body) + 1,
                 first.len(),
-                (false, false),
+                CorrectionStatus::Unavailable,
             );
         }
     }
@@ -267,7 +267,7 @@ fn check_hash_like_case(
                 index + 1,
                 leading_spaces(&lines[index].body) + 1,
                 lines[index].body.trim().len(),
-                (false, false),
+                CorrectionStatus::Unavailable,
             );
         }
     }

@@ -1,5 +1,5 @@
 use super::helpers::*;
-use super::{push_offense, Offense, SourceLine};
+use super::{push_offense, CorrectionStatus, Offense, SourceLine};
 use crate::config::InspectionConfig;
 
 pub(super) fn check(lines: &[SourceLine], options: &InspectionConfig, offenses: &mut Vec<Offense>) {
@@ -30,7 +30,7 @@ fn check_accessor_method_name(
                 index + 1,
                 line.body.find("def").unwrap_or(0) + 5,
                 name.len(),
-                (false, false),
+                CorrectionStatus::Unavailable,
             );
         }
     }
@@ -75,7 +75,7 @@ fn check_unused_method_argument(
                 index + 1,
                 line.find(&arg).unwrap_or(0) + 1,
                 arg.len(),
-                (false, false),
+                CorrectionStatus::Unavailable,
             );
         }
         index = end + 1;
@@ -105,7 +105,7 @@ fn check_debugger(lines: &[SourceLine], options: &InspectionConfig, offenses: &m
                     index + 1,
                     position + 1,
                     debugger.len(),
-                    (false, false),
+                    CorrectionStatus::Unavailable,
                 );
             }
         }

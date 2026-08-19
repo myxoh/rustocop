@@ -1,5 +1,5 @@
 use super::helpers::*;
-use super::{push_offense, Offense, SourceLine};
+use super::{push_offense, CorrectionStatus, Offense, SourceLine};
 use crate::config::InspectionConfig;
 
 pub(super) fn check(lines: &[SourceLine], options: &InspectionConfig, offenses: &mut Vec<Offense>) {
@@ -29,7 +29,7 @@ fn check_endless_method(
                 index + 1,
                 leading_spaces(&line.body) + 1,
                 trimmed.len(),
-                (false, false),
+                CorrectionStatus::Unavailable,
             );
         }
     }
@@ -62,7 +62,7 @@ fn check_documentation(
                 index + 1,
                 leading_spaces(&line.body) + 1,
                 trimmed.len(),
-                (false, false),
+                CorrectionStatus::Unavailable,
             );
         }
     }
@@ -86,7 +86,7 @@ fn check_trailing_commas(
                 index,
                 lines[index - 1].body.chars().count(),
                 1,
-                (true, false),
+                CorrectionStatus::Pending,
             );
         }
     }
@@ -110,7 +110,7 @@ fn check_numbered_parameters(
                 index + 1,
                 column,
                 2,
-                (false, false),
+                CorrectionStatus::Unavailable,
             );
         }
     }
@@ -134,7 +134,7 @@ fn check_string_literals(
                 index + 1,
                 column,
                 1,
-                (true, false),
+                CorrectionStatus::Pending,
             );
         }
     }

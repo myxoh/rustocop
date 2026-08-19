@@ -152,12 +152,31 @@ fn separate_inline_accessors(context: &mut CopContext<'_, '_>, lines: &[(usize, 
     }
 }
 
-type AccessorLine<'a> = (usize, usize, &'a str, String);
+type AccessorLine = (usize, usize, &'static str, String);
 
-fn flush_accessor_group(
-    group: &mut Vec<AccessorLine<'_>>,
-    context: &mut CopContext<'_, '_>,
-) {
+fn accessor_line(
+    offset: usize,
+    line: &str,
+    trimmed: &str,
+    accessor: &'static str,
+    trim_parentheses: bool,
+) -> AccessorLine {
+    let start = offset + line.len() - trimmed.len();
+    let end = offset + line.split('#').next().unwrap_or(line).trim_end().len();
+    let values = trimmed[accessor.len()..]
+        .split('#')
+        .next()
+        .unwrap_or_default()
+        .trim();
+    let values = if trim_parentheses {
+        values.trim_matches(['(', ')'])
+    } else {
+        values
+    };
+    (start, end, accessor, values.to_string())
+}
+
+fn flush_accessor_group(group: &mut Vec<AccessorLine>, context: &mut CopContext<'_, '_>) {
     if group.len() < 2 {
         group.clear();
         return;
@@ -201,7 +220,7 @@ fn flush_accessor_group(
 }
 
 fn grouped_accessors(context: &mut CopContext<'_, '_>, lines: &[(usize, &str)]) {
-    let mut groups: [Vec<AccessorLine<'_>>; 18] = Default::default();
+    let mut groups: [Vec<AccessorLine>; 18] = Default::default();
     let mut visibility = 0usize;
     let mut eigenclass = 0usize;
     for (index, (offset, line)) in lines.iter().enumerate() {
@@ -216,7 +235,6 @@ fn grouped_accessors(context: &mut CopContext<'_, '_>, lines: &[(usize, &str)]) 
                         .is_some_and(|byte| matches!(byte, b' ' | b'('))
             });
         if let Some(accessor) = accessor {
-            let start = offset + line.len() - trimmed.len();
             let group_index = eigenclass * 9
                 + visibility * 3
                 + match accessor {
@@ -236,16 +254,8 @@ fn grouped_accessors(context: &mut CopContext<'_, '_>, lines: &[(usize, &str)]) 
                 });
             if typed_or_commented {
                 flush_accessor_group(&mut groups[group_index], context);
-                groups[group_index].push((
-                    start,
-                    offset + line.split('#').next().unwrap_or(line).trim_end().len(),
-                    accessor,
-                    trimmed[accessor.len()..]
-                        .split('#')
-                        .next()
-                        .unwrap_or_default()
-                        .trim()
-                        .to_string(),
+                groups[group_index].push(accessor_line(
+                    *offset, line, trimmed, accessor, false,
                 ));
                 flush_accessor_group(&mut groups[group_index], context);
                 continue;
@@ -254,32 +264,13 @@ fn grouped_accessors(context: &mut CopContext<'_, '_>, lines: &[(usize, &str)]) 
                 .split_once('#')
                 .is_some_and(|(_, comment)| comment.trim_start().starts_with(':'))
             {
-                groups[group_index].push((
-                    start,
-                    offset + line.split('#').next().unwrap_or(line).trim_end().len(),
-                    accessor,
-                    trimmed[accessor.len()..]
-                        .split('#')
-                        .next()
-                        .unwrap_or_default()
-                        .trim()
-                        .to_string(),
+                groups[group_index].push(accessor_line(
+                    *offset, line, trimmed, accessor, false,
                 ));
                 flush_accessor_group(&mut groups[group_index], context);
                 continue;
             }
-            groups[group_index].push((
-                start,
-                offset + line.split('#').next().unwrap_or(line).trim_end().len(),
-                accessor,
-                trimmed[accessor.len()..]
-                    .split('#')
-                    .next()
-                    .unwrap_or_default()
-                    .trim()
-                    .trim_matches(['(', ')'])
-                    .to_string(),
-            ));
+            groups[group_index].push(accessor_line(*offset, line, trimmed, accessor, true));
         } else if matches!(trimmed.trim(), "private" | "protected" | "public") {
             visibility = match trimmed.trim() {
                 "protected" => 1,

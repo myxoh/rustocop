@@ -1,5 +1,5 @@
 use super::helpers::*;
-use super::{push_offense, Offense, SourceLine};
+use super::{push_offense, CorrectionStatus, Offense, SourceLine};
 use crate::config::InspectionConfig;
 
 pub(super) fn before_prism(
@@ -52,7 +52,7 @@ fn check_empty_ensure(
                 index + 1,
                 indentation + 1,
                 "ensure".len(),
-                (true, options.autocorrect),
+                CorrectionStatus::correctable(options.autocorrect),
             );
             if options.autocorrect {
                 lines[index]
@@ -97,7 +97,7 @@ fn check_small_line_cops(
                     index + 1,
                     column + 1,
                     2,
-                    (true, options.autocorrect),
+                    CorrectionStatus::correctable(options.autocorrect),
                 );
                 if options.autocorrect {
                     line.body.replace_range(column..column + 2, ".");
@@ -114,7 +114,7 @@ fn check_small_line_cops(
                     index + 1,
                     start + 4,
                     2,
-                    (true, options.autocorrect),
+                    CorrectionStatus::correctable(options.autocorrect),
                 );
                 if options.autocorrect {
                     line.body.replace_range(start + 2..start + 5, "");
@@ -132,7 +132,7 @@ fn check_small_line_cops(
                     index + 1,
                     selector + 1,
                     3,
-                    (true, options.autocorrect),
+                    CorrectionStatus::correctable(options.autocorrect),
                 );
                 if options.autocorrect {
                     line.body.replace_range(selector - 1..selector + 3, "");
@@ -154,7 +154,7 @@ fn check_small_line_cops(
                         index + 1,
                         comment + 1,
                         text.chars().count(),
-                        (false, false),
+                        CorrectionStatus::Unavailable,
                     );
                 }
             }
@@ -178,7 +178,7 @@ fn check_small_line_cops(
                     index + 1,
                     start + 1,
                     original[start..].chars().count(),
-                    (true, options.autocorrect),
+                    CorrectionStatus::correctable(options.autocorrect),
                 );
                 if options.autocorrect {
                     let names = original[start..]
@@ -213,7 +213,7 @@ fn check_end_block(
         index + 1,
         indentation + 1,
         3,
-        (true, options.autocorrect),
+        CorrectionStatus::correctable(options.autocorrect),
     );
     if options.autocorrect {
         line.body
@@ -248,7 +248,7 @@ fn check_useless_else(
             index + 1,
             indentation + 1,
             4,
-            (false, false),
+            CorrectionStatus::Unavailable,
         );
     }
 }
@@ -277,7 +277,7 @@ fn check_trailing_attribute_comma(
         index + 1,
         comma + 1,
         1,
-        (true, options.autocorrect),
+        CorrectionStatus::correctable(options.autocorrect),
     );
     if options.autocorrect {
         line.body.remove(comma);

@@ -15,17 +15,6 @@ define_cops! {
     SymbolProc => "Style/SymbolProc" => source(symbol_proc),
 }
 
-fn replace_code(context: &mut CopContext<'_, '_>, old: &str, new: &str, message: &str) {
-    for start in context.source_file().code_offsets(old) {
-        context.replace(
-            message,
-            start..start + old.len(),
-            start..start + old.len(),
-            new,
-        );
-    }
-}
-
 fn symbol_array(context: &mut CopContext<'_, '_>) {
     if context.policy().enforced_style("percent") != "percent" {
         return;
@@ -139,8 +128,7 @@ fn special_global_vars(context: &mut CopContext<'_, '_>) {
         ("$!", "$ERROR_INFO"),
         ("$@", "$ERROR_POSITION"),
     ] {
-        replace_code(
-            context,
+        context.replace_code(
             old,
             new,
             "Prefer the English global variable name.",
@@ -186,14 +174,12 @@ fn lambda_literal(context: &mut CopContext<'_, '_>) {
     if context.policy().enforced_style("literal") != "literal" {
         return;
     }
-    replace_code(
-        context,
+    context.replace_code(
         "lambda {",
         "-> {",
         "Use the lambda literal syntax for all lambdas.",
     );
-    replace_code(
-        context,
+    context.replace_code(
         "lambda do",
         "-> do",
         "Use the lambda literal syntax for all lambdas.",
@@ -285,7 +271,7 @@ fn percent_delimiters(context: &mut CopContext<'_, '_>) {
 }
 
 fn redundant_string_escape(context: &mut CopContext<'_, '_>) {
-    replace_code(context, "\\/", "/", "Remove the redundant escape.");
+    context.replace_code("\\/", "/", "Remove the redundant escape.");
 }
 
 fn symbol_proc(context: &mut CopContext<'_, '_>) {

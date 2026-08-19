@@ -1,5 +1,5 @@
 use super::helpers::*;
-use super::{push_offense, Offense, SourceLine};
+use super::{push_offense, CorrectionStatus, Offense, SourceLine};
 use crate::config::InspectionConfig;
 
 pub(super) fn after_prism(
@@ -29,7 +29,7 @@ fn check_rails(
                 index + 1,
                 text.find("default_scope").unwrap_or(0) + 1,
                 "default_scope".len(),
-                (false, false),
+                CorrectionStatus::Unavailable,
             );
         }
 
@@ -43,7 +43,7 @@ fn check_rails(
                 index + 1,
                 text.find("Rails.root").unwrap_or(0) + 1,
                 "Rails.root".len(),
-                (false, false),
+                CorrectionStatus::Unavailable,
             );
         }
 
@@ -58,7 +58,7 @@ fn check_rails(
                 index + 1,
                 text.find("ActiveJob::Base").unwrap_or(0) + 1,
                 "ActiveJob::Base".len(),
-                (false, false),
+                CorrectionStatus::Unavailable,
             );
         }
 
@@ -81,7 +81,7 @@ fn check_rails(
                 index + 1,
                 leading_spaces(&line.body) + 1,
                 line.body.trim().len(),
-                (false, false),
+                CorrectionStatus::Unavailable,
             );
         }
     }
@@ -117,7 +117,7 @@ fn check_rspec(
                     index + 1,
                     leading_spaces(&line.body) + 1,
                     trimmed.len(),
-                    (false, false),
+                    CorrectionStatus::Unavailable,
                 );
             }
 
@@ -142,7 +142,7 @@ fn check_rspec(
                 index + 1,
                 line.body.find("receive_message_chain").unwrap_or(0) + 1,
                 "receive_message_chain".len(),
-                (false, false),
+                CorrectionStatus::Unavailable,
             );
         } else if options.cop_enabled("RSpec/PendingWithoutReason")
             && pending_without_reason(trimmed)
@@ -154,7 +154,7 @@ fn check_rspec(
                 index + 1,
                 leading_spaces(&line.body) + 1,
                 trimmed.len(),
-                (false, false),
+                CorrectionStatus::Unavailable,
             );
         } else if trimmed.starts_with("before")
             || trimmed.starts_with("after")
@@ -170,7 +170,7 @@ fn check_rspec(
                         index + 1,
                         leading_spaces(&line.body) + 1,
                         trimmed.len(),
-                        (false, false),
+                        CorrectionStatus::Unavailable,
                     );
                 }
             }
@@ -187,7 +187,7 @@ fn check_rspec(
                         index + 1,
                         leading_spaces(&line.body) + 1,
                         trimmed.len(),
-                        (false, false),
+                        CorrectionStatus::Unavailable,
                     );
                 }
             }
@@ -201,7 +201,7 @@ fn check_rspec(
                         index + 1,
                         line.body.find(name).unwrap_or(0) + 1,
                         name.len(),
-                        (false, false),
+                        CorrectionStatus::Unavailable,
                     );
                 }
             }
@@ -239,7 +239,7 @@ fn check_rspec_focus(
             index + 1,
             leading_spaces(&line.body) + 1,
             trimmed.len(),
-            (false, false),
+            CorrectionStatus::Unavailable,
         );
     }
 }
@@ -270,7 +270,7 @@ fn close_rspec_block(
                 example.start + 1,
                 leading_spaces(&lines[example.start].body) + 1,
                 lines[example.start].body.trim().len(),
-                (false, false),
+                CorrectionStatus::Unavailable,
             );
         }
         if options.cop_enabled("RSpec/MultipleExpectations") && expectations > 1 {
@@ -281,7 +281,7 @@ fn close_rspec_block(
                 example.start + 1,
                 leading_spaces(&lines[example.start].body) + 1,
                 lines[example.start].body.trim().len(),
-                (false, false),
+                CorrectionStatus::Unavailable,
             );
         }
     } else if let Some(group) = groups.pop() {
@@ -293,7 +293,7 @@ fn close_rspec_block(
                 group.start + 1,
                 leading_spaces(&lines[group.start].body) + 1,
                 lines[group.start].body.trim().len(),
-                (false, false),
+                CorrectionStatus::Unavailable,
             );
         }
     }
@@ -308,7 +308,7 @@ fn check_rspec_file_path(path: &str, options: &InspectionConfig, offenses: &mut 
             1,
             1,
             1,
-            (false, false),
+            CorrectionStatus::Unavailable,
         );
     }
 
@@ -323,7 +323,7 @@ fn check_rspec_file_path(path: &str, options: &InspectionConfig, offenses: &mut 
             1,
             1,
             1,
-            (false, false),
+            CorrectionStatus::Unavailable,
         );
     }
 }

@@ -17,17 +17,6 @@ define_cops! {
     UselessOr => "Lint/UselessOr" => source(useless_or),
 }
 
-fn replace_code(context: &mut CopContext<'_, '_>, old: &str, new: &str, message: &str) {
-    for start in context.source_file().code_offsets(old) {
-        context.replace(
-            message,
-            start..start + old.len(),
-            start..start + old.len(),
-            new,
-        );
-    }
-}
-
 fn safe_navigation_consistency(context: &mut CopContext<'_, '_>) {
     for (offset, line) in context.source_file().lines() {
         let Some(safe) = line.find("&.") else {
@@ -95,14 +84,12 @@ fn missing_else(context: &mut CopContext<'_, '_>) {
 }
 
 fn combinable_defined(context: &mut CopContext<'_, '_>) {
-    replace_code(
-        context,
+    context.replace_code(
         "defined?(foo) && defined?(bar)",
         "defined?(foo && bar)",
         "Combine nested `defined?` calls.",
     );
-    replace_code(
-        context,
+    context.replace_code(
         "defined?(foo) || defined?(bar)",
         "defined?(foo || bar)",
         "Combine nested `defined?` calls.",
@@ -172,14 +159,12 @@ fn safe_navigation_chain(context: &mut CopContext<'_, '_>) {
 }
 
 fn predicate_with_kind(context: &mut CopContext<'_, '_>) {
-    replace_code(
-        context,
+    context.replace_code(
         ".select { |x| x.is_a?(",
         ".grep(",
         "Use `grep` instead of filtering with `is_a?`.",
     );
-    replace_code(
-        context,
+    context.replace_code(
         ".find_all { |x| x.kind_of?(",
         ".grep(",
         "Use `grep` instead of filtering with `kind_of?`.",
@@ -252,20 +237,17 @@ fn forwarded_signature(definition: &str) -> String {
 }
 
 fn redundant_safe_navigation(context: &mut CopContext<'_, '_>) {
-    replace_code(
-        context,
+    context.replace_code(
         "self&.",
         "self.",
         "Redundant safe navigation detected.",
     );
-    replace_code(
-        context,
+    context.replace_code(
         "[]&.",
         "[].",
         "Redundant safe navigation detected.",
     );
-    replace_code(
-        context,
+    context.replace_code(
         "{}&.",
         "{}.",
         "Redundant safe navigation detected.",
@@ -321,6 +303,6 @@ fn useless_or(context: &mut CopContext<'_, '_>) {
         (" || nil", ""),
         ("nil || ", ""),
     ] {
-        replace_code(context, old, new, "This `or` expression is redundant.");
+        context.replace_code(old, new, "This `or` expression is redundant.");
     }
 }

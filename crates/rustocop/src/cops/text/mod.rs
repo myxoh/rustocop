@@ -7,7 +7,7 @@ mod style;
 mod style_declarations;
 
 use crate::config::InspectionConfig;
-pub(crate) use crate::model::{push_offense, Offense, SourceLine};
+pub(crate) use crate::model::{push_offense, CorrectionStatus, Offense, SourceLine};
 
 // Prism cops advertise themselves through their registry. These names are the
 // shrinking compatibility surface that still requires the line-based runner.

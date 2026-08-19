@@ -115,8 +115,12 @@ range, or an `(start, end)` byte-offset pair. Prefer locations while working
 with AST nodes and raw offsets only when detecting source punctuation.
 
 - `report` records an offense with no correction.
+- `report_code` reports every occurrence of a token outside ordinary strings
+  and comments; use it only for genuinely lexical rules.
 - `report_call`, `report_selector`, and `report_node` select common AST ranges.
 - `replace` replaces one byte range with text.
+- `replace_code` replaces every code-only occurrence of a token and is the
+  correction counterpart to `report_code`.
 - `remove` is a replacement with empty text.
 - `insert` inserts text at a byte offset.
 - `replace_selector` replaces a call's method name.

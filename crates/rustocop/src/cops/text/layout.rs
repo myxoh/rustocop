@@ -1,5 +1,5 @@
 use super::helpers::*;
-use super::{push_offense, Offense, SourceLine};
+use super::{push_offense, CorrectionStatus, Offense, SourceLine};
 use crate::config::InspectionConfig;
 
 const TRAILING_WHITESPACE_COP: &str = "Layout/TrailingWhitespace";
@@ -73,7 +73,7 @@ fn check_trailing_whitespace(
                 index + 1,
                 column,
                 length,
-                (correctable, corrected),
+                CorrectionStatus::from_flags(correctable, corrected),
             );
 
             if corrected {
@@ -188,7 +188,7 @@ fn check_line_length(
                 index + 1,
                 max + 1,
                 length - max,
-                (false, false),
+                CorrectionStatus::Unavailable,
             );
         }
     }
@@ -214,7 +214,7 @@ fn check_extra_spacing(
                 index + 1,
                 column,
                 2,
-                (true, false),
+                CorrectionStatus::Pending,
             );
         }
     }
@@ -246,7 +246,7 @@ fn check_indentation(
                     index + 1,
                     1,
                     indent.max(1),
-                    (false, false),
+                    CorrectionStatus::Unavailable,
                 );
             }
         }
@@ -279,7 +279,7 @@ fn check_end_alignment(
                         index + 1,
                         indent + 1,
                         3,
-                        (false, false),
+                        CorrectionStatus::Unavailable,
                     );
                 }
             }
@@ -317,7 +317,7 @@ fn check_first_hash_element_indentation(
                 index + 2,
                 1,
                 leading_spaces(next).max(1),
-                (false, false),
+                CorrectionStatus::Unavailable,
             );
         }
     }

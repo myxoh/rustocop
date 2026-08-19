@@ -150,6 +150,27 @@ impl<'context, 'pr> CopContext<'context, 'pr> {
         self.reporter.replace(message, offense, edit, replacement);
     }
 
+    /// Replaces every code-only occurrence, excluding quoted strings and line
+    /// comments. Prefer AST locations when a rule depends on Ruby structure.
+    pub(super) fn replace_code(&mut self, old: &str, new: &str, message: &str) {
+        for start in self.source_file().code_offsets(old) {
+            self.replace(
+                message,
+                start..start + old.len(),
+                start..start + old.len(),
+                new,
+            );
+        }
+    }
+
+    /// Reports every code-only occurrence, excluding quoted strings and line
+    /// comments. This is the diagnostic-only counterpart to `replace_code`.
+    pub(super) fn report_code(&mut self, needle: &str, message: &str) {
+        for start in self.source_file().code_offsets(needle) {
+            self.report(message, start..start + needle.len());
+        }
+    }
+
     pub(super) fn replace_indirectly(
         &mut self,
         message: impl Into<String>,
