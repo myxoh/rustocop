@@ -9,7 +9,7 @@ extend BenchmarkSupport
 
 root = File.expand_path("..", __dir__)
 output_root = performance_output_root(root)
-cops, paths = compatibility_corpus(root)
+cops, paths = benchmark_corpus(root)
 
 native = File.join(root, "libexec/rustocop-native")
 config_path = prism_config(output_root)

@@ -2,7 +2,7 @@ directory	cop
 lint_boolean_symbol	Lint/BooleanSymbol
 lint_empty_expression	Lint/EmptyExpression
 lint_float_comparison	Lint/FloatComparison
-lint_self_assignment	Lint/SelfAssignment
+lint_empty_block	Lint/EmptyBlock
 security_compound_hash	Security/CompoundHash
 security_eval	Security/Eval
 security_json_load	Security/JSONLoad

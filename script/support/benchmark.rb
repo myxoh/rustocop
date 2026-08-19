@@ -2,28 +2,40 @@
 
 require "shellwords"
 require "fileutils"
+require "json"
+require_relative "../../lib/rustocop/compatibility_status"
 
 module BenchmarkSupport
   def performance_output_root(root)
     File.join(root, "tmp/performance-verification").tap { |path| FileUtils.mkdir_p(path) }
   end
 
-  def compatibility_corpus(root, interleaved: true)
-    fixture_root = File.join(root, "spec/fixtures/rubocop_builtin_examples")
-    manifest = File.readlines(File.join(fixture_root, "manifest.tsv"), chomp: true).drop(1).map do |line|
-      directory, cop = line.split("\t", 2)
-      [cop, Dir[File.join(fixture_root, directory, "*.rb")].sort]
+  def benchmark_corpus(root, interleaved: true)
+    manifest = JSON.parse(File.read(File.join(root, "benchmark/corpus.json")))
+    raise "unsupported benchmark corpus version" unless manifest.fetch("version") == 1
+
+    corpus_root = File.join(performance_output_root(root), "benchmark-corpus")
+    groups = manifest.fetch("groups").each_with_index.map do |group, group_index|
+      paths = group.fetch("sources").each_with_index.map do |source, source_index|
+        path = File.join(corpus_root, format("%02d", group_index), format("%02d.rb", source_index))
+        FileUtils.mkdir_p(File.dirname(path))
+        File.write(path, source) unless File.file?(path) && File.binread(path) == source
+        path
+      end
+      [group.fetch("cop"), paths]
     end
-    cops = manifest.map(&:first)
-    groups = manifest.map(&:last)
+    cops = groups.map(&:first)
+    file_groups = groups.map(&:last)
     paths = if interleaved
-              (0...groups.map(&:length).max).flat_map do |index|
-                groups.filter_map { |group| group[index] }
+              (0...file_groups.map(&:length).max).flat_map do |index|
+                file_groups.filter_map { |group| group[index] }
               end
             else
-              groups.flatten
+              file_groups.flatten
             end
-    raise "expected 500 compatibility files, got #{paths.length}" unless paths.length == 500
+    raise "expected 20 benchmark cops, got #{cops.length}" unless cops.length == 20
+    raise "expected 500 benchmark files, got #{paths.length}" unless paths.length == 500
+    Rustocop::CompatibilityStatus.load(root: root).validate_verified!(cops, label: "benchmark corpus")
 
     [cops, paths]
   end

@@ -36,26 +36,6 @@ pub(super) fn variable_interpolation(context: &mut CopContext<'_, '_>) {
     }
 }
 
-pub(super) fn interpolation_ranges(source: &str) -> Vec<(usize, usize)> {
-    let mut ranges = Vec::new();
-    let mut search = 0;
-    while let Some(relative) = source[search..].find("#{") {
-        let start = search + relative;
-        let Some(close) = source[start + 2..].find('}') else {
-            break;
-        };
-        let end = start + 2 + close + 1;
-        ranges.push((start, end));
-        search = end;
-    }
-    ranges
-}
-
-pub(super) fn percent_word_literal(source: &str, offset: usize) -> bool {
-    let line_start = source[..offset].rfind('\n').map_or(0, |at| at + 1);
-    source[line_start..offset].contains("%W[") || source[line_start..offset].contains("%I[")
-}
-
 pub(super) fn single_quoted_ranges(source: &str) -> Vec<std::ops::Range<usize>> {
     let bytes = source.as_bytes();
     let mut ranges = Vec::new();

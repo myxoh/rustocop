@@ -6,7 +6,7 @@ fn partitions_cops_by_the_work_they_perform() {
         matches!(
             cop,
             "Lint/Syntax"
-                | "Lint/FormatParameterMismatch"
+                | "Lint/DuplicateMagicComment"
                 | "Security/Eval"
                 | "Security/CompoundHash"
         )
@@ -20,7 +20,7 @@ fn partitions_cops_by_the_work_they_perform() {
 
     assert_eq!(
         indices_for(&registry.source_cops),
-        ["Lint/FormatParameterMismatch", "Security/CompoundHash"]
+        ["Lint/DuplicateMagicComment", "Security/CompoundHash"]
     );
     assert_eq!(
         indices_for(&registry.node_cops),

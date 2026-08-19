@@ -1,0 +1,11 @@
+version: 1.87.0
+non_behavioral_files:
+  - spec/rustocop/executable_spec.rb
+heuristic_regressions:
+  Lint/Syntax:
+    - crates/rustocop/src/cops/prism/tests/integration.rs
+  Style/GuardClause:
+    - crates/rustocop/src/engine/fixture_tests.rs
+    - crates/rustocop/tests/fixtures/inspection/style_guard_clause_regression/offenses.tsv
+  Lint/AmbiguousRange:
+    - real_fixtures/21_zxcvbn_ambiguous_ranges/source.yml

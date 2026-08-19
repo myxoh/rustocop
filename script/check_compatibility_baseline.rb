@@ -3,14 +3,20 @@
 require "json"
 require "yaml"
 require_relative "../lib/rustocop/compatibility_baseline"
+require_relative "../lib/rustocop/compatibility_status"
 
 ROOT = File.expand_path("..", __dir__)
 report_path = ARGV.shift or abort "usage: check_compatibility_baseline.rb REPORT [STATUS]"
-status_path = ARGV.shift || File.join(ROOT, "spec/upstream/rubocop-1.87.0/status.yml")
+status_path = ARGV.shift
+status = if status_path
+           YAML.safe_load_file(status_path)
+         else
+           Rustocop::CompatibilityStatus.load(root: ROOT).data
+         end
 
 errors = Rustocop::CompatibilityBaseline.errors(
   JSON.parse(File.read(report_path)),
-  YAML.safe_load(File.read(status_path))
+  status
 )
 
 if errors.empty?

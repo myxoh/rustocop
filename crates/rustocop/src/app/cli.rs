@@ -50,7 +50,7 @@ pub(super) fn parse_args(mut args: Vec<String>) -> Result<Command, String> {
             }
             "--config" | "-c" => {
                 let path = take_value(&mut args, &arg)?;
-                apply_config(&mut options.inspection, &path);
+                apply_config(&mut options.inspection, &path)?;
                 options.config_path = Some(path);
             }
             "--require" | "--plugin" => {
@@ -83,7 +83,7 @@ pub(super) fn parse_args(mut args: Vec<String>) -> Result<Command, String> {
             }
             _ if arg.starts_with("--config=") => {
                 let path = arg.strip_prefix("--config=").unwrap_or_default();
-                apply_config(&mut options.inspection, path);
+                apply_config(&mut options.inspection, path)?;
                 options.config_path = Some(path.to_string());
             }
             _ if arg.starts_with("--jobs=") => {
@@ -122,12 +122,12 @@ fn parse_jobs(value: &str) -> Result<usize, String> {
         .ok_or_else(|| format!("invalid worker count {value}"))
 }
 
-fn apply_config(config: &mut InspectionConfig, path: &str) {
-    let Some(source) = fs::read_to_string(path).ok() else {
-        return;
-    };
+fn apply_config(config: &mut InspectionConfig, path: &str) -> Result<(), String> {
+    let source = fs::read_to_string(path)
+        .map_err(|error| format!("could not read config {path}: {error}"))?;
     config.target_ruby_version = target_ruby_version_from_source(&source).unwrap_or_default();
     config.cop_config = Arc::new(CopConfig::from_source(&source));
+    Ok(())
 }
 
 fn target_ruby_version_from_source(source: &str) -> Option<RubyVersion> {
@@ -185,7 +185,6 @@ mod tests {
             "--require".to_string(),
             "custom/cop.rb".to_string(),
             "--plugin=custom-plugin".to_string(),
-            "--config=custom.yml".to_string(),
         ])
         .unwrap() else {
             panic!("expected run command");
@@ -198,6 +197,15 @@ mod tests {
                 ("--plugin".to_string(), "custom-plugin".to_string())
             ]
         );
-        assert_eq!(options.config_path.as_deref(), Some("custom.yml"));
+    }
+
+    #[test]
+    fn rejects_an_unreadable_requested_config() {
+        let missing = format!("{}/missing-rubocop.yml", env!("CARGO_MANIFEST_DIR"));
+        let error = parse_args(vec![format!("--config={missing}")])
+            .err()
+            .expect("missing config should fail");
+
+        assert!(error.starts_with(&format!("could not read config {missing}:")));
     }
 }

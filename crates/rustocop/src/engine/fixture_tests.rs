@@ -102,7 +102,7 @@ fixture_test!(
     orders_text_and_prism_offenses_by_location,
     "mixed_ordering",
     "/project/mixed.rb",
-    "Layout/ExtraSpacing,Security/Eval,Security/JSONLoad",
+    "Lint/BigDecimalNew,Security/Eval,Security/JSONLoad",
     false,
     RubyVersion::default()
 );

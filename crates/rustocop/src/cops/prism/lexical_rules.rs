@@ -9,7 +9,7 @@ use interpolation::*;
 define_cops! {
     InitialIndentation => "Layout/InitialIndentation" => source(initial_indentation),
     DuplicateMagicComment => "Lint/DuplicateMagicComment" => source(duplicate_magic_comment),
-    EmptyInterpolation => "Lint/EmptyInterpolation" => source(empty_interpolation),
+    EmptyInterpolation => "Lint/EmptyInterpolation" => any_node(empty_interpolation),
     InterpolationCheck => "Lint/InterpolationCheck" => source(interpolation_check),
     RequireRangeParentheses => "Lint/RequireRangeParentheses" => source(require_range_parentheses),
     AsciiIdentifiers => "Naming/AsciiIdentifiers" => source(ascii_identifiers),
@@ -66,15 +66,27 @@ fn duplicate_magic_comment(context: &mut CopContext<'_, '_>) {
     }
 }
 
-fn empty_interpolation(context: &mut CopContext<'_, '_>) {
+fn empty_interpolation(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
+    let Some(interpolation) = node.as_embedded_statements_node() else {
+        return;
+    };
     let source = context.source();
-    for (start, end) in interpolation_ranges(source) {
-        let inner = source[start + 2..end - 1].trim();
-        if !matches!(inner, "" | "''" | "\"\"" | "nil") || percent_word_literal(source, start) {
-            continue;
-        }
-        context.remove("Empty interpolation detected.", start..end, start..end);
+    let range = interpolation.location().start_offset()..interpolation.location().end_offset();
+    let Some(inner) = source.get(range.start + 2..range.end.saturating_sub(1)) else {
+        return;
+    };
+    if matches!(inner.trim(), "" | "''" | "\"\"" | "nil") && !inside_percent_word_array(context) {
+        context.remove("Empty interpolation detected.", range.clone(), range);
     }
+}
+
+fn inside_percent_word_array(context: &CopContext<'_, '_>) -> bool {
+    context.ancestors().iter().rev().any(|ancestor| {
+        ancestor
+            .as_array_node()
+            .and_then(|array| array.opening_loc())
+            .is_some_and(|opening| matches!(opening.as_slice(), b"%W[" | b"%I["))
+    })
 }
 
 fn interpolation_check(context: &mut CopContext<'_, '_>) {

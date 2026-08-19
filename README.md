@@ -29,20 +29,22 @@ to replace RuboCop.
 
 ## Performance
 
-On the committed 500-file, 20-cop compatibility corpus, rustocop is currently
-about 53 times faster than RuboCop with Prism. Both tools produced identical
+<!-- generated:rubocop-prism:start -->
+On the pinned 500-file, 20-cop benchmark corpus, rustocop is currently
+about 60 times faster than RuboCop with Prism. Both tools produced identical
 normalized JSON before measurement.
 
 | Files | rustocop | RuboCop (Prism) | Speedup |
 | ---: | ---: | ---: | ---: |
-| 1 | 3.02 ms | 398.12 ms | 132.00× |
-| 25 | 3.46 ms | 402.18 ms | 116.24× |
-| 100 | 4.33 ms | 414.00 ms | 95.59× |
-| 500 | **8.96 ms** | **477.11 ms** | **53.27×** |
+| 1 | 3.04 ms | 402.38 ms | 132.45× |
+| 25 | 3.49 ms | 400.83 ms | 114.72× |
+| 100 | 4.50 ms | 412.80 ms | 91.65× |
+| 500 | 7.79 ms | 467.51 ms | 60.02× |
+<!-- generated:rubocop-prism:end -->
 
 This uses RuboCop 1.87.0 with Prism, caching disabled, and server mode disabled.
 
-The fixtures total only 9,090 bytes, so this mostly measures startup,
+The fixtures total only 9,110 bytes, so this mostly measures startup,
 orchestration, and many tiny file reads—not performance on a representative
 application. See the [full methodology and results](docs/performance.md), or
 reproduce the comparison with:
@@ -53,16 +55,18 @@ bundle exec ruby script/benchmark_rubocop_prism.rb
 
 ### Ruby custom cops
 
+<!-- generated:mixed-custom:start -->
 Rustocop can keep recognized built-in cops native while delegating explicitly
 selected Ruby custom cops to RuboCop. On the same 500 files, 20 native cops plus
-one custom cop took 456.12 ms, versus 9.07 ms for pure native Rustocop and
-478.47 ms for pure RuboCop.
+one custom cop took 455.44 ms, versus 8.98 ms for pure native Rustocop and
+474.89 ms for pure RuboCop.
 
 | 500-file mode | Median |
 | --- | ---: |
-| Pure native, 20 built-in cops | **9.07 ms** |
-| Mixed, 20 native + 1 Ruby custom cop | **456.12 ms** |
-| Pure RuboCop, all 21 cops | 478.47 ms |
+| Pure native, 20 built-in cops | **8.98 ms** |
+| Mixed, 20 native + 1 Ruby custom cop | **455.44 ms** |
+| Pure RuboCop, all 21 cops | **474.89 ms** |
+<!-- generated:mixed-custom:end -->
 
 The mixed report exactly matched RuboCop, but the Ruby custom cop still imposed
 almost all of RuboCop's startup and parsing cost. See the [mixed custom-cop
@@ -177,7 +181,9 @@ especially cautious with anything marked heuristic.
 - A shared Prism parse and AST visitor powers the native cop registry. Against
   RuboCop 1.87, 361 built-in cops are verified and the other 245 have heuristic
   implementations. Verification uses 28,623 captured upstream diagnostic and
-  correction cases rather than only the smaller performance corpus.
+  correction cases rather than only the smaller performance corpus. Hardened
+  cops additionally pass the adversarial evidence recorded in
+  `spec/hardening/status.yml`; the support matrix reports that count separately.
 - `--show-cops` prints the native support registry.
 - [The complete built-in cop support matrix](docs/cop-support.md) records every
   RuboCop 1.87 cop as verified, heuristic, or missing. Regenerate it with
@@ -230,8 +236,11 @@ separate required gate before a cop can be marked fully upstream-compatible.
 Read [Building a cop](docs/building-a-cop.md), the
 [Prism cop DSL reference](docs/adding-a-prism-cop.md),
 [the architecture](docs/architecture.md), and
-[the rules of engagement](CONTRIBUTING.md) before adding cops. The default spec
-task enforces the documented module and function complexity ceilings.
+[the rules of engagement](CONTRIBUTING.md) before adding cops. The
+[substantial-work roadmap](docs/substantial-work.md) records the shared
+correctness and architecture work that does not belong in the generated
+per-cop queue. The default spec task enforces the documented module and function
+complexity ceilings.
 
 Install dependencies:
 
@@ -249,7 +258,12 @@ Regenerate the compatibility corpus after changing its case templates:
 
 ```sh
 bundle exec ruby script/generate_compatibility_corpus.rb
+bundle exec ruby script/generate_compatibility_corpus.rb --check
 ```
+
+The correctness corpus is status-checked and may contain only Verified cops.
+Benchmarks use the separate pinned `benchmark/corpus.json`, so improving a
+correctness fixture does not silently redefine historical performance work.
 
 Run the complete upstream differential with its non-regression gate, then
 regenerate the prioritized remaining-cop queue:
@@ -263,6 +277,10 @@ RUSTOCOP_NATIVE_PATH=crates/rustocop/target/debug/rustocop \
 RUSTOCOP_NATIVE_PATH=crates/rustocop/target/debug/rustocop \
   bundle exec ruby script/generate_remaining_cop_plan.rb \
   tmp/full-compatibility.json
+
+bundle exec ruby script/report_compatibility_drift.rb \
+  tmp/full-compatibility.json \
+  --output tmp/compatibility-promotion-drift.md
 ```
 
 The generated [remaining-cop plan](docs/remaining-cops.md) distinguishes partial

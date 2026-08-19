@@ -1,0 +1,24 @@
+version: 1
+rubocop_version: 1.87.0
+required_categories:
+  - autocorrection
+  - comments
+  - escaped_text
+  - heredocs
+  - nested_syntax
+  - quoted_literals
+  - regexps
+cops:
+  Lint/EmptyInterpolation:
+    fixture: spec/fixtures/hardening/lint_empty_interpolation/input.rb
+    evidence:
+      - spec/hardening_spec.rb
+      - spec/fixtures/hardening/lint_empty_interpolation/input.rb
+    categories:
+      - autocorrection
+      - comments
+      - escaped_text
+      - heredocs
+      - nested_syntax
+      - quoted_literals
+      - regexps

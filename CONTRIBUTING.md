@@ -9,6 +9,10 @@
    Pattern-based or partial behavior must remain documented as heuristic.
 3. Update `docs/cop-support.md` whenever a cop changes status. Never inflate the
    supported count to describe a registered name without compatible behavior.
+4. Trusted compatibility and benchmark corpora may contain only cops listed in
+   `fully_compatible_cops`. A test for an incomplete implementation must be
+   registered as a focused heuristic regression in
+   `spec/cop_test_classifications.yml`; do not let it imply broader parity.
 
 ## Put code in the right layer
 
@@ -33,6 +37,11 @@ Start with [Building a cop](docs/building-a-cop.md) for the complete workflow.
 The [Prism cop DSL reference](docs/adding-a-prism-cop.md) documents the shared
 callback, matcher, context, and diagnostic APIs. Extend those APIs only for a
 recurring concept, not to hide logic that belongs to one cop.
+
+Before starting a cross-cutting subsystem, check the
+[substantial-work roadmap](docs/substantial-work.md). It owns multi-stage
+correctness and architecture work; `docs/remaining-cops.md` owns individual cop
+failures and `docs/bottlenecks.md` owns measured performance work.
 
 ## Add a cop
 
@@ -71,6 +80,7 @@ Run, at minimum:
 ```sh
 cargo test --manifest-path crates/rustocop/Cargo.toml
 bundle exec rake quality:architecture
+bundle exec rake quality:test_contracts
 bundle exec rspec
 ```
 
@@ -84,3 +94,21 @@ Use `--baseline spec/upstream/rubocop-1.87.0/status.yml` for the full diagnostic
 run. The gate accepts improvements but rejects aggregate or Verified-cop
 regressions. Regenerate `docs/remaining-cops.md` from that complete report; the
 generator deliberately refuses focused or truncated reports.
+
+`quality:test_contracts` also checks that the committed 500-example corpus is
+exactly reproducible. Use `script/generate_compatibility_corpus.rb --check` for
+a read-only check. Performance scripts consume the independent pinned
+`benchmark/corpus.json` and update their marked README, performance-guide, and
+ADR sections from the measured JSON reports.
+
+The same gate checks `spec/source_cop_inventory.yml`. New source-wide callbacks
+must appear there and begin as `unreviewed`; classify them as `lexical` only
+when raw source is the actual contract, or `syntax_aware_migrate` when the rule
+belongs on Prism nodes. Legacy text cops remain `temporary_text` until migrated.
+
+After a complete differential run, report promotion drift with:
+
+```sh
+bundle exec ruby script/report_compatibility_drift.rb tmp/full-compatibility.json \
+  --output tmp/compatibility-promotion-drift.md
+```
