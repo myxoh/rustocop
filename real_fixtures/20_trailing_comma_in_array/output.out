@@ -1,0 +1,4 @@
+== input.rb ==
+C:  3:  3: [Correctable] Style/TrailingCommaInArrayLiteral: Put a comma after the last item of a multiline array.
+
+1 file inspected, 1 offense detected, 1 offense autocorrectable

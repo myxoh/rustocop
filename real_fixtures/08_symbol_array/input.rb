@@ -1,0 +1,1 @@
+STATES = [:draft, :published, :archived]

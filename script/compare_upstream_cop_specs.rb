@@ -121,6 +121,8 @@ workers = Array.new(options[:jobs]) do
       passed = expected.nil? ||
                (status.exitstatus == (expected.empty? ? 0 : 1) && diagnostics_match)
       correction_passed = nil
+      expected_correction = nil
+      actual_correction = nil
       if options[:corrections] && test_case.key?("correction")
         expected_correction = if test_case.fetch("asserts_no_correction", false)
                                 source
@@ -145,8 +147,9 @@ workers = Array.new(options[:jobs]) do
           acceptable_status = correction_status.success? ||
                               (test_case.fetch("asserts_no_correction", false) &&
                                correction_status.exitstatus == 1)
+          actual_correction = File.binread(source_path)
           correction_passed = acceptable_status && correction_stderr.empty? &&
-                              File.binread(source_path) == expected_correction
+                              actual_correction == expected_correction
         end
         passed &&= correction_passed
       end
@@ -157,6 +160,8 @@ workers = Array.new(options[:jobs]) do
           "example" => test_case.fetch("example"),
           "passed" => passed,
           "correction_passed" => correction_passed,
+          "expected_correction" => correction_passed == false ? expected_correction : nil,
+          "actual_correction" => correction_passed == false ? actual_correction : nil,
           "expected" => expected,
           "actual" => actual,
           "stderr" => stderr,

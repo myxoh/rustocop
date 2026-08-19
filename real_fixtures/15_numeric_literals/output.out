@@ -1,0 +1,4 @@
+== input.rb ==
+C:  1: 10: [Correctable] Style/NumericLiterals: Use underscores(_) as thousands separator and separate every 3 digits with them.
+
+1 file inspected, 1 offense detected, 1 offense autocorrectable

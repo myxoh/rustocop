@@ -5,8 +5,8 @@ upstream_rspec:
   pending: 6
 captured_cases: 28623
 diagnostic_baseline:
-  passed_cases: 15279
-  passing_cops: 286
+  passed_cases: 15454
+  passing_cops: 316
   total_cops: 606
 fully_compatible_cops:
   - Bundler/GemVersion
@@ -295,3 +295,33 @@ fully_compatible_cops:
   - Style/TrivialAccessors
   - Lint/UselessRuby2Keywords
   - Lint/MultipleComparison
+  - Gemspec/DuplicatedAssignment
+  - Gemspec/OrderedDependencies
+  - Layout/AssignmentIndentation
+  - Layout/BeginEndAlignment
+  - Layout/ConditionPosition
+  - Layout/EndOfLine
+  - Layout/FirstArrayElementLineBreak
+  - Layout/FirstHashElementLineBreak
+  - Layout/FirstMethodArgumentLineBreak
+  - Layout/FirstMethodParameterLineBreak
+  - Layout/FirstParameterIndentation
+  - Layout/MultilineHashKeyLineBreaks
+  - Layout/SingleLineBlockChain
+  - Layout/SpaceBeforeBrackets
+  - Layout/SpaceBeforeFirstArg
+  - Layout/SpaceInsideStringInterpolation
+  - Lint/ConstantOverwrittenInRescue
+  - Lint/ConstantResolution
+  - Lint/CopDirectiveSyntax
+  - Lint/MissingCopEnableDirective
+  - Lint/NestedMethodDefinition
+  - Lint/ReturnInVoidContext
+  - Lint/UselessConstantScoping
+  - Lint/UselessMethodDefinition
+  - Metrics/CollectionLiteralLength
+  - Metrics/ParameterLists
+  - Naming/BinaryOperatorParameterName
+  - Naming/BlockParameterName
+  - Style/AmbiguousEndlessMethodDefinition
+  - Style/RedundantAssignment

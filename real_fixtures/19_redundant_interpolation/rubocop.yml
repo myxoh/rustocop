@@ -1,0 +1,6 @@
+AllCops:
+  DisabledByDefault: true
+  NewCops: disable
+  SuggestExtensions: false
+Style/RedundantInterpolation:
+  Enabled: true

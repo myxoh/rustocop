@@ -1,0 +1,4 @@
+== input.rb ==
+C:  1: 11: [Correctable] Style/StringLiterals: Prefer single-quoted strings when you don't need string interpolation or special symbols.
+
+1 file inspected, 1 offense detected, 1 offense autocorrectable

@@ -1,0 +1,4 @@
+== input.rb ==
+C:  1:  8: [Correctable] Style/Semicolon: Do not use semicolons to terminate expressions.
+
+1 file inspected, 1 offense detected, 1 offense autocorrectable

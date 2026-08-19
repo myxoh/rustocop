@@ -28,10 +28,15 @@ fn prism_offense(source: &str, index: &SourceIndex, finding: prism::Finding) -> 
     let empty_location = finding.start_offset == 0 && finding.end_offset == 0;
     let ends_at_newline = finding.end_offset > finding.start_offset
         && source.as_bytes().get(finding.end_offset - 1) == Some(&b'\n');
-    let mut last_offset = finding
-        .end_offset
-        .saturating_sub(1)
-        .max(finding.start_offset);
+    let reversed_empty = finding.end_offset < finding.start_offset;
+    let mut last_offset = if reversed_empty {
+        finding.end_offset
+    } else {
+        finding
+            .end_offset
+            .saturating_sub(1)
+            .max(finding.start_offset)
+    };
     while last_offset > finding.start_offset && !source.is_char_boundary(last_offset) {
         last_offset -= 1;
     }

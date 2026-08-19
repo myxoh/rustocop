@@ -1,0 +1,4 @@
+== input.rb ==
+C:  1:  9: [Correctable] Style/PercentLiteralDelimiters: %w-literals should be delimited by [ and ].
+
+1 file inspected, 1 offense detected, 1 offense autocorrectable

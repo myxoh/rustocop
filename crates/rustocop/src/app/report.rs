@@ -89,7 +89,10 @@ fn warning_cop(cop_name: &str) -> bool {
     cop_name.starts_with("Lint/")
         || matches!(
             cop_name,
-            "Bundler/InsecureProtocolSource" | "Gemspec/RubyVersionGlobalsUsage"
+            "Bundler/InsecureProtocolSource"
+                | "Gemspec/RubyVersionGlobalsUsage"
+                | "Gemspec/DuplicatedAssignment"
+                | "Layout/BeginEndAlignment"
         )
 }
 

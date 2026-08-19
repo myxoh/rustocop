@@ -1,0 +1,4 @@
+== input.rb ==
+C:  1: 10: [Correctable] Style/WordArray: Use %w or %W for an array of words.
+
+1 file inspected, 1 offense detected, 1 offense autocorrectable

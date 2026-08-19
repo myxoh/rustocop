@@ -1,0 +1,4 @@
+== input.rb ==
+C:  1:  1: [Correctable] Layout/LeadingCommentSpace: Missing space after #.
+
+1 file inspected, 1 offense detected, 1 offense autocorrectable
