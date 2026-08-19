@@ -5,7 +5,7 @@ matrix_start: 547
 matrix_end: 606
 rubocop_version: 1.87.0
 rubocop_commit: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
-rustocop_commit: f3804d7c5170c99df8ed86e140eaaeca787543bd
+rustocop_commit: e3b5809313ae19ed738408f1cba382cb21b5d67d
 cops:
   Style/ZeroLengthPredicate:
     matrix_position: 606
@@ -455,7 +455,7 @@ cops:
     sources:
       rubocop: lib/rubocop/cop/style/while_until_do.rb
       rustocop:
-        - crates/rustocop/src/cops/prism/style_compat.rs
+        - crates/rustocop/src/cops/prism/while_until_do_rules.rs
     manual_review:
       status: passed
       notes:
