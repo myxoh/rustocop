@@ -5,7 +5,7 @@ define_cops! {
     RedundantMinMaxBy => "Style/RedundantMinMaxBy" => source(redundant_min_max_by),
     RedundantSort => "Style/RedundantSort" => source(redundant_sort),
     TallyMethod => "Style/TallyMethod" => call(tally_method),
-    ZeroLengthPredicate => "Style/ZeroLengthPredicate" => call(zero_length_predicate),
+    ZeroLengthPredicate => "Style/ZeroLengthPredicate" => call(on_send),
 }
 
 fn array_intersect(context: &mut CopContext<'_, '_>) {
@@ -410,23 +410,30 @@ fn counting_method(name: &[u8]) -> bool {
     matches!(name, b"count" | b"size" | b"length")
 }
 
-fn zero_length_predicate(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
+fn on_send(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     if !matches!(call_name(node), b"length" | b"size")
         || argument_count(node) != 0
         || node.receiver().is_none()
     {
         return;
     }
+    if call_operator_is(node, b"&.") {
+        on_csend(node, context);
+        return;
+    }
     let Some(parent) = context.parent().and_then(Node::as_call_node) else {
         return;
     };
-    if non_polymorphic_collection(node, context) {
-        return;
-    }
+    check_zero_length_predicate(node, &parent, context);
+    check_zero_length_comparison(node, &parent, context);
+    check_nonzero_length_comparison(node, &parent, context);
+}
 
-    if check_zero_length_predicate(node, &parent, context) {
+fn on_csend(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
+    let Some(parent) = context.parent().and_then(Node::as_call_node) else {
         return;
-    }
+    };
+    check_zero_length_predicate(node, &parent, context);
     check_zero_length_comparison(node, &parent, context);
 }
 
@@ -434,17 +441,20 @@ fn check_zero_length_predicate(
     node: &CallNode<'_>,
     parent: &CallNode<'_>,
     context: &mut CopContext<'_, '_>,
-) -> bool {
+) {
     if call_name(parent) != b"zero?"
         || argument_count(parent) != 0
         || !parent
             .receiver()
             .is_some_and(|receiver| same_call(&receiver, node))
     {
-        return false;
+        return;
+    }
+    if non_polymorphic_collection(node, context) {
+        return;
     }
     let Some(selector) = node.message_loc() else {
-        return false;
+        return;
     };
     let offense = selector.start_offset()..parent.location().end_offset();
     let current = context
@@ -455,7 +465,6 @@ fn check_zero_length_predicate(
     context.add_offense(offense.clone(), message, |corrector| {
         corrector.replace(offense, "empty?");
     });
-    true
 }
 
 fn check_zero_length_comparison(
@@ -463,47 +472,94 @@ fn check_zero_length_comparison(
     parent: &CallNode<'_>,
     context: &mut CopContext<'_, '_>,
 ) {
-    let operator = call_name(parent);
-    if !matches!(operator, b"==" | b"<" | b">" | b"!=") {
-        return;
-    }
-    let (Some(left), Some(right)) = (parent.receiver(), only_argument(parent)) else {
+    let Some(comparison) = length_comparison(node, parent) else {
         return;
     };
-    let length_on_left = same_call(&left, node);
-    let length_on_right = same_call(&right, node);
-    if !length_on_left && !length_on_right {
+    if !comparison.zero() || non_polymorphic_collection(node, context) {
         return;
     }
-    let other = if length_on_left { &right } else { &left };
-    let Some(integer) = integer_value(other) else {
+    report_length_comparison(node, parent, comparison, false, context);
+}
+
+fn check_nonzero_length_comparison(
+    node: &CallNode<'_>,
+    parent: &CallNode<'_>,
+    context: &mut CopContext<'_, '_>,
+) {
+    let Some(comparison) = length_comparison(node, parent) else {
         return;
     };
-    let zero = matches!(
-        (length_on_left, operator, integer),
-        (true, b"==", 0) | (false, b"==", 0) | (true, b"<", 1) | (false, b">", 1)
-    );
-    let nonzero = !call_operator_is(node, b"&.")
-        && matches!(
-            (length_on_left, operator, integer),
-            (true, b">", 0) | (true, b"!=", 0) | (false, b"<", 0) | (false, b"!=", 0)
-        );
-    if !zero && !nonzero {
+    if !comparison.nonzero() || non_polymorphic_collection(node, context) {
         return;
+    }
+    report_length_comparison(node, parent, comparison, true, context);
+}
+
+#[derive(Clone, Copy)]
+struct LengthComparison {
+    length_on_left: bool,
+    operator: &'static str,
+    integer: i32,
+}
+
+impl LengthComparison {
+    fn zero(self) -> bool {
+        matches!(
+            (self.length_on_left, self.operator, self.integer),
+            (true, "==", 0) | (false, "==", 0) | (true, "<", 1) | (false, ">", 1)
+        )
     }
 
-    let receiver = node.receiver().expect("receiver checked above");
-    let receiver_source = context.source_file().node(&receiver);
-    let call_operator = node
-        .call_operator_loc()
-        .map_or(".", |location| context.source_file().at(&location));
-    let replacement = zero_length_replacement(nonzero, receiver_source, call_operator);
+    fn nonzero(self) -> bool {
+        matches!(
+            (self.length_on_left, self.operator, self.integer),
+            (true, ">", 0) | (true, "!=", 0) | (false, "<", 0) | (false, "!=", 0)
+        )
+    }
+}
+
+fn length_comparison(node: &CallNode<'_>, parent: &CallNode<'_>) -> Option<LengthComparison> {
+    let operator = match call_name(parent) {
+        b"==" => "==",
+        b"!=" => "!=",
+        b"<" => "<",
+        b">" => ">",
+        _ => return None,
+    };
+    let (left, right) = (parent.receiver()?, only_argument(parent)?);
+    let length_on_left = same_call(&left, node);
+    if !length_on_left && !same_call(&right, node) {
+        return None;
+    }
+    let other = if length_on_left { &right } else { &left };
+    Some(LengthComparison {
+        length_on_left,
+        operator,
+        integer: integer_value(other)?,
+    })
+}
+
+fn report_length_comparison(
+    node: &CallNode<'_>,
+    parent: &CallNode<'_>,
+    comparison: LengthComparison,
+    nonzero: bool,
+    context: &mut CopContext<'_, '_>,
+) {
+    let Some(replacement) = replacement(node, nonzero, context.source_file()) else {
+        return;
+    };
     let method = String::from_utf8_lossy(call_name(node));
-    let operator = String::from_utf8_lossy(operator);
-    let current = if length_on_left {
-        format!("{method} {operator} {integer}")
+    let current = if comparison.length_on_left {
+        format!(
+            "{method} {} {}",
+            comparison.operator, comparison.integer
+        )
     } else {
-        format!("{integer} {operator} {method}")
+        format!(
+            "{} {} {method}",
+            comparison.integer, comparison.operator
+        )
     };
     let preferred = if nonzero { "!empty?" } else { "empty?" };
     let message = format!("Use `{preferred}` instead of `{current}`.");
@@ -512,15 +568,20 @@ fn check_zero_length_comparison(
     });
 }
 
-fn zero_length_replacement(
+fn replacement(
+    node: &CallNode<'_>,
     nonzero: bool,
-    receiver_source: &str,
-    call_operator: &str,
-) -> String {
-    format!(
+    file: SourceFile<'_>,
+) -> Option<String> {
+    let receiver = node.receiver()?;
+    let call_operator = node
+        .call_operator_loc()
+        .map_or(".", |location| file.at(&location));
+    Some(format!(
         "{}{receiver_source}{call_operator}empty?",
-        if nonzero { "!" } else { "" }
-    )
+        if nonzero { "!" } else { "" },
+        receiver_source = file.node(&receiver),
+    ))
 }
 
 fn same_call(node: &Node<'_>, expected: &CallNode<'_>) -> bool {

@@ -5,7 +5,7 @@ define_cops! {
     FileWrite => "Style/FileWrite" => source(file_write),
     IfWithSemicolon => "Style/IfWithSemicolon" => source(if_with_semicolon),
     MethodDefParentheses => "Style/MethodDefParentheses" => source(method_def_parentheses),
-    WhileUntilModifier => "Style/WhileUntilModifier" => any_node(while_until_modifier),
+    WhileUntilModifier => "Style/WhileUntilModifier" => any_node(on_while),
 }
 
 fn file_read(context: &mut CopContext<'_, '_>) {
@@ -194,7 +194,29 @@ fn method_def_parentheses(context: &mut CopContext<'_, '_>) {
     }
 }
 
-fn while_until_modifier(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
+struct ModifierForm {
+    keyword: &'static str,
+    offense: std::ops::Range<usize>,
+    replacement: String,
+}
+
+fn on_while(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
+    let Some(form) = single_line_as_modifier(node, context) else {
+        return;
+    };
+    let message = format!(
+        "Favor modifier `{}` usage when having a single-line body.",
+        form.keyword
+    );
+    context.add_offense(form.offense, message, |corrector| {
+        corrector.replace(node.location(), form.replacement);
+    });
+}
+
+fn single_line_as_modifier(
+    node: &Node<'_>,
+    context: &CopContext<'_, '_>,
+) -> Option<ModifierForm> {
     let parts = if let Some(loop_node) = node.as_while_node() {
         Some((
             "while",
@@ -203,40 +225,40 @@ fn while_until_modifier(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
             loop_node.predicate(),
             loop_node.statements(),
         ))
-    } else if let Some(loop_node) = node.as_until_node() {
-        Some((
+    } else {
+        node.as_until_node().map(|loop_node| {
+            (
             "until",
             loop_node.keyword_loc(),
             loop_node.closing_loc(),
             loop_node.predicate(),
             loop_node.statements(),
-        ))
-    } else {
-        None
+            )
+        })
     };
     let Some((keyword, keyword_loc, Some(closing), predicate, Some(statements))) = parts else {
-        return;
+        return None;
     };
     let body_nodes = statements.body().iter().collect::<Vec<_>>();
     if body_nodes.len() != 1 {
-        return;
+        return None;
     }
     let body = &body_nodes[0];
-    if conditional_body(body) || body.as_begin_node().is_some() {
-        return;
+    if non_eligible_body(body) {
+        return None;
     }
     let expression = context.source_file().node(node);
     if expression.lines().filter(|line| !line.trim().is_empty()).count() > 3 {
-        return;
+        return None;
     }
     let body_source = context.source_file().node(body);
     if body_source.trim().is_empty() || body_source.contains('\n') || source_has_comment(body_source) {
-        return;
+        return None;
     }
     let mut assignment = LocalAssignmentVisitor::default();
     assignment.visit(&predicate);
     if assignment.found {
-        return;
+        return None;
     }
 
     let source = context.source();
@@ -254,18 +276,17 @@ fn while_until_modifier(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
     if code_after.trim_start().starts_with('#')
         || first_line_comment.is_some() && !code_after.trim().is_empty()
     {
-        return;
+        return None;
     }
 
     let condition = context.source_file().node(&predicate);
-    let mut replacement = format!("{body_source} {keyword} {condition}");
-    if parenthesize_modifier(context.parent()) {
-        replacement = format!("({replacement})");
-    }
-    if let Some(comment) = first_line_comment {
-        replacement.push(' ');
-        replacement.push_str(comment);
-    }
+    let replacement = to_modifier_form(
+        body_source,
+        keyword,
+        condition,
+        parenthesize_modifier(context.parent()),
+        first_line_comment,
+    );
 
     let line_start = context.source_file().line_start(keyword_loc.start_offset());
     let code_before = &source[line_start..keyword_loc.start_offset()];
@@ -279,21 +300,40 @@ fn while_until_modifier(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
     if line_length_enabled
         && format!("{code_before}{replacement}{code_after}").chars().count() > maximum
     {
-        return;
+        return None;
     }
-    let message = format!("Favor modifier `{keyword}` usage when having a single-line body.");
-    context.add_offense(keyword_loc, message, |corrector| {
-        corrector.replace(node.location(), replacement);
-    });
+    Some(ModifierForm {
+        keyword,
+        offense: keyword_loc.start_offset()..keyword_loc.end_offset(),
+        replacement,
+    })
 }
 
-fn conditional_body(node: &Node<'_>) -> bool {
+fn non_eligible_body(node: &Node<'_>) -> bool {
     node.as_if_node().is_some()
         || node.as_unless_node().is_some()
         || node.as_while_node().is_some()
         || node.as_until_node().is_some()
         || node.as_case_node().is_some()
         || node.as_case_match_node().is_some()
+}
+
+fn to_modifier_form(
+    body: &str,
+    keyword: &str,
+    condition: &str,
+    parenthesize: bool,
+    comment: Option<&str>,
+) -> String {
+    let mut replacement = format!("{body} {keyword} {condition}");
+    if parenthesize {
+        replacement = format!("({replacement})");
+    }
+    if let Some(comment) = comment {
+        replacement.push(' ');
+        replacement.push_str(comment);
+    }
+    replacement
 }
 
 fn source_has_comment(source: &str) -> bool {

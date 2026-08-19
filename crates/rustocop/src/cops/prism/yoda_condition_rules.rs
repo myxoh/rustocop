@@ -1,10 +1,10 @@
 use super::*;
 
 define_cops! {
-    YodaCondition => "Style/YodaCondition" => call(yoda_condition),
+    YodaCondition => "Style/YodaCondition" => call(on_send),
 }
 
-fn yoda_condition(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
+fn on_send(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     let operator = call_name(node);
     if !yoda_compatible_condition(operator) {
         return;
@@ -18,7 +18,7 @@ fn yoda_condition(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     let (Some(left), Some(right)) = (node.receiver(), only_argument(node)) else {
         return;
     };
-    if file_program_name_comparison(&left, operator, &right, context)
+    if file_constant_equal_program_name(&left, operator, &right, context)
         || valid_yoda(&left, &right, style)
     {
         return;
@@ -33,7 +33,18 @@ fn yoda_condition(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
 }
 
 fn yoda_compatible_condition(operator: &[u8]) -> bool {
-    matches!(operator, b"==" | b"!=" | b"<" | b"<=" | b">" | b">=")
+    comparison_operator(operator) && !noncommutative_operator(operator)
+}
+
+fn comparison_operator(operator: &[u8]) -> bool {
+    matches!(
+        operator,
+        b"==" | b"!=" | b"<" | b"<=" | b">" | b">=" | b"===" | b"=~" | b"!~"
+    )
+}
+
+fn noncommutative_operator(operator: &[u8]) -> bool {
+    matches!(operator, b"===" | b"=~" | b"!~")
 }
 
 fn equality_only(style: &str) -> bool {
@@ -47,7 +58,7 @@ fn non_equality_operator(operator: &[u8]) -> bool {
 fn valid_yoda(left: &Node<'_>, right: &Node<'_>, style: &str) -> bool {
     let left_constant = constant_portion(left);
     let right_constant = constant_portion(right);
-    if left_constant == right_constant || interpolated_literal(left) {
+    if left_constant == right_constant || interpolation(left) {
         return true;
     }
     if enforce_yoda(style) {
@@ -135,20 +146,28 @@ fn scalar_literal(node: &Node<'_>) -> bool {
         || node.as_regular_expression_node().is_some()
 }
 
-fn interpolated_literal(node: &Node<'_>) -> bool {
+fn interpolation(node: &Node<'_>) -> bool {
     node.as_interpolated_string_node().is_some()
         || node.as_interpolated_regular_expression_node().is_some()
 }
 
-fn file_program_name_comparison(
+fn file_constant_equal_program_name(
     left: &Node<'_>,
     operator: &[u8],
     right: &Node<'_>,
     context: &CopContext<'_, '_>,
 ) -> bool {
     matches!(operator, b"==" | b"!=")
-        && context.source_file().node(left) == "__FILE__"
-        && right.as_global_variable_read_node().is_some_and(|global| {
-            matches!(global.name().as_slice(), b"$0" | b"$PROGRAM_NAME")
-        })
+        && source_file_path_constant(left, context)
+        && program_name(right)
+}
+
+fn source_file_path_constant(node: &Node<'_>, context: &CopContext<'_, '_>) -> bool {
+    context.source_file().node(node) == "__FILE__"
+}
+
+fn program_name(node: &Node<'_>) -> bool {
+    node.as_global_variable_read_node().is_some_and(|global| {
+        matches!(global.name().as_slice(), b"$0" | b"$PROGRAM_NAME")
+    })
 }

@@ -1,10 +1,10 @@
 use super::*;
 
 define_cops!(
-    WhileUntilDo => "Style/WhileUntilDo" => any_node(while_until_do),
+    WhileUntilDo => "Style/WhileUntilDo" => any_node(on_while),
 );
 
-fn while_until_do(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
+fn on_while(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
     let parts = if let Some(loop_node) = node.as_while_node() {
         loop_node.do_keyword_loc().map(|keyword| {
             (

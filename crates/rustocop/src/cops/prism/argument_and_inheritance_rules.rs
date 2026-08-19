@@ -7,7 +7,7 @@ define_cops! {
     RaiseException => "Lint/RaiseException" => call(raise_exception),
     DateTime => "Style/DateTime" => call(date_time),
     RedundantArgument => "Style/RedundantArgument" => call(redundant_argument),
-    YAMLFileRead => "Style/YAMLFileRead" => call(yaml_file_read),
+    YAMLFileRead => "Style/YAMLFileRead" => call(on_send),
 }
 
 fn raise_exception(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
@@ -269,7 +269,7 @@ fn redundant_argument(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     );
 }
 
-fn yaml_file_read(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
+fn on_send(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     if !matches!(call_name(node), b"load" | b"safe_load" | b"parse")
         || !root_constant(node.receiver(), b"YAML")
         || call_name(node) == b"safe_load" && !context.target_ruby_version().at_least(3, 0)
@@ -297,7 +297,22 @@ fn yaml_file_read(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     let Some(offense) = offense_range(node) else {
         return;
     };
-    let preferred = preferred_yaml_file_read(node, &path, &values[1..], context.source_file());
+    let rest_arguments = values
+        .iter()
+        .skip(1)
+        .map(|argument| context.source_file().node(argument))
+        .collect::<Vec<_>>()
+        .join(", ");
+    let rest_arguments = if rest_arguments.is_empty() {
+        String::new()
+    } else {
+        format!(", {rest_arguments}")
+    };
+    let preferred = format!(
+        "{}_file({}{rest_arguments})",
+        String::from_utf8_lossy(call_name(node)),
+        context.source_file().node(&path)
+    );
     let message = format!("Use `{preferred}` instead.");
     context.add_offense(offense.clone(), message, |corrector| {
         corrector.replace(offense, preferred);
@@ -307,28 +322,4 @@ fn yaml_file_read(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
 fn offense_range(node: &CallNode<'_>) -> Option<std::ops::Range<usize>> {
     let selector = node.message_loc()?;
     Some(selector.start_offset()..node.location().end_offset())
-}
-
-fn preferred_yaml_file_read(
-    node: &CallNode<'_>,
-    path: &Node<'_>,
-    rest: &[Node<'_>],
-    file: SourceFile<'_>,
-) -> String {
-    let suffix = rest
-        .iter()
-        .map(|argument| file.node(argument))
-        .collect::<Vec<_>>()
-        .join(", ");
-    let suffix = if suffix.is_empty() {
-        String::new()
-    } else {
-        format!(", {suffix}")
-    };
-    format!(
-        "{}_file({}{})",
-        String::from_utf8_lossy(call_name(node)),
-        file.node(path),
-        suffix
-    )
 }

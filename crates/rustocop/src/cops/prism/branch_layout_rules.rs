@@ -8,7 +8,7 @@ define_cops!(
     MultilineInPatternThen => "Style/MultilineInPatternThen" => node(as_in_node, multiline_in_pattern_then),
     MultilineIfModifier => "Style/MultilineIfModifier" => any_node(multiline_if_modifier),
     MultilineWhenThen => "Style/MultilineWhenThen" => node(as_when_node, multiline_when_then),
-    WhenThen => "Style/WhenThen" => node(as_when_node, when_then),
+    WhenThen => "Style/WhenThen" => node(as_when_node, on_when),
 );
 
 fn empty_when(node: &WhenNode<'_>, context: &mut CopContext<'_, '_>) {
@@ -205,7 +205,7 @@ fn multiline_when_then(node: &WhenNode<'_>, context: &mut CopContext<'_, '_>) {
     );
 }
 
-fn when_then(node: &WhenNode<'_>, context: &mut CopContext<'_, '_>) {
+fn on_when(node: &WhenNode<'_>, context: &mut CopContext<'_, '_>) {
     let Some(last_condition) = node.conditions().last() else {
         return;
     };
@@ -239,14 +239,11 @@ fn when_then(node: &WhenNode<'_>, context: &mut CopContext<'_, '_>) {
         .map(|condition| context.source_file().node(&condition))
         .collect::<Vec<_>>()
         .join(", ");
-    let message = when_then_message(&expression);
+    let message =
+        format!("Do not use `when {expression};`. Use `when {expression} then` instead.");
     context.add_offense(separator.clone(), message, |corrector| {
         corrector.replace(separator, " then");
     });
-}
-
-fn when_then_message(expression: &str) -> String {
-    format!("Do not use `when {expression};`. Use `when {expression} then` instead.")
 }
 
 fn check_multiline_then(

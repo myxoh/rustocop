@@ -8,7 +8,7 @@ define_cops! {
     RedundantLineContinuation => "Style/RedundantLineContinuation" => source(redundant_line_continuation),
     Lambda => "Style/Lambda" => source(lambda_literal),
     FormatString => "Style/FormatString" => source(format_string),
-    WordArray => "Style/WordArray" => node(as_array_node, word_array),
+    WordArray => "Style/WordArray" => node(as_array_node, on_array),
     PercentLiteralDelimiters => "Style/PercentLiteralDelimiters" => source(percent_delimiters),
     RedundantStringEscape => "Style/RedundantStringEscape" => source(redundant_string_escape),
 }
@@ -698,7 +698,7 @@ fn format_string(context: &mut CopContext<'_, '_>) {
     }
 }
 
-fn word_array(node: &ruby_prism::ArrayNode<'_>, context: &mut CopContext<'_, '_>) {
+fn on_array(node: &ruby_prism::ArrayNode<'_>, context: &mut CopContext<'_, '_>) {
     let Some(opening) = node.opening_loc() else {
         return;
     };
@@ -710,47 +710,66 @@ fn word_array(node: &ruby_prism::ArrayNode<'_>, context: &mut CopContext<'_, '_>
     }
 
     if opening_source == "[" {
-        if context.policy().enforced_style("percent") != "percent" || elements.is_empty() {
-            return;
-        }
-        if elements
-            .iter()
-            .any(|element| element.as_string_node().is_none())
-            || bracket_array_has_comment(node, context)
-            || elements
-                .iter()
-                .any(|element| !simple_word(element, context))
-            || within_complex_matrix(context)
+        if elements.iter().any(|element| element.as_string_node().is_none())
+            || complex_content(&elements, context)
+            || within_matrix_of_complex_content(context)
         {
             return;
         }
-        let Some(replacement) = percent_word_array(node, &elements, context) else {
-            return;
-        };
-        context.add_offense(
-            node.location(),
-            "Use `%w` or `%W` for an array of words.",
-            |corrector| corrector.replace(node.location(), replacement),
-        );
-        return;
+        check_bracketed_array(node, &elements, context);
+    } else if opening_source.starts_with("%w") || opening_source.starts_with("%W") {
+        check_percent_array(node, &elements, context);
     }
+}
 
-    if !opening_source.starts_with("%w") && !opening_source.starts_with("%W") {
+fn check_bracketed_array(
+    node: &ruby_prism::ArrayNode<'_>,
+    elements: &[Node<'_>],
+    context: &mut CopContext<'_, '_>,
+) {
+    if context.policy().enforced_style("percent") != "percent"
+        || elements.is_empty()
+        || bracket_array_has_comment(node, context)
+    {
         return;
     }
-    let invalid_percent = elements.iter().any(|element| {
-        element.as_string_node().is_some_and(|string| {
-            !valid_utf8(string.unescaped()) || string.unescaped().contains(&b' ')
-        })
-    });
-    if context.policy().enforced_style("percent") == "percent" && !invalid_percent {
+    let Some(replacement) = percent_word_array(node, elements, context) else {
+        return;
+    };
+    context.add_offense(
+        node.location(),
+        "Use `%w` or `%W` for an array of words.",
+        |corrector| corrector.replace(node.location(), replacement),
+    );
+}
+
+fn check_percent_array(
+    node: &ruby_prism::ArrayNode<'_>,
+    elements: &[Node<'_>],
+    context: &mut CopContext<'_, '_>,
+) {
+    if context.policy().enforced_style("percent") == "percent"
+        && !invalid_percent_array_contents(elements)
+    {
         return;
     }
-    let replacement = bracketed_word_array(node, &elements, context);
+    let replacement = build_bracketed_array(node, elements, context);
     let message = bracketed_word_array_message(&replacement);
     context.add_offense(node.location(), message, |corrector| {
         corrector.replace(node.location(), replacement);
     });
+}
+
+fn complex_content(elements: &[Node<'_>], context: &CopContext<'_, '_>) -> bool {
+    elements.iter().any(|element| !simple_word(element, context))
+}
+
+fn invalid_percent_array_contents(elements: &[Node<'_>]) -> bool {
+    elements.iter().any(|element| {
+        element.as_string_node().is_some_and(|string| {
+            !valid_utf8(string.unescaped()) || string.unescaped().contains(&b' ')
+        })
+    })
 }
 
 fn bracketed_word_array_message(replacement: &str) -> String {
@@ -777,12 +796,7 @@ fn simple_word(node: &Node<'_>, context: &CopContext<'_, '_>) -> bool {
     if value.is_empty() || value.contains(' ') {
         return false;
     }
-    let configured_regex = context
-        .config_map("WordRegex")
-        .and_then(|values| values.get("$regexp"))
-        .map(String::as_str)
-        .or_else(|| context.config_value("WordRegex"));
-    if let Some(regex) = configured_regex {
+    if let Some(regex) = word_regex(context) {
         if regex.contains("\\S+") {
             return !value.chars().any(char::is_whitespace);
         }
@@ -818,6 +832,14 @@ fn simple_word(node: &Node<'_>, context: &CopContext<'_, '_>) -> bool {
     previous_word
 }
 
+fn word_regex<'a>(context: &'a CopContext<'_, '_>) -> Option<&'a str> {
+    context
+        .config_map("WordRegex")
+        .and_then(|values| values.get("$regexp"))
+        .map(String::as_str)
+        .or_else(|| context.config_value("WordRegex"))
+}
+
 fn bracket_array_has_comment(
     node: &ruby_prism::ArrayNode<'_>,
     context: &CopContext<'_, '_>,
@@ -829,11 +851,15 @@ fn bracket_array_has_comment(
         .any(|line| line.trim_start().starts_with('#') || line.contains(" #"))
 }
 
-fn within_complex_matrix(context: &CopContext<'_, '_>) -> bool {
+fn within_matrix_of_complex_content(context: &CopContext<'_, '_>) -> bool {
     let Some(parent) = context.parent().and_then(Node::as_array_node) else {
         return false;
     };
-    let rows = parent.elements().iter().collect::<Vec<_>>();
+    matrix_of_complex_content(&parent)
+}
+
+fn matrix_of_complex_content(array: &ruby_prism::ArrayNode<'_>) -> bool {
+    let rows = array.elements().iter().collect::<Vec<_>>();
     !rows.is_empty()
         && rows.iter().all(|row| row.as_array_node().is_some())
         && rows.iter().any(|row| {
@@ -996,7 +1022,7 @@ fn format_percent_multiline(
     output
 }
 
-fn bracketed_word_array(
+fn build_bracketed_array(
     node: &ruby_prism::ArrayNode<'_>,
     elements: &[Node<'_>],
     context: &CopContext<'_, '_>,

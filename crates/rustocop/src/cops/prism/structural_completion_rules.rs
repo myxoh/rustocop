@@ -7,7 +7,7 @@ define_cops!(
     StaticClass => "Style/StaticClass" => node(as_class_node, static_class),
     TrailingBodyOnClass => "Style/TrailingBodyOnClass" => any_node(trailing_body_on_class),
     TrailingBodyOnModule => "Style/TrailingBodyOnModule" => node(as_module_node, trailing_body_on_module),
-    YodaExpression => "Style/YodaExpression" => call(yoda_expression),
+    YodaExpression => "Style/YodaExpression" => call(on_send),
 );
 
 fn multiline_memoization(context: &mut CopContext<'_, '_>) {
@@ -205,8 +205,11 @@ fn trailing_body_on_module(node: &ModuleNode<'_>, context: &mut CopContext<'_, '
     );
 }
 
-fn yoda_expression(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
-    if !supported_yoda_operator(node, context) {
+fn on_send(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
+    if !supported_operators(context)
+        .iter()
+        .any(|operator| operator.as_bytes() == call_name(node))
+    {
         return;
     }
     let Some(left) = node.receiver() else {
@@ -218,41 +221,34 @@ fn yoda_expression(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     if !yoda_expression_constant(&left, &right) {
         return;
     }
-    if offended_yoda_ancestor(context) {
+    if offended_ancestor(context) {
         return;
     }
-    let message = yoda_expression_message(&right, context.source_file());
+    let message = format!(
+        "Non-literal operand (`{}`) should be first.",
+        context.source_file().node(&right)
+    );
     let replacement = render_yoda(node, context.source_file());
     context.add_offense(node.location(), message, |corrector| {
         corrector.replace(node.location(), replacement);
     });
 }
 
-fn supported_yoda_operator(node: &CallNode<'_>, context: &CopContext<'_, '_>) -> bool {
-    context
-        .config_values("SupportedOperators")
-        .iter()
-        .any(|configured| configured.as_bytes() == node.name().as_slice())
+fn supported_operators<'a>(context: &'a CopContext<'_, '_>) -> &'a [String] {
+    context.config_values("SupportedOperators")
 }
 
 fn yoda_expression_constant(left: &Node<'_>, right: &Node<'_>) -> bool {
     constant_portion(left) && !constant_portion(right)
 }
 
-fn offended_yoda_ancestor(context: &CopContext<'_, '_>) -> bool {
+fn offended_ancestor(context: &CopContext<'_, '_>) -> bool {
     context.ancestors().iter().rev().any(|ancestor| {
         ancestor.as_call_node().is_some_and(|call| {
             call.receiver().as_ref().is_some_and(constant_portion)
                 && only_argument(&call).is_some_and(|argument| !constant_portion(&argument))
         })
     })
-}
-
-fn yoda_expression_message(right: &Node<'_>, file: SourceFile<'_>) -> String {
-    format!(
-        "Non-literal operand (`{}`) should be first.",
-        file.node(right)
-    )
 }
 
 fn constant_portion(node: &Node<'_>) -> bool {
