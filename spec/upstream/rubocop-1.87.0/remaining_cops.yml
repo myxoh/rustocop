@@ -1,22 +1,22 @@
 ---
 rubocop_version: 1.87.0
 generated_from: tmp/rubocop-1.87.0-compatibility.json
-remaining_cops: 250
+remaining_cops: 245
 states:
-  heuristic: 43
-  missing: 207
+  heuristic: 68
+  missing: 177
 lanes:
-  finish_existing: 43
-  structural_batch: 68
-  engine_capability: 139
+  finish_existing: 68
+  structural_batch: 67
+  engine_capability: 110
 capabilities:
   ast_structural: 98
-  layout_engine: 67
-  metrics_engine: 7
-  project_context: 4
-  scope_and_symbols: 34
-  file_metadata_and_lexing: 4
+  layout_engine: 63
   control_flow: 25
+  file_metadata_and_lexing: 4
+  metrics_engine: 7
+  scope_and_symbols: 34
+  project_context: 3
   regexp_semantics: 11
 cops:
 - cop: Style/AccessorGrouping
@@ -46,6 +46,24 @@ cops:
   failing_cases: 0
   autocorrect: true
   problem_documented: false
+- cop: Layout/EmptyLinesAroundMethodBody
+  state: heuristic
+  lane: finish_existing
+  capability: layout_engine
+  passing_cases: 12
+  total_cases: 14
+  failing_cases: 2
+  autocorrect: true
+  problem_documented: false
+- cop: Style/RedundantConditional
+  state: heuristic
+  lane: finish_existing
+  capability: control_flow
+  passing_cases: 9
+  total_cases: 11
+  failing_cases: 2
+  autocorrect: true
+  problem_documented: false
 - cop: Layout/TrailingEmptyLines
   state: heuristic
   lane: finish_existing
@@ -53,6 +71,24 @@ cops:
   passing_cases: 17
   total_cases: 20
   failing_cases: 3
+  autocorrect: true
+  problem_documented: false
+- cop: Layout/EmptyLinesAroundArguments
+  state: heuristic
+  lane: finish_existing
+  capability: layout_engine
+  passing_cases: 18
+  total_cases: 22
+  failing_cases: 4
+  autocorrect: true
+  problem_documented: false
+- cop: Lint/RedundantCopEnableDirective
+  state: heuristic
+  lane: finish_existing
+  capability: file_metadata_and_lexing
+  passing_cases: 19
+  total_cases: 23
+  failing_cases: 4
   autocorrect: true
   problem_documented: false
 - cop: Metrics/AbcSize
@@ -63,6 +99,42 @@ cops:
   total_cases: 25
   failing_cases: 4
   autocorrect: false
+  problem_documented: false
+- cop: Naming/HeredocDelimiterNaming
+  state: heuristic
+  lane: finish_existing
+  capability: scope_and_symbols
+  passing_cases: 15
+  total_cases: 19
+  failing_cases: 4
+  autocorrect: false
+  problem_documented: false
+- cop: Style/InvertibleUnlessCondition
+  state: heuristic
+  lane: finish_existing
+  capability: control_flow
+  passing_cases: 11
+  total_cases: 15
+  failing_cases: 4
+  autocorrect: true
+  problem_documented: false
+- cop: Style/RescueModifier
+  state: heuristic
+  lane: finish_existing
+  capability: control_flow
+  passing_cases: 17
+  total_cases: 21
+  failing_cases: 4
+  autocorrect: true
+  problem_documented: false
+- cop: Layout/DefEndAlignment
+  state: heuristic
+  lane: finish_existing
+  capability: layout_engine
+  passing_cases: 13
+  total_cases: 18
+  failing_cases: 5
+  autocorrect: true
   problem_documented: false
 - cop: Style/DoubleNegation
   state: heuristic
@@ -82,6 +154,33 @@ cops:
   failing_cases: 8
   autocorrect: false
   problem_documented: false
+- cop: Layout/EmptyLinesAroundAttributeAccessor
+  state: heuristic
+  lane: finish_existing
+  capability: layout_engine
+  passing_cases: 11
+  total_cases: 20
+  failing_cases: 9
+  autocorrect: true
+  problem_documented: false
+- cop: Lint/UnreachablePatternBranch
+  state: heuristic
+  lane: finish_existing
+  capability: control_flow
+  passing_cases: 14
+  total_cases: 23
+  failing_cases: 9
+  autocorrect: false
+  problem_documented: false
+- cop: Style/EachForSimpleLoop
+  state: heuristic
+  lane: finish_existing
+  capability: control_flow
+  passing_cases: 11
+  total_cases: 20
+  failing_cases: 9
+  autocorrect: true
+  problem_documented: false
 - cop: Style/EmptyLiteral
   state: heuristic
   lane: finish_existing
@@ -100,6 +199,60 @@ cops:
   failing_cases: 10
   autocorrect: false
   problem_documented: false
+- cop: Layout/EmptyLineAfterMultilineCondition
+  state: heuristic
+  lane: finish_existing
+  capability: layout_engine
+  passing_cases: 12
+  total_cases: 22
+  failing_cases: 10
+  autocorrect: true
+  problem_documented: false
+- cop: Layout/MultilineMethodParameterLineBreaks
+  state: heuristic
+  lane: finish_existing
+  capability: layout_engine
+  passing_cases: 4
+  total_cases: 14
+  failing_cases: 10
+  autocorrect: true
+  problem_documented: false
+- cop: Style/CombinableLoops
+  state: heuristic
+  lane: finish_existing
+  capability: control_flow
+  passing_cases: 10
+  total_cases: 20
+  failing_cases: 10
+  autocorrect: true
+  problem_documented: false
+- cop: Layout/MultilineMethodArgumentLineBreaks
+  state: heuristic
+  lane: finish_existing
+  capability: layout_engine
+  passing_cases: 7
+  total_cases: 18
+  failing_cases: 11
+  autocorrect: true
+  problem_documented: false
+- cop: Layout/ParameterAlignment
+  state: heuristic
+  lane: finish_existing
+  capability: layout_engine
+  passing_cases: 8
+  total_cases: 19
+  failing_cases: 11
+  autocorrect: true
+  problem_documented: false
+- cop: Style/RedundantSelfAssignmentBranch
+  state: heuristic
+  lane: finish_existing
+  capability: scope_and_symbols
+  passing_cases: 11
+  total_cases: 22
+  failing_cases: 11
+  autocorrect: true
+  problem_documented: false
 - cop: Style/TallyMethod
   state: heuristic
   lane: finish_existing
@@ -107,6 +260,15 @@ cops:
   passing_cases: 21
   total_cases: 32
   failing_cases: 11
+  autocorrect: true
+  problem_documented: false
+- cop: Lint/DeprecatedConstants
+  state: heuristic
+  lane: finish_existing
+  capability: scope_and_symbols
+  passing_cases: 8
+  total_cases: 20
+  failing_cases: 12
   autocorrect: true
   problem_documented: false
 - cop: Lint/DuplicateHashKey
@@ -117,6 +279,51 @@ cops:
   total_cases: 33
   failing_cases: 12
   autocorrect: false
+  problem_documented: false
+- cop: Naming/MethodParameterName
+  state: heuristic
+  lane: finish_existing
+  capability: scope_and_symbols
+  passing_cases: 11
+  total_cases: 23
+  failing_cases: 12
+  autocorrect: false
+  problem_documented: false
+- cop: Lint/UnderscorePrefixedVariableName
+  state: heuristic
+  lane: finish_existing
+  capability: scope_and_symbols
+  passing_cases: 5
+  total_cases: 19
+  failing_cases: 14
+  autocorrect: false
+  problem_documented: false
+- cop: Metrics/ModuleLength
+  state: heuristic
+  lane: finish_existing
+  capability: metrics_engine
+  passing_cases: 6
+  total_cases: 21
+  failing_cases: 15
+  autocorrect: false
+  problem_documented: false
+- cop: Lint/DeprecatedOpenSSLConstant
+  state: heuristic
+  lane: finish_existing
+  capability: scope_and_symbols
+  passing_cases: 8
+  total_cases: 24
+  failing_cases: 16
+  autocorrect: true
+  problem_documented: false
+- cop: Layout/BlockEndNewline
+  state: heuristic
+  lane: finish_existing
+  capability: layout_engine
+  passing_cases: 1
+  total_cases: 18
+  failing_cases: 17
+  autocorrect: true
   problem_documented: false
 - cop: Lint/SymbolConversion
   state: heuristic
@@ -134,6 +341,15 @@ cops:
   passing_cases: 15
   total_cases: 33
   failing_cases: 18
+  autocorrect: true
+  problem_documented: false
+- cop: Layout/ClassStructure
+  state: heuristic
+  lane: finish_existing
+  capability: layout_engine
+  passing_cases: 1
+  total_cases: 21
+  failing_cases: 20
   autocorrect: true
   problem_documented: false
 - cop: Lint/DuplicateSetElement
@@ -160,6 +376,15 @@ cops:
   capability: layout_engine
   passing_cases: 32
   total_cases: 53
+  failing_cases: 21
+  autocorrect: true
+  problem_documented: false
+- cop: Style/HashConversion
+  state: heuristic
+  lane: finish_existing
+  capability: ast_structural
+  passing_cases: 3
+  total_cases: 24
   failing_cases: 21
   autocorrect: true
   problem_documented: false
@@ -502,15 +727,6 @@ cops:
   capability: ast_structural
   passing_cases: 17
   total_cases: 39
-  failing_cases: 22
-  autocorrect: true
-  problem_documented: false
-- cop: Style/HashConversion
-  state: missing
-  lane: structural_batch
-  capability: ast_structural
-  passing_cases: 2
-  total_cases: 24
   failing_cases: 22
   autocorrect: true
   problem_documented: false
@@ -1027,33 +1243,6 @@ cops:
   failing_cases: 2
   autocorrect: true
   problem_documented: true
-- cop: Layout/DefEndAlignment
-  state: missing
-  lane: engine_capability
-  capability: layout_engine
-  passing_cases: 10
-  total_cases: 18
-  failing_cases: 8
-  autocorrect: true
-  problem_documented: false
-- cop: Layout/EmptyLineAfterMultilineCondition
-  state: missing
-  lane: engine_capability
-  capability: layout_engine
-  passing_cases: 14
-  total_cases: 22
-  failing_cases: 8
-  autocorrect: true
-  problem_documented: false
-- cop: Layout/EmptyLinesAroundMethodBody
-  state: missing
-  lane: engine_capability
-  capability: layout_engine
-  passing_cases: 6
-  total_cases: 14
-  failing_cases: 8
-  autocorrect: true
-  problem_documented: false
 - cop: Layout/LineContinuationSpacing
   state: missing
   lane: engine_capability
@@ -1061,78 +1250,6 @@ cops:
   passing_cases: 23
   total_cases: 31
   failing_cases: 8
-  autocorrect: true
-  problem_documented: false
-- cop: Style/RedundantConditional
-  state: missing
-  lane: engine_capability
-  capability: control_flow
-  passing_cases: 3
-  total_cases: 11
-  failing_cases: 8
-  autocorrect: true
-  problem_documented: false
-- cop: Layout/EmptyLinesAroundBeginBody
-  state: missing
-  lane: engine_capability
-  capability: layout_engine
-  passing_cases: 2
-  total_cases: 11
-  failing_cases: 9
-  autocorrect: true
-  problem_documented: false
-- cop: Layout/MultilineMethodArgumentLineBreaks
-  state: missing
-  lane: engine_capability
-  capability: layout_engine
-  passing_cases: 9
-  total_cases: 18
-  failing_cases: 9
-  autocorrect: true
-  problem_documented: false
-- cop: Layout/MultilineMethodParameterLineBreaks
-  state: missing
-  lane: engine_capability
-  capability: layout_engine
-  passing_cases: 5
-  total_cases: 14
-  failing_cases: 9
-  autocorrect: true
-  problem_documented: false
-- cop: Layout/ParameterAlignment
-  state: missing
-  lane: engine_capability
-  capability: layout_engine
-  passing_cases: 10
-  total_cases: 19
-  failing_cases: 9
-  autocorrect: true
-  problem_documented: false
-- cop: Style/InvertibleUnlessCondition
-  state: missing
-  lane: engine_capability
-  capability: control_flow
-  passing_cases: 6
-  total_cases: 15
-  failing_cases: 9
-  autocorrect: true
-  problem_documented: false
-- cop: Layout/EmptyLinesAroundArguments
-  state: missing
-  lane: engine_capability
-  capability: layout_engine
-  passing_cases: 12
-  total_cases: 22
-  failing_cases: 10
-  autocorrect: true
-  problem_documented: false
-- cop: Layout/EmptyLinesAroundAttributeAccessor
-  state: missing
-  lane: engine_capability
-  capability: layout_engine
-  passing_cases: 10
-  total_cases: 20
-  failing_cases: 10
   autocorrect: true
   problem_documented: false
 - cop: Layout/MultilineMethodDefinitionBraceLayout
@@ -1153,48 +1270,12 @@ cops:
   failing_cases: 10
   autocorrect: true
   problem_documented: false
-- cop: Naming/HeredocDelimiterNaming
-  state: missing
-  lane: engine_capability
-  capability: scope_and_symbols
-  passing_cases: 9
-  total_cases: 19
-  failing_cases: 10
-  autocorrect: false
-  problem_documented: false
-- cop: Naming/MethodParameterName
-  state: missing
-  lane: engine_capability
-  capability: scope_and_symbols
-  passing_cases: 13
-  total_cases: 23
-  failing_cases: 10
-  autocorrect: false
-  problem_documented: false
-- cop: Style/CombinableLoops
-  state: missing
-  lane: engine_capability
-  capability: control_flow
-  passing_cases: 10
-  total_cases: 20
-  failing_cases: 10
-  autocorrect: true
-  problem_documented: false
 - cop: Style/ParenthesesAroundCondition
   state: missing
   lane: engine_capability
   capability: control_flow
   passing_cases: 20
   total_cases: 30
-  failing_cases: 10
-  autocorrect: true
-  problem_documented: false
-- cop: Style/RedundantSelfAssignmentBranch
-  state: missing
-  lane: engine_capability
-  capability: scope_and_symbols
-  passing_cases: 12
-  total_cases: 22
   failing_cases: 10
   autocorrect: true
   problem_documented: false
@@ -1243,24 +1324,6 @@ cops:
   failing_cases: 11
   autocorrect: false
   problem_documented: false
-- cop: Lint/UnderscorePrefixedVariableName
-  state: missing
-  lane: engine_capability
-  capability: scope_and_symbols
-  passing_cases: 8
-  total_cases: 19
-  failing_cases: 11
-  autocorrect: false
-  problem_documented: false
-- cop: Style/EachForSimpleLoop
-  state: missing
-  lane: engine_capability
-  capability: control_flow
-  passing_cases: 9
-  total_cases: 20
-  failing_cases: 11
-  autocorrect: true
-  problem_documented: false
 - cop: Style/MagicCommentFormat
   state: missing
   lane: engine_capability
@@ -1268,33 +1331,6 @@ cops:
   passing_cases: 14
   total_cases: 25
   failing_cases: 11
-  autocorrect: true
-  problem_documented: false
-- cop: Layout/EmptyLinesAroundBlockBody
-  state: missing
-  lane: engine_capability
-  capability: layout_engine
-  passing_cases: 8
-  total_cases: 20
-  failing_cases: 12
-  autocorrect: true
-  problem_documented: false
-- cop: Layout/EmptyLinesAroundExceptionHandlingKeywords
-  state: missing
-  lane: engine_capability
-  capability: layout_engine
-  passing_cases: 12
-  total_cases: 24
-  failing_cases: 12
-  autocorrect: true
-  problem_documented: false
-- cop: Layout/SpaceBeforeBlockBraces
-  state: missing
-  lane: engine_capability
-  capability: layout_engine
-  passing_cases: 5
-  total_cases: 17
-  failing_cases: 12
   autocorrect: true
   problem_documented: false
 - cop: Layout/SpaceInsideParens
@@ -1315,15 +1351,6 @@ cops:
   failing_cases: 12
   autocorrect: false
   problem_documented: false
-- cop: Lint/UnreachablePatternBranch
-  state: missing
-  lane: engine_capability
-  capability: control_flow
-  passing_cases: 11
-  total_cases: 23
-  failing_cases: 12
-  autocorrect: false
-  problem_documented: false
 - cop: Style/ReturnNilInPredicateMethodDefinition
   state: missing
   lane: engine_capability
@@ -1332,15 +1359,6 @@ cops:
   total_cases: 39
   failing_cases: 12
   autocorrect: true
-  problem_documented: false
-- cop: Gemspec/RequiredRubyVersion
-  state: missing
-  lane: engine_capability
-  capability: project_context
-  passing_cases: 8
-  total_cases: 21
-  failing_cases: 13
-  autocorrect: false
   problem_documented: false
 - cop: Layout/ClosingParenthesisIndentation
   state: missing
@@ -1394,51 +1412,6 @@ cops:
   passing_cases: 15
   total_cases: 29
   failing_cases: 14
-  autocorrect: true
-  problem_documented: false
-- cop: Lint/DeprecatedConstants
-  state: missing
-  lane: engine_capability
-  capability: scope_and_symbols
-  passing_cases: 6
-  total_cases: 20
-  failing_cases: 14
-  autocorrect: true
-  problem_documented: false
-- cop: Metrics/ModuleLength
-  state: missing
-  lane: engine_capability
-  capability: metrics_engine
-  passing_cases: 7
-  total_cases: 21
-  failing_cases: 14
-  autocorrect: false
-  problem_documented: false
-- cop: Layout/BlockEndNewline
-  state: missing
-  lane: engine_capability
-  capability: layout_engine
-  passing_cases: 3
-  total_cases: 18
-  failing_cases: 15
-  autocorrect: true
-  problem_documented: false
-- cop: Style/RescueModifier
-  state: missing
-  lane: engine_capability
-  capability: control_flow
-  passing_cases: 6
-  total_cases: 21
-  failing_cases: 15
-  autocorrect: true
-  problem_documented: false
-- cop: Lint/DeprecatedOpenSSLConstant
-  state: missing
-  lane: engine_capability
-  capability: scope_and_symbols
-  passing_cases: 8
-  total_cases: 24
-  failing_cases: 16
   autocorrect: true
   problem_documented: false
 - cop: Lint/LiteralAssignmentInCondition
@@ -1530,15 +1503,6 @@ cops:
   total_cases: 26
   failing_cases: 19
   autocorrect: false
-  problem_documented: false
-- cop: Layout/ClassStructure
-  state: missing
-  lane: engine_capability
-  capability: layout_engine
-  passing_cases: 1
-  total_cases: 21
-  failing_cases: 20
-  autocorrect: true
   problem_documented: false
 - cop: Layout/EmptyLineAfterGuardClause
   state: missing
@@ -1645,15 +1609,6 @@ cops:
   capability: layout_engine
   passing_cases: 11
   total_cases: 32
-  failing_cases: 21
-  autocorrect: true
-  problem_documented: false
-- cop: Lint/RedundantCopEnableDirective
-  state: missing
-  lane: engine_capability
-  capability: file_metadata_and_lexing
-  passing_cases: 2
-  total_cases: 23
   failing_cases: 21
   autocorrect: true
   problem_documented: false

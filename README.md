@@ -129,7 +129,7 @@ especially cautious with anything marked heuristic.
   Style, and Lint cops listed in the project seed config. Singulate-specific
   cops are intentionally excluded.
 - A shared Prism parse and AST visitor powers the native cop registry. Against
-  RuboCop 1.87, 343 built-in cops are verified and another 26 have heuristic
+  RuboCop 1.87, 361 built-in cops are verified and another 68 have heuristic
   implementations. Verification uses 28,623 captured upstream diagnostic and
   correction cases rather than only the smaller performance corpus.
 - `--show-cops` prints the native support registry.
@@ -152,8 +152,8 @@ and applied as one batch. The differential compatibility suite runs 20 cops
 against 500 generated and committed Ruby fixture files, both cop-by-cop and as a
 single corpus, and compares their JSON reports directly with RuboCop.
 
-The current RuboCop 1.87 matrix contains 116 upstream-spec-verified cops, 57
-heuristic native implementations, and 433 missing built-in cops. A cop is only
+The current RuboCop 1.87 matrix contains 361 upstream-spec-verified cops, 68
+heuristic native implementations, and 177 missing built-in cops. A cop is only
 “verified” after all captured upstream diagnostics and correction assertions
 for that cop pass.
 

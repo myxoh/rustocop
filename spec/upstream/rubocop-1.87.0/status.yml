@@ -5,8 +5,8 @@ upstream_rspec:
   pending: 6
 captured_cases: 28623
 diagnostic_baseline:
-  passed_cases: 16074
-  passing_cops: 359
+  passed_cases: 16185
+  passing_cops: 364
   total_cops: 606
 fully_compatible_cops:
   - Bundler/DuplicatedGem
@@ -365,3 +365,8 @@ fully_compatible_cops:
   - Style/RedundantSelfAssignment
   - Style/TopLevelMethodDefinition
   - Style/TrailingBodyOnMethodDefinition
+  - Gemspec/RequiredRubyVersion
+  - Layout/EmptyLinesAroundBeginBody
+  - Layout/EmptyLinesAroundBlockBody
+  - Layout/EmptyLinesAroundExceptionHandlingKeywords
+  - Layout/SpaceBeforeBlockBraces

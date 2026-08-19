@@ -271,6 +271,14 @@ impl RubyVersion {
     pub(crate) fn at_least(self, major: u16, minor: u16) -> bool {
         (self.major, self.minor) >= (major, minor)
     }
+
+    pub(crate) fn major(self) -> u16 {
+        self.major
+    }
+
+    pub(crate) fn minor(self) -> u16 {
+        self.minor
+    }
 }
 
 impl Default for RubyVersion {

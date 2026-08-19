@@ -96,7 +96,9 @@ fn warning_cop(cop_name: &str) -> bool {
                 | "Gemspec/RubyVersionGlobalsUsage"
                 | "Gemspec/DuplicatedAssignment"
                 | "Gemspec/DeprecatedAttributeAssignment"
+                | "Gemspec/RequiredRubyVersion"
                 | "Layout/BeginEndAlignment"
+                | "Layout/DefEndAlignment"
         )
 }
 
