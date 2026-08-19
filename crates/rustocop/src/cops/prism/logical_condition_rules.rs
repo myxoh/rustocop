@@ -1,7 +1,51 @@
 use super::*;
 
 define_cops! {
+    MultipleComparison => "Lint/MultipleComparison" => call(multiple_comparison),
     UnlessLogicalOperators => "Style/UnlessLogicalOperators" => node(as_unless_node, unless_logical_operators),
+}
+
+fn multiple_comparison(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
+    if !comparison_operator(call_name(node)) {
+        return;
+    }
+    let (Some(inner), Some(right)) = (
+        node.receiver().and_then(|receiver| receiver.as_call_node()),
+        only_argument(node),
+    ) else {
+        return;
+    };
+    if !comparison_operator(call_name(&inner)) || argument_count(&inner) != 1 {
+        return;
+    }
+    let (Some(left), Some(middle)) = (inner.receiver(), only_argument(&inner)) else {
+        return;
+    };
+    if middle
+        .as_call_node()
+        .is_some_and(|call| matches!(call_name(&call), b"&" | b"|" | b"^"))
+    {
+        return;
+    }
+    let file = context.source_file();
+    let replacement = format!(
+        "{} {} {} && {} {} {}",
+        file.node(&left),
+        String::from_utf8_lossy(call_name(&inner)),
+        file.node(&middle),
+        file.node(&middle),
+        String::from_utf8_lossy(call_name(node)),
+        file.node(&right)
+    );
+    context.replace_call(
+        node,
+        "Use the `&&` operator to compare multiple values.",
+        replacement,
+    );
+}
+
+fn comparison_operator(name: &[u8]) -> bool {
+    matches!(name, b"<" | b">" | b"<=" | b">=")
 }
 
 fn unless_logical_operators(node: &ruby_prism::UnlessNode<'_>, context: &mut CopContext<'_, '_>) {

@@ -1,17 +1,17 @@
 ---
 rubocop_version: 1.87.0
-generated_from: tmp/full-277.json
-remaining_cops: 329
+generated_from: tmp/full-286.json
+remaining_cops: 320
 states:
   heuristic: 39
-  missing: 290
+  missing: 281
 lanes:
   finish_existing: 39
-  structural_batch: 104
+  structural_batch: 95
   engine_capability: 186
 capabilities:
   project_context: 12
-  ast_structural: 126
+  ast_structural: 117
   scope_and_symbols: 52
   metrics_engine: 10
   layout_engine: 85
@@ -388,24 +388,6 @@ cops:
   failing_cases: 12
   autocorrect: true
   problem_documented: false
-- cop: Style/RedundantSelf
-  state: missing
-  lane: structural_batch
-  capability: ast_structural
-  passing_cases: 51
-  total_cases: 63
-  failing_cases: 12
-  autocorrect: true
-  problem_documented: false
-- cop: Lint/UselessRuby2Keywords
-  state: missing
-  lane: structural_batch
-  capability: ast_structural
-  passing_cases: 10
-  total_cases: 23
-  failing_cases: 13
-  autocorrect: false
-  problem_documented: false
 - cop: Style/IfInsideElse
   state: missing
   lane: structural_batch
@@ -415,66 +397,12 @@ cops:
   failing_cases: 13
   autocorrect: true
   problem_documented: false
-- cop: Style/MultilineMethodSignature
-  state: missing
-  lane: structural_batch
-  capability: ast_structural
-  passing_cases: 6
-  total_cases: 19
-  failing_cases: 13
-  autocorrect: true
-  problem_documented: false
-- cop: Style/NestedModifier
-  state: missing
-  lane: structural_batch
-  capability: ast_structural
-  passing_cases: 0
-  total_cases: 13
-  failing_cases: 13
-  autocorrect: true
-  problem_documented: false
-- cop: Lint/NonDeterministicRequireOrder
-  state: missing
-  lane: structural_batch
-  capability: ast_structural
-  passing_cases: 14
-  total_cases: 28
-  failing_cases: 14
-  autocorrect: true
-  problem_documented: false
-- cop: Style/CollectionQuerying
-  state: missing
-  lane: structural_batch
-  capability: ast_structural
-  passing_cases: 6
-  total_cases: 20
-  failing_cases: 14
-  autocorrect: true
-  problem_documented: false
 - cop: Style/Copyright
   state: missing
   lane: structural_batch
   capability: ast_structural
   passing_cases: 7
   total_cases: 21
-  failing_cases: 14
-  autocorrect: true
-  problem_documented: false
-- cop: Style/EmptyClassDefinition
-  state: missing
-  lane: structural_batch
-  capability: ast_structural
-  passing_cases: 38
-  total_cases: 52
-  failing_cases: 14
-  autocorrect: true
-  problem_documented: false
-- cop: Style/TrivialAccessors
-  state: missing
-  lane: structural_batch
-  capability: ast_structural
-  passing_cases: 24
-  total_cases: 38
   failing_cases: 14
   autocorrect: true
   problem_documented: false
@@ -503,15 +431,6 @@ cops:
   passing_cases: 2
   total_cases: 17
   failing_cases: 15
-  autocorrect: true
-  problem_documented: false
-- cop: Lint/MultipleComparison
-  state: missing
-  lane: structural_batch
-  capability: ast_structural
-  passing_cases: 4
-  total_cases: 20
-  failing_cases: 16
   autocorrect: true
   problem_documented: false
 - cop: Style/MultipleComparison

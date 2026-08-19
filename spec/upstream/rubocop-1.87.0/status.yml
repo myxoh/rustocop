@@ -5,8 +5,8 @@ upstream_rspec:
   pending: 6
 captured_cases: 28623
 diagnostic_baseline:
-  passed_cases: 15156
-  passing_cops: 277
+  passed_cases: 15279
+  passing_cops: 286
   total_cops: 606
 fully_compatible_cops:
   - Bundler/GemVersion
@@ -286,3 +286,12 @@ fully_compatible_cops:
   - Style/LineEndConcatenation
   - Style/MixinGrouping
   - Style/RedundantDoubleSplatHashBraces
+  - Style/MultilineMethodSignature
+  - Style/RedundantSelf
+  - Style/NestedModifier
+  - Style/CollectionQuerying
+  - Style/EmptyClassDefinition
+  - Lint/NonDeterministicRequireOrder
+  - Style/TrivialAccessors
+  - Lint/UselessRuby2Keywords
+  - Lint/MultipleComparison
