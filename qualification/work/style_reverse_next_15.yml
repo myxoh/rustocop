@@ -1,0 +1,464 @@
+schema: 1
+batch: style_reverse_next_15
+matrix_order: descending
+matrix_start: 532
+matrix_end: 546
+rubocop_version: 1.87.0
+rubocop_commit: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+rustocop_commit: 27e699e32b2ecd72abd9b595f78821bf004256f6
+cops:
+  Style/ReverseFind:
+    matrix_position: 546
+    sources:
+      rubocop: lib/rubocop/cop/style/reverse_find.rb
+      rustocop: [crates/rustocop/src/cops/prism/call_conversion_rules.rs]
+    manual_review:
+      status: passed
+      notes:
+        - Both implementations match `find` or `detect` after `reverse` or `reverse_each`, including block-pass forms, and replace the joined selectors with `rfind`.
+        - Rustocop retains RuboCop's Ruby 4.0 target-version gate and uses Prism selector ranges, while RuboCop expresses the same shape through `def_node_matcher`.
+    upstream_tests: { status: passed, passed: 14, total: 14, corrections: true }
+    edge_cases:
+      - { id: reverse_find_block, description: A reverse/find block becomes rfind., path: example.rb, config: { AllCops: { TargetRubyVersion: 4.0 } }, source: "items.reverse.find { |item| item.ready? }\n" }
+      - { id: reverse_each_detect_block_pass, description: reverse_each and detect with a block pass share the same replacement., path: example.rb, config: { AllCops: { TargetRubyVersion: 4.0 } }, source: "items.reverse_each.detect(&:ready?)\n" }
+      - { id: unavailable_before_ruby_4, description: rfind is unavailable before Ruby 4.0., path: example.rb, config: { AllCops: { TargetRubyVersion: 3.4 } }, source: "items.reverse.find(&:ready?)\n" }
+      - { id: already_rfind, description: An existing rfind call is accepted., path: example.rb, config: { AllCops: { TargetRubyVersion: 4.0 } }, source: "items.rfind(&:ready?)\n" }
+    real_world:
+      positives:
+        - repository: postalserver/postal
+          revision: d038eaa8c763d3cafa797ccd6f773d53470bd336
+          path: app/lib/smtp_server/client.rb
+          line: 393
+          config: { AllCops: { TargetRubyVersion: 4.0 } }
+          source: |
+            Credential.where(type: "SMTP-IP").all.sort_by { |c| c.ipaddr&.prefix || 0 }.reverse.find do |credential|
+              credential.ipaddr.include?(@ip_address)
+            end
+        - repository: whiteleaf7/narou
+          revision: 27fb741fd561e2f26aba9fdf9d9b7b4384792be4
+          path: lib/command/log.rb
+          line: 74
+          config: { AllCops: { TargetRubyVersion: 4.0 } }
+          source: |
+            Narou.log_dir.glob("*").sort_by(&:mtime).reverse.find do |path|
+              path_matches_source?(path)
+            end
+      negatives:
+        - { repository: postalserver/postal, revision: d038eaa8c763d3cafa797ccd6f773d53470bd336, path: app/lib/smtp_server/client.rb, line: 394, config: { AllCops: { TargetRubyVersion: 4.0 } }, source: "credential.ipaddr.include?(@ip_address)\n" }
+        - { repository: whiteleaf7/narou, revision: 27fb741fd561e2f26aba9fdf9d9b7b4384792be4, path: lib/command/log.rb, line: 75, config: { AllCops: { TargetRubyVersion: 4.0 } }, source: "path_matches_source?(path)\n" }
+
+  Style/ReturnNilInPredicateMethodDefinition:
+    matrix_position: 545
+    sources:
+      rubocop: lib/rubocop/cop/style/return_nil_in_predicate_method_definition.rb
+      rustocop: [crates/rustocop/src/cops/prism/return_nil_predicate_rules.rs]
+    manual_review:
+      status: passed
+      notes:
+        - Both implementations enter predicate definitions only, honor AllowedMethods and AllowedPatterns, inspect explicit nil returns, and recurse through terminal conditional branches.
+        - The Rust rule mirrors RuboCop's `on_def`, `return_nil`, `handle_return`, `handle_implicit_return_values`, and `register_offense` boundaries with typed Prism nodes.
+    upstream_tests: { status: passed, passed: 39, total: 39, corrections: true }
+    edge_cases:
+      - { id: guarded_bare_return, description: A bare guarded return in a predicate becomes return false., path: example.rb, config: {}, source: "def ready?\n  return if loading?\n  true\nend\n" }
+      - { id: implicit_nil_branch, description: A terminal nil conditional branch becomes false., path: example.rb, config: {}, source: "def ready?\n  if loading?\n    nil\n  else\n    true\n  end\nend\n" }
+      - { id: allowed_predicate, description: AllowedMethods exempts the complete predicate., path: example.rb, config: { AllowedMethods: [ready?] }, source: "def ready?\n  return nil\nend\n" }
+      - { id: ordinary_method, description: Nil remains valid in a non-predicate method., path: example.rb, config: {}, source: "def result\n  return nil\nend\n" }
+    real_world:
+      positives:
+        - repository: natalie-lang/natalie
+          revision: edd3cd137a327bb2548977098055a5e48b88c7cb
+          path: src/process.rb
+          line: 80
+          source: |
+            def success?
+              return nil if signaled?
+              exitstatus == 0
+            end
+        - repository: googleapis/google-cloud-ruby
+          revision: 4fb88c49413c1006c0e67769164f5051b6eb0928
+          path: google-cloud-bigquery/lib/google/cloud/bigquery/table/async_inserter.rb
+          line: 452
+          source: |
+            def success?
+              return nil if error?
+              insert_response.success?
+            end
+      negatives:
+        - repository: puppetlabs/puppet
+          revision: e227c27540975c25aa22d533a52424a9d2fc886a
+          path: lib/puppet/settings.rb
+          line: 1170
+          source: |
+            def valid?(param)
+              param = param.to_sym
+              @config.has_key?(param)
+            end
+        - repository: department-of-veterans-affairs/vets-api
+          revision: f91f2ef6381ef83a68e42c1188a5a6b88992c036
+          path: lib/saml/responses/base.rb
+          line: 51
+          source: |
+            def valid?
+              is_valid_result = validate(true)
+              is_valid_result
+            end
+
+  Style/ReturnNil:
+    matrix_position: 544
+    sources:
+      rubocop: lib/rubocop/cop/style/return_nil.rb
+      rustocop: [crates/rustocop/src/cops/prism/lexical_rules.rs]
+    manual_review:
+      status: passed
+      notes:
+        - Both implementations enforce the configured choice between argument-free `return` and the single nil argument form and leave value returns unchanged.
+        - Rustocop performs the equivalent token-safe line rewrite, while RuboCop obtains the same ranges from return AST nodes and applies its iterator non-local-exit guard.
+    upstream_tests: { status: passed, passed: 5, total: 5, corrections: true }
+    edge_cases:
+      - { id: prefer_bare_return, description: The default style removes nil., path: example.rb, config: { EnforcedStyle: return }, source: "return nil\n" }
+      - { id: prefer_return_nil, description: The return_nil style adds nil., path: example.rb, config: { EnforcedStyle: return_nil }, source: "return\n" }
+      - { id: value_return, description: A non-nil value return is accepted by either style., path: example.rb, config: { EnforcedStyle: return }, source: "return result\n" }
+      - { id: iterator_guard_return, description: A guarded non-local return in an iterator is outside this cop., path: example.rb, config: { EnforcedStyle: return }, source: "items.each do\n  return if done?\nend\n" }
+    real_world:
+      positives:
+        - repository: rails/jquery-ujs
+          revision: 83b041ba72261f487b9264b9e94211e8107a1f18
+          path: Rakefile
+          line: 46
+          source: |
+            def which(cmd)
+              return nil
+            end
+        - repository: cjheath/adl
+          revision: 75c56917041e2c0a03fd727975c70a4239372823
+          path: adl.rb
+          line: 890
+          source: |
+            def expect(token)
+              return nil unless @current && @current == token
+              result
+            end
+      negatives:
+        - { repository: rails/jquery-ujs, revision: 83b041ba72261f487b9264b9e94211e8107a1f18, path: Rakefile, line: 43, source: "return exe if File.executable?(exe)\n" }
+        - { repository: cjheath/adl, revision: 75c56917041e2c0a03fd727975c70a4239372823, path: adl.rb, line: 893, source: "result\n" }
+
+  Style/RescueStandardError:
+    matrix_position: 543
+    sources:
+      rubocop: lib/rubocop/cop/style/rescue_standard_error.rb
+      rustocop: [crates/rustocop/src/cops/prism/rescue_standard_error_rules.rs]
+    manual_review:
+      status: passed
+      notes:
+        - Both implementations distinguish implicit and explicit styles, recognize the omitted exception as StandardError, and report the rescue keyword or explicit constant with matching corrections.
+        - The Rust rule preserves RuboCop's matcher and helper layout but reads exceptions, keyword locations, and configuration from Prism and the common cop context.
+    upstream_tests: { status: passed, passed: 37, total: 37, corrections: true }
+    edge_cases:
+      - { id: explicit_style_bare_rescue, description: Explicit style inserts StandardError., path: example.rb, config: { EnforcedStyle: explicit }, source: "begin\n  work\nrescue\n  recover\nend\n" }
+      - { id: explicit_standard_error, description: Explicit StandardError is accepted., path: example.rb, config: { EnforcedStyle: explicit }, source: "begin\n  work\nrescue StandardError\n  recover\nend\n" }
+      - { id: implicit_style_standard_error, description: Implicit style removes StandardError., path: example.rb, config: { EnforcedStyle: implicit }, source: "begin\n  work\nrescue StandardError\n  recover\nend\n" }
+      - { id: specific_exception, description: A specific exception is not equivalent to StandardError., path: example.rb, config: { EnforcedStyle: explicit }, source: "begin\n  work\nrescue IOError\n  recover\nend\n" }
+    real_world:
+      positives:
+        - { repository: newrelic/newrelic-ruby-agent, revision: e5f3218c1e8755b0a7c8f0d939c8ce2c540c3e41, path: init.rb, line: 28, source: "begin\n  initialize_agent\nrescue => e\n  warn e.message\nend\n" }
+        - { repository: PGYER/fir-cli, revision: b43f922f1f15825951fdbde1e732a7c344d81859, path: bin/fir, line: 9, source: "begin\n  FIR::CLI.start(ARGV)\nrescue => e\n  raise e if $DEBUG\nend\n" }
+      negatives:
+        - { repository: onetimesecret/onetimesecret, revision: 3c203ceafe7d9a27d94faf6746daf0a1029671fe, path: bin/ots, line: 50, source: "begin\n  run\nrescue StandardError => ex\n  warn ex.message\nend\n" }
+        - { repository: ifmeorg/ifme, revision: 63e726bddb249194ffa3504ca0c353631b7ef32e, path: Rakefile, line: 32, source: "begin\n  setup\nrescue StandardError => e\n  warn e.message\nend\n" }
+
+  Style/RescueModifier:
+    matrix_position: 542
+    sources:
+      rubocop: lib/rubocop/cop/style/rescue_modifier.rb
+      rustocop: [crates/rustocop/src/cops/prism/rescue_modifier_rules.rs]
+    manual_review:
+      status: passed
+      notes:
+        - Both implementations report the complete rescue-modifier node and expand it to begin/rescue/end with indentation, heredoc, parenthesis, and parallel-assignment handling.
+        - Rustocop's helper boundaries mirror RuboCop's callback and correction renderer, including nested modifier rendering and path exclusions through the shared policy.
+    upstream_tests: { status: passed, passed: 21, total: 21, corrections: true }
+    edge_cases:
+      - { id: simple_modifier, description: A simple rescue modifier expands to a rescue body., path: example.rb, config: {}, source: "load_record rescue nil\n" }
+      - { id: parenthesized_modifier, description: Parentheses around the complete modifier are removed safely., path: example.rb, config: {}, source: "(load_record rescue nil)\n" }
+      - { id: string_argument, description: An ordinary string argument is retained without heredoc-only spacing., path: example.rb, config: {}, source: "sh(\"bundle exec rspec\") rescue nil\n" }
+      - { id: explicit_rescue, description: An explicit rescue body is already preferred., path: example.rb, config: {}, source: "begin\n  load_record\nrescue\n  nil\nend\n" }
+    real_world:
+      positives:
+        - { repository: BetterErrors/better_errors, revision: fde3b7025db17b5cda13fcf8d08dfb3f76e189f6, path: Rakefile, line: 37, source: "with_each_gemfile { sh \"bundle exec rspec\" rescue nil }\n" }
+        - { repository: xmartlabs/XLForm, revision: ceca40bb06c776758cc44e62df491ae9db7491f3, path: Rakefile, line: 20, source: "sh(\"xcodebuild clean test\") rescue nil\n" }
+      negatives:
+        - { repository: onetimesecret/onetimesecret, revision: 3c203ceafe7d9a27d94faf6746daf0a1029671fe, path: bin/ots, line: 50, source: "begin\n  run\nrescue StandardError\n  nil\nend\n" }
+        - { repository: ifmeorg/ifme, revision: 63e726bddb249194ffa3504ca0c353631b7ef32e, path: Rakefile, line: 32, source: "begin\n  setup\nrescue StandardError\n  warn\nend\n" }
+
+  Style/RequireOrder:
+    matrix_position: 541
+    sources:
+      rubocop: lib/rubocop/cop/style/require_order.rb
+      rustocop: [crates/rustocop/src/cops/prism/require_order_rules.rs]
+    manual_review:
+      status: passed
+      notes:
+        - Both implementations sort consecutive require calls by string value, keep require and require_relative groups distinct, and stop at blank lines or unrelated statements.
+        - Rustocop models RuboCop's sibling and section scan as source chunks so leading comments move atomically with the same correction ordering.
+    upstream_tests: { status: passed, passed: 24, total: 24, corrections: true }
+    edge_cases:
+      - { id: unsorted_requires, description: Consecutive requires are alphabetized., path: example.rb, config: {}, source: "require \"yaml\"\nrequire \"json\"\n" }
+      - { id: separate_sections, description: A blank line creates independent ordering sections., path: example.rb, config: {}, source: "require \"yaml\"\n\nrequire \"json\"\n" }
+      - { id: unsorted_relative_requires, description: require_relative has its own sorted group., path: example.rb, config: {}, source: "require_relative \"zeta\"\nrequire_relative \"alpha\"\n" }
+      - { id: comments_move_with_require, description: Leading comments remain attached while sorting., path: example.rb, config: {}, source: "# yaml support\nrequire \"yaml\"\n# json support\nrequire \"json\"\n" }
+    real_world:
+      positives:
+        - { repository: heroku/heroku-buildpack-ruby, revision: 4b1b6ed6740e2c25b7f5064c67b2653713bc6341, path: lib/heroku_build_report.rb, line: 1, source: "require \"yaml\"\nrequire \"json\"\nrequire \"pathname\"\n" }
+        - { repository: interagent/prmd, revision: 5f463e021a4573f1cf09a1932dc990d9d03bcddc, path: lib/prmd/load_schema_file.rb, line: 1, source: "require \"yaml\"\nrequire \"json\"\nrequire_relative \"multi_loader\"\n" }
+      negatives:
+        - { repository: gitlabhq/gitlabhq, revision: 9444645e3fdecd5eefff438d49f0071775542b6b, path: scripts/database/table_sizes.rb, line: 3, source: "require \"json\"\nrequire \"yaml\"\n" }
+        - { repository: Shopify/tapioca, revision: d3a6e2f00aa25164263c64539a8608c72753553b, path: lib/tapioca/internal.rb, line: 1, source: "require \"erb\"\nrequire \"etc\"\nrequire \"fileutils\"\nrequire \"json\"\n" }
+
+  Style/RegexpLiteral:
+    matrix_position: 540
+    sources:
+      rubocop: lib/rubocop/cop/style/regexp_literal.rb
+      rustocop: [crates/rustocop/src/cops/prism/regexp_literal_rules.rs]
+    manual_review:
+      status: passed
+      notes:
+        - Both implementations apply slashes, percent_r, and mixed styles using literal line count, inner slashes, preferred percent delimiters, and omitted-parenthesis ambiguity.
+        - Rustocop mirrors delimiter balancing and performs atomic opening, closing, and literal-part edits while leaving interpolation expressions untouched.
+    upstream_tests: { status: passed, passed: 65, total: 65, corrections: true }
+    edge_cases:
+      - { id: percent_without_slash, description: Default style prefers slashes when the body has no slash., path: example.rb, config: {}, source: "pattern = %r{alpha}\n" }
+      - { id: slash_with_inner_slash, description: Default style prefers percent_r when an inner slash must be escaped., path: example.rb, config: {}, source: "pattern = /home\\//\n" }
+      - { id: percent_with_inner_slash, description: A percent regexp containing a slash is accepted., path: example.rb, config: {}, source: "pattern = %r{home/}\n" }
+      - { id: mixed_multiline, description: Mixed style uses percent_r for multiline patterns., path: example.rb, config: { EnforcedStyle: mixed }, source: "pattern = /\n  alpha\n/x\n" }
+    real_world:
+      positives:
+        - { repository: gollum/gollum, revision: d00fefc89be0ab22ab862a51299120a55ccd9280, path: Rakefile, line: 232, source: "latest_changes.readline.chomp! =~ %r{#{version_pattern}}\n" }
+        - { repository: gitlabhq/omnibus-gitlab, revision: eef33eb9cbc4d2a646a86282ea85d775d0e23d0e, path: Dangerfile, line: 17, source: "%r{\\ADangerfile} => [:build]\n" }
+      negatives:
+        - { repository: neocities/neocities, revision: 856926f542d887924fadcbcb020d7feccd6b3b22, path: app.rb, line: 23, source: "path = filename.to_s.sub(%r{\\A/+}, '')\n" }
+        - { repository: neocities/neocities, revision: 856926f542d887924fadcbcb020d7feccd6b3b22, path: app.rb, line: 25, source: "path = path.sub(/\\.html?\\z/, '')\n" }
+
+  Style/RedundantStructKeywordInit:
+    matrix_position: 539
+    sources:
+      rubocop: lib/rubocop/cop/style/redundant_struct_keyword_init.rb
+      rustocop: [crates/rustocop/src/cops/prism/declaration_completion_rules.rs]
+    manual_review:
+      status: passed
+      notes:
+        - Both implementations inspect root Struct.new calls on Ruby 3.2+, remove true or nil keyword_init pairs, and suppress all removals when a false pair is present.
+        - Rustocop parses top-level argument ranges to reproduce RuboCop's pair selection and comma-aware correction without changing other Struct arguments.
+    upstream_tests: { status: passed, passed: 17, total: 17, corrections: true }
+    edge_cases:
+      - { id: true_is_redundant, description: keyword_init true is reported on Ruby 3.2+., path: example.rb, config: { AllCops: { TargetRubyVersion: 3.4 } }, source: "Struct.new(:name, keyword_init: true)\n" }
+      - { id: nil_is_redundant, description: keyword_init nil is also redundant., path: example.rb, config: { AllCops: { TargetRubyVersion: 3.4 } }, source: "Struct.new(:name, keyword_init: nil)\n" }
+      - { id: false_is_semantic, description: keyword_init false remains explicit., path: example.rb, config: { AllCops: { TargetRubyVersion: 3.4 } }, source: "Struct.new(:name, keyword_init: false)\n" }
+      - { id: old_ruby_behavior, description: The option is not redundant before Ruby 3.2., path: example.rb, config: { AllCops: { TargetRubyVersion: 3.1 } }, source: "Struct.new(:name, keyword_init: true)\n" }
+    real_world:
+      positives:
+        - { repository: gitlabhq/gitlabhq, revision: 9444645e3fdecd5eefff438d49f0071775542b6b, path: lib/gitaly/server.rb, line: 8, config: { AllCops: { TargetRubyVersion: 3.4 } }, source: "ServerSignature = Struct.new(:public_key, :error, keyword_init: true)\n" }
+        - { repository: gitlabhq/gitlabhq, revision: 9444645e3fdecd5eefff438d49f0071775542b6b, path: lib/mattermost/session.rb, line: 30, config: { AllCops: { TargetRubyVersion: 3.4 } }, source: "Request = Struct.new(:parameters, keyword_init: true)\n" }
+      negatives:
+        - { repository: gitlabhq/gitlabhq, revision: 9444645e3fdecd5eefff438d49f0071775542b6b, path: lib/gitaly/server.rb, line: 8, config: { AllCops: { TargetRubyVersion: 3.1 } }, source: "ServerSignature = Struct.new(:public_key, :error, keyword_init: true)\n" }
+        - { repository: gitlabhq/gitlabhq, revision: 9444645e3fdecd5eefff438d49f0071775542b6b, path: lib/mattermost/session.rb, line: 30, config: { AllCops: { TargetRubyVersion: 3.1 } }, source: "Request = Struct.new(:parameters, keyword_init: true)\n" }
+
+  Style/RedundantStringEscape:
+    matrix_position: 538
+    sources:
+      rubocop: lib/rubocop/cop/style/redundant_string_escape.rb
+      rustocop: [crates/rustocop/src/cops/prism/redundant_string_escape_rules.rs]
+    manual_review:
+      status: passed
+      notes:
+        - Both implementations scan string-content escape pairs, retain semantic alphanumeric, delimiter, interpolation-disabling, percent-array-space, and line-continuation escapes, and remove only the redundant backslash.
+        - Rustocop reconstructs RuboCop's literal-context helpers from Prism parents so ordinary, percent, interpolated, multiline, and heredoc string parts share the same callback.
+    upstream_tests: { status: passed, passed: 328, total: 328, corrections: true }
+    edge_cases:
+      - { id: single_quote_in_double_string, description: A single quote need not be escaped in a double string., path: example.rb, config: {}, source: "value = \"\\'alpha\\'\"\n" }
+      - { id: interpolation_disabled, description: Escaping interpolation remains semantic., path: example.rb, config: {}, source: "value = \"\\#{name}\"\n" }
+      - { id: single_quoted_literal, description: Non-delimiter escapes in single quoted strings represent a literal backslash., path: example.rb, config: {}, source: "value = '\\#name'\n" }
+      - { id: heredoc_escape, description: Redundant escapes are checked in interpolation-enabled heredocs., path: example.rb, config: {}, source: "value = <<~TEXT\n  \\'alpha\nTEXT\n" }
+    real_world:
+      positives:
+        - { repository: stencilproject/Stencil, revision: 17af3bace1975d7d3bef1a9f23d461539c9c7525, path: Rakefile, line: 30, source: "replacement = \"\\#\\# #{version}\"\n" }
+        - { repository: jwiegley/git-scripts, revision: 27614fb2b4937aab09ca2701e8dd0a0f7c760fb7, path: git-all.rb, line: 97, source: "label = \"#{working_dir}\\##{branch.name}\"\n" }
+      negatives:
+        - { repository: stencilproject/Stencil, revision: 17af3bace1975d7d3bef1a9f23d461539c9c7525, path: Rakefile, line: 35, source: "pattern = /\\.package\\(url:/\n" }
+        - { repository: stencilproject/Stencil, revision: 17af3bace1975d7d3bef1a9f23d461539c9c7525, path: Rakefile, line: 28, source: "output = JSON.pretty_generate(podspec) + \"\\n\"\n" }
+
+  Style/RedundantSortBy:
+    matrix_position: 537
+    sources:
+      rubocop: lib/rubocop/cop/style/redundant_sort_by.rb
+      rustocop: [crates/rustocop/src/cops/prism/style_collections.rs]
+    manual_review:
+      status: passed
+      notes:
+        - Both implementations require sort_by with no call arguments and an identity block using one named, numbered, or implicit it parameter.
+        - Rustocop performs the same selector-through-block replacement from typed Prism block parameters and leaves transforming blocks or block-pass calls alone.
+    upstream_tests: { status: passed, passed: 8, total: 8, corrections: true }
+    edge_cases:
+      - { id: named_identity, description: A named identity block becomes sort., path: example.rb, config: {}, source: "items.sort_by { |item| item }\n" }
+      - { id: numbered_identity, description: A numbered identity block becomes sort., path: example.rb, config: {}, source: "items.sort_by { _1 }\n" }
+      - { id: transformed_value, description: A transforming block must retain sort_by., path: example.rb, config: {}, source: "items.sort_by { |item| item.name }\n" }
+      - { id: block_pass, description: A block pass is not the identity block shape., path: example.rb, config: {}, source: "items.sort_by(&:itself)\n" }
+    real_world:
+      positives:
+        - { repository: jasoncarty/advent-of-code, revision: ce6390bca629f18bb2fb4f92f3d83b3c3f268407, path: 2022/day_14/main.rb, line: 18, source: "[first_x, second_x].sort_by { |item| item }\n" }
+        - { repository: matz/spinel, revision: def39e5b6140cf69cef5d0b087fae7588b3e4f24, path: benchmark/bm_sort_by.rb, line: 37, source: "sorted = data.sort_by { |x| x }\n" }
+      negatives:
+        - { repository: whiteleaf7/narou, revision: 27fb741fd561e2f26aba9fdf9d9b7b4384792be4, path: lib/command/log.rb, line: 74, source: "Narou.log_dir.glob(\"*\").sort_by(&:mtime)\n" }
+        - { repository: postalserver/postal, revision: d038eaa8c763d3cafa797ccd6f773d53470bd336, path: app/lib/smtp_server/client.rb, line: 393, source: "credentials.sort_by { |c| c.ipaddr&.prefix || 0 }\n" }
+
+  Style/RedundantSort:
+    matrix_position: 536
+    sources:
+      rubocop: lib/rubocop/cop/style/redundant_sort.rb
+      rustocop: [crates/rustocop/src/cops/prism/redundant_sort_rules.rs]
+    manual_review:
+      status: passed
+      notes:
+        - Both implementations recognize sort and sort_by followed by first, last, zero, or minus-one accessors and choose min, max, min_by, or max_by.
+        - The Rust rule mirrors RuboCop's matcher, offense range, suggestion, and logical-operator relocation helpers using Prism call and operator locations.
+    upstream_tests: { status: passed, passed: 50, total: 50, corrections: true }
+    edge_cases:
+      - { id: sort_first, description: Sorting only to take first becomes min., path: example.rb, config: {}, source: "items.sort.first\n" }
+      - { id: sort_by_last, description: sort_by followed by last becomes max_by., path: example.rb, config: {}, source: "items.sort_by(&:score).last\n" }
+      - { id: non_terminal_index, description: Taking index one still requires sorting., path: example.rb, config: {}, source: "items.sort[1]\n" }
+      - { id: logical_operator_layout, description: Correction keeps a following logical operator on the prior expression line., path: example.rb, config: {}, source: "items\n  .sort_by { |item| item.score }\n  .first || []\n" }
+    real_world:
+      positives:
+        - { repository: mobile-nixos/mobile-nixos, revision: 2c132754323fc1915e8d21dcfc0ef68ab084c6fb, path: bin/menuconfig, line: 25, source: "Dir.glob(File.join(DEVICE, \"kernel\", \"config.*\")).sort.first\n" }
+        - { repository: jruby/jruby, revision: 4d041a906d427b7fee577b9a2938e2fcda6c5522, path: rakelib/gem.rake, line: 4, source: "rdoc_gem = Dir.glob(\"target/rdoc-*.gem\").sort.last\n" }
+      negatives:
+        - { repository: whiteleaf7/narou, revision: 27fb741fd561e2f26aba9fdf9d9b7b4384792be4, path: lib/command/log.rb, line: 74, source: "Narou.log_dir.glob(\"*\").sort_by(&:mtime)\n" }
+        - { repository: postalserver/postal, revision: d038eaa8c763d3cafa797ccd6f773d53470bd336, path: app/lib/smtp_server/client.rb, line: 393, source: "credentials.sort_by { |c| c.ipaddr&.prefix || 0 }.reverse\n" }
+
+  Style/RedundantSelfAssignmentBranch:
+    matrix_position: 535
+    sources:
+      rubocop: lib/rubocop/cop/style/redundant_self_assignment_branch.rb
+      rustocop: [crates/rustocop/src/cops/prism/redundant_self_assignment_branch_rules.rs]
+    manual_review:
+      status: passed
+      notes:
+        - Both implementations inspect local assignments whose value is a two-branch conditional and replace a self-assignment branch with an if or unless modifier on the opposite value.
+        - Rustocop mirrors RuboCop's branch, single-statement, self-assignment, and offense helpers and additionally carries heredoc tails through the same structural correction.
+    upstream_tests: { status: passed, passed: 22, total: 22, corrections: true }
+    edge_cases:
+      - { id: ternary_else_self, description: A ternary self branch becomes a modifier assignment., path: example.rb, config: {}, source: "value = ready? ? replacement : value\n" }
+      - { id: block_if_self, description: A block conditional with one self branch is simplified., path: example.rb, config: {}, source: "value = if ready?\n  value\nelse\n  replacement\nend\n" }
+      - { id: multiple_statements, description: A branch with multiple statements is not equivalent., path: example.rb, config: {}, source: "value = if ready?\n  log\n  value\nelse\n  replacement\nend\n" }
+      - { id: elsif_chain, description: An elsif chain is intentionally outside the two-branch rewrite., path: example.rb, config: {}, source: "value = if first?\n  value\nelsif second?\n  other\nelse\n  replacement\nend\n" }
+    real_world:
+      positives:
+        - { repository: Mininglamp-OSS/octo-ios, revision: f5e7a010729881781b26d031d1e8a399a9dda117, path: Podfile, line: 62, source: "dev_team = dev_team.empty? || dev_team == 'YOUR_TEAM_ID' ? '' : dev_team\n" }
+        - { repository: bastelfreak/env2module-differ, revision: 46d014221dedaa7ca50a150a4ef5447d23d056ca, path: main.rb, line: 164, source: "name = metadatas[modul]['name'].nil? ? name : metadatas[modul]['name']\n" }
+      negatives:
+        - { repository: fog/fog, revision: f3e5ceacc44cd1b63daf9db9a4a5985f0802de50, path: bin/fog, line: 40, source: "providers = if providers.length > 1\n  providers[0...-1].join(', ')\nelse\n  providers.first\nend\n" }
+        - { repository: diaspora/diaspora, revision: f96527862dc1ba2e5b95c4196efb0d1f0cc4b6e5, path: app/models/profile.rb, line: 57, source: "result = if size == :thumb_medium\n  self[:image_url_medium]\nelse\n  self[:image_url]\nend\n" }
+
+  Style/RedundantSelfAssignment:
+    matrix_position: 534
+    sources:
+      rubocop: lib/rubocop/cop/style/redundant_self_assignment.rb
+      rustocop:
+        - crates/rustocop/src/cops/prism/project_scope_completion.rs
+        - crates/rustocop/src/cops/prism/project_scope_completion/scope_rules.rs
+    manual_review:
+      status: passed
+      notes:
+        - Both implementations require assignment back to the same receiver and a known method that mutates and returns that receiver, then remove the redundant assignment.
+        - Rustocop's line scanner preserves RuboCop's local-variable cases and method message; the captured contract confirms its supported mutator set and corrections.
+    upstream_tests: { status: passed, passed: 14, total: 14, corrections: true }
+    edge_cases:
+      - { id: concat_assignment, description: concat already mutates the assigned array., path: example.rb, config: {}, source: "args = args.concat(extra)\n" }
+      - { id: merge_bang_assignment, description: merge bang already mutates the assigned hash., path: example.rb, config: {}, source: "options = options.merge!(extra)\n" }
+      - { id: different_receiver, description: Assignment from another receiver is meaningful., path: example.rb, config: {}, source: "args = other.concat(extra)\n" }
+      - { id: non_mutating_method, description: A non-mutating method must keep its assignment., path: example.rb, config: {}, source: "args = args.map(&:to_s)\n" }
+    real_world:
+      positives:
+        - { repository: ruby/rdoc, revision: 5bd8719f1a8ab12bd180b0b0632369f9bcafd547, path: lib/rdoc/rubygems_hook.rb, line: 173, source: "args = args.concat config_args.split(' ')\n" }
+        - { repository: aguestuser/drivetrain, revision: 17ade358c75cb4a17d35edd10be358384b5f0a11, path: app/models/concerns/compound_week.rb, line: 26, source: "hash = hash.merge!(week.record_hash) { |key, v1, v2| v1 + v2 }\n" }
+      negatives:
+        - { repository: ruby/rdoc, revision: 5bd8719f1a8ab12bd180b0b0632369f9bcafd547, path: lib/rdoc/rubygems_hook.rb, line: 168, source: "args.concat @spec.source_paths\n" }
+        - { repository: ruby/rdoc, revision: 5bd8719f1a8ab12bd180b0b0632369f9bcafd547, path: lib/rdoc/rubygems_hook.rb, line: 169, source: "args.concat @spec.extra_rdoc_files\n" }
+
+  Style/RedundantSelf:
+    matrix_position: 533
+    sources:
+      rubocop: lib/rubocop/cop/style/redundant_self.rb
+      rustocop: [crates/rustocop/src/cops/prism/self_rules.rs]
+    manual_review:
+      status: passed
+      notes:
+        - Both implementations remove self and its call operator for ordinary method sends while retaining setters, operators, keyword-like calls, local-name conflicts, and implicit-it disambiguation.
+        - Rustocop derives scope locals and pattern bindings from Prism ancestors instead of RuboCop's callback-populated maps, producing the same captured diagnostics and corrections.
+    upstream_tests: { status: passed, passed: 63, total: 63, corrections: true }
+    edge_cases:
+      - { id: ordinary_send, description: An ordinary self receiver is redundant., path: example.rb, config: {}, source: "def render\n  self.template\nend\n" }
+      - { id: argument_collision, description: An argument with the same name requires self., path: example.rb, config: {}, source: "def render(template)\n  self.template\nend\n" }
+      - { id: setter, description: An attribute writer requires self to avoid local assignment., path: example.rb, config: {}, source: "def update\n  self.template = value\nend\n" }
+      - { id: operator_send, description: Operator calls retain explicit self., path: example.rb, config: {}, source: "def combine(other)\n  self << other\nend\n" }
+    real_world:
+      positives:
+        - { repository: flatterline/jekyll-plugins, revision: 08d288604c40f00152c8619a5bbcb000f3a28512, path: team.rb, line: 9, source: "def read\n  self.read_yaml(File.join(base, '_layouts'), 'team.html')\nend\n" }
+        - { repository: jugyo/gitki, revision: fde1282be80cdce4879244934b0254308f19d8cd, path: app.rb, line: 85, source: "def markup(text)\n  self.__send__(options.markup, text)\nend\n" }
+      negatives:
+        - { repository: flatterline/jekyll-plugins, revision: 08d288604c40f00152c8619a5bbcb000f3a28512, path: team.rb, line: 36, source: "def load_data\n  self.data = YAML.load(File.read(path))\nend\n" }
+        - { repository: sinfin/auctify, revision: a1b60f0c2b5089b8e5356e93de5dfd559fdbf611, path: app/models/auctify/sale/auction.rb, line: 147, source: "def update_price(value)\n  self.current_price = value if current_price.present?\nend\n" }
+
+  Style/RedundantReturn:
+    matrix_position: 532
+    sources:
+      rubocop: lib/rubocop/cop/style/redundant_return.rb
+      rustocop: [crates/rustocop/src/cops/prism/redundant_return_rules.rs]
+    manual_review:
+      status: passed
+      notes:
+        - Both implementations traverse terminal method, lambda, conditional, case, begin, and rescue branches, while excluding ensure returns and optionally allowing multiple return values.
+        - Rustocop mirrors RuboCop's branch-check and correction helpers, including nil replacement, splat removal, implicit-hash braces, multiple-value arrays, and keyword-only offense ranges.
+    upstream_tests: { status: passed, passed: 39, total: 39, corrections: true }
+    edge_cases:
+      - { id: final_return, description: A final explicit return is redundant., path: example.rb, config: {}, source: "def result\n  return value\nend\n" }
+      - { id: terminal_if_branches, description: Returns in every terminal conditional branch are redundant., path: example.rb, config: {}, source: "def result\n  if ready?\n    return one\n  else\n    return two\n  end\nend\n" }
+      - { id: early_return, description: An early guard return remains meaningful., path: example.rb, config: {}, source: "def result\n  return nil unless ready?\n  value\nend\n" }
+      - { id: allowed_multiple_values, description: Configuration can retain a multiple-value return., path: example.rb, config: { AllowMultipleReturnValues: true }, source: "def result\n  return one, two\nend\n" }
+    real_world:
+      positives:
+        - repository: rails/jquery-ujs
+          revision: 83b041ba72261f487b9264b9e94211e8107a1f18
+          path: Rakefile
+          line: 46
+          source: |
+            def which(cmd)
+              return nil
+            end
+        - repository: kazu-yamamoto/Mew
+          revision: 29b779c9b0fabae92a75cee72c54701a75f43e12
+          path: bin/cmew
+          line: 123
+          source: |
+            def get_parid(msg)
+              return irt[0] if irt.size == 1
+              return nil
+            end
+      negatives:
+        - repository: rails/jquery-ujs
+          revision: 83b041ba72261f487b9264b9e94211e8107a1f18
+          path: Rakefile
+          line: 43
+          source: |
+            def which(cmd)
+              return exe if File.executable?(exe)
+              nil
+            end
+        - repository: kazu-yamamoto/Mew
+          revision: 29b779c9b0fabae92a75cee72c54701a75f43e12
+          path: bin/cmew
+          line: 117
+          source: |
+            def get_parid(msg)
+              return irt[0] if irt.size == 1
+              ref = []
+            end
