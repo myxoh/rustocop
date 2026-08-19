@@ -3,21 +3,18 @@
 # Keep these limits deliberately mechanical. Clippy owns function-level
 # complexity; this script prevents modules from becoming dumping grounds.
 LIMITS = {
-  "crates/rustocop/src/main.rs" => 50,
-  "crates/rustocop/src/cops/prism/mod.rs" => 500,
-  "crates/rustocop/src/cops/prism/diagnostic.rs" => 425
+  "crates/rustocop/src/main.rs" => 50
 }.freeze
 DEFAULT_RUST_LIMIT = 400
 SOURCE_ROOT = "crates/rustocop/src"
-ROOT_MODULES = %w[catalog.rs config.rs main.rs model.rs].freeze
+ROOT_MODULES = %w[config.rs main.rs model.rs].freeze
 PACKAGE_DIRECTORIES = %w[app cops engine].freeze
 
 DEPENDENCY_RULES = {
   "#{SOURCE_ROOT}/cops/" => %w[app engine],
   "#{SOURCE_ROOT}/engine/" => %w[app],
   "#{SOURCE_ROOT}/config.rs" => %w[app cops engine model],
-  "#{SOURCE_ROOT}/catalog.rs" => %w[app config cops engine model],
-  "#{SOURCE_ROOT}/model.rs" => %w[app catalog config cops engine]
+  "#{SOURCE_ROOT}/model.rs" => %w[app config cops engine]
 }.freeze
 
 rust_files = Dir.glob("#{SOURCE_ROOT}/**/*.rs").sort

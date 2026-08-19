@@ -2,7 +2,6 @@ use std::fs;
 use std::io;
 use std::path::PathBuf;
 
-use crate::catalog::SUPPORTED_COPS;
 use crate::config::InspectionConfig;
 use crate::cops::{prism, text};
 use crate::model::Offense;
@@ -24,7 +23,7 @@ pub(crate) struct InspectionPlan {
 impl InspectionPlan {
     pub(crate) fn new(options: &InspectionConfig) -> Self {
         let prism = prism::Engine::new(&|cop| options.cop_enabled(cop));
-        let text_cops_enabled = SUPPORTED_COPS
+        let text_cops_enabled = text::LEGACY_COP_NAMES
             .iter()
             .any(|cop| options.cop_enabled(cop) && !prism.implements(cop));
         Self {
@@ -66,7 +65,7 @@ impl InspectionPlan {
         let mut lines = source::split(content);
         let original_lines = lines.clone();
         let mut offenses = Vec::new();
-        text::before_prism(path, &mut lines, options, &mut offenses);
+        text::before_prism(&mut lines, options, &mut offenses);
 
         let prism_source = source::join(&lines);
         let prism_inspection = self.prism.inspect(

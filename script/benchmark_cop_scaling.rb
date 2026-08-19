@@ -1,21 +1,14 @@
 # frozen_string_literal: true
 
-require 'fileutils'
 require 'json'
 require 'time'
+require_relative 'support/benchmark'
+
+extend BenchmarkSupport
 
 root = File.expand_path('..', __dir__)
-fixture_root = File.join(root, 'spec/fixtures/rubocop_builtin_examples')
-output_root = File.join(root, 'tmp/performance-verification')
-FileUtils.mkdir_p(output_root)
-
-manifest = File.readlines(File.join(fixture_root, 'manifest.tsv'), chomp: true).drop(1).map do |line|
-  directory, cop = line.split("\t", 2)
-  [cop, Dir[File.join(fixture_root, directory, '*.rb')].sort]
-end
-cops = manifest.map(&:first)
-paths = manifest.flat_map(&:last)
-raise 'expected 500 files' unless paths.length == 500
+output_root = performance_output_root(root)
+cops, paths = compatibility_corpus(root, interleaved: false)
 
 native = File.join(root, 'libexec/rustocop-native')
 variants = {
@@ -25,20 +18,6 @@ variants = {
   'twenty' => cops
 }
 runs = 30
-
-def duration(command)
-  started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-  pid = Process.spawn(*command, out: File::NULL, err: File::NULL)
-  _finished_pid, status = Process.wait2(pid)
-  raise "benchmark command failed with #{status.exitstatus}" unless [0, 1].include?(status.exitstatus)
-
-  Process.clock_gettime(Process::CLOCK_MONOTONIC) - started
-end
-
-def percentile(values, fraction)
-  sorted = values.sort
-  sorted[((sorted.length - 1) * fraction).round]
-end
 
 commands = variants.transform_values do |selected_cops|
   [native, '--no-parallel', '--format', 'json', '--only', selected_cops.join(','), *paths]

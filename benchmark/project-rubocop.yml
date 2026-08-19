@@ -1,0 +1,37 @@
+AllCops:
+  DisabledByDefault: true
+  Exclude: []
+  NewCops: disable
+  ParserEngine: parser_prism
+  SuggestExtensions: false
+  TargetRubyVersion: 3.4
+
+# These deliberately strict settings make established projects produce useful
+# diagnostics instead of benchmarking a no-op clean run.
+Layout/LineLength:
+  Enabled: true
+  Max: 100
+
+Metrics/AbcSize:
+  Enabled: true
+  Max: 10
+
+Metrics/MethodLength:
+  Enabled: true
+  Max: 10
+
+Style/Documentation:
+  Enabled: true
+
+Style/HashSyntax:
+  Enabled: true
+
+Style/RedundantReturn:
+  Enabled: true
+
+Style/Semicolon:
+  Enabled: true
+
+Style/StringLiterals:
+  Enabled: true
+  EnforcedStyle: double_quotes

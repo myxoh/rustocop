@@ -8,7 +8,7 @@ the command-line interface.
 main.rs
   |
   v
-app/  ----------------------> catalog.rs / config.rs / model.rs
+app/  ----------------------> config.rs / model.rs
   |                                      ^
   v                                      |
 engine/ --------------------> cops/ -----+
@@ -25,7 +25,6 @@ shared leaf modules:
 ```text
 src/
   main.rs          process entrypoint only
-  catalog.rs       advertised cop inventory and defaults
   config.rs        run options, cop selection, Ruby version
   model.rs         source lines and formatter-independent offenses
   app/
@@ -83,9 +82,9 @@ coordinated edits without replacing an unnecessarily large source region.
   behavior.
 - `engine` may depend on cops and shared leaf modules. It owns ordering,
   concurrency, file writes, and the one-parse-per-file invariant.
-- `cops` may depend only on `catalog`, `config`, `model`, and sibling cop
+- `cops` may depend only on `config`, `model`, and sibling cop
   modules. A cop cannot discover files, format reports, or invoke the engine.
-- `catalog`, `config`, and `model` are leaf modules. They cannot depend on the
+- `config` and `model` are leaf modules. They cannot depend on the
   application, engine, or cop implementations.
 - Specs and the extracted upstream corpus are the compatibility contract. A cop
   is not verified merely because it recognizes representative text.
@@ -99,8 +98,9 @@ function-level complexity and argument limits.
 Every inspected file is parsed exactly once. Adding an AST cop registers a
 stateless visitor in `cops/prism`; it must never open or parse the source
 independently. See [Adding a Prism cop](adding-a-prism-cop.md) for the authoring
-API. Registry names come from implementations rather than a parallel public
-list, and generated scaffolding performs the composition-root wiring.
+API. The `cop_modules!` composition list declares and registers each cop family
+in one place. Public cop names come from implementations rather than a parallel
+catalog, and generated scaffolding performs the composition-root wiring.
 
 `--parallel` distributes complete files across scoped worker threads. Results
 are restored to discovery order before formatting, so parallel and sequential
@@ -110,10 +110,9 @@ to the same file.
 
 ## Complexity limits
 
-Rust modules have an enforced 400-line ceiling. The Prism composition root and
-correction engine have narrow, explicit exceptions while they are split along
-cohesive boundaries; new cop-family modules do not. Functions should normally
-remain below 60 lines, cognitive complexity 15, and five arguments. The
+Rust modules have an enforced 400-line ceiling, and the process entrypoint has
+a 50-line ceiling. There are no exceptions for cop-family or composition-root
+modules. Functions should normally remain below 60 lines, cognitive complexity 15, and five arguments. The
 enforced Clippy limits are 200 lines, cognitive complexity 30, and eight
 arguments. Do not raise a limit to land a feature.
 

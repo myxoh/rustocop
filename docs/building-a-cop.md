@@ -92,7 +92,7 @@ generator always creates cop-specific fixtures regardless of module choice.
 Without `--family`, the generator creates and wires:
 
 - a focused module under `crates/rustocop/src/cops/prism/`;
-- the module and registry entries in `prism/mod.rs`;
+- one `cop_modules!` entry in `prism/mod.rs`, which declares and registers it;
 - `input.rb` and `offenses.tsv` fixtures;
 - `corrected.rb` when `--autocorrect` is used;
 - a fixture test registration in `engine/fixture_tests.rs`.

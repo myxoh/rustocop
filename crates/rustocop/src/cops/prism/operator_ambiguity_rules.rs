@@ -27,6 +27,9 @@ fn parentheses_as_grouped_expression(node: &CallNode<'_>, context: &mut CopConte
         } else {
             return;
         };
+    if selector.end_offset() >= opening.start_offset() {
+        return;
+    }
     let gap = &context.source()[selector.end_offset()..opening.start_offset()];
     if gap.is_empty() || !gap.chars().all(char::is_whitespace) {
         return;

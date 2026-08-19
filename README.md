@@ -30,15 +30,15 @@ to replace RuboCop.
 ## Performance
 
 On the committed 500-file, 20-cop compatibility corpus, rustocop is currently
-about 55 times faster than RuboCop with Prism. Both tools produced identical
+about 52 times faster than RuboCop with Prism. Both tools produced identical
 normalized JSON before measurement.
 
 | Files | rustocop | RuboCop (Prism) | Speedup |
 | ---: | ---: | ---: | ---: |
-| 1 | 2.92 ms | 447.56 ms | 153.38× |
-| 25 | 3.31 ms | 451.64 ms | 136.53× |
-| 100 | 4.45 ms | 457.08 ms | 102.78× |
-| 500 | **9.45 ms** | **516.26 ms** | **54.64×** |
+| 1 | 2.99 ms | 397.69 ms | 133.23× |
+| 25 | 3.43 ms | 402.12 ms | 117.37× |
+| 100 | 4.24 ms | 413.29 ms | 97.43× |
+| 500 | **9.13 ms** | **471.83 ms** | **51.66×** |
 
 This uses RuboCop 1.87.0 with Prism, caching disabled, and server mode disabled.
 
@@ -50,6 +50,24 @@ reproduce the comparison with:
 ```sh
 bundle exec ruby script/benchmark_rubocop_prism.rb
 ```
+
+### Real Rails projects
+
+The sustained-workload benchmark runs deliberately strict built-in rules over
+three pinned open-source Rails projects. Unlike the small compatibility corpus,
+these reports are not yet identical: the exact-match column is the new
+correctness target, matching path, cop, severity, message, and source range.
+
+| Project | Ruby files | rustocop, 4 workers | RuboCop Prism | Speedup | Exact matches / RuboCop offenses |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| [Chatwoot](https://github.com/chatwoot/chatwoot/tree/8d93d69e8e356216e85c28de7c4240e66b8e83fa) | 1,842 | **104 ms** | 5.72 s | **54.9×** | 429 / 48,951 |
+| [RubyGems.org](https://github.com/rubygems/rubygems.org/tree/3201f8831866f82eb9acd7f66287a978d0e59079) | 1,337 | **50 ms** | 2.69 s | **53.4×** | 273 / 4,195 |
+| [GitLab CE](https://github.com/gitlabhq/gitlabhq/tree/67a526442c20d20b6e80ebf916bd766b54018c5e) | 30,894 | **1.82 s** | 106.18 s | **58.5×** | 6,780 / 698,393 |
+
+All timings are medians from five measured runs after warmup, with RuboCop's
+cache and server disabled. The configuration intentionally forces offenses
+using eight core cops; no custom cops or extensions are loaded. See the
+[project benchmark methodology and full median/p95 results](benchmark/project-benchmarks.md).
 
 ## Using it locally
 

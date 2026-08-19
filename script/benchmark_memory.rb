@@ -1,36 +1,21 @@
 # frozen_string_literal: true
 
-require "fileutils"
 require "json"
 require "open3"
 require "rbconfig"
 require "shellwords"
 require "time"
+require_relative "support/benchmark"
+
+extend BenchmarkSupport
 
 root = File.expand_path("..", __dir__)
-fixture_root = File.join(root, "spec/fixtures/rubocop_builtin_examples")
-output_root = File.join(root, "tmp/performance-verification")
-FileUtils.mkdir_p(output_root)
+output_root = performance_output_root(root)
 
 abort "memory benchmark currently requires macOS /usr/bin/time -l" unless RbConfig::CONFIG.fetch("host_os").include?("darwin")
 
-manifest = File.readlines(File.join(fixture_root, "manifest.tsv"), chomp: true).drop(1).map do |line|
-  directory, cop = line.split("\t", 2)
-  [cop, Dir[File.join(fixture_root, directory, "*.rb")].sort]
-end
-cops = manifest.map(&:first)
-paths = manifest.map(&:last).then do |groups|
-  (0...groups.map(&:length).max).flat_map { |index| groups.filter_map { |group| group[index] } }
-end
-raise "expected 500 files" unless paths.length == 500
-
-config_path = File.join(output_root, "rubocop-prism.yml")
-File.write(config_path, <<~YAML)
-  AllCops:
-    ParserEngine: parser_prism
-    TargetRubyVersion: 3.4
-    NewCops: enable
-YAML
+cops, paths = compatibility_corpus(root)
+config_path = prism_config(output_root)
 
 native = File.join(root, "libexec/rustocop-native")
 rubocop = [RbConfig.ruby, Gem.bin_path("rubocop", "rubocop")]
@@ -60,11 +45,6 @@ def peak_rss_bytes(command)
   raise "could not read peak RSS from /usr/bin/time output:\n#{accounting}" unless match
 
   Integer(match[1])
-end
-
-def percentile(values, fraction)
-  sorted = values.sort
-  sorted[((sorted.length - 1) * fraction).round]
 end
 
 sizes = [1, 25, 100, 500]

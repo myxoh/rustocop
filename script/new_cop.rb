@@ -143,15 +143,9 @@ end
 
 unless options[:family]
   composition = File.read(COMPOSITION_ROOT)
-  module_line = "mod #{module_name};\n"
-  abort "composition module marker not found" unless composition.include?("mod source_helpers;\n")
-  composition = composition.sub("mod source_helpers;\n", "#{module_line}mod source_helpers;\n")
-  chain = "            .chain(#{module_name}::cops())\n"
-  abort "registry chain marker not found" unless composition.include?("            .chain(lint_control_flow::cops())\n")
-  composition = composition.sub(
-    "            .chain(lint_control_flow::cops())\n",
-    "#{chain}            .chain(lint_control_flow::cops())\n"
-  )
+  module_marker = "cop_modules!(\n"
+  abort "composition module marker not found" unless composition.include?(module_marker)
+  composition = composition.sub(module_marker, "#{module_marker}    #{module_name},\n")
 end
 fixture_tests = File.read(FIXTURE_TESTS)
 fixture_marker = "// New-cop generator registrations are inserted directly below this line.\n"

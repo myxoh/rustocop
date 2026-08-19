@@ -1,7 +1,8 @@
 use super::helpers::*;
 use super::{push_offense, Offense, SourceLine};
-use crate::catalog::TRAILING_WHITESPACE_COP;
 use crate::config::InspectionConfig;
+
+const TRAILING_WHITESPACE_COP: &str = "Layout/TrailingWhitespace";
 
 pub(super) fn before_prism(
     lines: &mut [SourceLine],

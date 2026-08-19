@@ -1,7 +1,5 @@
 use std::env;
 
-use crate::catalog::SUPPORTED_COPS;
-
 mod cli;
 mod report;
 mod targets;
@@ -20,11 +18,7 @@ pub(crate) fn run(args: Vec<String>) -> i32 {
             0
         }
         Ok(cli::Command::ShowCops) => {
-            let mut cops = SUPPORTED_COPS.to_vec();
-            cops.extend(crate::cops::prism::cop_names());
-            cops.sort_unstable();
-            cops.dedup();
-            for cop in cops {
+            for cop in crate::cops::cop_names() {
                 println!("{cop}");
             }
             0

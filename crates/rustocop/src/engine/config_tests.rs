@@ -4,6 +4,7 @@ use super::*;
 fn expands_departments_without_enabling_default_disabled_cops() {
     let selection = CopSelection::only("Style");
     assert!(selection.enabled("Style/HashSyntax"));
+    assert!(!selection.enabled("Style/Copyright"));
     assert!(!selection.enabled("Style/Documentation"));
 }
 

@@ -3,7 +3,15 @@ use std::sync::Arc;
 
 use regex::Regex;
 
-use crate::catalog::DEFAULT_DISABLED_COPS;
+const DEFAULT_DISABLED_COPS: &[&str] = &[
+    "RSpec/MessageChain",
+    "RSpec/MultipleExpectations",
+    "RSpec/MultipleMemoizedHelpers",
+    "RSpec/PendingWithoutReason",
+    "Security/IoMethods",
+    "Style/Copyright",
+    "Style/Documentation",
+];
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum Parallelism {

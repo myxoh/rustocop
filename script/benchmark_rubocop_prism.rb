@@ -1,34 +1,18 @@
 # frozen_string_literal: true
 
-require "fileutils"
 require "json"
 require "open3"
 require "rbconfig"
 require "shellwords"
 require "time"
+require_relative "support/benchmark"
+
+extend BenchmarkSupport
 
 root = File.expand_path("..", __dir__)
-fixture_root = File.join(root, "spec/fixtures/rubocop_builtin_examples")
-output_root = File.join(root, "tmp/performance-verification")
-FileUtils.mkdir_p(output_root)
-
-manifest = File.readlines(File.join(fixture_root, "manifest.tsv"), chomp: true).drop(1).map do |line|
-  directory, cop = line.split("\t", 2)
-  [cop, Dir[File.join(fixture_root, directory, "*.rb")].sort]
-end
-cops = manifest.map(&:first)
-paths = manifest.map(&:last).then do |groups|
-  (0...groups.map(&:length).max).flat_map { |index| groups.filter_map { |group| group[index] } }
-end
-raise "expected 500 files" unless paths.length == 500
-
-prism_config_path = File.join(output_root, "rubocop-prism.yml")
-File.write(prism_config_path, <<~YAML)
-  AllCops:
-    ParserEngine: parser_prism
-    TargetRubyVersion: 3.4
-    NewCops: enable
-YAML
+output_root = performance_output_root(root)
+cops, paths = compatibility_corpus(root)
+prism_config_path = prism_config(output_root)
 
 native = File.join(root, "libexec/rustocop-native")
 rubocop = [RbConfig.ruby, Gem.bin_path("rubocop", "rubocop")]
@@ -47,20 +31,6 @@ def normalize(report)
   report.fetch("metadata").transform_values! { "normalized" }
   report.fetch("files").each { |file| file["path"] = File.basename(file.fetch("path")) }
   report
-end
-
-def duration(command)
-  started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-  _pid = Process.spawn(*command, out: File::NULL, err: File::NULL)
-  _finished_pid, status = Process.wait2(_pid)
-  raise "benchmark command failed with #{status.exitstatus}: #{command.shelljoin}" unless [0, 1].include?(status.exitstatus)
-
-  Process.clock_gettime(Process::CLOCK_MONOTONIC) - started
-end
-
-def percentile(values, fraction)
-  sorted = values.sort
-  sorted[((sorted.length - 1) * fraction).round]
 end
 
 sizes = [1, 25, 100, 500]

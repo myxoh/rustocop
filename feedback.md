@@ -10,10 +10,13 @@ Reviewed on 2026-08-18 against the current working tree.
   by capability-oriented `source_semantics.rs` and `lexical_rules.rs` modules.
 - Reusable delimiter, definition, and argument scanning lives in the tested
   `source_syntax.rs` infrastructure module.
-- The default architecture ceiling now enforces 400 lines, with explicit
-  exceptions only for the Prism composition root and correction engine.
+- The architecture ceiling now enforces 400 lines without cop-family or
+  composition-root exceptions. The Prism composition tests live separately.
 - `script/new_cop.rb --family <module>` can add a cop to an existing cohesive
-  family without creating another module and registry chain entry.
+  family without creating another module and registration entry.
+- Prism families are declared and registered through one `cop_modules!` list;
+  public names are derived from implementations rather than a duplicate global
+  catalog.
 
 ## Short version
 
@@ -216,10 +219,11 @@ The text pipeline was a sensible bootstrap, but it now creates two authoring
 models, two registries, two correction phases, and source-position concerns
 across pre- and post-Prism representations.
 
-`SUPPORTED_COPS` remains a manually maintained catalog for text cops while
-Prism names are runtime-discovered. `InspectionPlan` infers whether textual
-processing is necessary by comparing the catalog with the Prism registry. It
-works, but it is indirect and easy to misunderstand.
+The old global `SUPPORTED_COPS` catalog has been removed. Prism names are
+runtime-discovered and the remaining legacy text names are isolated in the
+text layer. `InspectionPlan` only checks that short legacy list when deciding
+whether textual processing is necessary. This removes the cross-layer catalog,
+but the two execution models still remain.
 
 The long-term direction should be one registry with explicit metadata:
 
