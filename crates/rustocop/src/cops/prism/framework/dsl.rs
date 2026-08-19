@@ -1,5 +1,41 @@
 /// Declares a module's registry without repeating `Box::new` and trait-object
 /// coercions for every cop.
+///
+/// These guard and offense macros deliberately mirror RuboCop's callback DSL.
+/// They keep the policy-level control flow visible while expanding to ordinary
+/// Rust returns and the same atomic `CorrectionPlan` used by `CopContext`.
+macro_rules! return_if {
+    ($condition:expr $(,)?) => {
+        if $condition {
+            return;
+        }
+    };
+    ($condition:expr, $value:expr $(,)?) => {
+        if $condition {
+            return $value;
+        }
+    };
+}
+
+macro_rules! return_unless {
+    ($condition:expr $(,)?) => {
+        if !$condition {
+            return;
+        }
+    };
+    ($condition:expr, $value:expr $(,)?) => {
+        if !$condition {
+            return $value;
+        }
+    };
+}
+
+macro_rules! add_offense {
+    ($context:expr, $offense:expr, message: $message:expr, |$corrector:ident| $correction:block) => {
+        $context.add_offense($offense, $message, |$corrector| $correction)
+    };
+}
+
 macro_rules! declare_cops {
     ($($cop:expr),+ $(,)?) => {
         pub(super) fn cops() -> Vec<Box<dyn Cop>> {
@@ -191,6 +227,11 @@ macro_rules! define_cop_entry {
 }
 
 pub(super) use {
-    declare_cops, declare_source_cops, define_any_node_cop, define_call_cop, define_cop_entry,
-    define_cops, define_node_cop, define_parse_error_cop, define_source_context_cop,
+    add_offense, declare_cops, declare_source_cops, define_any_node_cop, define_call_cop,
+    define_cop_entry, define_cops, define_node_cop, define_parse_error_cop,
+    define_source_context_cop, return_if, return_unless,
 };
+
+#[cfg(test)]
+#[path = "dsl_tests.rs"]
+mod tests;

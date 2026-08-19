@@ -705,17 +705,14 @@ fn on_array(node: &ruby_prism::ArrayNode<'_>, context: &mut CopContext<'_, '_>) 
     let opening_source = context.source_file().at(&opening);
     let elements = node.elements().iter().collect::<Vec<_>>();
     let minimum = context.config_usize("MinSize", 0);
-    if elements.len() < minimum {
-        return;
-    }
+    return_unless!(elements.len() >= minimum);
 
     if opening_source == "[" {
-        if elements.iter().any(|element| element.as_string_node().is_none())
-            || complex_content(&elements, context)
-            || within_matrix_of_complex_content(context)
-        {
-            return;
-        }
+        return_if!(
+            elements.iter().any(|element| element.as_string_node().is_none())
+                || complex_content(&elements, context)
+                || within_matrix_of_complex_content(context)
+        );
         check_bracketed_array(node, &elements, context);
     } else if opening_source.starts_with("%w") || opening_source.starts_with("%W") {
         check_percent_array(node, &elements, context);
@@ -727,19 +724,18 @@ fn check_bracketed_array(
     elements: &[Node<'_>],
     context: &mut CopContext<'_, '_>,
 ) {
-    if context.policy().enforced_style("percent") != "percent"
-        || elements.is_empty()
-        || bracket_array_has_comment(node, context)
-    {
-        return;
-    }
+    return_unless!(context.policy().enforced_style("percent") == "percent");
+    return_if!(elements.is_empty() || bracket_array_has_comment(node, context));
     let Some(replacement) = percent_word_array(node, elements, context) else {
         return;
     };
-    context.add_offense(
+    add_offense!(
+        context,
         node.location(),
-        "Use `%w` or `%W` for an array of words.",
-        |corrector| corrector.replace(node.location(), replacement),
+        message: "Use `%w` or `%W` for an array of words.",
+        |corrector| {
+            corrector.replace(node.location(), replacement);
+        }
     );
 }
 
@@ -748,14 +744,13 @@ fn check_percent_array(
     elements: &[Node<'_>],
     context: &mut CopContext<'_, '_>,
 ) {
-    if context.policy().enforced_style("percent") == "percent"
-        && !invalid_percent_array_contents(elements)
-    {
-        return;
-    }
+    return_if!(
+        context.policy().enforced_style("percent") == "percent"
+            && !invalid_percent_array_contents(elements)
+    );
     let replacement = build_bracketed_array(node, elements, context);
     let message = bracketed_word_array_message(&replacement);
-    context.add_offense(node.location(), message, |corrector| {
+    add_offense!(context, node.location(), message: message, |corrector| {
         corrector.replace(node.location(), replacement);
     });
 }

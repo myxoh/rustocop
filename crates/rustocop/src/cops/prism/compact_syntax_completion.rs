@@ -208,7 +208,7 @@ fn on_while(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
         "Favor modifier `{}` usage when having a single-line body.",
         form.keyword
     );
-    context.add_offense(form.offense, message, |corrector| {
+    add_offense!(context, form.offense, message: message, |corrector| {
         corrector.replace(node.location(), form.replacement);
     });
 }
@@ -240,26 +240,24 @@ fn single_line_as_modifier(
         return None;
     };
     let body_nodes = statements.body().iter().collect::<Vec<_>>();
-    if body_nodes.len() != 1 {
-        return None;
-    }
+    return_unless!(body_nodes.len() == 1, None);
     let body = &body_nodes[0];
-    if non_eligible_body(body) {
-        return None;
-    }
+    return_if!(non_eligible_body(body), None);
     let expression = context.source_file().node(node);
-    if expression.lines().filter(|line| !line.trim().is_empty()).count() > 3 {
-        return None;
-    }
+    return_if!(
+        expression.lines().filter(|line| !line.trim().is_empty()).count() > 3,
+        None
+    );
     let body_source = context.source_file().node(body);
-    if body_source.trim().is_empty() || body_source.contains('\n') || source_has_comment(body_source) {
-        return None;
-    }
+    return_if!(
+        body_source.trim().is_empty()
+            || body_source.contains('\n')
+            || source_has_comment(body_source),
+        None
+    );
     let mut assignment = LocalAssignmentVisitor::default();
     assignment.visit(&predicate);
-    if assignment.found {
-        return None;
-    }
+    return_if!(assignment.found, None);
 
     let source = context.source();
     let first_line_end = source[keyword_loc.start_offset()..]
@@ -273,11 +271,11 @@ fn single_line_as_modifier(
         .find('\n')
         .map_or(source.len(), |offset| closing.end_offset() + offset);
     let code_after = &source[closing.end_offset()..last_line_end];
-    if code_after.trim_start().starts_with('#')
-        || first_line_comment.is_some() && !code_after.trim().is_empty()
-    {
-        return None;
-    }
+    return_if!(
+        code_after.trim_start().starts_with('#')
+            || first_line_comment.is_some() && !code_after.trim().is_empty(),
+        None
+    );
 
     let condition = context.source_file().node(&predicate);
     let replacement = to_modifier_form(
@@ -297,11 +295,11 @@ fn single_line_as_modifier(
         .related_config_value("Layout/LineLength", "Max")
         .and_then(|value| value.parse::<usize>().ok())
         .unwrap_or(120);
-    if line_length_enabled
-        && format!("{code_before}{replacement}{code_after}").chars().count() > maximum
-    {
-        return None;
-    }
+    return_if!(
+        line_length_enabled
+            && format!("{code_before}{replacement}{code_after}").chars().count() > maximum,
+        None
+    );
     Some(ModifierForm {
         keyword,
         offense: keyword_loc.start_offset()..keyword_loc.end_offset(),

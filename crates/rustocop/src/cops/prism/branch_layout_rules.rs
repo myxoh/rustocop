@@ -223,14 +223,13 @@ fn on_when(node: &WhenNode<'_>, context: &mut CopContext<'_, '_>) {
     let Some(relative_separator) = separator_gap.find(';') else {
         return;
     };
-    if node.then_keyword_loc().is_some()
-        || !context.source_file().same_line(
+    return_if!(
+        node.then_keyword_loc().is_some()
+            || !context.source_file().same_line(
             node.keyword_loc().start_offset(),
             last_statement.location().end_offset(),
         )
-    {
-        return;
-    }
+    );
     let separator_start = last_condition.location().end_offset() + relative_separator;
     let separator = separator_start..separator_start + 1;
     let expression = node
@@ -241,7 +240,7 @@ fn on_when(node: &WhenNode<'_>, context: &mut CopContext<'_, '_>) {
         .join(", ");
     let message =
         format!("Do not use `when {expression};`. Use `when {expression} then` instead.");
-    context.add_offense(separator.clone(), message, |corrector| {
+    add_offense!(context, separator.clone(), message: message, |corrector| {
         corrector.replace(separator, " then");
     });
 }

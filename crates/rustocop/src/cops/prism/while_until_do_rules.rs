@@ -27,13 +27,11 @@ fn on_while(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
     let Some((keyword_name, predicate_end, do_keyword)) = parts else {
         return;
     };
-    if !context.source_file().node(node).contains('\n') {
-        return;
-    }
+    return_unless!(context.source_file().node(node).contains('\n'));
 
     let removal = predicate_end..do_keyword.end_offset();
     let message = format!("Do not use `do` with multi-line `{keyword_name}`.");
-    context.add_offense(do_keyword, message, |corrector| {
+    add_offense!(context, do_keyword, message: message, |corrector| {
         corrector.remove(removal);
     });
 }

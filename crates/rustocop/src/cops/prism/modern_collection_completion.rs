@@ -411,12 +411,11 @@ fn counting_method(name: &[u8]) -> bool {
 }
 
 fn on_send(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
-    if !matches!(call_name(node), b"length" | b"size")
-        || argument_count(node) != 0
-        || node.receiver().is_none()
-    {
-        return;
-    }
+    return_unless!(
+        matches!(call_name(node), b"length" | b"size")
+            && argument_count(node) == 0
+            && node.receiver().is_some()
+    );
     if call_operator_is(node, b"&.") {
         on_csend(node, context);
         return;
@@ -442,17 +441,14 @@ fn check_zero_length_predicate(
     parent: &CallNode<'_>,
     context: &mut CopContext<'_, '_>,
 ) {
-    if call_name(parent) != b"zero?"
-        || argument_count(parent) != 0
-        || !parent
+    return_unless!(
+        call_name(parent) == b"zero?"
+            && argument_count(parent) == 0
+            && parent
             .receiver()
             .is_some_and(|receiver| same_call(&receiver, node))
-    {
-        return;
-    }
-    if non_polymorphic_collection(node, context) {
-        return;
-    }
+    );
+    return_if!(non_polymorphic_collection(node, context));
     let Some(selector) = node.message_loc() else {
         return;
     };
@@ -462,7 +458,7 @@ fn check_zero_length_predicate(
         .slice(offense.clone())
         .unwrap_or_default();
     let message = format!("Use `empty?` instead of `{current}`.");
-    context.add_offense(offense.clone(), message, |corrector| {
+    add_offense!(context, offense.clone(), message: message, |corrector| {
         corrector.replace(offense, "empty?");
     });
 }
@@ -475,9 +471,8 @@ fn check_zero_length_comparison(
     let Some(comparison) = length_comparison(node, parent) else {
         return;
     };
-    if !comparison.zero() || non_polymorphic_collection(node, context) {
-        return;
-    }
+    return_unless!(comparison.zero());
+    return_if!(non_polymorphic_collection(node, context));
     report_length_comparison(node, parent, comparison, false, context);
 }
 
@@ -489,9 +484,8 @@ fn check_nonzero_length_comparison(
     let Some(comparison) = length_comparison(node, parent) else {
         return;
     };
-    if !comparison.nonzero() || non_polymorphic_collection(node, context) {
-        return;
-    }
+    return_unless!(comparison.nonzero());
+    return_if!(non_polymorphic_collection(node, context));
     report_length_comparison(node, parent, comparison, true, context);
 }
 
@@ -563,7 +557,7 @@ fn report_length_comparison(
     };
     let preferred = if nonzero { "!empty?" } else { "empty?" };
     let message = format!("Use `{preferred}` instead of `{current}`.");
-    context.add_offense(parent.location(), message, |corrector| {
+    add_offense!(context, parent.location(), message: message, |corrector| {
         corrector.replace(parent.location(), replacement);
     });
 }

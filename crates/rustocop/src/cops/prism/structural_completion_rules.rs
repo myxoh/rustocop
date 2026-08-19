@@ -206,30 +206,23 @@ fn trailing_body_on_module(node: &ModuleNode<'_>, context: &mut CopContext<'_, '
 }
 
 fn on_send(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
-    if !supported_operators(context)
+    return_unless!(supported_operators(context)
         .iter()
-        .any(|operator| operator.as_bytes() == call_name(node))
-    {
-        return;
-    }
+        .any(|operator| operator.as_bytes() == call_name(node)));
     let Some(left) = node.receiver() else {
         return;
     };
     let Some(right) = only_argument(node) else {
         return;
     };
-    if !yoda_expression_constant(&left, &right) {
-        return;
-    }
-    if offended_ancestor(context) {
-        return;
-    }
+    return_unless!(yoda_expression_constant(&left, &right));
+    return_if!(offended_ancestor(context));
     let message = format!(
         "Non-literal operand (`{}`) should be first.",
         context.source_file().node(&right)
     );
     let replacement = render_yoda(node, context.source_file());
-    context.add_offense(node.location(), message, |corrector| {
+    add_offense!(context, node.location(), message: message, |corrector| {
         corrector.replace(node.location(), replacement);
     });
 }

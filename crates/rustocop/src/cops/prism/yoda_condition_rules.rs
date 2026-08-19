@@ -6,28 +6,23 @@ define_cops! {
 
 fn on_send(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     let operator = call_name(node);
-    if !yoda_compatible_condition(operator) {
-        return;
-    }
+    return_unless!(yoda_compatible_condition(operator));
     let style = context
         .policy()
         .enforced_style("forbid_for_all_comparison_operators");
-    if equality_only(style) && non_equality_operator(operator) {
-        return;
-    }
+    return_if!(equality_only(style) && non_equality_operator(operator));
     let (Some(left), Some(right)) = (node.receiver(), only_argument(node)) else {
         return;
     };
-    if file_constant_equal_program_name(&left, operator, &right, context)
-        || valid_yoda(&left, &right, style)
-    {
-        return;
-    }
+    return_if!(
+        file_constant_equal_program_name(&left, operator, &right, context)
+            || valid_yoda(&left, &right, style)
+    );
 
     let offense = actual_code_range(node);
     let message = message(node, context);
     let correction = corrected_code(&left, operator, &right, context);
-    context.add_offense(offense.clone(), message, |corrector| {
+    add_offense!(context, offense.clone(), message: message, |corrector| {
         corrector.replace(offense, correction);
     });
 }

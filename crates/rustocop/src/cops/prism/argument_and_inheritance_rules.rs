@@ -270,12 +270,13 @@ fn redundant_argument(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
 }
 
 fn on_send(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
-    if !matches!(call_name(node), b"load" | b"safe_load" | b"parse")
-        || !root_constant(node.receiver(), b"YAML")
-        || call_name(node) == b"safe_load" && !context.target_ruby_version().at_least(3, 0)
-    {
-        return;
-    }
+    return_unless!(
+        matches!(call_name(node), b"load" | b"safe_load" | b"parse")
+            && root_constant(node.receiver(), b"YAML")
+    );
+    return_if!(
+        call_name(node) == b"safe_load" && !context.target_ruby_version().at_least(3, 0)
+    );
     let Some(arguments) = node.arguments() else {
         return;
     };
@@ -283,14 +284,11 @@ fn on_send(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     let Some(read) = values.first().and_then(|argument| argument.as_call_node()) else {
         return;
     };
-    if !match_call(&read)
+    return_unless!(match_call(&read)
         .named(b"read")
         .on_root_constant(b"File")
         .with_argument_count(1)
-        .matches()
-    {
-        return;
-    }
+        .matches());
     let Some(path) = only_argument(&read) else {
         return;
     };
@@ -314,7 +312,7 @@ fn on_send(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
         context.source_file().node(&path)
     );
     let message = format!("Use `{preferred}` instead.");
-    context.add_offense(offense.clone(), message, |corrector| {
+    add_offense!(context, offense.clone(), message: message, |corrector| {
         corrector.replace(offense, preferred);
     });
 }
