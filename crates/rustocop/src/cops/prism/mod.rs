@@ -9,6 +9,8 @@ mod cop_context;
 mod cop_policy;
 #[path = "framework/correction_engine.rs"]
 mod correction_engine;
+#[path = "framework/corrector.rs"]
+mod corrector;
 #[path = "framework/diagnostic.rs"]
 mod diagnostic;
 #[path = "framework/dsl.rs"]
@@ -191,8 +193,9 @@ cop_modules!(
 );
 
 use crate::config::{CopConfig, RubyVersion};
-use cop_context::{CopContext, CorrectionPlan};
+use cop_context::CopContext;
 use cop_policy::CopPolicy;
+use corrector::CorrectionPlan;
 use diagnostic::{Context, Reporter};
 pub(crate) use diagnostic::{Finding, Inspection};
 use dsl::*;

@@ -6,49 +6,96 @@ define_cops! {
 
 fn yoda_condition(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     let operator = call_name(node);
-    if !matches!(operator, b"==" | b"!=" | b"<" | b"<=" | b">" | b">=") {
+    if !yoda_compatible_condition(operator) {
         return;
     }
     let style = context
         .policy()
         .enforced_style("forbid_for_all_comparison_operators");
-    if style.ends_with("equality_operators_only") && !matches!(operator, b"==" | b"!=") {
+    if equality_only(style) && non_equality_operator(operator) {
         return;
     }
     let (Some(left), Some(right)) = (node.receiver(), only_argument(node)) else {
         return;
     };
     if file_program_name_comparison(&left, operator, &right, context)
-        || interpolated_literal(&left)
+        || valid_yoda(&left, &right, style)
     {
         return;
     }
 
-    let left_constant = constant_portion(&left);
-    let right_constant = constant_portion(&right);
-    if left_constant == right_constant {
-        return;
-    }
-    let require_yoda = style.starts_with("require_");
-    if (require_yoda && left_constant) || (!require_yoda && right_constant) {
-        return;
-    }
+    let offense = actual_code_range(node);
+    let message = message(node, context);
+    let correction = corrected_code(&left, operator, &right, context);
+    context.add_offense(offense.clone(), message, |corrector| {
+        corrector.replace(offense, correction);
+    });
+}
 
+fn yoda_compatible_condition(operator: &[u8]) -> bool {
+    matches!(operator, b"==" | b"!=" | b"<" | b"<=" | b">" | b">=")
+}
+
+fn equality_only(style: &str) -> bool {
+    style.ends_with("equality_operators_only")
+}
+
+fn non_equality_operator(operator: &[u8]) -> bool {
+    !matches!(operator, b"==" | b"!=")
+}
+
+fn valid_yoda(left: &Node<'_>, right: &Node<'_>, style: &str) -> bool {
+    let left_constant = constant_portion(left);
+    let right_constant = constant_portion(right);
+    if left_constant == right_constant || interpolated_literal(left) {
+        return true;
+    }
+    if enforce_yoda(style) {
+        left_constant
+    } else {
+        right_constant
+    }
+}
+
+fn enforce_yoda(style: &str) -> bool {
+    style.starts_with("require_")
+}
+
+fn message(node: &CallNode<'_>, context: &CopContext<'_, '_>) -> String {
+    format!(
+        "Reverse the order of the operands `{}`.",
+        context.source_file().node(&node.as_node())
+    )
+}
+
+fn corrected_code(
+    left: &Node<'_>,
+    operator: &[u8],
+    right: &Node<'_>,
+    context: &CopContext<'_, '_>,
+) -> String {
     let file = context.source_file();
-    let original = file.node(&node.as_node());
-    let reverse = match operator {
+    format!(
+        "{} {} {}",
+        file.node(right),
+        reverse_comparison(operator),
+        file.node(left)
+    )
+}
+
+fn reverse_comparison(operator: &[u8]) -> &str {
+    match operator {
         b"<" => ">",
         b"<=" => ">=",
         b">" => "<",
         b">=" => "<=",
         _ => std::str::from_utf8(operator).unwrap_or_default(),
-    };
-    let correction = format!("{} {reverse} {}", file.node(&right), file.node(&left));
-    context.replace_call(
-        node,
-        format!("Reverse the order of the operands `{original}`."),
-        correction,
-    );
+    }
+}
+
+fn actual_code_range(node: &CallNode<'_>) -> std::ops::Range<usize> {
+    let location = node.location();
+    location.start_offset()..location.end_offset()
 }
 
 fn constant_portion(node: &Node<'_>) -> bool {

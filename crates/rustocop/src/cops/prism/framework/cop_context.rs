@@ -1,8 +1,7 @@
 use ruby_prism::{CallNode, Node};
-use std::ops::Range;
 
 use super::diagnostic::{ByteRange, Reporter};
-use super::{CopPolicy, SourceFile};
+use super::{CopPolicy, CorrectionPlan, SourceFile};
 use crate::config::RubyVersion;
 
 /// The complete, read-only inspection view available to a cop callback, plus
@@ -11,35 +10,6 @@ pub(super) struct CopContext<'context, 'pr> {
     reporter: Reporter<'context>,
     source: &'pr str,
     ancestors: &'pr [Node<'pr>],
-}
-
-/// A set of source edits that must be accepted or rejected together.
-///
-/// Cops use this for structural rewrites such as swapping conditional branches
-/// without rebuilding the surrounding Ruby source.
-#[derive(Default)]
-pub(super) struct CorrectionPlan {
-    edits: Vec<(Range<usize>, String)>,
-}
-
-impl CorrectionPlan {
-    pub(super) fn replace(&mut self, range: Range<usize>, replacement: impl Into<String>) {
-        self.edits.push((range, replacement.into()));
-    }
-
-    pub(super) fn swap(&mut self, source: &str, left: Range<usize>, right: Range<usize>) -> bool {
-        if left.end > right.start {
-            return false;
-        }
-        let (Some(left_source), Some(right_source)) =
-            (source.get(left.clone()), source.get(right.clone()))
-        else {
-            return false;
-        };
-        self.replace(left, right_source);
-        self.replace(right, left_source);
-        true
-    }
 }
 
 // This is the supported cop-authoring surface. Not every primitive needs an
@@ -144,6 +114,19 @@ impl<'context, 'pr> CopContext<'context, 'pr> {
         self.reporter.report(message, offense);
     }
 
+    /// Registers an offense and lets the cop describe its autocorrection with
+    /// the same transaction-oriented shape as RuboCop's `add_offense` block.
+    pub(super) fn add_offense(
+        &mut self,
+        offense: impl ByteRange,
+        message: impl Into<String>,
+        correction: impl FnOnce(&mut CorrectionPlan),
+    ) {
+        let mut plan = CorrectionPlan::default();
+        correction(&mut plan);
+        self.apply_correction(message, offense, plan);
+    }
+
     pub(super) fn replace(
         &mut self,
         message: impl Into<String>,
@@ -203,7 +186,7 @@ impl<'context, 'pr> CopContext<'context, 'pr> {
         offense: impl ByteRange,
         correction: CorrectionPlan,
     ) {
-        self.replace_many(message, offense, correction.edits);
+        self.replace_many(message, offense, correction.into_edits());
     }
 
     pub(super) fn remove(

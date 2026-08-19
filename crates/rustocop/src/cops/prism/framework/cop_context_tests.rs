@@ -7,11 +7,11 @@ fn correction_plan_swaps_disjoint_ranges_without_rebuilding_source() {
     let mut correction = CorrectionPlan::default();
 
     assert!(correction.swap(source, 0..4, 12..17));
+    assert!(!correction.swap(source, 0..8, 4..12));
     assert_eq!(
-        correction.edits,
+        correction.into_edits(),
         vec![(0..4, "right".to_string()), (12..17, "left".to_string())]
     );
-    assert!(!correction.swap(source, 0..8, 4..12));
 }
 
 #[test]
