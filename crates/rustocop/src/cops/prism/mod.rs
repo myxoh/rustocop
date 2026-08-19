@@ -1,21 +1,37 @@
 use ruby_prism::{parse, CallNode, Node, Visit};
 use std::sync::Arc;
 
+#[path = "framework/catalog_cop.rs"]
 mod catalog_cop;
+#[path = "framework/cop_context.rs"]
 mod cop_context;
+#[path = "framework/cop_policy.rs"]
 mod cop_policy;
+#[path = "framework/correction_engine.rs"]
 mod correction_engine;
+#[path = "framework/diagnostic.rs"]
 mod diagnostic;
+#[path = "framework/dsl.rs"]
 mod dsl;
+#[path = "framework/matchers.rs"]
 mod matchers;
+#[path = "framework/node_helpers.rs"]
 mod node_helpers;
+#[path = "framework/numeric_helpers.rs"]
 mod numeric_helpers;
+#[path = "runtime/prism_engine.rs"]
 mod prism_engine;
+#[path = "runtime/registry.rs"]
 mod registry;
+#[path = "runtime/runner.rs"]
 mod runner;
+#[path = "framework/source_file.rs"]
 mod source_file;
+#[path = "framework/source_helpers.rs"]
 mod source_helpers;
+#[path = "framework/source_syntax.rs"]
 mod source_syntax;
+#[path = "framework/ternary_conversion.rs"]
 mod ternary_conversion;
 use ternary_conversion::*;
 
@@ -230,4 +246,5 @@ fn inspect(
 }
 
 #[cfg(test)]
+#[path = "tests/integration.rs"]
 mod tests;

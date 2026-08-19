@@ -25,6 +25,9 @@
    and corrections; they do not write files or print output.
 5. Corrections use Prism byte offsets and must be non-overlapping. Add an
    autocorrection regression case for every correctable cop.
+6. Keep cop-family implementations directly under `cops/prism`. Reusable
+   authoring APIs belong in `cops/prism/framework`, while traversal, registry,
+   and dispatch code belongs in `cops/prism/runtime`.
 
 Start with [Building a cop](docs/building-a-cop.md) for the complete workflow.
 The [Prism cop DSL reference](docs/adding-a-prism-cop.md) documents the shared

@@ -136,7 +136,7 @@ This keeps every cop out of correction bookkeeping.
 
 ## Reusable matchers
 
-`cops/prism/matchers.rs` exposes focused helpers for recurring patterns:
+`cops/prism/framework/matchers.rs` exposes focused helpers for recurring patterns:
 `only_argument`, `receiver_call`, root constants, keyword presence,
 `node_source`, source equality, location equality, and common literal
 classification. Prefer `only_argument` when a rule requires exactly one

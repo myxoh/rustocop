@@ -7,6 +7,7 @@ use super::correction_engine::{accepted_corrections, apply_edits, Correction, Ed
 use super::{CopContext, CopPolicy};
 use crate::config::{CopConfig, RubyVersion};
 
+#[path = "diagnostic/reporter.rs"]
 mod reporter;
 pub(super) use reporter::Reporter;
 

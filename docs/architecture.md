@@ -39,7 +39,12 @@ src/
     diagnostic.rs  Prism finding-to-offense location conversion
     source.rs      mutable textual source representation
   cops/
-    prism/         discovered registry, CopContext, source geometry, DSL, and AST cops
+    prism/
+      mod.rs       composition root and cop-family registry
+      framework/   CopContext, DSL, matchers, diagnostics, and source geometry
+      runtime/     shared traversal, enabled-cop registry, and dispatch
+      tests/       cross-family Prism integration tests
+      *.rs         cohesive cop-family implementations
     text/          textual compatibility cops grouped by department
 ```
 
@@ -103,6 +108,12 @@ independently. See [Adding a Prism cop](adding-a-prism-cop.md) for the authoring
 API. The `cop_modules!` composition list declares and registers each cop family
 in one place. Public cop names come from implementations rather than a parallel
 catalog, and generated scaffolding performs the composition-root wiring.
+
+The physical Prism layout deliberately does not add another Rust module layer:
+`mod.rs` uses explicit paths for `framework/` and `runtime/`, so existing cop
+families keep the short `super::*` authoring surface. New reusable authoring
+APIs belong in `framework/`; parse/traversal/dispatch code belongs in
+`runtime/`; actual lint behavior stays in a named cop-family file.
 
 `--parallel` distributes complete files across scoped worker threads. Results
 are restored to discovery order before formatting, so parallel and sequential
