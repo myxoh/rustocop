@@ -8,7 +8,6 @@ const NONZERO_MSG: &str = "Use `!empty?` instead of `{current}`.";
 define_cops! {
     ArrayIntersect => "Style/ArrayIntersect" => source(array_intersect),
     RedundantMinMaxBy => "Style/RedundantMinMaxBy" => source(redundant_min_max_by),
-    RedundantSort => "Style/RedundantSort" => source(redundant_sort),
     TallyMethod => "Style/TallyMethod" => call(tally_method),
     ZeroLengthPredicate => "Style/ZeroLengthPredicate" => call_rule(ZeroLengthPredicateRule, on_send, restrict [b"size", b"length"]),
 }
@@ -103,50 +102,6 @@ fn redundant_min_max_by(context: &mut CopContext<'_, '_>) {
                 preferred,
             );
             search = end;
-        }
-    }
-}
-
-fn redundant_sort(context: &mut CopContext<'_, '_>) {
-    let source = context.source();
-    for (suffix, replacement, message_name) in [
-        (".sort.first", ".min", "min"),
-        (".sort.last", ".max", "max"),
-        (".sort_by.first", ".min_by", "min_by"),
-        (".sort_by.last", ".max_by", "max_by"),
-    ] {
-        for start in source
-            .match_indices(suffix)
-            .map(|(at, _)| at)
-            .collect::<Vec<_>>()
-        {
-            context.replace(
-                format!(
-                    "Use `{message_name}` instead of `{}...{}`.",
-                    suffix.split('.').nth(1).unwrap_or("sort"),
-                    suffix.rsplit('.').next().unwrap_or_default()
-                ),
-                start + 1..start + suffix.len(),
-                start..start + suffix.len(),
-                replacement,
-            );
-        }
-        let safe_suffix = suffix.replace('.', "&.");
-        for start in source
-            .match_indices(&safe_suffix)
-            .map(|(at, _)| at)
-            .collect::<Vec<_>>()
-        {
-            context.replace(
-                format!(
-                    "Use `{message_name}` instead of `{}...{}`.",
-                    suffix.split('.').nth(1).unwrap_or("sort"),
-                    suffix.rsplit('.').next().unwrap_or_default()
-                ),
-                start + 2..start + safe_suffix.len(),
-                start..start + safe_suffix.len(),
-                replacement.replace('.', "&."),
-            );
         }
     }
 }

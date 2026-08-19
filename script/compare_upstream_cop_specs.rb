@@ -70,6 +70,10 @@ FileUtils.mkdir_p(config_root)
 config_paths = {}
 cases.each do |test_case|
   config = test_case.fetch("config")
+  all_cops = config.fetch("AllCops", {}).merge(
+    "TargetRubyVersion" => test_case.fetch("ruby_version")
+  )
+  config = config.merge("AllCops" => all_cops)
   digest = Digest::SHA256.hexdigest(JSON.generate(config))
   config_paths[digest] ||= begin
     path = File.join(config_root, "#{digest}.yml")
@@ -87,7 +91,8 @@ correction_alternatives = cases.each_with_object(Hash.new { |hash, key| hash[key
   next unless test_case.key?("correction") && !test_case.fetch("asserts_no_correction", false)
 
   key = JSON.generate([
-    test_case.fetch("cop"), test_case.fetch("source"), test_case.fetch("path"), test_case.fetch("config")
+    test_case.fetch("cop"), test_case.fetch("source"), test_case.fetch("path"),
+    test_case.fetch("ruby_version"), test_case.fetch("config")
   ])
   grouped[key] << test_case.fetch("correction")
 end
@@ -163,7 +168,7 @@ workers = Array.new(options[:jobs]) do
           actual_correction = File.binread(source_path)
           correction_key = JSON.generate([
             test_case.fetch("cop"), test_case.fetch("source"), test_case.fetch("path"),
-            test_case.fetch("config")
+            test_case.fetch("ruby_version"), test_case.fetch("config")
           ])
           alternatives = correction_alternatives.fetch(correction_key, []).map do |correction|
             if correction.is_a?(Hash) && correction.key?("$hex")

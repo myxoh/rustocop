@@ -8,10 +8,6 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
     let mut cops = vec![
         custom("Lint/ShadowedException", shadowed_exception),
         custom("Lint/ConstantDefinitionInBlock", constant_in_block),
-        custom(
-            "Style/ReturnNilInPredicateMethodDefinition",
-            return_nil_predicate,
-        ),
         custom("Lint/ShadowingOuterLocalVariable", shadowing_outer_local),
         report(
             "Lint/LiteralAssignmentInCondition",
@@ -83,45 +79,6 @@ fn constant_in_block(context: &mut CopContext<'_, '_>) {
         }
         if trimmed == "end" && block_depth > 0 {
             block_depth -= 1;
-        }
-    }
-}
-
-fn return_nil_predicate(context: &mut CopContext<'_, '_>) {
-    let lines = context.source_file().lines().collect::<Vec<_>>();
-    let mut predicate = false;
-    for (index, (offset, line)) in lines.iter().copied().enumerate() {
-        if line.trim_start().starts_with("def ") {
-            let method = line.trim_start()[4..]
-                .split(['(', ' '])
-                .next()
-                .unwrap_or("")
-                .rsplit('.')
-                .next()
-                .unwrap_or("")
-                .to_string();
-            predicate = method.ends_with('?')
-                && !context
-                    .config_values("AllowedMethods")
-                    .iter()
-                    .any(|name| name == &method)
-                && context.config_values("AllowedPatterns").is_empty();
-        }
-        if predicate
-            && line.trim() == "nil"
-            && lines
-                .get(index + 1)
-                .is_some_and(|(_, line)| line.trim() == "end")
-        {
-            context.replace(
-                "Return `false` instead of `nil` in a predicate method.",
-                offset..offset + line.len(),
-                offset..offset + line.len(),
-                format!("{}false", &line[..line.len() - line.trim_start().len()]),
-            );
-        }
-        if line.trim() == "end" {
-            predicate = false;
         }
     }
 }

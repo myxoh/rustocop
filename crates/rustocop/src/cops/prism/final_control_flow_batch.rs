@@ -1,4 +1,4 @@
-use super::catalog_cop::{custom, replace, report};
+use super::catalog_cop::{custom, report};
 use super::*;
 
 mod registry;
@@ -6,12 +6,6 @@ mod registry;
 pub(super) fn cops() -> Vec<Box<dyn Cop>> {
     let mut cops = vec![
         custom("Style/ParenthesesAroundCondition", parentheses_condition),
-        replace(
-            "Style/RescueStandardError",
-            "rescue Exception",
-            "rescue StandardError",
-            "Avoid rescuing the `Exception` class.",
-        ),
         custom("Lint/UnreachableLoop", unreachable_loop),
         custom("Style/IdenticalConditionalBranches", identical_branches),
         custom("Style/NegatedIfElseCondition", negated_if_else),
@@ -22,7 +16,6 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
             "Use `filter_map` instead of `map` followed by `compact`.",
         ),
         custom("Lint/EmptyConditionalBody", empty_conditional),
-        custom("Style/RedundantReturn", redundant_return),
     ];
     cops.extend(registry::cops());
     cops
@@ -153,30 +146,6 @@ fn empty_conditional(context: &mut CopContext<'_, '_>) {
                 "Avoid empty conditional bodies.",
                 window[0].0..window[1].0 + window[1].1.len(),
             );
-        }
-    }
-}
-
-fn redundant_return(context: &mut CopContext<'_, '_>) {
-    if context.source().contains("proc do") || context.source().contains("lambda do") {
-        return;
-    }
-    let lines = context.source_file().lines().collect::<Vec<_>>();
-    for window in lines.windows(2) {
-        if let Some(value) = window[0].1.trim_start().strip_prefix("return ") {
-            if context.config_bool("AllowMultipleReturnValues", false) && value.contains(',') {
-                continue;
-            }
-            if window[1].1.trim() == "end" {
-                let start = window[0].0 + window[0].1.find("return ").unwrap_or(0);
-                context.replace(
-                    "Redundant `return` detected.",
-                    start..start + 7,
-                    start..start + 7,
-                    "",
-                );
-                let _ = value;
-            }
         }
     }
 }

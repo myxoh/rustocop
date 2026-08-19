@@ -19,7 +19,6 @@ define_cops! {
     FormatString => "Style/FormatString" => source(format_string),
     WordArray => "Style/WordArray" => stateful_node_rule(as_array_node, WordArrayRule, WordArrayState, on_array),
     PercentLiteralDelimiters => "Style/PercentLiteralDelimiters" => source(percent_delimiters),
-    RedundantStringEscape => "Style/RedundantStringEscape" => source(redundant_string_escape),
 }
 
 fn symbol_array(node: &ruby_prism::ArrayNode<'_>, context: &mut CopContext<'_, '_>) {
@@ -1121,8 +1120,4 @@ fn percent_delimiters(context: &mut CopContext<'_, '_>) {
             }
         }
     }
-}
-
-fn redundant_string_escape(context: &mut CopContext<'_, '_>) {
-    context.replace_code("\\/", "/", "Remove the redundant escape.");
 }

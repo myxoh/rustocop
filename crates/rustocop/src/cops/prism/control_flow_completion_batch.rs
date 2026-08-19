@@ -5,8 +5,6 @@ define_cops! {
     InvertibleUnlessCondition => "Style/InvertibleUnlessCondition" => source(invertible_unless),
     CombinableLoops => "Style/CombinableLoops" => source(combinable_loops),
     EachForSimpleLoop => "Style/EachForSimpleLoop" => source(each_for_simple_loop),
-    RescueModifier => "Style/RescueModifier" => source(rescue_modifier),
-    RedundantSelfAssignmentBranch => "Style/RedundantSelfAssignmentBranch" => source(redundant_self_branch),
 }
 
 fn redundant_conditional(context: &mut CopContext<'_, '_>) {
@@ -201,55 +199,5 @@ fn each_for_simple_loop(context: &mut CopContext<'_, '_>) {
             format!("{number}.times"),
         );
         search = offense_end;
-    }
-}
-
-fn rescue_modifier(context: &mut CopContext<'_, '_>) {
-    for (offset, line) in context.source_file().lines() {
-        let Some(at) = line.find(" rescue ") else {
-            continue;
-        };
-        let code = line.trim();
-        let indent = line.len() - line.trim_start().len();
-        let body = line[indent..at].trim();
-        let handler = line[at + 8..].trim();
-        context.replace(
-            "Avoid using `rescue` in its modifier form.",
-            offset + indent..offset + line.len(),
-            offset + indent..offset + line.len(),
-            format!("begin\n  {body}\nrescue\n  {handler}\nend"),
-        );
-        let _ = code;
-    }
-}
-
-fn redundant_self_branch(context: &mut CopContext<'_, '_>) {
-    for (offset, line) in context.source_file().lines() {
-        let Some((left, rest)) = line.trim().split_once(" = ") else {
-            continue;
-        };
-        let Some((condition, branches)) = rest.split_once(" ? ") else {
-            continue;
-        };
-        let Some((truthy, falsey)) = branches.split_once(" : ") else {
-            continue;
-        };
-        let (branch, replacement) = if falsey.trim() == left {
-            (falsey.trim(), format!("{left} = {truthy} if {condition}"))
-        } else if truthy.trim() == left {
-            (
-                truthy.trim(),
-                format!("{left} = {falsey} unless {condition}"),
-            )
-        } else {
-            continue;
-        };
-        let start = offset + line.rfind(branch).unwrap_or(0);
-        context.replace(
-            "Remove the self-assignment branch.",
-            start..start + branch.len(),
-            offset + line.find(left).unwrap_or(0)..offset + line.len(),
-            replacement,
-        );
     }
 }

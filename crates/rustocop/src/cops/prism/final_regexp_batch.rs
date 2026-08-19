@@ -39,7 +39,6 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
             ":",
             "Redundant escape inside regexp literal.",
         ),
-        custom("Style/RegexpLiteral", regexp_literal),
         replace(
             "Style/RedundantRegexpArgument",
             ".match(/foo/, 0)",
@@ -283,30 +282,6 @@ fn redundant_character_class(context: &mut CopContext<'_, '_>) {
                 regexp_start + 1..regexp_end,
                 &regexp[1..regexp.len() - 1],
             );
-        }
-    }
-}
-
-fn regexp_literal(context: &mut CopContext<'_, '_>) {
-    let source = context.source().to_string();
-    for quote in ['\'', '"'] {
-        let needle = format!("Regexp.new({quote}");
-        let mut search = 0;
-        while let Some(relative) = source[search..].find(&needle) {
-            let start = search + relative;
-            let body_start = start + needle.len();
-            let Some(close) = source[body_start..].find(quote).map(|at| body_start + at) else {
-                break;
-            };
-            if source.as_bytes().get(close + 1) == Some(&b')') {
-                context.replace(
-                    "Use a regexp literal instead of `Regexp.new`.",
-                    start..close + 2,
-                    start..close + 2,
-                    format!("/{}/", &source[body_start..close]),
-                );
-            }
-            search = close + 1;
         }
     }
 }
