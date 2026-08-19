@@ -19,6 +19,16 @@ namespace :quality do
   task :compatibility_baseline do
     report = ENV.fetch("REPORT", "tmp/rubocop-1.87.0-compatibility.json")
     ruby "script/check_compatibility_baseline.rb", report
+    ruby "script/report_compatibility_drift.rb", report,
+         "--output", "tmp/compatibility-promotion-drift.md"
+  end
+
+  desc "Reject unclassified heuristic cops in trusted test surfaces"
+  task :test_contracts do
+    ruby "script/check_test_cop_classifications.rb"
+    ruby "script/check_hardening_contracts.rb"
+    ruby "script/generate_source_cop_inventory.rb", "--check"
+    ruby "script/generate_compatibility_corpus.rb", "--check"
   end
 end
 
@@ -38,6 +48,6 @@ namespace :build do
   end
 end
 
-task spec: ["build:native", "quality:architecture"]
+task spec: ["build:native", "quality:architecture", "quality:test_contracts"]
 
 task default: :spec

@@ -43,29 +43,26 @@ exe/rustocop \
 
 ## Performance result
 
-The synthetic benchmark uses the committed 500-file compatibility corpus,
-containing 9,090 bytes of Ruby. It enables 20 built-in cops plus one custom cop
+The synthetic benchmark uses the pinned 500-file benchmark corpus,
+containing 9,110 bytes of Ruby. It enables 20 built-in cops plus one custom cop
 that raises one offense in each file. RuboCop 1.87.0 uses Prism, with caching
 and server mode disabled. Results are medians of seven runs after two warmups.
 
-| Variant | Median | p95 |
-| --- | ---: | ---: |
-| Rustocop native binary, 20 built-in cops | **9.07 ms** | 9.19 ms |
-| Rustocop Ruby entrypoint, 20 built-in cops | 85.01 ms | 87.38 ms |
-| Mixed native binary, 20 native + 1 custom cop | **456.12 ms** | 463.33 ms |
-| Mixed Ruby entrypoint, 20 native + 1 custom cop | 531.26 ms | 536.79 ms |
-| RuboCop, custom cop only | 446.74 ms | 454.94 ms |
-| RuboCop, all 20 built-ins + custom cop | 478.47 ms | 485.41 ms |
+<!-- generated:mixed-custom-results:start -->
+| Variant | Median | p95 | Relative to native binary |
+| --- | ---: | ---: | ---: |
+| Rustocop native binary, 20 built-in cops | 8.98 ms | 12.93 ms | 1.0× |
+| Rustocop Ruby entrypoint, 20 built-in cops | 88.68 ms | 91.71 ms | 9.9× |
+| Mixed native binary, 20 native + 1 custom cop | 455.44 ms | 460.53 ms | 50.7× |
+| Mixed Ruby entrypoint, 20 native + 1 custom cop | 530.62 ms | 540.34 ms | 59.1× |
+| RuboCop, custom cop only | 448.95 ms | 454.71 ms | 50.0× |
+| RuboCop, all 20 built-ins + custom cop | 474.89 ms | 481.18 ms | 52.9× |
 
-The direct mixed run produced JSON identical to pure RuboCop and was 4.7%
-faster. It was only 2.1% slower than asking RuboCop to run the custom cop alone,
-showing that concurrent native inspection adds little beyond the unavoidable
-Ruby work.
-
-One Ruby custom cop nevertheless made the run approximately 50 times slower
-than pure native Rustocop. RuboCop startup and its second Prism parse are the
-performance floor; the native tree cannot be shared across the process
-boundary.
+The direct mixed run was 4.1% faster than pure RuboCop and produced
+identical normalized JSON. One Ruby custom cop still made this tiny-corpus run
+50.7 times slower than pure native Rustocop because RuboCop must
+start Ruby, load the custom cop, and build a second set of Prism trees.
+<!-- generated:mixed-custom-results:end -->
 
 The existing Ruby `exe/rustocop` entrypoint adds approximately 75 ms before it
 replaces itself with the native executable. On this startup-dominated corpus,
@@ -108,14 +105,14 @@ Negative consequences:
 
 ### Run all selected cops through RuboCop when a custom cop is present
 
-This is operationally simple but discards native work. It measured 478.47 ms,
-compared with 456.12 ms for direct mixed execution, and the gap should grow when
+This is operationally simple but discards native work. It measured 478.32 ms,
+compared with 457.36 ms for direct mixed execution, and the gap should grow when
 the built-in set is more expensive.
 
 ### Coordinate mixed execution in the Ruby entrypoint
 
 The first prototype worked but paid Ruby startup before launching another Ruby
-process for RuboCop. It measured approximately 541 ms and was slower than pure
+process for RuboCop. It measured approximately 533 ms and was slower than pure
 RuboCop, so coordination was moved into the native executable.
 
 ### Ignore custom cops

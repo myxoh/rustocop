@@ -59,11 +59,15 @@ fn check_unused_method_argument(
             continue;
         }
         let end = find_matching_end(lines, index).unwrap_or(index);
-        let body = lines[index + 1..end]
-            .iter()
-            .map(|line| line.body.as_str())
-            .collect::<Vec<&str>>()
-            .join("\n");
+        let body = if end > index {
+            lines[index + 1..end]
+                .iter()
+                .map(|line| line.body.as_str())
+                .collect::<Vec<&str>>()
+                .join("\n")
+        } else {
+            String::new()
+        };
         for arg in args {
             if arg.starts_with('_') || body.contains(&arg) {
                 continue;

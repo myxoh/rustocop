@@ -6,9 +6,9 @@ require "open3"
 require "rubocop"
 require "yaml"
 require_relative "../lib/rustocop/compatibility_baseline"
+require_relative "../lib/rustocop/compatibility_status"
 
 ROOT = File.expand_path("..", __dir__)
-STATUS_PATH = File.join(ROOT, "spec/upstream/rubocop-1.87.0/status.yml")
 YAML_OUTPUT = File.join(ROOT, "spec/upstream/rubocop-1.87.0/remaining_cops.yml")
 MARKDOWN_OUTPUT = File.join(ROOT, "docs/remaining-cops.md")
 
@@ -20,9 +20,10 @@ native = ENV.fetch(
 abort "compatibility report not found: #{report_path}" unless File.file?(report_path)
 abort "native Rustocop executable not found: #{native}" unless File.executable?(native)
 
-status = YAML.safe_load(File.read(STATUS_PATH))
+compatibility_status = Rustocop::CompatibilityStatus.load(root: ROOT)
+status = compatibility_status.data
 report = JSON.parse(File.read(report_path))
-verified = status.fetch("fully_compatible_cops")
+verified = compatibility_status.verified_cops
 registry = RuboCop::Cop::Registry.global.to_a
 registry_names = registry.map(&:cop_name).sort
 implemented_output, implemented_status = Open3.capture2(native, "--show-cops")

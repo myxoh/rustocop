@@ -2,6 +2,7 @@ use super::*;
 
 pub(super) struct Runner<'registry, 'context> {
     pub(super) registry: &'registry Registry,
+    pub(super) node_cops: &'registry [usize],
     pub(super) context: &'context mut Context,
     pub(super) source: &'context str,
     pub(super) ancestors: Vec<Node<'context>>,
@@ -29,7 +30,6 @@ macro_rules! visit_typed_branch {
 impl<'pr> Visit<'pr> for Runner<'_, 'pr> {
     fn visit_branch_node_enter(&mut self, node: Node<'pr>) {
         for cop in self
-            .registry
             .node_cops
             .iter()
             .map(|index| &self.registry.cops[*index])
@@ -45,7 +45,6 @@ impl<'pr> Visit<'pr> for Runner<'_, 'pr> {
 
     fn visit_leaf_node_enter(&mut self, node: Node<'pr>) {
         for cop in self
-            .registry
             .node_cops
             .iter()
             .map(|index| &self.registry.cops[*index])

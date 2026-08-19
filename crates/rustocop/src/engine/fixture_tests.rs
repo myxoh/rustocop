@@ -18,6 +18,7 @@ fn run_fixture(
     let expected_offenses = fs::read_to_string(directory.join("offenses.tsv")).unwrap();
     let options = InspectionConfig {
         autocorrect,
+        cop_parallelism: crate::config::Parallelism::Sequential,
         cops: CopSelection::only(cops),
         target_ruby_version: ruby_version,
         cop_config: Arc::new(CopConfig::default()),
@@ -102,7 +103,7 @@ fixture_test!(
     orders_text_and_prism_offenses_by_location,
     "mixed_ordering",
     "/project/mixed.rb",
-    "Layout/ExtraSpacing,Security/Eval,Security/JSONLoad",
+    "Lint/BigDecimalNew,Security/Eval,Security/JSONLoad",
     false,
     RubyVersion::default()
 );

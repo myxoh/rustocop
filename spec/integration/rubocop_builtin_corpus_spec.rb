@@ -1,13 +1,17 @@
 # frozen_string_literal: true
 
+require_relative "../../lib/rustocop/compatibility_status"
+
 RSpec.describe "RuboCop built-in compatibility corpus" do
   fixture_root = File.join(ROOT, "spec", "fixtures", "rubocop_builtin_examples")
   manifest = File.readlines(File.join(fixture_root, "manifest.tsv"), chomp: true).drop(1).to_h do |line|
     directory, cop = line.split("\t", 2)
     [cop, Dir[File.join(fixture_root, directory, "*.rb")].sort]
   end
+  status = Rustocop::CompatibilityStatus.load(root: ROOT)
 
   raise "expected 20 verified built-in cops, got #{manifest.length}" unless manifest.length == 20
+  status.validate_verified!(manifest.keys, label: "compatibility corpus")
   raise "expected 500 Ruby examples, got #{manifest.values.flatten.length}" unless manifest.values.flatten.length == 500
   raise "expected 25 examples per cop" unless manifest.values.all? { |paths| paths.length == 25 }
 

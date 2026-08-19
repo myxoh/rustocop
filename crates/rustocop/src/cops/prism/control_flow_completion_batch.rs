@@ -209,8 +209,10 @@ fn rescue_modifier(context: &mut CopContext<'_, '_>) {
         let Some(at) = line.find(" rescue ") else {
             continue;
         };
-        let code = line.trim();
         let indent = line.len() - line.trim_start().len();
+        if at <= indent {
+            continue;
+        }
         let body = line[indent..at].trim();
         let handler = line[at + 8..].trim();
         context.replace(
@@ -219,7 +221,6 @@ fn rescue_modifier(context: &mut CopContext<'_, '_>) {
             offset + indent..offset + line.len(),
             format!("begin\n  {body}\nrescue\n  {handler}\nend"),
         );
-        let _ = code;
     }
 }
 

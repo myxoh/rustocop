@@ -8,7 +8,7 @@ extend BenchmarkSupport
 
 root = File.expand_path('..', __dir__)
 output_root = performance_output_root(root)
-cops, paths = compatibility_corpus(root, interleaved: false)
+cops, paths = benchmark_corpus(root, interleaved: false)
 
 native = File.join(root, 'libexec/rustocop-native')
 variants = {

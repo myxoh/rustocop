@@ -3,16 +3,15 @@ use super::*;
 #[test]
 fn expands_departments_without_enabling_default_disabled_cops() {
     let selection = CopSelection::only("Style");
-    assert!(selection.enabled("Style/HashSyntax"));
+    assert!(selection.enabled("Style/KeywordParametersOrder"));
     assert!(!selection.enabled("Style/Copyright"));
-    assert!(!selection.enabled("Style/Documentation"));
 }
 
 #[test]
 fn explicitly_enables_default_disabled_cops() {
-    let selection = CopSelection::only("Style/Documentation");
-    assert!(selection.enabled("Style/Documentation"));
-    assert!(!selection.enabled("Style/HashSyntax"));
+    let selection = CopSelection::only("Style/Copyright");
+    assert!(selection.enabled("Style/Copyright"));
+    assert!(!selection.enabled("Style/KeywordParametersOrder"));
 }
 
 #[test]
@@ -81,13 +80,11 @@ fn preserves_block_scalars_blank_lines_and_quoted_hash_values() {
 
 #[test]
 fn unquotes_nested_map_keys() {
-    let config = CopConfig::from_source(
-        "Style/PercentLiteralDelimiters:\n  PreferredDelimiters:\n    '%x': '[]'\n",
-    );
+    let config = CopConfig::from_source("Style/Example:\n  PreferredDelimiters:\n    '%x': '[]'\n");
 
     assert_eq!(
         config
-            .map("Style/PercentLiteralDelimiters", "PreferredDelimiters")
+            .map("Style/Example", "PreferredDelimiters")
             .and_then(|values| values.get("%x"))
             .map(String::as_str),
         Some("[]")

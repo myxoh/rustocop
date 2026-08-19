@@ -107,6 +107,49 @@ RSpec.describe "rustocop executable" do
     expect(parallel.stdout).to eq(sequential.stdout)
   end
 
+  it "preserves detection output when source cops run in parallel" do
+    fixture_root = File.join(ROOT, "spec/fixtures/rubocop_builtin_examples")
+    paths = Dir[File.join(fixture_root, "{lint_empty_block,security_eval,style_semicolon}/*.rb")].sort
+    cops = "Lint/EmptyBlock,Security/Eval,Style/Semicolon"
+    sequential = run_rustocop(
+      "--no-parallel", "--format", "json", "--only", cops, *paths
+    )
+    cop_parallel = run_rustocop(
+      "--cop-jobs", "4", "--format", "json", "--only", cops, *paths
+    )
+
+    expect(cop_parallel.stderr).to eq("")
+    expect(cop_parallel.status.exitstatus).to eq(sequential.status.exitstatus)
+    expect(parsed_json(cop_parallel)).to eq(parsed_json(sequential))
+  end
+
+  it "does not mistake a rescue clause for a rescue modifier" do
+    source = <<~RUBY
+      begin
+        perform_work
+      rescue StandardError
+        recover
+      end
+    RUBY
+
+    result = run_rustocop("--only", "Style/RescueModifier", "--stdin", "example.rb", stdin: source)
+
+    expect(result.stderr).to eq("")
+    expect(result.status.exitstatus).to eq(0)
+    expect(result.stdout).to include("0 offenses detected")
+  end
+
+  it "handles a single-line method while checking unused arguments" do
+    result = run_rustocop(
+      "--only", "Lint/UnusedMethodArgument", "--stdin", "example.rb",
+      stdin: "def perform(value); end\n"
+    )
+
+    expect(result.stderr).to eq("")
+    expect(result.status.exitstatus).to eq(1)
+    expect(result.stdout).to include("Unused method argument - `value`.")
+  end
+
   it "rejects an invalid parallel worker count" do
     result = run_rustocop("--jobs", "0", "--stdin", "example.rb", stdin: "puts :ok\n")
 

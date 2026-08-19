@@ -75,6 +75,9 @@ fn check_trailing_comma(
     let Some((last_start, last_end)) = last_element else {
         return;
     };
+    if last_end > close {
+        return;
+    }
     let tail = &context.source()[last_end..close];
     let leading = tail
         .bytes()

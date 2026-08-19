@@ -5,13 +5,14 @@ require "open3"
 require "rbconfig"
 require "shellwords"
 require "time"
+require_relative "../lib/rustocop/benchmark_documentation"
 require_relative "support/benchmark"
 
 extend BenchmarkSupport
 
 root = File.expand_path("..", __dir__)
 output_root = performance_output_root(root)
-cops, paths = compatibility_corpus(root)
+cops, paths = benchmark_corpus(root)
 custom_cop_name = "Custom/SyntheticFileHeader"
 custom_cop = File.join(root, "benchmark/custom_cops/synthetic_file_header.rb")
 config = File.join(root, "benchmark/custom-cop-rubocop.yml")
@@ -91,6 +92,7 @@ report = {
 }
 json_path = File.join(output_root, "mixed-custom-cop-benchmark.json")
 File.write(json_path, JSON.pretty_generate(report))
+Rustocop::BenchmarkDocumentation.update_mixed(root, report)
 
 puts "variant\tmedian_ms\tp95_ms"
 measurements.each do |name, measurement|

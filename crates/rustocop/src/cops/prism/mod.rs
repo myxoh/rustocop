@@ -180,7 +180,7 @@ cop_modules!(
     gemspec_completion,
 );
 
-use crate::config::{CopConfig, RubyVersion};
+use crate::config::{CopConfig, Parallelism, RubyVersion};
 use cop_context::{CopContext, CorrectionPlan};
 use cop_policy::CopPolicy;
 use diagnostic::{Context, Reporter};
@@ -266,6 +266,7 @@ fn inspect(
         "example.rb",
         source,
         autocorrect,
+        crate::config::Parallelism::Sequential,
         target_ruby_version,
         Arc::new(CopConfig::default()),
     )

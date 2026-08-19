@@ -27,6 +27,7 @@ pub(crate) struct RunOptions {
 #[derive(Clone, Debug)]
 pub(crate) struct InspectionConfig {
     pub(crate) autocorrect: bool,
+    pub(crate) cop_parallelism: Parallelism,
     pub(crate) cops: CopSelection,
     pub(crate) target_ruby_version: RubyVersion,
     pub(crate) cop_config: Arc<CopConfig>,

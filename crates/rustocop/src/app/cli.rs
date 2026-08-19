@@ -23,6 +23,7 @@ pub(super) fn parse_args(mut args: Vec<String>) -> Result<Command, String> {
         config_path: None,
         inspection: InspectionConfig {
             autocorrect: false,
+            cop_parallelism: Parallelism::Sequential,
             cops: CopSelection::default_enabled(),
             target_ruby_version: RubyVersion::default(),
             cop_config: Arc::new(CopConfig::default()),
@@ -44,13 +45,21 @@ pub(super) fn parse_args(mut args: Vec<String>) -> Result<Command, String> {
             "--stdin" => options.stdin_path = Some(take_value(&mut args, &arg)?),
             "--parallel" => options.parallelism = Parallelism::Automatic,
             "--no-parallel" => options.parallelism = Parallelism::Sequential,
+            "--parallel-cops" => options.inspection.cop_parallelism = Parallelism::Automatic,
+            "--no-parallel-cops" => {
+                options.inspection.cop_parallelism = Parallelism::Sequential;
+            }
             "--jobs" => {
                 options.parallelism =
                     Parallelism::Fixed(parse_jobs(&take_value(&mut args, &arg)?)?);
             }
+            "--cop-jobs" => {
+                options.inspection.cop_parallelism =
+                    Parallelism::Fixed(parse_jobs(&take_value(&mut args, &arg)?)?);
+            }
             "--config" | "-c" => {
                 let path = take_value(&mut args, &arg)?;
-                apply_config(&mut options.inspection, &path);
+                apply_config(&mut options.inspection, &path)?;
                 options.config_path = Some(path);
             }
             "--require" | "--plugin" => {
@@ -83,12 +92,16 @@ pub(super) fn parse_args(mut args: Vec<String>) -> Result<Command, String> {
             }
             _ if arg.starts_with("--config=") => {
                 let path = arg.strip_prefix("--config=").unwrap_or_default();
-                apply_config(&mut options.inspection, path);
+                apply_config(&mut options.inspection, path)?;
                 options.config_path = Some(path.to_string());
             }
             _ if arg.starts_with("--jobs=") => {
                 let value = arg.strip_prefix("--jobs=").unwrap_or_default();
                 options.parallelism = Parallelism::Fixed(parse_jobs(value)?);
+            }
+            _ if arg.starts_with("--cop-jobs=") => {
+                let value = arg.strip_prefix("--cop-jobs=").unwrap_or_default();
+                options.inspection.cop_parallelism = Parallelism::Fixed(parse_jobs(value)?);
             }
             _ if arg.starts_with("--require=") || arg.starts_with("--plugin=") => {
                 let (name, value) = arg.split_once('=').unwrap_or((&arg, ""));
@@ -103,6 +116,16 @@ pub(super) fn parse_args(mut args: Vec<String>) -> Result<Command, String> {
 
     if options.format != "json" && options.format != "simple" {
         return Err(format!("unsupported formatter {}", options.format));
+    }
+    if options.inspection.autocorrect
+        && options.inspection.cop_parallelism != Parallelism::Sequential
+    {
+        return Err("cop parallelism POC supports detection only".to_string());
+    }
+    if options.parallelism != Parallelism::Sequential
+        && options.inspection.cop_parallelism != Parallelism::Sequential
+    {
+        return Err("file and cop parallelism cannot be combined in the POC".to_string());
     }
     Ok(Command::Run(options))
 }
@@ -122,12 +145,12 @@ fn parse_jobs(value: &str) -> Result<usize, String> {
         .ok_or_else(|| format!("invalid worker count {value}"))
 }
 
-fn apply_config(config: &mut InspectionConfig, path: &str) {
-    let Some(source) = fs::read_to_string(path).ok() else {
-        return;
-    };
+fn apply_config(config: &mut InspectionConfig, path: &str) -> Result<(), String> {
+    let source = fs::read_to_string(path)
+        .map_err(|error| format!("could not read config {path}: {error}"))?;
     config.target_ruby_version = target_ruby_version_from_source(&source).unwrap_or_default();
     config.cop_config = Arc::new(CopConfig::from_source(&source));
+    Ok(())
 }
 
 fn target_ruby_version_from_source(source: &str) -> Option<RubyVersion> {
@@ -169,6 +192,11 @@ mod tests {
         };
         assert_eq!(automatic.parallelism, Parallelism::Automatic);
         assert_eq!(fixed.parallelism, Parallelism::Fixed(4));
+
+        let Command::Run(cops) = parse_args(vec!["--cop-jobs=3".to_string()]).unwrap() else {
+            panic!("expected run command");
+        };
+        assert_eq!(cops.inspection.cop_parallelism, Parallelism::Fixed(3));
     }
 
     #[test]
@@ -185,7 +213,6 @@ mod tests {
             "--require".to_string(),
             "custom/cop.rb".to_string(),
             "--plugin=custom-plugin".to_string(),
-            "--config=custom.yml".to_string(),
         ])
         .unwrap() else {
             panic!("expected run command");
@@ -198,6 +225,33 @@ mod tests {
                 ("--plugin".to_string(), "custom-plugin".to_string())
             ]
         );
-        assert_eq!(options.config_path.as_deref(), Some("custom.yml"));
+    }
+
+    #[test]
+    fn rejects_an_unreadable_requested_config() {
+        let missing = format!("{}/missing-rubocop.yml", env!("CARGO_MANIFEST_DIR"));
+        let error = parse_args(vec![format!("--config={missing}")])
+            .err()
+            .expect("missing config should fail");
+
+        assert!(error.starts_with(&format!("could not read config {missing}:")));
+    }
+
+    #[test]
+    fn keeps_cop_parallelism_detection_only_and_separate_from_file_workers() {
+        let correction = parse_args(vec!["--parallel-cops".to_string(), "-A".to_string()]);
+        assert_eq!(
+            correction.err().as_deref(),
+            Some("cop parallelism POC supports detection only")
+        );
+
+        let nested = parse_args(vec![
+            "--parallel".to_string(),
+            "--parallel-cops".to_string(),
+        ]);
+        assert_eq!(
+            nested.err().as_deref(),
+            Some("file and cop parallelism cannot be combined in the POC")
+        );
     }
 }

@@ -5,6 +5,7 @@ require "open3"
 require "rbconfig"
 require "shellwords"
 require "time"
+require_relative "../lib/rustocop/benchmark_documentation"
 require_relative "support/benchmark"
 
 extend BenchmarkSupport
@@ -14,7 +15,7 @@ output_root = performance_output_root(root)
 
 abort "memory benchmark currently requires macOS /usr/bin/time -l" unless RbConfig::CONFIG.fetch("host_os").include?("darwin")
 
-cops, paths = compatibility_corpus(root)
+cops, paths = benchmark_corpus(root)
 config_path = prism_config(output_root)
 
 native = File.join(root, "libexec/rustocop-native")
@@ -111,6 +112,7 @@ report = {
 
 json_path = File.join(output_root, "memory-benchmark.json")
 File.write(json_path, JSON.pretty_generate(report))
+Rustocop::BenchmarkDocumentation.update_memory(root, report)
 
 puts "files\trustocop_mib\tparallel_mib\trubocop_prism_mib\tratio\tverified"
 results.each do |result|
