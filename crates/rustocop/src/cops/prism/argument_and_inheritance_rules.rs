@@ -294,28 +294,41 @@ fn yaml_file_read(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     let Some(path) = only_argument(&read) else {
         return;
     };
-    let Some(selector) = node.message_loc() else {
+    let Some(offense) = offense_range(node) else {
         return;
     };
-    let rest = values
+    let preferred = preferred_yaml_file_read(node, &path, &values[1..], context.source_file());
+    let message = format!("Use `{preferred}` instead.");
+    context.add_offense(offense.clone(), message, |corrector| {
+        corrector.replace(offense, preferred);
+    });
+}
+
+fn offense_range(node: &CallNode<'_>) -> Option<std::ops::Range<usize>> {
+    let selector = node.message_loc()?;
+    Some(selector.start_offset()..node.location().end_offset())
+}
+
+fn preferred_yaml_file_read(
+    node: &CallNode<'_>,
+    path: &Node<'_>,
+    rest: &[Node<'_>],
+    file: SourceFile<'_>,
+) -> String {
+    let suffix = rest
         .iter()
-        .skip(1)
-        .map(|argument| context.source_file().node(argument))
-        .collect::<Vec<_>>();
-    let suffix = if rest.is_empty() {
+        .map(|argument| file.node(argument))
+        .collect::<Vec<_>>()
+        .join(", ");
+    let suffix = if suffix.is_empty() {
         String::new()
     } else {
-        format!(", {}", rest.join(", "))
+        format!(", {suffix}")
     };
-    let preferred = format!(
-        "{}_file({}{suffix})",
+    format!(
+        "{}_file({}{})",
         String::from_utf8_lossy(call_name(node)),
-        context.source_file().node(&path)
-    );
-    context.replace(
-        format!("Use `{preferred}` instead."),
-        selector.start_offset()..node.location().end_offset(),
-        selector.start_offset()..node.location().end_offset(),
-        preferred,
-    );
+        file.node(path),
+        suffix
+    )
 }

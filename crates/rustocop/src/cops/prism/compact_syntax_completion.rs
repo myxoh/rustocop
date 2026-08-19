@@ -281,12 +281,10 @@ fn while_until_modifier(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
     {
         return;
     }
-    context.replace(
-        format!("Favor modifier `{keyword}` usage when having a single-line body."),
-        keyword_loc,
-        node.location(),
-        replacement,
-    );
+    let message = format!("Favor modifier `{keyword}` usage when having a single-line body.");
+    context.add_offense(keyword_loc, message, |corrector| {
+        corrector.replace(node.location(), replacement);
+    });
 }
 
 fn conditional_body(node: &Node<'_>) -> bool {

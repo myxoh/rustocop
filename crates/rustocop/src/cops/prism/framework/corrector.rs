@@ -1,5 +1,7 @@
 use std::ops::Range;
 
+use super::diagnostic::ByteRange;
+
 /// A set of source edits that must be accepted or rejected together.
 ///
 /// This is the Rustocop counterpart to the corrector yielded by RuboCop's
@@ -11,8 +13,12 @@ pub(super) struct CorrectionPlan {
 }
 
 impl CorrectionPlan {
-    pub(super) fn replace(&mut self, range: Range<usize>, replacement: impl Into<String>) {
-        self.edits.push((range, replacement.into()));
+    pub(super) fn replace(&mut self, range: impl ByteRange, replacement: impl Into<String>) {
+        self.edits.push((range.offsets(), replacement.into()));
+    }
+
+    pub(super) fn remove(&mut self, range: impl ByteRange) {
+        self.replace(range, "");
     }
 
     pub(super) fn swap(&mut self, source: &str, left: Range<usize>, right: Range<usize>) -> bool {

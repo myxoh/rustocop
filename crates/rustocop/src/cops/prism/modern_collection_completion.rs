@@ -424,29 +424,50 @@ fn zero_length_predicate(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) 
         return;
     }
 
-    if call_name(&parent) == b"zero?"
-        && argument_count(&parent) == 0
-        && parent.receiver().is_some_and(|receiver| same_call(&receiver, node))
-    {
-        let Some(selector) = node.message_loc() else {
-            return;
-        };
-        let offense = selector.start_offset()..parent.location().end_offset();
-        let current = context.source_file().slice(offense.clone()).unwrap_or_default();
-        context.replace(
-            format!("Use `empty?` instead of `{current}`."),
-            offense.clone(),
-            offense,
-            "empty?",
-        );
+    if check_zero_length_predicate(node, &parent, context) {
         return;
     }
+    check_zero_length_comparison(node, &parent, context);
+}
 
-    let operator = call_name(&parent);
+fn check_zero_length_predicate(
+    node: &CallNode<'_>,
+    parent: &CallNode<'_>,
+    context: &mut CopContext<'_, '_>,
+) -> bool {
+    if call_name(parent) != b"zero?"
+        || argument_count(parent) != 0
+        || !parent
+            .receiver()
+            .is_some_and(|receiver| same_call(&receiver, node))
+    {
+        return false;
+    }
+    let Some(selector) = node.message_loc() else {
+        return false;
+    };
+    let offense = selector.start_offset()..parent.location().end_offset();
+    let current = context
+        .source_file()
+        .slice(offense.clone())
+        .unwrap_or_default();
+    let message = format!("Use `empty?` instead of `{current}`.");
+    context.add_offense(offense.clone(), message, |corrector| {
+        corrector.replace(offense, "empty?");
+    });
+    true
+}
+
+fn check_zero_length_comparison(
+    node: &CallNode<'_>,
+    parent: &CallNode<'_>,
+    context: &mut CopContext<'_, '_>,
+) {
+    let operator = call_name(parent);
     if !matches!(operator, b"==" | b"<" | b">" | b"!=") {
         return;
     }
-    let (Some(left), Some(right)) = (parent.receiver(), only_argument(&parent)) else {
+    let (Some(left), Some(right)) = (parent.receiver(), only_argument(parent)) else {
         return;
     };
     let length_on_left = same_call(&left, node);
@@ -476,10 +497,7 @@ fn zero_length_predicate(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) 
     let call_operator = node
         .call_operator_loc()
         .map_or(".", |location| context.source_file().at(&location));
-    let replacement = format!(
-        "{}{receiver_source}{call_operator}empty?",
-        if nonzero { "!" } else { "" }
-    );
+    let replacement = zero_length_replacement(nonzero, receiver_source, call_operator);
     let method = String::from_utf8_lossy(call_name(node));
     let operator = String::from_utf8_lossy(operator);
     let current = if length_on_left {
@@ -488,11 +506,21 @@ fn zero_length_predicate(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) 
         format!("{integer} {operator} {method}")
     };
     let preferred = if nonzero { "!empty?" } else { "empty?" };
-    context.replace_call(
-        &parent,
-        format!("Use `{preferred}` instead of `{current}`."),
-        replacement,
-    );
+    let message = format!("Use `{preferred}` instead of `{current}`.");
+    context.add_offense(parent.location(), message, |corrector| {
+        corrector.replace(parent.location(), replacement);
+    });
+}
+
+fn zero_length_replacement(
+    nonzero: bool,
+    receiver_source: &str,
+    call_operator: &str,
+) -> String {
+    format!(
+        "{}{receiver_source}{call_operator}empty?",
+        if nonzero { "!" } else { "" }
+    )
 }
 
 fn same_call(node: &Node<'_>, expected: &CallNode<'_>) -> bool {

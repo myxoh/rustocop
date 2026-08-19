@@ -239,12 +239,14 @@ fn when_then(node: &WhenNode<'_>, context: &mut CopContext<'_, '_>) {
         .map(|condition| context.source_file().node(&condition))
         .collect::<Vec<_>>()
         .join(", ");
-    context.replace(
-        format!("Do not use `when {expression};`. Use `when {expression} then` instead."),
-        separator.clone(),
-        separator,
-        " then",
-    );
+    let message = when_then_message(&expression);
+    context.add_offense(separator.clone(), message, |corrector| {
+        corrector.replace(separator, " then");
+    });
+}
+
+fn when_then_message(expression: &str) -> String {
+    format!("Do not use `when {expression};`. Use `when {expression} then` instead.")
 }
 
 fn check_multiline_then(

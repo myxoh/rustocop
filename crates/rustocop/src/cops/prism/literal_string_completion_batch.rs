@@ -727,11 +727,10 @@ fn word_array(node: &ruby_prism::ArrayNode<'_>, context: &mut CopContext<'_, '_>
         let Some(replacement) = percent_word_array(node, &elements, context) else {
             return;
         };
-        context.replace(
+        context.add_offense(
+            node.location(),
             "Use `%w` or `%W` for an array of words.",
-            node.location(),
-            node.location(),
-            replacement,
+            |corrector| corrector.replace(node.location(), replacement),
         );
         return;
     }
@@ -748,14 +747,20 @@ fn word_array(node: &ruby_prism::ArrayNode<'_>, context: &mut CopContext<'_, '_>
         return;
     }
     let replacement = bracketed_word_array(node, &elements, context);
-    let message = if replacement == "[]" {
+    let message = bracketed_word_array_message(&replacement);
+    context.add_offense(node.location(), message, |corrector| {
+        corrector.replace(node.location(), replacement);
+    });
+}
+
+fn bracketed_word_array_message(replacement: &str) -> String {
+    if replacement == "[]" {
         "Use `[]` for an array of words.".to_string()
     } else if replacement.contains('\n') {
         "Use an array literal `[...]` for an array of words.".to_string()
     } else {
         format!("Use `{replacement}` for an array of words.")
-    };
-    context.replace(message, node.location(), node.location(), replacement);
+    }
 }
 
 fn valid_utf8(bytes: &[u8]) -> bool {

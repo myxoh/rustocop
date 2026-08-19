@@ -15,6 +15,19 @@ fn correction_plan_swaps_disjoint_ranges_without_rebuilding_source() {
 }
 
 #[test]
+fn correction_plan_uses_the_same_range_dsl_for_replace_and_remove() {
+    let mut correction = CorrectionPlan::default();
+
+    correction.replace((1, 3), "new");
+    correction.remove(5..8);
+
+    assert_eq!(
+        correction.into_edits(),
+        vec![(1..3, "new".to_string()), (5..8, String::new())]
+    );
+}
+
+#[test]
 fn applies_common_allow_style_and_path_policies() {
     let config = CopConfig::from_source(
         "AllCops:\n  Exclude:\n    - '**/vendor/**'\nStyle/Example:\n  EnforcedStyle: compact\n  AllowedMethods:\n    - map\n  AllowedPatterns:\n    - '^find_'\n  AllowedReceivers: [ENV]\n  Include:\n    - '**/*.rb'\n",

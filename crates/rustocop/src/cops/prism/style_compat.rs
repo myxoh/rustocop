@@ -8,7 +8,6 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
         Box::new(RedundantFileExtensionInRequire),
         Box::new(SuperWithArgsParentheses),
         Box::new(TrailingCommaInBlockArgs),
-        Box::new(WhileUntilDo),
     ]
 }
 
@@ -354,53 +353,4 @@ fn required_block_argument_count(parameter: &Node<'_>) -> usize {
         .chain(group.rights().iter())
         .map(|target| required_block_argument_count(&target))
         .sum()
-}
-
-struct WhileUntilDo;
-
-impl Cop for WhileUntilDo {
-    fn name(&self) -> &'static str {
-        "Style/WhileUntilDo"
-    }
-
-    fn on_node<'pr>(
-        &self,
-        node: &Node<'pr>,
-        _ancestors: &[Node<'pr>],
-        source: &str,
-        context: &mut Context,
-    ) {
-        let parts = if let Some(loop_node) = node.as_while_node() {
-            loop_node.do_keyword_loc().map(|keyword| {
-                (
-                    "while",
-                    loop_node.predicate().location().end_offset(),
-                    keyword,
-                )
-            })
-        } else if let Some(loop_node) = node.as_until_node() {
-            loop_node.do_keyword_loc().map(|keyword| {
-                (
-                    "until",
-                    loop_node.predicate().location().end_offset(),
-                    keyword,
-                )
-            })
-        } else {
-            None
-        };
-        let Some((kind, predicate_end, keyword)) = parts else {
-            return;
-        };
-        let loop_location = node.location();
-        if !source_at(source, &loop_location).contains('\n') {
-            return;
-        }
-        context.remove(
-            self.name(),
-            format!("Do not use `do` with multi-line `{kind}`."),
-            &keyword,
-            (predicate_end, keyword.end_offset()),
-        );
-    }
 }

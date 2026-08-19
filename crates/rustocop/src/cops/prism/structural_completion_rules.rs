@@ -206,12 +206,7 @@ fn trailing_body_on_module(node: &ModuleNode<'_>, context: &mut CopContext<'_, '
 }
 
 fn yoda_expression(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
-    let operator = node.name().as_slice();
-    if !context
-        .config_values("SupportedOperators")
-        .iter()
-        .any(|configured| configured.as_bytes() == operator)
-    {
+    if !supported_yoda_operator(node, context) {
         return;
     }
     let Some(left) = node.receiver() else {
@@ -220,28 +215,47 @@ fn yoda_expression(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     let Some(right) = only_argument(node) else {
         return;
     };
-    if !yoda_literal(&left) || yoda_literal(&right) {
+    if !yoda_expression_constant(&left, &right) {
         return;
     }
-    let nested_in_yoda = context.ancestors().iter().rev().any(|ancestor| {
-        ancestor.as_call_node().is_some_and(|call| {
-            call.receiver().as_ref().is_some_and(yoda_literal)
-                && only_argument(&call).is_some_and(|argument| !yoda_literal(&argument))
-        })
-    });
-    if nested_in_yoda {
+    if offended_yoda_ancestor(context) {
         return;
     }
-    let right_source = context.source_file().node(&right);
+    let message = yoda_expression_message(&right, context.source_file());
     let replacement = render_yoda(node, context.source_file());
-    context.replace_call(
-        node,
-        format!("Non-literal operand (`{right_source}`) should be first."),
-        replacement,
-    );
+    context.add_offense(node.location(), message, |corrector| {
+        corrector.replace(node.location(), replacement);
+    });
 }
 
-fn yoda_literal(node: &Node<'_>) -> bool {
+fn supported_yoda_operator(node: &CallNode<'_>, context: &CopContext<'_, '_>) -> bool {
+    context
+        .config_values("SupportedOperators")
+        .iter()
+        .any(|configured| configured.as_bytes() == node.name().as_slice())
+}
+
+fn yoda_expression_constant(left: &Node<'_>, right: &Node<'_>) -> bool {
+    constant_portion(left) && !constant_portion(right)
+}
+
+fn offended_yoda_ancestor(context: &CopContext<'_, '_>) -> bool {
+    context.ancestors().iter().rev().any(|ancestor| {
+        ancestor.as_call_node().is_some_and(|call| {
+            call.receiver().as_ref().is_some_and(constant_portion)
+                && only_argument(&call).is_some_and(|argument| !constant_portion(&argument))
+        })
+    })
+}
+
+fn yoda_expression_message(right: &Node<'_>, file: SourceFile<'_>) -> String {
+    format!(
+        "Non-literal operand (`{}`) should be first.",
+        file.node(right)
+    )
+}
+
+fn constant_portion(node: &Node<'_>) -> bool {
     node.as_integer_node().is_some()
         || node.as_float_node().is_some()
         || node.as_rational_node().is_some()
@@ -279,8 +293,8 @@ fn render_yoda_node(node: &Node<'_>, file: SourceFile<'_>) -> String {
                 .and_then(|statements| statements.body().first())
                 .unwrap_or(body);
             if let Some(call) = expression.as_call_node() {
-                if call.receiver().as_ref().is_some_and(yoda_literal)
-                    && only_argument(&call).is_some_and(|argument| !yoda_literal(&argument))
+                if call.receiver().as_ref().is_some_and(constant_portion)
+                    && only_argument(&call).is_some_and(|argument| !constant_portion(&argument))
                 {
                     return format!("({})", render_yoda(&call, file));
                 }
@@ -288,8 +302,8 @@ fn render_yoda_node(node: &Node<'_>, file: SourceFile<'_>) -> String {
         }
     }
     if let Some(call) = node.as_call_node() {
-        if call.receiver().as_ref().is_some_and(yoda_literal)
-            && only_argument(&call).is_some_and(|argument| !yoda_literal(&argument))
+        if call.receiver().as_ref().is_some_and(constant_portion)
+            && only_argument(&call).is_some_and(|argument| !constant_portion(&argument))
         {
             return render_yoda(&call, file);
         }
