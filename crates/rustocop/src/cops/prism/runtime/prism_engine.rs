@@ -43,11 +43,22 @@ impl Engine {
                 cop.on_parse_error(&error, source, &mut context);
             }
         }
+        let mut investigation_states: Vec<Box<dyn Any>> = self
+            .registry
+            .cops
+            .iter()
+            .map(|cop| {
+                let mut state = cop.investigation_state();
+                cop.on_new_investigation(state.as_mut());
+                state
+            })
+            .collect();
         let mut runner = Runner {
             registry: &self.registry,
             context: &mut context,
             source,
             ancestors: Vec::new(),
+            investigation_states: &mut investigation_states,
         };
         runner.visit(&parsed.node());
         context.finish(source)

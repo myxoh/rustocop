@@ -1,5 +1,9 @@
 use super::*;
 
+define_rule!(YamlFileReadRule);
+
+const YAML_FILE_READ_MSG: &str = "Use `{prefer}` instead.";
+
 define_cops! {
     CircularArgumentReference => "Lint/CircularArgumentReference" => any_node(circular_argument_reference),
     InheritException => "Lint/InheritException" => any_node(inherit_exception),
@@ -7,7 +11,7 @@ define_cops! {
     RaiseException => "Lint/RaiseException" => call(raise_exception),
     DateTime => "Style/DateTime" => call(date_time),
     RedundantArgument => "Style/RedundantArgument" => call(redundant_argument),
-    YAMLFileRead => "Style/YAMLFileRead" => call(on_send),
+    YAMLFileRead => "Style/YAMLFileRead" => call_rule(YamlFileReadRule, on_send, restrict [b"load", b"safe_load", b"parse"]),
 }
 
 fn raise_exception(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
@@ -269,52 +273,51 @@ fn redundant_argument(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     );
 }
 
-fn on_send(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
-    return_unless!(
-        matches!(call_name(node), b"load" | b"safe_load" | b"parse")
-            && root_constant(node.receiver(), b"YAML")
-    );
-    return_if!(
-        call_name(node) == b"safe_load" && !context.target_ruby_version().at_least(3, 0)
-    );
-    let Some(arguments) = node.arguments() else {
-        return;
-    };
-    let values = arguments.arguments().iter().collect::<Vec<_>>();
-    let Some(read) = values.first().and_then(|argument| argument.as_call_node()) else {
-        return;
-    };
-    return_unless!(match_call(&read)
-        .named(b"read")
-        .on_root_constant(b"File")
-        .with_argument_count(1)
-        .matches());
-    let Some(path) = only_argument(&read) else {
-        return;
-    };
-    let Some(offense) = offense_range(node) else {
-        return;
-    };
-    let rest_arguments = values
-        .iter()
-        .skip(1)
-        .map(|argument| context.source_file().node(argument))
-        .collect::<Vec<_>>()
-        .join(", ");
-    let rest_arguments = if rest_arguments.is_empty() {
-        String::new()
-    } else {
-        format!(", {rest_arguments}")
-    };
-    let preferred = format!(
-        "{}_file({}{rest_arguments})",
-        String::from_utf8_lossy(call_name(node)),
-        context.source_file().node(&path)
-    );
-    let message = format!("Use `{preferred}` instead.");
-    add_offense!(context, offense.clone(), message: message, |corrector| {
-        corrector.replace(offense, preferred);
-    });
+impl YamlFileReadRule<'_, '_, '_> {
+    fn on_send(&mut self, node: &CallNode<'_>) {
+        return_unless!(root_constant(node.receiver(), b"YAML"));
+        return_if!(
+            node.method_name() == b"safe_load" && !self.target_ruby_version().at_least(3, 0)
+        );
+        let Some(arguments) = node.arguments() else {
+            return;
+        };
+        let values = arguments.arguments().iter().collect::<Vec<_>>();
+        let Some(read) = values.first().and_then(|argument| argument.as_call_node()) else {
+            return;
+        };
+        return_unless!(match_call(&read)
+            .named(b"read")
+            .on_root_constant(b"File")
+            .with_argument_count(1)
+            .matches());
+        let Some(path) = only_argument(&read) else {
+            return;
+        };
+        let Some(offense) = offense_range(node) else {
+            return;
+        };
+        let rest_arguments = values
+            .iter()
+            .skip(1)
+            .map(|argument| self.source_file().node(argument))
+            .collect::<Vec<_>>()
+            .join(", ");
+        let rest_arguments = if rest_arguments.is_empty() {
+            String::new()
+        } else {
+            format!(", {rest_arguments}")
+        };
+        let preferred = format!(
+            "{}_file({}{rest_arguments})",
+            String::from_utf8_lossy(node.method_name()),
+            self.source_of(&path)
+        );
+        let message = YAML_FILE_READ_MSG.replace("{prefer}", &preferred);
+        add_offense!(self, offense.clone(), message: message, |corrector| {
+            corrector.replace(offense, preferred);
+        });
+    }
 }
 
 fn offense_range(node: &CallNode<'_>) -> Option<std::ops::Range<usize>> {

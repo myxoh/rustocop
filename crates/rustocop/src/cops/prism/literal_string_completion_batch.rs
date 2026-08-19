@@ -1,5 +1,14 @@
 use super::*;
 
+#[derive(Default)]
+struct WordArrayState {
+    matrix_of_complex_content: std::collections::HashMap<(usize, usize), bool>,
+}
+
+define_stateful_rule!(WordArrayRule, WordArrayState);
+
+const PERCENT_MSG: &str = "Use `%w` or `%W` for an array of words.";
+
 define_cops! {
     SymbolArray => "Style/SymbolArray" => node(as_array_node, symbol_array),
     QuotedSymbols => "Style/QuotedSymbols" => source(quoted_symbols),
@@ -8,7 +17,7 @@ define_cops! {
     RedundantLineContinuation => "Style/RedundantLineContinuation" => source(redundant_line_continuation),
     Lambda => "Style/Lambda" => source(lambda_literal),
     FormatString => "Style/FormatString" => source(format_string),
-    WordArray => "Style/WordArray" => node(as_array_node, on_array),
+    WordArray => "Style/WordArray" => stateful_node_rule(as_array_node, WordArrayRule, WordArrayState, on_array),
     PercentLiteralDelimiters => "Style/PercentLiteralDelimiters" => source(percent_delimiters),
     RedundantStringEscape => "Style/RedundantStringEscape" => source(redundant_string_escape),
 }
@@ -698,61 +707,78 @@ fn format_string(context: &mut CopContext<'_, '_>) {
     }
 }
 
-fn on_array(node: &ruby_prism::ArrayNode<'_>, context: &mut CopContext<'_, '_>) {
-    let Some(opening) = node.opening_loc() else {
-        return;
-    };
-    let opening_source = context.source_file().at(&opening);
-    let elements = node.elements().iter().collect::<Vec<_>>();
-    let minimum = context.config_usize("MinSize", 0);
-    return_unless!(elements.len() >= minimum);
+impl WordArrayRule<'_, '_, '_> {
+    fn on_array(&mut self, node: &ruby_prism::ArrayNode<'_>) {
+        let Some(opening) = node.opening_loc() else {
+            return;
+        };
+        let opening_source = self.source_file().at(&opening);
+        let elements = node.elements().iter().collect::<Vec<_>>();
+        let minimum = self.config_usize("MinSize", 0);
+        return_unless!(elements.len() >= minimum);
 
-    if opening_source == "[" {
-        return_if!(
-            elements.iter().any(|element| element.as_string_node().is_none())
-                || complex_content(&elements, context)
-                || within_matrix_of_complex_content(context)
-        );
-        check_bracketed_array(node, &elements, context);
-    } else if opening_source.starts_with("%w") || opening_source.starts_with("%W") {
-        check_percent_array(node, &elements, context);
-    }
-}
-
-fn check_bracketed_array(
-    node: &ruby_prism::ArrayNode<'_>,
-    elements: &[Node<'_>],
-    context: &mut CopContext<'_, '_>,
-) {
-    return_unless!(context.policy().enforced_style("percent") == "percent");
-    return_if!(elements.is_empty() || bracket_array_has_comment(node, context));
-    let Some(replacement) = percent_word_array(node, elements, context) else {
-        return;
-    };
-    add_offense!(
-        context,
-        node.location(),
-        message: "Use `%w` or `%W` for an array of words.",
-        |corrector| {
-            corrector.replace(node.location(), replacement);
+        if opening_source == "[" {
+            return_if!(
+                elements.iter().any(|element| element.as_string_node().is_none())
+                    || complex_content(&elements, self)
+                    || self.within_matrix_of_complex_content()
+            );
+            self.check_bracketed_array(node, &elements);
+        } else if opening_source.starts_with("%w") || opening_source.starts_with("%W") {
+            self.check_percent_array(node, &elements);
         }
-    );
-}
+    }
 
-fn check_percent_array(
-    node: &ruby_prism::ArrayNode<'_>,
-    elements: &[Node<'_>],
-    context: &mut CopContext<'_, '_>,
-) {
-    return_if!(
-        context.policy().enforced_style("percent") == "percent"
-            && !invalid_percent_array_contents(elements)
-    );
-    let replacement = build_bracketed_array(node, elements, context);
-    let message = bracketed_word_array_message(&replacement);
-    add_offense!(context, node.location(), message: message, |corrector| {
-        corrector.replace(node.location(), replacement);
-    });
+    fn check_bracketed_array(
+        &mut self,
+        node: &ruby_prism::ArrayNode<'_>,
+        elements: &[Node<'_>],
+    ) {
+        return_unless!(self.policy().enforced_style("percent") == "percent");
+        return_if!(elements.is_empty() || bracket_array_has_comment(node, self));
+        let Some(replacement) = percent_word_array(node, elements, self) else {
+            return;
+        };
+        add_offense!(
+            self,
+            node.location(),
+            message: PERCENT_MSG,
+            |corrector| {
+                corrector.replace(node.location(), replacement);
+            }
+        );
+    }
+
+    fn check_percent_array(
+        &mut self,
+        node: &ruby_prism::ArrayNode<'_>,
+        elements: &[Node<'_>],
+    ) {
+        return_if!(
+            self.policy().enforced_style("percent") == "percent"
+                && !invalid_percent_array_contents(elements)
+        );
+        let replacement = build_bracketed_array(node, elements, self);
+        let message = bracketed_word_array_message(&replacement);
+        add_offense!(self, node.location(), message: message, |corrector| {
+            corrector.replace(node.location(), replacement);
+        });
+    }
+
+    fn within_matrix_of_complex_content(&mut self) -> bool {
+        let Some(parent) = self.parent().and_then(Node::as_array_node) else {
+            return false;
+        };
+        let key = (
+            parent.location().start_offset(),
+            parent.location().end_offset(),
+        );
+        *self
+            .state
+            .matrix_of_complex_content
+            .entry(key)
+            .or_insert_with(|| matrix_of_complex_content(&parent))
+    }
 }
 
 fn complex_content(elements: &[Node<'_>], context: &CopContext<'_, '_>) -> bool {
@@ -844,13 +870,6 @@ fn bracket_array_has_comment(
         .node(&node.as_node())
         .lines()
         .any(|line| line.trim_start().starts_with('#') || line.contains(" #"))
-}
-
-fn within_matrix_of_complex_content(context: &CopContext<'_, '_>) -> bool {
-    let Some(parent) = context.parent().and_then(Node::as_array_node) else {
-        return false;
-    };
-    matrix_of_complex_content(&parent)
 }
 
 fn matrix_of_complex_content(array: &ruby_prism::ArrayNode<'_>) -> bool {

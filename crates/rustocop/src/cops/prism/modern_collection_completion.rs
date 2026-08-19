@@ -1,11 +1,16 @@
 use super::*;
 
+define_rule!(ZeroLengthPredicateRule);
+
+const ZERO_MSG: &str = "Use `empty?` instead of `{current}`.";
+const NONZERO_MSG: &str = "Use `!empty?` instead of `{current}`.";
+
 define_cops! {
     ArrayIntersect => "Style/ArrayIntersect" => source(array_intersect),
     RedundantMinMaxBy => "Style/RedundantMinMaxBy" => source(redundant_min_max_by),
     RedundantSort => "Style/RedundantSort" => source(redundant_sort),
     TallyMethod => "Style/TallyMethod" => call(tally_method),
-    ZeroLengthPredicate => "Style/ZeroLengthPredicate" => call(on_send),
+    ZeroLengthPredicate => "Style/ZeroLengthPredicate" => call_rule(ZeroLengthPredicateRule, on_send, restrict [b"size", b"length"]),
 }
 
 fn array_intersect(context: &mut CopContext<'_, '_>) {
@@ -410,83 +415,68 @@ fn counting_method(name: &[u8]) -> bool {
     matches!(name, b"count" | b"size" | b"length")
 }
 
-fn on_send(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
-    return_unless!(
-        matches!(call_name(node), b"length" | b"size")
-            && argument_count(node) == 0
-            && node.receiver().is_some()
-    );
-    if call_operator_is(node, b"&.") {
-        on_csend(node, context);
-        return;
+impl ZeroLengthPredicateRule<'_, '_, '_> {
+    fn on_send(&mut self, node: &CallNode<'_>) {
+        return_unless!(argument_count(node) == 0 && node.receiver().is_some());
+        if call_operator_is(node, b"&.") {
+            self.on_csend(node);
+            return;
+        }
+        let Some(parent) = self.parent().and_then(Node::as_call_node) else {
+            return;
+        };
+        self.check_zero_length_predicate(node, &parent);
+        self.check_zero_length_comparison(node, &parent);
+        self.check_nonzero_length_comparison(node, &parent);
     }
-    let Some(parent) = context.parent().and_then(Node::as_call_node) else {
-        return;
-    };
-    check_zero_length_predicate(node, &parent, context);
-    check_zero_length_comparison(node, &parent, context);
-    check_nonzero_length_comparison(node, &parent, context);
-}
 
-fn on_csend(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
-    let Some(parent) = context.parent().and_then(Node::as_call_node) else {
-        return;
-    };
-    check_zero_length_predicate(node, &parent, context);
-    check_zero_length_comparison(node, &parent, context);
-}
+    fn on_csend(&mut self, node: &CallNode<'_>) {
+        let Some(parent) = self.parent().and_then(Node::as_call_node) else {
+            return;
+        };
+        self.check_zero_length_predicate(node, &parent);
+        self.check_zero_length_comparison(node, &parent);
+    }
 
-fn check_zero_length_predicate(
-    node: &CallNode<'_>,
-    parent: &CallNode<'_>,
-    context: &mut CopContext<'_, '_>,
-) {
-    return_unless!(
-        call_name(parent) == b"zero?"
-            && argument_count(parent) == 0
-            && parent
-            .receiver()
-            .is_some_and(|receiver| same_call(&receiver, node))
-    );
-    return_if!(non_polymorphic_collection(node, context));
-    let Some(selector) = node.message_loc() else {
-        return;
-    };
-    let offense = selector.start_offset()..parent.location().end_offset();
-    let current = context
-        .source_file()
-        .slice(offense.clone())
-        .unwrap_or_default();
-    let message = format!("Use `empty?` instead of `{current}`.");
-    add_offense!(context, offense.clone(), message: message, |corrector| {
-        corrector.replace(offense, "empty?");
-    });
-}
+    fn check_zero_length_predicate(&mut self, node: &CallNode<'_>, parent: &CallNode<'_>) {
+        return_unless!(
+            call_name(parent) == b"zero?"
+                && argument_count(parent) == 0
+                && parent
+                    .receiver()
+                    .is_some_and(|receiver| same_call(&receiver, node))
+        );
+        return_if!(non_polymorphic_collection(node, self));
+        let Some(offense) = self.selector_through(node, parent.location().end_offset()) else {
+            return;
+        };
+        let current = self
+            .source_file()
+            .slice(offense.clone())
+            .unwrap_or_default();
+        let message = ZERO_MSG.replace("{current}", current);
+        add_offense!(self, offense.clone(), message: message, |corrector| {
+            corrector.replace(offense, "empty?");
+        });
+    }
 
-fn check_zero_length_comparison(
-    node: &CallNode<'_>,
-    parent: &CallNode<'_>,
-    context: &mut CopContext<'_, '_>,
-) {
-    let Some(comparison) = length_comparison(node, parent) else {
-        return;
-    };
-    return_unless!(comparison.zero());
-    return_if!(non_polymorphic_collection(node, context));
-    report_length_comparison(node, parent, comparison, false, context);
-}
+    fn check_zero_length_comparison(&mut self, node: &CallNode<'_>, parent: &CallNode<'_>) {
+        let Some(comparison) = length_comparison(node, parent) else {
+            return;
+        };
+        return_unless!(comparison.zero());
+        return_if!(non_polymorphic_collection(node, self));
+        report_length_comparison(node, parent, comparison, false, self);
+    }
 
-fn check_nonzero_length_comparison(
-    node: &CallNode<'_>,
-    parent: &CallNode<'_>,
-    context: &mut CopContext<'_, '_>,
-) {
-    let Some(comparison) = length_comparison(node, parent) else {
-        return;
-    };
-    return_unless!(comparison.nonzero());
-    return_if!(non_polymorphic_collection(node, context));
-    report_length_comparison(node, parent, comparison, true, context);
+    fn check_nonzero_length_comparison(&mut self, node: &CallNode<'_>, parent: &CallNode<'_>) {
+        let Some(comparison) = length_comparison(node, parent) else {
+            return;
+        };
+        return_unless!(comparison.nonzero());
+        return_if!(non_polymorphic_collection(node, self));
+        report_length_comparison(node, parent, comparison, true, self);
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -512,25 +502,27 @@ impl LengthComparison {
     }
 }
 
-fn length_comparison(node: &CallNode<'_>, parent: &CallNode<'_>) -> Option<LengthComparison> {
-    let operator = match call_name(parent) {
-        b"==" => "==",
-        b"!=" => "!=",
-        b"<" => "<",
-        b">" => ">",
-        _ => return None,
-    };
-    let (left, right) = (parent.receiver()?, only_argument(parent)?);
-    let length_on_left = same_call(&left, node);
-    if !length_on_left && !same_call(&right, node) {
-        return None;
+def_node_matcher! {
+    fn length_comparison(node: &CallNode<'_>, parent: &CallNode<'_>) -> Option<LengthComparison> {
+        let operator = match call_name(parent) {
+            b"==" => "==",
+            b"!=" => "!=",
+            b"<" => "<",
+            b">" => ">",
+            _ => return None,
+        };
+        let (left, right) = (parent.receiver()?, only_argument(parent)?);
+        let length_on_left = same_call(&left, node);
+        if !length_on_left && !same_call(&right, node) {
+            return None;
+        }
+        let other = if length_on_left { &right } else { &left };
+        Some(LengthComparison {
+            length_on_left,
+            operator,
+            integer: integer_value(other)?,
+        })
     }
-    let other = if length_on_left { &right } else { &left };
-    Some(LengthComparison {
-        length_on_left,
-        operator,
-        integer: integer_value(other)?,
-    })
 }
 
 fn report_length_comparison(
@@ -555,8 +547,7 @@ fn report_length_comparison(
             comparison.integer, comparison.operator
         )
     };
-    let preferred = if nonzero { "!empty?" } else { "empty?" };
-    let message = format!("Use `{preferred}` instead of `{current}`.");
+    let message = if nonzero { NONZERO_MSG } else { ZERO_MSG }.replace("{current}", &current);
     add_offense!(context, parent.location(), message: message, |corrector| {
         corrector.replace(parent.location(), replacement);
     });
@@ -589,18 +580,20 @@ fn integer_value(node: &Node<'_>) -> Option<i32> {
     TryInto::<i32>::try_into(node.as_integer_node()?.value()).ok()
 }
 
-fn non_polymorphic_collection(node: &CallNode<'_>, context: &CopContext<'_, '_>) -> bool {
-    if call_name(node) != b"size" {
-        return false;
+def_node_matcher! {
+    fn non_polymorphic_collection(node: &CallNode<'_>, context: &CopContext<'_, '_>) -> bool {
+        if call_name(node) != b"size" {
+            return false;
+        }
+        let Some(receiver) = node.receiver() else {
+            return false;
+        };
+        let source = context.source_file().node(&receiver);
+        let source = source.strip_prefix("::").unwrap_or(source);
+        source.starts_with("File.stat(")
+            || ["File", "Tempfile", "StringIO"].iter().any(|constant| {
+                source.starts_with(&format!("{constant}.new"))
+                    || source.starts_with(&format!("{constant}.open"))
+            })
     }
-    let Some(receiver) = node.receiver() else {
-        return false;
-    };
-    let source = context.source_file().node(&receiver);
-    let source = source.strip_prefix("::").unwrap_or(source);
-    source.starts_with("File.stat(")
-        || ["File", "Tempfile", "StringIO"].iter().any(|constant| {
-            source.starts_with(&format!("{constant}.new"))
-                || source.starts_with(&format!("{constant}.open"))
-        })
 }

@@ -1,8 +1,11 @@
 use ruby_prism::{parse, CallNode, Diagnostic, Node, Visit};
+use std::any::Any;
 use std::sync::Arc;
 
 #[path = "framework/catalog_cop.rs"]
 mod catalog_cop;
+#[path = "framework/context_node_facade.rs"]
+mod context_node_facade;
 #[path = "framework/cop_context.rs"]
 mod cop_context;
 #[path = "framework/cop_policy.rs"]
@@ -25,6 +28,8 @@ mod numeric_helpers;
 mod prism_engine;
 #[path = "runtime/registry.rs"]
 mod registry;
+#[path = "framework/rule_dsl.rs"]
+mod rule_dsl;
 #[path = "runtime/runner.rs"]
 mod runner;
 #[path = "framework/source_file.rs"]
@@ -194,6 +199,7 @@ cop_modules!(
 );
 
 use crate::config::{CopConfig, RubyVersion};
+use context_node_facade::*;
 use cop_context::CopContext;
 use cop_policy::CopPolicy;
 use corrector::CorrectionPlan;
@@ -205,6 +211,7 @@ use node_helpers::*;
 use numeric_helpers::*;
 pub use prism_engine::Engine;
 use registry::Registry;
+use rule_dsl::*;
 use runner::Runner;
 use source_file::{SourceEdit, SourceFile};
 
@@ -237,6 +244,20 @@ pub(super) trait Cop: Sync {
     }
     fn on_source(&self, _source: &str, _context: &mut Context) {}
     fn on_parse_error(&self, _error: &Diagnostic<'_>, _source: &str, _context: &mut Context) {}
+    fn investigation_state(&self) -> Box<dyn Any> {
+        Box::new(())
+    }
+    fn on_new_investigation(&self, _state: &mut dyn Any) {}
+    fn on_node_with_state<'pr>(
+        &self,
+        node: &Node<'pr>,
+        ancestors: &[Node<'pr>],
+        source: &str,
+        context: &mut Context,
+        _state: &mut dyn Any,
+    ) {
+        self.on_node(node, ancestors, source, context);
+    }
     fn on_node<'pr>(
         &self,
         node: &Node<'pr>,

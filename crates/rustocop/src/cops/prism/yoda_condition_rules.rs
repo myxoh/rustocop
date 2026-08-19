@@ -1,41 +1,36 @@
 use super::*;
 
+define_rule!(YodaConditionRule);
+
+const MSG: &str = "Reverse the order of the operands `{source}`.";
+
 define_cops! {
-    YodaCondition => "Style/YodaCondition" => call(on_send),
+    YodaCondition => "Style/YodaCondition" => call_rule(YodaConditionRule, on_send, restrict [b"==", b"!=", b"<", b"<=", b">", b">=", b"===", b"=~", b"!~"]),
 }
 
-fn on_send(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
-    let operator = call_name(node);
-    return_unless!(yoda_compatible_condition(operator));
-    let style = context
-        .policy()
-        .enforced_style("forbid_for_all_comparison_operators");
-    return_if!(equality_only(style) && non_equality_operator(operator));
-    let (Some(left), Some(right)) = (node.receiver(), only_argument(node)) else {
-        return;
-    };
-    return_if!(
-        file_constant_equal_program_name(&left, operator, &right, context)
-            || valid_yoda(&left, &right, style)
-    );
+impl YodaConditionRule<'_, '_, '_> {
+    fn on_send(&mut self, node: &CallNode<'_>) {
+        let operator = call_name(node);
+        return_unless!(!noncommutative_operator(operator));
+        let style = self
+            .policy()
+            .enforced_style("forbid_for_all_comparison_operators");
+        return_if!(equality_only(style) && non_equality_operator(operator));
+        let (Some(left), Some(right)) = (node.receiver(), only_argument(node)) else {
+            return;
+        };
+        return_if!(
+            file_constant_equal_program_name(&left, operator, &right, self)
+                || valid_yoda(&left, &right, style)
+        );
 
-    let offense = actual_code_range(node);
-    let message = message(node, context);
-    let correction = corrected_code(&left, operator, &right, context);
-    add_offense!(context, offense.clone(), message: message, |corrector| {
-        corrector.replace(offense, correction);
-    });
-}
-
-fn yoda_compatible_condition(operator: &[u8]) -> bool {
-    comparison_operator(operator) && !noncommutative_operator(operator)
-}
-
-fn comparison_operator(operator: &[u8]) -> bool {
-    matches!(
-        operator,
-        b"==" | b"!=" | b"<" | b"<=" | b">" | b">=" | b"===" | b"=~" | b"!~"
-    )
+        let offense = actual_code_range(node);
+        let message = message(node, self);
+        let correction = corrected_code(&left, operator, &right, self);
+        add_offense!(self, offense.clone(), message: message, |corrector| {
+            corrector.replace(offense, correction);
+        });
+    }
 }
 
 fn noncommutative_operator(operator: &[u8]) -> bool {
@@ -68,10 +63,7 @@ fn enforce_yoda(style: &str) -> bool {
 }
 
 fn message(node: &CallNode<'_>, context: &CopContext<'_, '_>) -> String {
-    format!(
-        "Reverse the order of the operands `{}`.",
-        context.source_file().node(&node.as_node())
-    )
+    MSG.replace("{source}", context.source_file().node(&node.as_node()))
 }
 
 fn corrected_code(
@@ -146,15 +138,17 @@ fn interpolation(node: &Node<'_>) -> bool {
         || node.as_interpolated_regular_expression_node().is_some()
 }
 
-fn file_constant_equal_program_name(
-    left: &Node<'_>,
-    operator: &[u8],
-    right: &Node<'_>,
-    context: &CopContext<'_, '_>,
-) -> bool {
-    matches!(operator, b"==" | b"!=")
-        && source_file_path_constant(left, context)
-        && program_name(right)
+def_node_matcher! {
+    fn file_constant_equal_program_name(
+        left: &Node<'_>,
+        operator: &[u8],
+        right: &Node<'_>,
+        context: &CopContext<'_, '_>,
+    ) -> bool {
+        matches!(operator, b"==" | b"!=")
+            && source_file_path_constant(left, context)
+            && program_name(right)
+    }
 }
 
 fn source_file_path_constant(node: &Node<'_>, context: &CopContext<'_, '_>) -> bool {

@@ -5,6 +5,7 @@ pub(super) struct Runner<'registry, 'context> {
     pub(super) context: &'context mut Context,
     pub(super) source: &'context str,
     pub(super) ancestors: Vec<Node<'context>>,
+    pub(super) investigation_states: &'context mut [Box<dyn Any>],
 }
 
 macro_rules! visit_typed_branch {
@@ -28,13 +29,14 @@ macro_rules! visit_typed_branch {
 
 impl<'pr> Visit<'pr> for Runner<'_, 'pr> {
     fn visit_branch_node_enter(&mut self, node: Node<'pr>) {
-        for cop in self
-            .registry
-            .node_cops
-            .iter()
-            .map(|index| &self.registry.cops[*index])
-        {
-            cop.on_node(&node, &self.ancestors, self.source, self.context);
+        for index in &self.registry.node_cops {
+            self.registry.cops[*index].on_node_with_state(
+                &node,
+                &self.ancestors,
+                self.source,
+                self.context,
+                self.investigation_states[*index].as_mut(),
+            );
         }
         self.ancestors.push(node);
     }
@@ -44,13 +46,14 @@ impl<'pr> Visit<'pr> for Runner<'_, 'pr> {
     }
 
     fn visit_leaf_node_enter(&mut self, node: Node<'pr>) {
-        for cop in self
-            .registry
-            .node_cops
-            .iter()
-            .map(|index| &self.registry.cops[*index])
-        {
-            cop.on_node(&node, &self.ancestors, self.source, self.context);
+        for index in &self.registry.node_cops {
+            self.registry.cops[*index].on_node_with_state(
+                &node,
+                &self.ancestors,
+                self.source,
+                self.context,
+                self.investigation_states[*index].as_mut(),
+            );
         }
     }
 
@@ -75,13 +78,14 @@ impl<'pr> Visit<'pr> for Runner<'_, 'pr> {
         });
         if !already_entered {
             let generic = node.as_node();
-            for cop in self
-                .registry
-                .node_cops
-                .iter()
-                .map(|index| &self.registry.cops[*index])
-            {
-                cop.on_node(&generic, &self.ancestors, self.source, self.context);
+            for index in &self.registry.node_cops {
+                self.registry.cops[*index].on_node_with_state(
+                    &generic,
+                    &self.ancestors,
+                    self.source,
+                    self.context,
+                    self.investigation_states[*index].as_mut(),
+                );
             }
         }
         ruby_prism::visit_statements_node(self, node);

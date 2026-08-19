@@ -2,6 +2,30 @@ use ruby_prism::{CallNode, Location, Node, StatementsNode};
 
 use super::SourceFile;
 
+/// RuboCop-shaped vocabulary over Prism call nodes. Keeping this facade typed
+/// means cop callbacks can read like their Ruby counterparts without giving up
+/// compile-time node validation.
+pub(super) trait CallNodeExt<'pr> {
+    fn method_name(&self) -> &'pr [u8];
+    fn first_argument(&self) -> Option<Node<'pr>>;
+    fn arguments_present(&self) -> bool;
+}
+
+impl<'pr> CallNodeExt<'pr> for CallNode<'pr> {
+    fn method_name(&self) -> &'pr [u8] {
+        self.name().as_slice()
+    }
+
+    fn first_argument(&self) -> Option<Node<'pr>> {
+        self.arguments()?.arguments().first()
+    }
+
+    fn arguments_present(&self) -> bool {
+        self.arguments()
+            .is_some_and(|arguments| !arguments.arguments().is_empty())
+    }
+}
+
 /// Materializes call arguments when a cop needs to inspect or render the
 /// complete argument list. Prefer `first_argument` or `only_argument` for the
 /// common zero/one-argument cases.

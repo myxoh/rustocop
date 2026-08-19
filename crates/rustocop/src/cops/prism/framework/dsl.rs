@@ -36,6 +36,15 @@ macro_rules! add_offense {
     };
 }
 
+/// Marks a typed Prism predicate/capture function as the Rust equivalent of
+/// RuboCop's `def_node_matcher`. The body is compiled Rust, so captures and
+/// node types are checked instead of interpreted at runtime.
+macro_rules! def_node_matcher {
+    ($item:item) => {
+        $item
+    };
+}
+
 macro_rules! declare_cops {
     ($($cop:expr),+ $(,)?) => {
         pub(super) fn cops() -> Vec<Box<dyn Cop>> {
@@ -215,6 +224,27 @@ macro_rules! define_cop_entry {
     ($type:ident => $name:literal => node($cast:ident, $check:path)) => {
         define_node_cop!($type => $name => $cast => $check);
     };
+    ($type:ident => $name:literal => call_rule($rule:ident, $callback:ident)) => {
+        define_call_rule_cop!($type => $name => $rule::$callback);
+    };
+    ($type:ident => $name:literal => call_rule($rule:ident, $callback:ident, restrict [$($method:literal),+ $(,)?])) => {
+        define_call_rule_cop!($type => $name => $rule::$callback restrict [$($method),+]);
+    };
+    ($type:ident => $name:literal => stateful_call_rule($rule:ident, $state:ident, $callback:ident, restrict [$($method:literal),+ $(,)?])) => {
+        define_stateful_call_rule_cop!($type => $name => $rule<$state>::$callback restrict [$($method),+]);
+    };
+    ($type:ident => $name:literal => node_rule($cast:ident, $rule:ident, $callback:ident)) => {
+        define_node_rule_cop!($type => $name => $cast => $rule::$callback);
+    };
+    ($type:ident => $name:literal => stateful_node_rule($cast:ident, $rule:ident, $state:ident, $callback:ident)) => {
+        define_stateful_node_rule_cop!($type => $name => $cast => $rule<$state>::$callback);
+    };
+    ($type:ident => $name:literal => any_node_rule($rule:ident, $callback:ident)) => {
+        define_any_node_rule_cop!($type => $name => $rule::$callback);
+    };
+    ($type:ident => $name:literal => node_rule_aliases($rule:ident, $callback:ident => [$($cast:ident),+ $(,)?])) => {
+        define_any_node_rule_cop!($type => $name => $rule::$callback aliases [$($cast),+]);
+    };
     ($type:ident => $name:literal => any_node($check:path)) => {
         define_any_node_cop!($type => $name => $check);
     };
@@ -227,8 +257,8 @@ macro_rules! define_cop_entry {
 }
 
 pub(super) use {
-    add_offense, declare_cops, declare_source_cops, define_any_node_cop, define_call_cop,
-    define_cop_entry, define_cops, define_node_cop, define_parse_error_cop,
+    add_offense, declare_cops, declare_source_cops, def_node_matcher, define_any_node_cop,
+    define_call_cop, define_cop_entry, define_cops, define_node_cop, define_parse_error_cop,
     define_source_context_cop, return_if, return_unless,
 };
 

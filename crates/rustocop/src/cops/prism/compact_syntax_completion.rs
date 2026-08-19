@@ -1,11 +1,16 @@
 use super::*;
 
+define_rule!(WhileUntilModifierRule);
+
+const WHILE_UNTIL_MODIFIER_MSG: &str =
+    "Favor modifier `{keyword}` usage when having a single-line body.";
+
 define_cops! {
     FileRead => "Style/FileRead" => source(file_read),
     FileWrite => "Style/FileWrite" => source(file_write),
     IfWithSemicolon => "Style/IfWithSemicolon" => source(if_with_semicolon),
     MethodDefParentheses => "Style/MethodDefParentheses" => source(method_def_parentheses),
-    WhileUntilModifier => "Style/WhileUntilModifier" => any_node(on_while),
+    WhileUntilModifier => "Style/WhileUntilModifier" => node_rule_aliases(WhileUntilModifierRule, on_while => [as_while_node, as_until_node]),
 }
 
 fn file_read(context: &mut CopContext<'_, '_>) {
@@ -200,17 +205,16 @@ struct ModifierForm {
     replacement: String,
 }
 
-fn on_while(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
-    let Some(form) = single_line_as_modifier(node, context) else {
-        return;
-    };
-    let message = format!(
-        "Favor modifier `{}` usage when having a single-line body.",
-        form.keyword
-    );
-    add_offense!(context, form.offense, message: message, |corrector| {
-        corrector.replace(node.location(), form.replacement);
-    });
+impl WhileUntilModifierRule<'_, '_, '_> {
+    fn on_while(&mut self, node: &Node<'_>) {
+        let Some(form) = single_line_as_modifier(node, self) else {
+            return;
+        };
+        let message = WHILE_UNTIL_MODIFIER_MSG.replace("{keyword}", form.keyword);
+        add_offense!(self, form.offense, message: message, |corrector| {
+            corrector.replace(node.location(), form.replacement);
+        });
+    }
 }
 
 fn single_line_as_modifier(

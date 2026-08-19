@@ -2,12 +2,21 @@ use ruby_prism::{CallNode, ClassNode, ModuleNode, SingletonClassNode};
 
 use super::*;
 
+#[derive(Default)]
+struct YodaExpressionState {
+    offended_nodes: std::collections::HashSet<(usize, usize)>,
+}
+
+define_stateful_rule!(YodaExpressionRule, YodaExpressionState);
+
+const YODA_EXPRESSION_MSG: &str = "Non-literal operand (`{source}`) should be first.";
+
 define_cops!(
     MultilineMemoization => "Style/MultilineMemoization" => source(multiline_memoization),
     StaticClass => "Style/StaticClass" => node(as_class_node, static_class),
     TrailingBodyOnClass => "Style/TrailingBodyOnClass" => any_node(trailing_body_on_class),
     TrailingBodyOnModule => "Style/TrailingBodyOnModule" => node(as_module_node, trailing_body_on_module),
-    YodaExpression => "Style/YodaExpression" => call(on_send),
+    YodaExpression => "Style/YodaExpression" => stateful_call_rule(YodaExpressionRule, YodaExpressionState, on_send, restrict [b"*", b"+", b"&", b"|", b"^"]),
 );
 
 fn multiline_memoization(context: &mut CopContext<'_, '_>) {
@@ -205,43 +214,48 @@ fn trailing_body_on_module(node: &ModuleNode<'_>, context: &mut CopContext<'_, '
     );
 }
 
-fn on_send(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
-    return_unless!(supported_operators(context)
-        .iter()
-        .any(|operator| operator.as_bytes() == call_name(node)));
-    let Some(left) = node.receiver() else {
-        return;
-    };
-    let Some(right) = only_argument(node) else {
-        return;
-    };
-    return_unless!(yoda_expression_constant(&left, &right));
-    return_if!(offended_ancestor(context));
-    let message = format!(
-        "Non-literal operand (`{}`) should be first.",
-        context.source_file().node(&right)
-    );
-    let replacement = render_yoda(node, context.source_file());
-    add_offense!(context, node.location(), message: message, |corrector| {
-        corrector.replace(node.location(), replacement);
-    });
-}
+impl YodaExpressionRule<'_, '_, '_> {
+    fn on_send(&mut self, node: &CallNode<'_>) {
+        return_unless!(self
+            .supported_operators()
+            .iter()
+            .any(|operator| operator.as_bytes() == node.method_name()));
+        return_unless!(node.arguments_present());
+        let Some(left) = node.receiver() else {
+            return;
+        };
+        let Some(right) = node.first_argument() else {
+            return;
+        };
+        return_unless!(yoda_expression_constant(&left, &right));
+        return_if!(self.offended_ancestor());
+        let message = YODA_EXPRESSION_MSG.replace("{source}", self.source_of(&right));
+        let replacement = render_yoda(node, self.source_file());
+        add_offense!(self, node.location(), message: message, |corrector| {
+            corrector.replace(node.location(), replacement);
+        });
+        self.state.offended_nodes.insert((
+            node.location().start_offset(),
+            node.location().end_offset(),
+        ));
+    }
 
-fn supported_operators<'a>(context: &'a CopContext<'_, '_>) -> &'a [String] {
-    context.config_values("SupportedOperators")
+    fn supported_operators(&self) -> &[String] {
+        self.config_values("SupportedOperators")
+    }
+
+    fn offended_ancestor(&self) -> bool {
+        self.ancestors().iter().rev().any(|ancestor| {
+            self.state.offended_nodes.contains(&(
+                ancestor.location().start_offset(),
+                ancestor.location().end_offset(),
+            ))
+        })
+    }
 }
 
 fn yoda_expression_constant(left: &Node<'_>, right: &Node<'_>) -> bool {
     constant_portion(left) && !constant_portion(right)
-}
-
-fn offended_ancestor(context: &CopContext<'_, '_>) -> bool {
-    context.ancestors().iter().rev().any(|ancestor| {
-        ancestor.as_call_node().is_some_and(|call| {
-            call.receiver().as_ref().is_some_and(constant_portion)
-                && only_argument(&call).is_some_and(|argument| !constant_portion(&argument))
-        })
-    })
 }
 
 fn constant_portion(node: &Node<'_>) -> bool {
