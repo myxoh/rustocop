@@ -79,6 +79,10 @@ impl Cop for CompoundHash {
         "Security/CompoundHash"
     }
 
+    fn phase(&self) -> CopPhase {
+        CopPhase::SourceAndNode
+    }
+
     fn on_source(&self, source: &str, context: &mut Context) {
         let mut inside_hash = false;
         for (offset, line) in SourceFile::new(source).lines() {

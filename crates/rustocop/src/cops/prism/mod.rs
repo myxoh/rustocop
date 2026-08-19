@@ -1,4 +1,4 @@
-use ruby_prism::{parse, CallNode, Node, Visit};
+use ruby_prism::{parse, CallNode, Diagnostic, Node, Visit};
 use std::sync::Arc;
 
 #[path = "framework/catalog_cop.rs"]
@@ -194,9 +194,35 @@ use registry::Registry;
 use runner::Runner;
 use source_file::{SourceEdit, SourceFile};
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(super) enum CopPhase {
+    Source,
+    Node,
+    ParseError,
+    SourceAndNode,
+}
+
+impl CopPhase {
+    const fn visits_source(self) -> bool {
+        matches!(self, Self::Source | Self::SourceAndNode)
+    }
+
+    const fn visits_nodes(self) -> bool {
+        matches!(self, Self::Node | Self::SourceAndNode)
+    }
+
+    const fn visits_parse_errors(self) -> bool {
+        matches!(self, Self::ParseError)
+    }
+}
+
 pub(super) trait Cop: Sync {
     fn name(&self) -> &'static str;
+    fn phase(&self) -> CopPhase {
+        CopPhase::Node
+    }
     fn on_source(&self, _source: &str, _context: &mut Context) {}
+    fn on_parse_error(&self, _error: &Diagnostic<'_>, _source: &str, _context: &mut Context) {}
     fn on_node<'pr>(
         &self,
         node: &Node<'pr>,
@@ -225,7 +251,7 @@ impl Registry {
             .filter(|cop| enabled(cop.name()))
             .collect();
 
-        Self { cops }
+        Self::new(cops)
     }
 }
 

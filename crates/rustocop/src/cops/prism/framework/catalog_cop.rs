@@ -53,6 +53,10 @@ impl Cop for CatalogCop {
         self.name
     }
 
+    fn phase(&self) -> CopPhase {
+        CopPhase::Source
+    }
+
     fn on_source(&self, source: &str, context: &mut Context) {
         let mut context = context.cop_context(self.name, source, &[]);
         match self.rule {

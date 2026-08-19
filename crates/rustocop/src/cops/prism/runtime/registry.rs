@@ -2,6 +2,30 @@ use super::*;
 
 pub(super) struct Registry {
     pub(super) cops: Vec<Box<dyn Cop>>,
+    pub(super) source_cops: Vec<usize>,
+    pub(super) node_cops: Vec<usize>,
+    pub(super) parse_error_cops: Vec<usize>,
+}
+
+impl Registry {
+    pub(super) fn new(cops: Vec<Box<dyn Cop>>) -> Self {
+        let source_cops = cop_indices(&cops, |phase| phase.visits_source());
+        let node_cops = cop_indices(&cops, |phase| phase.visits_nodes());
+        let parse_error_cops = cop_indices(&cops, |phase| phase.visits_parse_errors());
+        Self {
+            cops,
+            source_cops,
+            node_cops,
+            parse_error_cops,
+        }
+    }
+}
+
+fn cop_indices(cops: &[Box<dyn Cop>], accepts: impl Fn(CopPhase) -> bool) -> Vec<usize> {
+    cops.iter()
+        .enumerate()
+        .filter_map(|(index, cop)| accepts(cop.phase()).then_some(index))
+        .collect()
 }
 
 pub(super) fn cop_names() -> Vec<&'static str> {

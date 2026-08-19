@@ -1,7 +1,7 @@
 use super::*;
 
 define_cops! {
-    Syntax => "Lint/Syntax" => source(syntax),
+    Syntax => "Lint/Syntax" => parse_error(syntax),
     FormatParameterMismatch => "Lint/FormatParameterMismatch" => source(format_parameter_mismatch),
     UnusedBlockArgument => "Lint/UnusedBlockArgument" => source(unused_block_argument),
     AmbiguousRange => "Lint/AmbiguousRange" => source(ambiguous_range),
@@ -13,14 +13,11 @@ define_cops! {
     ModuleMemberExistenceCheck => "Style/ModuleMemberExistenceCheck" => source(module_member_existence_check),
 }
 
-fn syntax(context: &mut CopContext<'_, '_>) {
-    let result = parse(context.source().as_bytes());
-    for error in result.errors() {
-        let location = error.location();
-        let start = location.start_offset().min(context.source().len());
-        let end = location.end_offset().max(start).min(context.source().len());
-        context.report(error.message(), start..end);
-    }
+fn syntax(error: &Diagnostic<'_>, context: &mut CopContext<'_, '_>) {
+    let location = error.location();
+    let start = location.start_offset().min(context.source().len());
+    let end = location.end_offset().max(start).min(context.source().len());
+    context.report(error.message(), start..end);
 }
 
 fn format_parameter_mismatch(context: &mut CopContext<'_, '_>) {

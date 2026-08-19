@@ -1,6 +1,48 @@
 use super::*;
 
 #[test]
+fn partitions_cops_by_the_work_they_perform() {
+    let registry = Registry::enabled(&|cop| {
+        matches!(
+            cop,
+            "Lint/Syntax"
+                | "Lint/FormatParameterMismatch"
+                | "Security/Eval"
+                | "Security/CompoundHash"
+        )
+    });
+    let indices_for = |indices: &[usize]| {
+        indices
+            .iter()
+            .map(|index| registry.cops[*index].name())
+            .collect::<Vec<_>>()
+    };
+
+    assert_eq!(
+        indices_for(&registry.source_cops),
+        ["Lint/FormatParameterMismatch", "Security/CompoundHash"]
+    );
+    assert_eq!(
+        indices_for(&registry.node_cops),
+        ["Security/Eval", "Security/CompoundHash"]
+    );
+    assert_eq!(indices_for(&registry.parse_error_cops), ["Lint/Syntax"]);
+}
+
+#[test]
+fn syntax_cop_consumes_the_shared_parse_diagnostics() {
+    let inspection = inspect("def broken(\n", false, RubyVersion::default(), &|cop| {
+        cop == "Lint/Syntax"
+    });
+
+    assert!(!inspection.findings.is_empty());
+    assert!(inspection
+        .findings
+        .iter()
+        .all(|finding| finding.cop_name == "Lint/Syntax"));
+}
+
+#[test]
 fn parses_once_and_dispatches_to_enabled_cops() {
     let inspection = inspect(
         "eval(code)\nJSON.load(payload)\n",

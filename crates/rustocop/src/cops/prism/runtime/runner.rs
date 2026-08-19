@@ -28,7 +28,12 @@ macro_rules! visit_typed_branch {
 
 impl<'pr> Visit<'pr> for Runner<'_, 'pr> {
     fn visit_branch_node_enter(&mut self, node: Node<'pr>) {
-        for cop in &self.registry.cops {
+        for cop in self
+            .registry
+            .node_cops
+            .iter()
+            .map(|index| &self.registry.cops[*index])
+        {
             cop.on_node(&node, &self.ancestors, self.source, self.context);
         }
         self.ancestors.push(node);
@@ -39,7 +44,12 @@ impl<'pr> Visit<'pr> for Runner<'_, 'pr> {
     }
 
     fn visit_leaf_node_enter(&mut self, node: Node<'pr>) {
-        for cop in &self.registry.cops {
+        for cop in self
+            .registry
+            .node_cops
+            .iter()
+            .map(|index| &self.registry.cops[*index])
+        {
             cop.on_node(&node, &self.ancestors, self.source, self.context);
         }
     }

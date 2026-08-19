@@ -1,5 +1,5 @@
 use super::*;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 define_cops! {
     UnderscorePrefixedVariableName => "Lint/UnderscorePrefixedVariableName" => source(underscore_variable),
@@ -11,8 +11,8 @@ define_cops! {
 }
 
 fn underscore_variable(context: &mut CopContext<'_, '_>) {
-    let source = context.source();
-    let mut declarations = Vec::new();
+    let mut candidates = Vec::new();
+    let mut occurrences = HashMap::new();
     for (offset, line) in context.source_file().lines() {
         for (at, _) in line.match_indices('_') {
             let tail = &line[at..];
@@ -24,17 +24,16 @@ fn underscore_variable(context: &mut CopContext<'_, '_>) {
                 continue;
             }
             let name = &tail[..len];
-            if source.match_indices(name).count() > 1 {
-                declarations.push((offset + at, name.len()));
-            }
+            *occurrences.entry(name).or_insert(0) += 1;
+            candidates.push((offset + at, name));
         }
     }
     let mut seen = HashSet::new();
-    for (start, len) in declarations {
-        if seen.insert(start) {
+    for (start, name) in candidates {
+        if occurrences.get(name).copied().unwrap_or_default() > 1 && seen.insert(start) {
             context.report(
                 "Do not use prefix `_` for a variable that is used.",
-                start..start + len,
+                start..start + name.len(),
             );
         }
     }

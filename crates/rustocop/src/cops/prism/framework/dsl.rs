@@ -24,6 +24,10 @@ macro_rules! declare_source_cops {
                     $name
                 }
 
+                fn phase(&self) -> CopPhase {
+                    CopPhase::Source
+                }
+
                 fn on_source(&self, source: &str, context: &mut Context) {
                     let mut reporter = context.reporter(self.name());
                     $check(source, &mut reporter);
@@ -124,9 +128,36 @@ macro_rules! define_source_context_cop {
                 $name
             }
 
+            fn phase(&self) -> CopPhase {
+                CopPhase::Source
+            }
+
             fn on_source(&self, source: &str, context: &mut Context) {
                 let mut cop_context = context.cop_context(self.name(), source, &[]);
                 $check(&mut cop_context);
+            }
+        }
+    };
+}
+
+/// Defines a cop that consumes parse diagnostics produced by the engine's
+/// single Prism parse instead of parsing the source again.
+macro_rules! define_parse_error_cop {
+    ($type:ident => $name:literal => $check:path) => {
+        struct $type;
+
+        impl Cop for $type {
+            fn name(&self) -> &'static str {
+                $name
+            }
+
+            fn phase(&self) -> CopPhase {
+                CopPhase::ParseError
+            }
+
+            fn on_parse_error(&self, error: &Diagnostic<'_>, source: &str, context: &mut Context) {
+                let mut cop_context = context.cop_context(self.name(), source, &[]);
+                $check(error, &mut cop_context);
             }
         }
     };
@@ -154,9 +185,12 @@ macro_rules! define_cop_entry {
     ($type:ident => $name:literal => source($check:path)) => {
         define_source_context_cop!($type => $name => $check);
     };
+    ($type:ident => $name:literal => parse_error($check:path)) => {
+        define_parse_error_cop!($type => $name => $check);
+    };
 }
 
 pub(super) use {
     declare_cops, declare_source_cops, define_any_node_cop, define_call_cop, define_cop_entry,
-    define_cops, define_node_cop, define_source_context_cop,
+    define_cops, define_node_cop, define_parse_error_cop, define_source_context_cop,
 };

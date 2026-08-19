@@ -87,17 +87,25 @@ mutators from after-Prism readers before attempting copy-on-write storage.
 Do not remove the single-Prism-parse invariant or change correction ordering to
 save these allocations.
 
-## 3. Every enabled cop sees every Prism node
+## 3. Partially addressed: every enabled cop saw every Prism node
 
-Confidence: measured scaling plus code inspection.
+Status: source, node, and parse-error phases were separated on 2026-08-19.
 
-The visitor loops over the complete enabled registry for every branch and leaf
-node. Each cop then rejects irrelevant node types and call names itself. The
-500-file median increased from 10.83 ms with five cops to 19.28 ms with twenty,
-showing that this linear dispatch is already material on tiny syntax trees.
+The visitor previously looped over the complete enabled registry for every
+branch and leaf node, including hundreds of source-wide cops whose node callback
+was empty. The registry now builds stable execution buckets once. Source cops
+run once per file, node cops run during traversal, and parse-error cops consume
+the diagnostics from the engine's existing Prism parse.
 
-This is the most important bottleneck for eventual support of all built-in
-cops. File parallelism distributes the work but does not remove it.
+On the same 500 Chatwoot files (886,046 bytes), enabling all 573 non-legacy Prism
+cops except the known `Style/RescueModifier` failure fell from 584.36 ms to
+515.53 ms, an 11.8% reduction. The 500-file compatibility corpus with its 20
+cops fell from 7.57 ms to 7.31 ms. Its default-cop run remained effectively
+flat at 22.03 ms because startup and actual cop work dominate that tiny corpus.
+
+Remaining opportunity: every *node* cop still sees every Prism node and rejects
+irrelevant node types and call names itself. File parallelism distributes this
+work but does not remove it.
 
 Preferred direction:
 
@@ -111,7 +119,27 @@ Preferred direction:
 A large matcher DSL is not required. A small subscription API or registry
 metadata should be enough.
 
-## 4. Addressed: source positions rescanned the file for every offense
+## 4. Addressed: selected source cops repeatedly rescanned or reparsed files
+
+Status: two measured cases were addressed on 2026-08-19.
+
+`Lint/Syntax` used to invoke Prism a second time. It now consumes the parse
+diagnostics already returned by the engine. Across 100 inspections of a
+78,166-byte file, the syntax run fell from 129.89 ms to 72.47 ms; its no-cop
+control measured 72.72 ms, so the extra parse cost disappeared within benchmark
+noise.
+
+`Lint/UnderscorePrefixedVariableName` used `match_indices` over the complete
+source for every underscore candidate. It now gathers candidate occurrence
+counts during one scan. On 150 Chatwoot files, its incremental time over the
+no-cop control fell from approximately 13.42 ms to 6.16 ms, a 54% reduction.
+
+Many heuristic source cops still scan the full file independently. Sharing a
+token stream or line index could reduce that cost, but doing so across unrelated
+rules would introduce a broader cache API and lifetime constraints. Keep this
+as a measured future option rather than adding infrastructure pre-emptively.
+
+## 5. Addressed: source positions rescanned the file for every offense
 
 Status: addressed on 2026-08-18.
 
@@ -126,7 +154,7 @@ Implemented:
 - Byte offsets use binary search and count Unicode scalar values only within
   the selected line, preserving RuboCop-compatible columns.
 
-## 5. Parallel scaling is limited by tiny tasks
+## 6. Parallel scaling is limited by tiny tasks
 
 Confidence: measured.
 
@@ -144,10 +172,12 @@ tiny fixtures.
 
 ## Recommended order
 
-1. Separate line mutators from line readers, then make remaining splitting and
+1. Dispatch Prism node cops by node kind and, where useful, call method.
+2. Separate line mutators from line readers, then make remaining splitting and
    cloning lazy or copy-on-write.
-2. Dispatch Prism cops by node kind and, where useful, call method.
-3. Add a realistic large-file/application benchmark before further scheduler
+3. Consider shared lexical indexes only after profiles identify a group of
+   source cops with meaningful aggregate scan cost.
+4. Add a realistic large-file/application benchmark before further scheduler
    tuning.
 
 Each optimization must retain normalized JSON parity, correction parity, the
