@@ -43,33 +43,196 @@ These helpers are small, but they remove some of the most error-prone code in
 correctable cops: newline ownership, indentation slicing, and relative offset
 arithmetic.
 
-## Highest-value capabilities to build next
+## Lessons from the 30-cop completion batch
 
-The generated remaining-cop plan currently groups 329 non-Verified cops into
-85 layout, 52 scope/symbol, 27 control-flow, 12 project-context, 11 regexp,
-10 metrics, and 126 other AST-structural cops. That distribution argues for
-shared capabilities in this order.
+The August 2026 batch registered 30 cops, moved 13 through every captured
+diagnostic and correction assertion, and left 17 as explicit heuristics. That
+split is useful evidence: a source callback can establish broad behavior very
+quickly, but syntax-aware negative cases and exact corrections are where raw
+string matching stops scaling.
 
-### 1. Statement and scope index
+### Text scanning is a prototype, not the default implementation
 
-Build an immutable per-file index during the existing Prism traversal:
+The batch repeatedly needed local replacements for balanced delimiters,
+top-level comma splitting, quote handling, comments, safe navigation, root
+constants, command-form arguments, and block forms. Each local scanner made a
+few more examples pass, but the remaining failures are mostly cases Prism
+already distinguishes correctly.
 
-- containing lexical scope for every node;
-- statement list, statement index, previous sibling, and next sibling;
-- method/class/module/block boundaries;
-- local declarations, reads, writes, and shadowing depth;
-- visibility changes and definitions within a scope.
+New syntax-aware cops should therefore begin on Prism nodes even when a source
+pattern looks easier. A source implementation is appropriate for actual file
+metadata, comments, magic comments, and whitespace. For call chains, literals,
+assignments, definitions, branches, and blocks, use a source callback only as a
+short-lived heuristic and record the AST migration as part of the same cop's
+completion work.
 
-This would directly simplify unused arguments, duplicate methods, access
-modifiers, redundant assignments, method-definition rules, and many naming
-cops. Individual cops should query this index rather than each implementing a
-custom `Visit` collector.
+### Negative examples define the abstraction
 
-Do not begin with full Ruby data-flow analysis. A correct lexical index plus
-scope-aware reads and writes covers a large portion of the 52-cop cluster and
-creates the input needed by later flow analysis.
+The most informative upstream cases were not the obvious offenses. They were
+examples that must remain untouched:
 
-### 2. Layout context
+- dynamic set elements that have identical source but different evaluations;
+- Bundler groups with the same name but different option sets;
+- visibility declarations using splats or multiple constants;
+- invalid magic-comment values;
+- assignment conditions whose modifier conversion would change semantics;
+- root constants, safe navigation, and command-form calls whose correction
+  must preserve their original operator or parentheses.
+
+When extracting a helper, model these refusal cases first. A helper that only
+recognizes the positive example moves boilerplate while leaving every caller
+to rediscover the dangerous exceptions.
+
+### Detection, offense geometry, and correction are three contracts
+
+Many cases had the correct message but still failed because RuboCop highlights
+only a selector, operator, body expression, or zero-width boundary. Other cases
+had identical diagnostics but a different correction because a leading `::`,
+safe-navigation operator, comment, space, or command-form parenthesis was lost.
+
+Shared APIs should keep these concepts separate:
+
+1. the semantic node or chain that establishes the offense;
+2. the exact range RuboCop highlights;
+3. the edit plan that preserves surrounding syntax.
+
+`CopContext::replace` already accepts separate offense and edit ranges. The
+next helpers should make the correct ranges easy to obtain rather than
+reconstructing them from `find`, `rfind`, and string lengths in each cop.
+
+### Configuration and related cops are part of matching
+
+Target Ruby version, `Allowed*` values, style selection, file role, and related
+`Layout/LineLength` configuration changed whether several examples were
+offenses. These checks should happen before expensive matching and before a
+correction is planned. Typed configuration access exists; new shared views
+should accept policy inputs rather than reading configuration implicitly.
+
+### Diagnostic parity and correction parity need separate queues
+
+The refreshed remaining plan contains heuristic cops whose diagnostic cases
+are already complete but whose correction assertions are not. Those are not
+missing matchers. They need focused correction work. Reporting them together
+with detection gaps wastes implementation time and makes apparently complete
+cops difficult to promote.
+
+The authoring tools should expose four counts per cop: expected-clean cases,
+diagnostic matches, correction assertions, and complete cases. Promotion to
+Verified must continue to require all four.
+
+## Highest-leverage extractions after the batch
+
+The current queue has 250 non-Verified cops: 43 partial implementations, 68
+structural-batch candidates, and 139 engine-capability candidates. The recent
+failures suggest the following implementation order.
+
+### 1. Call-chain view and targeted chain edits
+
+This is now the clearest immediate win. Add a normalized view with:
+
+- receiver and root-constant identity;
+- `.` versus `&.` operator locations;
+- selector, arguments, and block locations;
+- parent and child call segments;
+- block form (`{}` or `do`/`end`) and parameters;
+- targeted replacement or removal of a sequence of segments.
+
+It should preserve source outside the selected segments and provide a
+parenthesization edit for command-form arguments. This directly serves the
+recent `FileRead`, `FileWrite`, `TallyMethod`, `RedundantSort`,
+`RedundantMinMaxBy`, `ArrayIntersect`, `ZeroLengthPredicate`, and
+`SymbolConversion` heuristics, plus safe-navigation and collection cops still
+in the queue.
+
+### 2. Delimited-list and token geometry
+
+Add one quote-aware, comment-aware abstraction backed by Prism delimiter and
+element locations. It should expose:
+
+- matching opening and closing delimiters;
+- top-level elements and their separator ownership;
+- leading and trailing whitespace for each element;
+- trailing comma and comment attachment;
+- safe removal ranges for first, middle, last, and only elements.
+
+This replaces the local balanced-parenthesis and top-level-entry scanners added
+for lambda, hash, and set behavior. Prefer AST element locations; keep a small
+lexical fallback only for constructs Prism does not locate directly.
+
+### 3. Static literal identity
+
+Implement a conservative `StaticValue` representation for strings, symbols,
+numbers, ranges, arrays, hashes, constants, and static pattern elements. It
+must return `None` for calls, interpolation, mutable evaluation, or any value
+whose equality cannot be established safely.
+
+This would let duplicate hash keys, set elements, match patterns, literal
+constructors, and related cops share Ruby-aware equality instead of comparing
+normalized source text.
+
+### 4. Statement position and lexical scope index
+
+Add queries for previous/next statement, tail position, enclosing branch,
+definition scope, block variable, and declarations in the current scope. The
+batch needed ad hoc versions for top-level methods, constant visibility,
+gemspec block variables, and return-position double negation.
+
+This should remain a lexical index, not a speculative full data-flow engine.
+Tail-position and sibling queries alone would close several current heuristic
+gaps and prepare the remaining unused-variable and shadowing cops.
+
+### 5. Comment and file-header view
+
+Centralize shebangs, recognized magic comments, documentation comments,
+comment borders/margins, and comments attached before or after a statement.
+This is a smaller abstraction, but it is safety-critical for corrections that
+move definitions or alter blank lines.
+
+### 6. Correction plan helpers
+
+Build narrow correction operations on top of `replace_many` and
+`SourceFile::rewrite`:
+
+- replace a call-chain segment sequence;
+- preserve or normalize a root constant intentionally;
+- parenthesize command-form arguments;
+- move an attached comment with its statement;
+- replace a body while preserving its indentation and terminator;
+- insert at beginning/end of file with RuboCop-compatible zero-width ranges.
+
+These are preferable to a generic renderer. Each operation has a testable
+source-preservation contract and can be reused without hiding why the cop
+reports an offense.
+
+## Workflow improvements with no runtime complexity
+
+The manual compatibility loop itself exposed a tooling opportunity. Add a
+batch verifier that accepts a cop list and prints, for every failing cop:
+
+- passed and total diagnostics;
+- passed and total correction assertions;
+- the first failing source and effective configuration;
+- expected versus actual offenses;
+- expected versus actual corrected source.
+
+It should rank cops by remaining failures and distinguish correction-only gaps.
+This is likely to save more implementation time immediately than another DSL
+macro.
+
+For each future batch, build an AST-shape matrix before coding: root versus
+relative constants, ordinary versus safe navigation, receiver versus no
+receiver, parentheses versus command form, braces versus `do`/`end`, and
+single-line versus multiline with comments. Running that matrix against the
+upstream corpus early prevents a narrow textual implementation from becoming
+the accidental architecture.
+
+## Longer-term capability backlog
+
+The updated priorities above cover the abstractions most strongly supported by
+the recent batch. Four broader capabilities still matter for the rest of the
+queue.
+
+### Layout context
 
 Add a `LayoutContext` backed by Prism locations and `SourceFile`:
 
@@ -81,22 +244,11 @@ Add a `LayoutContext` backed by Prism locations and `SourceFile`:
 - line-break and blank-line queries;
 - configured indentation width.
 
-The key abstraction should be geometry, not one helper per Layout cop. The 85
+The key abstraction should be geometry, not one helper per Layout cop. The 67
 remaining layout cops repeatedly ask the same questions with different policy.
 A shared context would also reduce unsafe raw slicing in existing layout rules.
 
-### 3. Call-chain view and renderer
-
-Normalize a call chain into receiver, operator, selector, arguments, block, and
-parent-call links. Provide rendering operations such as replacing one segment,
-removing a segment, and parenthesizing command-form arguments.
-
-This should serve safe-navigation consistency, redundant call chains, inverse
-methods, collection querying, hash/array transformations, and parentheses
-cops. Rendering must preserve comments and safe-navigation operators; a string
-builder that reconstructs the complete call is not sufficient.
-
-### 4. Conditional and branch view
+### Conditional and branch view
 
 `ModifierConditional` is the first small piece. Extend it only as consumers
 arrive, toward a normalized conditional API covering:
@@ -111,17 +263,7 @@ This should unlock `Style/NestedModifier`, `Style/WhileUntilModifier`,
 `Style/IfInsideElse`, `Style/MissingElse`, and parts of guard-clause and
 conditional-assignment behavior.
 
-### 5. Literal identity
-
-Provide a canonical, hashable representation for static strings, symbols,
-numbers, ranges, arrays, hashes, and constants when Ruby semantics make the
-comparison safe. Keep “static value” distinct from “same source text.”
-
-This would serve duplicate hash/set elements, duplicate branches, literal
-conversion, collection literals, and several pattern cops. It should refuse
-dynamic interpolation and other ambiguous values instead of guessing.
-
-### 6. Focused parsers shared by cop families
+### Focused parsers shared by cop families
 
 Some domains are languages inside Ruby and deserve dedicated parsers:
 
@@ -133,7 +275,7 @@ Some domains are languages inside Ruby and deserve dedicated parsers:
 These belong in tested infrastructure modules. They should not become methods
 on a general-purpose AST DSL.
 
-### 7. Project context and metrics
+### Project context and metrics
 
 Project-wide gem/dependency cops need a run-level read-only index rather than
 global state in individual cops. Metrics cops need a shared counter model with
