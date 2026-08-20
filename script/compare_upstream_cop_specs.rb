@@ -131,9 +131,16 @@ workers = Array.new(options[:jobs]) do
                  end
                end
       expected = test_case["offenses"]&.map do |offense|
-        offense.slice(
+        captured = offense.slice(
           "message", "severity", "correctable", "line", "column", "last_line", "last_column"
         )
+        # Captured Parser ranges use column zero when the range ends exactly
+        # at a newline; RuboCop's public JSON formatter serializes that point
+        # as column one.
+        if captured["last_line"] > captured["line"] && captured["last_column"].zero?
+          captured["last_column"] = 1
+        end
+        captured
       end
       diagnostics_match = expected.nil? || actual.sort_by(&offense_order) == expected.sort_by(&offense_order)
       passed = expected.nil? ||

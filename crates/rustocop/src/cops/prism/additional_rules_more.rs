@@ -11,7 +11,6 @@ declare_source_cops! {
     UriEscapeUnescape => "Lint/UriEscapeUnescape" => uri_escape_unescape,
     OrAssignmentToConstant => "Lint/OrAssignmentToConstant" => or_assignment_to_constant,
     OrderedMagicComments => "Lint/OrderedMagicComments" => ordered_magic_comments,
-    RedundantRegexpConstructor => "Style/RedundantRegexpConstructor" => redundant_regexp_constructor,
     DuplicateRequire => "Lint/DuplicateRequire" => duplicate_require,
     UriRegexp => "Lint/UriRegexp" => uri_regexp,
 }
@@ -220,33 +219,6 @@ fn ordered_magic_comments(source: &str, reporter: &mut Reporter<'_>) {
         frozen_offset..end,
         replacement,
     );
-}
-
-fn redundant_regexp_constructor(source: &str, reporter: &mut Reporter<'_>) {
-    for receiver in ["::Regexp", "Regexp"] {
-        for method in ["new", "compile"] {
-            let needle = format!("{receiver}.{method}(/");
-            for start in all_offsets(source, &needle) {
-                if receiver == "Regexp" && start >= 2 && &source[start - 2..start] == "::" {
-                    continue;
-                }
-                let Some(close) = source[start..].rfind(')') else {
-                    continue;
-                };
-                let end = start + close + 1;
-                let Some(slash) = source[start..end].find('/') else {
-                    continue;
-                };
-                let replacement = &source[start + slash..end - 1];
-                reporter.replace(
-                    format!("Remove the redundant `Regexp.{method}`."),
-                    start..end,
-                    start..end,
-                    replacement,
-                );
-            }
-        }
-    }
 }
 
 fn duplicate_require(source: &str, reporter: &mut Reporter<'_>) {

@@ -126,7 +126,7 @@ module UpstreamCopCapture
       "line" => location.line,
       "column" => location.column + 1,
       "last_line" => location.last_line,
-      "last_column" => location.last_column,
+      "last_column" => location.last_line > location.line && location.last_column.zero? ? 1 : location.last_column,
       "begin_pos" => location.begin_pos,
       "end_pos" => location.end_pos
     }

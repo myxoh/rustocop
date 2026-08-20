@@ -50,6 +50,13 @@ impl RedundantParenthesesRule<'_, '_, '_> {
             .source()
             .get(node.closing_loc().end_offset()..)
             .unwrap_or_default();
+        if (suffix.trim_start().starts_with('.') || suffix.trim_start().starts_with("&."))
+            && first.as_call_node().is_some_and(|call| {
+                argument_count(&call) > 0 && operator_method(call.name().as_slice())
+            })
+        {
+            return true;
+        }
         let whitespace_before = self.source()[..node.opening_loc().start_offset()]
             .chars()
             .last()
@@ -145,6 +152,18 @@ impl RedundantParenthesesRule<'_, '_, '_> {
         if first.as_call_node().is_some_and(|call| {
             matches!(call.name().as_slice(), b"&" | b"|" | b"^")
         }) && suffix.trim_start().starts_with('.')
+        {
+            return true;
+        }
+        if first.as_call_node().is_some_and(|call| {
+            call.opening_loc().is_none()
+                && argument_count(&call) > 0
+                && operator_method(call.name().as_slice())
+        }) && parent.is_some_and(|ancestor| {
+            ancestor
+                .as_call_node()
+                .is_some_and(|call| operator_method(call.name().as_slice()))
+        })
         {
             return true;
         }
@@ -746,6 +765,13 @@ fn definition_parameter_node(node: &Node<'_>) -> bool {
 
 fn comparison_method(name: &[u8]) -> bool {
     matches!(name, b"==" | b"===" | b"!=" | b">" | b">=" | b"<" | b"<=" | b"<=>" | b"=~" | b"!~")
+}
+
+fn operator_method(name: &[u8]) -> bool {
+    matches!(
+        name,
+        b"+" | b"-" | b"*" | b"/" | b"%" | b"**" | b"<<" | b">>" | b"&" | b"|" | b"^"
+    )
 }
 
 fn pattern_matching_node(node: &Node<'_>) -> bool {

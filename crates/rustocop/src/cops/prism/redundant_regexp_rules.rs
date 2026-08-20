@@ -3,6 +3,7 @@ use ruby_prism::{CallNode, Node};
 use super::*;
 
 define_rule!(RedundantRegexpEscapeRule);
+define_rule!(RedundantRegexpConstructorRule);
 define_rule!(RedundantRegexpCharacterClassRule);
 define_rule!(RedundantRegexpArgumentRule);
 
@@ -16,6 +17,11 @@ define_cops! {
         RedundantRegexpEscapeRule,
         on_regexp => [as_regular_expression_node, as_interpolated_regular_expression_node]
     ),
+    RedundantRegexpConstructor => "Style/RedundantRegexpConstructor" => call_rule(
+        RedundantRegexpConstructorRule,
+        on_send,
+        restrict [b"new", b"compile"]
+    ),
     RedundantRegexpCharacterClass => "Style/RedundantRegexpCharacterClass" => node_rule_aliases(
         RedundantRegexpCharacterClassRule,
         on_regexp => [as_regular_expression_node, as_interpolated_regular_expression_node]
@@ -25,6 +31,24 @@ define_cops! {
         on_send,
         restrict [b"byteindex", b"byterindex", b"gsub", b"gsub!", b"partition", b"rpartition", b"scan", b"split", b"start_with?", b"sub", b"sub!"]
     ),
+}
+
+impl RedundantRegexpConstructorRule<'_, '_, '_> {
+    fn on_send(&mut self, node: &CallNode<'_>) {
+        return_unless!(root_constant(node.receiver(), b"Regexp"));
+        let Some(regexp) = only_argument(node).filter(|argument| {
+            argument.as_regular_expression_node().is_some()
+                || argument.as_interpolated_regular_expression_node().is_some()
+        }) else {
+            return;
+        };
+        let method = String::from_utf8_lossy(node.name().as_slice());
+        let message = format!("Remove the redundant `Regexp.{method}`.");
+        let replacement = self.source_file().node(&regexp).to_string();
+        add_offense!(self, node.location(), message: message, |corrector| {
+            corrector.replace(node.location(), replacement);
+        });
+    }
 }
 
 impl RedundantRegexpEscapeRule<'_, '_, '_> {
@@ -345,10 +369,19 @@ fn determinist_regexp(content: &str) -> bool {
             if index + 1 >= bytes.len() {
                 return false;
             }
+            if bytes[index + 1].is_ascii_digit()
+                || b"AbBdDgGhHkpPRwWXsSzZ".contains(&bytes[index + 1])
+            {
+                return false;
+            }
             index += 2;
             continue;
         }
-        if b".^$*+?{}[]()|".contains(&bytes[index]) {
+        if !(bytes[index].is_ascii_alphanumeric()
+            || bytes[index] == b'_'
+            || bytes[index].is_ascii_whitespace()
+            || b"-,\"'!#%&<>=;:`~/".contains(&bytes[index]))
+        {
             return false;
         }
         index += 1;

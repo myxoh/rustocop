@@ -44,7 +44,10 @@ fn prism_offense(source: &str, index: &SourceIndex, finding: prism::Finding) -> 
         (1, 0)
     } else if ends_at_newline {
         let (line, _) = index.position(source, finding.end_offset);
-        (line, 0)
+        // RuboCop's JSON formatter reports the beginning of the following
+        // line as column one even though Parser's internal range column is
+        // zero for a range ending exactly at a newline.
+        (line, 1)
     } else {
         index.position(source, last_offset)
     };
@@ -136,6 +139,6 @@ mod tests {
                 end_offset: 8,
             },
         );
-        assert_eq!((newline.last_line, newline.last_column), (2, 0));
+        assert_eq!((newline.last_line, newline.last_column), (2, 1));
     }
 }

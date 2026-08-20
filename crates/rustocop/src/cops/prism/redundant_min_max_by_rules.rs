@@ -18,6 +18,7 @@ define_cops! {
 
 impl RedundantMinMaxByRule<'_, '_, '_> {
     fn on_block(&mut self, node: &CallNode<'_>) {
+        return_if!(argument_count(node) != 0);
         let Some(block) = node.block().and_then(|candidate| candidate.as_block_node()) else {
             return;
         };
