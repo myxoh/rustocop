@@ -1,9 +1,11 @@
+use ruby_prism::{BlockNode, ForNode, Node};
+
 use super::*;
 
 define_cops! {
     SafeNavigationConsistency => "Lint/SafeNavigationConsistency" => source(safe_navigation_consistency),
     CombinableDefined => "Style/CombinableDefined" => source(combinable_defined),
-    For => "Style/For" => source(for_loop),
+    For => "Style/For" => rubocop_callbacks(ForRule, [on_for, on_block]),
     ClassAndModuleChildren => "Style/ClassAndModuleChildren" => source(class_module_children),
     SafeNavigationChain => "Lint/SafeNavigationChain" => source(safe_navigation_chain),
     BlockDelimiters => "Style/BlockDelimiters" => source(block_delimiters),
@@ -46,23 +48,87 @@ fn combinable_defined(context: &mut CopContext<'_, '_>) {
     );
 }
 
-fn for_loop(context: &mut CopContext<'_, '_>) {
-    for (offset, line) in context.source_file().lines() {
-        let trimmed = line.trim_start();
-        let Some(body) = trimmed.strip_prefix("for ") else {
-            continue;
+impl ForRule<'_, '_, '_> {
+    fn on_for(&mut self, node: &ForNode<'_>) {
+        return_if!(self.policy().enforced_style("each") != "each");
+        let collection = node.collection();
+        let variable = node.index();
+        let collection_source = self.source_file().node(&collection);
+        let variable_source = self.source_file().node(&variable);
+        let collection_source = if for_collection_needs_parentheses(&collection, collection_source) {
+            format!("({collection_source})")
+        } else {
+            collection_source.to_string()
         };
-        let Some((variable, collection)) = body.split_once(" in ") else {
-            continue;
+        let navigation = if collection
+            .as_call_node()
+            .and_then(|call| call.call_operator_loc())
+            .is_some_and(|operator| operator.as_slice() == b"&.")
+        {
+            "&."
+        } else {
+            "."
         };
-        let indent = line.len() - trimmed.len();
-        context.replace(
-            "Prefer `each` over `for`.",
-            offset + indent..offset + line.len(),
-            offset + indent..offset + line.len(),
-            format!("{}.each do |{}|", collection.trim(), variable.trim()),
-        );
+        let replacement = format!("{collection_source}{navigation}each do |{variable_source}|");
+        let header_end = node
+            .do_keyword_loc()
+            .map_or(collection.location().end_offset(), |location| location.end_offset());
+        let edit = node.for_keyword_loc().start_offset()..header_end;
+        let offense = node.location();
+        add_offense!(self, offense, message: "Prefer `each` over `for`.", |corrector| {
+            corrector.replace(edit, replacement);
+        });
     }
+
+    fn on_block(&mut self, block: &BlockNode<'_>) {
+        return_if!(self.policy().enforced_style("each") != "for");
+        let Some(each) = self.parent().and_then(Node::as_call_node) else { return };
+        return_unless!(each.name().as_slice() == b"each" && argument_count(&each) == 0);
+        let block_source = self
+            .source_file()
+            .slice(block.location().start_offset()..block.location().end_offset())
+            .unwrap_or_default();
+        return_if!(block_source.lines().count() <= 1);
+        let Some(receiver) = each.receiver() else { return };
+        let explicit_parameters = block
+            .parameters()
+            .and_then(|parameters| parameters.as_block_parameters_node());
+        let variable = explicit_parameters
+            .as_ref()
+            .map(|parameters| {
+                self.source_file()
+                    .slice(parameters.location().start_offset()..parameters.location().end_offset())
+                    .unwrap_or_default()
+                    .trim()
+                    .trim_matches('|')
+                    .trim()
+            })
+            .filter(|parameter| !parameter.is_empty())
+            .unwrap_or("_");
+        let receiver_source = self.source_file().node(&receiver);
+        let replacement = format!("for {variable} in {receiver_source} do");
+        let header_end = explicit_parameters
+            .map_or(block.opening_loc().end_offset(), |parameters| {
+                parameters.location().end_offset()
+            });
+        let edit = each.location().start_offset()..header_end;
+        let offense = each.location().start_offset()..block.closing_loc().end_offset();
+        add_offense!(self, offense, message: "Prefer `for` over `each`.", |corrector| {
+            corrector.replace(edit, replacement);
+        });
+    }
+}
+
+fn for_collection_needs_parentheses(node: &Node<'_>, source: &str) -> bool {
+    if source.trim_start().starts_with('(') {
+        return false;
+    }
+    node.as_and_node().is_some()
+        || node.as_or_node().is_some()
+        || node.as_range_node().is_some()
+        || node.as_call_node().is_some_and(|call| {
+            matches!(call.name().as_slice(), b"+" | b"-" | b"*" | b"|" | b"&")
+        })
 }
 
 fn class_module_children(context: &mut CopContext<'_, '_>) {

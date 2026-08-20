@@ -11,6 +11,9 @@ pub(super) fn if_inside_else(context: &mut CopContext<'_, '_>) {
         }
         let indent = if_line.len() - if_line.trim_start().len();
         let condition = if_line.trim_start()[3..].trim_end();
+        if condition.contains(" then ") && correct_then_form(context, &lines, else_offset, if_offset, if_line, condition) {
+            return;
+        }
         if condition.ends_with(" then") || condition.contains(" #") {
             continue;
         }
@@ -53,11 +56,16 @@ pub(super) fn if_inside_else(context: &mut CopContext<'_, '_>) {
         let mut replacement = format!("{outer_indent}elsif {condition}");
         let nested_end = nested_end.expect("checked above");
         let mut nested_else = false;
+        let before_else = lines.iter().take(nested_end).skip(nested_index + 1).take_while(|(_, line)| {
+            !line.trim_start().starts_with("else") && !line.trim_start().starts_with("elsif")
+        }).map(|(_, line)| *line).collect::<Vec<_>>();
+        let has_comment = before_else.iter().any(|line| line.trim_start().starts_with('#'));
+        let has_expression = before_else.iter().any(|line| !line.trim().is_empty() && !line.trim_start().starts_with('#'));
         for (_, body_line) in lines.iter().take(nested_end).skip(nested_index + 1) {
-            if body_line.trim_start().starts_with("else") {
+            if body_line.trim_start().starts_with("else") || body_line.trim_start().starts_with("elsif") {
                 nested_else = true;
             }
-            let dedented = if nested_else {
+            let dedented = if nested_else || (has_comment && (!body_line.trim_start().starts_with('#') || !has_expression)) {
                 body_line
             } else {
                 body_line.strip_prefix("  ").unwrap_or(body_line)
@@ -112,6 +120,9 @@ fn correct_modifier_form(context: &mut CopContext<'_, '_>, lines: &[(usize, &str
             .unwrap_or_default()
             .trim();
         let body = body_line[..if_at].trim();
+        let trailing_comment = body_line[if_at + 4..].find('#').map(|at| {
+            format!(" {}", body_line[if_at + 4 + at..].trim())
+        }).unwrap_or_default();
         let body_indent = &body_line[..body_line.len() - body_line.trim_start().len()];
         context.replace_many(
             "Convert `if` nested inside `else` to `elsif`.",
@@ -126,9 +137,64 @@ fn correct_modifier_form(context: &mut CopContext<'_, '_>, lines: &[(usize, &str
                 ),
                 (
                     *body_offset..body_offset + body_line.len(),
-                    format!("{body_indent}  {body}"),
+                    format!("{body_indent}{body}{trailing_comment}"),
                 ),
             ],
         );
     }
+}
+
+fn correct_then_form(
+    context: &mut CopContext<'_, '_>,
+    lines: &[(usize, &str)],
+    else_offset: usize,
+    if_offset: usize,
+    if_line: &str,
+    condition: &str,
+) -> bool {
+    let indent = &if_line[..if_line.len() - if_line.trim_start().len()];
+    let nested_index = lines.iter().position(|(offset, _)| *offset == if_offset).unwrap_or(0);
+    let inline_end = lines[nested_index..].iter().position(|(_, line)| line.trim_end().ends_with(" end")).map(|at| nested_index + at);
+    let Some(end_index) = inline_end else { return false };
+    let multiline = end_index > nested_index;
+    let mut expanded = String::new();
+    for (position, (_, line)) in lines[nested_index..=end_index].iter().enumerate() {
+        if position > 0 { expanded.push('\n'); }
+        let mut line = line.to_string();
+        if !line.trim_start().starts_with("elsif ") {
+            line = line.replace(" elsif ", &format!("\n{indent}elsif "));
+        }
+        line = line.replace(" then ", &format!("\n{indent}"));
+        if line.trim_start().starts_with("else ") {
+            let leading = &line[..line.len() - line.trim_start().len()];
+            line = format!("{leading}else\n{indent}{}", line.trim_start()[5..].trim_start());
+        } else if let Some((before, after)) = line.split_once(" else ") {
+            line = format!("{before}\n{indent}else\n{indent}{after}");
+        }
+        if line.ends_with(" end") {
+            line.truncate(line.len() - 4);
+            line.push('\n');
+            line.push_str(if multiline { indent } else { "" });
+            line.push_str("end");
+        }
+        expanded.push_str(&line);
+    }
+    let offense = if_offset + indent.len()..if_offset + indent.len() + 2;
+    let has_final_else = !multiline && condition.contains(" else ");
+    if has_final_else {
+        let mut lines = expanded.lines();
+        let first = lines.next().unwrap_or_default().trim_start().strip_prefix("if ").unwrap_or_default();
+        let outer_line = context.source()[else_offset..if_offset].lines().next().unwrap_or("");
+        let outer_indent = &outer_line[..outer_line.len() - outer_line.trim_start().len()];
+        let mut replacement = format!("{outer_indent}elsif {first}");
+        let rest = lines.collect::<Vec<_>>();
+        for line in rest.iter().take(rest.len().saturating_sub(1)) {
+            replacement.push('\n');
+            replacement.push_str(line);
+        }
+        context.replace("Convert `if` nested inside `else` to `elsif`.", offense, else_offset..if_offset + if_line.len(), replacement);
+    } else {
+        context.replace("Convert `if` nested inside `else` to `elsif`.", offense, if_offset..lines[end_index].0 + lines[end_index].1.len(), expanded);
+    }
+    true
 }

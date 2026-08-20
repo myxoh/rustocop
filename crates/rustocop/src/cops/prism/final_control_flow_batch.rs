@@ -6,8 +6,6 @@ mod registry;
 pub(super) fn cops() -> Vec<Box<dyn Cop>> {
     let mut cops = vec![
         custom("Lint/UnreachableLoop", unreachable_loop),
-        custom("Style/IdenticalConditionalBranches", identical_branches),
-        custom("Style/InfiniteLoop", infinite_loop),
         custom("Lint/EmptyConditionalBody", empty_conditional),
     ];
     cops.extend(registry::cops());
@@ -37,12 +35,8 @@ fn identical_branches(context: &mut CopContext<'_, '_>) {
             && window[2].1.trim() == "else"
             && window[4].1.trim() == "end"
             && window[1].1.trim() == window[3].1.trim()
-            && window[1].1.trim() != "()"
         {
-            context.report(
-                "Move identical branch contents out of the conditional.",
-                window[0].0..window[4].0 + window[4].1.len(),
-            );
+            context.report("Duplicate branch body detected.", window[1].0..window[3].0 + window[3].1.len());
         }
     }
 }
@@ -60,27 +54,6 @@ fn empty_conditional(context: &mut CopContext<'_, '_>) {
                 window[0].0..window[1].0 + window[1].1.len(),
             );
         }
-    }
-}
-
-fn infinite_loop(context: &mut CopContext<'_, '_>) {
-    let source = context.source();
-    if source
-        .lines()
-        .any(|line| line.contains("while true") && line.trim_start() != "while true")
-        || source
-            .lines()
-            .any(|line| line.contains(",") && line.contains(" = "))
-    {
-        return;
-    }
-    for start in context.source_file().code_offsets("while true") {
-        context.replace(
-            "Use `Kernel#loop` for infinite loops.",
-            start..start + 10,
-            start..start + 10,
-            "loop do",
-        );
     }
 }
 

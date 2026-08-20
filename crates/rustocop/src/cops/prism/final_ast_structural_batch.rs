@@ -1,4 +1,4 @@
-use super::catalog_cop::{custom, report};
+use super::catalog_cop::custom;
 use super::*;
 use std::collections::HashSet;
 
@@ -11,11 +11,6 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
         Box::new(SelectByRange),
         custom("Lint/UselessAccessModifier", useless_access_modifier),
         custom("Style/ArgumentsForwarding", arguments_forwarding),
-        report(
-            "Style/FormatStringToken",
-            "%s %s",
-            "Prefer annotated format tokens when multiple substitutions are used.",
-        ),
         custom("Lint/Void", void_expression),
     ];
     cops.extend(registry::cops());

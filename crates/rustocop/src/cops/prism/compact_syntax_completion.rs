@@ -1,3 +1,5 @@
+use ruby_prism::{BlockNode, CallNode, Node};
+
 use super::*;
 
 define_rule!(WhileUntilModifierRule);
@@ -7,8 +9,7 @@ const WHILE_UNTIL_MODIFIER_MSG: &str =
 
 define_cops! {
     FileRead => "Style/FileRead" => source(file_read),
-    FileWrite => "Style/FileWrite" => source(file_write),
-    IfWithSemicolon => "Style/IfWithSemicolon" => source(if_with_semicolon),
+    FileWrite => "Style/FileWrite" => rubocop_callbacks(FileWriteRule, [on_send restrict [b"open"]]),
     WhileUntilModifier => "Style/WhileUntilModifier" => node_rule_aliases(WhileUntilModifierRule, on_while => [as_while_node, as_until_node]),
 }
 
@@ -50,107 +51,96 @@ fn file_read(context: &mut CopContext<'_, '_>) {
     }
 }
 
-fn file_write(context: &mut CopContext<'_, '_>) {
-    let source = context.source();
-    let mut search = 0;
-    while let Some(relative) = source[search..].find("File.open(") {
-        let start = search + relative;
-        let offense_start = if source.get(start.saturating_sub(2)..start) == Some("::") {
-            start - 2
-        } else {
-            start
-        };
-        let Some(write_relative) = source[start..].find(").write(") else {
-            break;
-        };
-        let write = start + write_relative;
-        let Some(end_relative) = source[write + ").write(".len()..].find(')') else {
-            break;
-        };
-        let end = write + ").write(".len() + end_relative + 1;
-        let open_args = &source[start + "File.open(".len()..write];
-        let Some((path, mode)) = open_args.rsplit_once(',') else {
-            search = end;
-            continue;
-        };
-        let mode = mode.trim().trim_matches(['\'', '"']);
-        let preferred = if mode.contains('b') {
-            "File.binwrite"
-        } else {
-            "File.write"
-        };
-        if !mode.starts_with('w') && !mode.starts_with('a') {
-            search = end;
-            continue;
+impl FileWriteRule<'_, '_, '_> {
+    fn on_send(&mut self, node: &CallNode<'_>) {
+        let Some(receiver) = node.receiver() else { return };
+        return_unless!(matches!(self.source_file().node(&receiver), "File" | "::File"));
+        let arguments = node
+            .arguments()
+            .map(|arguments| arguments.arguments().iter().collect::<Vec<_>>())
+            .unwrap_or_default();
+        let [filename, mode] = arguments.as_slice() else { return };
+        let mode = self.source_file().node(mode).trim_matches(['\'', '"']);
+        return_unless!(matches!(mode, "w" | "wt" | "wb" | "w+" | "w+t" | "w+b"));
+        let write_method = if mode.ends_with('b') { "binwrite" } else { "write" };
+
+        if let Some(block) = node.block().and_then(|block| block.as_block_node()) {
+            self.register_block_write(node, &block, filename, write_method);
+            return;
         }
-        let content = &source[write + ").write(".len()..end - 1];
-        context.replace(
-            format!("Use `{preferred}`."),
-            offense_start..end,
-            offense_start..end,
-            format!(
-                "{}{preferred}({}, {content})",
-                if offense_start < start { "::" } else { "" },
-                path.trim()
-            ),
+        let Some(write) = self.parent().and_then(Node::as_call_node) else { return };
+        return_unless!(write.name().as_slice() == b"write");
+        let Some(content) = only_argument(&write) else { return };
+        return_if!(content.as_splat_node().is_some());
+        let Some(open_selector) = node.message_loc() else { return };
+        let replacement = format!(
+            "{write_method}({}, {})",
+            self.source_file().node(filename),
+            self.source_file().node(&content)
         );
-        search = end;
+        let edit = open_selector.start_offset()..write.location().end_offset();
+        add_offense!(self, write.location(), message: format!("Use `File.{write_method}`."), |corrector| {
+            corrector.replace(edit, replacement);
+        });
+    }
+
+    fn register_block_write(
+        &mut self,
+        node: &CallNode<'_>,
+        block: &BlockNode<'_>,
+        filename: &Node<'_>,
+        write_method: &str,
+    ) {
+        let Some(parameters) = block.parameters().and_then(|parameters| parameters.as_block_parameters_node()) else { return };
+        let parameter = self
+            .source_file()
+            .slice(parameters.location().start_offset()..parameters.location().end_offset())
+            .unwrap_or_default()
+            .trim()
+            .trim_matches('|')
+            .trim();
+        return_if!(parameter.is_empty() || parameter.contains(','));
+        let Some(write) = block.body().and_then(single_expression).and_then(|body| body.as_call_node()) else { return };
+        return_unless!(write.name().as_slice() == b"write");
+        let Some(write_receiver) = write.receiver() else { return };
+        return_unless!(self.source_file().node(&write_receiver) == parameter);
+        let Some(content) = only_argument(&write) else { return };
+        return_if!(content.as_splat_node().is_some());
+        let Some(open_selector) = node.message_loc() else { return };
+        let mut replacement = format!(
+            "{write_method}({}, {})",
+            self.source_file().node(filename),
+            self.source_file().node(&content)
+        );
+        if let Some(heredoc) = heredoc_tail(self.source(), &content) {
+            replacement.push('\n');
+            replacement.push_str(heredoc);
+        }
+        let edit = open_selector.start_offset()..block.closing_loc().end_offset();
+        let offense = node.location().start_offset()..block.closing_loc().end_offset();
+        add_offense!(self, offense, message: format!("Use `File.{write_method}`."), |corrector| {
+            corrector.replace(edit, replacement);
+        });
     }
 }
 
-fn if_with_semicolon(context: &mut CopContext<'_, '_>) {
-    for (offset, line) in context.source_file().lines() {
-        let code = line.trim();
-        let (keyword, condition_start) = if code.starts_with("if ") {
-            ("if", 3)
-        } else if code.starts_with("unless ") {
-            ("unless", 7)
-        } else {
-            continue;
-        };
-        if !code.ends_with(" end") {
-            continue;
+fn heredoc_tail<'a>(source: &'a str, content: &Node<'_>) -> Option<&'a str> {
+    let header = source.get(content.location().start_offset()..content.location().end_offset())?;
+    let marker = header.trim_start().strip_prefix("<<")?.trim_start_matches(['-', '~']);
+    let marker = marker
+        .split(|character: char| !character.is_ascii_alphanumeric() && character != '_')
+        .next()?;
+    let first_newline = source[content.location().start_offset()..].find('\n')?
+        + content.location().start_offset();
+    let tail = &source[first_newline + 1..];
+    let mut consumed = 0;
+    for line in tail.split_inclusive('\n') {
+        consumed += line.len();
+        if line.trim() == marker {
+            return Some(tail[..consumed].trim_end_matches('\n'));
         }
-        let Some((condition, rest)) = code[condition_start..].split_once(';') else {
-            continue;
-        };
-        let Some(body) = rest.trim().strip_suffix(" end") else {
-            continue;
-        };
-        let Some((mut truthy, mut falsey)) = body
-            .split_once(" else ")
-            .or_else(|| body.strip_prefix("else ").map(|falsey| ("", falsey)))
-        else {
-            continue;
-        };
-        if keyword == "unless" {
-            std::mem::swap(&mut truthy, &mut falsey);
-        }
-        let replacement = format!(
-            "{} ? {} : {}",
-            condition.trim(),
-            if truthy.trim().is_empty() {
-                "nil"
-            } else {
-                truthy.trim()
-            },
-            if falsey.trim().is_empty() {
-                "nil"
-            } else {
-                falsey.trim()
-            }
-        );
-        let start = offset + line.find(code).unwrap_or(0);
-        context.replace(
-            format!(
-                "Do not use `{keyword} {};` - use a ternary operator instead.",
-                condition.trim()
-            ),
-            start..start + code.len(),
-            start..start + code.len(),
-            replacement,
-        );
     }
+    None
 }
 
 struct ModifierForm {

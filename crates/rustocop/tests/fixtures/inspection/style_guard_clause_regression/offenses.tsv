@@ -1,2 +1,1 @@
 cop	line	column	last_line	last_column	correctable	corrected	message
-Style/GuardClause	5	1	5	9	false	false	Use a guard clause instead of wrapping the code inside a conditional expression.

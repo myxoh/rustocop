@@ -13,7 +13,6 @@ define_cops! {
     SymbolArray => "Style/SymbolArray" => node(as_array_node, symbol_array),
     FetchEnvVar => "Style/FetchEnvVar" => source(fetch_env_var),
     StringConcatenation => "Style/StringConcatenation" => call(string_concatenation),
-    FormatString => "Style/FormatString" => source(format_string),
     WordArray => "Style/WordArray" => stateful_node_rule(as_array_node, WordArrayRule, WordArrayState, on_array),
 }
 
@@ -284,11 +283,14 @@ fn bare_symbol(value: &str) -> bool {
                 .iter()
                 .all(|byte| byte.is_ascii_alphanumeric() || *byte == b'_')
     };
-    let method = bytes
+    let method = if bytes
         .last()
         .is_some_and(|last| matches!(last, b'!' | b'?'))
-        .then_some(&bytes[..bytes.len() - 1])
-        .unwrap_or(bytes);
+    {
+        &bytes[..bytes.len() - 1]
+    } else {
+        bytes
+    };
     if identifier(method) {
         return true;
     }
@@ -621,26 +623,6 @@ fn concatenation_inspect_string(value: &str) -> String {
         .replace('\r', "\\r")
         .replace('\t', "\\t");
     format!("\"{escaped}\"")
-}
-
-fn format_string(context: &mut CopContext<'_, '_>) {
-    for (offset, line) in context.source_file().lines() {
-        let Some(percent) = line.find(" % ") else {
-            continue;
-        };
-        let left = line[..percent].trim();
-        if !left.starts_with(['\'', '"']) {
-            continue;
-        }
-        let right = line[percent + 3..].trim();
-        let start = offset + line.find(left).unwrap_or(0);
-        context.replace(
-            "Use `format` instead of the `%` operator.",
-            start..offset + line.len(),
-            start..offset + line.len(),
-            format!("format({left}, {right})"),
-        );
-    }
 }
 
 impl WordArrayRule<'_, '_, '_> {

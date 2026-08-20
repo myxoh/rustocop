@@ -249,6 +249,10 @@ macro_rules! define_cop_entry {
         define_rule!($rule);
         define_rubocop_callback_rule_cop!($type => $name => $rule [on_send restrict [$($method),+]]);
     };
+    ($type:ident => $name:literal => rubocop_callbacks($rule:ident, [on_block, on_send restrict [$($method:literal),+ $(,)?]])) => {
+        define_rule!($rule);
+        define_rubocop_callback_rule_cop!($type => $name => $rule [on_block, on_send restrict [$($method),+]]);
+    };
     ($type:ident => $name:literal => rubocop_callbacks($rule:ident, [$($callback:ident),+ $(,)?])) => {
         define_rule!($rule);
         define_rubocop_callback_rule_cop!($type => $name => $rule [$($callback),+]);

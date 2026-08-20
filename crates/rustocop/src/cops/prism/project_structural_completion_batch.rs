@@ -6,7 +6,6 @@ define_cops! {
     ModuleLength => "Metrics/ModuleLength" => source(module_length),
     EmptyLineAfterMultilineCondition => "Layout/EmptyLineAfterMultilineCondition" => source(empty_after_multiline_condition),
     DeprecatedOpenSSLConstant => "Lint/DeprecatedOpenSSLConstant" => source(deprecated_openssl),
-    HashConversion => "Style/HashConversion" => source(hash_conversion),
 }
 
 fn required_ruby_version(context: &mut CopContext<'_, '_>) {
@@ -190,43 +189,6 @@ fn deprecated_openssl(context: &mut CopContext<'_, '_>) {
             start..end,
             replacement,
         );
-        search = end;
-    }
-}
-
-fn hash_conversion(context: &mut CopContext<'_, '_>) {
-    let source = context.source();
-    let mut search = 0;
-    while let Some(relative) = source[search..].find("Hash[") {
-        let start = search + relative;
-        let Some(close) = source[start + 5..].find(']').map(|at| start + 5 + at) else {
-            break;
-        };
-        let arguments = &source[start + 5..close];
-        let end = close + 1;
-        if !arguments.contains(',') {
-            let replacement = format!("{}.to_h", arguments.trim());
-            context.replace(
-                format!("Prefer `{replacement}` to `{}`.", &source[start..end]),
-                start..end,
-                start..end,
-                replacement,
-            );
-        } else {
-            let values = arguments.split(',').map(str::trim).collect::<Vec<_>>();
-            let replacement = values
-                .chunks(2)
-                .filter(|pair| pair.len() == 2)
-                .map(|pair| format!("{} => {}", pair[0], pair[1]))
-                .collect::<Vec<_>>()
-                .join(", ");
-            context.replace(
-                "Prefer literal hash to `Hash[arg1, arg2, ...]`.",
-                start..end,
-                start..end,
-                format!("{{{replacement}}}"),
-            );
-        }
         search = end;
     }
 }

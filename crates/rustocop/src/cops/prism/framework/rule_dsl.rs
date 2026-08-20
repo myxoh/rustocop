@@ -216,6 +216,11 @@ macro_rules! dispatch_rubocop_callback {
             $rule.on_unless(&typed_node);
         }
     };
+    ($rule:ident, $node:ident, on_str) => {
+        if let Some(typed_node) = $node.as_string_node() {
+            $rule.on_str(&typed_node);
+        }
+    };
     ($rule:ident, $node:ident, on_block) => {
         if let Some(typed_node) = $node.as_block_node() {
             $rule.on_block(&typed_node);
@@ -266,9 +271,19 @@ macro_rules! dispatch_rubocop_callback {
             $rule.on_hash(&typed_node);
         }
     };
+    ($rule:ident, $node:ident, on_keyword_hash) => {
+        if let Some(typed_node) = $node.as_keyword_hash_node() {
+            $rule.on_keyword_hash(&typed_node);
+        }
+    };
     ($rule:ident, $node:ident, on_case) => {
         if let Some(typed_node) = $node.as_case_node() {
             $rule.on_case(&typed_node);
+        }
+    };
+    ($rule:ident, $node:ident, on_case_match) => {
+        if let Some(typed_node) = $node.as_case_match_node() {
+            $rule.on_case_match(&typed_node);
         }
     };
     ($rule:ident, $node:ident, on_yield) => {
@@ -301,6 +316,9 @@ macro_rules! rubocop_callback_matches {
     ($node:ident, on_unless) => {
         $node.as_unless_node().is_some()
     };
+    ($node:ident, on_str) => {
+        $node.as_string_node().is_some()
+    };
     ($node:ident, on_block) => {
         $node.as_block_node().is_some()
     };
@@ -331,8 +349,14 @@ macro_rules! rubocop_callback_matches {
     ($node:ident, on_hash) => {
         $node.as_hash_node().is_some()
     };
+    ($node:ident, on_keyword_hash) => {
+        $node.as_keyword_hash_node().is_some()
+    };
     ($node:ident, on_case) => {
         $node.as_case_node().is_some()
+    };
+    ($node:ident, on_case_match) => {
+        $node.as_case_match_node().is_some()
     };
     ($node:ident, on_yield) => {
         $node.as_yield_node().is_some()
@@ -352,6 +376,24 @@ macro_rules! rubocop_callback_matches {
 /// Defines one cop adapter from the same callback names visible in RuboCop.
 /// Multiple callbacks share one rule object and one cop-scoped context.
 macro_rules! define_rubocop_callback_rule_cop {
+    ($type:ident => $name:literal => $rule:ident [on_block, on_send restrict [$($method:literal),+ $(,)?]]) => {
+        struct $type;
+
+        impl Cop for $type {
+            fn name(&self) -> &'static str { $name }
+
+            fn on_node_with_state<'pr>(&self, node: &Node<'pr>, ancestors: &[Node<'pr>], source: &str, context: &mut Context, _state: &mut dyn Any) {
+                let is_restricted_send = node.as_call_node().is_some_and(|call| {
+                    [$($method.as_slice()),+].contains(&call.method_name())
+                });
+                if node.as_block_node().is_none() && !is_restricted_send { return; }
+                let mut context = context.cop_context(self.name(), source, ancestors);
+                let mut rule = $rule::new(&mut context);
+                if let Some(block) = node.as_block_node() { rule.on_block(&block); }
+                if let Some(call) = node.as_call_node() { rule.on_send(&call); }
+            }
+        }
+    };
     ($type:ident => $name:literal => $rule:ident [$($callback:ident),+ $(,)?]) => {
         struct $type;
 
