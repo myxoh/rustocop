@@ -1,0 +1,13 @@
+sources:
+  - repository: rails/rails
+    revision: ba4f7369aee71f9f38d67bdbf0e8571fb372b535
+    path: activerecord/test/models/owner.rb
+    source_lines: 11-18
+  - repository: gitlabhq/gitlabhq
+    revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+    path: tooling/ci/changed_files.rb
+    source_line: 29
+pathological_controls:
+  - parser-prism exposes a multi-line literal as a dynamic string to RuboCop
+  - strings inside backtick interpolation remain eligible for this cop
+  - strings inside ordinary interpolation are handled by the interpolation cop

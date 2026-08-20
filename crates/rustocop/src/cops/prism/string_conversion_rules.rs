@@ -115,11 +115,18 @@ fn string_literals(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
     {
         return;
     }
-    if context
+    let inside_interpolation = context
         .ancestors()
         .iter()
         .any(|ancestor| ancestor.as_embedded_statements_node().is_some())
-    {
+        && context.ancestors().iter().any(|ancestor| {
+            ancestor.as_interpolated_string_node().is_some()
+                || ancestor.as_interpolated_symbol_node().is_some()
+                || ancestor
+                    .as_interpolated_regular_expression_node()
+                    .is_some()
+        });
+    if inside_interpolation {
         return;
     }
     let (Some(opening), Some(closing)) = (string.opening_loc(), string.closing_loc()) else {
@@ -130,6 +137,9 @@ fn string_literals(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
     }
     let style = context.policy().enforced_style("single_quotes");
     let source = context.source_file().at(&string.location());
+    if source.contains('\n') && !context.config_bool("ConsistentQuotesInMultiline", false) {
+        return;
+    }
     let wrong = if style == "single_quotes" {
         opening.as_slice() == b"\"" && !double_quotes_required(source)
     } else if style == "double_quotes" {

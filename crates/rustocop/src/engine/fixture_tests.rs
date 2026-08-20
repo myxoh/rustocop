@@ -137,6 +137,15 @@ fixture_test!(
 );
 
 fixture_test!(
+    matches_parser_string_shapes_for_multiline_and_xstring_interpolation,
+    "string_literals_parser_shape_real_project_regression",
+    "/project/tooling/ci/changed_files.rb",
+    "Style/StringLiterals",
+    true,
+    RubyVersion::default()
+);
+
+fixture_test!(
     accepts_multibyte_offsets_at_node_ends,
     "unicode_node_end_real_project_regression",
     "/project/activerecord/test/cases/base_test.rb",
