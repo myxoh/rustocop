@@ -1,0 +1,5 @@
+repository: rubygems/rubygems.org
+revision: 3201f8831866f82eb9acd7f66287a978d0e59079
+sources:
+  - path: test/models/user_test.rb
+    source_line: 1180

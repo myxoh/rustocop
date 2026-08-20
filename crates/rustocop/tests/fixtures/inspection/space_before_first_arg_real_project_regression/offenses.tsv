@@ -1,0 +1,5 @@
+cop	line	column	last_line	last_column	correctable	corrected	message
+Layout/SpaceBeforeFirstArg	2	9	2	10	true	true	Put one space between the method name and the first argument.
+Layout/SpaceBeforeFirstArg	11	24	11	25	true	true	Put one space between the method name and the first argument.
+Layout/SpaceBeforeFirstArg	18	24	18	25	true	true	Put one space between the method name and the first argument.
+Layout/SpaceBeforeFirstArg	25	24	25	25	true	true	Put one space between the method name and the first argument.

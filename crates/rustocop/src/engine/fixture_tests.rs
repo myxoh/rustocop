@@ -74,6 +74,24 @@ macro_rules! fixture_test {
 // New-cop generator registrations are inserted directly below this line.
 
 fixture_test!(
+    scans_utf8_comment_annotations_without_splitting_characters,
+    "comment_annotation_utf8_real_project_regression",
+    "/project/test/models/user_test.rb",
+    "Style/CommentAnnotation",
+    true,
+    RubyVersion::default()
+);
+
+fixture_test!(
+    checks_space_before_first_argument_on_call_nodes,
+    "space_before_first_arg_real_project_regression",
+    "/project/spec/rspec/core/drb_spec.rb",
+    "Layout/SpaceBeforeFirstArg",
+    true,
+    RubyVersion::default()
+);
+
+fixture_test!(
     accepts_multibyte_offsets_at_node_ends,
     "unicode_node_end_real_project_regression",
     "/project/activerecord/test/cases/base_test.rb",

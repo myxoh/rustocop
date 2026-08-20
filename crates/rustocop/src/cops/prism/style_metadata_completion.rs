@@ -201,8 +201,10 @@ fn comment_annotation(context: &mut CopContext<'_, '_>) {
         let text = after_hash.trim_start();
         let Some(configured_keyword) = keywords
             .iter()
-            .filter(|keyword| text.len() >= keyword.len())
-            .filter(|keyword| text[..keyword.len()].eq_ignore_ascii_case(keyword))
+            .filter(|keyword| {
+                text.get(..keyword.len())
+                    .is_some_and(|prefix| prefix.eq_ignore_ascii_case(keyword))
+            })
             .max_by_key(|keyword| keyword.len())
         else {
             continue;

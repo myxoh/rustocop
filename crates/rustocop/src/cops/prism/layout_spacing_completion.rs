@@ -1,15 +1,12 @@
 use super::*;
 
-mod helpers;
-use helpers::*;
-
 define_cops! {
     AssignmentIndentation => "Layout/AssignmentIndentation" => source(assignment_indentation),
     BeginEndAlignment => "Layout/BeginEndAlignment" => source(begin_end_alignment),
     EndOfLine => "Layout/EndOfLine" => source(end_of_line),
     FirstParameterIndentation => "Layout/FirstParameterIndentation" => source(first_parameter_indentation),
     SpaceBeforeBrackets => "Layout/SpaceBeforeBrackets" => source(space_before_brackets),
-    SpaceBeforeFirstArg => "Layout/SpaceBeforeFirstArg" => source(space_before_first_arg),
+    SpaceBeforeFirstArg => "Layout/SpaceBeforeFirstArg" => call(space_before_first_arg),
     SpaceInsideStringInterpolation => "Layout/SpaceInsideStringInterpolation" => source(space_inside_string_interpolation),
 }
 
@@ -200,67 +197,112 @@ fn space_before_brackets(context: &mut CopContext<'_, '_>) {
     }
 }
 
-fn space_before_first_arg(context: &mut CopContext<'_, '_>) {
-    let allow_alignment = context.config_bool("AllowForAlignment", true);
-    for (offset, line) in context.source_file().lines() {
-        let bytes = line.as_bytes();
-        let mut index = 0;
-        while index < bytes.len() {
-            if !(bytes[index].is_ascii_alphabetic() || bytes[index] == b'_') {
-                index += 1;
-                continue;
-            }
-            let name_start = index;
-            index += 1;
-            while index < bytes.len()
-                && (bytes[index].is_ascii_alphanumeric()
-                    || matches!(bytes[index], b'_' | b'?' | b'!'))
-            {
-                index += 1;
-            }
-            if line[name_start..index].starts_with("def") {
-                continue;
-            }
-            let spaces = bytes[index..]
-                .iter()
-                .take_while(|byte| **byte == b' ')
-                .count();
-            let direct_string = spaces == 0 && matches!(bytes.get(index), Some(b'\'') | Some(b'"'));
-            if spaces > 0
-                && bytes
-                    .get(index + spaces)
-                    .is_some_and(|byte| matches!(byte, b')' | b']' | b'}' | b','))
-            {
-                index += spaces;
-                continue;
-            }
-            if !direct_string && spaces <= 1 {
-                continue;
-            }
-            if allow_alignment
-                && spaces > 1
-                && aligned_argument_column(context.source(), offset, index + spaces)
-            {
-                continue;
-            }
-            let edit = offset + index..offset + index + spaces;
-            let offense = if direct_string {
-                offset + index..offset + index - 1
-            } else {
-                edit.clone()
-            };
-            context.replace(
-                "Put one space between the method name and the first argument.",
-                offense.clone(),
-                edit,
-                " ",
-            );
-            index += spaces.max(1);
-            if direct_string {
-                break;
-            }
-        }
+fn space_before_first_arg(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
+    let name = node.name().as_slice();
+    if node.opening_loc().is_some() || space_before_operator_or_setter(name) {
+        return;
     }
+    let Some(first_argument) = node.arguments().and_then(|arguments| arguments.arguments().first())
+    else {
+        return;
+    };
+    let Some(selector) = node.message_loc() else {
+        return;
+    };
+    let selector_end = selector.end_offset();
+    let argument_start = first_argument.location().start_offset();
+    if argument_start < selector_end {
+        return;
+    }
+    let file = context.source_file();
+    if file.line_start(selector_end) != file.line_start(argument_start) {
+        return;
+    }
+    let whitespace_start = context.source()[selector_end..argument_start]
+        .rfind(|character: char| !matches!(character, ' ' | '\t'))
+        .map_or(selector_end, |offset| selector_end + offset + 1);
+    let space = whitespace_start..argument_start;
+    if space.len() == 1 {
+        return;
+    }
+    if !space.is_empty()
+        && context.config_bool("AllowForAlignment", true)
+        && aligned_first_argument(context, &first_argument)
+    {
+        return;
+    }
+    context.replace(
+        "Put one space between the method name and the first argument.",
+        space.clone(),
+        space,
+        " ",
+    );
+}
+
+fn space_before_operator_or_setter(name: &[u8]) -> bool {
+    matches!(
+        name,
+        b"+" | b"-" | b"*" | b"/" | b"%" | b"**" | b"==" | b"!=" | b"==="
+            | b"=~" | b"!~" | b"<" | b">" | b"<=" | b">=" | b"<=>" | b"<<"
+            | b">>" | b"&" | b"|" | b"^" | b"[]" | b"[]=" | b"!" | b"~" | b"+@"
+            | b"-@"
+    ) || name.ends_with(b"=")
+}
+
+fn aligned_first_argument(context: &CopContext<'_, '_>, argument: &Node<'_>) -> bool {
+    let file = context.source_file();
+    let location = argument.location();
+    let line_start = file.line_start(location.start_offset());
+    let column = location.start_offset() - line_start;
+    let token = file.node(argument);
+    let lines = file.lines().collect::<Vec<_>>();
+    let Some(current) = lines.iter().position(|(start, _)| *start == line_start) else {
+        return false;
+    };
+    let base_indent = lines[current].1.len() - lines[current].1.trim_start().len();
+    let aligns = |line: &str| {
+        let bytes = line.as_bytes();
+        column > 0
+            && bytes.get(column - 1).is_some_and(u8::is_ascii_whitespace)
+            && bytes.get(column).is_some_and(|byte| !byte.is_ascii_whitespace())
+            || line
+                .get(column..column.saturating_add(token.len()))
+                .is_some_and(|candidate| candidate == token)
+    };
+    let eligible = |line: &str| {
+        !line.trim().is_empty() && !line.trim_start().starts_with('#')
+    };
+
+    let nearest_before = lines[..current]
+        .iter()
+        .rev()
+        .map(|(_, line)| *line)
+        .find(|line| eligible(line));
+    if nearest_before.is_some_and(aligns) {
+        return true;
+    }
+    let nearest_after = lines[current + 1..]
+        .iter()
+        .map(|(_, line)| *line)
+        .find(|line| eligible(line));
+    if nearest_after.is_some_and(aligns) {
+        return true;
+    }
+
+    let same_indent = |line: &str| {
+        eligible(line) && line.len() - line.trim_start().len() == base_indent
+    };
+    lines[..current]
+        .iter()
+        .rev()
+        .map(|(_, line)| *line)
+        .find(|line| same_indent(line))
+        .is_some_and(aligns)
+        || lines[current + 1..]
+            .iter()
+            .map(|(_, line)| *line)
+            .find(|line| same_indent(line))
+            .is_some_and(aligns)
 }
 
 fn space_inside_string_interpolation(context: &mut CopContext<'_, '_>) {

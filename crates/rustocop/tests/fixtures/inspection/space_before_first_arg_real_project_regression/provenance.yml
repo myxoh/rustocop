@@ -1,0 +1,9 @@
+sources:
+  - repository: heartcombo/devise
+    revision: 372b295fe6f63b4af3269f5dcd51a18c0bc2016c
+    path: lib/devise/models/lockable.rb
+    source_line: 25
+  - repository: rspec/rspec-core
+    revision: aec5f49485d97908183dbe790a7fefb8baaa8091
+    path: spec/rspec/core/drb_spec.rb
+    source_lines: [222, 233, 244]
