@@ -185,8 +185,20 @@ fn comment_annotation(context: &mut CopContext<'_, '_>) {
     let keywords = context.config_values("Keywords").to_vec();
     let require_colon = context.config_bool("RequireColon", true);
     let mut previous_comment_line = None;
+    let mut embedded_document = false;
     for (line_number, (offset, line)) in context.source_file().lines().enumerate() {
-        let Some(hash) = line.find('#') else {
+        if line.trim_end_matches('\r') == "=begin" {
+            embedded_document = true;
+            previous_comment_line = None;
+            continue;
+        }
+        if embedded_document {
+            if line.trim_end_matches('\r') == "=end" {
+                embedded_document = false;
+            }
+            continue;
+        }
+        let Some(hash) = ruby_comment_offset(line) else {
             previous_comment_line = None;
             continue;
         };
@@ -204,6 +216,10 @@ fn comment_annotation(context: &mut CopContext<'_, '_>) {
             .filter(|keyword| {
                 text.get(..keyword.len())
                     .is_some_and(|prefix| prefix.eq_ignore_ascii_case(keyword))
+                    && text
+                        .as_bytes()
+                        .get(keyword.len())
+                        .is_none_or(|byte| !byte.is_ascii_alphanumeric() && *byte != b'_')
             })
             .max_by_key(|keyword| keyword.len())
         else {
@@ -212,28 +228,35 @@ fn comment_annotation(context: &mut CopContext<'_, '_>) {
         let raw_keyword = configured_keyword.len();
         let keyword = &text[..raw_keyword];
         let remainder = &text[raw_keyword..];
-        if remainder.is_empty() || remainder.starts_with(['.', '(']) {
+        let colon = remainder.find(':').filter(|colon| {
+            remainder[..*colon]
+                .bytes()
+                .all(|byte| matches!(byte, b' ' | b'\t'))
+        });
+        let colon_len = colon.map_or(0, |colon| colon + 1);
+        let space_len = remainder[colon_len..]
+            .bytes()
+            .take_while(|byte| matches!(byte, b' ' | b'\t'))
+            .count();
+        let has_colon = colon.is_some();
+        let has_space = space_len > 0;
+        if !has_colon && !has_space {
             continue;
         }
-        if keyword
-            .bytes()
-            .next()
-            .is_some_and(|byte| byte.is_ascii_uppercase())
-            && keyword != keyword.to_uppercase()
-            && !remainder.starts_with(':')
+        let note = &remainder[colon_len + space_len..];
+        let has_note = note.bytes().next().is_some_and(|byte| !byte.is_ascii_whitespace());
+        if keyword_is_capitalized(keyword) && !has_colon && has_space && has_note {
+            continue;
+        }
+        if keyword == keyword.to_uppercase()
+            && has_space
+            && has_note
+            && has_colon == require_colon
         {
             continue;
         }
-        let has_note = !remainder.trim_matches([' ', ':']).is_empty();
         let correct_prefix = if require_colon { ": " } else { " " };
-        if has_note && keyword == keyword.to_uppercase() && remainder.starts_with(correct_prefix) {
-            continue;
-        }
-        let consumed = raw_keyword
-            + remainder
-                .bytes()
-                .take_while(|byte| matches!(byte, b':' | b' ' | b'\t'))
-                .count();
+        let consumed = raw_keyword + colon_len + space_len;
         let start = offset + hash + 1 + leading;
         let range = start..start + consumed.max(raw_keyword);
         let message = if has_note {
@@ -255,5 +278,106 @@ fn comment_annotation(context: &mut CopContext<'_, '_>) {
         } else {
             context.report(message, range);
         }
+    }
+    embedded_comment_annotation(context, &keywords, require_colon);
+}
+
+fn keyword_is_capitalized(keyword: &str) -> bool {
+    let mut bytes = keyword.bytes();
+    bytes.next().is_some_and(|byte| byte.is_ascii_uppercase())
+        && bytes.all(|byte| !byte.is_ascii_uppercase())
+}
+
+fn embedded_comment_annotation(
+    context: &mut CopContext<'_, '_>,
+    keywords: &[String],
+    require_colon: bool,
+) {
+    let lines = context.source_file().lines().collect::<Vec<_>>();
+    let mut index = 0;
+    while index < lines.len() {
+        let (block_start, opening) = lines[index];
+        if opening.trim_end_matches('\r') != "=begin" {
+            index += 1;
+            continue;
+        }
+        let Some(relative_end) = lines[index + 1..]
+            .iter()
+            .position(|(_, line)| line.trim_end_matches('\r') == "=end")
+        else {
+            break;
+        };
+        let block_end = index + 1 + relative_end;
+        for (_, line) in &lines[index + 1..block_end] {
+            let Some(after_hash) = line.strip_prefix('#') else {
+                continue;
+            };
+            let (margin, text) = after_hash
+                .strip_prefix(' ')
+                .map_or((1, after_hash), |text| (2, text));
+            let Some(configured) = keywords.iter().find(|keyword| {
+                text.get(..keyword.len())
+                    .is_some_and(|prefix| prefix.eq_ignore_ascii_case(keyword))
+                    && text
+                        .as_bytes()
+                        .get(keyword.len())
+                        .is_none_or(|byte| !byte.is_ascii_alphanumeric() && *byte != b'_')
+            }) else {
+                continue;
+            };
+            let keyword = &text[..configured.len()];
+            let remainder = &text[configured.len()..];
+            let colon = remainder.find(':').filter(|colon| {
+                remainder[..*colon]
+                    .bytes()
+                    .all(|byte| matches!(byte, b' ' | b'\t'))
+            });
+            let colon_len = colon.map_or(0, |colon| colon + 1);
+            let space_len = remainder[colon_len..]
+                .bytes()
+                .take_while(|byte| matches!(byte, b' ' | b'\t'))
+                .count();
+            let has_colon = colon.is_some();
+            let has_space = space_len > 0;
+            if !has_colon && !has_space {
+                continue;
+            }
+            let note = &remainder[colon_len + space_len..];
+            let has_note = note.bytes().next().is_some_and(|byte| !byte.is_ascii_whitespace());
+            if keyword_is_capitalized(keyword) && !has_colon && has_space && has_note {
+                continue;
+            }
+            if keyword == keyword.to_uppercase()
+                && has_space
+                && has_note
+                && has_colon == require_colon
+            {
+                break;
+            }
+            let range = block_start + margin
+                ..block_start + margin + configured.len() + colon_len + space_len;
+            let message = if has_note {
+                if require_colon {
+                    format!("Annotation keywords like `{keyword}` should be all upper case, followed by a colon, and a space, then a note describing the problem.")
+                } else {
+                    format!("Annotation keywords like `{keyword}` should be all upper case, followed by a space, then a note describing the problem.")
+                }
+            } else {
+                format!("Annotation comment, with keyword `{keyword}`, is missing a note.")
+            };
+            if has_note {
+                let prefix = if require_colon { ": " } else { " " };
+                context.replace(
+                    message,
+                    range.clone(),
+                    range,
+                    format!("{}{prefix}", keyword.to_uppercase()),
+                );
+            } else {
+                context.report(message, range);
+            }
+            break;
+        }
+        index = block_end + 1;
     }
 }
