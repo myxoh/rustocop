@@ -6,7 +6,7 @@ matrix_start: 452
 matrix_end: 481
 rubocop_version: 1.87.0
 rubocop_commit: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
-rustocop_commit: 151887f89c931fed54346f03bf9875dc034f3940
+rustocop_commit: b56ffcb3840742b3c6845860b50b18c7f81d8b69
 cops:
   Style/OneClassPerFile:
     matrix_position: 481
