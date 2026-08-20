@@ -128,6 +128,15 @@ fixture_test!(
 );
 
 fixture_test!(
+    normalizes_prism_block_passes_for_multiline_element_breaks,
+    "multiline_element_line_breaks_real_project_regression",
+    "/project/spec/models/import/source_user_placeholder_reference_spec.rb",
+    "Layout/MultilineMethodParameterLineBreaks,Layout/MultilineMethodArgumentLineBreaks",
+    true,
+    RubyVersion::default()
+);
+
+fixture_test!(
     accepts_multibyte_offsets_at_node_ends,
     "unicode_node_end_real_project_regression",
     "/project/activerecord/test/cases/base_test.rb",

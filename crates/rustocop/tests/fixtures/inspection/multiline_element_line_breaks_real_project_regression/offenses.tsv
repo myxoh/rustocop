@@ -1,0 +1,8 @@
+cop	line	column	last_line	last_column	correctable	corrected	message
+Layout/MultilineMethodParameterLineBreaks	2	36	2	47	true	true	Each parameter in a multi-line method definition must start on a separate line.
+Layout/MultilineMethodParameterLineBreaks	2	49	2	58	true	true	Each parameter in a multi-line method definition must start on a separate line.
+Layout/MultilineMethodArgumentLineBreaks	10	24	10	29	true	true	Each argument in a multi-line method call must start on a separate line.
+Layout/MultilineMethodArgumentLineBreaks	16	18	16	41	true	true	Each argument in a multi-line method call must start on a separate line.
+Layout/MultilineMethodArgumentLineBreaks	16	43	16	64	true	true	Each argument in a multi-line method call must start on a separate line.
+Layout/MultilineMethodArgumentLineBreaks	27	25	27	25	true	true	Each argument in a multi-line method call must start on a separate line.
+Layout/MultilineMethodArgumentLineBreaks	30	22	32	3	true	true	Each argument in a multi-line method call must start on a separate line.

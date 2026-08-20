@@ -3,58 +3,84 @@ use super::*;
 define_rule!(BlockEndNewlineRule);
 
 define_cops! {
-    MultilineMethodParameterLineBreaks => "Layout/MultilineMethodParameterLineBreaks" => source(parameter_line_breaks),
+    MultilineMethodParameterLineBreaks => "Layout/MultilineMethodParameterLineBreaks" => node(as_def_node, parameter_line_breaks),
     SpaceBeforeBlockBraces => "Layout/SpaceBeforeBlockBraces" => source(space_before_block_braces),
     BlockEndNewline => "Layout/BlockEndNewline" => node_rule_aliases(
         BlockEndNewlineRule,
         on_block => [as_block_node, as_lambda_node]
     ),
     DefEndAlignment => "Layout/DefEndAlignment" => node(as_def_node, def_end_alignment),
-    MultilineMethodArgumentLineBreaks => "Layout/MultilineMethodArgumentLineBreaks" => source(argument_line_breaks),
+    MultilineMethodArgumentLineBreaks => "Layout/MultilineMethodArgumentLineBreaks" => node(as_call_node, argument_line_breaks),
     ParameterAlignment => "Layout/ParameterAlignment" => node(as_def_node, parameter_alignment),
 }
 
-fn parameter_line_breaks(context: &mut CopContext<'_, '_>) {
-    comma_line_breaks(context, true);
-}
-fn argument_line_breaks(context: &mut CopContext<'_, '_>) {
-    comma_line_breaks(context, false);
+fn parameter_line_breaks(node: &ruby_prism::DefNode<'_>, context: &mut CopContext<'_, '_>) {
+    let Some(parameters) = node.parameters() else {
+        return;
+    };
+    check_multiline_element_line_breaks(
+        &definition_parameter_nodes(&parameters),
+        context.config_bool("AllowMultilineFinalElement", false),
+        "Each parameter in a multi-line method definition must start on a separate line.",
+        context,
+    );
 }
 
-fn comma_line_breaks(context: &mut CopContext<'_, '_>, parameters: bool) {
-    let source = context.source();
-    if !source.contains('\n') {
+fn argument_line_breaks(node: &ruby_prism::CallNode<'_>, context: &mut CopContext<'_, '_>) {
+    if node.name().as_slice() == b"[]=" {
         return;
     }
-    for (offset, line) in context.source_file().lines() {
-        let commas = line
-            .match_indices(',')
-            .map(|(at, _)| at)
-            .collect::<Vec<_>>();
-        for comma in commas.into_iter().skip(1) {
-            let rest = &line[comma + 1..];
-            let leading = rest.len() - rest.trim_start().len();
-            let value = rest
-                .trim_start()
-                .split(',')
-                .next()
-                .unwrap_or_default()
-                .trim_end();
-            if value.is_empty() {
-                continue;
-            }
-            let start = offset + comma + 1 + leading;
-            let message = if parameters {
-                "Each parameter in a multi-line method definition must start on a separate line."
-            } else {
-                "Each argument in a multi-line method call must start on a separate line."
-            };
-            context.replace(
-                message,
-                start..start + value.len(),
-                offset + comma + 1..start,
-                "\n",
-            );
+    let Some(arguments) = node.arguments() else {
+        return;
+    };
+    let mut elements = arguments.arguments().iter().collect::<Vec<_>>();
+    let block_argument = node
+        .block()
+        .filter(|block| block.as_block_argument_node().is_some());
+    if block_argument.is_none() {
+        if let Some(keyword_hash) = elements.last().and_then(Node::as_keyword_hash_node) {
+            elements.pop();
+            elements.extend(keyword_hash.elements().iter());
+        }
+    }
+    elements.extend(block_argument);
+    check_multiline_element_line_breaks(
+        &elements,
+        context.config_bool("AllowMultilineFinalElement", false),
+        "Each argument in a multi-line method call must start on a separate line.",
+        context,
+    );
+}
+
+fn check_multiline_element_line_breaks(
+    elements: &[Node<'_>],
+    allow_multiline_final_element: bool,
+    message: &str,
+    context: &mut CopContext<'_, '_>,
+) {
+    let Some((first, last)) = elements.first().zip(elements.last()) else {
+        return;
+    };
+    let file = context.source_file();
+    let first_line = file.line_start(first.location().start_offset());
+    let last_location = last.location();
+    let last_line = file.line_start(if allow_multiline_final_element {
+        last_location.start_offset()
+    } else {
+        last_location.end_offset().saturating_sub(1)
+    });
+    if first_line == last_line {
+        return;
+    }
+
+    let mut last_seen_line = None;
+    for element in elements {
+        let location = element.location();
+        let first_line = file.line_start(location.start_offset());
+        if last_seen_line.is_some_and(|line| line >= first_line) {
+            context.insert(message, &location, location.start_offset(), "\n");
+        } else {
+            last_seen_line = Some(file.line_start(location.end_offset().saturating_sub(1)));
         }
     }
 }

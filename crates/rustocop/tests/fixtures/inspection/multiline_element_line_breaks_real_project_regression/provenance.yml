@@ -1,0 +1,19 @@
+sources:
+  - repository: gitlabhq/gitlabhq
+    revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+    path: spec/models/import/source_user_placeholder_reference_spec.rb
+    source_lines: 369-373
+  - repository: rubygems/rubygems.org
+    revision: 3201f8831866f82eb9acd7f66287a978d0e59079
+    path: app/avo/concerns/auditable.rb
+    source_line: 30
+  - repository: rubygems/rubygems.org
+    revision: 3201f8831866f82eb9acd7f66287a978d0e59079
+    path: app/avo/fields/event_additional_field.rb
+    source_lines: 31-34
+pathological_controls:
+  - a block pass prevents RuboCop from flattening the preceding keyword hash
+  - an unbraced final keyword hash is flattened into individual arguments
+  - an explicitly braced hash remains one argument
+  - anonymous and multi-line lambda block passes remain call arguments
+  - bracket assignment calls are excluded
