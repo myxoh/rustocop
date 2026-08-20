@@ -2,7 +2,7 @@ use super::*;
 use std::collections::{HashMap, HashSet};
 
 define_cops! {
-    UnderscorePrefixedVariableName => "Lint/UnderscorePrefixedVariableName" => source(underscore_variable),
+    UnderscorePrefixedVariableName => "Lint/UnderscorePrefixedVariableName" => any_node(underscore_variable),
     HeredocDelimiterNaming => "Naming/HeredocDelimiterNaming" => source(heredoc_naming),
     DeprecatedConstants => "Lint/DeprecatedConstants" => source(deprecated_constants),
     RedundantCopEnableDirective => "Lint/RedundantCopEnableDirective" => source(redundant_enable),
@@ -10,33 +10,155 @@ define_cops! {
     MethodParameterName => "Naming/MethodParameterName" => source(method_parameter_name),
 }
 
-fn underscore_variable(context: &mut CopContext<'_, '_>) {
-    let mut candidates = Vec::new();
-    let mut occurrences = HashMap::new();
-    for (offset, line) in context.source_file().lines() {
-        for (at, _) in line.match_indices('_') {
-            let tail = &line[at..];
-            let len = tail
-                .bytes()
-                .take_while(|b| b.is_ascii_alphanumeric() || *b == b'_')
-                .count();
-            if len < 2 {
-                continue;
+fn underscore_variable(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
+    if node.as_program_node().is_none() {
+        return;
+    }
+    let mut visitor = UnderscoreVariableVisitor::default();
+    ruby_prism::Visit::visit(&mut visitor, node);
+    let mut offenses = visitor
+        .variables
+        .into_values()
+        .filter_map(|variable| variable.used.then_some(variable.declaration).flatten())
+        .collect::<Vec<_>>();
+    offenses.sort_by_key(|range| range.start);
+    for range in offenses {
+        context.report(
+            "Do not use prefix `_` for a variable that is used.",
+            range,
+        );
+    }
+}
+
+#[derive(Default)]
+struct UnderscoreVariableVisitor {
+    variables: HashMap<(usize, Vec<u8>), UnderscoreVariable>,
+    scopes: Vec<usize>,
+    branch_scopes: Vec<bool>,
+    next_scope: usize,
+}
+
+#[derive(Default)]
+struct UnderscoreVariable {
+    declaration: Option<std::ops::Range<usize>>,
+    used: bool,
+}
+
+impl UnderscoreVariableVisitor {
+    fn scope_for_depth(&self, depth: u32) -> Option<usize> {
+        self.scopes
+            .len()
+            .checked_sub(depth as usize + 1)
+            .and_then(|index| self.scopes.get(index))
+            .copied()
+    }
+
+    fn declare(
+        &mut self,
+        name: &[u8],
+        depth: u32,
+        location: ruby_prism::Location<'_>,
+    ) {
+        if !underscore_prefixed_name(name) {
+            return;
+        }
+        let Some(scope) = self.scope_for_depth(depth) else {
+            return;
+        };
+        self.variables
+            .entry((scope, name.to_vec()))
+            .or_default()
+            .declaration
+            .get_or_insert(location.start_offset()..location.start_offset() + name.len());
+    }
+
+    fn use_variable(&mut self, name: &[u8], depth: u32) {
+        if !underscore_prefixed_name(name) {
+            return;
+        }
+        let Some(scope) = self.scope_for_depth(depth) else {
+            return;
+        };
+        self.variables.entry((scope, name.to_vec())).or_default().used = true;
+    }
+
+    fn observe(&mut self, node: &Node<'_>) {
+        if let Some(read) = node.as_local_variable_read_node() {
+            self.use_variable(read.name().as_slice(), read.depth());
+        } else if let Some(write) = node.as_local_variable_write_node() {
+            self.declare(write.name().as_slice(), write.depth(), write.name_loc());
+        } else if let Some(target) = node.as_local_variable_target_node() {
+            self.declare(target.name().as_slice(), target.depth(), target.location());
+        } else if let Some(write) = node.as_local_variable_and_write_node() {
+            self.declare(write.name().as_slice(), write.depth(), write.name_loc());
+            self.use_variable(write.name().as_slice(), write.depth());
+        } else if let Some(write) = node.as_local_variable_or_write_node() {
+            self.declare(write.name().as_slice(), write.depth(), write.name_loc());
+            self.use_variable(write.name().as_slice(), write.depth());
+        } else if let Some(write) = node.as_local_variable_operator_write_node() {
+            self.declare(write.name().as_slice(), write.depth(), write.name_loc());
+            self.use_variable(write.name().as_slice(), write.depth());
+        } else if let Some(parameter) = node.as_required_parameter_node() {
+            self.declare(parameter.name().as_slice(), 0, parameter.location());
+        } else if let Some(parameter) = node.as_optional_parameter_node() {
+            self.declare(parameter.name().as_slice(), 0, parameter.name_loc());
+        } else if let Some(parameter) = node.as_rest_parameter_node() {
+            if let (Some(name), Some(location)) = (parameter.name(), parameter.name_loc()) {
+                self.declare(name.as_slice(), 0, location);
             }
-            let name = &tail[..len];
-            *occurrences.entry(name).or_insert(0) += 1;
-            candidates.push((offset + at, name));
+        } else if let Some(parameter) = node.as_required_keyword_parameter_node() {
+            self.declare(parameter.name().as_slice(), 0, parameter.name_loc());
+        } else if let Some(parameter) = node.as_optional_keyword_parameter_node() {
+            self.declare(parameter.name().as_slice(), 0, parameter.name_loc());
+        } else if let Some(parameter) = node.as_keyword_rest_parameter_node() {
+            if let (Some(name), Some(location)) = (parameter.name(), parameter.name_loc()) {
+                self.declare(name.as_slice(), 0, location);
+            }
+        } else if let Some(parameter) = node.as_block_parameter_node() {
+            if let (Some(name), Some(location)) = (parameter.name(), parameter.name_loc()) {
+                self.declare(name.as_slice(), 0, location);
+            }
+        } else if let Some(parameter) = node.as_block_local_variable_node() {
+            self.declare(parameter.name().as_slice(), 0, parameter.location());
         }
     }
-    let mut seen = HashSet::new();
-    for (start, name) in candidates {
-        if occurrences.get(name).copied().unwrap_or_default() > 1 && seen.insert(start) {
-            context.report(
-                "Do not use prefix `_` for a variable that is used.",
-                start..start + name.len(),
-            );
+}
+
+impl<'pr> ruby_prism::Visit<'pr> for UnderscoreVariableVisitor {
+    fn visit_branch_node_enter(&mut self, node: Node<'pr>) {
+        let opens_scope = prism_local_scope(&node);
+        self.branch_scopes.push(opens_scope);
+        if opens_scope {
+            let scope = self.next_scope;
+            self.next_scope += 1;
+            self.scopes.push(scope);
+        }
+        self.observe(&node);
+    }
+
+    fn visit_branch_node_leave(&mut self) {
+        if self.branch_scopes.pop() == Some(true) {
+            self.scopes.pop();
         }
     }
+
+    fn visit_leaf_node_enter(&mut self, node: Node<'pr>) {
+        self.observe(&node);
+    }
+}
+
+fn prism_local_scope(node: &Node<'_>) -> bool {
+    node.as_program_node().is_some()
+        || node.as_def_node().is_some()
+        || node.as_block_node().is_some()
+        || node.as_lambda_node().is_some()
+        || node.as_class_node().is_some()
+        || node.as_module_node().is_some()
+        || node.as_singleton_class_node().is_some()
+}
+
+fn underscore_prefixed_name(name: &[u8]) -> bool {
+    name.starts_with(b"_")
 }
 
 fn heredoc_naming(context: &mut CopContext<'_, '_>) {

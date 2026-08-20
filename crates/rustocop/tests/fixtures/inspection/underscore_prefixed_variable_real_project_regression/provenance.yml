@@ -1,0 +1,11 @@
+repository: rails/rails
+revision: ba4f7369aee71f9f38d67bdbf0e8571fb372b535
+sources:
+  - path: actionpack/lib/action_controller/metal/strong_parameters.rb
+    source_line: 1241
+  - path: activemodel/lib/active_model/attribute_methods.rb
+    source_line: 317
+  - path: activerecord/lib/active_record/connection_adapters/abstract/transaction.rb
+    source_line: 529
+  - path: activesupport/lib/active_support/core_ext/string/indent.rb
+    source_line: 50

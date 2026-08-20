@@ -1,0 +1,5 @@
+cop	line	column	last_line	last_column	correctable	corrected	message
+Lint/UnderscorePrefixedVariableName	2	17	2	17	false	false	Do not use prefix `_` for a variable that is used.
+Lint/UnderscorePrefixedVariableName	5	33	5	38	false	false	Do not use prefix `_` for a variable that is used.
+Lint/UnderscorePrefixedVariableName	9	23	9	27	false	false	Do not use prefix `_` for a variable that is used.
+Lint/UnderscorePrefixedVariableName	16	34	16	39	false	false	Do not use prefix `_` for a variable that is used.

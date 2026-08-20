@@ -92,6 +92,15 @@ fixture_test!(
 );
 
 fixture_test!(
+    tracks_underscore_variables_by_declaration_and_scope,
+    "underscore_prefixed_variable_real_project_regression",
+    "/project/actionpack/lib/action_controller/metal/strong_parameters.rb",
+    "Lint/UnderscorePrefixedVariableName",
+    false,
+    RubyVersion::default()
+);
+
+fixture_test!(
     accepts_multibyte_offsets_at_node_ends,
     "unicode_node_end_real_project_regression",
     "/project/activerecord/test/cases/base_test.rb",
