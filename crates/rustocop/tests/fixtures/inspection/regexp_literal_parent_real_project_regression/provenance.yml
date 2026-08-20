@@ -1,0 +1,9 @@
+repository: gitlabhq/gitlabhq
+revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+sources:
+  - path: spec/support/helpers/html_escaped_helpers.rb
+    source_line: 20
+  - path: app/validators/devise_email_validator.rb
+    source_line: 23
+  - path: qa/spec/resource/base_spec.rb
+    source_line: 9

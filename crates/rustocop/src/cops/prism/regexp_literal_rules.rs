@@ -112,9 +112,7 @@ impl RegexpLiteralRule<'_, '_, '_> {
     }
 
     fn allowed_omit_parentheses(&self, body: &str) -> bool {
-        let call_parent = self.ancestors().iter().rev().any(|ancestor| {
-            ancestor.as_call_node().is_some_and(|call| call.opening_loc().is_none())
-        });
+        let call_parent = self.parent().and_then(Node::as_call_node).is_some();
         call_parent
             && (body.starts_with([' ', '='])
                 || self.related_config_value(

@@ -1,0 +1,3 @@
+cop	line	column	last_line	last_column	correctable	corrected	message
+Style/RegexpLiteral	3	23	3	36	true	true	Use `//` around regular expression.
+Style/RegexpLiteral	4	13	4	72	true	true	Use `//` around regular expression.

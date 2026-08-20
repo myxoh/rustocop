@@ -182,6 +182,15 @@ fixture_test!(
 );
 
 fixture_test!(
+    distinguishes_regexp_receivers_from_command_arguments,
+    "regexp_literal_parent_real_project_regression",
+    "/project/app/validators/devise_email_validator.rb",
+    "Style/RegexpLiteral",
+    true,
+    RubyVersion::default()
+);
+
+fixture_test!(
     rejects_unscoped_guard_clause_exits,
     "style_guard_clause_regression",
     "/project/example.rb",
