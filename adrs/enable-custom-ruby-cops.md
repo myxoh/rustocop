@@ -90,6 +90,9 @@ Positive consequences:
 
 Negative consequences:
 
+- Resolving an effective project configuration loads RuboCop before native
+  inspection and can add several hundred milliseconds to short runs. Explicit
+  `--only` runs without a project or user configuration bypass this work.
 - A single Ruby custom cop forfeits most of Rustocop's startup advantage.
 - Every file is read and parsed independently by both engines.
 - Concurrent processes increase CPU and peak-memory pressure compared with a

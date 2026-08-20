@@ -197,6 +197,11 @@ default; `--included-non-native-cops` delegates those cops back to RuboCop and
 merges their results. This is substantially slower because the delegated files
 are parsed a second time in Ruby.
 
+Resolving a project configuration also loads RuboCop before native inspection,
+which can add several hundred milliseconds to short runs. Explicit `--only`
+runs with no discoverable project or user configuration keep the fast path and
+do not load RuboCop.
+
 Explicit `--require`/`--plugin` plus `--only` custom-cop delegation remains
 supported. Mixed runs currently reject autocorrection and `--stdin`, because
 independent native and Ruby correction passes would not have safe ordering

@@ -136,6 +136,39 @@ RSpec.describe "rustocop executable" do
     end
   end
 
+  it "uses inherited effective cop settings for explicit native selections" do
+    Dir.mktmpdir("rustocop-inherited-config") do |directory|
+      File.write(File.join(directory, "base.yml"), <<~YAML)
+        AllCops:
+          DisabledByDefault: true
+          NewCops: disable
+
+        Style/StringLiterals:
+          Enabled: true
+          EnforcedStyle: double_quotes
+      YAML
+      File.write(File.join(directory, ".rubocop.yml"), <<~YAML)
+        inherit_from: base.yml
+      YAML
+      path = File.join(directory, "example.rb")
+      File.write(path, "'example'\n")
+
+      rustocop = run_rustocop(
+        "--format", "json", "--only", "Style/StringLiterals", path, chdir: directory
+      )
+      rubocop = run_rubocop(
+        "--format", "json", "--only", "Style/StringLiterals", path, chdir: directory
+      )
+
+      expect(rustocop.stderr).to eq("")
+      expect(rustocop.status.exitstatus).to eq(rubocop.status.exitstatus)
+      expect(parsed_json(rustocop).dig("summary", "offense_count")).to eq(1)
+      expect(parsed_json(rubocop).dig("summary", "offense_count")).to eq(1)
+      expect(parsed_json(rustocop).fetch("files").flat_map { |file| file.fetch("offenses") })
+        .to contain_exactly(include("cop_name" => "Style/StringLiterals"))
+    end
+  end
+
   it "warns about configured non-native cops and delegates them only when requested" do
     Dir.mktmpdir("rustocop-non-native-config") do |directory|
       custom_cop = File.join(ROOT, "benchmark/custom_cops/synthetic_file_header.rb")

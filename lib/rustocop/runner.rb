@@ -21,7 +21,7 @@ module Rustocop
       resolution = RubocopConfiguration.resolve(argv)
       warn RubocopConfiguration::WARNING if resolution.warn_about_non_native_cops
 
-      Kernel.exec(runtime_environment, executable, *resolution.arguments)
+      Kernel.exec(runtime_environment.merge(resolution.environment), executable, *resolution.arguments)
     rescue RuntimeError => e
       warn "rustocop: #{e.message}"
       2

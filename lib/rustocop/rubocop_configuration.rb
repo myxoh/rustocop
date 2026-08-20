@@ -1,13 +1,16 @@
 # frozen_string_literal: true
 
 require "set"
+require "yaml"
 
 module Rustocop
   class RubocopConfiguration
     WARNING = "Warning - non native cops are ignored by default, to include them use " \
               "--included-non-native-cops NOTE performance is severely degraded when using non native cops."
 
-    Resolution = Struct.new(:arguments, :warn_about_non_native_cops, keyword_init: true)
+    RESOLVED_CONFIG_ENV = "RUSTOCOP_RESOLVED_CONFIG_SOURCE"
+
+    Resolution = Struct.new(:arguments, :environment, :warn_about_non_native_cops, keyword_init: true)
 
     OPTIONS_WITH_VALUES = %w[
       --cache
@@ -31,23 +34,29 @@ module Rustocop
     end
 
     def resolve
-      return unchanged if metadata_command? || explicit_cop_selection?
+      return unchanged if metadata_command? || explicit_custom_cop_selection?
+      return unchanged if explicit_cop_selection? && !configuration_present?
 
       require "rubocop"
 
       base_cops = RuboCop::Cop::Registry.global.names.to_set
       config = effective_config
-      enabled_cops = RuboCop::Cop::Registry.global.enabled(config).map(&:cop_name)
-      base_enabled_cops, non_native_cops = enabled_cops.partition { |name| base_cops.include?(name) }
-
       resolved_arguments = arguments.dup
       add_discovered_config(resolved_arguments, config)
-      resolved_arguments << "--resolved-enabled-cops=#{base_enabled_cops.sort.join(',')}"
-      resolved_arguments << "--resolved-non-native-cops=#{non_native_cops.sort.join(',')}"
+
+      non_native_cops = []
+      unless explicit_cop_selection?
+        enabled_cops = RuboCop::Cop::Registry.global.enabled(config).map(&:cop_name)
+        base_enabled_cops, non_native_cops = enabled_cops.partition { |name| base_cops.include?(name) }
+        resolved_arguments << "--resolved-enabled-cops=#{base_enabled_cops.sort.join(',')}"
+        resolved_arguments << "--resolved-non-native-cops=#{non_native_cops.sort.join(',')}"
+      end
 
       Resolution.new(
         arguments: resolved_arguments,
-        warn_about_non_native_cops: non_native_cops.any? && !include_non_native_cops?
+        environment: { RESOLVED_CONFIG_ENV => resolved_config_source(config, base_cops) },
+        warn_about_non_native_cops: !explicit_cop_selection? &&
+          non_native_cops.any? && !include_non_native_cops?
       )
     rescue LoadError => e
       raise "RuboCop is required to resolve project configuration: #{e.message}"
@@ -60,7 +69,7 @@ module Rustocop
     attr_reader :arguments
 
     def unchanged
-      Resolution.new(arguments:, warn_about_non_native_cops: false)
+      Resolution.new(arguments:, environment: {}, warn_about_non_native_cops: false)
     end
 
     def metadata_command?
@@ -71,8 +80,48 @@ module Rustocop
       arguments.any? { |argument| argument == "--only" || argument.start_with?("--only=") }
     end
 
+    def explicit_custom_cop_selection?
+      explicit_cop_selection? && arguments.any? do |argument|
+        %w[--require --plugin].include?(argument) ||
+          argument.start_with?("--require=", "--plugin=")
+      end
+    end
+
     def include_non_native_cops?
       arguments.include?("--included-non-native-cops")
+    end
+
+    def configuration_present?
+      return true if explicit_config_path
+
+      directory = target_directory
+      loop do
+        return true if config_candidates(directory).any? { |path| File.file?(path) }
+
+        parent = File.dirname(directory)
+        break if parent == directory
+
+        directory = parent
+      end
+
+      user_config_candidates.any? { |path| File.file?(path) }
+    end
+
+    def config_candidates(directory)
+      [
+        File.join(directory, ".rubocop.yml"),
+        File.join(directory, ".config", ".rubocop.yml"),
+        File.join(directory, ".config", "rubocop", "config.yml")
+      ]
+    end
+
+    def user_config_candidates
+      home = ENV["HOME"]
+      xdg = ENV["XDG_CONFIG_HOME"] || (File.join(home, ".config") if home)
+      [
+        (File.join(home, ".rubocop.yml") if home),
+        (File.join(xdg, "rubocop", "config.yml") if xdg)
+      ].compact
     end
 
     def effective_config
@@ -128,6 +177,19 @@ module Rustocop
       return if File.basename(loaded_path) == "default.yml" && loaded_path.include?("/rubocop-")
 
       resolved_arguments << "--config=#{loaded_path}"
+    end
+
+    def resolved_config_source(config, base_cops)
+      defaults = RuboCop::ConfigLoader.default_configuration.to_h
+      overrides = config.to_h.each_with_object({}) do |(name, settings), result|
+        next unless name == "AllCops" || base_cops.include?(name)
+        next unless settings.is_a?(Hash)
+
+        default_settings = defaults.fetch(name, {})
+        changed = settings.reject { |key, value| default_settings[key] == value }
+        result[name] = changed unless changed.empty?
+      end
+      YAML.dump(overrides)
     end
   end
 end

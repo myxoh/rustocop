@@ -1,4 +1,4 @@
-use std::fs;
+use std::{env, fs};
 
 use std::sync::Arc;
 
@@ -122,6 +122,10 @@ pub(super) fn parse_args(mut args: Vec<String>) -> Result<Command, String> {
         }
     }
 
+    if let Ok(source) = env::var("RUSTOCOP_RESOLVED_CONFIG_SOURCE") {
+        apply_config_source(&mut options.inspection, &source);
+    }
+
     if options.format != "json" && options.format != "simple" {
         return Err(format!("unsupported formatter {}", options.format));
     }
@@ -155,9 +159,13 @@ fn parse_jobs(value: &str) -> Result<usize, String> {
 fn apply_config(config: &mut InspectionConfig, path: &str) -> Result<(), String> {
     let source = fs::read_to_string(path)
         .map_err(|error| format!("could not read config {path}: {error}"))?;
-    config.target_ruby_version = target_ruby_version_from_source(&source).unwrap_or_default();
-    config.cop_config = Arc::new(CopConfig::from_source(&source));
+    apply_config_source(config, &source);
     Ok(())
+}
+
+fn apply_config_source(config: &mut InspectionConfig, source: &str) {
+    config.target_ruby_version = target_ruby_version_from_source(source).unwrap_or_default();
+    config.cop_config = Arc::new(CopConfig::from_source(source));
 }
 
 fn target_ruby_version_from_source(source: &str) -> Option<RubyVersion> {
