@@ -137,10 +137,37 @@ fixture_test!(
 );
 
 fixture_test!(
-    ignores_dependency_calls_in_comments,
+    ignores_dependency_calls_outside_gemspecs,
     "ordered_dependencies_real_project_regression",
     "/project/rubocop/cop/rspec/before_all.rb",
     "Gemspec/OrderedDependencies",
+    false,
+    RubyVersion::default()
+);
+
+fixture_test!(
+    ignores_gem_declarations_outside_bundler_files,
+    "ordered_gems_path_real_project_regression",
+    "/project/railties/test/generators/actions_test.rb",
+    "Bundler/OrderedGems",
+    false,
+    RubyVersion::default()
+);
+
+fixture_test!(
+    ignores_semicolons_in_embedded_documents,
+    "semicolon_embedded_document_real_project_regression",
+    "/project/script/import_scripts/nabble.rb",
+    "Style/Semicolon",
+    false,
+    RubyVersion::default()
+);
+
+fixture_test!(
+    honors_real_project_cop_directives,
+    "cop_directive_real_project_regression",
+    "/project/spec/lib/web_ide/settings/main_spec.rb",
+    "Style/Semicolon,Style/TrailingCommaInArrayLiteral",
     false,
     RubyVersion::default()
 );

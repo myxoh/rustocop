@@ -149,3 +149,47 @@ fn invalid_transactions_leave_findings_uncorrected() {
     assert!(inspection.findings[0].correctable);
     assert!(!inspection.findings[0].corrected);
 }
+
+#[test]
+fn source_directives_suppress_findings_and_corrections() {
+    let source = concat!(
+        "# rubocop:disable Style/Semicolon\n",
+        "first; value\n",
+        "# rubocop:enable Style/Semicolon\n",
+        "second; value\n",
+        "third; value # rubocop:disable Style/Semicolon -- generated\n",
+    );
+    let first = source.find("first;").unwrap() + "first".len();
+    let second = source.find("second;").unwrap() + "second".len();
+    let third = source.find("third;").unwrap() + "third".len();
+    let mut context = context(true);
+    for offset in [first, second, third] {
+        context.remove(
+            "Style/Semicolon",
+            "Remove semicolon.",
+            offset..offset + 1,
+            offset..offset + 1,
+        );
+    }
+
+    let inspection = context.finish(source);
+
+    assert_eq!(inspection.findings.len(), 1);
+    assert_eq!(inspection.findings[0].start_offset, second);
+    assert!(inspection.corrected_source.contains("first; value"));
+    assert!(inspection.corrected_source.contains("second value"));
+    assert!(inspection.corrected_source.contains("third; value"));
+}
+
+#[test]
+fn department_directives_suppress_member_cops() {
+    let source = "value # rubocop:disable Style\n";
+    let mut context = context(false);
+    context.report("Style/Example", "Hidden.", 0..5);
+    context.report("Lint/Example", "Visible.", 0..5);
+
+    let inspection = context.finish(source);
+
+    assert_eq!(inspection.findings.len(), 1);
+    assert_eq!(inspection.findings[0].cop_name, "Lint/Example");
+}

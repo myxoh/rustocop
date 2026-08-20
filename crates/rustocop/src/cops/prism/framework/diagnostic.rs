@@ -1,5 +1,6 @@
 use ruby_prism::{Location, Node};
 use std::cmp::Reverse;
+use std::collections::HashSet;
 use std::ops::Range;
 use std::sync::Arc;
 
@@ -262,6 +263,9 @@ impl Context {
     }
 
     pub(super) fn finish(mut self, source: &str) -> Inspection {
+        let disabled = disabled_findings(source, &self.findings);
+        self.corrections
+            .retain(|correction| !disabled[correction.finding_index]);
         let (accepted, subsumed) = accepted_corrections(source, self.corrections);
         let mut edits = Vec::new();
         for correction in accepted {
@@ -271,6 +275,12 @@ impl Context {
         for finding_index in subsumed {
             self.findings[finding_index].corrected = true;
         }
+        self.findings = self
+            .findings
+            .into_iter()
+            .enumerate()
+            .filter_map(|(index, finding)| (!disabled[index]).then_some(finding))
+            .collect();
         self.findings.sort_by_key(|finding| {
             (
                 finding.start_offset,
@@ -283,6 +293,92 @@ impl Context {
             corrected_source: apply_edits(source, edits),
         }
     }
+}
+
+#[derive(Clone, Default)]
+struct DisabledState {
+    all: bool,
+    cops: Arc<HashSet<String>>,
+}
+
+impl DisabledState {
+    fn update(&mut self, names: &[&str], disabled: bool) {
+        for name in names {
+            if name.eq_ignore_ascii_case("all") {
+                self.all = disabled;
+            } else if disabled {
+                Arc::make_mut(&mut self.cops).insert((*name).to_string());
+            } else {
+                Arc::make_mut(&mut self.cops).remove(*name);
+            }
+        }
+    }
+
+    fn contains(&self, cop: &str) -> bool {
+        self.all
+            || self.cops.contains(cop)
+            || cop
+                .split_once('/')
+                .is_some_and(|(department, _)| self.cops.contains(department))
+    }
+}
+
+fn disabled_findings(source: &str, findings: &[Finding]) -> Vec<bool> {
+    let mut state = DisabledState::default();
+    let mut line_starts = Vec::new();
+    let mut states = Vec::new();
+    let mut offset = 0;
+    for physical_line in source.split_inclusive('\n') {
+        line_starts.push(offset);
+        let line = physical_line.strip_suffix('\n').unwrap_or(physical_line);
+        let mut line_state = state.clone();
+        if let Some((comment_at, disabled, names)) = cop_directive(line) {
+            if line[..comment_at].trim().is_empty() {
+                state.update(&names, disabled);
+                line_state = state.clone();
+            } else {
+                line_state.update(&names, disabled);
+            }
+        }
+        states.push(line_state);
+        offset += physical_line.len();
+    }
+    if states.is_empty() {
+        line_starts.push(0);
+        states.push(state);
+    }
+
+    findings
+        .iter()
+        .map(|finding| {
+            let line = line_starts
+                .partition_point(|start| *start <= finding.start_offset)
+                .saturating_sub(1);
+            states[line].contains(finding.cop_name)
+        })
+        .collect()
+}
+
+fn cop_directive(line: &str) -> Option<(usize, bool, Vec<&str>)> {
+    let comment_at = line.find("# rubocop:")?;
+    let directive = &line[comment_at + "# rubocop:".len()..];
+    let (disabled, names) = if let Some(names) = directive.strip_prefix("disable") {
+        (true, names)
+    } else if let Some(names) = directive.strip_prefix("todo") {
+        (true, names)
+    } else if let Some(names) = directive.strip_prefix("enable") {
+        (false, names)
+    } else {
+        return None;
+    };
+    let names = names
+        .split_once("--")
+        .map_or(names, |(names, _reason)| names)
+        .split(',')
+        .flat_map(str::split_whitespace)
+        .filter(|name| !name.is_empty())
+        .collect::<Vec<_>>();
+    Some((comment_at, disabled, names))
 }
 
 #[cfg(test)]

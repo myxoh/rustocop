@@ -159,6 +159,19 @@ fn semicolon_offsets(root: &Node<'_>, source: &str, allow_separators: bool) -> V
 
     let mut literals = LiteralContent::default();
     literals.visit(root);
+    let mut embedded_document = None;
+    for (offset, line) in SourceFile::new(source).lines() {
+        if embedded_document.is_none() && line.starts_with("=begin") {
+            embedded_document = Some(offset);
+        } else if line.starts_with("=end") {
+            if let Some(start) = embedded_document.take() {
+                literals.ranges.push(start..offset + line.len());
+            }
+        }
+    }
+    if let Some(start) = embedded_document {
+        literals.ranges.push(start..source.len());
+    }
     literals.ranges.sort_by_key(|range| range.start);
 
     struct MultiExpressionLines<'src> {

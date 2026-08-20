@@ -88,6 +88,9 @@ struct Dependency {
 }
 
 fn ordered_dependencies(context: &mut CopContext<'_, '_>) {
+    if !context.path().ends_with(".gemspec") {
+        return;
+    }
     let source = context.source();
     let comments_separate = context.config_bool("TreatCommentsAsGroupSeparators", false);
     let punctuation = context.config_bool("ConsiderPunctuation", false);

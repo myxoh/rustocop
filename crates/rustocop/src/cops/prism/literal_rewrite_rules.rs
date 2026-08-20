@@ -108,6 +108,34 @@ fn escape_symbol(value: &str, quote: u8) -> String {
 
 impl PercentLiteralDelimitersRule<'_, '_, '_> {
     fn on_percent_literal(&mut self, node: &Node<'_>) {
+        let percent_opening = if let Some(array) = node.as_array_node() {
+            array
+                .opening_loc()
+                .is_some_and(|opening| opening.as_slice().starts_with(b"%"))
+        } else if let Some(string) = node.as_string_node() {
+            string
+                .opening_loc()
+                .is_some_and(|opening| opening.as_slice().starts_with(b"%"))
+        } else if let Some(string) = node.as_interpolated_string_node() {
+            string
+                .opening_loc()
+                .is_some_and(|opening| opening.as_slice().starts_with(b"%"))
+        } else if let Some(regexp) = node.as_regular_expression_node() {
+            regexp.opening_loc().as_slice().starts_with(b"%")
+        } else if let Some(regexp) = node.as_interpolated_regular_expression_node() {
+            regexp.opening_loc().as_slice().starts_with(b"%")
+        } else if let Some(symbol) = node.as_symbol_node() {
+            symbol
+                .opening_loc()
+                .is_some_and(|opening| opening.as_slice().starts_with(b"%"))
+        } else if let Some(xstring) = node.as_x_string_node() {
+            xstring.opening_loc().as_slice().starts_with(b"%")
+        } else if let Some(xstring) = node.as_interpolated_x_string_node() {
+            xstring.opening_loc().as_slice().starts_with(b"%")
+        } else {
+            false
+        };
+        return_unless!(percent_opening);
         let source = self.source_file().node(node);
         let Some((literal_type, prefix_len)) = percent_literal_type(source) else { return };
         let bytes = source.as_bytes();

@@ -44,6 +44,10 @@ struct GemDeclaration {
 }
 
 fn ordered_gems(context: &mut CopContext<'_, '_>) {
+    let filename = context.path().rsplit('/').next().unwrap_or(context.path());
+    if !matches!(filename, "Gemfile" | "gems.rb") && !filename.ends_with(".gemfile") {
+        return;
+    }
     let source = context.source();
     let lines = context.source_file().lines().collect::<Vec<_>>();
     let comments_separate = context.config_bool("TreatCommentsAsGroupSeparators", false);

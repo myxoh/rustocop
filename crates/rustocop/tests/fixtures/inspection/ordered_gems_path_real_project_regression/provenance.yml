@@ -1,0 +1,4 @@
+repository: rails/rails
+revision: ba4f7369aee71f9f38d67bdbf0e8571fb372b535
+path: railties/test/generators/actions_test.rb
+source_lines: 198-200
