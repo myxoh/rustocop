@@ -6,7 +6,6 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
     vec![
         custom("Naming/MemoizedInstanceVariableName", memoized_variable),
         custom("Naming/FileName", file_name),
-        custom("Style/ParallelAssignment", parallel_assignment),
         report(
             "Lint/AssignmentInCondition",
             "if value = ",
@@ -194,36 +193,6 @@ fn memoized_variable(context: &mut CopContext<'_, '_>) {
         if line.trim() == "end" {
             method = None;
         }
-    }
-}
-
-fn parallel_assignment(context: &mut CopContext<'_, '_>) {
-    for (offset, line) in context.source_file().lines() {
-        let Some((left, right)) = line.split_once(" = ") else {
-            continue;
-        };
-        if !left.contains(',')
-            || left.contains('*')
-            || left.contains("self.")
-            || left
-                .trim_start()
-                .bytes()
-                .next()
-                .is_some_and(|byte| byte.is_ascii_uppercase())
-            || right.contains('*')
-            || right.contains(".map")
-        {
-            continue;
-        }
-        let left_names = left.split(',').count();
-        let right_values = right.split(',').count();
-        if left_names != right_values || right.contains(left.split(',').next().unwrap_or("")) {
-            continue;
-        }
-        context.report(
-            "Do not use parallel assignment.",
-            offset..offset + line.len(),
-        );
     }
 }
 

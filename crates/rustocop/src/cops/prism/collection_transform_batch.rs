@@ -1,27 +1,17 @@
 use super::*;
 
 define_cops! {
-    ReduceToHash => "Style/ReduceToHash" => source(reduce_to_hash),
     HashTransformKeys => "Style/HashTransformKeys" => source(hash_transform_keys),
     HashTransformValues => "Style/HashTransformValues" => source(hash_transform_values),
     MapToSet => "Style/MapToSet" => source(map_to_set),
     HashEachMethods => "Style/HashEachMethods" => source(hash_each_methods),
     HashFetchChain => "Style/HashFetchChain" => source(hash_fetch_chain),
-    PartitionInsteadOfDoubleSelect => "Style/PartitionInsteadOfDoubleSelect" => source(partition_double_select),
     MapToHash => "Style/MapToHash" => source(map_to_hash),
     HashExcept => "Style/HashExcept" => source(hash_except),
     HashSlice => "Style/HashSlice" => source(hash_slice),
     MapIntoArray => "Style/MapIntoArray" => source(map_into_array),
     CollectionMethods => "Style/CollectionMethods" => source(collection_methods),
     Sample => "Style/Sample" => call(sample),
-}
-
-fn reduce_to_hash(context: &mut CopContext<'_, '_>) {
-    context.replace_code(
-        ".map { |key, value| [key, value] }.to_h",
-        ".to_h",
-        "Prefer `to_h` over `map.to_h` when the pairs are unchanged.",
-    );
 }
 
 fn hash_transform_keys(context: &mut CopContext<'_, '_>) {
@@ -116,20 +106,6 @@ fn hash_fetch_chain(context: &mut CopContext<'_, '_>) {
         );
     }
     let _ = source;
-}
-
-fn partition_double_select(context: &mut CopContext<'_, '_>) {
-    for (offset, line) in context.source_file().lines() {
-        if line.matches(".select").count() >= 2
-            || line.contains(".select") && line.contains(".reject")
-        {
-            let start = offset + line.find(".select").unwrap_or(0);
-            context.report(
-                "Use `partition` instead of multiple `select`/`reject` calls.",
-                start..offset + line.len(),
-            );
-        }
-    }
 }
 
 fn map_to_hash(context: &mut CopContext<'_, '_>) {

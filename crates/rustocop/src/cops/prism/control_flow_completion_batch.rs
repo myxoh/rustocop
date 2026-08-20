@@ -1,69 +1,9 @@
 use super::*;
 
 define_cops! {
-    RedundantConditional => "Style/RedundantConditional" => source(redundant_conditional),
     InvertibleUnlessCondition => "Style/InvertibleUnlessCondition" => source(invertible_unless),
     CombinableLoops => "Style/CombinableLoops" => source(combinable_loops),
     EachForSimpleLoop => "Style/EachForSimpleLoop" => source(each_for_simple_loop),
-}
-
-fn redundant_conditional(context: &mut CopContext<'_, '_>) {
-    let lines = context.source_file().lines().collect::<Vec<_>>();
-    for window in lines.windows(5) {
-        let (start, header) = window[0];
-        let header = header.trim_start();
-        let keyword = if header.starts_with("if ") {
-            "if"
-        } else if header.starts_with("unless ") {
-            "unless"
-        } else {
-            continue;
-        };
-        if window[2].1.trim() != "else" || window[4].1.trim() != "end" {
-            continue;
-        }
-        let (truthy, falsey) = (window[1].1.trim(), window[3].1.trim());
-        if !matches!((truthy, falsey), ("true", "false") | ("false", "true")) {
-            continue;
-        }
-        let condition = header.trim_start_matches(keyword).trim();
-        let direct = (keyword == "if") == (truthy == "true");
-        let replacement = if direct {
-            condition.to_string()
-        } else {
-            format!("!({condition})")
-        };
-        let end = window[4].0 + window[4].1.len();
-        context.replace(
-            format!("This conditional expression can just be replaced by `{replacement}`."),
-            start..end,
-            start..end,
-            replacement,
-        );
-    }
-    for (offset, line) in context.source_file().lines() {
-        let code = line.trim();
-        let (suffix, negated) = if code.ends_with(" ? true : false") {
-            (" ? true : false", false)
-        } else if code.ends_with(" ? false : true") {
-            (" ? false : true", true)
-        } else {
-            continue;
-        };
-        let condition = code.trim_end_matches(suffix);
-        let replacement = if negated {
-            format!("!({condition})")
-        } else {
-            condition.to_string()
-        };
-        let start = offset + line.find(code).unwrap_or(0);
-        context.replace(
-            format!("This conditional expression can just be replaced by `{replacement}`."),
-            start..start + code.len(),
-            start..start + code.len(),
-            replacement,
-        );
-    }
 }
 
 fn invertible_unless(context: &mut CopContext<'_, '_>) {

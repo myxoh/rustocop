@@ -5,7 +5,6 @@ mod registry;
 
 pub(super) fn cops() -> Vec<Box<dyn Cop>> {
     let mut cops = vec![
-        custom("Style/ParenthesesAroundCondition", parentheses_condition),
         custom("Lint/UnreachableLoop", unreachable_loop),
         custom("Style/IdenticalConditionalBranches", identical_branches),
         custom("Style/NegatedIfElseCondition", negated_if_else),
@@ -56,62 +55,6 @@ fn unreachable_loop(context: &mut CopContext<'_, '_>) {
             context.report(
                 "This loop will have at most one iteration.",
                 window[0].0..window[1].0 + window[1].1.len(),
-            );
-        }
-    }
-}
-
-fn parentheses_condition(context: &mut CopContext<'_, '_>) {
-    for (offset, line) in context.source_file().lines() {
-        let trimmed = line.trim_start();
-        if ["if (", "unless (", "while (", "until ("]
-            .iter()
-            .any(|prefix| trimmed.starts_with(prefix))
-            && trimmed.find(')').is_some_and(|close| {
-                trimmed[close + 1..].trim().is_empty()
-                    || trimmed[close + 1..].trim_start().starts_with("then")
-            })
-        {
-            let open = trimmed.find('(').unwrap_or(0);
-            let close = trimmed.find(')').unwrap_or(trimmed.len());
-            let body = &trimmed[open + 1..close];
-            if body.is_empty()
-                || body.contains(';')
-                || body.contains(" = ")
-                || [" rescue ", " if ", " unless ", " while ", " until "]
-                    .iter()
-                    .any(|keyword| body.contains(keyword))
-            {
-                continue;
-            }
-            let at = offset + line.find('(').unwrap_or(0);
-            context.report(
-                "Don't use parentheses around the condition of a conditional.",
-                at..offset + line.find(')').unwrap_or(line.len()) + 1,
-            );
-        }
-    }
-}
-
-fn one_line_conditional(context: &mut CopContext<'_, '_>) {
-    for (offset, line) in context.source_file().lines() {
-        let trimmed = line.trim_start();
-        if (trimmed.starts_with("if ") || trimmed.starts_with("unless "))
-            && trimmed.contains(" then ")
-            && trimmed.ends_with(" end")
-            && trimmed
-                .split_once(" else ")
-                .is_some_and(|(_, branch)| branch != "end")
-            && !trimmed.split_once(" then ").is_some_and(|(_, body)| {
-                body.split_once(" else ")
-                    .unwrap_or((body, ""))
-                    .0
-                    .contains(';')
-            })
-        {
-            context.report(
-                "Favor a normal conditional over a one-line conditional.",
-                offset..offset + line.len(),
             );
         }
     }

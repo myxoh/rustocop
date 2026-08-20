@@ -57,7 +57,6 @@ pub(crate) const LEGACY_COP_NAMES: &[&str] = &[
     "Style/IfUnlessModifier",
     "Style/InlineComment",
     "Style/NumberedParameters",
-    "Style/RedundantBegin",
 ];
 
 pub(crate) fn before_prism(

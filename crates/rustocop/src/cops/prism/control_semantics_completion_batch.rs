@@ -2,13 +2,11 @@ use super::*;
 
 define_cops! {
     SafeNavigationConsistency => "Lint/SafeNavigationConsistency" => source(safe_navigation_consistency),
-    RaiseArgs => "Style/RaiseArgs" => source(raise_args),
     MissingElse => "Style/MissingElse" => source(missing_else),
     CombinableDefined => "Style/CombinableDefined" => source(combinable_defined),
     For => "Style/For" => source(for_loop),
     ClassAndModuleChildren => "Style/ClassAndModuleChildren" => source(class_module_children),
     SafeNavigationChain => "Lint/SafeNavigationChain" => source(safe_navigation_chain),
-    PredicateWithKind => "Style/PredicateWithKind" => source(predicate_with_kind),
     BlockDelimiters => "Style/BlockDelimiters" => source(block_delimiters),
     RedundantSafeNavigation => "Lint/RedundantSafeNavigation" => source(redundant_safe_navigation),
     Next => "Style/Next" => source(next_in_loop),
@@ -34,34 +32,6 @@ fn safe_navigation_consistency(context: &mut CopContext<'_, '_>) {
                 "&.",
             );
         }
-    }
-}
-
-fn raise_args(context: &mut CopContext<'_, '_>) {
-    if context.policy().enforced_style("compact") != "compact" {
-        return;
-    }
-    for (offset, line) in context.source_file().lines() {
-        let trimmed = line.trim_start();
-        if !trimmed.starts_with("raise ") {
-            continue;
-        }
-        let Some(arguments) = trimmed.strip_prefix("raise ") else {
-            continue;
-        };
-        let Some((class, message)) = arguments.split_once(',') else {
-            continue;
-        };
-        if class.contains(".new") {
-            continue;
-        }
-        let start = offset + line.len() - trimmed.len();
-        context.replace(
-            "Provide an exception object as an argument to `raise`.",
-            start..offset + line.len(),
-            start..offset + line.len(),
-            format!("raise {}.new({})", class.trim(), message.trim()),
-        );
     }
 }
 
@@ -155,19 +125,6 @@ fn safe_navigation_chain(context: &mut CopContext<'_, '_>) {
             }
         }
     }
-}
-
-fn predicate_with_kind(context: &mut CopContext<'_, '_>) {
-    context.replace_code(
-        ".select { |x| x.is_a?(",
-        ".grep(",
-        "Use `grep` instead of filtering with `is_a?`.",
-    );
-    context.replace_code(
-        ".find_all { |x| x.kind_of?(",
-        ".grep(",
-        "Use `grep` instead of filtering with `kind_of?`.",
-    );
 }
 
 fn block_delimiters(context: &mut CopContext<'_, '_>) {

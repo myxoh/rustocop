@@ -1,4 +1,4 @@
-use super::catalog_cop::{custom, replace, report};
+use super::catalog_cop::{custom, report};
 use super::*;
 use std::collections::HashSet;
 
@@ -15,12 +15,6 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
             "Do not use a literal assignment in a condition.",
         ),
         custom("Naming/HeredocDelimiterCase", heredoc_case),
-        replace(
-            "Style/OrAssignment",
-            "value = value || ",
-            "value ||= ",
-            "Use self-assignment shorthand `||=`.",
-        ),
         custom("Naming/BlockForwarding", block_forwarding),
         report(
             "Lint/AmbiguousAssignment",

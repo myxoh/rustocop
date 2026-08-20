@@ -16,7 +16,6 @@ pub(super) fn after_prism(
     offenses: &mut Vec<Offense>,
 ) {
     check_hash_syntax(lines, options, offenses);
-    check_redundant_begin(lines, options, offenses);
     check_if_unless_modifier(lines, options, offenses);
     check_conditional_assignment(lines, options, offenses);
     check_empty_else(lines, options, offenses);
@@ -79,31 +78,6 @@ fn check_hash_syntax(
                 column,
                 2,
                 CorrectionStatus::Pending,
-            );
-        }
-    }
-}
-
-fn check_redundant_begin(
-    lines: &[SourceLine],
-    options: &InspectionConfig,
-    offenses: &mut Vec<Offense>,
-) {
-    let cop = "Style/RedundantBegin";
-    if !options.cop_enabled(cop) {
-        return;
-    }
-
-    for (index, line) in lines.iter().enumerate() {
-        if line.body.trim() == "begin" {
-            push_offense(
-                offenses,
-                cop,
-                "Redundant `begin` block detected.",
-                index + 1,
-                leading_spaces(&line.body) + 1,
-                5,
-                CorrectionStatus::Unavailable,
             );
         }
     }

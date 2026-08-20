@@ -22,7 +22,6 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
             "Prefer annotated format tokens when multiple substitutions are used.",
         ),
         custom("Lint/Void", void_expression),
-        custom("Style/OperatorMethodCall", operator_method_call),
     ];
     cops.extend(registry::cops());
     cops
@@ -457,27 +456,6 @@ fn duplicate_methods(context: &mut CopContext<'_, '_>) {
             context.report(
                 "Method is defined more than once.",
                 start..start + name.len(),
-            );
-        }
-    }
-}
-
-fn operator_method_call(context: &mut CopContext<'_, '_>) {
-    for (offset, line) in context.source_file().lines() {
-        let Some(at) = line.find(".+(") else { continue };
-        let receiver = line[..at].split_whitespace().last().unwrap_or("");
-        let argument = &line[at + 3..];
-        if receiver
-            .bytes()
-            .next()
-            .is_some_and(|byte| byte.is_ascii_lowercase())
-            && argument.ends_with(')')
-            && !argument.contains(',')
-            && !argument.contains(").")
-        {
-            context.report(
-                "Use the operator syntax instead of calling the operator method.",
-                offset + at..offset + at + 2,
             );
         }
     }

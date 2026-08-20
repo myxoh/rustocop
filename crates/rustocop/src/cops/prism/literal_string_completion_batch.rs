@@ -11,13 +11,11 @@ const PERCENT_MSG: &str = "Use `%w` or `%W` for an array of words.";
 
 define_cops! {
     SymbolArray => "Style/SymbolArray" => node(as_array_node, symbol_array),
-    QuotedSymbols => "Style/QuotedSymbols" => source(quoted_symbols),
     FetchEnvVar => "Style/FetchEnvVar" => source(fetch_env_var),
     StringConcatenation => "Style/StringConcatenation" => call(string_concatenation),
     Lambda => "Style/Lambda" => source(lambda_literal),
     FormatString => "Style/FormatString" => source(format_string),
     WordArray => "Style/WordArray" => stateful_node_rule(as_array_node, WordArrayRule, WordArrayState, on_array),
-    PercentLiteralDelimiters => "Style/PercentLiteralDelimiters" => source(percent_delimiters),
 }
 
 fn symbol_array(node: &ruby_prism::ArrayNode<'_>, context: &mut CopContext<'_, '_>) {
@@ -359,30 +357,6 @@ fn bare_symbol(value: &str) -> bool {
             | "!="
             | "!~"
     )
-}
-
-fn quoted_symbols(context: &mut CopContext<'_, '_>) {
-    let source = context.source().to_string();
-    let mut search = 0;
-    while let Some(relative) = source[search..].find(":\"") {
-        let start = search + relative;
-        let body_start = start + 2;
-        let Some(close) = source[body_start..].find('"').map(|at| body_start + at) else {
-            break;
-        };
-        let body = &source[body_start..close];
-        if !body.contains('#')
-            && !body.contains('\'')
-            && !body.contains('\n')
-            && !body.contains("\\n")
-            && !body.contains("\\u")
-            && !body.contains("\\x")
-            && !body.contains("\\e")
-        {
-            context.replace("Prefer single-quoted symbols when you don't need string interpolation or special symbols.", start..close + 1, start..close + 1, format!(":'{}'", body.replace("\\\"", "\"").replace('\\', "\\\\")));
-        }
-        search = close + 1;
-    }
 }
 
 fn fetch_env_var(context: &mut CopContext<'_, '_>) {
@@ -1074,30 +1048,4 @@ fn escape_double_quoted(value: &str) -> String {
         .replace('\u{08}', "\\b")
         .replace('\u{0b}', "\\v")
         .replace('\u{0c}', "\\f")
-}
-
-fn percent_delimiters(context: &mut CopContext<'_, '_>) {
-    if context.config_value("PreferredDelimiters").is_none() {
-        return;
-    }
-    for (old, new) in [
-        ("%w(", "%w["),
-        ("%i(", "%i["),
-        ("%W(", "%W["),
-        ("%I(", "%I["),
-    ] {
-        for start in context.source_file().code_offsets(old) {
-            if let Some(close) = context.source()[start + old.len()..]
-                .find(')')
-                .map(|at| start + old.len() + at)
-            {
-                context.replace(
-                    "Use `[]` delimiters for this percent literal.",
-                    start..close + 1,
-                    start..close + 1,
-                    format!("{}{}]", new, &context.source()[start + old.len()..close]),
-                );
-            }
-        }
-    }
 }
