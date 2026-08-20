@@ -145,12 +145,23 @@ end
 common = ["--config", options[:config]]
 survivors = cops.dup
 crashes = []
+rust_results = nil
 loop do
-  failure = projects.lazy.filter_map do |project|
+  candidate_results = {}
+  failure = nil
+  projects.each do |project|
+    warn "Rust crash gate: #{project.fetch('name')} (#{survivors.length} cops)"
     result = capture(native_command(options[:native], options[:jobs], common, project.fetch("corpus"), survivors))
-    [project, result] unless accepted?(result)
-  end.first
-  break unless failure
+    unless accepted?(result)
+      failure = [project, result]
+      break
+    end
+    candidate_results[project.fetch("name")] = result
+  end
+  unless failure
+    rust_results = candidate_results
+    break
+  end
 
   project, result = failure
   culprit = isolate_crash(survivors) do |subset|
@@ -171,9 +182,14 @@ end
 
 rubocop_errors = []
 probe_corpus = projects.fetch(0).fetch("corpus")
+probe_rubocop_result = nil
 loop do
+  warn "RuboCop engine gate: #{projects.fetch(0).fetch('name')} (#{survivors.length} cops)"
   result = capture(rubocop_command(rubocop, common, probe_corpus, survivors))
-  break if accepted?(result)
+  if accepted?(result)
+    probe_rubocop_result = result
+    break
+  end
 
   culprit = isolate_crash(survivors) do |subset|
     probe = capture(rubocop_command(rubocop, common, probe_corpus, subset))
@@ -220,33 +236,43 @@ def signature(offense)
 end
 
 def compare(rust, ruby, cops)
+  rust_by_cop = rust.group_by { |item| item.fetch("cop") }
+  ruby_by_cop = ruby.group_by { |item| item.fetch("cop") }
   cops.to_h do |cop|
-    rust_rows = rust.select { |item| item.fetch("cop") == cop }
-    ruby_rows = ruby.select { |item| item.fetch("cop") == cop }
+    rust_rows = rust_by_cop.fetch(cop, [])
+    ruby_rows = ruby_by_cop.fetch(cop, [])
     rust_tally = rust_rows.map { |item| signature(item) }.tally
     ruby_tally = ruby_rows.map { |item| signature(item) }.tally
     exact = rust_tally.sum { |key, count| [count, ruby_tally.fetch(key, 0)].min }
-    rust_only = rust_tally.flat_map do |key, count|
-      [count - ruby_tally.fetch(key, 0), 0].max.times.map { key }
-    end
-    ruby_only = ruby_tally.flat_map do |key, count|
-      [count - rust_tally.fetch(key, 0), 0].max.times.map { key }
-    end
+    rust_only = unmatched_examples(rust_tally, ruby_tally)
+    ruby_only = unmatched_examples(ruby_tally, rust_tally)
     [cop, {
       "rustocop" => rust_rows.length,
       "rubocop" => ruby_rows.length,
       "exact" => exact,
-      "rustocop_only_examples" => rust_only.first(3),
-      "rubocop_only_examples" => ruby_only.first(3)
+      "rustocop_only_examples" => rust_only,
+      "rubocop_only_examples" => ruby_only
     }]
+  end
+end
+
+def unmatched_examples(left, right, limit = 3)
+  left.each_with_object([]) do |(key, count), examples|
+    missing = [count - right.fetch(key, 0), 0].max
+    [missing, limit - examples.length].min.times { examples << key }
+    break examples if examples.length == limit
   end
 end
 
 project_results = projects.to_h do |project|
   corpus = project.fetch("corpus")
-  rust_result = capture(native_command(options[:native], options[:jobs], common, corpus, survivors))
-  abort "Rustocop failed after crash isolation: #{rust_result.fetch('stderr')}" unless accepted?(rust_result)
-  ruby_result = capture(rubocop_command(rubocop, common, corpus, survivors))
+  warn "Exact comparison: #{project.fetch('name')} (#{survivors.length} cops)"
+  rust_result = rust_results.fetch(project.fetch("name"))
+  ruby_result = if project == projects.fetch(0)
+                  probe_rubocop_result
+                else
+                  capture(rubocop_command(rubocop, common, corpus, survivors))
+                end
   abort "RuboCop failed: #{ruby_result.fetch('stderr')}" unless accepted?(ruby_result)
 
   rust_offenses = offense_signatures(JSON.parse(rust_result.fetch("stdout")), corpus)
