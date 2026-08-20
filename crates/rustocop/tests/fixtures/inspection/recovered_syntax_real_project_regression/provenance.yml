@@ -1,0 +1,4 @@
+repository: heartcombo/devise
+revision: 372b295fe6f63b4af3269f5dcd51a18c0bc2016c
+path: lib/generators/active_record/templates/migration.rb
+source_lines: 3-20

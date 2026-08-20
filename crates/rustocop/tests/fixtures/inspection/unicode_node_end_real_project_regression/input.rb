@@ -4,3 +4,9 @@ def test_unicode_column_name
 end
 
 enum :language, [:🇺🇸, :🇪🇸, :🇫🇷]
+
+def format_deletion_date(deletion_date_str)
+  Time.zone.parse(deletion_date_str).strftime('%B %d, %Y')
+rescue StandardError
+  'Unknown'
+end

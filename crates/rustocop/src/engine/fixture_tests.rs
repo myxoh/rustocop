@@ -83,6 +83,15 @@ fixture_test!(
 );
 
 fixture_test!(
+    skips_ordinary_cops_on_real_project_parse_errors,
+    "recovered_syntax_real_project_regression",
+    "/project/lib/generators/active_record/templates/migration.rb",
+    "Style/TrailingBodyOnClass,Style/TrailingCommaInArrayLiteral,Style/Semicolon",
+    false,
+    RubyVersion::default()
+);
+
+fixture_test!(
     handles_empty_single_line_do_end_block,
     "block_delimiters_real_project_regression",
     "/project/railties/lib/rails/application/bootstrap.rb",

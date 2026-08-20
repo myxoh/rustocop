@@ -40,13 +40,14 @@ fn preserves_symbol_map_entries_separately_from_string_entries() {
             .and_then(|values| values.get("include?").map(String::as_str)),
         Some("exclude?")
     );
+    let symbols = config
+        .symbol_map("Style/InvertibleUnlessCondition", "InverseMethods")
+        .unwrap();
     assert_eq!(
-        config.symbol_map("Style/InvertibleUnlessCondition", "InverseMethods"),
-        Some(&HashMap::from([(
-            "include?".to_string(),
-            "exclude?".to_string()
-        )]))
+        symbols.get("include?").map(String::as_str),
+        Some("exclude?")
     );
+    assert!(!symbols.contains_key("plain?"));
 }
 
 #[test]
@@ -110,4 +111,25 @@ fn unquotes_nested_map_keys() {
             .map(String::as_str),
         Some("[]")
     );
+}
+
+#[test]
+fn merges_user_configuration_over_pinned_rubocop_defaults() {
+    let defaults = CopConfig::default();
+    assert_eq!(
+        defaults
+            .map("Style/PercentLiteralDelimiters", "PreferredDelimiters")
+            .and_then(|values| values.get("%r"))
+            .map(String::as_str),
+        Some("{}")
+    );
+
+    let configured = CopConfig::from_source(
+        "Style/PercentLiteralDelimiters:\n  PreferredDelimiters:\n    default: '[]'\n",
+    );
+    let delimiters = configured
+        .map("Style/PercentLiteralDelimiters", "PreferredDelimiters")
+        .unwrap();
+    assert_eq!(delimiters.get("default").map(String::as_str), Some("[]"));
+    assert_eq!(delimiters.get("%r").map(String::as_str), Some("{}"));
 }

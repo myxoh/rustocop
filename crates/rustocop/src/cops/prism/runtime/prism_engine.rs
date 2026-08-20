@@ -25,14 +25,7 @@ impl Engine {
     ) -> Inspection {
         let parsed = parse(source.as_bytes());
         let mut context = Context::new(autocorrect, path, target_ruby_version, cop_config);
-        for cop in self
-            .registry
-            .source_cops
-            .iter()
-            .map(|index| &self.registry.cops[*index])
-        {
-            cop.on_source(source, &mut context);
-        }
+        let has_parse_errors = parsed.errors().next().is_some();
         for error in parsed.errors() {
             for cop in self
                 .registry
@@ -42,6 +35,17 @@ impl Engine {
             {
                 cop.on_parse_error(&error, source, &mut context);
             }
+        }
+        if has_parse_errors {
+            return context.finish(source);
+        }
+        for cop in self
+            .registry
+            .source_cops
+            .iter()
+            .map(|index| &self.registry.cops[*index])
+        {
+            cop.on_source(source, &mut context);
         }
         let mut investigation_states: Vec<Box<dyn Any>> = self
             .registry

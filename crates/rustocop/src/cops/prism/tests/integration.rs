@@ -43,6 +43,18 @@ fn syntax_cop_consumes_the_shared_parse_diagnostics() {
 }
 
 #[test]
+fn ordinary_cops_do_not_investigate_recovered_syntax_trees() {
+    let inspection = inspect(
+        "def broken(; end\n",
+        false,
+        RubyVersion::default(),
+        &|cop| cop == "Style/Semicolon",
+    );
+
+    assert!(inspection.findings.is_empty());
+}
+
+#[test]
 fn parses_once_and_dispatches_to_enabled_cops() {
     let inspection = inspect(
         "eval(code)\nJSON.load(payload)\n",

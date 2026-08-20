@@ -5,3 +5,7 @@ sources:
     source_lines: 898-901
   - path: activerecord/test/cases/enum_test.rb
     source_line: 1001
+  - repository: chatwoot/chatwoot
+    revision: 8d93d69e8e356216e85c28de7c4240e66b8e83fa
+    path: app/mailers/administrator_notifications/account_notification_mailer.rb
+    source_lines: 63-69

@@ -11,17 +11,16 @@ fn trailing_method_end_statement(node: &DefNode<'_>, context: &mut CopContext<'_
     let Some(end_keyword) = node.end_keyword_loc() else {
         return;
     };
-    let Some(body) = node.body() else {
+    if node.body().is_none() {
         return;
-    };
+    }
     let file = context.source_file();
     if file.same_line(node.location().start_offset(), end_keyword.start_offset()) {
         return;
     }
-    if !file.same_line(
-        body.location().end_offset().saturating_sub(1),
-        end_keyword.start_offset(),
-    ) {
+    let before_end = &context.source()
+        [file.line_start(end_keyword.start_offset())..end_keyword.start_offset()];
+    if before_end.trim().is_empty() {
         return;
     }
     let padding = " ".repeat(file.column(node.def_keyword_loc().start_offset()));

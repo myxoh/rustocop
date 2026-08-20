@@ -32,13 +32,16 @@ pub(crate) struct InspectionConfig {
     pub(crate) cop_config: Arc<CopConfig>,
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug)]
 pub(crate) struct CopConfig {
     values: HashMap<String, HashMap<String, ConfigValue>>,
     // Precompiled once per run for the authoring policy API.
     #[allow(dead_code)]
     patterns: HashMap<String, HashMap<String, Vec<Regex>>>,
 }
+
+const RUBOCOP_DEFAULT_CONFIG: &str =
+    include_str!("../../../spec/upstream/rubocop-1.87.0/config/default.yml");
 
 #[derive(Clone, Debug)]
 enum ConfigValue {
@@ -52,9 +55,39 @@ enum ConfigValue {
 
 impl CopConfig {
     pub(crate) fn from_source(source: &str) -> Self {
-        let values = Self::parse_values(source);
+        let mut values = Self::parse_values(RUBOCOP_DEFAULT_CONFIG);
+        Self::merge_values(&mut values, Self::parse_values(source));
         let patterns = Self::compile_patterns(&values);
         Self { values, patterns }
+    }
+
+    fn merge_values(
+        base: &mut HashMap<String, HashMap<String, ConfigValue>>,
+        overrides: HashMap<String, HashMap<String, ConfigValue>>,
+    ) {
+        for (cop, entries) in overrides {
+            let target = base.entry(cop).or_default();
+            for (key, value) in entries {
+                match (target.get_mut(&key), value) {
+                    (
+                        Some(ConfigValue::Map {
+                            values,
+                            symbol_values,
+                        }),
+                        ConfigValue::Map {
+                            values: override_values,
+                            symbol_values: override_symbols,
+                        },
+                    ) => {
+                        values.extend(override_values);
+                        symbol_values.extend(override_symbols);
+                    }
+                    (_, value) => {
+                        target.insert(key, value);
+                    }
+                }
+            }
+        }
     }
 
     fn parse_values(source: &str) -> HashMap<String, HashMap<String, ConfigValue>> {
@@ -248,6 +281,12 @@ impl CopConfig {
             ConfigValue::Map { symbol_values, .. } => Some(symbol_values),
             ConfigValue::Scalar(_) | ConfigValue::List(_) => None,
         }
+    }
+}
+
+impl Default for CopConfig {
+    fn default() -> Self {
+        Self::from_source("")
     }
 }
 
