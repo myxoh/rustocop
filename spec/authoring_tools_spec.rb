@@ -84,4 +84,24 @@ RSpec.describe "cop authoring tools" do
       "fn on_until(&mut self, node: &ruby_prism::UntilNode<'_>)"
     )
   end
+
+  it "prepares a pending qualification record without running external scans" do
+    stdout, stderr, status = run_script(
+      "prepare_qualification_batch.rb",
+      "--cops",
+      "Style/ZeroLengthPredicate",
+      "--no-real-world",
+      "--no-verify-upstream",
+      "--dry-run"
+    )
+
+    expect(status).to be_success
+    expect(stderr).to eq("")
+    document = YAML.safe_load(stdout)
+    record = document.fetch("cops").fetch("Style/ZeroLengthPredicate")
+    expect(record.dig("manual_review", "status")).to eq("pending")
+    expect(record.fetch("edge_cases").length).to eq(4)
+    expect(record.dig("preparation", "internals", "ruby", "callbacks")).to include("on_send")
+    expect(record.dig("preparation", "internals", "rust", "callbacks")).to include("on_send")
+  end
 end

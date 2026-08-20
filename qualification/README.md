@@ -70,3 +70,29 @@ A cop earns credit only when all of the following are true:
 `rustocop_commit` must be the exact commit containing the reviewed native code.
 If code changes afterward, affected cops return to pending until all evidence is
 rerun and the SHA is updated.
+
+## Preparing a batch
+
+Generate the next ten unrecorded cops in reverse matrix order with:
+
+```sh
+bundle exec ruby script/prepare_qualification_batch.rb --count 10
+```
+
+The command first runs every captured upstream diagnostic and correction case,
+then scans the three pinned project corpora for real-world examples. It writes a
+pending YAML record and a side-by-side review packet under `tmp/qualification/`.
+Real-world candidates are retained only when RuboCop and Rustocop agree on both
+diagnostics and the final autocorrected source. Repeated differential checks are
+cached by candidate content and native binary digest.
+
+Use `--cops Style/First,Style/Second` for an explicit batch or
+`--from-position 451 --count 10` to resume at a matrix position. `--dry-run`
+selects upstream edge cases and prints the record without building, scanning,
+or writing files.
+
+Generated records intentionally leave `manual_review.status` pending. Review
+the paired source inventory, replace both TODO notes with concrete semantic
+findings, and inspect all generated examples before moving the YAML into
+`qualification/work/`. If the upstream contract fails, the review packet marks
+the cop for Ruby-shaped callback conversion and a complete rerun.

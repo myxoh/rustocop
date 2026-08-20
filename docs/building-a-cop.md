@@ -344,6 +344,17 @@ RUSTOCOP_NATIVE_PATH=crates/rustocop/target/debug/rustocop \
 If the implementation is useful but does not meet that contract, leave it
 Heuristic. Passing a few representative examples is not verification.
 
+For qualification batches, prepare the repetitive evidence and a source-shape
+review packet automatically:
+
+```sh
+bundle exec ruby script/prepare_qualification_batch.rb --count 10
+```
+
+The generated files remain under `tmp/qualification/` and retain a pending
+manual-review status. See [the qualification evidence guide](../qualification/README.md)
+for explicit cop selection, reverse matrix resumption, caching, and promotion.
+
 ## Final checklist
 
 - [ ] Read every upstream spec context.
