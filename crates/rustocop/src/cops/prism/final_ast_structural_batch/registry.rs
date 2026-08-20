@@ -15,12 +15,6 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
             "value.to_s",
             "Use `to_s` instead of formatting a single `%s` value.",
         ),
-        replace(
-            "Style/RedundantParentheses",
-            "return(value)",
-            "return value",
-            "Don't use parentheses around a return value.",
-        ),
         custom("Lint/DuplicateMethods", duplicate_methods),
         custom(
             "Style/AccessModifierDeclarations",

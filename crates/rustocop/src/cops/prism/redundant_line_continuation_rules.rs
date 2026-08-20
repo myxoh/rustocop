@@ -1,0 +1,223 @@
+use super::*;
+
+define_rule!(RedundantLineContinuationRule);
+
+const MSG: &str = "Redundant line continuation.";
+
+define_cops! {
+    RedundantLineContinuation => "Style/RedundantLineContinuation" => source(on_new_investigation),
+}
+
+fn on_new_investigation(context: &mut CopContext<'_, '_>) {
+    RedundantLineContinuationRule::new(context).on_new_investigation();
+}
+
+impl RedundantLineContinuationRule<'_, '_, '_> {
+    fn on_new_investigation(&mut self) {
+        let source = self.source().to_string();
+        let ruby_end = source.find("\n__END__\n").map_or(source.len(), |at| at + 1);
+        let ruby_source = &source[..ruby_end];
+        let logical_end = ruby_source.trim_end_matches(['\n', '\r']).len();
+        for (slash, _) in ruby_source.match_indices("\\\n") {
+            if slash + 2 >= logical_end {
+                continue;
+            }
+            let range = slash..slash + 2;
+            if self.require_line_continuation(&source, slash)
+                || !self.redundant_line_continuation(&source, slash)
+            {
+                continue;
+            }
+            add_offense!(self, range, message: MSG, |corrector| {
+                corrector.remove(slash..slash + 1);
+            });
+        }
+        self.inspect_end_of_ruby_code_line_continuation(ruby_source);
+    }
+
+    fn require_line_continuation(&self, source: &str, slash: usize) -> bool {
+        let line_start = source[..slash].rfind('\n').map_or(0, |at| at + 1);
+        let line = &source[line_start..slash];
+        let next_start = slash + 2;
+        let next_end = source[next_start..]
+            .find('\n')
+            .map_or(source.len(), |at| next_start + at);
+        let next = &source[next_start..next_end];
+        let before = line.trim_end();
+        if before.ends_with([',', '(', '[', '{', ':', '.'])
+            || before.ends_with("&&")
+            || before.ends_with("||")
+        {
+            return false;
+        }
+        line_has_comment(line)
+            || string_concatenation(line)
+            || starts_with_arithmetic_operator(next)
+            || starts_with_required_operator(next)
+            || method_with_argument(line, next)
+            || inside_literal(source, slash)
+            || inside_regexp(source, slash)
+            || leading_dot_method_chain_with_blank_line(line, next)
+    }
+
+    fn redundant_line_continuation(&self, source: &str, slash: usize) -> bool {
+        let line_start = source[..slash].rfind('\n').map_or(0, |at| at + 1);
+        let before = source[line_start..slash].trim_end();
+        if before.ends_with([',', '(', '[', '{', ':', '.'])
+            || before.ends_with("&&")
+            || before.ends_with("||")
+        {
+            return true;
+        }
+        let mut candidate = source.to_string();
+        candidate.remove(slash);
+        let parsed = ruby_prism::parse(candidate.as_bytes());
+        let valid = parsed.errors().next().is_none();
+        valid
+    }
+
+    fn inspect_end_of_ruby_code_line_continuation(&mut self, source: &str) {
+        let trimmed = source.trim_end_matches(['\n', '\r']);
+        return_unless!(trimmed.ends_with('\\'));
+        let slash = trimmed.len() - 1;
+        let line_start = trimmed[..slash].rfind('\n').map_or(0, |at| at + 1);
+        return_if!(line_has_comment(&trimmed[line_start..slash]));
+        add_offense!(self, slash..slash + 1, message: MSG, |corrector| {
+            corrector.remove(slash..slash + 1);
+        });
+    }
+}
+
+fn line_has_comment(line: &str) -> bool {
+    let mut quote = None;
+    let mut escaped = false;
+    for character in line.chars() {
+        if escaped {
+            escaped = false;
+            continue;
+        }
+        if character == '\\' {
+            escaped = true;
+        } else if quote == Some(character) {
+            quote = None;
+        } else if quote.is_none() && matches!(character, '\'' | '"') {
+            quote = Some(character);
+        } else if quote.is_none() && character == '#' {
+            return true;
+        }
+    }
+    false
+}
+
+fn string_concatenation(line: &str) -> bool {
+    line.trim_end().ends_with(['\'', '"'])
+}
+
+fn starts_with_arithmetic_operator(line: &str) -> bool {
+    matches!(line.trim_start().chars().next(), Some('+' | '-' | '*' | '/' | '%'))
+}
+
+fn starts_with_required_operator(line: &str) -> bool {
+    let line = line.trim_start();
+    ["&&", "||", "==", "===", "!=", ">=", "<=", "<=>", "=~", "!~", "&", "|", "^"]
+        .iter()
+        .any(|operator| line.starts_with(operator))
+}
+
+fn method_with_argument(line: &str, next: &str) -> bool {
+    let previous = line.trim_end();
+    let next = next.trim_start();
+    if next.is_empty()
+        || matches!(next, "end" | "else" | "elsif" | "ensure" | "rescue")
+        || next.starts_with(['&', ')', ']', '}', ','])
+        || next.starts_with('.') && !next.starts_with("..")
+    {
+        return false;
+    }
+    if ["class ", "module ", "def ", "if ", "unless ", "while ", "until "]
+        .iter()
+        .any(|keyword| previous.starts_with(keyword))
+        || previous.ends_with(" do")
+        || ["&& ", "|| "]
+            .iter()
+            .any(|operator| previous.trim_start().starts_with(operator))
+    {
+        return false;
+    }
+    let last = previous
+        .split(|character: char| character.is_whitespace() || "()[]{}.,;".contains(character))
+        .filter(|part| !part.is_empty())
+        .next_back()
+        .unwrap_or_default();
+    let flow = matches!(last, "break" | "next" | "return" | "super" | "yield" | "defined?");
+    let identifier = last
+        .chars()
+        .next()
+        .is_some_and(|character| character.is_ascii_alphabetic() || character == '_')
+        && last.chars().all(|character| character.is_ascii_alphanumeric() || "_?!".contains(character));
+    (flow || identifier)
+        && !previous.ends_with(['.', ',', '(', '[', '{', ':'])
+        && !previous.ends_with("&&")
+        && !previous.ends_with("||")
+}
+
+fn leading_dot_method_chain_with_blank_line(line: &str, next: &str) -> bool {
+    matches!(line.trim_start().get(..1), Some(".")) && next.trim().is_empty()
+        || line.trim_start().starts_with("&.") && next.trim().is_empty()
+}
+
+fn inside_literal(source: &str, offset: usize) -> bool {
+    let mut quote = None;
+    let mut escaped = false;
+    for character in source[..offset].chars() {
+        if escaped {
+            escaped = false;
+        } else if character == '\\' {
+            escaped = true;
+        } else if quote == Some(character) {
+            quote = None;
+        } else if quote.is_none() && matches!(character, '\'' | '"' | '`') {
+            quote = Some(character);
+        } else if character == '\n' && quote == Some('\'') {
+            quote = None;
+        }
+    }
+    quote.is_some()
+}
+
+fn inside_regexp(source: &str, offset: usize) -> bool {
+    let line_start = source[..offset].rfind('\n').map_or(0, |at| at + 1);
+    let line = &source[line_start..offset];
+    let mut in_regexp = false;
+    let mut escaped = false;
+    let mut quote = None;
+    let characters = line.char_indices().collect::<Vec<_>>();
+    for (position, character) in characters {
+        if escaped {
+            escaped = false;
+            continue;
+        }
+        if character == '\\' {
+            escaped = true;
+            continue;
+        }
+        if quote == Some(character) {
+            quote = None;
+            continue;
+        }
+        if quote.is_none() && matches!(character, '\'' | '"' | '`') {
+            quote = Some(character);
+            continue;
+        }
+        if quote.is_none() && character == '#' {
+            break;
+        }
+        if quote.is_none() && character == '/' {
+            let previous = line[..position].trim_end().chars().last();
+            if in_regexp || previous.is_none_or(|value| "=([{!,:;".contains(value)) {
+                in_regexp = !in_regexp;
+            }
+        }
+    }
+    in_regexp
+}

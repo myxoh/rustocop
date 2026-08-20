@@ -14,7 +14,6 @@ define_cops! {
     QuotedSymbols => "Style/QuotedSymbols" => source(quoted_symbols),
     FetchEnvVar => "Style/FetchEnvVar" => source(fetch_env_var),
     StringConcatenation => "Style/StringConcatenation" => call(string_concatenation),
-    RedundantLineContinuation => "Style/RedundantLineContinuation" => source(redundant_line_continuation),
     Lambda => "Style/Lambda" => source(lambda_literal),
     FormatString => "Style/FormatString" => source(format_string),
     WordArray => "Style/WordArray" => stateful_node_rule(as_array_node, WordArrayRule, WordArrayState, on_array),
@@ -649,25 +648,6 @@ fn concatenation_inspect_string(value: &str) -> String {
         .replace('\r', "\\r")
         .replace('\t', "\\t");
     format!("\"{escaped}\"")
-}
-
-fn redundant_line_continuation(context: &mut CopContext<'_, '_>) {
-    for (offset, line) in context.source_file().lines() {
-        if line.trim_end().ends_with('\\')
-            && ["(", "[", "{", ",", ".", "&&", "||"].iter().any(|token| {
-                line[..line.trim_end().len() - 1]
-                    .trim_end()
-                    .ends_with(token)
-            })
-        {
-            let slash = offset + line.rfind('\\').unwrap_or(0);
-            context.remove(
-                "Redundant line continuation.",
-                slash..slash + 1,
-                slash..slash + 1,
-            );
-        }
-    }
 }
 
 fn lambda_literal(context: &mut CopContext<'_, '_>) {

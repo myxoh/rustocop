@@ -24,26 +24,10 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
             "puts /",
             "Ambiguous regexp literal. Parenthesize the method arguments.",
         ),
-        custom(
-            "Style/RedundantRegexpCharacterClass",
-            redundant_character_class,
-        ),
         report(
             "Lint/ArrayLiteralInRegexp",
             "Regexp.new([",
             "Passing an array to `Regexp.new` is invalid.",
-        ),
-        replace(
-            "Style/RedundantRegexpEscape",
-            "\\:",
-            ":",
-            "Redundant escape inside regexp literal.",
-        ),
-        replace(
-            "Style/RedundantRegexpArgument",
-            ".match(/foo/, 0)",
-            ".match(/foo/)",
-            "Remove the redundant regexp match position argument.",
         ),
         custom("Lint/OutOfRangeRegexpRef", out_of_range_ref),
         Box::new(SelectByRegexp),
@@ -263,25 +247,6 @@ fn duplicate_character_class(context: &mut CopContext<'_, '_>) {
                     start..start + character.len_utf8(),
                 );
             }
-        }
-    }
-}
-
-fn redundant_character_class(context: &mut CopContext<'_, '_>) {
-    let source = context.source().to_string();
-    for (regexp_start, regexp_end) in regexp_ranges(&source) {
-        let regexp = &source[regexp_start + 1..regexp_end];
-        if regexp.starts_with('[')
-            && regexp.ends_with(']')
-            && regexp[1..regexp.len() - 1].chars().count() == 1
-            && !matches!(&regexp[1..regexp.len() - 1], "+" | " " | "-" | "#")
-        {
-            context.replace(
-                "Redundant single-element regexp character class.",
-                regexp_start + 1..regexp_end,
-                regexp_start + 1..regexp_end,
-                &regexp[1..regexp.len() - 1],
-            );
         }
     }
 }

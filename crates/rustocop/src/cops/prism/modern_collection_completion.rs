@@ -7,7 +7,6 @@ const NONZERO_MSG: &str = "Use `!empty?` instead of `{current}`.";
 
 define_cops! {
     ArrayIntersect => "Style/ArrayIntersect" => source(array_intersect),
-    RedundantMinMaxBy => "Style/RedundantMinMaxBy" => source(redundant_min_max_by),
     TallyMethod => "Style/TallyMethod" => call(tally_method),
     ZeroLengthPredicate => "Style/ZeroLengthPredicate" => call_rule(ZeroLengthPredicateRule, on_send, restrict [b"size", b"length"]),
 }
@@ -43,66 +42,6 @@ fn array_intersect(context: &mut CopContext<'_, '_>) {
             start..start + code.len(),
             replacement,
         );
-    }
-}
-
-fn redundant_min_max_by(context: &mut CopContext<'_, '_>) {
-    let source = context.source();
-    for method in ["max_by", "min_by"] {
-        let needle = format!(".{method} {{ |");
-        let mut search = 0;
-        while let Some(relative) = source[search..].find(&needle) {
-            let dot = search + relative;
-            let Some(pipe_relative) = source[dot + needle.len()..].find('|') else {
-                break;
-            };
-            let pipe = dot + needle.len() + pipe_relative;
-            let parameter = source[dot + needle.len()..pipe].trim();
-            let Some(close_relative) = source[pipe + 1..].find('}') else {
-                break;
-            };
-            let end = pipe + 1 + close_relative + 1;
-            if source[pipe + 1..end - 1].trim() != parameter {
-                search = end;
-                continue;
-            }
-            let preferred = method.trim_end_matches("_by");
-            context.replace(
-                format!("Use `{preferred}` instead of `{method} {{ |{parameter}| {parameter} }}`."),
-                dot + 1..end,
-                dot + 1..end,
-                preferred,
-            );
-            search = end;
-        }
-    }
-    for method in ["max_by", "min_by"] {
-        let needle = format!(".{method} do |");
-        let mut search = 0;
-        while let Some(relative) = source[search..].find(&needle) {
-            let dot = search + relative;
-            let Some(pipe_relative) = source[dot + needle.len()..].find('|') else {
-                break;
-            };
-            let pipe = dot + needle.len() + pipe_relative;
-            let parameter = source[dot + needle.len()..pipe].trim();
-            let Some(end_relative) = source[pipe + 1..].find("\nend") else {
-                break;
-            };
-            let end = pipe + 1 + end_relative + "\nend".len();
-            if source[pipe + 1..pipe + 1 + end_relative].trim() != parameter {
-                search = end;
-                continue;
-            }
-            let preferred = method.trim_end_matches("_by");
-            context.replace(
-                format!("Use `{preferred}` instead of `{}`.", &source[dot + 1..end]),
-                dot + 1..end,
-                dot + 1..end,
-                preferred,
-            );
-            search = end;
-        }
     }
 }
 
