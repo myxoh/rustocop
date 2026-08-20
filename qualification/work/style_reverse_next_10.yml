@@ -1,0 +1,278 @@
+schema: 1
+batch: style_reverse_next_10
+matrix_order: descending
+matrix_start: 522
+matrix_end: 531
+rubocop_version: 1.87.0
+rubocop_commit: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+rustocop_commit: 2b574f7416bc2917998254161aaf1b9cf98e3f0d
+cops:
+  Style/RedundantRegexpEscape:
+    matrix_position: 531
+    sources:
+      rubocop: lib/rubocop/cop/style/redundant_regexp_escape.rb
+      rustocop: [crates/rustocop/src/cops/prism/redundant_regexp_rules.rs]
+    manual_review:
+      status: passed
+      notes:
+        - Both implementations visit regexp nodes, parse delimiter-aware content, and report only backslashes that do not change regexp meaning.
+        - The Rust rule mirrors RuboCop's on_regexp and offense registration flow while using Prism locations and the shared add_offense correction DSL.
+    upstream_tests: { status: passed, passed: 217, total: 217, corrections: true }
+    edge_cases:
+      - { id: escaped_colon, description: A colon does not need escaping in a regexp., path: example.rb, source: "/foo\\:bar/\n" }
+      - { id: escaped_space, description: A space escape remains meaningful in extended mode., path: example.rb, source: "/foo\\ bar/x\n" }
+      - { id: escaped_delimiter, description: The slash delimiter must remain escaped., path: example.rb, source: "/foo\\/bar/\n" }
+      - { id: character_class_hyphen, description: An internal character-class hyphen escape remains meaningful., path: example.rb, source: "/[a\\-z]/\n" }
+    real_world:
+      positives:
+        - repository: puma/puma
+          revision: b8341dc946f0a2444e5ea6730d1967ca53c8d006
+          path: benchmarks/local/bench_base.rb
+          line: 204
+          source: |
+            job[:rps] = hey_output[/^\s+Requests\/sec\:\s+([\d.]+)/, 1]
+        - repository: rspec/rspec-core
+          revision: aec5f49485d97908183dbe790a7fefb8baaa8091
+          path: lib/rspec/core/configuration.rb
+          line: 2267
+          source: |
+            match = /^(.*?)((?:\:\d+)+)$/.match(path)
+      negatives:
+        - { repository: puma/puma, revision: b8341dc946f0a2444e5ea6730d1967ca53c8d006, path: benchmarks/local/bench_base.rb, line: 210, source: "per_cent = l[/\\A\\d+/].to_i\n" }
+        - { repository: rspec/rspec-core, revision: aec5f49485d97908183dbe790a7fefb8baaa8091, path: lib/rspec/core/configuration.rb, line: 2269, source: "if match\n  captures = match.captures\nend\n" }
+
+  Style/RedundantRegexpConstructor:
+    matrix_position: 530
+    sources:
+      rubocop: lib/rubocop/cop/style/redundant_regexp_constructor.rb
+      rustocop: [crates/rustocop/src/cops/prism/redundant_regexp_rules.rs]
+    manual_review:
+      status: passed
+      notes:
+        - Both implementations identify Regexp.new or Regexp.compile whose sole argument is already a regexp literal and replace the constructor with that argument.
+        - The Rust rule mirrors RuboCop's on_send matcher and offense callback through the shared call-rule and add_offense DSL, with exact receiver and arity checks.
+    upstream_tests: { status: passed, passed: 10, total: 10, corrections: true }
+    edge_cases:
+      - { id: regexp_new_literal, description: Regexp.new around a regexp literal is redundant., path: example.rb, source: "Regexp.new(/foo/)\n" }
+      - { id: regexp_compile_literal, description: Regexp.compile has the same redundant literal form., path: example.rb, source: "Regexp.compile(/foo/i)\n" }
+      - { id: string_constructor, description: A string constructor remains dynamic and valid., path: example.rb, source: "Regexp.new(pattern)\n" }
+      - { id: constructor_options, description: Explicit constructor options are not removed., path: example.rb, source: "Regexp.new(/foo/, Regexp::IGNORECASE)\n" }
+    real_world:
+      positives:
+        - { repository: chef/chef, revision: 5b1611b762c404d3709e94ad58e2af21a0afd995, path: lib/chef/dsl/chef_vault.rb, line: 61, source: "pattern = Regexp.new(/_keys$/).freeze\n" }
+        - { repository: gitlabhq/gitlabhq, revision: 1a33ea1d9f4b42c6a42be328bf1720250c01e347, path: scripts/trigger-build.rb, line: 343, source: "Regexp.compile(/^\\d+\\.\\d+\\.\\d+(-rc\\d+)?(-ee)?$/).match?(raw_version)\n" }
+      negatives:
+        - { repository: jekyll/jekyll, revision: 74d751339d3e534aa51d5d7b0640e9bd743509e4, path: features/step_definitions.rb, line: 280, source: "regexp = Regexp.new(text, Regexp::MULTILINE)\n" }
+        - { repository: puma/puma, revision: b8341dc946f0a2444e5ea6730d1967ca53c8d006, path: lib/puma/rack/urlmap.rb, line: 37, source: "match = Regexp.new(\"^#{Regexp.quote(location).gsub('/', '/+')}(.*)\", Regexp::NOENCODING)\n" }
+
+  Style/RedundantRegexpCharacterClass:
+    matrix_position: 529
+    sources:
+      rubocop: lib/rubocop/cop/style/redundant_regexp_character_class.rb
+      rustocop: [crates/rustocop/src/cops/prism/redundant_regexp_rules.rs]
+    manual_review:
+      status: passed
+      notes:
+        - Both implementations find positive single-element character classes and exclude sets, POSIX classes, multi-codepoint elements, and characters whose meaning changes outside the class.
+        - The Rust rule follows RuboCop's on_regexp and helper predicates, including free-spacing whitespace, backspace, octal, metacharacter, and interpolation-safe hash handling.
+    upstream_tests: { status: passed, passed: 47, total: 47, corrections: true }
+    edge_cases:
+      - { id: simple_single_element, description: A single ordinary character does not need a class., path: example.rb, source: "/[x]/\n" }
+      - { id: escaped_space_class, description: A shorthand class can stand alone., path: example.rb, source: "/[\\s]/\n" }
+      - { id: multiple_elements, description: A multi-element character class is meaningful., path: example.rb, source: "/[xy]/\n" }
+      - { id: metacharacter_class, description: A dot class avoids wildcard semantics and remains., path: example.rb, source: "/[.]/\n" }
+    real_world:
+      positives:
+        - { repository: olafkaderka/bicvalidator, revision: 4c02b4bcadd443706407d8ba7c1beced2a117afd, path: lib/bicvalidator/bic.rb, line: 44, source: "(branch[0] =~ /[X]/).nil?\n" }
+        - { repository: chesterbr/advent-of-code, revision: a58259f3c5eeda9d18f6e6efe15383327c361e6b, path: 2020/day14a.rb, line: 10, source: "or_mask = argument.gsub(/[X]/,\"0\").to_i(2)\n" }
+      negatives:
+        - { repository: olafkaderka/bicvalidator, revision: 4c02b4bcadd443706407d8ba7c1beced2a117afd, path: lib/bicvalidator/bic.rb, line: 88, source: "/([A-Z]{4})([A-Z]{2})([0-9A-Z]{2})([0-9A-Z]{3})?/\n" }
+        - { repository: chesterbr/advent-of-code, revision: a58259f3c5eeda9d18f6e6efe15383327c361e6b, path: 2020/day14a.rb, line: 13, source: "captures = /mem\\[(\\d+)\\]/.match(command)\n" }
+
+  Style/RedundantRegexpArgument:
+    matrix_position: 528
+    sources:
+      rubocop: lib/rubocop/cop/style/redundant_regexp_argument.rb
+      rustocop: [crates/rustocop/src/cops/prism/redundant_regexp_rules.rs]
+    manual_review:
+      status: passed
+      notes:
+        - Both implementations limit inspection to the String methods that accept either strings or regexps and replace regexp arguments that have an equivalent literal string.
+        - Rustocop mirrors RuboCop's on_send matcher and regexp-to-string safety helpers, preserving escapes, interpolation exclusions, method arity, and delimiter-sensitive corrections.
+    upstream_tests: { status: passed, passed: 50, total: 50, corrections: true }
+    edge_cases:
+      - { id: split_plain_regexp, description: A plain split regexp becomes a string., path: example.rb, source: "value.split(/:/)\n" }
+      - { id: sub_plain_regexp, description: A plain sub pattern becomes a string., path: example.rb, source: "value.sub(/foo/, 'bar')\n" }
+      - { id: regexp_metacharacter, description: A regexp using repetition cannot become a string., path: example.rb, source: "value.split(/:+/)\n" }
+      - { id: regexp_match, description: Match semantics require a regexp., path: example.rb, source: "value.match(/foo/)\n" }
+    real_world:
+      positives:
+        - { repository: rails/rails, revision: f2c5779757a083a7e511ea8994aee8e1d71564eb, path: railties/lib/rails/command/base.rb, line: 47, source: "@namespace ||= super.chomp(\"_command\").sub(/:command:/, \":\")\n" }
+        - { repository: rspec/rspec-core, revision: aec5f49485d97908183dbe790a7fefb8baaa8091, path: lib/rspec/core/formatters.rb, line: 261, source: "word.gsub!(/::/, '/')\n" }
+      negatives:
+        - { repository: puma/puma, revision: b8341dc946f0a2444e5ea6730d1967ca53c8d006, path: benchmarks/local/bench_base.rb, line: 210, source: "per_cent = l[/\\A\\d+/].to_i\n" }
+        - { repository: jekyll/jekyll, revision: 74d751339d3e534aa51d5d7b0640e9bd743509e4, path: features/step_definitions.rb, line: 369, source: "date_time_pattern = /(\\d{4}-\\d{2}-\\d{2}\\s\\d+:\\d{2}:\\d{2})/\n" }
+
+  Style/RedundantPercentQ:
+    matrix_position: 527
+    sources:
+      rubocop: lib/rubocop/cop/style/redundant_percent_q.rb
+      rustocop: [crates/rustocop/src/cops/prism/percent_string_rules.rs]
+    manual_review:
+      status: passed
+      notes:
+        - Both implementations prefer ordinary quoted strings unless percent notation avoids both quote kinds or supports interpolation containing double quotes.
+        - Rustocop retains the existing literal callback and delimiter-aware replacement while matching RuboCop's single-quote, double-quote, interpolation, and escape decisions.
+    upstream_tests: { status: passed, passed: 27, total: 27, corrections: true }
+    edge_cases:
+      - { id: simple_lower_percent_q, description: A simple percent-q string becomes single quoted., path: example.rb, source: "%q(hello)\n" }
+      - { id: simple_upper_percent_q, description: A simple percent-Q string becomes double quoted., path: example.rb, source: "%Q(hello #{name})\n" }
+      - { id: both_quote_types, description: Percent notation is useful when both quote types occur., path: example.rb, source: "%q(he said \"it's ready\")\n" }
+      - { id: ordinary_string, description: An ordinary quoted string is outside the cop., path: example.rb, source: "'hello'\n" }
+    real_world:
+      positives:
+        - { repository: puma/puma, revision: b8341dc946f0a2444e5ea6730d1967ca53c8d006, path: test/helpers/integration.rb, line: 465, source: "%Q[-C unix://#{@control_path} -T #{TOKEN} #{argv}]\n" }
+        - { repository: rspec/rspec-core, revision: aec5f49485d97908183dbe790a7fefb8baaa8091, path: features/step_definitions/additional_cli_steps.rb, line: 43, source: "step %q{the output should contain \"0 failures\"}\n" }
+      negatives:
+        - { repository: sidekiq/sidekiq, revision: 1bb4aa06e5aa178a114a5e855f9f3d5c24f6c61b, path: test/web_helpers_test.rb, line: 231, source: "%q(<a> & \"x\" 'y')\n" }
+        - { repository: puma/puma, revision: b8341dc946f0a2444e5ea6730d1967ca53c8d006, path: lib/puma/cluster/worker.rb, line: 135, source: "%Q! \"#{k}\":#{v || 0},!\n" }
+
+  Style/RedundantParentheses:
+    matrix_position: 526
+    sources:
+      rubocop: lib/rubocop/cop/style/redundant_parentheses.rb
+      rustocop: [crates/rustocop/src/cops/prism/redundant_parentheses_rules.rs]
+    manual_review:
+      status: passed
+      notes:
+        - Both implementations dispatch across parenthesized nodes, calls, interpolation, conditions, operators, ranges, and keyword contexts, removing only grouping that does not affect parsing.
+        - The Rust rule mirrors RuboCop's callback and helper decomposition through node aliases and Prism ranges, including hash arguments, chained calls, modifier conditions, and precedence guards.
+    upstream_tests: { status: passed, passed: 349, total: 349, corrections: true }
+    edge_cases:
+      - { id: arithmetic_atom, description: Parentheses around a literal operand are redundant., path: example.rb, source: "total = 2 * (3)\n" }
+      - { id: method_call, description: Parentheses around a method call operand are redundant., path: example.rb, source: "value = (items.size)\n" }
+      - { id: precedence_group, description: Grouping an addition before multiplication changes precedence., path: example.rb, source: "total = (2 + 3) * 4\n" }
+      - { id: hash_first_argument, description: A parenthesized hash after command syntax prevents ambiguity., path: example.rb, source: "publish ({ ready: true })\n" }
+    real_world:
+      positives:
+        - { repository: rspec/rspec-core, revision: aec5f49485d97908183dbe790a7fefb8baaa8091, path: lib/rspec/core/formatters/exception_presenter.rb, line: 68, source: "cause << (\"  #{line}\")\n" }
+        - { repository: rails/rails, revision: f2c5779757a083a7e511ea8994aee8e1d71564eb, path: activerecord/test/cases/persistence_test.rb, line: 107, source: "assert_equal false, (/RETURNING.*id/).match?(sql)\n" }
+      negatives:
+        - { repository: puma/puma, revision: b8341dc946f0a2444e5ea6730d1967ca53c8d006, path: tools/trickletest.rb, line: 29, source: "st = \"GET / HTTP/1.1\\r\\nContent-Length: #{content.length}\\r\\n\\r\\n#{content}\"\n" }
+        - { repository: rspec/rspec-core, revision: aec5f49485d97908183dbe790a7fefb8baaa8091, path: lib/rspec/core/formatters.rb, line: 263, source: "word.gsub!(/([a-z\\d])([A-Z])/, '\\1_\\2')\n" }
+
+  Style/RedundantMinMaxBy:
+    matrix_position: 525
+    sources:
+      rubocop: lib/rubocop/cop/style/redundant_min_max_by.rb
+      rustocop: [crates/rustocop/src/cops/prism/redundant_min_max_by_rules.rs]
+    manual_review:
+      status: passed
+      notes:
+        - Both implementations recognize max_by, min_by, and minmax_by identity blocks in named-parameter, numbered-parameter, and it-block forms and replace the selector plus block.
+        - Rustocop follows RuboCop's three callbacks, matchers, message helpers, offense range, and replacement table using typed Prism block and call nodes.
+    upstream_tests: { status: passed, passed: 33, total: 33, corrections: true }
+    edge_cases:
+      - { id: named_identity, description: A named identity block makes min_by equivalent to min., path: example.rb, source: "items.min_by { |item| item }\n" }
+      - { id: numbered_identity, description: A numbered identity block makes max_by equivalent to max., path: example.rb, source: "items.max_by { _1 }\n" }
+      - { id: transformed_value, description: A transformed block is semantically meaningful., path: example.rb, source: "items.min_by { |item| item.length }\n" }
+      - { id: count_argument, description: The count-taking min_by overload is not equivalent to min., path: example.rb, source: "items.min_by(2) { |item| item }\n" }
+    real_world:
+      positives:
+        - { repository: ko1/astro, revision: 473a96b0c73a246a3717ec1b5cbce16e7c5e10a6, path: sample/rubyharness/t/hand/array_min_max_by_n.rb, line: 11, source: "p [1, 5, 3, 2, 4].min_by { |x| x }\n" }
+        - { repository: ko1/astro, revision: 0a53d26a7f40d7ccff34896534afe3d83c30a79f, path: sample/rubyharness/t/hand/sort_by_custom_spaceship.rb, line: 10, source: "p a.max_by { |x| x }.n\n" }
+      negatives:
+        - { repository: jekyll/jekyll, revision: 74d751339d3e534aa51d5d7b0640e9bd743509e4, path: features/support/formatter.rb, line: 36, source: "padding = rows.max_by { |r| r[0].length }.first.length + 2\n" }
+        - { repository: rails/rails, revision: f2c5779757a083a7e511ea8994aee8e1d71564eb, path: activerecord/lib/active_record/connection_adapters/postgresql/oid/well_known_generator.rb, line: 175, source: "ref = refs_by_version[version]&.max_by { |entry| entry.fetch(:minor_version) }\n" }
+
+  Style/RedundantLineContinuation:
+    matrix_position: 524
+    sources:
+      rubocop: lib/rubocop/cop/style/redundant_line_continuation.rb
+      rustocop: [crates/rustocop/src/cops/prism/redundant_line_continuation_rules.rs]
+    manual_review:
+      status: passed
+      notes:
+        - Both implementations scan explicit backslash-newline continuations and remove them only where Ruby already continues the expression through syntax or indentation-safe adjacency.
+        - The Rust source investigation mirrors RuboCop's token and ancestor checks with helper functions for strings, operators, delimiters, comments, assignments, and command calls.
+    upstream_tests: { status: passed, passed: 167, total: 167, corrections: true }
+    edge_cases:
+      - { id: comma_continuation, description: A comma already continues an argument list., path: example.rb, source: "publish first, \\\n  second\n" }
+      - { id: assignment_continuation, description: An assignment expression continues after the equals sign., path: example.rb, source: "value = \\\n  compute\n" }
+      - { id: adjacent_strings, description: A backslash is needed between adjacent string literals., path: example.rb, source: "message = 'hello ' \\\n  'world'\n" }
+      - { id: operator_continuation, description: A trailing operator already continues the expression., path: example.rb, source: "ready = first && \\\n  second\n" }
+    real_world:
+      positives:
+        - repository: jekyll/jekyll
+          revision: 74d751339d3e534aa51d5d7b0640e9bd743509e4
+          path: test/test_layout_reader.rb
+          line: 78
+          source: |
+            refute layouts.key?("theme-symlink"), \
+                   "Should not read symlinked layout from theme"
+        - repository: jekyll/jekyll
+          revision: 74d751339d3e534aa51d5d7b0640e9bd743509e4
+          path: lib/jekyll/convertible.rb
+          line: 115
+          source: |
+            further_data = \
+              (attrs || self.class::ATTRIBUTES_FOR_LIQUID).each_with_object({}) do |attribute, hsh|
+                hsh[attribute] = send(attribute)
+              end
+      negatives:
+        - repository: jekyll/jekyll
+          revision: 74d751339d3e534aa51d5d7b0640e9bd743509e4
+          path: lib/jekyll/deprecator.rb
+          line: 8
+          source: |
+            message = "The --server command has been replaced by the \
+                       'serve' subcommand."
+        - { repository: puma/puma, revision: b8341dc946f0a2444e5ea6730d1967ca53c8d006, path: benchmarks/local/long_tail_hey.rb, line: 124, source: "str = \"first line\\n\" \\\n  \"second line\\n\"\n" }
+
+  Style/RedundantInterpolationUnfreeze:
+    matrix_position: 523
+    sources:
+      rubocop: lib/rubocop/cop/style/redundant_interpolation_unfreeze.rb
+      rustocop: [crates/rustocop/src/cops/prism/string_conversion_rules.rs]
+    manual_review:
+      status: passed
+      notes:
+        - Both implementations target Ruby 3.0 and later and remove unary plus, dup, or String.new only when the enclosed string is genuinely interpolated and therefore already mutable.
+        - Rustocop retains the existing call callback and source-range correction while matching RuboCop's dstr matcher, heredoc exclusion, selector range, and target-version behavior.
+    upstream_tests: { status: passed, passed: 17, total: 17, corrections: true }
+    edge_cases:
+      - { id: unary_plus_interpolation, description: Unary plus is redundant for an interpolated string on Ruby 3., path: example.rb, source: "+\"#{name}\"\n" }
+      - { id: dup_interpolation, description: Dup is redundant for an interpolated string on Ruby 3., path: example.rb, source: "\"#{name}\".dup\n" }
+      - { id: string_new_interpolation, description: String.new is redundant around an interpolated string., path: example.rb, source: "String.new(\"#{name}\")\n" }
+      - { id: static_string_unfreeze, description: A static frozen literal can still require explicit unfreezing., path: example.rb, source: "+'name'\n" }
+    real_world:
+      positives:
+        - { repository: puma/puma, revision: b8341dc946f0a2444e5ea6730d1967ca53c8d006, path: test/helpers/test_puma.rb, line: 16, source: "str = t.include?('127.0.0.1') ? +'127.0.0.1' : +\"#{t.first}\"\n" }
+        - { repository: octokit/octokit.rb, revision: 6d02a4b506aaf6a6b6b1a04e065dd23c697275ce, path: lib/octokit/error.rb, line: 210, source: "message = +\"#{@response[:method].to_s.upcase} \"\n" }
+      negatives:
+        - { repository: puma/puma, revision: b8341dc946f0a2444e5ea6730d1967ca53c8d006, path: lib/puma/error_logger.rb, line: 67, source: "string_block << \" #{text}\" if text\n" }
+        - { repository: octokit/octokit.rb, revision: 6d02a4b506aaf6a6b6b1a04e065dd23c697275ce, path: lib/octokit/error.rb, line: 211, source: "message << \"#{redact_url(@response[:url].to_s.dup)}: \"\n" }
+
+  Style/RedundantInterpolation:
+    matrix_position: 522
+    sources:
+      rubocop: lib/rubocop/cop/style/redundant_interpolation.rb
+      rustocop: [crates/rustocop/src/cops/prism/string_conversion_rules.rs]
+    manual_review:
+      status: passed
+      notes:
+        - Both implementations replace a double-quoted string consisting of one interpolation with the expression's to_s call while leaving mixed text, format specifications, and heredocs alone.
+        - Rustocop retains the existing interpolated-string callback and Prism correction range, matching RuboCop's single-part, begin-node, and parent-context safeguards.
+    upstream_tests: { status: passed, passed: 29, total: 29, corrections: true }
+    edge_cases:
+      - { id: single_expression, description: A sole interpolation becomes to_s., path: example.rb, source: "value = \"#{item}\"\n" }
+      - { id: method_expression, description: A sole method-call interpolation becomes to_s., path: example.rb, source: "value = \"#{item.name}\"\n" }
+      - { id: surrounding_text, description: Surrounding text makes interpolation meaningful., path: example.rb, source: "value = \"item: #{item}\"\n" }
+      - { id: multiple_interpolations, description: Multiple interpolation parts remain string composition., path: example.rb, source: "value = \"#{first}#{last}\"\n" }
+    real_world:
+      positives:
+        - { repository: puma/puma, revision: b8341dc946f0a2444e5ea6730d1967ca53c8d006, path: lib/puma/error_logger.rb, line: 66, source: "string_block = [\"#{Time.now}\"]\n" }
+        - { repository: jekyll/jekyll, revision: 74d751339d3e534aa51d5d7b0640e9bd743509e4, path: features/step_definitions.rb, line: 373, source: "file_time = Time.parse(\"#{date_time_str}\")\n" }
+      negatives:
+        - { repository: puma/puma, revision: b8341dc946f0a2444e5ea6730d1967ca53c8d006, path: lib/puma/error_logger.rb, line: 67, source: "string_block << \" #{text}\" if text\n" }
+        - { repository: octokit/octokit.rb, revision: 6d02a4b506aaf6a6b6b1a04e065dd23c697275ce, path: lib/octokit/error.rb, line: 211, source: "message << \"#{redact_url(@response[:url].to_s.dup)}: \"\n" }
