@@ -38,17 +38,17 @@ requires the recorded Rust files to be unchanged from that record's pinned SHA.
 
 | Check | Recorded evidence | Current-source credit | Current progress |
 | --- | ---: | ---: | ---: |
-| 1. Manual source verification | 155 / 606 | 138 / 606 | 22.8% |
-| 2. Ported upstream unit tests | 155 / 606 | 138 / 606 | 22.8% |
-| 3. Edge-case fixtures | 155 / 606 | 138 / 606 | 22.8% |
-| 4. Real-world true positives | 155 / 606 | 138 / 606 | 22.8% |
-| 5. Real-world true negatives | 155 / 606 | 138 / 606 | 22.8% |
-| **Fully qualified** | **155 / 606** | **138 / 606** | **22.8%** |
+| 1. Manual source verification | 185 / 606 | 167 / 606 | 27.6% |
+| 2. Ported upstream unit tests | 185 / 606 | 167 / 606 | 27.6% |
+| 3. Edge-case fixtures | 185 / 606 | 167 / 606 | 27.6% |
+| 4. Real-world true positives | 185 / 606 | 167 / 606 | 27.6% |
+| 5. Real-world true negatives | 185 / 606 | 167 / 606 | 27.6% |
+| **Fully qualified** | **185 / 606** | **167 / 606** | **27.6%** |
 
-155 cops have complete five-check records. 17 of those
+185 cops have complete five-check records. 18 of those
 records are currently invalidated by later changes to their Rust source, leaving
-**138 currently qualified cops**. The RuboCop reference is
-`e5b788dba181ad94de30cfbad661c5d6aa08a4e5`; the current native Rust source is `b56ffcb3840742b3c6845860b50b18c7f81d8b69`.
+**167 currently qualified cops**. The RuboCop reference is
+`e5b788dba181ad94de30cfbad661c5d6aa08a4e5`; the current native Rust source is `01196d5f11cb10acd9701db86e87d8c3d7dd9dbb`.
 
 | Department | Currently qualified | Complete records | Stale records |
 | --- | ---: | ---: | ---: |
@@ -60,7 +60,7 @@ records are currently invalidated by later changes to their Rust source, leaving
 | `Migration` | 0 / 1 | 0 | 0 |
 | `Naming` | 0 / 19 | 0 | 0 |
 | `Security` | 0 / 7 | 0 | 0 |
-| `Style` | 138 / 298 | 155 | 17 |
+| `Style` | 167 / 298 | 185 | 18 |
 
 See [the detailed qualification ledger](docs/qualification-progress.md) for
 batch totals, every recorded cop, pinned SHAs, and the records needing revalidation.

@@ -1,0 +1,3668 @@
+---
+schema: 1
+batch: style_reverse_451_422
+matrix_order: descending
+matrix_start: 422
+matrix_end: 451
+rubocop_version: 1.87.0
+rubocop_commit: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+rustocop_commit: 01196d5f11cb10acd9701db86e87d8c3d7dd9dbb
+cops:
+  Style/MultilineBlockChain:
+    matrix_position: 451
+    sources:
+      rubocop: lib/rubocop/cop/style/multiline_block_chain.rb
+      rustocop:
+      - crates/rustocop/src/cops/prism/block_chain_rules.rs
+    manual_review:
+      status: passed
+      notes:
+      - Reviewed RuboCop's lib/rubocop/cop/style/multiline_block_chain.rb against
+        Rustocop's crates/rustocop/src/cops/prism/block_chain_rules.rs. RuboCop's
+        on_block walks calls in the block send and Rustocop's multiline_block_chain
+        performs the same receiver-block and multiline guards before reporting only
+        the chained suffix.
+      - Both implementations suppress ordinary call chains and stop after the first
+        nested block boundary; this preserves the exact range and non-correctable
+        diagnostic exercised by the upstream suite.
+    upstream_tests:
+      status: passed
+      passed: 11
+      total: 11
+      corrections: true
+    edge_cases:
+    - id: upstream_1_rubocop_cop_style_multilineblockchain_with_multi_line_block_chai
+      description: RuboCop::Cop::Style::MultilineBlockChain with multi-line block
+        chaining registers an offense for a chain where the second block is single-line
+      path: "(string)"
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+      source: |
+        Thread.list.find_all { |t|
+          t.alive?
+        }.map { |thread| thread.object_id }
+    - id: upstream_2_rubocop_cop_style_multilineblockchain_accepts_a_chain_of_calls_f
+      description: RuboCop::Cop::Style::MultilineBlockChain accepts a chain of calls
+        followed by a multi-line block
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+      source: |
+        a1.a2.a3 do
+          b
+        end
+    - id: upstream_3_rubocop_cop_style_multilineblockchain_with_multi_line_block_chai
+      description: RuboCop::Cop::Style::MultilineBlockChain with multi-line block
+        chaining Ruby 3.4 registers an offense for a slightly more complicated case
+      path: "(string)"
+      config:
+        AllCops:
+          TargetRubyVersion: '3.4'
+      source: |
+        a do
+          it
+        end.c1.c2 do
+          it
+        end
+    - id: upstream_4_rubocop_cop_style_multilineblockchain_with_multi_line_block_chai
+      description: RuboCop::Cop::Style::MultilineBlockChain with multi-line block
+        chaining Ruby 2.7 registers an offense for a slightly more complicated case
+      path: "(string)"
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+      source: |
+        a do
+          _1
+        end.c1.c2 do
+          _1
+        end
+    real_world:
+      positives:
+      - repository: gitlabhq/gitlabhq
+        revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+        path: vendor/gems/omniauth_crowd/lib/omniauth/strategies/crowd.rb
+        line: 35
+        source: "env['HTTP_COOKIE'].split(';').select { |val| \n          val.strip.start_with?(@configuration.session_cookie)\n
+          \       }.map { |val| \n          val.strip.split('=').last\n        }"
+      - repository: gitlabhq/gitlabhq
+        revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+        path: vendor/gems/sidekiq/lib/sidekiq/web/helpers.rb
+        line: 157
+        source: |-
+          languages.to_s.downcase.gsub(/\s+/, "").split(",").map { |language|
+                  locale, quality = language.split(";q=", 2)
+                  locale = nil if locale == "*" # Ignore wildcards
+                  quality = quality ? quality.to_f : 1.0
+                  [locale, quality]
+                }.sort { |(_, left), (_, right)|
+                  right <=> left
+                }.map(&:first).compact
+      negatives:
+      - repository: chatwoot/chatwoot
+        revision: 8d93d69e8e356216e85c28de7c4240e66b8e83fa
+        path: app/builders/v2/reports/agent_summary_builder.rb
+        line: 15
+        source: |-
+          account.account_users.map do |account_user|
+                build_agent_stats(account_user)
+              end
+      - repository: chatwoot/chatwoot
+        revision: 8d93d69e8e356216e85c28de7c4240e66b8e83fa
+        path: app/builders/v2/reports/bot_metrics_builder.rb
+        line: 22
+        source: "@bot_activated_inbox_ids ||= account.inboxes.filter(&:active_bot?).map(&:id)"
+  Style/ModuleMemberExistenceCheck:
+    matrix_position: 450
+    sources:
+      rubocop: lib/rubocop/cop/style/module_member_existence_check.rb
+      rustocop:
+      - crates/rustocop/src/cops/prism/module_member_existence_rules.rs
+    manual_review:
+      status: passed
+      notes:
+      - Reviewed RuboCop's lib/rubocop/cop/style/module_member_existence_check.rb
+        against Rustocop's crates/rustocop/src/cops/prism/module_member_existence_rules.rs.
+        RuboCop's on_send and Rustocop's on_send both recognize the visibility/member-list
+        calls followed by include?, while rejecting extra, keyword, splat, and non-simple
+        member arguments.
+      - Rustocop's replacement helper mirrors RuboCop's replacement_for, preserving
+        safe-navigation and the false argument where required and replacing the complete
+        chained expression with the matching member predicate.
+    upstream_tests:
+      status: passed
+      passed: 69
+      total: 69
+      corrections: true
+    edge_cases:
+    - id: upstream_1_rubocop_cop_style_modulememberexistencecheck_behaves_like_module
+      description: RuboCop::Cop::Style::ModuleMemberExistenceCheck behaves like module
+        member inclusion does not register an offense when passing more than one argument
+        to `class_variables`
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+      source: 'x.class_variables(true, false).include?(method)
+
+        '
+    - id: upstream_2_rubocop_cop_style_modulememberexistencecheck_behaves_like_module
+      description: RuboCop::Cop::Style::ModuleMemberExistenceCheck behaves like module
+        member inclusion registers an offense when using `&.instance_methods&.include?(method)`
+      path: "(string)"
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+      source: 'x&.instance_methods&.include?(method)
+
+        '
+    - id: upstream_3_rubocop_cop_style_modulememberexistencecheck_behaves_like_module
+      description: RuboCop::Cop::Style::ModuleMemberExistenceCheck behaves like module
+        member inclusion does not register an offense when passing a kwargs argument
+        to `include?`
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+      source: 'x.public_instance_methods.include?(**foo)
+
+        '
+    - id: upstream_4_rubocop_cop_style_modulememberexistencecheck_behaves_like_module
+      description: RuboCop::Cop::Style::ModuleMemberExistenceCheck behaves like module
+        member inclusion does not register an offense when passing more than one argument
+        to `include?`
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+      source: 'x.private_instance_methods.include?(foo, bar)
+
+        '
+    real_world:
+      positives:
+      - repository: gitlabhq/gitlabhq
+        revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+        path: lib/gitlab/profiler.rb
+        line: 154
+        source: klass.send(:remove_method, meth) if klass.instance_methods(false).include?(meth)
+      - repository: gitlabhq/gitlabhq
+        revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+        path: lib/system_check/base_check.rb
+        line: 80
+        source: self.class.instance_methods(false).include?(:repair!)
+      negatives:
+      - repository: chatwoot/chatwoot
+        revision: 8d93d69e8e356216e85c28de7c4240e66b8e83fa
+        path: app/builders/messages/facebook/message_builder.rb
+        line: 104
+        source: return :fallback if [:share, :post].include?(type.to_sym)
+      - repository: chatwoot/chatwoot
+        revision: 8d93d69e8e356216e85c28de7c4240e66b8e83fa
+        path: app/builders/messages/messenger/message_builder.rb
+        line: 151
+        source: "[:template, :unsupported_type, :ephemeral].include? attachment_type.to_sym"
+  Style/ModuleFunction:
+    matrix_position: 449
+    sources:
+      rubocop: lib/rubocop/cop/style/module_function.rb
+      rustocop:
+      - crates/rustocop/src/cops/prism/compatibility_lexical_rules.rs
+    manual_review:
+      status: passed
+      notes:
+      - Reviewed RuboCop's lib/rubocop/cop/style/module_function.rb against Rustocop's
+        crates/rustocop/src/cops/prism/compatibility_lexical_rules.rs. RuboCop's on_module
+        and Rustocop's module_function both inspect direct module-body statements
+        and distinguish module_function, extend self, and forbidden enforced styles.
+      - Both skip extend-self conversion when a private directive exists in module_function
+        style, use style-specific messages, and replace only the directive; forbidden
+        style intentionally offers no correction.
+    upstream_tests:
+      status: passed
+      passed: 11
+      total: 11
+      corrections: true
+    edge_cases:
+    - id: upstream_1_rubocop_cop_style_modulefunction_when_enforced_style_is_module_f
+      description: RuboCop::Cop::Style::ModuleFunction when enforced style is `module_function`
+        accepts for `extend self` in a module with private methods
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+        Style/ModuleFunction:
+          EnforcedStyle: module_function
+          SupportedStyles:
+          - module_function
+          - extend_self
+          - forbidden
+          Autocorrect: false
+      source: |
+        module Test
+          extend self
+          def test; end
+          private
+          def test_private;end
+        end
+    - id: upstream_2_rubocop_cop_style_modulefunction_when_enforced_style_is_extend_s
+      description: RuboCop::Cop::Style::ModuleFunction when enforced style is `extend_self`
+        registers an offense for `module_function` without an argument
+      path: "(string)"
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+        Style/ModuleFunction:
+          EnforcedStyle: extend_self
+          SupportedStyles:
+          - module_function
+          - extend_self
+          - forbidden
+          Autocorrect: false
+      source: |
+        module Test
+          module_function
+          def test; end
+        end
+    - id: upstream_3_rubocop_cop_style_modulefunction_when_enforced_style_is_forbidde
+      description: RuboCop::Cop::Style::ModuleFunction when enforced style is `forbidden`
+        accepts `extend self` in a class
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+        Style/ModuleFunction:
+          EnforcedStyle: forbidden
+          SupportedStyles:
+          - module_function
+          - extend_self
+          - forbidden
+          Autocorrect: false
+      source: |
+        class Test
+          extend self
+        end
+    - id: upstream_4_rubocop_cop_style_modulefunction_when_enforced_style_is_forbidde
+      description: RuboCop::Cop::Style::ModuleFunction when enforced style is `forbidden`
+        registers an offense for `extend self` in a module with private methods
+      path: "(string)"
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+        Style/ModuleFunction:
+          EnforcedStyle: forbidden
+          SupportedStyles:
+          - module_function
+          - extend_self
+          - forbidden
+          Autocorrect: false
+      source: |
+        module Test
+          extend self
+          def test; end
+          private
+          def test_private;end
+        end
+    real_world:
+      positives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/module_function_spec.rb
+        line: 7
+        source: |
+          module Test
+            extend self
+            def test; end
+          end
+        config:
+          AllCops:
+            TargetRubyVersion: '2.7'
+          Style/ModuleFunction:
+            EnforcedStyle: module_function
+            SupportedStyles:
+            - module_function
+            - extend_self
+            - forbidden
+            Autocorrect: false
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/module_function_spec.rb
+        line: 57
+        source: |
+          module Test
+            module_function
+            def test; end
+          end
+        config:
+          AllCops:
+            TargetRubyVersion: '2.7'
+          Style/ModuleFunction:
+            EnforcedStyle: extend_self
+            SupportedStyles:
+            - module_function
+            - extend_self
+            - forbidden
+            Autocorrect: false
+      negatives:
+      - repository: chatwoot/chatwoot
+        revision: 8d93d69e8e356216e85c28de7c4240e66b8e83fa
+        path: app/actions/contact_merge_action.rb
+        line: 21
+        source: private
+      - repository: chatwoot/chatwoot
+        revision: 8d93d69e8e356216e85c28de7c4240e66b8e83fa
+        path: app/builders/account_builder.rb
+        line: 22
+        source: private
+  Style/MixinUsage:
+    matrix_position: 448
+    sources:
+      rubocop: lib/rubocop/cop/style/mixin_usage.rb
+      rustocop:
+      - crates/rustocop/src/cops/prism/mixin_rules.rs
+    manual_review:
+      status: passed
+      notes:
+      - Reviewed RuboCop's lib/rubocop/cop/style/mixin_usage.rb against Rustocop's
+        crates/rustocop/src/cops/prism/mixin_rules.rs. RuboCop's restricted on_send
+        callback and Rustocop's mixin_usage both target bare include, extend, or prepend
+        of a constant only when the call remains in top-level scope.
+      - Both allow the same calls inside classes and modules, including top-level
+        control/definition wrappers, and report the whole call with the selected mixin
+        name and no autocorrection.
+    upstream_tests:
+      status: passed
+      passed: 18
+      total: 18
+      corrections: true
+    edge_cases:
+    - id: upstream_1_rubocop_cop_style_mixinusage_include_does_not_register_an_offens
+      description: RuboCop::Cop::Style::MixinUsage include does not register an offense
+        when using inside block and `if` condition is after `include`
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+      source: |
+        klass.class_eval do
+          include M1
+          include M2 if defined?(M)
+        end
+    - id: upstream_2_rubocop_cop_style_mixinusage_include_nested_module_registers_an_
+      description: RuboCop::Cop::Style::MixinUsage include Nested module registers
+        an offense when using outside class
+      path: "(string)"
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+      source: |
+        include M1::M2::M3
+        class C
+        end
+    - id: upstream_3_rubocop_cop_style_mixinusage_include_does_not_register_an_offens
+      description: RuboCop::Cop::Style::MixinUsage include does not register an offense
+        when using `include` in method definition inside module
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+      source: |
+        module X
+          def foo
+            include M
+          end
+        end
+    - id: upstream_4_rubocop_cop_style_mixinusage_include_does_not_register_an_offens
+      description: RuboCop::Cop::Style::MixinUsage include does not register an offense
+        when using inside block
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+      source: |
+        Class.new do
+          include M
+        end
+    real_world:
+      positives:
+      - repository: chatwoot/chatwoot
+        revision: 8d93d69e8e356216e85c28de7c4240e66b8e83fa
+        path: bin/update
+        line: 3
+        source: include FileUtils
+      - repository: gitlabhq/gitlabhq
+        revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+        path: bin/update
+        line: 3
+        source: include FileUtils
+      negatives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/mixin_usage_spec.rb
+        line: 162
+        source: |
+          module M1
+            include M2
+
+            class C
+              include M3
+            end
+          end
+        config:
+          AllCops:
+            TargetRubyVersion: '2.7'
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/mixin_usage_spec.rb
+        line: 39
+        source: |
+          Foo.include M
+          class C; end
+        config:
+          AllCops:
+            TargetRubyVersion: '2.7'
+  Style/MixinGrouping:
+    matrix_position: 447
+    sources:
+      rubocop: lib/rubocop/cop/style/mixin_grouping.rb
+      rustocop:
+      - crates/rustocop/src/cops/prism/mixin_grouping_rules.rs
+    manual_review:
+      status: passed
+      notes:
+      - Reviewed RuboCop's lib/rubocop/cop/style/mixin_grouping.rb against Rustocop's
+        crates/rustocop/src/cops/prism/mixin_grouping_rules.rs. RuboCop's on_class/on_module
+        checks and Rustocop's mixin_grouping collect direct macro calls separately
+        for include, extend, and prepend, then apply the same separated or grouped
+        style.
+      - The Rust correction helpers preserve RuboCop's reverse argument ordering,
+        indentation, intervening whitespace removal, and per-call offense ranges when
+        splitting or combining declarations.
+    upstream_tests:
+      status: passed
+      passed: 18
+      total: 18
+      corrections: true
+    edge_cases:
+    - id: upstream_1_rubocop_cop_style_mixingrouping_when_configured_with_grouped_sty
+      description: RuboCop::Cop::Style::MixinGrouping when configured with grouped
+        style when using include registers an offense for several mixins in separate
+        calls
+      path: "(string)"
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+        Style/MixinGrouping:
+          EnforcedStyle: grouped
+          SupportedStyles:
+          - separated
+          - grouped
+      source: |
+        class Foo
+          include Bar, Baz
+          include FooBar, FooBaz
+          include Qux, FooBarBaz
+        end
+    - id: upstream_2_rubocop_cop_style_mixingrouping_when_configured_with_separated_s
+      description: RuboCop::Cop::Style::MixinGrouping when configured with separated
+        style when using `include` allows include call as an argument to another method
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+        Style/MixinGrouping:
+          EnforcedStyle: separated
+          SupportedStyles:
+          - separated
+          - grouped
+      source: 'expect(foo).to include { { bar: baz } }'
+    - id: upstream_3_rubocop_cop_style_mixingrouping_when_configured_with_grouped_sty
+      description: RuboCop::Cop::Style::MixinGrouping when configured with grouped
+        style when using `prepend` registers an offense when other mixins have receivers
+      path: "(string)"
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+        Style/MixinGrouping:
+          EnforcedStyle: grouped
+          SupportedStyles:
+          - separated
+          - grouped
+      source: |
+        class Foo
+          prepend Bar
+          Other.prepend Baz
+          do_something_else
+          prepend Qux
+        end
+    - id: upstream_4_rubocop_cop_style_mixingrouping_when_configured_with_separated_s
+      description: RuboCop::Cop::Style::MixinGrouping when configured with separated
+        style when using a mix of different methods registers an offense for some
+        calls having several mixins
+      path: "(string)"
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+        Style/MixinGrouping:
+          EnforcedStyle: separated
+          SupportedStyles:
+          - separated
+          - grouped
+      source: |
+        class Foo
+          include Bar, Baz
+          extend Qux
+        end
+    real_world:
+      positives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/mixin_grouping_spec.rb
+        line: 8
+        source: |
+          class Foo
+            include Bar, Qux
+          end
+        config:
+          AllCops:
+            TargetRubyVersion: '2.7'
+          Style/MixinGrouping:
+            EnforcedStyle: separated
+            SupportedStyles:
+            - separated
+            - grouped
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/mixin_grouping_spec.rb
+        line: 28
+        source: |
+          class Foo
+            include Bar, Baz
+            include Qux
+          end
+        config:
+          AllCops:
+            TargetRubyVersion: '2.7'
+          Style/MixinGrouping:
+            EnforcedStyle: separated
+            SupportedStyles:
+            - separated
+            - grouped
+      negatives:
+      - repository: chatwoot/chatwoot
+        revision: 8d93d69e8e356216e85c28de7c4240e66b8e83fa
+        path: app/actions/contact_identify_action.rb
+        line: 9
+        source: include UrlHelper
+      - repository: chatwoot/chatwoot
+        revision: 8d93d69e8e356216e85c28de7c4240e66b8e83fa
+        path: app/actions/contact_merge_action.rb
+        line: 2
+        source: include Events::Types
+  Style/MissingRespondToMissing:
+    matrix_position: 446
+    sources:
+      rubocop: lib/rubocop/cop/style/missing_respond_to_missing.rb
+      rustocop:
+      - crates/rustocop/src/cops/prism/declaration_semantics.rs
+    manual_review:
+      status: passed
+      notes:
+      - Reviewed RuboCop's lib/rubocop/cop/style/missing_respond_to_missing.rb against
+        Rustocop's crates/rustocop/src/cops/prism/declaration_semantics.rs. RuboCop's
+        on_def/on_defs and Rustocop's missing_respond_to_missing find method_missing
+        definitions and search the same enclosing class or module for an instance
+        or singleton respond_to_missing?.
+      - Both accept the companion method regardless of declaration order, keep nested
+        scopes isolated, and report the method_missing definition without attempting
+        an unsafe correction.
+    upstream_tests:
+      status: passed
+      passed: 8
+      total: 8
+      corrections: true
+    edge_cases:
+    - id: upstream_1_rubocop_cop_style_missingrespondtomissing_registers_an_offense_r
+      description: RuboCop::Cop::Style::MissingRespondToMissing registers an offense
+        respond_to_missing? is implemented as an instance method and method_missing
+        is implemented as a class method
+      path: "(string)"
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+      source: |
+        class Test
+          def self.method_missing
+          end
+
+          def respond_to_missing?
+          end
+        end
+    - id: upstream_2_rubocop_cop_style_missingrespondtomissing_allows_method_missing_
+      description: RuboCop::Cop::Style::MissingRespondToMissing allows method_missing
+        and respond_to_missing? when defined with inline access modifier and method_missing
+        is not qualified by inline access modifier
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+      source: |
+        class Test
+          private def respond_to_missing?
+          end
+
+          def method_missing
+          end
+        end
+    - id: upstream_3_rubocop_cop_style_missingrespondtomissing_registers_an_offense_r
+      description: RuboCop::Cop::Style::MissingRespondToMissing registers an offense
+        respond_to_missing? is implemented as a class method and method_missing is
+        implemented as an instance method
+      path: "(string)"
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+      source: |
+        class Test
+          def self.respond_to_missing?
+          end
+
+          def method_missing
+          end
+        end
+    - id: upstream_4_rubocop_cop_style_missingrespondtomissing_allows_method_missing_
+      description: RuboCop::Cop::Style::MissingRespondToMissing allows method_missing
+        and respond_to_missing? implemented as class methods
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+      source: |
+        class Test
+          def self.respond_to_missing?
+          end
+
+          def self.method_missing
+          end
+        end
+    real_world:
+      positives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/missing_respond_to_missing_spec.rb
+        line: 4
+        source: |
+          class Test
+            def method_missing
+            end
+          end
+        config:
+          AllCops:
+            TargetRubyVersion: '2.7'
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/missing_respond_to_missing_spec.rb
+        line: 14
+        source: |
+          class Test
+            def self.method_missing
+            end
+          end
+        config:
+          AllCops:
+            TargetRubyVersion: '2.7'
+      negatives:
+      - repository: chatwoot/chatwoot
+        revision: 8d93d69e8e356216e85c28de7c4240e66b8e83fa
+        path: app/services/messages/markdown_renderers/base_markdown_renderer.rb
+        line: 36
+        source: |-
+          def respond_to_missing?(_method_name, _include_private = false)
+              true
+            end
+      - repository: chatwoot/chatwoot
+        revision: 8d93d69e8e356216e85c28de7c4240e66b8e83fa
+        path: spec/builders/messages/message_builder_spec.rb
+        line: 171
+        source: |-
+          ActionController::Parameters.new({
+                                                     content: 'test',
+                                                     attachments: [Rack::Test::UploadedFile.new('spec/assets/avatar.png', 'image/png')]
+                                                   })
+  Style/MissingElse:
+    matrix_position: 445
+    sources:
+      rubocop: lib/rubocop/cop/style/missing_else.rb
+      rustocop:
+      - crates/rustocop/src/cops/prism/missing_else_rules.rs
+    manual_review:
+      status: passed
+      notes:
+      - Reviewed RuboCop's lib/rubocop/cop/style/missing_else.rb against Rustocop's
+        crates/rustocop/src/cops/prism/missing_else_rules.rs. RuboCop's normal-if,
+        case, and case-match callbacks map to Rustocop's on_if/on_unless/on_case dispatch,
+        with the same If, Case, Both, and empty-else style decisions.
+      - Rustocop's add_missing_else matches RuboCop's keyword-range diagnostics, messages,
+        indentation, unless/EmptyElse conflict guards, and insertion of an empty else
+        branch for each supported construct.
+    upstream_tests:
+      status: passed
+      passed: 84
+      total: 84
+      corrections: true
+    edge_cases:
+    - id: upstream_1_rubocop_cop_style_missingelse_unlesselse_enabled_given_an_if_sta
+      description: RuboCop::Cop::Style::MissingElse UnlessElse enabled given an if-statement
+        with an else-clause with side-effects doesn't register an offense
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+        Style/MissingElse:
+          EnforcedStyle: both
+          SupportedStyles:
+          - if
+          - case
+          - both
+      source: if cond; foo else bar; nil end
+    - id: upstream_2_rubocop_cop_style_missingelse_configured_to_warn_only_on_empty_i
+      description: RuboCop::Cop::Style::MissingElse configured to warn only on empty
+        if given an if-statement with no else-clause registers an offense with multiple
+        `elsif` clauses
+      path: "(string)"
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+        Style/MissingElse:
+          EnforcedStyle: if
+          SupportedStyles:
+          - if
+          - case
+          - both
+      source: 'if cond_1; 1; elsif cond_2; 2; elsif cond_3; 3; end
+
+        '
+    - id: upstream_3_rubocop_cop_style_missingelse_configured_to_warn_only_on_empty_c
+      description: RuboCop::Cop::Style::MissingElse configured to warn only on empty
+        case behaves like pattern matching >= Ruby 2.7 does not register an offense
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+        Style/MissingElse:
+          EnforcedStyle: case
+          SupportedStyles:
+          - if
+          - case
+          - both
+      source: case pattern; in a; foo; end
+    - id: upstream_4_rubocop_cop_style_missingelse_unlesselse_enabled_given_an_unless
+      description: RuboCop::Cop::Style::MissingElse UnlessElse enabled given an unless-statement
+        with an else-clause with side-effects doesn't register an offense
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+        Style/MissingElse:
+          EnforcedStyle: both
+          SupportedStyles:
+          - if
+          - case
+          - both
+      source: unless cond; foo else bar; nil end
+    real_world:
+      positives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/missing_else_spec.rb
+        line: 44
+        source: 'if cond; foo end
+
+          '
+        config:
+          AllCops:
+            TargetRubyVersion: '2.7'
+          Style/MissingElse:
+            EnforcedStyle: both
+            SupportedStyles:
+            - if
+            - case
+            - both
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/missing_else_spec.rb
+        line: 101
+        source: 'case v; when a; foo; when b; bar; end
+
+          '
+        config:
+          AllCops:
+            TargetRubyVersion: '2.7'
+          Style/MissingElse:
+            EnforcedStyle: both
+            SupportedStyles:
+            - if
+            - case
+            - both
+      negatives:
+      - repository: gitlabhq/gitlabhq
+        revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+        path: app/policies/authz/boundary_policy.rb
+        line: 43
+        source: granular_token & cond(permission) & member
+      - repository: gitlabhq/gitlabhq
+        revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+        path: app/policies/concerns/authz/role_permissions.rb
+        line: 23
+        source: cond(:"role_enables_#{permission}")
+  Style/MinMaxComparison:
+    matrix_position: 444
+    sources:
+      rubocop: lib/rubocop/cop/style/min_max_comparison.rb
+      rustocop:
+      - crates/rustocop/src/cops/prism/predicate_conversion_rules.rs
+    manual_review:
+      status: passed
+      notes:
+      - Reviewed RuboCop's lib/rubocop/cop/style/min_max_comparison.rb against Rustocop's
+        crates/rustocop/src/cops/prism/predicate_conversion_rules.rs. RuboCop's on_if
+        matcher and Rustocop's min_max_comparison accept only ternaries whose comparison
+        operands reappear in the two branches in max/min order, including a parenthesized
+        condition.
+      - Both select max versus min from the operator and branch ordering, replace
+        the whole ternary with [lhs, rhs].min/max, and retain RuboCop's special correction
+        shape for elsif nodes.
+    upstream_tests:
+      status: passed
+      passed: 17
+      total: 17
+      corrections: true
+    edge_cases:
+    - id: upstream_1_rubocop_cop_style_minmaxcomparison_does_not_register_an_offense_
+      description: RuboCop::Cop::Style::MinMaxComparison does not register an offense
+        when using `elsif`
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+      source: |
+        if a
+        elsif foo(b)
+          b
+        end
+    - id: upstream_2_rubocop_cop_style_minmaxcomparison_registers_and_corrects_an_off
+      description: 'RuboCop::Cop::Style::MinMaxComparison registers and corrects an
+        offense when using `a >= b ? a : b`'
+      path: "(string)"
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+      source: 'a >= b ? a : b
+
+        '
+    - id: upstream_3_rubocop_cop_style_minmaxcomparison_registers_and_corrects_an_off
+      description: 'RuboCop::Cop::Style::MinMaxComparison registers and corrects an
+        offense when using `a < b a : b` with `elsif/else`'
+      path: "(string)"
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+      source: |
+        if x
+        elsif a < b
+          a
+        else
+          b
+        end
+    - id: upstream_4_rubocop_cop_style_minmaxcomparison_does_not_register_an_offense_
+      description: RuboCop::Cop::Style::MinMaxComparison does not register an offense
+        when using `[a, b].max`
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+      source: "[a, b].max\n"
+    real_world:
+      positives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/min_max_comparison_spec.rb
+        line: 4
+        source: 'a > b ? a : b
+
+          '
+        config:
+          AllCops:
+            TargetRubyVersion: '2.7'
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/min_max_comparison_spec.rb
+        line: 15
+        source: 'a >= b ? a : b
+
+          '
+        config:
+          AllCops:
+            TargetRubyVersion: '2.7'
+      negatives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/min_max_comparison_spec.rb
+        line: 153
+        source: 'a > b ? c : d
+
+          '
+        config:
+          AllCops:
+            TargetRubyVersion: '2.7'
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/min_max_comparison_spec.rb
+        line: 159
+        source: 'condition ? a : b
+
+          '
+        config:
+          AllCops:
+            TargetRubyVersion: '2.7'
+  Style/MinMax:
+    matrix_position: 443
+    sources:
+      rubocop: lib/rubocop/cop/style/min_max.rb
+      rustocop:
+      - crates/rustocop/src/cops/prism/style_compat.rs
+    manual_review:
+      status: passed
+      notes:
+      - Reviewed RuboCop's lib/rubocop/cop/style/min_max.rb against Rustocop's crates/rustocop/src/cops/prism/style_compat.rs.
+        RuboCop's on_array/on_return and Rustocop's MinMax dispatch require adjacent
+        min and max calls with the same explicit receiver and reject reversed, safe-navigation,
+        or argument-bearing forms.
+      - Both report the array or return-argument range and replace exactly that range
+        with receiver.minmax, leaving the return keyword and surrounding expression
+        intact.
+    upstream_tests:
+      status: passed
+      passed: 12
+      total: 12
+      corrections: true
+    edge_cases:
+    - id: upstream_1_rubocop_cop_style_minmax_with_an_array_literal_containing_calls_
+      description: RuboCop::Cop::Style::MinMax with an array literal containing calls
+        to `#min` and `#max` when the expression is used in a parallel assignment
+        does not register an offense if the receivers do not match
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+      source: 'baz = foo.min, bar.max
+
+        '
+    - id: upstream_2_rubocop_cop_style_minmax_with_an_array_literal_containing_calls_
+      description: RuboCop::Cop::Style::MinMax with an array literal containing calls
+        to `#min` and `#max` when the expression is used as a return value registers
+        an offense if the receivers match
+      path: "(string)"
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+      source: 'return foo.min, foo.max
+
+        '
+    - id: upstream_3_rubocop_cop_style_minmax_with_an_array_literal_containing_calls_
+      description: RuboCop::Cop::Style::MinMax with an array literal containing calls
+        to `#min` and `#max` when the expression is used as a return value does not
+        register an offense if the receivers do not match
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+      source: 'return foo.min, bar.max
+
+        '
+    - id: upstream_4_rubocop_cop_style_minmax_with_an_array_literal_containing_calls_
+      description: RuboCop::Cop::Style::MinMax with an array literal containing calls
+        to `#min` and `#max` when the expression is used in a parallel assignment
+        does not register an offense if there are additional elements
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+      source: 'bar = foo.min, foo.baz, foo.max
+
+        '
+    real_world:
+      positives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/min_max_spec.rb
+        line: 6
+        source: "[foo.min, foo.max]\n"
+        config:
+          AllCops:
+            TargetRubyVersion: '2.7'
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/min_max_spec.rb
+        line: 37
+        source: 'bar = foo.min, foo.max
+
+          '
+        config:
+          AllCops:
+            TargetRubyVersion: '2.7'
+      negatives:
+      - repository: chatwoot/chatwoot
+        revision: 8d93d69e8e356216e85c28de7c4240e66b8e83fa
+        path: app/builders/v2/reports/drilldown_builder.rb
+        line: 207
+        source: "[requested_per_page, MAX_PER_PAGE].min"
+      - repository: chatwoot/chatwoot
+        revision: 8d93d69e8e356216e85c28de7c4240e66b8e83fa
+        path: app/builders/v2/reports/drilldown_record_serializer.rb
+        line: 181
+        source: event_end_times.min - 1.second
+  Style/MethodDefParentheses:
+    matrix_position: 442
+    sources:
+      rubocop: lib/rubocop/cop/style/method_def_parentheses.rb
+      rustocop:
+      - crates/rustocop/src/cops/prism/method_def_parentheses_rules.rs
+    manual_review:
+      status: passed
+      notes:
+      - Reviewed RuboCop's lib/rubocop/cop/style/method_def_parentheses.rb against
+        Rustocop's crates/rustocop/src/cops/prism/method_def_parentheses_rules.rs.
+        RuboCop's on_def and Rustocop's on_def apply the same require_parentheses
+        style to method parameters while honoring forced parentheses for destructuring
+        and anonymous forwarding forms.
+      - The missing/unwanted-parentheses branches use matching name-to-parameter ranges
+        and corrections, including empty parameters, multiline definitions, singleton
+        methods, and the Ruby-version-sensitive anonymous arguments.
+    upstream_tests:
+      status: passed
+      passed: 49
+      total: 49
+      corrections: true
+    edge_cases:
+    - id: upstream_1_rubocop_cop_style_methoddefparentheses_require_parentheses_auto_
+      description: RuboCop::Cop::Style::MethodDefParentheses require_parentheses auto-adds
+        required parens for a defs after a passing method
+      path: "(string)"
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+        Style/MethodDefParentheses:
+          EnforcedStyle: require_parentheses
+          SupportedStyles:
+          - require_parentheses
+          - require_no_parentheses
+          - require_no_parentheses_except_multiline
+      source: |
+        def self.fine; end
+
+        def self.test param; end
+
+        def self.test2 param; end
+    - id: upstream_2_rubocop_cop_style_methoddefparentheses_require_parentheses_behav
+      description: RuboCop::Cop::Style::MethodDefParentheses require_parentheses behaves
+        like endless methods endless methods accepts parens with `forward-arg`
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: '3.0'
+        Style/MethodDefParentheses:
+          EnforcedStyle: require_parentheses
+          SupportedStyles:
+          - require_parentheses
+          - require_no_parentheses
+          - require_no_parentheses_except_multiline
+      source: 'def foo(...)= bar(...)
+
+        '
+    - id: upstream_3_rubocop_cop_style_methoddefparentheses_require_no_parentheses_ex
+      description: RuboCop::Cop::Style::MethodDefParentheses require_no_parentheses_except_multiline
+        when args span multiple lines auto-adds required parens to argument lists
+        on multiple lines
+      path: "(string)"
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+        Style/MethodDefParentheses:
+          EnforcedStyle: require_no_parentheses_except_multiline
+          SupportedStyles:
+          - require_parentheses
+          - require_no_parentheses
+          - require_no_parentheses_except_multiline
+      source: |
+        def test one,
+        two
+        end
+    - id: upstream_4_rubocop_cop_style_methoddefparentheses_require_no_parentheses_be
+      description: RuboCop::Cop::Style::MethodDefParentheses require_no_parentheses
+        behaves like no parentheses requires parens for anonymous keyword rest arguments
+        forwarding
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: '3.2'
+        Style/MethodDefParentheses:
+          EnforcedStyle: require_no_parentheses
+          SupportedStyles:
+          - require_parentheses
+          - require_no_parentheses
+          - require_no_parentheses_except_multiline
+      source: |
+        def foo(**)
+          bar(**)
+        end
+    real_world:
+      positives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/method_def_parentheses_spec.rb
+        line: 161
+        source: |
+          def func a, b
+          end
+        config:
+          AllCops:
+            TargetRubyVersion: '2.7'
+          Style/MethodDefParentheses:
+            EnforcedStyle: require_parentheses
+            SupportedStyles:
+            - require_parentheses
+            - require_no_parentheses
+            - require_no_parentheses_except_multiline
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/method_def_parentheses_spec.rb
+        line: 174
+        source: |
+          def func(a, b)
+          end
+          def func a, b
+          end
+        config:
+          AllCops:
+            TargetRubyVersion: '2.7'
+          Style/MethodDefParentheses:
+            EnforcedStyle: require_parentheses
+            SupportedStyles:
+            - require_parentheses
+            - require_no_parentheses
+            - require_no_parentheses_except_multiline
+      negatives:
+      - repository: chatwoot/chatwoot
+        revision: 8d93d69e8e356216e85c28de7c4240e66b8e83fa
+        path: app/controllers/api/v2/accounts/reports_controller.rb
+        line: 154
+        source: params[param].present?
+      - repository: chatwoot/chatwoot
+        revision: 8d93d69e8e356216e85c28de7c4240e66b8e83fa
+        path: app/controllers/super_admin/users_controller.rb
+        line: 77
+        source: |-
+          def find_resource(param)
+              super.becomes(User)
+            end
+  Style/MethodCalledOnDoEndBlock:
+    matrix_position: 441
+    sources:
+      rubocop: lib/rubocop/cop/style/method_called_on_do_end_block.rb
+      rustocop:
+      - crates/rustocop/src/cops/prism/resource_and_precedence_rules.rs
+    manual_review:
+      status: passed
+      notes:
+      - 'Reviewed RuboCop''s lib/rubocop/cop/style/method_called_on_do_end_block.rb
+        against Rustocop''s crates/rustocop/src/cops/prism/resource_and_precedence_rules.rs.
+        RuboCop''s on_block ignore step plus on_send check is mirrored by Rustocop''s
+        method_called_on_do_end_block: calls directly chained from a do...end receiver
+        are targeted, but a following block call is ignored.'
+      - Both allow brace blocks and unchained assigned results, report only the suffix
+        from end through the chained call, and deliberately provide no autocorrection.
+    upstream_tests:
+      status: passed
+      passed: 10
+      total: 10
+      corrections: true
+    edge_cases:
+    - id: upstream_1_rubocop_cop_style_methodcalledondoendblock_with_a_multi_line_do_
+      description: RuboCop::Cop::Style::MethodCalledOnDoEndBlock with a multi-line
+        do..end block when using safe navigation operator registers an offense for
+        a chained call
+      path: "(string)"
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+      source: |
+        a do
+          b
+        end&.c
+    - id: upstream_2_rubocop_cop_style_methodcalledondoendblock_ruby_3_4_registers_an
+      description: RuboCop::Cop::Style::MethodCalledOnDoEndBlock Ruby 3.4 registers
+        an offense for a chained call
+      path: "(string)"
+      config:
+        AllCops:
+          TargetRubyVersion: '3.4'
+      source: |
+        a do
+          it
+        end.c
+    - id: upstream_3_rubocop_cop_style_methodcalledondoendblock_with_a_single_line_do
+      description: RuboCop::Cop::Style::MethodCalledOnDoEndBlock with a single-line
+        do..end block accepts a single-line do..end block with a chained block
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+      source: a do b end.c do d end
+    - id: upstream_4_rubocop_cop_style_methodcalledondoendblock_ruby_2_7_registers_an
+      description: RuboCop::Cop::Style::MethodCalledOnDoEndBlock Ruby 2.7 registers
+        an offense for a chained call
+      path: "(string)"
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+      source: |
+        a do
+          _1
+        end.c
+    real_world:
+      positives:
+      - repository: chatwoot/chatwoot
+        revision: 8d93d69e8e356216e85c28de7c4240e66b8e83fa
+        path: app/actions/contact_identify_action.rb
+        line: 103
+        source: |-
+          @contact.attributes = params.slice(*@attributes_to_update).reject do |_k, v|
+                v.blank?
+              end.merge({ custom_attributes: custom_attributes, additional_attributes: additional_attributes })
+      - repository: chatwoot/chatwoot
+        revision: 8d93d69e8e356216e85c28de7c4240e66b8e83fa
+        path: enterprise/app/services/internal/accounts/marketing_conversion_tracking_service.rb
+        line: 78
+        source: |-
+          @click_attributes ||= CLICK_ID_FIELDS.filter_map do |field|
+                value = attribution[field]
+                [field.to_sym, value] if value.present?
+              end.to_h
+      negatives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/method_called_on_do_end_block_spec.rb
+        line: 25
+        source: |
+          a do
+            b
+          end
+        config:
+          AllCops:
+            TargetRubyVersion: '2.7'
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/method_called_on_do_end_block_spec.rb
+        line: 33
+        source: |
+          a do
+            b
+          end.c do
+            d
+          end
+        config:
+          AllCops:
+            TargetRubyVersion: '2.7'
+  Style/MethodCallWithoutArgsParentheses:
+    matrix_position: 440
+    sources:
+      rubocop: lib/rubocop/cop/style/method_call_without_args_parentheses.rb
+      rustocop:
+      - crates/rustocop/src/cops/prism/style.rs
+    manual_review:
+      status: passed
+      notes:
+      - Reviewed RuboCop's lib/rubocop/cop/style/method_call_without_args_parentheses.rb
+        against Rustocop's crates/rustocop/src/cops/prism/style.rs. RuboCop's on_send
+        eligibility checks and Rustocop's MethodCallWithoutArgsParentheses dispatch
+        target empty argument parentheses while excluding operators, setters, super-like
+        forms, assignments, and configured allowed names.
+      - Both report the parenthesis range rather than the receiver/call and remove
+        only (), preserving safe-navigation, chains, block attachment, and surrounding
+        source layout.
+    upstream_tests:
+      status: passed
+      passed: 34
+      total: 34
+      corrections: true
+    edge_cases:
+    - id: upstream_1_rubocop_cop_style_methodcallwithoutargsparentheses_assignment_to
+      description: RuboCop::Cop::Style::MethodCallWithoutArgsParentheses assignment
+        to a variable with the same name accepts parens in complex assignment
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+        Style/MethodCallWithoutArgsParentheses:
+          AllowedMethods: []
+          AllowedPatterns: []
+      source: |
+        test = begin
+          case a
+          when b
+            c = test() if d
+          end
+        end
+    - id: upstream_2_rubocop_cop_style_methodcallwithoutargsparentheses_method_call_a
+      description: RuboCop::Cop::Style::MethodCallWithoutArgsParentheses method call
+        as argument registers an empty parens offense for multiple assignment with
+        safe navigation
+      path: "(string)"
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+        Style/MethodCallWithoutArgsParentheses:
+          AllowedMethods: []
+          AllowedPatterns: []
+      source: '_a, _b, _c = d&.e()
+
+        '
+    - id: upstream_3_rubocop_cop_style_methodcallwithoutargsparentheses_registers_an_
+      description: RuboCop::Cop::Style::MethodCallWithoutArgsParentheses registers
+        an offense for `obj.method += func()`
+      path: "(string)"
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+        Style/MethodCallWithoutArgsParentheses:
+          AllowedMethods: []
+          AllowedPatterns: []
+      source: 'obj.method += func()
+
+        '
+    - id: upstream_4_rubocop_cop_style_methodcallwithoutargsparentheses_autocorrects_
+      description: RuboCop::Cop::Style::MethodCallWithoutArgsParentheses autocorrects
+        calls that could be empty literals
+      path: "(string)"
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+        Style/MethodCallWithoutArgsParentheses:
+          AllowedMethods: []
+          AllowedPatterns: []
+      source: |
+        Hash.new()
+        Array.new()
+        String.new()
+    real_world:
+      positives:
+      - repository: gitlabhq/gitlabhq
+        revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+        path: vendor/gems/omniauth_crowd/lib/omniauth/strategies/crowd.rb
+        line: 12
+        source: |-
+          def initialize(app, options = {}, &block)
+                  options.symbolize_keys!()
+                  super(app, {:name=> :crowd}.merge(options), &block)
+                  @configuration = OmniAuth::Strategies::Crowd::Configuration.new(options)
+                end
+      - repository: gitlabhq/gitlabhq
+        revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+        path: vendor/gems/omniauth_crowd/lib/omniauth/strategies/crowd/crowd_validator.rb
+        line: 139
+        source: "def make_session_request(token)\n\n          root = url = validation_factor
+          = nil\n          doc = Nokogiri::XML::Document.new\n\n          if token
+          === nil\n\n            url = @session_uri\n            root = doc.create_element('authentication-context')\n\n
+          \           doc.root = root\n            root.add_child(doc.create_element('username',
+          @username))\n            root.add_child(doc.create_element('password', @password))\n\n
+          \         else\n            url = URI.parse(@session_uri.to_s() + \"/#{token}\")\n
+          \         end\n\n          if @configuration.use_sessions? || @client_ip\n\n
+          \           if root === nil\n              root = doc.create_element('validation-factors')\n
+          \             doc.root = root\n            else\n              root.add_child(doc.create_element('validation-factors'))\n
+          \           end\n\n            validation_factor = doc.create_element('validation-factor')\n
+          \           validation_factor.add_child(doc.create_element('name', 'remote_address'))\n
+          \           validation_factor.add_child(doc.create_element('value', @client_ip))\n
+          \           \n            doc.xpath('//validation-factors').first.add_child(validation_factor)\n
+          \           \n          end\n          \n          make_request(url, doc.to_s)\n
+          \         \n        end"
+      negatives:
+      - repository: chatwoot/chatwoot
+        revision: 8d93d69e8e356216e85c28de7c4240e66b8e83fa
+        path: app/actions/contact_identify_action.rb
+        line: 121
+        source: |-
+          ContactMergeAction.new(
+                account: account,
+                base_contact: base_contact,
+                mergee_contact: merge_contact
+              ).perform
+      - repository: chatwoot/chatwoot
+        revision: 8d93d69e8e356216e85c28de7c4240e66b8e83fa
+        path: app/builders/account_builder.rb
+        line: 40
+        source: 'raise UserExists.new(email: @email)'
+  Style/MethodCallWithArgsParentheses:
+    matrix_position: 439
+    sources:
+      rubocop: lib/rubocop/cop/style/method_call_with_args_parentheses.rb
+      rustocop:
+      - crates/rustocop/src/cops/prism/method_call_parentheses_rules.rs
+      - crates/rustocop/src/cops/prism/regexp_literal_rules.rs
+    manual_review:
+      status: passed
+      notes:
+      - Reviewed RuboCop's lib/rubocop/cop/style/method_call_with_args_parentheses.rb
+        against Rustocop's crates/rustocop/src/cops/prism/method_call_parentheses_rules.rs,
+        crates/rustocop/src/cops/prism/regexp_literal_rules.rs. RuboCop's on_send
+        behavior maps to Rustocop's on_send/on_yield callbacks for require_parentheses
+        and omit_parentheses, including operators, macros, allowed names/patterns,
+        chaining, interpolation, and multiline exceptions.
+      - Rustocop's offense helper matches RuboCop's selector/argument ranges and inserts
+        or removes delimiters without changing arguments; the separate regexp callback
+        preserves slash-literal safety required by the same upstream contract.
+    upstream_tests:
+      status: passed
+      passed: 174
+      total: 174
+      corrections: true
+    edge_cases:
+    - id: upstream_1_rubocop_cop_style_methodcallwithargsparentheses_when_enforcedsty
+      description: RuboCop::Cop::Style::MethodCallWithArgsParentheses when EnforcedStyle
+        is omit_parentheses accepts parens in operator method calls
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+        Style/MethodCallWithArgsParentheses:
+          IgnoreMacros: true
+          AllowedMethods: []
+          AllowedPatterns: []
+          IncludedMacros: []
+          IncludedMacroPatterns: []
+          AllowParenthesesInMultilineCall: false
+          AllowParenthesesInChaining: false
+          AllowParenthesesInCamelCaseMethod: false
+          AllowParenthesesInStringInterpolation: false
+          EnforcedStyle: omit_parentheses
+          SupportedStyles:
+          - require_parentheses
+          - omit_parentheses
+      source: |
+        data.[](value)
+        data&.[](value)
+        string.<<(even_more_string)
+        ruby.==(good)
+        ruby&.===(better)
+    - id: upstream_2_rubocop_cop_style_methodcallwithargsparentheses_when_enforcedsty
+      description: RuboCop::Cop::Style::MethodCallWithArgsParentheses when EnforcedStyle
+        is omit_parentheses registers an offense in complex conditionals
+      path: "(string)"
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+        Style/MethodCallWithArgsParentheses:
+          IgnoreMacros: true
+          AllowedMethods: []
+          AllowedPatterns: []
+          IncludedMacros: []
+          IncludedMacroPatterns: []
+          AllowParenthesesInMultilineCall: false
+          AllowParenthesesInChaining: false
+          AllowParenthesesInCamelCaseMethod: false
+          AllowParenthesesInStringInterpolation: false
+          EnforcedStyle: omit_parentheses
+          SupportedStyles:
+          - require_parentheses
+          - omit_parentheses
+      source: |
+        def foo
+          if cond.present? && verify?(:something)
+            h.do_with(kw: value)
+          elsif cond.present? || verify?(:something_else)
+            h.do_with(kw: value)
+          elsif whatevs?
+            h.do_with(kw: value)
+          end
+        end
+    - id: upstream_3_rubocop_cop_style_methodcallwithargsparentheses_when_enforcedsty
+      description: RuboCop::Cop::Style::MethodCallWithArgsParentheses when EnforcedStyle
+        is omit_parentheses accepts parens in assignment in conditions
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+        Style/MethodCallWithArgsParentheses:
+          IgnoreMacros: true
+          AllowedMethods: []
+          AllowedPatterns: []
+          IncludedMacros: []
+          IncludedMacroPatterns: []
+          AllowParenthesesInMultilineCall: false
+          AllowParenthesesInChaining: false
+          AllowParenthesesInCamelCaseMethod: false
+          AllowParenthesesInStringInterpolation: false
+          EnforcedStyle: omit_parentheses
+          SupportedStyles:
+          - require_parentheses
+          - omit_parentheses
+      source: |2
+                case response = get("server/list")
+                when server = response.take(1)
+                  if @size ||= server.take(:size)
+                    pass
+                  elsif @@image &&= server.take(:image)
+                    pass
+                  end
+                end
+    - id: upstream_4_rubocop_cop_style_methodcallwithargsparentheses_when_enforcedsty
+      description: RuboCop::Cop::Style::MethodCallWithArgsParentheses when EnforcedStyle
+        is omit_parentheses hash value omission in 3.1 does not register an offense
+        in case_match single-line branches
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: '3.1'
+        Style/MethodCallWithArgsParentheses:
+          IgnoreMacros: true
+          AllowedMethods: []
+          AllowedPatterns: []
+          IncludedMacros: []
+          IncludedMacroPatterns: []
+          AllowParenthesesInMultilineCall: false
+          AllowParenthesesInChaining: false
+          AllowParenthesesInCamelCaseMethod: false
+          AllowParenthesesInStringInterpolation: false
+          EnforcedStyle: omit_parentheses
+          SupportedStyles:
+          - require_parentheses
+          - omit_parentheses
+      source: |
+        case match
+        in :pattern1 then foo(value:)
+        in :pattern2 then bar(value:)
+        end
+    real_world:
+      positives:
+      - repository: gitlabhq/gitlabhq
+        revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+        path: app/helpers/auth_helper.rb
+        line: 137
+        source: "    auth_providers.include? :crowd\n"
+      - repository: rubygems/rubygems.org
+        revision: 3201f8831866f82eb9acd7f66287a978d0e59079
+        path: bin/update
+        line: 7
+        source: APP_ROOT = Pathname.new File.expand_path('../../', __FILE__)
+      negatives:
+      - repository: chatwoot/chatwoot
+        revision: 8d93d69e8e356216e85c28de7c4240e66b8e83fa
+        path: app/actions/contact_identify_action.rb
+        line: 112
+        source: return unless params[:avatar_url].present? && !@contact.avatar.attached?
+      - repository: chatwoot/chatwoot
+        revision: 8d93d69e8e356216e85c28de7c4240e66b8e83fa
+        path: app/builders/account_builder.rb
+        line: 35
+        source: Account::SignUpEmailValidationService.new(@email).perform
+  Style/MapToSet:
+    matrix_position: 438
+    sources:
+      rubocop: lib/rubocop/cop/style/map_to_set.rb
+      rustocop:
+      - crates/rustocop/src/cops/prism/map_conversion_rules.rs
+    manual_review:
+      status: passed
+      notes:
+      - Reviewed RuboCop's lib/rubocop/cop/style/map_to_set.rb against Rustocop's
+        crates/rustocop/src/cops/prism/map_conversion_rules.rs. RuboCop's on_send
+        and Rustocop's on_send both recognize map followed by to_set, requiring a
+        compatible block or symbol block pass and rejecting intervening arguments
+        or unrelated receivers.
+      - Both move the mapping block onto to_set, report the complete conversion chain
+        with the same message, and correct map { ... }.to_set or map(&:x).to_set to
+        to_set { ... } / to_set(&:x).
+    upstream_tests:
+      status: passed
+      passed: 32
+      total: 32
+      corrections: true
+    edge_cases:
+    - id: upstream_1_rubocop_cop_style_maptoset_when_using_numbered_parameters_for_ma
+      description: RuboCop::Cop::Style::MapToSet when using numbered parameters for
+        `map.to_set` with block arity 2 registers an offense and corrects
+      path: "(string)"
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+      source: 'foo.map { [_1.to_s, _2.to_i] }.to_set
+
+        '
+    - id: upstream_2_rubocop_cop_style_maptoset_collect_followed_by_to_set_with_an_it
+      description: RuboCop::Cop::Style::MapToSet `collect` followed by `to_set` with
+        an `it` block passed to `to_set` does not register an offense but does not
+        correct
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: '3.4'
+      source: 'foo.collect { |x| x * 2 }.to_set { |x| [x.to_s, x] }
+
+        '
+    - id: upstream_3_rubocop_cop_style_maptoset_map_and_map_to_set_with_newlines_regi
+      description: RuboCop::Cop::Style::MapToSet `map` and `map.to_set` with newlines
+        registers an offense and corrects with newline removal
+      path: "(string)"
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+      source: |
+        {foo: bar}
+          .map { |k, v| [k.to_s, v.do_something] }
+          .to_set
+          .freeze
+    - id: upstream_4_rubocop_cop_style_maptoset_with_safe_navigation_registers_an_off
+      description: RuboCop::Cop::Style::MapToSet with safe navigation registers an
+        offense and corrects for `foo&.map.to_set
+      path: "(string)"
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+      source: 'foo&.map { |x| [x, x * 2] }.to_set
+
+        '
+    real_world:
+      positives:
+      - repository: gitlabhq/gitlabhq
+        revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+        path: app/models/merge_request.rb
+        line: 1919
+        source: closing_issue_ids = visible_closing_issues_for(current_user).map(&:id).to_set
+      - repository: gitlabhq/gitlabhq
+        revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+        path: app/services/integrations/exclusions/create_service.rb
+        line: 47
+        source: existing_group_ids = integrations_for_groups.map(&:group_id).to_set
+      negatives:
+      - repository: chatwoot/chatwoot
+        revision: 8d93d69e8e356216e85c28de7c4240e66b8e83fa
+        path: app/builders/contact_inbox_builder.rb
+        line: 47
+        source: "@contact.phone_number.delete('+').to_s"
+      - repository: chatwoot/chatwoot
+        revision: 8d93d69e8e356216e85c28de7c4240e66b8e83fa
+        path: app/builders/messages/messenger/message_builder.rb
+        line: 123
+        source: 'FACEBOOK_FILE_TYPE_MAP = { reel: :ig_reel, sticker: :image }.freeze'
+  Style/MapToHash:
+    matrix_position: 437
+    sources:
+      rubocop: lib/rubocop/cop/style/map_to_hash.rb
+      rustocop:
+      - crates/rustocop/src/cops/prism/map_conversion_rules.rs
+    manual_review:
+      status: passed
+      notes:
+      - Reviewed RuboCop's lib/rubocop/cop/style/map_to_hash.rb against Rustocop's
+        crates/rustocop/src/cops/prism/map_conversion_rules.rs. RuboCop's on_send
+        and Rustocop's on_send both recognize map followed by to_h, including destructured
+        block parameters while excluding argument-bearing map/to_h calls and unsafe
+        shapes.
+      - The shared Rust map-conversion helper mirrors RuboCop's range and correction
+        construction by removing map and retaining the original block or block-pass
+        on to_h.
+    upstream_tests:
+      status: passed
+      passed: 38
+      total: 38
+      corrections: true
+    edge_cases:
+    - id: upstream_1_rubocop_cop_style_maptohash_ruby_2_6_when_using_numbered_paramet
+      description: RuboCop::Cop::Style::MapToHash >= Ruby 2.6 when using numbered
+        parameters for `map.to_h` with block arity 2 registers an offense and corrects
+      path: "(string)"
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+      source: 'foo.map { [_1.to_s, _2.to_i] }.to_h
+
+        '
+    - id: upstream_2_rubocop_cop_style_maptohash_ruby_2_6_map_and_collect_to_h_with_n
+      description: RuboCop::Cop::Style::MapToHash >= Ruby 2.6 `map` and `collect.to_h`
+        with newlines registers an offense and corrects with newline removal
+      path: "(string)"
+      config:
+        AllCops:
+          TargetRubyVersion: '2.6'
+      source: |
+        {foo: bar}
+          .collect { |k, v| [k.to_s, v.do_something] }
+          .to_h
+          .freeze
+    - id: upstream_3_rubocop_cop_style_maptohash_ruby_2_6_map_followed_by_to_h_with_a
+      description: RuboCop::Cop::Style::MapToHash >= Ruby 2.6 `map` followed by `to_h`
+        with an `it` block passed to `to_h` does not register an offense
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: '3.4'
+      source: 'foo.map { |x| x * 2 }.to_h { [it.to_s, it] }
+
+        '
+    - id: upstream_4_rubocop_cop_style_maptohash_ruby_2_6_for_map_to_h_with_block_ari
+      description: RuboCop::Cop::Style::MapToHash >= Ruby 2.6 for `map&.to_h` with
+        block arity 2 registers an offense and corrects
+      path: "(string)"
+      config:
+        AllCops:
+          TargetRubyVersion: '2.6'
+      source: 'foo&.map { |x, y| [x.to_s, y.to_i] }&.to_h
+
+        '
+    real_world:
+      positives:
+      - repository: chatwoot/chatwoot
+        revision: 8d93d69e8e356216e85c28de7c4240e66b8e83fa
+        path: app/controllers/webhooks/tiktok_controller.rb
+        line: 46
+        source: signature_parts = keys.map { |part| part.split('=') }.to_h
+      - repository: chatwoot/chatwoot
+        revision: 8d93d69e8e356216e85c28de7c4240e66b8e83fa
+        path: app/models/account.rb
+        line: 110
+        source: 'enum :locale, LANGUAGES_CONFIG.map { |key, val| [val[:iso_639_1_code],
+          key] }.to_h, prefix: true'
+      negatives:
+      - repository: chatwoot/chatwoot
+        revision: 8d93d69e8e356216e85c28de7c4240e66b8e83fa
+        path: app/builders/agent_builder.rb
+        line: 5
+        source: LIMIT_EXCEEDED_MESSAGE = 'Account limit exceeded. Please purchase
+          more licenses'.freeze
+      - repository: chatwoot/chatwoot
+        revision: 8d93d69e8e356216e85c28de7c4240e66b8e83fa
+        path: app/builders/contact_inbox_builder.rb
+        line: 47
+        source: "@contact.phone_number.delete('+').to_s"
+  Style/MapJoin:
+    matrix_position: 436
+    sources:
+      rubocop: lib/rubocop/cop/style/map_join.rb
+      rustocop:
+      - crates/rustocop/src/cops/prism/map_join_rules.rs
+    manual_review:
+      status: passed
+      notes:
+      - Reviewed RuboCop's lib/rubocop/cop/style/map_join.rb against Rustocop's crates/rustocop/src/cops/prism/map_join_rules.rs.
+        RuboCop's on_send and Rustocop's map_join require a map transformation that
+        is observably to_s before join, accepting the equivalent block and &:to_s
+        forms while rejecting other mapping bodies.
+      - Both report the map portion and remove it so the original receiver, join arguments,
+        navigation operator, and surrounding chain remain byte-for-byte consistent.
+    upstream_tests:
+      status: passed
+      passed: 24
+      total: 24
+      corrections: true
+    edge_cases:
+    - id: upstream_1_rubocop_cop_style_mapjoin_with_map_to_s_join_using_safe_navigati
+      description: RuboCop::Cop::Style::MapJoin with `map(&:to_s).join` using safe
+        navigation registers an offense and corrects
+      path: "(string)"
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+      source: 'array&.map(&:to_s)&.join('', '')
+
+        '
+    - id: upstream_2_rubocop_cop_style_mapjoin_with_collect_doing_something_other_tha
+      description: RuboCop::Cop::Style::MapJoin with `collect` doing something other
+        than `to_s` does not register an offense
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+      source: 'array.collect(&:to_i).join('', '')
+
+        '
+    - id: upstream_3_rubocop_cop_style_mapjoin_with_it_parameter_registers_an_offense
+      description: RuboCop::Cop::Style::MapJoin with `it` parameter registers an offense
+        and corrects `map { it.to_s }.join`
+      path: "(string)"
+      config:
+        AllCops:
+          TargetRubyVersion: '3.4'
+      source: 'array.map { it.to_s }.join('', '')
+
+        '
+    - id: upstream_4_rubocop_cop_style_mapjoin_with_numbered_parameters_registers_an_
+      description: RuboCop::Cop::Style::MapJoin with numbered parameters registers
+        an offense and corrects `map { _1.to_s }.join`
+      path: "(string)"
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+      source: 'array.map { _1.to_s }.join('', '')
+
+        '
+    real_world:
+      positives:
+      - repository: gitlabhq/gitlabhq
+        revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+        path: bin/feature-flag
+        line: 89
+        source: TYPES.keys.map(&:to_s).join(', ')
+      - repository: gitlabhq/gitlabhq
+        revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+        path: keeps/cleanup_unused_indexes.rb
+        line: 247
+        source: |-
+          def description_for(ctx)
+                <<~MARKDOWN.chomp
+                  ## What does this MR do and why?
+
+                  Remove the unused index `#{ctx[:schema]}.#{ctx[:name]}` on `#{ctx[:tablename]}`
+                  with `remove_concurrent_index_by_name`. The index reported **zero scans**
+                  over a #{MIMIR_LOOKBACK_DAYS}-day pre-filter window on the
+                  `#{ctx[:cluster_type]}` Patroni cluster (query run at #{ctx[:checked_at]}).
+                  Verify the 180-day chart below as confirmation before merging.
+
+                  Definition:
+
+                  ~~~sql
+                  #{ctx[:definition]}
+                  ~~~
+
+                  ## :warning: Large tables: remove asynchronously instead
+
+                  This MR drops the index **synchronously**, which is fine for small and
+                  medium tables. On a **large** table a synchronous removal can run for a
+                  long time, block the deployment, and starve `autovacuum`. If
+                  `#{ctx[:tablename]}` is a large table, do not merge this as-is: switch to
+                  asynchronous removal (`prepare_async_index_removal` + a synchronous
+                  follow-up) per
+                  [Drop indexes asynchronously](https://docs.gitlab.com/development/database/adding_database_indexes/#drop-indexes-asynchronously).
+
+                  ## Required: verify the 180-day Grafana chart before merging
+
+                  The Keep's #{MIMIR_LOOKBACK_DAYS}-day window is a fast pre-filter, not
+                  a final verdict. Per
+                  [Dropping unused indexes](https://docs.gitlab.com/development/database/adding_database_indexes/#dropping-unused-indexes),
+                  confirm via Grafana over **at least 6 months** before merging.
+
+                  [**Open this query in Grafana Explore**](#{grafana_explore_url_for(ctx)}) (6-month range, #{grafana_datasource_uid}).
+                  The chart should be flat at `0`. PromQL for reference:
+
+                  ```promql
+                  sum by (indexrelname) (
+                    increase(pg_stat_user_indexes_idx_scan{
+                      env="#{grafana_query_env}", type="#{ctx[:cluster_type]}",
+                      relname="#{ctx[:tablename]}", indexrelname="#{ctx[:name]}"
+                    }[180d])
+                  )
+                  ```
+
+                  ## Cross-environment review checklist
+
+                  An index that is idle on GitLab.com may still be required elsewhere:
+
+                  - [ ] No GitLab Self-Managed or GitLab Dedicated feature relies on this index.
+                  - [ ] No low-frequency (quarterly, yearly) cron uses the column(s) this index covers.
+                  - [ ] Kibana (`pubsub-postgres-inf-gprd*`, last 7 days): review `json.sql: #{ctx[:tablename]} AND json.sql: *#{ctx[:columns].first}*` and confirm no query filters/orders on `#{ctx[:columns].map(&:to_s).join(', ')}` in a way this index would serve. A text match alone is not index usage; PostgreSQL favours the index when a query filters on its leading column(s).
+
+                  ## If this index must be kept
+
+                  Add an entry to `keeps/cleanup_unused_indexes/index_keep_list.yml` and close this MR:
+
+                  ```yaml
+                  "#{ctx[:schema]}.#{ctx[:name]}":
+                    reason: "<why this index must stay>"
+                    added_by: "@<your-handle>"
+                    added_on: "#{Date.current.iso8601}"
+                  ```
+
+                  The Keep will not propose this index again.
+                MARKDOWN
+              end
+      negatives:
+      - repository: chatwoot/chatwoot
+        revision: 8d93d69e8e356216e85c28de7c4240e66b8e83fa
+        path: app/builders/contact_inbox_builder.rb
+        line: 47
+        source: "@contact.phone_number.delete('+').to_s"
+      - repository: chatwoot/chatwoot
+        revision: 8d93d69e8e356216e85c28de7c4240e66b8e83fa
+        path: app/builders/v2/reports/agent_summary_builder.rb
+        line: 15
+        source: |-
+          account.account_users.map do |account_user|
+                build_agent_stats(account_user)
+              end
+  Style/MapIntoArray:
+    matrix_position: 435
+    sources:
+      rubocop: lib/rubocop/cop/style/map_into_array.rb
+      rustocop:
+      - crates/rustocop/src/cops/prism/map_into_array_rules.rs
+    manual_review:
+      status: passed
+      notes:
+      - Reviewed RuboCop's lib/rubocop/cop/style/map_into_array.rb against Rustocop's
+        crates/rustocop/src/cops/prism/map_into_array_rules.rs. RuboCop's on_block
+        scope analysis and Rustocop's on_block find an empty-array destination followed
+        by map each/with_index pushes, or the equivalent empty-array tap form, with
+        the same usage guards.
+      - 'Rustocop mirrors the configured collection method name and RuboCop''s multi-edit
+        correction: it removes the redundant assignment/tap, converts the iterator,
+        rewrites push/append to the mapped value, and preserves a used return value.'
+    upstream_tests:
+      status: passed
+      passed: 64
+      total: 64
+      corrections: true
+    edge_cases:
+    - id: upstream_1_rubocop_cop_style_mapintoarray_registers_an_offense_and_corrects
+      description: RuboCop::Cop::Style::MapIntoArray registers an offense and corrects
+        when using a case statement
+      path: "(string)"
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+      source: |
+        dest = []
+        src.each do |e|
+          dest << case foo
+          when 1
+            e
+          else
+            e * 2
+          end
+        end
+    - id: upstream_2_rubocop_cop_style_mapintoarray_does_not_register_an_offense_when
+      description: RuboCop::Cop::Style::MapIntoArray does not register an offense
+        when pushing anonymously-forwarded kwrestarg
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: '3.2'
+      source: |
+        def foo(**)
+          dest = []
+          src.each { |e| dest.push(**) }
+        end
+    - id: upstream_3_rubocop_cop_style_mapintoarray_registers_an_offense_and_corrects
+      description: RuboCop::Cop::Style::MapIntoArray registers an offense and corrects
+        when using a itblock
+      path: "(string)"
+      config:
+        AllCops:
+          TargetRubyVersion: '3.4'
+      source: |
+        dest = []
+        src.each { dest << it * 2 }
+    - id: upstream_4_rubocop_cop_style_mapintoarray_registers_an_offense_and_corrects
+      description: RuboCop::Cop::Style::MapIntoArray registers an offense and corrects
+        when using an if statement
+      path: "(string)"
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+      source: |
+        dest = []
+        src.each do |e|
+          dest << if cond?
+            e
+          else
+            e * 2
+          end
+        end
+    real_world:
+      positives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/map_into_array_spec.rb
+        line: 4
+        source: |
+          dest = []
+          src.each { |e| dest << e * 2 }
+        config:
+          AllCops:
+            TargetRubyVersion: '2.7'
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/map_into_array_spec.rb
+        line: 16
+        source: |
+          dest = []
+          src.each { |e| dest.push(e * 2) }
+        config:
+          AllCops:
+            TargetRubyVersion: '2.7'
+      negatives:
+      - repository: chatwoot/chatwoot
+        revision: 8d93d69e8e356216e85c28de7c4240e66b8e83fa
+        path: app/actions/contact_identify_action.rb
+        line: 121
+        source: |-
+          ContactMergeAction.new(
+                account: account,
+                base_contact: base_contact,
+                mergee_contact: merge_contact
+              ).perform
+      - repository: chatwoot/chatwoot
+        revision: 8d93d69e8e356216e85c28de7c4240e66b8e83fa
+        path: app/builders/account_builder.rb
+        line: 40
+        source: 'raise UserExists.new(email: @email)'
+  Style/MapCompactWithConditionalBlock:
+    matrix_position: 434
+    sources:
+      rubocop: lib/rubocop/cop/style/map_compact_with_conditional_block.rb
+      rustocop:
+      - crates/rustocop/src/cops/prism/map_compact_conditional_rules.rs
+    manual_review:
+      status: passed
+      notes:
+      - Reviewed RuboCop's lib/rubocop/cop/style/map_compact_with_conditional_block.rb
+        against Rustocop's crates/rustocop/src/cops/prism/map_compact_conditional_rules.rs.
+        RuboCop's on_send and Rustocop's on_send both match map...compact only when
+        the block conditional returns the block argument on the selected branch and
+        nil on the other, including guard clauses.
+      - Both distinguish select/reject-compatible conditions from filter_map shapes,
+        report the map-through-compact range, and build the same replacement while
+        retaining block delimiters and parameters.
+    upstream_tests:
+      status: passed
+      passed: 33
+      total: 33
+      corrections: true
+    edge_cases:
+    - id: upstream_1_rubocop_cop_style_mapcompactwithconditionalblock_with_multiline_
+      description: RuboCop::Cop::Style::MapCompactWithConditionalBlock With multiline
+        block registers an offense and corrects to `select` with multi-line `if` condition
+      path: "(string)"
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+      source: |
+        foo.map do |item|
+          if item.bar? &&
+            bar.baz
+            item
+          else
+            next
+          end
+        end.compact
+    - id: upstream_2_rubocop_cop_style_mapcompactwithconditionalblock_with_multiline_
+      description: RuboCop::Cop::Style::MapCompactWithConditionalBlock With multiline
+        block does not register offenses if there are multiple guard clauses
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+      source: |
+        return unless item.bar?
+        return unless item.baz?
+
+        item
+    - id: upstream_3_rubocop_cop_style_mapcompactwithconditionalblock_with_multiline_
+      description: RuboCop::Cop::Style::MapCompactWithConditionalBlock With multiline
+        block does not register offenses if condition has elsif branch
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+      source: |
+        foo.map do |item|
+          if item.bar?
+            item
+          elsif
+            baz
+          else
+            next
+          end
+        end.compact
+    - id: upstream_4_rubocop_cop_style_mapcompactwithconditionalblock_with_multiline_
+      description: RuboCop::Cop::Style::MapCompactWithConditionalBlock With multiline
+        block registers an offense and corrects to safe navigation `select` call with
+        `if` condition
+      path: "(string)"
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+      source: |
+        foo&.map do |item|
+          if item.bar?
+            item
+          else
+            next
+          end
+        end&.compact
+    real_world:
+      positives:
+      - repository: gitlabhq/gitlabhq
+        revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+        path: app/services/work_items/data_sync/handlers/notes/copy_service.rb
+        line: 66
+        source: |-
+          desc_versions_metadata = notes_metadata.filter_map do |metadata|
+                        metadata if metadata.description_version_id.present?
+                      end
+      - repository: gitlabhq/gitlabhq
+        revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+        path: app/workers/jira_connect/sync_project_worker.rb
+        line: 44
+        source: |-
+          project.repository.branches_sorted_by(SORT_UPDATED_RECENT).filter_map do |branch|
+                  branch if branch.name.match(Gitlab::Regex.jira_issue_key_regex)
+                end.first(MAX_RECORDS_LIMIT)
+      negatives:
+      - repository: chatwoot/chatwoot
+        revision: 8d93d69e8e356216e85c28de7c4240e66b8e83fa
+        path: app/builders/v2/reports/agent_summary_builder.rb
+        line: 15
+        source: |-
+          account.account_users.map do |account_user|
+                build_agent_stats(account_user)
+              end
+      - repository: chatwoot/chatwoot
+        revision: 8d93d69e8e356216e85c28de7c4240e66b8e83fa
+        path: app/builders/v2/reports/bot_metrics_builder.rb
+        line: 22
+        source: "@bot_activated_inbox_ids ||= account.inboxes.filter(&:active_bot?).map(&:id)"
+  Style/MagicCommentFormat:
+    matrix_position: 433
+    sources:
+      rubocop: lib/rubocop/cop/style/magic_comment_format.rb
+      rustocop:
+      - crates/rustocop/src/cops/prism/magic_comment_format_rules.rs
+    manual_review:
+      status: passed
+      notes:
+      - Reviewed RuboCop's lib/rubocop/cop/style/magic_comment_format.rb against Rustocop's
+        crates/rustocop/src/cops/prism/magic_comment_format_rules.rs. RuboCop's on_new_investigation
+        and Rustocop's callback both inspect only leading magic-comment directives
+        and apply the configured directive/value capitalization and separator rules.
+      - Rustocop's capitalization helpers preserve RuboCop's supported-capitalization
+        exceptions, one-offense-per-issue ranges, messages, and independent separator/case
+        corrections without touching ordinary comments.
+    upstream_tests:
+      status: passed
+      passed: 25
+      total: 25
+      corrections: true
+    edge_cases:
+    - id: upstream_1_rubocop_cop_style_magiccommentformat_directivecapitalization_whe
+      description: RuboCop::Cop::Style::MagicCommentFormat DirectiveCapitalization
+        when not set does not change the case of magic comment directives
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+        Style/MagicCommentFormat:
+          EnforcedStyle: snake_case
+          SupportedStyles:
+          - snake_case
+          - kebab_case
+          DirectiveCapitalization:
+          ValueCapitalization:
+          SupportedCapitalizations:
+          - lowercase
+          - uppercase
+      source: |
+        # eNcOdInG: utf-8
+        puts 1
+    - id: upstream_2_rubocop_cop_style_magiccommentformat_directivecapitalization_whe
+      description: RuboCop::Cop::Style::MagicCommentFormat DirectiveCapitalization
+        when lowercase registers an offense and corrects when the case does not match
+      path: "(string)"
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+        Style/MagicCommentFormat:
+          EnforcedStyle: snake_case
+          SupportedStyles:
+          - snake_case
+          - kebab_case
+          DirectiveCapitalization: lowercase
+          ValueCapitalization:
+          SupportedCapitalizations:
+          - lowercase
+          - uppercase
+      source: |
+        # eNcOdInG: utf-8
+        puts 1
+    - id: upstream_3_rubocop_cop_style_magiccommentformat_kebab_case_style_accepts_an
+      description: RuboCop::Cop::Style::MagicCommentFormat kebab case style accepts
+        an empty source
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+        Style/MagicCommentFormat:
+          EnforcedStyle: kebab_case
+          SupportedStyles:
+          - snake_case
+          - kebab_case
+          DirectiveCapitalization:
+          ValueCapitalization:
+          SupportedCapitalizations:
+          - lowercase
+          - uppercase
+      source: ''
+    - id: upstream_4_rubocop_cop_style_magiccommentformat_directivecapitalization_whe
+      description: RuboCop::Cop::Style::MagicCommentFormat DirectiveCapitalization
+        when uppercase registers an offense and corrects when the case does not match
+      path: "(string)"
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+        Style/MagicCommentFormat:
+          EnforcedStyle: snake_case
+          SupportedStyles:
+          - snake_case
+          - kebab_case
+          DirectiveCapitalization: uppercase
+          ValueCapitalization:
+          SupportedCapitalizations:
+          - lowercase
+          - uppercase
+      source: |
+        # eNcOdInG: utf-8
+        puts 1
+    real_world:
+      positives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/magic_comment_format_spec.rb
+        line: 71
+        source: |
+          # frozen-string-literal: true
+          # encoding: utf-8
+          # shareable-constant-value: literal
+          # typed: ignore
+
+          puts 1
+        config:
+          AllCops:
+            TargetRubyVersion: '2.7'
+          Style/MagicCommentFormat:
+            EnforcedStyle: snake_case
+            SupportedStyles:
+            - snake_case
+            - kebab_case
+            DirectiveCapitalization:
+            ValueCapitalization:
+            SupportedCapitalizations:
+            - lowercase
+            - uppercase
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/magic_comment_format_spec.rb
+        line: 93
+        source: |
+          # -*- encoding: ASCII-8BIT; frozen-string-literal: true -*-
+          puts 1
+        config:
+          AllCops:
+            TargetRubyVersion: '2.7'
+          Style/MagicCommentFormat:
+            EnforcedStyle: snake_case
+            SupportedStyles:
+            - snake_case
+            - kebab_case
+            DirectiveCapitalization:
+            ValueCapitalization:
+            SupportedCapitalizations:
+            - lowercase
+            - uppercase
+      negatives:
+      - repository: chatwoot/chatwoot
+        revision: 8d93d69e8e356216e85c28de7c4240e66b8e83fa
+        path: config/initializers/monkey_patches/schema_dumper.rb
+        line: 24
+        source: stream.puts
+      - repository: chatwoot/chatwoot
+        revision: 8d93d69e8e356216e85c28de7c4240e66b8e83fa
+        path: docker/entrypoints/helpers/pg_database_url.rb
+        line: 9
+        source: puts 'export POSTGRES_PORT=5432'
+  Style/LineEndConcatenation:
+    matrix_position: 432
+    sources:
+      rubocop: lib/rubocop/cop/style/line_end_concatenation.rb
+      rustocop:
+      - crates/rustocop/src/cops/prism/line_concatenation_rules.rs
+    manual_review:
+      status: passed
+      notes:
+      - Reviewed RuboCop's lib/rubocop/cop/style/line_end_concatenation.rb against
+        Rustocop's crates/rustocop/src/cops/prism/line_concatenation_rules.rs. RuboCop's
+        token scan and Rustocop's line_end_concatenation both require quoted string
+        literals around a trailing + or << and reject same-line operands, nonstandard
+        literals, and higher-precedence continuation contexts.
+      - Both report the operator, replace it plus trailing horizontal space with a
+        single backslash, and avoid producing a doubled backslash when one is already
+        present.
+    upstream_tests:
+      status: passed
+      passed: 19
+      total: 19
+      corrections: true
+    edge_cases:
+    - id: upstream_1_rubocop_cop_style_lineendconcatenation_accepts_string_concat_wit
+      description: RuboCop::Cop::Style::LineEndConcatenation accepts string concat
+        with a return value of method on a string
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+      source: |
+        content_and_three_spaces = "content" +
+          " " * 3
+        a_thing = 'a ' +
+          'gniht'.reverse
+        output = 'value: ' +
+          '%d' % value
+        'letter: ' +
+          'abcdefghij'[ix]
+    - id: upstream_2_rubocop_cop_style_lineendconcatenation_registers_an_offense_for_
+      description: RuboCop::Cop::Style::LineEndConcatenation registers an offense
+        for string concat with << at line end
+      path: "(string)"
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+      source: |
+        top = "test" <<
+        "top"
+    - id: upstream_3_rubocop_cop_style_lineendconcatenation_accepts_string_concat_at_
+      description: RuboCop::Cop::Style::LineEndConcatenation accepts string concat
+        at line end for special strings like __FILE__
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+      source: |
+        top = __FILE__ +
+        "top"
+    - id: upstream_4_rubocop_cop_style_lineendconcatenation_accepts_string_concat_wit
+      description: RuboCop::Cop::Style::LineEndConcatenation accepts string concat
+        with a return value of method on an interpolated string
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+      source: |
+        x3a = 'x' +
+          "#{'a' + "#{3}"}".reverse
+    real_world:
+      positives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/line_end_concatenation_spec.rb
+        line: 4
+        source: |
+          top = "test" +
+          "top"
+        config:
+          AllCops:
+            TargetRubyVersion: '2.7'
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/line_end_concatenation_spec.rb
+        line: 17
+        source: |
+          top = "test" <<
+          "top"
+        config:
+          AllCops:
+            TargetRubyVersion: '2.7'
+      negatives:
+      - repository: gitlabhq/gitlabhq
+        revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+        path: app/components/pajamas/toggle_component.rb
+        line: 6
+        source: LABEL_POSITION_OPTIONS = [:top, :left, :hidden].freeze
+      - repository: gitlabhq/gitlabhq
+        revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+        path: app/models/namespaces/traversal/linear.rb
+        line: 170
+        source: top_index = ancestors_upto_top_index(top)
+  Style/LambdaCall:
+    matrix_position: 431
+    sources:
+      rubocop: lib/rubocop/cop/style/lambda_call.rb
+      rustocop:
+      - crates/rustocop/src/cops/prism/call_conversion_rules.rs
+    manual_review:
+      status: passed
+      notes:
+      - Reviewed RuboCop's lib/rubocop/cop/style/lambda_call.rb against Rustocop's
+        crates/rustocop/src/cops/prism/call_conversion_rules.rs. RuboCop's restricted
+        on_send and Rustocop's lambda_call distinguish implicit .(...) from explicit
+        .call(...) and apply the same call or braces enforced style only to calls
+        with a receiver.
+      - Both reconstruct the receiver, navigation dot, and comma-separated arguments
+        identically, preserve empty calls, and replace the whole call while avoiding
+        duplicate correction of nested nodes.
+    upstream_tests:
+      status: passed
+      passed: 19
+      total: 19
+      corrections: true
+    edge_cases:
+    - id: upstream_1_rubocop_cop_style_lambdacall_when_style_is_set_to_braces_autocor
+      description: RuboCop::Cop::Style::LambdaCall when style is set to braces autocorrects
+        x&.call asdf, x123 to x&.(asdf, x123)
+      path: "(string)"
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+        Style/LambdaCall:
+          EnforcedStyle: braces
+          SupportedStyles:
+          - call
+          - braces
+      source: 'a&.call asdf, x123
+
+        '
+    - id: upstream_2_rubocop_cop_style_lambdacall_when_style_is_set_to_braces_accepts
+      description: RuboCop::Cop::Style::LambdaCall when style is set to braces accepts
+        a call without receiver
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+        Style/LambdaCall:
+          EnforcedStyle: braces
+          SupportedStyles:
+          - call
+          - braces
+      source: call(a, b)
+    - id: upstream_3_rubocop_cop_style_lambdacall_when_style_is_set_to_call_registers
+      description: RuboCop::Cop::Style::LambdaCall when style is set to call registers
+        an offense for correct + opposite with safe navigation
+      path: "(string)"
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+        Style/LambdaCall:
+          EnforcedStyle: call
+          SupportedStyles:
+          - call
+          - braces
+      source: |
+        x&.call(a, b)
+        x&.(a, b)
+    - id: upstream_4_rubocop_cop_style_lambdacall_when_style_is_set_to_braces_autocor
+      description: RuboCop::Cop::Style::LambdaCall when style is set to braces autocorrects
+        x.call asdf, x123 to x.(asdf, x123)
+      path: "(string)"
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+        Style/LambdaCall:
+          EnforcedStyle: braces
+          SupportedStyles:
+          - call
+          - braces
+      source: 'a.call asdf, x123
+
+        '
+    real_world:
+      positives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/lambda_call_spec.rb
+        line: 7
+        source: 'x.(a, b)
+
+          '
+        config:
+          AllCops:
+            TargetRubyVersion: '2.7'
+          Style/LambdaCall:
+            EnforcedStyle: call
+            SupportedStyles:
+            - call
+            - braces
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/lambda_call_spec.rb
+        line: 18
+        source: 'x&.(a, b)
+
+          '
+        config:
+          AllCops:
+            TargetRubyVersion: '2.7'
+          Style/LambdaCall:
+            EnforcedStyle: call
+            SupportedStyles:
+            - call
+            - braces
+      negatives:
+      - repository: chatwoot/chatwoot
+        revision: 8d93d69e8e356216e85c28de7c4240e66b8e83fa
+        path: app/models/concerns/json_schema_validator.rb
+        line: 38
+        source: json_data = attribute_resolver.call(record)
+      - repository: chatwoot/chatwoot
+        revision: 8d93d69e8e356216e85c28de7c4240e66b8e83fa
+        path: app/models/concerns/reauthorizable.rb
+        line: 44
+        source: reauthorization_handlers[self.class.name]&.call(self)
+  Style/Lambda:
+    matrix_position: 430
+    sources:
+      rubocop: lib/rubocop/cop/style/lambda.rb
+      rustocop:
+      - crates/rustocop/src/cops/prism/lambda_rules.rs
+    manual_review:
+      status: passed
+      notes:
+      - Reviewed RuboCop's lib/rubocop/cop/style/lambda.rb against Rustocop's crates/rustocop/src/cops/prism/lambda_rules.rs.
+        RuboCop's on_block and Rustocop's on_block/on_lambda cover method-form lambda
+        blocks and literal -> lambdas for literal, lambda, and line_count_dependent
+        styles.
+      - The Rust helpers match RuboCop's single-line/multiline decision, selector
+        offense range, message modifier, whitespace-sensitive argument reconstruction,
+        and conversion in both directions.
+    upstream_tests:
+      status: passed
+      passed: 38
+      total: 38
+      corrections: true
+    edge_cases:
+    - id: upstream_1_rubocop_cop_style_lambda_with_default_line_count_dependent_style
+      description: RuboCop::Cop::Style::Lambda with default `line_count_dependent`
+        style with a multiline lambda literal as an argument registers an offense
+      path: "(string)"
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+        Style/Lambda:
+          EnforcedStyle: line_count_dependent
+          SupportedStyles:
+          - line_count_dependent
+          - lambda
+          - literal
+      source: |
+        has_many :kittens, -> do
+          where(cats: Cat.young.where_values_hash)
+        end, source: cats
+    - id: upstream_2_rubocop_cop_style_lambda_when_using_safe_navigation_operator_doe
+      description: RuboCop::Cop::Style::Lambda when using safe navigation operator
+        does not break
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: '2.3'
+        Style/Lambda:
+          EnforcedStyle: line_count_dependent
+          SupportedStyles:
+          - line_count_dependent
+          - lambda
+          - literal
+      source: |
+        foo&.bar do |_|
+          baz
+        end
+    - id: upstream_3_rubocop_cop_style_lambda_with_default_line_count_dependent_style
+      description: RuboCop::Cop::Style::Lambda with default `line_count_dependent`
+        style >= Ruby 3.4 when using `it` parameter with a single line lambda method
+        call registers an offense
+      path: "(string)"
+      config:
+        AllCops:
+          TargetRubyVersion: '3.4'
+        Style/Lambda:
+          EnforcedStyle: line_count_dependent
+          SupportedStyles:
+          - line_count_dependent
+          - lambda
+          - literal
+      source: 'f = lambda { it }
+
+        '
+    - id: upstream_4_rubocop_cop_style_lambda_with_default_line_count_dependent_style
+      description: RuboCop::Cop::Style::Lambda with default `line_count_dependent`
+        style unusual lack of spacing with a multiline lambda literal with no parentheses
+        and many args registers an offense
+      path: "(string)"
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+        Style/Lambda:
+          EnforcedStyle: line_count_dependent
+          SupportedStyles:
+          - line_count_dependent
+          - lambda
+          - literal
+      source: |
+        ->   hello, user  do
+          puts hello
+        end
+    real_world:
+      positives:
+      - repository: gitlabhq/gitlabhq
+        revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+        path: app/controllers/concerns/integrations/actions.rb
+        line: 16
+        source: |2
+              # rubocop:enable Rails/LexicallyScopedActionFilter
+
+              before_action :render_404, only: [:edit, :update, :overrides, :test], if: -> do
+                integration.is_a?(::Integrations::Prometheus) && Feature.enabled?(:remove_monitor_metrics)
+              end
+      - repository: gitlabhq/gitlabhq
+        revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+        path: app/controllers/concerns/notes_actions.rb
+        line: 20
+        source: |2
+              before_action :require_last_fetched_at_header!, only: [:index]
+              before_action :require_noteable!, only: [:index, :create]
+              before_action :authorize_admin_note!, only: [:update, :destroy]
+              before_action :note_project, only: [:create]
+              before_action -> {
+                check_rate_limit!(:notes_create,
+                  scope: current_user,
+                  users_allowlist: Gitlab::CurrentSettings.current_application_settings.notes_create_limit_allowlist)
+              }, only: [:create]
+      negatives:
+      - repository: chatwoot/chatwoot
+        revision: 8d93d69e8e356216e85c28de7c4240e66b8e83fa
+        path: app/actions/contact_merge_action.rb
+        line: 42
+        source: 'Message.where(sender: @mergee_contact).update(sender: @base_contact)'
+      - repository: chatwoot/chatwoot
+        revision: 8d93d69e8e356216e85c28de7c4240e66b8e83fa
+        path: app/builders/contact_inbox_builder.rb
+        line: 68
+        source: "::ContactInbox.where(attrs).first_or_create!(hmac_verified: hmac_verified
+          || false)"
+  Style/KeywordParametersOrder:
+    matrix_position: 429
+    sources:
+      rubocop: lib/rubocop/cop/style/keyword_parameters_order.rb
+      rustocop:
+      - crates/rustocop/src/cops/prism/parameter_order_completion.rs
+      - crates/rustocop/src/engine/config_tests.rs
+    manual_review:
+      status: passed
+      notes:
+      - Reviewed RuboCop's lib/rubocop/cop/style/keyword_parameters_order.rb against
+        Rustocop's crates/rustocop/src/cops/prism/parameter_order_completion.rs, crates/rustocop/src/engine/config_tests.rs.
+        RuboCop's on_kwoptarg and Rustocop's keyword_parameters_order identify an
+        optional keyword that precedes required keywords in methods and block parameters,
+        but only once at the first optional keyword.
+      - Both report that optional keyword and move the required keywords before it,
+        preserving rest/block parameters and multiline layout while suppressing correction
+        when comments make reordering unsafe.
+    upstream_tests:
+      status: passed
+      passed: 10
+      total: 10
+      corrections: true
+    edge_cases:
+    - id: upstream_1_rubocop_cop_style_keywordparametersorder_registers_an_offense_an
+      description: RuboCop::Cop::Style::KeywordParametersOrder registers an offense
+        and corrects when multiple `kwoptarg`s are interleaved with `kwarg`sand last
+        argument is `blockarg` and argument parentheses omitted
+      path: "(string)"
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+      source: |
+        def m arg, optional1: 1, required1:, optional2: 2, required2:, **rest, &block
+          do_something
+        end
+    - id: upstream_2_rubocop_cop_style_keywordparametersorder_when_using_block_keywor
+      description: RuboCop::Cop::Style::KeywordParametersOrder when using block keyword
+        parameters does not register an offense when there are no `kwoptarg`s before
+        `kwarg`s
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+      source: |
+        m(arg) do |block_arg, required:, optional: 1|
+        end
+    - id: upstream_3_rubocop_cop_style_keywordparametersorder_registers_an_offense_bu
+      description: RuboCop::Cop::Style::KeywordParametersOrder registers an offense
+        but does not autocorrect when the argument range contains comments
+      path: "(string)"
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+      source: |
+        def foo(optional: 123,
+            # Some explanation
+            required:)
+        end
+    - id: upstream_4_rubocop_cop_style_keywordparametersorder_registers_an_offense_an
+      description: RuboCop::Cop::Style::KeywordParametersOrder registers an offense
+        and corrects when multiple `kwoptarg`s are interleaved with `kwarg`s
+      path: "(string)"
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+      source: |
+        def m(arg, optional1: 1, required1:, optional2: 2, required2:, **rest, &block)
+        end
+    real_world:
+      positives:
+      - repository: gitlabhq/gitlabhq
+        revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+        path: cells-mailroom/lib/cells/mailroom/forwarder.rb
+        line: 39
+        source: |2
+                #   on each cell so it can verify the signature.
+                # @param scheme [String] URL scheme used to reach cells ("https" in
+                #   production, "http" for local environments). Cell addresses are bare
+                #   hosts, so the scheme is chosen here rather than carried in the address.
+                # @param logger [#info, #warn]
+                def initialize(mailbox_type:, signing_key_path:, scheme: DEFAULT_SCHEME, logger:)
+                  @mailbox_type = mailbox_type
+                  @signing_key_path = signing_key_path
+                  @scheme = scheme
+                  @logger = logger
+                end
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/keyword_parameters_order_spec.rb
+        line: 4
+        source: |
+          def m(arg, optional: 1, required:)
+          end
+        config:
+          AllCops:
+            TargetRubyVersion: '2.7'
+      negatives:
+      - repository: chatwoot/chatwoot
+        revision: 8d93d69e8e356216e85c28de7c4240e66b8e83fa
+        path: lib/global_config.rb
+        line: 20
+        source: load_from_cache(arg)
+      - repository: chatwoot/chatwoot
+        revision: 8d93d69e8e356216e85c28de7c4240e66b8e83fa
+        path: spec/controllers/api/v1/accounts/conversations_controller_spec.rb
+        line: 166
+        source: block.call
+  Style/KeywordArgumentsMerging:
+    matrix_position: 428
+    sources:
+      rubocop: lib/rubocop/cop/style/keyword_arguments_merging.rb
+      rustocop:
+      - crates/rustocop/src/cops/prism/resource_and_precedence_rules.rs
+    manual_review:
+      status: passed
+      notes:
+      - Reviewed RuboCop's lib/rubocop/cop/style/keyword_arguments_merging.rb against
+        Rustocop's crates/rustocop/src/cops/prism/resource_and_precedence_rules.rs.
+        RuboCop's on_kwsplat matcher and Rustocop's keyword_arguments_merging both
+        target **hash.merge(...) only in a keyword-argument hash and reject ordinary
+        merge calls.
+      - Both replace the kwsplat with **hash plus direct keyword pairs or additional
+        **hash arguments, stripping only braces that are redundant and preserving
+        multiple merge arguments in order.
+    upstream_tests:
+      status: passed
+      passed: 9
+      total: 9
+      corrections: true
+    edge_cases:
+    - id: upstream_1_rubocop_cop_style_keywordargumentsmerging_registers_an_offense_a
+      description: RuboCop::Cop::Style::KeywordArgumentsMerging registers an offense
+        and corrects when using a chain of `merge`s
+      path: "(string)"
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+      source: 'foo(x, **options.merge(other_options).merge(more_options))
+
+        '
+    - id: upstream_2_rubocop_cop_style_keywordargumentsmerging_does_not_register_an_o
+      description: RuboCop::Cop::Style::KeywordArgumentsMerging does not register
+        an offense when using `merge!`
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+      source: 'foo(x, **options.merge!(other_options))
+
+        '
+    - id: upstream_3_rubocop_cop_style_keywordargumentsmerging_registers_an_offense_a
+      description: RuboCop::Cop::Style::KeywordArgumentsMerging registers an offense
+        and corrects when using `merge` with multiple hash arguments
+      path: "(string)"
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+      source: 'foo(x, **options.merge(other_options, yet_another_options))
+
+        '
+    - id: upstream_4_rubocop_cop_style_keywordargumentsmerging_registers_an_offense_a
+      description: RuboCop::Cop::Style::KeywordArgumentsMerging registers an offense
+        and corrects when using `merge` with complex argument
+      path: "(string)"
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+      source: 'foo(x, **options.merge(other_options, y: 1, **yet_another_options))
+
+        '
+    real_world:
+      positives:
+      - repository: gitlabhq/gitlabhq
+        revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+        path: app/controllers/concerns/rapid_diffs/resource.rb
+        line: 76
+        source: rapid_diffs_presenter.diff_files(**options.merge(extra_options)).first
+      - repository: gitlabhq/gitlabhq
+        revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+        path: app/controllers/projects/merge_requests_controller.rb
+        line: 744
+        source: |-
+          ::RapidDiffs::MergeRequestDiffFileComponent.new(
+                **base_args.merge({
+                  merge_request: @merge_request,
+                  conflict_resolution_path: rapid_diffs_presenter.conflict_resolution_path,
+                  can_merge: rapid_diffs_presenter.can_merge
+                })
+              )
+      negatives:
+      - repository: chatwoot/chatwoot
+        revision: 8d93d69e8e356216e85c28de7c4240e66b8e83fa
+        path: app/builders/messages/facebook/message_builder.rb
+        line: 76
+        source: |-
+          Conversation.create!(conversation_params.merge(
+                                     contact_inbox_id: @contact_inbox.id
+                                   ))
+      - repository: chatwoot/chatwoot
+        revision: 8d93d69e8e356216e85c28de7c4240e66b8e83fa
+        path: app/builders/messages/message_builder.rb
+        line: 76
+        source: attachment.meta = (attachment.meta || {}).merge('is_voice_message'
+          => true)
+  Style/ItBlockParameter:
+    matrix_position: 427
+    sources:
+      rubocop: lib/rubocop/cop/style/it_block_parameter.rb
+      rustocop:
+      - crates/rustocop/src/cops/prism/it_parameter_rules.rs
+    manual_review:
+      status: passed
+      notes:
+      - Reviewed RuboCop's lib/rubocop/cop/style/it_block_parameter.rb against Rustocop's
+        crates/rustocop/src/cops/prism/it_parameter_rules.rs. RuboCop's block/numblock/itblock
+        callbacks and Rustocop's visitor cover named, _1, and it parameters under
+        all four enforced styles, gated to Ruby 3.4 semantics.
+      - Both find only reads bound to the current block, respect the single-line exception,
+        emit the same style-specific ranges/messages, and replace parameter declarations
+        and references without touching nested bindings.
+    upstream_tests:
+      status: passed
+      passed: 34
+      total: 34
+      corrections: true
+    edge_cases:
+    - id: upstream_1_rubocop_cop_style_itblockparameter_ruby_3_4_enforcedstyle_allow_
+      description: 'RuboCop::Cop::Style::ItBlockParameter >= Ruby 3.4 EnforcedStyle:
+        allow_single_line registers an offense when using twice a single numbered
+        parameters'
+      path: "(string)"
+      config:
+        AllCops:
+          TargetRubyVersion: '3.4'
+        Style/ItBlockParameter:
+          EnforcedStyle: allow_single_line
+          SupportedStyles:
+          - allow_single_line
+          - only_numbered_parameters
+          - always
+          - disallow
+      source: |
+        block do
+          foo(_1)
+          bar(_1)
+        end
+    - id: upstream_2_rubocop_cop_style_itblockparameter_ruby_3_3_enforcedstyle_disall
+      description: 'RuboCop::Cop::Style::ItBlockParameter <= Ruby 3.3 EnforcedStyle:
+        disallow does not register an offense when using `it` block parameters'
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: '3.3'
+        Style/ItBlockParameter:
+          EnforcedStyle: disallow
+          SupportedStyles:
+          - allow_single_line
+          - only_numbered_parameters
+          - always
+          - disallow
+      source: 'block { do_something(it) }
+
+        '
+    - id: upstream_3_rubocop_cop_style_itblockparameter_ruby_3_4_enforcedstyle_only_n
+      description: 'RuboCop::Cop::Style::ItBlockParameter >= Ruby 3.4 EnforcedStyle:
+        only_numbered_parameters registers an offense when using a single numbered
+        parameter after multiple numbered parameters in a method chain'
+      path: "(string)"
+      config:
+        AllCops:
+          TargetRubyVersion: '3.4'
+        Style/ItBlockParameter:
+          EnforcedStyle: only_numbered_parameters
+          SupportedStyles:
+          - allow_single_line
+          - only_numbered_parameters
+          - always
+          - disallow
+      source: 'foo { bar(_1, _2) }.baz { qux(_1) }
+
+        '
+    - id: upstream_4_rubocop_cop_style_itblockparameter_ruby_3_4_enforcedstyle_allow_
+      description: 'RuboCop::Cop::Style::ItBlockParameter >= Ruby 3.4 EnforcedStyle:
+        allow_single_line registers no offense when using `it` block parameter with
+        multi-line method chain'
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: '3.4'
+        Style/ItBlockParameter:
+          EnforcedStyle: allow_single_line
+          SupportedStyles:
+          - allow_single_line
+          - only_numbered_parameters
+          - always
+          - disallow
+      source: |
+        collection.each
+                  .foo { puts it }
+    real_world:
+      positives:
+      - repository: gitlabhq/gitlabhq
+        revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+        path: app/models/bulk_imports/entity.rb
+        line: 147
+        source: "    pipelines.any? { _1[:pipeline].to_s == name.to_s }\n"
+      - repository: gitlabhq/gitlabhq
+        revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+        path: app/models/integrations/datadog.rb
+        line: 269
+        source: |2
+                return unless datadog_tags
+
+                unless datadog_tags.split("\n").select(&:present?).all? { _1 =~ TAG_KEY_VALUE_RE }
+                  errors.add(:datadog_tags, s_("DatadogIntegration|have an invalid format"))
+                end
+      negatives:
+      - repository: chatwoot/chatwoot
+        revision: 8d93d69e8e356216e85c28de7c4240e66b8e83fa
+        path: lib/global_config.rb
+        line: 20
+        source: load_from_cache(arg)
+      - repository: chatwoot/chatwoot
+        revision: 8d93d69e8e356216e85c28de7c4240e66b8e83fa
+        path: spec/controllers/api/v1/accounts/conversations_controller_spec.rb
+        line: 166
+        source: block.call
+  Style/ItAssignment:
+    matrix_position: 426
+    sources:
+      rubocop: lib/rubocop/cop/style/it_assignment.rb
+      rustocop:
+      - crates/rustocop/src/cops/prism/parameter_order_completion.rs
+    manual_review:
+      status: passed
+      notes:
+      - Reviewed RuboCop's lib/rubocop/cop/style/it_assignment.rb against Rustocop's
+        crates/rustocop/src/cops/prism/parameter_order_completion.rs. RuboCop's aliased
+        assignment/argument callbacks and Rustocop's it_assignment inspect local assignments
+        plus positional, optional, rest, keyword, keyword-rest, and block parameter
+        declarations named it.
+      - Both report only the name token with the Ruby 3.4 ambiguity message, accept
+        meaningful alternative names, and intentionally provide no automatic rename.
+    upstream_tests:
+      status: passed
+      passed: 23
+      total: 23
+      corrections: true
+    edge_cases:
+    - id: upstream_1_rubocop_cop_style_itassignment_registers_an_offense_when_naming_
+      description: RuboCop::Cop::Style::ItAssignment registers an offense when naming
+        a kwarg splat `**it`
+      path: "(string)"
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+      source: |
+        def foo(**it)
+        end
+    - id: upstream_2_rubocop_cop_style_itassignment_ruby_3_4_does_not_register_an_off
+      description: RuboCop::Cop::Style::ItAssignment Ruby < 3.4 does not register
+        an offense when calling `it` in a block
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: '3.3'
+      source: 'foo { puts it }
+
+        '
+    - id: upstream_3_rubocop_cop_style_itassignment_registers_an_offense_when_assigni
+      description: RuboCop::Cop::Style::ItAssignment registers an offense when assigning
+        a local `it` variable inside a multiline block
+      path: "(string)"
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+      source: |
+        foo do
+          it = 5
+          bar(it)
+        end
+    - id: upstream_4_rubocop_cop_style_itassignment_ruby_3_4_does_not_register_an_off
+      description: RuboCop::Cop::Style::ItAssignment Ruby >= 3.4 does not register
+        an offense when calling `it` in a block
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: '3.4'
+      source: 'foo { puts it }
+
+        '
+    real_world:
+      positives:
+      - repository: gitlabhq/gitlabhq
+        revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+        path: lib/banzai/filter/task_list_filter.rb
+        line: 157
+        source: "          it = start.next_sibling\n"
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/it_assignment_spec.rb
+        line: 4
+        source: 'it = 5
+
+          '
+        config:
+          AllCops:
+            TargetRubyVersion: '2.7'
+      negatives:
+      - repository: gitlabhq/gitlabhq
+        revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+        path: spec/rubocop/cop/gitlab/policy_rule_boolean_spec.rb
+        line: 37
+        source: "      rule { _1 && _2 }.enable :light_bulb\n"
+      - repository: rubygems/rubygems.org
+        revision: 3201f8831866f82eb9acd7f66287a978d0e59079
+        path: app/models/oidc/access_policy.rb
+        line: 69
+        source: Condition.new(_2)
+  Style/IpAddresses:
+    matrix_position: 425
+    sources:
+      rubocop: lib/rubocop/cop/style/ip_addresses.rb
+      rustocop:
+      - crates/rustocop/src/cops/prism/call_conversion_rules.rs
+    manual_review:
+      status: passed
+      notes:
+      - Reviewed RuboCop's lib/rubocop/cop/style/ip_addresses.rb against Rustocop's
+        crates/rustocop/src/cops/prism/call_conversion_rules.rs. RuboCop's StringHelp
+        predicate and Rustocop's ip_addresses inspect static string content for valid
+        IPv4/IPv6 forms, applying the same length/prefix fast guards and case-insensitive
+        AllowedAddresses list.
+      - Both reject interpolated/non-IP strings, report the complete hardcoded string
+        literal with the same message, and leave configuration replacement to the
+        user rather than autocorrecting.
+    upstream_tests:
+      status: passed
+      passed: 14
+      total: 14
+      corrections: true
+    edge_cases:
+    - id: upstream_1_rubocop_cop_style_ipaddresses_does_not_register_an_offense_on_an
+      description: RuboCop::Cop::Style::IpAddresses does not register an offense on
+        an empty string
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+        Style/IpAddresses:
+          AllowedAddresses:
+          - "::"
+          Exclude:
+          - "/Users/nicco/work/rustocop/**/*.gemfile"
+          - "/Users/nicco/work/rustocop/**/Gemfile"
+          - "/Users/nicco/work/rustocop/**/gems.rb"
+          - "/Users/nicco/work/rustocop/**/*.gemspec"
+      source: "''"
+    - id: upstream_2_rubocop_cop_style_ipaddresses_ipv6_the_unspecified_address_short
+      description: 'RuboCop::Cop::Style::IpAddresses IPv6 the unspecified address
+        :: (short-form of 0:0:0:0:0:0:0:0) when it is removed from the allowed addresses
+        registers an offense'
+      path: "(string)"
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+        Style/IpAddresses:
+          AllowedAddresses: []
+          Exclude:
+          - "/Users/nicco/work/rustocop/**/*.gemfile"
+          - "/Users/nicco/work/rustocop/**/Gemfile"
+          - "/Users/nicco/work/rustocop/**/gems.rb"
+          - "/Users/nicco/work/rustocop/**/*.gemspec"
+      source: "'::'\n"
+    - id: upstream_3_rubocop_cop_style_ipaddresses_with_allowed_addresses_does_not_re
+      description: RuboCop::Cop::Style::IpAddresses with allowed addresses does not
+        register an offense for an allowed address
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+        Style/IpAddresses:
+          AllowedAddresses:
+          - a::b
+          Exclude:
+          - "/Users/nicco/work/rustocop/**/*.gemfile"
+          - "/Users/nicco/work/rustocop/**/Gemfile"
+          - "/Users/nicco/work/rustocop/**/gems.rb"
+          - "/Users/nicco/work/rustocop/**/*.gemspec"
+      source: '"a::b"'
+    - id: upstream_4_rubocop_cop_style_ipaddresses_ipv6_the_unspecified_address_short
+      description: 'RuboCop::Cop::Style::IpAddresses IPv6 the unspecified address
+        :: (short-form of 0:0:0:0:0:0:0:0) does not register an offense'
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+        Style/IpAddresses:
+          AllowedAddresses:
+          - "::"
+          Exclude:
+          - "/Users/nicco/work/rustocop/**/*.gemfile"
+          - "/Users/nicco/work/rustocop/**/Gemfile"
+          - "/Users/nicco/work/rustocop/**/gems.rb"
+          - "/Users/nicco/work/rustocop/**/*.gemspec"
+      source: '"::"'
+    real_world:
+      positives:
+      - repository: chatwoot/chatwoot
+        revision: 8d93d69e8e356216e85c28de7c4240e66b8e83fa
+        path: config/initializers/rack_attack.rb
+        line: 29
+        source: default_allowed_ips = ['127.0.0.1', '::1']
+      - repository: gitlabhq/gitlabhq
+        revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+        path: qa/gems/gitlab-orchestrator/lib/gitlab/orchestrator/lib/deployment/services/garage.rb
+        line: 213
+        source: server = TCPServer.new("127.0.0.1", 0)
+      negatives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/ip_addresses_spec.rb
+        line: 6
+        source: "''"
+        config:
+          AllCops:
+            TargetRubyVersion: '2.7'
+          Style/IpAddresses:
+            AllowedAddresses:
+            - "::"
+            Exclude:
+            - "/Users/nicco/work/rustocop/**/*.gemfile"
+            - "/Users/nicco/work/rustocop/**/Gemfile"
+            - "/Users/nicco/work/rustocop/**/gems.rb"
+            - "/Users/nicco/work/rustocop/**/*.gemspec"
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/ip_addresses_spec.rb
+        line: 18
+        source: '"578.194.591.059"'
+        config:
+          AllCops:
+            TargetRubyVersion: '2.7'
+          Style/IpAddresses:
+            AllowedAddresses:
+            - "::"
+            Exclude:
+            - "/Users/nicco/work/rustocop/**/*.gemfile"
+            - "/Users/nicco/work/rustocop/**/Gemfile"
+            - "/Users/nicco/work/rustocop/**/gems.rb"
+            - "/Users/nicco/work/rustocop/**/*.gemspec"
+  Style/InvertibleUnlessCondition:
+    matrix_position: 424
+    sources:
+      rubocop: lib/rubocop/cop/style/invertible_unless_condition.rb
+      rustocop:
+      - crates/rustocop/src/cops/prism/invertible_unless_condition_rules.rs
+    manual_review:
+      status: passed
+      notes:
+      - Reviewed RuboCop's lib/rubocop/cop/style/invertible_unless_condition.rb against
+        Rustocop's crates/rustocop/src/cops/prism/invertible_unless_condition_rules.rs.
+        RuboCop's on_if and Rustocop's on_unless target unless conditions that have
+        a configured inverse method, a directly invertible comparison, or a logical
+        expression whose operands can be inverted.
+      - Both preserve inheritance-check exclusions and safe-navigation constraints,
+        use the InverseMethods mapping, replace unless with if, and rewrite the condition
+        with matching parentheses and operator precedence.
+    upstream_tests:
+      status: passed
+      passed: 15
+      total: 15
+      corrections: true
+    edge_cases:
+    - id: upstream_1_rubocop_cop_style_invertibleunlesscondition_when_invertible_unle
+      description: RuboCop::Cop::Style::InvertibleUnlessCondition when invertible
+        `unless` registers an offense and corrects when using complex condition
+      path: "(string)"
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+        Style/InvertibleUnlessCondition:
+          InverseMethods:
+            "!=": "=="
+            even?: odd?
+            odd?: even?
+            ">=": "<"
+            "<": ">="
+            zero?: nonzero?
+            include?: exclude?
+            exclude?: include?
+      source: 'foo unless x != y && (((x.odd?) || (((y >= 5)))) || z.zero?)
+
+        '
+    - id: upstream_2_rubocop_cop_style_invertibleunlesscondition_when_invertible_unle
+      description: RuboCop::Cop::Style::InvertibleUnlessCondition when invertible
+        `unless` registers an offense and corrects when using method condition with
+        arguments
+      path: "(string)"
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+        Style/InvertibleUnlessCondition:
+          InverseMethods:
+            "!=": "=="
+            even?: odd?
+            odd?: even?
+            ">=": "<"
+            "<": ">="
+            zero?: nonzero?
+            include?: exclude?
+            exclude?: include?
+      source: |
+        foo unless array.include?(value)
+        foo unless array.exclude? value # no parentheses
+    - id: upstream_3_rubocop_cop_style_invertibleunlesscondition_does_not_register_an
+      description: RuboCop::Cop::Style::InvertibleUnlessCondition does not register
+        an offense when using explicit begin condition
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+        Style/InvertibleUnlessCondition:
+          InverseMethods:
+            "!=": "=="
+            even?: odd?
+            odd?: even?
+            ">=": "<"
+            "<": ">="
+            zero?: nonzero?
+            include?: exclude?
+            exclude?: include?
+      source: 'foo unless begin x != y end
+
+        '
+    - id: upstream_4_rubocop_cop_style_invertibleunlesscondition_does_not_register_an
+      description: RuboCop::Cop::Style::InvertibleUnlessCondition does not register
+        an offense when using invertible `if`
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+        Style/InvertibleUnlessCondition:
+          InverseMethods:
+            "!=": "=="
+            even?: odd?
+            odd?: even?
+            ">=": "<"
+            "<": ">="
+            zero?: nonzero?
+            include?: exclude?
+            exclude?: include?
+      source: 'foo if !condition
+
+        '
+    real_world:
+      positives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/invertible_unless_condition_spec.rb
+        line: 94
+        source: 'foo unless odd?
+
+          '
+        config:
+          AllCops:
+            TargetRubyVersion: '2.7'
+          Style/InvertibleUnlessCondition:
+            InverseMethods:
+              "!=": "=="
+              even?: odd?
+              odd?: even?
+              ">=": "<"
+              "<": ">="
+              zero?: nonzero?
+              include?: exclude?
+              exclude?: include?
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/invertible_unless_condition_spec.rb
+        line: 105
+        source: 'foo unless include?(value)
+
+          '
+        config:
+          AllCops:
+            TargetRubyVersion: '2.7'
+          Style/InvertibleUnlessCondition:
+            InverseMethods:
+              "!=": "=="
+              even?: odd?
+              odd?: even?
+              ">=": "<"
+              "<": ">="
+              zero?: nonzero?
+              include?: exclude?
+              exclude?: include?
+      negatives:
+      - repository: chatwoot/chatwoot
+        revision: 8d93d69e8e356216e85c28de7c4240e66b8e83fa
+        path: app/builders/messages/facebook/message_builder.rb
+        line: 104
+        source: return :fallback if [:share, :post].include?(type.to_sym)
+      - repository: chatwoot/chatwoot
+        revision: 8d93d69e8e356216e85c28de7c4240e66b8e83fa
+        path: app/builders/messages/message_builder.rb
+        line: 137
+        source: return if @params[:sender_type] != 'AgentBot'
+  Style/InverseMethods:
+    matrix_position: 423
+    sources:
+      rubocop: lib/rubocop/cop/style/inverse_methods.rb
+      rustocop:
+      - crates/rustocop/src/cops/prism/inverse_methods_rules.rs
+    manual_review:
+      status: passed
+      notes:
+      - Reviewed RuboCop's lib/rubocop/cop/style/inverse_methods.rb against Rustocop's
+        crates/rustocop/src/cops/prism/inverse_methods_rules.rs. RuboCop's on_send/on_block
+        and Rustocop's matching callbacks detect negated configured inverse methods
+        and inverse predicate blocks while excluding safe-navigation incompatibilities
+        and possible class-hierarchy checks.
+      - Rustocop mirrors receiver-parenthesis cleanup, dot/range selection, configured
+        bidirectional maps, message text, and correction edits for both !receiver.method
+        and none?/any?-style block inversions.
+    upstream_tests:
+      status: passed
+      passed: 110
+      total: 110
+      corrections: true
+    edge_cases:
+    - id: upstream_1_rubocop_cop_style_inversemethods_allows_an_inverse_method_in_a_b
+      description: RuboCop::Cop::Style::InverseMethods allows an inverse method in
+        a block with next
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+        Style/InverseMethods:
+          InverseMethods:
+            any?: none?
+            even?: odd?
+            present?: blank?
+            include?: exclude?
+            "==": "!="
+            "=~": "!~"
+            "<": ">="
+            ">": "<="
+          InverseBlocks:
+            select: reject
+            select!: reject!
+      source: |
+        class TestClass
+          def test_method
+            [1, 2, 3, 4].select do |number|
+              next if number == 4
+
+              number != 2
+            end
+          end
+        end
+    - id: upstream_2_rubocop_cop_style_inversemethods_ruby_3_4_registers_an_offense_f
+      description: RuboCop::Cop::Style::InverseMethods Ruby 3.4 registers an offense
+        for calling !.none? with an itblock
+      path: "(string)"
+      config:
+        AllCops:
+          TargetRubyVersion: '3.4'
+        Style/InverseMethods:
+          InverseMethods:
+            any?: none?
+            even?: odd?
+            present?: blank?
+            include?: exclude?
+            "==": "!="
+            "=~": "!~"
+            "<": ">="
+            ">": "<="
+          InverseBlocks:
+            select: reject
+            select!: reject!
+      source: "!foo.none? { it.even? }\n"
+    - id: upstream_3_rubocop_cop_style_inversemethods_inverse_blocks_registers_an_off
+      description: RuboCop::Cop::Style::InverseMethods inverse blocks registers an
+        offense for a multiline safe navigation method call where the last method
+        is inverted
+      path: "(string)"
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+        Style/InverseMethods:
+          InverseMethods:
+            any?: none?
+            even?: odd?
+            present?: blank?
+            include?: exclude?
+            "==": "!="
+            "=~": "!~"
+            "<": ">="
+            ">": "<="
+          InverseBlocks:
+            select: reject
+            select!: reject!
+      source: |
+        foo&.reject do |e|
+          something
+          e&.bar&.!
+        end
+    - id: upstream_4_rubocop_cop_style_inversemethods_behaves_like_all_variable_types
+      description: RuboCop::Cop::Style::InverseMethods behaves like all variable types
+        registers an offense for calling not FOO::BAR.none?
+      path: "(string)"
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+        Style/InverseMethods:
+          InverseMethods:
+            any?: none?
+            even?: odd?
+            present?: blank?
+            include?: exclude?
+            "==": "!="
+            "=~": "!~"
+            "<": ">="
+            ">": "<="
+          InverseBlocks:
+            select: reject
+            select!: reject!
+      source: 'not FOO::BAR.none?
+
+        '
+    real_world:
+      positives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/inverse_methods_spec.rb
+        line: 25
+        source: "!foo.none?(&:even?)\n"
+        config:
+          AllCops:
+            TargetRubyVersion: '2.7'
+          Style/InverseMethods:
+            InverseMethods:
+              any?: none?
+              even?: odd?
+              present?: blank?
+              include?: exclude?
+              "==": "!="
+              "=~": "!~"
+              "<": ">="
+              ">": "<="
+            InverseBlocks:
+              select: reject
+              select!: reject!
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/inverse_methods_spec.rb
+        line: 42
+        source: "!foo.none? { |f| f.even? }\n"
+        config:
+          AllCops:
+            TargetRubyVersion: '2.7'
+          Style/InverseMethods:
+            InverseMethods:
+              any?: none?
+              even?: odd?
+              present?: blank?
+              include?: exclude?
+              "==": "!="
+              "=~": "!~"
+              "<": ">="
+              ">": "<="
+            InverseBlocks:
+              select: reject
+              select!: reject!
+      negatives:
+      - repository: chatwoot/chatwoot
+        revision: 8d93d69e8e356216e85c28de7c4240e66b8e83fa
+        path: app/actions/contact_identify_action.rb
+        line: 119
+        source: return base_contact if base_contact.id == merge_contact.id
+      - repository: chatwoot/chatwoot
+        revision: 8d93d69e8e356216e85c28de7c4240e66b8e83fa
+        path: app/actions/contact_merge_action.rb
+        line: 30
+        source: "@account.id == contact.account_id"
+  Style/InlineComment:
+    matrix_position: 422
+    sources:
+      rubocop: lib/rubocop/cop/style/inline_comment.rb
+      rustocop:
+      - crates/rustocop/src/cops/text/lint.rs
+      - crates/rustocop/src/cops/text/mod.rs
+    manual_review:
+      status: passed
+      notes:
+      - Reviewed RuboCop's lib/rubocop/cop/style/inline_comment.rb against Rustocop's
+        crates/rustocop/src/cops/text/lint.rs, crates/rustocop/src/cops/text/mod.rs.
+        RuboCop's on_new_investigation comment walk and Rustocop's text pass both
+        report comments that follow code on the same physical line while accepting
+        standalone comments.
+      - Both exempt rubocop enable/disable directives, report the comment range with
+        the same non-correctable message, and leave source unchanged under autocorrection.
+    upstream_tests:
+      status: passed
+      passed: 3
+      total: 3
+      corrections: true
+    edge_cases:
+    - id: upstream_1_rubocop_cop_style_inlinecomment_registers_an_offense_for_a_trail
+      description: RuboCop::Cop::Style::InlineComment registers an offense for a trailing
+        inline comment
+      path: "(string)"
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+      source: 'two = 1 + 1 # A trailing inline comment
+
+        '
+    - id: upstream_2_rubocop_cop_style_inlinecomment_does_not_register_an_offense_for
+      description: RuboCop::Cop::Style::InlineComment does not register an offense
+        for special rubocop inline comments
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+      source: 'two = 1 + 1 # rubocop:disable Layout/ExtraSpacing
+
+        '
+    - id: upstream_3_rubocop_cop_style_inlinecomment_does_not_register_an_offense_for
+      description: RuboCop::Cop::Style::InlineComment does not register an offense
+        for a standalone comment
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: '2.7'
+      source: "# A standalone comment"
+    - id: manual_standalone_comment_after_code_line
+      description: A standalone comment following a code line remains accepted.
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+      source: |
+        value = 1
+        # Explanation of value
+    real_world:
+      positives:
+      - repository: chatwoot/chatwoot
+        revision: 8d93d69e8e356216e85c28de7c4240e66b8e83fa
+        path: app/services/crm/leadsquared/processor_service.rb
+        line: 142
+        source: "    contact.reload # reload to ensure all the attributes are up-to-date\n"
+      - repository: chatwoot/chatwoot
+        revision: 8d93d69e8e356216e85c28de7c4240e66b8e83fa
+        path: app/services/mailbox/conversation_finder_strategies/references_strategy.rb
+        line: 22
+        source: "    return nil unless @channel # No valid channel found\n"
+      negatives:
+      - repository: gitlabhq/gitlabhq
+        revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+        path: app/graphql/types/user_merge_request_interaction_type.rb
+        line: 9
+        source: |2+
+              description <<~MD
+                Information about a merge request given a specific user.
+
+                This object has two parts to its state: a `User` and a `MergeRequest`. All
+                fields relate to interactions between the two entities.
+              MD
+
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/inline_comment_spec.rb
+        line: 11
+        source: 'two = 1 + 1 # rubocop:disable Layout/ExtraSpacing
+
+          '
+        config:
+          AllCops:
+            TargetRubyVersion: '2.7'
+...

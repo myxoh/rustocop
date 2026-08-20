@@ -6,10 +6,10 @@ the authoritative records in `qualification/work/`.
 ## References
 
 - RuboCop 1.87.0: `e5b788dba181ad94de30cfbad661c5d6aa08a4e5`
-- Current native Rust source: `b56ffcb3840742b3c6845860b50b18c7f81d8b69`
-- Complete five-check records: 155 / 606
-- Currently qualified: 138 / 606 (22.8%)
-- Complete records requiring revalidation: 17
+- Current native Rust source: `01196d5f11cb10acd9701db86e87d8c3d7dd9dbb`
+- Complete five-check records: 185 / 606
+- Currently qualified: 167 / 606 (27.6%)
+- Complete records requiring revalidation: 18
 
 ## By department
 
@@ -23,18 +23,19 @@ the authoritative records in `qualification/work/`.
 | `Migration` | 0 / 1 | 0 | 0 |
 | `Naming` | 0 / 19 | 0 | 0 |
 | `Security` | 0 / 7 | 0 | 0 |
-| `Style` | 138 / 298 | 155 | 17 |
+| `Style` | 167 / 298 | 185 | 18 |
 
 ## By batch
 
 | Batch | Matrix positions | Complete evidence | Source current | Qualified | Reviewed Rust SHA |
 | --- | ---: | ---: | ---: | ---: | --- |
-| `style_reverse_cops` | 606–547 | 60 / 60 | 43 / 60 | 43 / 60 | `f320e68d` |
+| `style_reverse_cops` | 606–547 | 60 / 60 | 42 / 60 | 42 / 60 | `f320e68d` |
 | `style_reverse_next_15` | 546–532 | 15 / 15 | 15 / 15 | 15 / 15 | `27e699e3` |
 | `style_reverse_next_10` | 531–522 | 10 / 10 | 10 / 10 | 10 / 10 | `2b574f74` |
 | `style_reverse_521_512` | 521–512 | 10 / 10 | 10 / 10 | 10 / 10 | `4dd1fb43` |
 | `style_reverse_511_482` | 511–482 | 30 / 30 | 30 / 30 | 30 / 30 | `26f91bc5` |
 | `style_reverse_481_452` | 481–452 | 30 / 30 | 30 / 30 | 30 / 30 | `b56ffcb3` |
+| `style_reverse_451_422` | 451–422 | 30 / 30 | 30 / 30 | 30 / 30 | `01196d5f` |
 
 ## Records requiring revalidation
 
@@ -43,6 +44,7 @@ the authoritative records in `qualification/work/`.
 | 606 | `Style/ZeroLengthPredicate` | `style_reverse_cops` | `f320e68d` | `crates/rustocop/src/cops/prism/modern_collection_completion.rs` |
 | 603 | `Style/YAMLFileRead` | `style_reverse_cops` | `f320e68d` | `crates/rustocop/src/cops/prism/argument_and_inheritance_rules.rs` |
 | 602 | `Style/WordArray` | `style_reverse_cops` | `f320e68d` | `crates/rustocop/src/cops/prism/literal_string_completion_batch.rs` |
+| 601 | `Style/WhileUntilModifier` | `style_reverse_cops` | `f320e68d` | `crates/rustocop/src/cops/prism/compact_syntax_completion.rs` |
 | 582 | `Style/TallyMethod` | `style_reverse_cops` | `f320e68d` | `crates/rustocop/src/cops/prism/modern_collection_completion.rs` |
 | 579 | `Style/SymbolArray` | `style_reverse_cops` | `f320e68d` | `crates/rustocop/src/cops/prism/literal_string_completion_batch.rs` |
 | 571 | `Style/StringLiterals` | `style_reverse_cops` | `f320e68d` | `crates/rustocop/src/cops/prism/string_conversion_rules.rs`<br>`crates/rustocop/src/cops/text/mod.rs`<br>`crates/rustocop/src/cops/text/style_declarations.rs` |
@@ -71,7 +73,7 @@ complete and its Rust source still matches the reviewed SHA.
 | 604 | `Style/YodaCondition` | ✓ | ✓ | ✓ | ✓ | ✓ | Current | ✓ | `style_reverse_cops` | `f320e68d` |
 | 603 | `Style/YAMLFileRead` | ✓ | ✓ | ✓ | ✓ | ✓ | **Stale** | — | `style_reverse_cops` | `f320e68d` |
 | 602 | `Style/WordArray` | ✓ | ✓ | ✓ | ✓ | ✓ | **Stale** | — | `style_reverse_cops` | `f320e68d` |
-| 601 | `Style/WhileUntilModifier` | ✓ | ✓ | ✓ | ✓ | ✓ | Current | ✓ | `style_reverse_cops` | `f320e68d` |
+| 601 | `Style/WhileUntilModifier` | ✓ | ✓ | ✓ | ✓ | ✓ | **Stale** | — | `style_reverse_cops` | `f320e68d` |
 | 600 | `Style/WhileUntilDo` | ✓ | ✓ | ✓ | ✓ | ✓ | Current | ✓ | `style_reverse_cops` | `f320e68d` |
 | 599 | `Style/WhenThen` | ✓ | ✓ | ✓ | ✓ | ✓ | Current | ✓ | `style_reverse_cops` | `f320e68d` |
 | 598 | `Style/VariableInterpolation` | ✓ | ✓ | ✓ | ✓ | ✓ | Current | ✓ | `style_reverse_cops` | `f320e68d` |
@@ -221,3 +223,33 @@ complete and its Rust source still matches the reviewed SHA.
 | 454 | `Style/MultilineInPatternThen` | ✓ | ✓ | ✓ | ✓ | ✓ | Current | ✓ | `style_reverse_481_452` | `b56ffcb3` |
 | 453 | `Style/MultilineIfThen` | ✓ | ✓ | ✓ | ✓ | ✓ | Current | ✓ | `style_reverse_481_452` | `b56ffcb3` |
 | 452 | `Style/MultilineIfModifier` | ✓ | ✓ | ✓ | ✓ | ✓ | Current | ✓ | `style_reverse_481_452` | `b56ffcb3` |
+| 451 | `Style/MultilineBlockChain` | ✓ | ✓ | ✓ | ✓ | ✓ | Current | ✓ | `style_reverse_451_422` | `01196d5f` |
+| 450 | `Style/ModuleMemberExistenceCheck` | ✓ | ✓ | ✓ | ✓ | ✓ | Current | ✓ | `style_reverse_451_422` | `01196d5f` |
+| 449 | `Style/ModuleFunction` | ✓ | ✓ | ✓ | ✓ | ✓ | Current | ✓ | `style_reverse_451_422` | `01196d5f` |
+| 448 | `Style/MixinUsage` | ✓ | ✓ | ✓ | ✓ | ✓ | Current | ✓ | `style_reverse_451_422` | `01196d5f` |
+| 447 | `Style/MixinGrouping` | ✓ | ✓ | ✓ | ✓ | ✓ | Current | ✓ | `style_reverse_451_422` | `01196d5f` |
+| 446 | `Style/MissingRespondToMissing` | ✓ | ✓ | ✓ | ✓ | ✓ | Current | ✓ | `style_reverse_451_422` | `01196d5f` |
+| 445 | `Style/MissingElse` | ✓ | ✓ | ✓ | ✓ | ✓ | Current | ✓ | `style_reverse_451_422` | `01196d5f` |
+| 444 | `Style/MinMaxComparison` | ✓ | ✓ | ✓ | ✓ | ✓ | Current | ✓ | `style_reverse_451_422` | `01196d5f` |
+| 443 | `Style/MinMax` | ✓ | ✓ | ✓ | ✓ | ✓ | Current | ✓ | `style_reverse_451_422` | `01196d5f` |
+| 442 | `Style/MethodDefParentheses` | ✓ | ✓ | ✓ | ✓ | ✓ | Current | ✓ | `style_reverse_451_422` | `01196d5f` |
+| 441 | `Style/MethodCalledOnDoEndBlock` | ✓ | ✓ | ✓ | ✓ | ✓ | Current | ✓ | `style_reverse_451_422` | `01196d5f` |
+| 440 | `Style/MethodCallWithoutArgsParentheses` | ✓ | ✓ | ✓ | ✓ | ✓ | Current | ✓ | `style_reverse_451_422` | `01196d5f` |
+| 439 | `Style/MethodCallWithArgsParentheses` | ✓ | ✓ | ✓ | ✓ | ✓ | Current | ✓ | `style_reverse_451_422` | `01196d5f` |
+| 438 | `Style/MapToSet` | ✓ | ✓ | ✓ | ✓ | ✓ | Current | ✓ | `style_reverse_451_422` | `01196d5f` |
+| 437 | `Style/MapToHash` | ✓ | ✓ | ✓ | ✓ | ✓ | Current | ✓ | `style_reverse_451_422` | `01196d5f` |
+| 436 | `Style/MapJoin` | ✓ | ✓ | ✓ | ✓ | ✓ | Current | ✓ | `style_reverse_451_422` | `01196d5f` |
+| 435 | `Style/MapIntoArray` | ✓ | ✓ | ✓ | ✓ | ✓ | Current | ✓ | `style_reverse_451_422` | `01196d5f` |
+| 434 | `Style/MapCompactWithConditionalBlock` | ✓ | ✓ | ✓ | ✓ | ✓ | Current | ✓ | `style_reverse_451_422` | `01196d5f` |
+| 433 | `Style/MagicCommentFormat` | ✓ | ✓ | ✓ | ✓ | ✓ | Current | ✓ | `style_reverse_451_422` | `01196d5f` |
+| 432 | `Style/LineEndConcatenation` | ✓ | ✓ | ✓ | ✓ | ✓ | Current | ✓ | `style_reverse_451_422` | `01196d5f` |
+| 431 | `Style/LambdaCall` | ✓ | ✓ | ✓ | ✓ | ✓ | Current | ✓ | `style_reverse_451_422` | `01196d5f` |
+| 430 | `Style/Lambda` | ✓ | ✓ | ✓ | ✓ | ✓ | Current | ✓ | `style_reverse_451_422` | `01196d5f` |
+| 429 | `Style/KeywordParametersOrder` | ✓ | ✓ | ✓ | ✓ | ✓ | Current | ✓ | `style_reverse_451_422` | `01196d5f` |
+| 428 | `Style/KeywordArgumentsMerging` | ✓ | ✓ | ✓ | ✓ | ✓ | Current | ✓ | `style_reverse_451_422` | `01196d5f` |
+| 427 | `Style/ItBlockParameter` | ✓ | ✓ | ✓ | ✓ | ✓ | Current | ✓ | `style_reverse_451_422` | `01196d5f` |
+| 426 | `Style/ItAssignment` | ✓ | ✓ | ✓ | ✓ | ✓ | Current | ✓ | `style_reverse_451_422` | `01196d5f` |
+| 425 | `Style/IpAddresses` | ✓ | ✓ | ✓ | ✓ | ✓ | Current | ✓ | `style_reverse_451_422` | `01196d5f` |
+| 424 | `Style/InvertibleUnlessCondition` | ✓ | ✓ | ✓ | ✓ | ✓ | Current | ✓ | `style_reverse_451_422` | `01196d5f` |
+| 423 | `Style/InverseMethods` | ✓ | ✓ | ✓ | ✓ | ✓ | Current | ✓ | `style_reverse_451_422` | `01196d5f` |
+| 422 | `Style/InlineComment` | ✓ | ✓ | ✓ | ✓ | ✓ | Current | ✓ | `style_reverse_451_422` | `01196d5f` |
