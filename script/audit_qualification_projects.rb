@@ -7,9 +7,11 @@ require "open3"
 require "optparse"
 require "pathname"
 require "rbconfig"
-require "rubocop"
 require "time"
 require_relative "../lib/rustocop/qualification_batch"
+
+gem "rubocop", "=#{Rustocop::QualificationBatch::RUBOCOP_VERSION}"
+require "rubocop"
 
 ROOT = File.expand_path("..", __dir__)
 DEFAULT_CONFIG = File.join(ROOT, "benchmark/project-rubocop.yml")
@@ -93,7 +95,13 @@ projects = Rustocop::QualificationBatch::PROJECTS.map do |project|
   project.merge("corpus" => corpus)
 end
 
-rubocop = [RbConfig.ruby, Gem.bin_path("rubocop", "rubocop")].freeze
+rubocop_version = RuboCop::Version::STRING
+abort "loaded RuboCop #{rubocop_version}, expected #{Rustocop::QualificationBatch::RUBOCOP_VERSION}" unless
+  rubocop_version == Rustocop::QualificationBatch::RUBOCOP_VERSION
+rubocop = [
+  RbConfig.ruby,
+  Gem.bin_path("rubocop", "rubocop", "=#{Rustocop::QualificationBatch::RUBOCOP_VERSION}")
+].freeze
 
 def capture(command)
   started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
@@ -297,7 +305,7 @@ report = {
   "generated_at" => Time.now.iso8601,
   "rust_commit" => rust_commit,
   "native_sha256" => Digest::SHA256.file(options[:native]).hexdigest,
-  "rubocop_version" => Rustocop::QualificationBatch::RUBOCOP_VERSION,
+  "rubocop_version" => rubocop_version,
   "matrix_start" => positions.min,
   "matrix_end" => positions.max,
   "cops" => cops,
