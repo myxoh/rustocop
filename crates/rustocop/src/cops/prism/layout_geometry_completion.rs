@@ -11,7 +11,7 @@ define_cops! {
     ),
     DefEndAlignment => "Layout/DefEndAlignment" => node(as_def_node, def_end_alignment),
     MultilineMethodArgumentLineBreaks => "Layout/MultilineMethodArgumentLineBreaks" => source(argument_line_breaks),
-    ParameterAlignment => "Layout/ParameterAlignment" => source(parameter_alignment),
+    ParameterAlignment => "Layout/ParameterAlignment" => node(as_def_node, parameter_alignment),
 }
 
 fn parameter_line_breaks(context: &mut CopContext<'_, '_>) {
@@ -206,32 +206,73 @@ fn def_end_alignment(node: &ruby_prism::DefNode<'_>, context: &mut CopContext<'_
     );
 }
 
-fn parameter_alignment(context: &mut CopContext<'_, '_>) {
-    let lines = context.source_file().lines().collect::<Vec<_>>();
-    let mut expected = None;
-    for (offset, line) in lines {
-        if let Some(open) = line
-            .find('(')
-            .filter(|_| line.trim_start().starts_with("def "))
-        {
-            expected = Some(open + 1);
-            continue;
-        }
-        let Some(column) = expected else { continue };
-        if line.contains(')') {
-            expected = None;
-        }
-        if line.trim().is_empty() || line.trim_start().starts_with(')') {
-            continue;
-        }
-        let actual = line.len() - line.trim_start().len();
-        if actual != column {
-            context.replace(
-                "Align the parameters of a method definition if they span more than one line.",
-                offset + actual..offset + actual + 1,
-                offset..offset + actual,
-                " ".repeat(column),
-            );
-        }
+fn parameter_alignment(node: &ruby_prism::DefNode<'_>, context: &mut CopContext<'_, '_>) {
+    let Some(parameters) = node.parameters() else {
+        return;
+    };
+    let parameters = definition_parameter_nodes(&parameters);
+    if parameters.len() < 2 {
+        return;
     }
+
+    let file = context.source_file();
+    let fixed = context.config_value("EnforcedStyle") == Some("with_fixed_indentation");
+    let expected = if fixed {
+        let width = context
+            .config_value("IndentationWidth")
+            .and_then(|value| value.parse::<usize>().ok())
+            .or_else(|| {
+                context
+                    .related_config_value("Layout/IndentationWidth", "Width")
+                    .and_then(|value| value.parse::<usize>().ok())
+            })
+            .unwrap_or(2);
+        file.indentation(node.def_keyword_loc().start_offset()).len() + width
+    } else {
+        file.column(parameters[0].location().start_offset())
+    };
+
+    let mut previous_line_start = usize::MAX;
+    for parameter in parameters {
+        let location = parameter.location();
+        let line_start = file.line_start(location.start_offset());
+        if line_start == previous_line_start {
+            continue;
+        }
+        previous_line_start = line_start;
+        if !context.source()[line_start..location.start_offset()]
+            .trim()
+            .is_empty()
+        {
+            continue;
+        }
+        let actual = file.column(location.start_offset());
+        if actual == expected {
+            continue;
+        }
+        let message = if fixed {
+            "Use one level of indentation for parameters following the first line of a multi-line method definition."
+        } else {
+            "Align the parameters of a method definition if they span more than one line."
+        };
+        context.replace(
+            message,
+            &location,
+            line_start..location.start_offset(),
+            " ".repeat(expected),
+        );
+    }
+}
+
+fn definition_parameter_nodes<'pr>(
+    parameters: &ruby_prism::ParametersNode<'pr>,
+) -> Vec<Node<'pr>> {
+    let mut result = parameters.requireds().iter().collect::<Vec<_>>();
+    result.extend(parameters.optionals().iter());
+    result.extend(parameters.rest());
+    result.extend(parameters.posts().iter());
+    result.extend(parameters.keywords().iter());
+    result.extend(parameters.keyword_rest());
+    result.extend(parameters.block().map(|block| block.as_node()));
+    result
 }

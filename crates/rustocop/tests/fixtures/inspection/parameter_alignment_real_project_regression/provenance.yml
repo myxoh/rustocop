@@ -1,0 +1,8 @@
+repository: gitlabhq/gitlabhq
+revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+path: cells-mailroom/lib/cells/mailroom/processor.rb
+source_lines: 27-35
+pathological_controls:
+  - commas in a multi-line method body are not parameters
+  - multiple parameters on the same line do not require alignment
+  - an already aligned continuation parameter remains unchanged

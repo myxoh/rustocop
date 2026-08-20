@@ -119,6 +119,15 @@ fixture_test!(
 );
 
 fixture_test!(
+    aligns_only_parameters_that_begin_new_lines,
+    "parameter_alignment_real_project_regression",
+    "/project/cells-mailroom/lib/cells/mailroom/processor.rb",
+    "Layout/ParameterAlignment",
+    true,
+    RubyVersion::default()
+);
+
+fixture_test!(
     accepts_multibyte_offsets_at_node_ends,
     "unicode_node_end_real_project_regression",
     "/project/activerecord/test/cases/base_test.rb",
