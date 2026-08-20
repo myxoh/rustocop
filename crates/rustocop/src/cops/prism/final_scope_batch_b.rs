@@ -16,7 +16,6 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
         custom("Lint/UselessAssignment", useless_assignment),
         Box::new(SelfAssignment),
         custom("Naming/MethodName", method_name),
-        custom("Style/MutableConstant", mutable_constant),
         custom("Naming/PredicateMethod", predicate_method),
     ]
 }
@@ -42,30 +41,31 @@ impl Cop for SelfAssignment {
         source: &str,
         context: &mut Context,
     ) {
-        let (name, operator, value, variable) = if let Some(write) = node.as_local_variable_write_node() {
-            (
-                write.name().as_slice(),
-                write.operator_loc(),
-                write.value(),
-                SelfAssignmentVariable::Local,
-            )
-        } else if let Some(write) = node.as_instance_variable_write_node() {
-            (
-                write.name().as_slice(),
-                write.operator_loc(),
-                write.value(),
-                SelfAssignmentVariable::Instance,
-            )
-        } else if let Some(write) = node.as_class_variable_write_node() {
-            (
-                write.name().as_slice(),
-                write.operator_loc(),
-                write.value(),
-                SelfAssignmentVariable::Class,
-            )
-        } else {
-            return;
-        };
+        let (name, operator, value, variable) =
+            if let Some(write) = node.as_local_variable_write_node() {
+                (
+                    write.name().as_slice(),
+                    write.operator_loc(),
+                    write.value(),
+                    SelfAssignmentVariable::Local,
+                )
+            } else if let Some(write) = node.as_instance_variable_write_node() {
+                (
+                    write.name().as_slice(),
+                    write.operator_loc(),
+                    write.value(),
+                    SelfAssignmentVariable::Instance,
+                )
+            } else if let Some(write) = node.as_class_variable_write_node() {
+                (
+                    write.name().as_slice(),
+                    write.operator_loc(),
+                    write.value(),
+                    SelfAssignmentVariable::Class,
+                )
+            } else {
+                return;
+            };
 
         let Some((shorthand, new_rhs)) = self_assignment_rhs(&value, name, variable) else {
             return;
@@ -75,7 +75,10 @@ impl Cop for SelfAssignment {
             format!("Use self-assignment shorthand `{shorthand}=`."),
             node.location(),
             vec![
-                (operator.start_offset()..operator.start_offset(), shorthand.to_string()),
+                (
+                    operator.start_offset()..operator.start_offset(),
+                    shorthand.to_string(),
+                ),
                 (
                     value.location().start_offset()..value.location().end_offset(),
                     source_at(source, &new_rhs.location()).to_string(),
@@ -104,9 +107,9 @@ fn self_assignment_rhs<'pr>(
             (b"|", "|"),
             (b"&", "&"),
         ];
-        let shorthand = OPERATORS
-            .iter()
-            .find_map(|(method, shorthand)| (call.name().as_slice() == *method).then_some(*shorthand))?;
+        let shorthand = OPERATORS.iter().find_map(|(method, shorthand)| {
+            (call.name().as_slice() == *method).then_some(*shorthand)
+        })?;
         let receiver = call.receiver()?;
         if !same_assignment_variable(&receiver, name, variable) {
             return None;
@@ -337,37 +340,6 @@ fn method_name(context: &mut CopContext<'_, '_>) {
             context.report(
                 "Use snake_case for method names.",
                 start..start + name.len(),
-            );
-        }
-    }
-}
-
-fn mutable_constant(context: &mut CopContext<'_, '_>) {
-    if context.source().contains("shareable_constant_value")
-        || context.source().contains("frozen_string_literal: true")
-    {
-        return;
-    }
-    for (offset, line) in context.source_file().lines() {
-        let Some((name, value)) = line.split_once(" = ") else {
-            continue;
-        };
-        let name = name.trim();
-        if name
-            .bytes()
-            .all(|byte| byte.is_ascii_uppercase() || byte == b'_')
-            && value.trim_start().starts_with(['[', '{', '"', '\''])
-            && !value.contains(".freeze")
-            && !value.contains(" + ")
-            && !value.contains(".count")
-            && !value.contains(".length")
-            && !value.contains(".size")
-        {
-            context.insert(
-                "Freeze mutable objects assigned to constants.",
-                offset..offset + line.len(),
-                offset + line.len(),
-                ".freeze",
             );
         }
     }

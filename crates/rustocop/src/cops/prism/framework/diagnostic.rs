@@ -214,6 +214,7 @@ impl Context {
                 self.corrections.push(Correction {
                     finding_index,
                     edits,
+                    indirect: !correctable,
                 });
             }
         }
@@ -235,6 +236,27 @@ impl Context {
                 range: edit.offsets(),
                 replacement: replacement.into(),
             }]),
+            false,
+        );
+    }
+
+    fn replace_many_indirectly(
+        &mut self,
+        cop_name: &'static str,
+        message: impl Into<String>,
+        offense: impl ByteRange,
+        edits: Vec<(Range<usize>, String)>,
+    ) {
+        self.record_with_correctability(
+            cop_name,
+            message.into(),
+            offense.offsets(),
+            Some(
+                edits
+                    .into_iter()
+                    .map(|(range, replacement)| Edit { range, replacement })
+                    .collect(),
+            ),
             false,
         );
     }

@@ -9,7 +9,6 @@ define_cops! {
     SafeNavigationChain => "Lint/SafeNavigationChain" => source(safe_navigation_chain),
     BlockDelimiters => "Style/BlockDelimiters" => source(block_delimiters),
     RedundantSafeNavigation => "Lint/RedundantSafeNavigation" => source(redundant_safe_navigation),
-    Next => "Style/Next" => source(next_in_loop),
     AndOr => "Style/AndOr" => source(and_or),
     UselessOr => "Lint/UselessOr" => source(useless_or),
 }
@@ -146,39 +145,9 @@ fn block_delimiters(context: &mut CopContext<'_, '_>) {
 }
 
 fn redundant_safe_navigation(context: &mut CopContext<'_, '_>) {
-    context.replace_code(
-        "self&.",
-        "self.",
-        "Redundant safe navigation detected.",
-    );
-    context.replace_code(
-        "[]&.",
-        "[].",
-        "Redundant safe navigation detected.",
-    );
-    context.replace_code(
-        "{}&.",
-        "{}.",
-        "Redundant safe navigation detected.",
-    );
-}
-
-fn next_in_loop(context: &mut CopContext<'_, '_>) {
-    let lines = context.source_file().lines().collect::<Vec<_>>();
-    for window in lines.windows(3) {
-        let condition = window[0].1.trim_start().strip_prefix("if ");
-        if let Some(condition) = condition {
-            if window[2].1.trim() == "end" && !window[1].1.trim().is_empty() {
-                let indent = window[0].1.len() - window[0].1.trim_start().len();
-                context.replace(
-                    "Use `next` to skip iteration.",
-                    window[0].0 + indent..window[2].0 + window[2].1.len(),
-                    window[0].0 + indent..window[2].0 + window[2].1.len(),
-                    format!("next unless {condition}\n{}", window[1].1),
-                );
-            }
-        }
-    }
+    context.replace_code("self&.", "self.", "Redundant safe navigation detected.");
+    context.replace_code("[]&.", "[].", "Redundant safe navigation detected.");
+    context.replace_code("{}&.", "{}.", "Redundant safe navigation detected.");
 }
 
 fn and_or(context: &mut CopContext<'_, '_>) {

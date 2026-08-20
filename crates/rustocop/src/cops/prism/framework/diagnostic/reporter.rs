@@ -131,4 +131,14 @@ impl Reporter<'_> {
         self.context
             .replace_indirectly(self.cop_name, message, offense, edit, replacement);
     }
+
+    pub(in super::super) fn replace_many_indirectly(
+        &mut self,
+        message: impl Into<String>,
+        offense: impl ByteRange,
+        edits: Vec<(Range<usize>, String)>,
+    ) {
+        self.context
+            .replace_many_indirectly(self.cop_name, message, offense, edits);
+    }
 }

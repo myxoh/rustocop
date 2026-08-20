@@ -9,6 +9,7 @@ pub(super) struct Edit {
 pub(super) struct Correction {
     pub(super) finding_index: usize,
     pub(super) edits: Vec<Edit>,
+    pub(super) indirect: bool,
 }
 
 pub(super) fn accepted_corrections(
@@ -69,13 +70,18 @@ pub(super) fn accepted_corrections(
                             left.range == right.range && left.replacement == right.replacement
                         })
             });
-            if duplicates_accepted
-                || correction.edits.iter().all(|edit| {
-                    accepted_containers
+            let contained_by_container = correction.edits.iter().all(|edit| {
+                accepted_containers
+                    .iter()
+                    .any(|range| range.start <= edit.range.start && edit.range.end <= range.end)
+            });
+            let indirect_edits_applied_by_parent = correction.indirect
+                && correction.edits.iter().all(|edit| {
+                    accepted_ranges
                         .iter()
                         .any(|range| range.start <= edit.range.start && edit.range.end <= range.end)
-                })
-            {
+                });
+            if duplicates_accepted || contained_by_container || indirect_edits_applied_by_parent {
                 subsumed.push(correction.finding_index);
             }
             continue;

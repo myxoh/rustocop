@@ -169,6 +169,16 @@ impl<'context, 'pr> CopContext<'context, 'pr> {
             .replace_indirectly(message, offense, edit, replacement);
     }
 
+    pub(super) fn apply_correction_indirectly(
+        &mut self,
+        message: impl Into<String>,
+        offense: impl ByteRange,
+        correction: CorrectionPlan,
+    ) {
+        self.reporter
+            .replace_many_indirectly(message, offense, correction.into_edits());
+    }
+
     /// Applies several coordinated edits as one correction transaction.
     /// Conflicts or invalid ranges reject the complete transaction.
     pub(super) fn replace_many(

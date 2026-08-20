@@ -7,7 +7,6 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
     let mut cops = vec![
         custom("Lint/UnreachableLoop", unreachable_loop),
         custom("Style/IdenticalConditionalBranches", identical_branches),
-        custom("Style/NegatedIfElseCondition", negated_if_else),
         custom("Style/InfiniteLoop", infinite_loop),
         report(
             "Style/MapCompactWithConditionalBlock",
@@ -18,30 +17,6 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
     ];
     cops.extend(registry::cops());
     cops
-}
-
-fn negated_if_else(context: &mut CopContext<'_, '_>) {
-    let lines = context.source_file().lines().collect::<Vec<_>>();
-    if !lines.iter().any(|(_, line)| line.trim() == "else")
-        || lines
-            .iter()
-            .any(|(_, line)| line.trim_start().starts_with("elsif "))
-    {
-        return;
-    }
-    for (offset, line) in lines {
-        let condition = line.trim_start();
-        if condition.starts_with("if !")
-            && !condition.starts_with("if !!")
-            && !condition.contains(" && ")
-            && !condition.contains(" || ")
-        {
-            context.report(
-                "Invert the negated condition and swap the branches.",
-                offset..offset + line.len(),
-            );
-        }
-    }
 }
 
 fn unreachable_loop(context: &mut CopContext<'_, '_>) {

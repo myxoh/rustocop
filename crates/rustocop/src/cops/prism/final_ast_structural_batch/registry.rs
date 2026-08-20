@@ -3,12 +3,6 @@ use super::*;
 
 pub(super) fn cops() -> Vec<Box<dyn Cop>> {
     vec![
-        replace(
-            "Style/NegativeArrayIndex",
-            ".fetch(-1)",
-            "[-1]",
-            "Prefer negative array indexing over `fetch`.",
-        ),
         custom("Lint/DuplicateMethods", duplicate_methods),
         custom(
             "Style/AccessModifierDeclarations",
