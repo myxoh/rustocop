@@ -89,7 +89,7 @@ RSpec.describe "cop authoring tools" do
     stdout, stderr, status = run_script(
       "prepare_qualification_batch.rb",
       "--cops",
-      "Style/ZeroLengthPredicate",
+      "Style/Semicolon",
       "--no-real-world",
       "--no-verify-upstream",
       "--dry-run"
@@ -98,10 +98,10 @@ RSpec.describe "cop authoring tools" do
     expect(status).to be_success
     expect(stderr).to eq("")
     document = YAML.safe_load(stdout)
-    record = document.fetch("cops").fetch("Style/ZeroLengthPredicate")
+    record = document.fetch("cops").fetch("Style/Semicolon")
     expect(record.dig("manual_review", "status")).to eq("pending")
     expect(record.fetch("edge_cases").length).to eq(4)
-    expect(record.dig("preparation", "internals", "ruby", "callbacks")).to include("on_send")
-    expect(record.dig("preparation", "internals", "rust", "callbacks")).to include("on_send")
+    expect(record.dig("sources", "rubocop")).to end_with("style/semicolon.rb")
+    expect(record.dig("sources", "rustocop")).not_to be_empty
   end
 end

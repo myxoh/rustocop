@@ -62,9 +62,16 @@ unknown = cops - matrix
 abort "unknown cops: #{unknown.join(', ')}" unless unknown.empty?
 abort "no cops selected" if cops.empty?
 
-head, git_error, git_status = Open3.capture3("git", "rev-parse", "HEAD", chdir: ROOT)
-abort "could not determine Rustocop commit: #{git_error}" unless git_status.success?
-rust_commit = head.strip
+rust_status, status_error, status_ok = Open3.capture3(
+  "git", "status", "--porcelain", "--", "crates/rustocop", chdir: ROOT
+)
+abort "could not inspect native Rust source: #{status_error}" unless status_ok.success?
+abort "native Rust source has uncommitted changes; commit it before preparing qualification evidence" unless rust_status.empty?
+rust_head, git_error, git_status = Open3.capture3(
+  "git", "log", "-1", "--format=%H", "--", "crates/rustocop", chdir: ROOT
+)
+abort "could not determine the native Rust source commit: #{git_error}" unless git_status.success?
+rust_commit = rust_head.strip
 rubocop_root = Gem::Specification.find_by_name("rubocop", Rustocop::QualificationBatch::RUBOCOP_VERSION).full_gem_path
 corpus = Rustocop::QualificationBatch::Corpus.new(options[:corpus])
 cases = corpus.cases_for(cops)
@@ -150,7 +157,9 @@ records = cops.each_with_object({}) do |cop, output|
                  old_commit = previous.fetch("rustocop_commit", "pending")
                  paths = Array(previous.dig("sources", "rustocop"))
                  if old_commit.match?(/\A[0-9a-f]{40}\z/) && !paths.empty?
-                   _stdout, _stderr, unchanged = Open3.capture3("git", "diff", "--quiet", old_commit, rust_commit, "--", *paths, chdir: ROOT)
+                   _stdout, _stderr, unchanged = Open3.capture3(
+                     "git", "diff", "--quiet", old_commit, rust_commit, "--", *paths, chdir: ROOT
+                   )
                    unchanged.success? ? "unchanged" : "changed_since_#{old_commit[0, 8]}"
                  else
                    "unfinalized"

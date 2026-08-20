@@ -96,3 +96,8 @@ the paired source inventory, replace both TODO notes with concrete semantic
 findings, and inspect all generated examples before moving the YAML into
 `qualification/work/`. If the upstream contract fails, the review packet marks
 the cop for Ruby-shaped callback conversion and a complete rerun.
+
+The recorded Rust SHA is the most recent commit that changed `crates/rustocop`,
+not merely the current repository HEAD. Preparation refuses to run while that
+tree has staged or unstaged changes, preventing evidence from being pinned to a
+commit that does not contain the tested native source.
