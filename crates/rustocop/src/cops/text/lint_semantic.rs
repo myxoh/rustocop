@@ -53,32 +53,75 @@ fn check_unused_method_argument(
             index += 1;
             continue;
         }
-        let args = method_arguments(trimmed);
+        let endless = endless_method_parts(trimmed);
+        let args = method_arguments(endless.map_or(trimmed, |(signature, _)| signature));
         if args.is_empty() {
             index += 1;
             continue;
         }
-        let end = find_matching_end(lines, index).unwrap_or(index);
+        if let Some((_, body)) = endless {
+            report_unused_arguments(&args, body, line, index, offenses, cop);
+            index += 1;
+            continue;
+        }
+        let Some(end) = find_matching_end(lines, index) else {
+            index += 1;
+            continue;
+        };
         let body = lines[index + 1..end]
             .iter()
             .map(|line| line.body.as_str())
             .collect::<Vec<&str>>()
             .join("\n");
-        for arg in args {
-            if arg.starts_with('_') || body.contains(&arg) {
-                continue;
-            }
-            push_offense(
-                offenses,
-                cop,
-                &format!("Unused method argument - `{}`.", arg),
-                index + 1,
-                line.find(&arg).unwrap_or(0) + 1,
-                arg.len(),
-                CorrectionStatus::Unavailable,
-            );
-        }
+        report_unused_arguments(&args, &body, line, index, offenses, cop);
         index = end + 1;
+    }
+}
+
+fn endless_method_parts(source: &str) -> Option<(&str, &str)> {
+    let open = source.find('(')?;
+    let mut depth = 0usize;
+    let mut close = None;
+    for (offset, character) in source[open..].char_indices() {
+        match character {
+            '(' => depth += 1,
+            ')' => {
+                depth = depth.saturating_sub(1);
+                if depth == 0 {
+                    close = Some(open + offset);
+                    break;
+                }
+            }
+            _ => {}
+        }
+    }
+    let close = close?;
+    let remainder = source[close + 1..].trim_start();
+    let body = remainder.strip_prefix('=')?.trim_start();
+    Some((&source[..=close], body))
+}
+
+fn report_unused_arguments(
+    arguments: &[String],
+    body: &str,
+    signature_line: &str,
+    index: usize,
+    offenses: &mut Vec<Offense>,
+    cop: &'static str,
+) {
+    for argument in arguments {
+        if argument.starts_with('_') || body.contains(argument) {
+            continue;
+        }
+        push_offense(
+            offenses,
+            cop,
+            &format!("Unused method argument - `{}`.", argument),
+            index + 1,
+            signature_line.find(argument).unwrap_or(0) + 1,
+            argument.len(),
+            CorrectionStatus::Unavailable,
+        );
     }
 }
 

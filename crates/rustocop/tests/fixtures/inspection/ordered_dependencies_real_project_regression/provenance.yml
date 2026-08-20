@@ -1,0 +1,4 @@
+repository: gitlabhq/gitlabhq
+revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+path: rubocop/cop/rspec/before_all.rb
+source_lines: 23-26

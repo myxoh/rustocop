@@ -117,7 +117,9 @@ impl PercentLiteralDelimitersRule<'_, '_, '_> {
         let preferred = self.preferred_delimiters(literal_type);
         let preferred_bytes = preferred.as_bytes();
         return_if!(preferred_bytes.len() < 2 || used_open == preferred_bytes[0]);
-        let content = &source[prefix_len + 1..close_at];
+        let content_start = prefix_len + 1;
+        return_if!(close_at < content_start);
+        let content = &source[content_start..close_at];
         let literal_content = without_interpolations(content);
         return_if!(literal_content.contains(preferred_bytes[0] as char)
             || literal_content.contains(preferred_bytes[1] as char));
@@ -169,8 +171,9 @@ fn without_interpolations(source: &str) -> String {
                 index += 1;
             }
         } else {
-            result.push(source.as_bytes()[index] as char);
-            index += 1;
+            let Some(character) = source[index..].chars().next() else { break };
+            result.push(character);
+            index += character.len_utf8();
         }
     }
     result

@@ -74,6 +74,51 @@ macro_rules! fixture_test {
 // New-cop generator registrations are inserted directly below this line.
 
 fixture_test!(
+    accepts_percent_text_in_utf8_interpolation,
+    "percent_literal_real_project_regression",
+    "/project/lib/seeders/reports/report_data_seeder.rb",
+    "Style/PercentLiteralDelimiters",
+    false,
+    RubyVersion::default()
+);
+
+fixture_test!(
+    accepts_utf8_interpolation_inside_class,
+    "trailing_body_class_real_project_regression",
+    "/project/app/services/notification/push_test_service.rb",
+    "Style/TrailingBodyOnClass",
+    false,
+    RubyVersion::default()
+);
+
+fixture_test!(
+    ignores_heredoc_braces_as_inline_blocks,
+    "explicit_block_argument_real_project_regression",
+    "/project/lib/linear/mutations.rb",
+    "Style/ExplicitBlockArgument",
+    false,
+    RubyVersion::default()
+);
+
+fixture_test!(
+    accepts_used_argument_in_endless_method,
+    "unused_method_argument_real_project_regression",
+    "/project/app/builders/v2/reports/drilldown_builder.rb",
+    "Lint/UnusedMethodArgument",
+    false,
+    RubyVersion::default()
+);
+
+fixture_test!(
+    ignores_dependency_calls_in_comments,
+    "ordered_dependencies_real_project_regression",
+    "/project/rubocop/cop/rspec/before_all.rb",
+    "Gemspec/OrderedDependencies",
+    false,
+    RubyVersion::default()
+);
+
+fixture_test!(
     rejects_unscoped_guard_clause_exits,
     "style_guard_clause_regression",
     "/project/example.rb",

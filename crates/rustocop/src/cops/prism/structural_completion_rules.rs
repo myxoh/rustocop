@@ -168,13 +168,6 @@ fn is_assignment(node: &Node<'_>) -> bool {
 }
 
 fn trailing_body_on_class(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
-    let location = node.location();
-    if context.source_file().same_line(
-        location.start_offset(),
-        location.end_offset().saturating_sub(1),
-    ) {
-        return;
-    }
     let parts = if let Some(class) = node.as_class_node() {
         class_parts(&class)
     } else if let Some(class) = node.as_singleton_class_node() {
@@ -182,6 +175,13 @@ fn trailing_body_on_class(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
     } else {
         return;
     };
+    let location = node.location();
+    if context.source_file().same_line(
+        location.start_offset(),
+        location.end_offset().saturating_sub(1),
+    ) {
+        return;
+    }
     let Some((header_end, body)) = parts else {
         return;
     };

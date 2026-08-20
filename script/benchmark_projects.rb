@@ -10,6 +10,7 @@ require "shellwords"
 require "tempfile"
 require "time"
 require_relative "support/benchmark"
+require_relative "../lib/rustocop/qualification_batch"
 
 extend BenchmarkSupport
 
@@ -31,26 +32,21 @@ COPS = %w[
   Style/Semicolon
   Style/StringLiterals
 ].freeze
-PROJECTS = [
-  {
-    "name" => "chatwoot",
-    "repository" => "chatwoot/chatwoot",
-    "revision" => "8d93d69e8e356216e85c28de7c4240e66b8e83fa",
-    "license" => "MIT outside enterprise/"
-  },
-  {
-    "name" => "rubygems.org",
-    "repository" => "rubygems/rubygems.org",
-    "revision" => "3201f8831866f82eb9acd7f66287a978d0e59079",
-    "license" => "MIT"
-  },
-  {
-    "name" => "gitlab-ce",
-    "repository" => "gitlabhq/gitlabhq",
-    "revision" => "67a526442c20d20b6e80ebf916bd766b54018c5e",
-    "license" => "MIT Community Edition"
-  }
-].freeze
+PROJECT_LICENSES = {
+  "chatwoot" => "MIT outside enterprise/",
+  "rubygems.org" => "MIT",
+  "gitlab-ce" => "MIT Community Edition",
+  "rails" => "MIT",
+  "discourse" => "GPL-2.0-or-later",
+  "mastodon" => "AGPL-3.0-or-later",
+  "sidekiq" => "LGPL-3.0-or-later",
+  "devise" => "MIT",
+  "rspec-core" => "MIT",
+  "homebrew" => "BSD-2-Clause"
+}.freeze
+PROJECTS = Rustocop::QualificationBatch::PROJECTS.map do |project|
+  project.merge("license" => PROJECT_LICENSES.fetch(project.fetch("name")))
+end.freeze
 EXCLUDED_COMPONENTS = %w[
   .git
   coverage
@@ -194,10 +190,21 @@ def source_measurements(corpus)
 end
 
 common = ["--format", "json", "--only", COPS.join(","), "--config", CONFIG_PATH]
-results = PROJECTS.map do |project|
+prepared_corpora = PROJECTS.to_h do |project|
   archive = download_archive(project)
   source = extract_archive(project, archive)
-  corpus = build_corpus(project, source)
+  [project.fetch("name"), build_corpus(project, source)]
+end
+
+if ENV["PROJECT_BENCHMARK_PREPARE_ONLY"] == "1"
+  prepared_corpora.each do |name, corpus|
+    puts "#{name}\t#{source_measurements(corpus).fetch('files')}\t#{corpus}"
+  end
+  exit
+end
+
+results = PROJECTS.map do |project|
+  corpus = prepared_corpora.fetch(project.fetch("name"))
   commands = {
     "rustocop_sequential" => [NATIVE, "--no-parallel", *common, corpus],
     "rustocop_jobs_4" => [NATIVE, "--jobs", "4", *common, corpus],

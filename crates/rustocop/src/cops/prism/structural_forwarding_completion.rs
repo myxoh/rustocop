@@ -256,6 +256,9 @@ fn explicit_inline_blocks(
         let Some(close) = line.rfind('}') else {
             continue;
         };
+        if close <= open + 2 {
+            continue;
+        }
         let block = line[open + 2..close].trim();
         let forwards = if let Some(parameters) = block.strip_prefix('|') {
             let Some((parameters, body)) = parameters.split_once('|') else {

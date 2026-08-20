@@ -95,6 +95,9 @@ fn ordered_dependencies(context: &mut CopContext<'_, '_>) {
     let mut dependencies = Vec::new();
     for (index, (offset, line)) in lines.iter().enumerate() {
         let trimmed = line.trim();
+        if trimmed.starts_with('#') {
+            continue;
+        }
         let Some(method_at) = trimmed.find(".add_") else {
             continue;
         };
@@ -135,6 +138,7 @@ fn ordered_dependencies(context: &mut CopContext<'_, '_>) {
         let (previous, current) = (&pair[0], &pair[1]);
         if previous.method != current.method
             || comments_separate && current.chunk_start > previous.line_end
+            || current.chunk_start < previous.line_end
             || source[previous.line_end..current.chunk_start].contains('\n')
         {
             continue;
