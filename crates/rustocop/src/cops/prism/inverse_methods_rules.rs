@@ -13,9 +13,9 @@ impl InverseMethodsRule<'_, '_, '_> {
         return_unless!(node.name().as_slice() == b"!");
         return_if!(self.parent().and_then(Node::as_call_node).is_some_and(|parent| parent.name().as_slice() == b"!"));
 
-        let inverse_blocks = bidirectional(self.config_map("InverseBlocks"));
+        let inverse_blocks = bidirectional(self.config_symbol_map("InverseBlocks"));
         return_if!(inside_inverse_block(node.as_node(), self.ancestors(), &inverse_blocks));
-        let inverse_methods = bidirectional(self.config_map("InverseMethods"));
+        let inverse_methods = bidirectional(self.config_symbol_map("InverseMethods"));
         let Some((method_call, _wrapped)) = inverse_candidate(node) else { return };
         let method = String::from_utf8_lossy(method_call.name().as_slice()).to_string();
         let Some(inverse) = inverse_methods.get(&method).cloned() else { return };
@@ -46,7 +46,7 @@ impl InverseMethodsRule<'_, '_, '_> {
             .filter(|ancestor| ancestor.name().as_slice() == b"!" && ancestor.location().start_offset() <= call.location().start_offset() && call.location().end_offset() <= ancestor.location().end_offset())
             .count();
         return_if!(enclosing_negations >= 2);
-        let inverse_blocks = bidirectional(self.config_map("InverseBlocks"));
+        let inverse_blocks = bidirectional(self.config_symbol_map("InverseBlocks"));
         let method = String::from_utf8_lossy(call.name().as_slice()).to_string();
         let Some(inverse) = inverse_blocks.get(&method).cloned() else { return };
         return_if!(self.source_file().node(&node.as_node()).split(|character: char| !character.is_alphanumeric() && character != '_').any(|word| word == "next"));

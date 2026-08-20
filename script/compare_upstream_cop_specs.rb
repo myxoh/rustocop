@@ -9,6 +9,7 @@ require "thread"
 require "tmpdir"
 require "yaml"
 require_relative "../lib/rustocop/compatibility_baseline"
+require_relative "../lib/rustocop/config_serialization"
 
 root = File.expand_path("..", __dir__)
 options = {
@@ -74,10 +75,11 @@ cases.each do |test_case|
     "TargetRubyVersion" => test_case.fetch("ruby_version")
   )
   config = config.merge("AllCops" => all_cops)
-  digest = Digest::SHA256.hexdigest(JSON.generate(config))
+  rendered_config = Rustocop::ConfigSerialization.rubocop_yaml(config)
+  digest = Digest::SHA256.hexdigest(rendered_config)
   config_paths[digest] ||= begin
     path = File.join(config_root, "#{digest}.yml")
-    File.write(path, YAML.dump(config)) unless File.file?(path)
+    File.write(path, rendered_config) unless File.file?(path)
     path
   end
   test_case["config_path"] = config_paths.fetch(digest)

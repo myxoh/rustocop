@@ -44,7 +44,10 @@ pub(crate) struct CopConfig {
 enum ConfigValue {
     Scalar(String),
     List(Vec<String>),
-    Map(HashMap<String, String>),
+    Map {
+        values: HashMap<String, String>,
+        symbol_values: HashMap<String, String>,
+    },
 }
 
 impl CopConfig {
@@ -103,20 +106,10 @@ impl CopConfig {
                 {
                     continue;
                 }
-                if let (Some(container), Some((key, value))) =
-                    (container_key.as_ref(), trimmed.split_once(':'))
+                if let (Some(container), Some((key, value, symbols))) =
+                    (container_key.as_ref(), nested_config_pair(trimmed))
                 {
-                    let entry = values
-                        .entry(section.clone())
-                        .or_default()
-                        .entry(container.clone())
-                        .or_insert_with(|| ConfigValue::Map(HashMap::new()));
-                    if !matches!(entry, ConfigValue::Map(_)) {
-                        *entry = ConfigValue::Map(HashMap::new());
-                    }
-                    if let ConfigValue::Map(entries) = entry {
-                        entries.insert(clean_config_scalar(key), clean_config_scalar(value));
-                    }
+                    insert_config_map_entry(&mut values, section, container, key, value, symbols);
                 }
                 continue;
             }
@@ -205,7 +198,7 @@ impl CopConfig {
     pub(crate) fn value(&self, cop: &str, key: &str) -> Option<&str> {
         match self.values.get(cop)?.get(key)? {
             ConfigValue::Scalar(value) => Some(value),
-            ConfigValue::List(_) | ConfigValue::Map(_) => None,
+            ConfigValue::List(_) | ConfigValue::Map { .. } => None,
         }
     }
 
@@ -245,10 +238,62 @@ impl CopConfig {
 
     pub(crate) fn map(&self, cop: &str, key: &str) -> Option<&HashMap<String, String>> {
         match self.values.get(cop)?.get(key)? {
-            ConfigValue::Map(values) => Some(values),
+            ConfigValue::Map { values, .. } => Some(values),
             ConfigValue::Scalar(_) | ConfigValue::List(_) => None,
         }
     }
+
+    pub(crate) fn symbol_map(&self, cop: &str, key: &str) -> Option<&HashMap<String, String>> {
+        match self.values.get(cop)?.get(key)? {
+            ConfigValue::Map { symbol_values, .. } => Some(symbol_values),
+            ConfigValue::Scalar(_) | ConfigValue::List(_) => None,
+        }
+    }
+}
+
+fn insert_config_map_entry(
+    config: &mut HashMap<String, HashMap<String, ConfigValue>>,
+    section: &str,
+    container: &str,
+    key: &str,
+    value: &str,
+    symbols: bool,
+) {
+    let entry = config
+        .entry(section.to_string())
+        .or_default()
+        .entry(container.to_string())
+        .or_insert_with(|| ConfigValue::Map {
+            values: HashMap::new(),
+            symbol_values: HashMap::new(),
+        });
+    if !matches!(entry, ConfigValue::Map { .. }) {
+        *entry = ConfigValue::Map {
+            values: HashMap::new(),
+            symbol_values: HashMap::new(),
+        };
+    }
+    if let ConfigValue::Map {
+        values,
+        symbol_values,
+    } = entry
+    {
+        let key = clean_config_scalar(key);
+        let value = clean_config_scalar(value);
+        values.insert(key.clone(), value.clone());
+        if symbols {
+            symbol_values.insert(key, value);
+        }
+    }
+}
+
+fn nested_config_pair(line: &str) -> Option<(&str, &str, bool)> {
+    if let Some(symbol_pair) = line.strip_prefix(':') {
+        let (key, value) = symbol_pair.split_once(": ")?;
+        return Some((key, value.strip_prefix(':')?, true));
+    }
+    let (key, value) = line.split_once(':')?;
+    Some((key, value, false))
 }
 
 fn config_scalar_source(value: &str) -> &str {

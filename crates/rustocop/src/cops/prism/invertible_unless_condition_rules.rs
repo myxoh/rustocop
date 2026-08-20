@@ -11,7 +11,10 @@ define_cops! {
 impl InvertibleUnlessConditionRule<'_, '_, '_> {
     fn on_unless(&mut self, node: &UnlessNode<'_>) {
         let condition = node.predicate();
-        let inverse_methods = self.config_map("InverseMethods").cloned().unwrap_or_default();
+        let inverse_methods = self
+            .config_symbol_map("InverseMethods")
+            .cloned()
+            .unwrap_or_default();
         let mut edits = Vec::new();
         return_unless!(invert_condition(&condition, &inverse_methods, self.source_file(), &mut edits));
 

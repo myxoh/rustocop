@@ -7,6 +7,7 @@ require "optparse"
 require "rbconfig"
 require "rubocop"
 require "yaml"
+require_relative "../lib/rustocop/config_serialization"
 require_relative "../lib/rustocop/qualification_batch"
 
 ROOT = File.expand_path("..", __dir__)
@@ -111,7 +112,7 @@ if options[:real_world] && !options[:dry_run]
   end
   config_path = File.join(ROOT, "tmp/qualification/project-rubocop.yml")
   FileUtils.mkdir_p(File.dirname(config_path))
-  File.write(config_path, YAML.dump(
+  File.write(config_path, Rustocop::ConfigSerialization.rubocop_yaml(
     "AllCops" => {
       "DisabledByDefault" => true,
       "Exclude" => [],

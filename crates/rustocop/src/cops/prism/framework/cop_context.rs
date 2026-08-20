@@ -106,6 +106,13 @@ impl<'context, 'pr> CopContext<'context, 'pr> {
         self.reporter.config_map(key)
     }
 
+    pub(super) fn config_symbol_map(
+        &self,
+        key: &str,
+    ) -> Option<&std::collections::HashMap<String, String>> {
+        self.reporter.config_symbol_map(key)
+    }
+
     pub(super) fn policy(&self) -> CopPolicy<'_> {
         self.reporter.policy()
     }

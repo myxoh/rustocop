@@ -10,6 +10,7 @@ require "ripper"
 require "thread"
 require "tmpdir"
 require "yaml"
+require_relative "config_serialization"
 
 module Rustocop
   module QualificationBatch
@@ -527,7 +528,10 @@ module Rustocop
           source_path = File.join(directory, relative)
           FileUtils.mkdir_p(File.dirname(source_path))
           config_path = File.join(directory, "rubocop.yml")
-          File.write(config_path, YAML.dump(case_config(cop, candidate["config"])))
+          File.write(
+            config_path,
+            ConfigSerialization.rubocop_yaml(case_config(cop, candidate["config"]))
+          )
           source = candidate.fetch("source")
           ruby_diagnostics = diagnostics(@rubocop, cop, config_path, relative, source)
           rust_diagnostics = diagnostics([@rustocop], cop, config_path, relative, source)

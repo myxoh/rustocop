@@ -8,6 +8,7 @@ require "set"
 require "tempfile"
 require "tmpdir"
 require "yaml"
+require_relative "../lib/rustocop/config_serialization"
 
 ROOT = File.expand_path("..", __dir__)
 MANIFEST = File.join(ROOT, "crates/rustocop/Cargo.toml")
@@ -82,7 +83,7 @@ end
 
 def verify_case(cop, test_case)
   Tempfile.create(["rustocop-qualification", ".yml"]) do |config|
-    config.write(YAML.dump(case_config(cop, test_case["config"])))
+    config.write(Rustocop::ConfigSerialization.rubocop_yaml(case_config(cop, test_case["config"])))
     config.flush
     common = ["--format", "json", "--only", cop, "--config", config.path,
               "--stdin", test_case.fetch("path")]

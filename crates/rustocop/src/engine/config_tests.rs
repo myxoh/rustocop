@@ -29,6 +29,27 @@ fn reads_scoped_cop_configuration_values() {
 }
 
 #[test]
+fn preserves_symbol_map_entries_separately_from_string_entries() {
+    let config = CopConfig::from_source(
+        "Style/InvertibleUnlessCondition:\n  InverseMethods:\n    :include?: :exclude?\n    plain?: ignored?\n",
+    );
+
+    assert_eq!(
+        config
+            .map("Style/InvertibleUnlessCondition", "InverseMethods")
+            .and_then(|values| values.get("include?").map(String::as_str)),
+        Some("exclude?")
+    );
+    assert_eq!(
+        config.symbol_map("Style/InvertibleUnlessCondition", "InverseMethods"),
+        Some(&HashMap::from([(
+            "include?".to_string(),
+            "exclude?".to_string()
+        )]))
+    );
+}
+
+#[test]
 fn reads_typed_scalars_and_block_or_inline_lists() {
     let config = CopConfig::from_source(
             "Style/Example:\n  Enabled: true\n  Max: 12\n  AllowedMethods:\n    - map\n    - 'each'\n  AllowedPatterns: [foo, 'bar']\n  PreferredMethods:\n    intern: to_sym\n",
