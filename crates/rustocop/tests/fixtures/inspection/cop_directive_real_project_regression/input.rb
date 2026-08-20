@@ -5,6 +5,6 @@ values = [
 ]
 # rubocop:enable Style/TrailingCommaInArrayLiteral
 
-# rubocop:disable Style/Semicolon
+# rubocop: disable Style/Semicolon
 expect { iterations << i; raise }
-# rubocop:enable Style/Semicolon
+# rubocop: enable Style/Semicolon

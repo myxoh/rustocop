@@ -173,6 +173,15 @@ fixture_test!(
 );
 
 fixture_test!(
+    checks_static_segments_of_interpolated_word_arrays,
+    "percent_literal_interpolated_array_real_project_regression",
+    "/project/app/models/optimized_image.rb",
+    "Style/PercentLiteralDelimiters",
+    true,
+    RubyVersion::default()
+);
+
+fixture_test!(
     rejects_unscoped_guard_clause_exits,
     "style_guard_clause_regression",
     "/project/example.rb",

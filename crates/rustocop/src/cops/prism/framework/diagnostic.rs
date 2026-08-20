@@ -361,7 +361,7 @@ fn disabled_findings(source: &str, findings: &[Finding]) -> Vec<bool> {
 
 fn cop_directive(line: &str) -> Option<(usize, bool, Vec<&str>)> {
     let comment_at = line.find("# rubocop:")?;
-    let directive = &line[comment_at + "# rubocop:".len()..];
+    let directive = line[comment_at + "# rubocop:".len()..].trim_start();
     let (disabled, names) = if let Some(names) = directive.strip_prefix("disable") {
         (true, names)
     } else if let Some(names) = directive.strip_prefix("todo") {

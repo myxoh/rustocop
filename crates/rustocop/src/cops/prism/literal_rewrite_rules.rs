@@ -148,7 +148,18 @@ impl PercentLiteralDelimitersRule<'_, '_, '_> {
         let content_start = prefix_len + 1;
         return_if!(close_at < content_start);
         let content = &source[content_start..close_at];
-        let literal_content = without_interpolations(content);
+        let literal_content = if let Some(array) = node.as_array_node() {
+            array
+                .elements()
+                .iter()
+                .filter(|element| {
+                    element.as_string_node().is_some() || element.as_symbol_node().is_some()
+                })
+                .map(|element| self.source_file().node(&element))
+                .collect::<String>()
+        } else {
+            without_interpolations(content)
+        };
         return_if!(literal_content.contains(preferred_bytes[0] as char)
             || literal_content.contains(preferred_bytes[1] as char));
         if matches!(literal_type, "%w" | "%i") {

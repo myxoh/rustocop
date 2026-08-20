@@ -1,0 +1,2 @@
+cop	line	column	last_line	last_column	correctable	corrected	message
+Style/PercentLiteralDelimiters	1	16	4	1	true	true	`%W`-literals should be delimited by `[` and `]`.
