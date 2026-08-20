@@ -10,7 +10,6 @@ define_cops! {
     NumberedParameterAssignment => "Lint/NumberedParameterAssignment" => node(as_local_variable_write_node, numbered_parameter_assignment),
     RaiseException => "Lint/RaiseException" => call(raise_exception),
     DateTime => "Style/DateTime" => call(date_time),
-    RedundantArgument => "Style/RedundantArgument" => call(redundant_argument),
     YAMLFileRead => "Style/YAMLFileRead" => call_rule(YamlFileReadRule, on_send, restrict [b"load", b"safe_load", b"parse"]),
 }
 
@@ -220,57 +219,6 @@ fn historic_date(node: &CallNode<'_>) -> bool {
         constant_path(&argument)
             .is_some_and(|path| path.first() == Some(&b"Date".as_slice()) && path.len() >= 2)
     })
-}
-
-fn redundant_argument(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
-    let name = String::from_utf8_lossy(call_name(node));
-    if node.receiver().is_none() && !matches!(name.as_ref(), "exit" | "exit!") {
-        return;
-    }
-    let Some(argument) = only_argument(node) else {
-        return;
-    };
-    let Some(methods) = context.config_map("Methods") else {
-        return;
-    };
-    let Some(default) = methods.get(name.as_ref()).cloned() else {
-        return;
-    };
-    let invalid_byte_default = methods
-        .get("$hex")
-        .or_else(|| methods.get("\"$hex\""))
-        .is_some_and(|hex| hex == "82");
-    let matches_default = if invalid_byte_default && name == "chomp" {
-        argument
-            .as_string_node()
-            .is_some_and(|string| string.unescaped() == [0x82])
-    } else if let Some(string) = argument.as_string_node() {
-        let decoded = match default.as_str() {
-            r"\n" => b"\n".as_slice(),
-            _ => default.as_bytes(),
-        };
-        string.unescaped() == decoded
-    } else if let Some(integer) = argument.as_integer_node() {
-        default.parse::<i32>().ok().is_some_and(|expected| {
-            TryInto::<i32>::try_into(integer.value()).ok() == Some(expected)
-        })
-    } else {
-        argument.as_true_node().is_some() && default == "true"
-            || argument.as_false_node().is_some() && default == "false"
-    };
-    if !matches_default {
-        return;
-    }
-    let Some(selector) = node.message_loc() else {
-        return;
-    };
-    let argument_source = context.source_file().node(&argument).to_string();
-    let redundant_range = selector.end_offset()..node.location().end_offset();
-    context.remove(
-        format!("Argument {argument_source} is redundant because it is implied by default."),
-        redundant_range.clone(),
-        redundant_range,
-    );
 }
 
 impl YamlFileReadRule<'_, '_, '_> {

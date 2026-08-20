@@ -4,7 +4,6 @@ define_cops! {
     ExpandPathArguments => "Style/ExpandPathArguments" => call(expand_path_arguments),
     RedundantDirGlobSort => "Lint/RedundantDirGlobSort" => call(redundant_dir_glob_sort),
     PercentQLiterals => "Style/PercentQLiterals" => node(as_string_node, percent_q_literals),
-    RedundantCurrentDirectoryInPath => "Style/RedundantCurrentDirectoryInPath" => call(redundant_current_directory_in_path),
     SlicingWithRange => "Style/SlicingWithRange" => call(slicing_with_range),
 }
 
@@ -263,64 +262,4 @@ fn percent_q_literals(node: &ruby_prism::StringNode<'_>, context: &mut CopContex
         opening.start_offset() + 1..opening.start_offset() + 2,
         replacement,
     );
-}
-
-fn redundant_current_directory_in_path(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
-    if !match_call(node)
-        .named(b"require_relative")
-        .without_receiver()
-        .with_arguments()
-        .matches()
-    {
-        return;
-    }
-    let Some(argument) = first_argument(node) else {
-        return;
-    };
-    if argument.as_string_node().is_none() && argument.as_interpolated_string_node().is_none() {
-        return;
-    }
-    let raw = context.source_file().node(&argument);
-    let Some(content_start) = raw.find("./") else {
-        return;
-    };
-    if raw[..content_start]
-        .bytes()
-        .any(|byte| !matches!(byte, b'\'' | b'"' | b'%' | b'q' | b'Q' | b'(' | b'[' | b'{'))
-    {
-        return;
-    }
-    let content = raw.as_bytes();
-    let Some(first_prefix) = current_directory_prefix(&content[content_start..]) else {
-        return;
-    };
-    let mut all_prefixes = first_prefix;
-    while let Some(length) = current_directory_prefix(&content[content_start + all_prefixes..]) {
-        all_prefixes += length;
-    }
-    let start = argument.location().start_offset() + content_start;
-    context.remove(
-        "Remove the redundant current directory path.",
-        start..start + first_prefix,
-        start..start + all_prefixes,
-    );
-}
-
-fn current_directory_prefix(source: &[u8]) -> Option<usize> {
-    if !source.starts_with(b"./") {
-        return None;
-    }
-    Some(1 + source[1..].iter().take_while(|byte| **byte == b'/').count())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::current_directory_prefix;
-
-    #[test]
-    fn measures_one_current_directory_component() {
-        assert_eq!(current_directory_prefix(b"./path"), Some(2));
-        assert_eq!(current_directory_prefix(b".///./../path"), Some(4));
-        assert_eq!(current_directory_prefix(b"../path"), None);
-    }
 }

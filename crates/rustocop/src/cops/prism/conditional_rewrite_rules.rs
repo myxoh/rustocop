@@ -357,7 +357,10 @@ fn safe_assignment(node: &Node<'_>) -> bool {
         || node.as_constant_write_node().is_some()
         || node.as_call_operator_write_node().is_some()
         || node.as_index_operator_write_node().is_some()
-        || node.as_call_node().is_some_and(|call| call.name().as_slice().ends_with(b"="))
+        || node.as_call_node().is_some_and(|call| {
+            call.name().as_slice().ends_with(b"=")
+                && !matches!(call.name().as_slice(), b"==" | b"!=" | b"===" | b"<=" | b">=" | b"<=>" | b"=~" | b"!~")
+        })
 }
 
 fn do_end_block(node: &Node<'_>, file: SourceFile<'_>) -> bool {

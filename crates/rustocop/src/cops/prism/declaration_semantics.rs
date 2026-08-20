@@ -3,7 +3,6 @@ use super::*;
 define_cops! {
     IneffectiveAccessModifier => "Lint/IneffectiveAccessModifier" => node(as_def_node, ineffective_access_modifier),
     DefWithParentheses => "Style/DefWithParentheses" => node(as_def_node, def_with_parentheses),
-    OptionHash => "Style/OptionHash" => node(as_optional_parameter_node, option_hash),
     MissingRespondToMissing => "Style/MissingRespondToMissing" => any_node(missing_respond_to_missing),
 }
 
@@ -82,47 +81,6 @@ fn def_with_parentheses(node: &ruby_prism::DefNode<'_>, context: &mut CopContext
         opening.start_offset()..closing.end_offset(),
         opening.start_offset()..closing.end_offset(),
     );
-}
-
-fn option_hash(node: &ruby_prism::OptionalParameterNode<'_>, context: &mut CopContext<'_, '_>) {
-    if node.value().as_hash_node().is_none()
-        || !context
-            .config_values("SuspiciousParamNames")
-            .iter()
-            .any(|name| name.as_bytes() == node.name().as_slice())
-    {
-        return;
-    }
-    let Some(definition) = context.ancestors().iter().rev().find_map(Node::as_def_node) else {
-        return;
-    };
-    if context
-        .config_values("Allowlist")
-        .iter()
-        .any(|name| name.as_bytes() == definition.name().as_slice())
-    {
-        return;
-    }
-    let mut forwarding_super = ForwardingSuperFinder(false);
-    if let Some(body) = definition.body() {
-        forwarding_super.visit(&body);
-    }
-    if !forwarding_super.0 {
-        context.report(
-            "Prefer keyword arguments to options hashes.",
-            node.location(),
-        );
-    }
-}
-
-struct ForwardingSuperFinder(bool);
-
-impl<'pr> Visit<'pr> for ForwardingSuperFinder {
-    fn visit_forwarding_super_node(&mut self, _node: &ruby_prism::ForwardingSuperNode<'pr>) {
-        self.0 = true;
-    }
-
-    fn visit_def_node(&mut self, _node: &ruby_prism::DefNode<'pr>) {}
 }
 
 fn missing_respond_to_missing(node: &Node<'_>, context: &mut CopContext<'_, '_>) {

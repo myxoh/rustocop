@@ -63,7 +63,14 @@ fn invalid_operator_argument(node: &Node<'_>) -> bool {
 }
 
 fn method_call_with_parenthesized_arg(node: &Node<'_>) -> bool {
-    node.as_call_node().is_some_and(|call| call.receiver().is_some() || call.arguments().is_some())
+    // Parser's `argument.children.first` is the receiver for sends and the
+    // stored value/name for literals and variable reads. A bare send has a
+    // nil receiver even when it has arguments, so it must remain eligible.
+    node.as_call_node().is_some_and(|call| call.receiver().is_some())
+        || node.as_integer_node().is_some()
+        || node.as_float_node().is_some()
+        || node.as_string_node().is_some()
+        || node.as_symbol_node().is_some()
         || node.as_local_variable_read_node().is_some()
         || node.as_instance_variable_read_node().is_some()
         || node.as_class_variable_read_node().is_some()

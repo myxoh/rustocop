@@ -58,6 +58,7 @@ cop_modules!(
     additional_rules_more,
     alias_rules,
     argument_and_inheritance_rules,
+    argument_default_rules,
     assignment_completion_rules,
     assignment_rewrite_rules,
     block_association_rules,
