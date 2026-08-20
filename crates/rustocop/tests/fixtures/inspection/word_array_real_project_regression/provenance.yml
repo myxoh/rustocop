@@ -1,0 +1,13 @@
+sources:
+  - repository: mastodon/mastodon
+    revision: 60593f6a8de11effdcf0a0dcb40e22115ae9361a
+    path: app/helpers/languages_helper.rb
+    source_lines: [13, 61, 87]
+  - repository: mastodon/mastodon
+    revision: 60593f6a8de11effdcf0a0dcb40e22115ae9361a
+    path: spec/lib/search_query_transformer_spec.rb
+    source_lines: [14, 19]
+  - repository: rails/rails
+    revision: ba4f7369aee71f9f38d67bdbf0e8571fb372b535
+    path: railties/lib/rails/code_statistics.rb
+    source_lines: [22, 23]

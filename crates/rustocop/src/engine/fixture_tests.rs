@@ -191,6 +191,15 @@ fixture_test!(
 );
 
 fixture_test!(
+    preserves_word_array_unicode_matrix_and_whitespace_semantics,
+    "word_array_real_project_regression",
+    "/project/app/helpers/languages_helper.rb",
+    "Style/WordArray",
+    true,
+    RubyVersion::default()
+);
+
+fixture_test!(
     rejects_unscoped_guard_clause_exits,
     "style_guard_clause_regression",
     "/project/example.rb",

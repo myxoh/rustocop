@@ -691,11 +691,12 @@ impl WordArrayRule<'_, '_, '_> {
             parent.location().start_offset(),
             parent.location().end_offset(),
         );
-        *self
-            .state
-            .matrix_of_complex_content
-            .entry(key)
-            .or_insert_with(|| matrix_of_complex_content(&parent))
+        if let Some(cached) = self.state.matrix_of_complex_content.get(&key) {
+            return *cached;
+        }
+        let complex = matrix_of_complex_content(&parent, self);
+        self.state.matrix_of_complex_content.insert(key, complex);
+        complex
     }
 }
 
@@ -736,6 +737,14 @@ fn simple_word(node: &Node<'_>, context: &CopContext<'_, '_>) -> bool {
         return false;
     }
     if let Some(regex) = word_regex(context) {
+        if regex.contains("\\p{Word}") {
+            static DEFAULT_WORD: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
+            let regex = DEFAULT_WORD.get_or_init(|| {
+                regex::Regex::new(r"\A(?:[\w\n\t]|\w-\w)+\z")
+                    .expect("the pinned Style/WordArray expression is valid")
+            });
+            return regex.is_match(value);
+        }
         if regex.contains("\\S+") {
             return !value.chars().any(char::is_whitespace);
         }
@@ -790,18 +799,17 @@ fn bracket_array_has_comment(
         .any(|line| line.trim_start().starts_with('#') || line.contains(" #"))
 }
 
-fn matrix_of_complex_content(array: &ruby_prism::ArrayNode<'_>) -> bool {
+fn matrix_of_complex_content(
+    array: &ruby_prism::ArrayNode<'_>,
+    context: &CopContext<'_, '_>,
+) -> bool {
     let rows = array.elements().iter().collect::<Vec<_>>();
     !rows.is_empty()
         && rows.iter().all(|row| row.as_array_node().is_some())
         && rows.iter().any(|row| {
             row.as_array_node().is_some_and(|array| {
-                array.elements().iter().any(|element| {
-                    element.as_string_node().is_some_and(|string| {
-                        std::str::from_utf8(string.unescaped())
-                            .map_or(true, |value| value.contains(' ') || value.is_empty())
-                    })
-                })
+                let elements = array.elements().iter().collect::<Vec<_>>();
+                complex_content(&elements, context)
             })
         })
 }
@@ -966,10 +974,6 @@ fn build_bracketed_array(
         .iter()
         .map(|element| bracketed_word(element, context))
         .collect::<Vec<_>>();
-    let source = context.source_file().node(&node.as_node());
-    if !source.contains('\n') {
-        return format!("[{}]", words.join(", "));
-    }
     let opening_end = node
         .opening_loc()
         .map_or(node.location().start_offset() + 3, |loc| loc.end_offset());
@@ -978,17 +982,23 @@ fn build_bracketed_array(
         .map_or(node.location().end_offset().saturating_sub(1), |loc| {
             loc.start_offset()
         });
-    let prefix = &context.source()[opening_end..elements[0].location().start_offset()];
-    let indent = prefix.rsplit('\n').next().unwrap_or("");
-    let closing_indent = &context.source()
-        [elements.last().unwrap().location().end_offset()..closing_start]
-        .rsplit('\n')
-        .next()
-        .unwrap_or("");
-    format!(
-        "[\n{indent}{}\n{closing_indent}]",
-        words.join(&format!(",\n{indent}"))
-    )
+    let mut replacement = String::from("[");
+    replacement.push_str(
+        &context.source()[opening_end..elements[0].location().start_offset()],
+    );
+    replacement.push_str(&words[0]);
+    for (pair, word) in elements.windows(2).zip(words.iter().skip(1)) {
+        replacement.push(',');
+        replacement.push_str(
+            &context.source()[pair[0].location().end_offset()..pair[1].location().start_offset()],
+        );
+        replacement.push_str(word);
+    }
+    replacement.push_str(
+        &context.source()[elements.last().unwrap().location().end_offset()..closing_start],
+    );
+    replacement.push(']');
+    replacement
 }
 
 fn bracketed_word(node: &Node<'_>, context: &CopContext<'_, '_>) -> String {
