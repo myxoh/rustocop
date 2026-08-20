@@ -1,0 +1,17 @@
+sources:
+  - repository: rails/rails
+    revision: ba4f7369aee71f9f38d67bdbf0e8571fb372b535
+    path: actionpack/test/controller/routing_test.rb
+    source_line: 259
+  - repository: rails/rails
+    revision: ba4f7369aee71f9f38d67bdbf0e8571fb372b535
+    path: activerecord/lib/active_record/associations/builder/belongs_to.rb
+    source_line: 95
+  - repository: rails/rails
+    revision: ba4f7369aee71f9f38d67bdbf0e8571fb372b535
+    path: activestorage/app/models/active_storage/attachment.rb
+    source_line: 62
+  - repository: rspec/rspec-core
+    revision: aec5f49485d97908183dbe790a7fefb8baaa8091
+    path: spec/rspec/core/example_group_spec.rb
+    source_line: 1062

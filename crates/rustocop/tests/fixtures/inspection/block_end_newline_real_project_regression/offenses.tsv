@@ -1,0 +1,5 @@
+cop	line	column	last_line	last_column	correctable	corrected	message
+Layout/BlockEndNewline	2	56	2	56	true	true	Expression at 2, 56 should be on its own line.
+Layout/BlockEndNewline	7	2	7	2	true	true	Expression at 7, 2 should be on its own line.
+Layout/BlockEndNewline	11	3	11	3	true	true	Expression at 11, 3 should be on its own line.
+Layout/BlockEndNewline	15	4	15	4	true	true	Expression at 15, 4 should be on its own line.

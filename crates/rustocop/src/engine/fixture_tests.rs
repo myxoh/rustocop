@@ -101,6 +101,15 @@ fixture_test!(
 );
 
 fixture_test!(
+    places_multiline_block_endings_on_their_own_lines,
+    "block_end_newline_real_project_regression",
+    "/project/actionpack/test/controller/routing_test.rb",
+    "Layout/BlockEndNewline",
+    true,
+    RubyVersion::default()
+);
+
+fixture_test!(
     accepts_multibyte_offsets_at_node_ends,
     "unicode_node_end_real_project_regression",
     "/project/activerecord/test/cases/base_test.rb",

@@ -1,9 +1,14 @@
 use super::*;
 
+define_rule!(BlockEndNewlineRule);
+
 define_cops! {
     MultilineMethodParameterLineBreaks => "Layout/MultilineMethodParameterLineBreaks" => source(parameter_line_breaks),
     SpaceBeforeBlockBraces => "Layout/SpaceBeforeBlockBraces" => source(space_before_block_braces),
-    BlockEndNewline => "Layout/BlockEndNewline" => source(block_end_newline),
+    BlockEndNewline => "Layout/BlockEndNewline" => node_rule_aliases(
+        BlockEndNewlineRule,
+        on_block => [as_block_node, as_lambda_node]
+    ),
     DefEndAlignment => "Layout/DefEndAlignment" => source(def_end_alignment),
     MultilineMethodArgumentLineBreaks => "Layout/MultilineMethodArgumentLineBreaks" => source(argument_line_breaks),
     ParameterAlignment => "Layout/ParameterAlignment" => source(parameter_alignment),
@@ -88,28 +93,63 @@ fn space_before_block_braces(context: &mut CopContext<'_, '_>) {
     }
 }
 
-fn block_end_newline(context: &mut CopContext<'_, '_>) {
-    for (offset, line) in context.source_file().lines() {
-        for token in ["end", "}"] {
-            let Some(at) = line.rfind(token) else {
-                continue;
-            };
-            if at == 0 || line[..at].trim().is_empty() {
-                continue;
-            }
-            let column = line[..at].chars().count();
-            context.replace(
-                format!(
-                    "Expression at {}, {} should be on its own line.",
-                    context.source()[..offset].matches('\n').count() + 1,
-                    column
-                ),
-                offset + at..offset + at + token.len(),
-                offset + at..offset + at,
-                "\n",
-            );
-        }
+impl BlockEndNewlineRule<'_, '_, '_> {
+fn on_block(&mut self, node: &Node<'_>) {
+    let (location, body, closing) = if let Some(block) = node.as_block_node() {
+        (block.location(), block.body(), block.closing_loc())
+    } else if let Some(lambda) = node.as_lambda_node() {
+        (lambda.location(), lambda.body(), lambda.closing_loc())
+    } else {
+        return;
+    };
+    let file = self.source_file();
+    let block_source = self
+        .source()
+        .get(location.start_offset()..closing.end_offset())
+        .unwrap_or_default();
+    if !block_source.contains('\n') {
+        return;
     }
+    let line_start = file.line_start(closing.start_offset());
+    if self.source()[line_start..closing.start_offset()]
+        .trim()
+        .is_empty()
+    {
+        return;
+    }
+    let Some(last) = body.and_then(last_block_body_expression) else {
+        return;
+    };
+    let edit = last.location().end_offset()..closing.start_offset();
+    let between = self.source().get(edit.clone()).unwrap_or_default();
+    let preserved = between.trim_start_matches(char::is_whitespace);
+    if preserved.starts_with(';') {
+        return;
+    }
+    let line = self.source()[..closing.start_offset()].matches('\n').count() + 1;
+    let column = self.source()[line_start..closing.start_offset()]
+        .chars()
+        .count()
+        + 1;
+    self.replace(
+        format!("Expression at {line}, {column} should be on its own line."),
+        closing.start_offset()..closing.end_offset(),
+        edit,
+        format!("\n{preserved}"),
+    );
+}
+}
+
+fn last_block_body_expression(node: Node<'_>) -> Option<Node<'_>> {
+    if let Some(statements) = node.as_statements_node() {
+        return statements.body().iter().last();
+    }
+    if let Some(begin) = node.as_begin_node() {
+        return begin
+            .statements()
+            .and_then(|statements| statements.body().iter().last());
+    }
+    Some(node)
 }
 
 fn def_end_alignment(context: &mut CopContext<'_, '_>) {
