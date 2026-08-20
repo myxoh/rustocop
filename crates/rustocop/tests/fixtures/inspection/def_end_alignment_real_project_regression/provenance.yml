@@ -1,0 +1,8 @@
+repository: gitlabhq/gitlabhq
+revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+path: db/fixtures/development/03_project.rb
+source_lines: 61-63
+pathological_controls:
+  - one-line semicolon method whose end token must not be aligned
+  - modifier method aligned with the start of its line
+  - endless method without an end keyword

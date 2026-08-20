@@ -9,7 +9,7 @@ define_cops! {
         BlockEndNewlineRule,
         on_block => [as_block_node, as_lambda_node]
     ),
-    DefEndAlignment => "Layout/DefEndAlignment" => source(def_end_alignment),
+    DefEndAlignment => "Layout/DefEndAlignment" => node(as_def_node, def_end_alignment),
     MultilineMethodArgumentLineBreaks => "Layout/MultilineMethodArgumentLineBreaks" => source(argument_line_breaks),
     ParameterAlignment => "Layout/ParameterAlignment" => source(parameter_alignment),
 }
@@ -152,30 +152,58 @@ fn last_block_body_expression(node: Node<'_>) -> Option<Node<'_>> {
     Some(node)
 }
 
-fn def_end_alignment(context: &mut CopContext<'_, '_>) {
-    let lines = context.source_file().lines().collect::<Vec<_>>();
-    let mut stack = Vec::new();
-    for (offset, line) in lines {
-        let trimmed = line.trim_start();
-        let indent = line.len() - trimmed.len();
-        if let Some(definition) = line.find("def ") {
-            stack.push((
-                offset,
-                if definition > 0 { 0 } else { indent },
-                line[..definition + 3].trim().to_string(),
-            ));
-        }
-        if trimmed == "end" {
-            let Some((def_offset, expected, opening)) = stack.pop() else {
-                continue;
-            };
-            if indent != expected {
-                let def_line = context.source()[..def_offset].matches('\n').count() + 1;
-                let end_line = context.source()[..offset].matches('\n').count() + 1;
-                context.replace(format!("`end` at {end_line}, {indent} is not aligned with `{opening}` at {def_line}, {expected}."), offset + indent..offset + line.len(), offset..offset + indent, " ".repeat(expected));
-            }
-        }
+fn def_end_alignment(node: &ruby_prism::DefNode<'_>, context: &mut CopContext<'_, '_>) {
+    let Some(end) = node.end_keyword_loc() else {
+        return;
+    };
+    let keyword = node.def_keyword_loc();
+    let file = context.source_file();
+    let def_line_start = file.line_start(keyword.start_offset());
+    let end_line_start = file.line_start(end.start_offset());
+    if def_line_start == end_line_start {
+        return;
     }
+    let keyword_column = context.source()[def_line_start..keyword.start_offset()]
+        .chars()
+        .count();
+    let indentation = context.source()[def_line_start..keyword.start_offset()]
+        .chars()
+        .take_while(|character| character.is_whitespace())
+        .count();
+    let align_with_def = context
+        .config_value("EnforcedStyleAlignWith")
+        .is_some_and(|style| style == "def");
+    let expected = if align_with_def {
+        keyword_column
+    } else {
+        indentation
+    };
+    let actual = context.source()[end_line_start..end.start_offset()]
+        .chars()
+        .count();
+    if actual == expected {
+        return;
+    }
+    let def_line = context.source()[..keyword.start_offset()].matches('\n').count() + 1;
+    let end_line = context.source()[..end.start_offset()].matches('\n').count() + 1;
+    let (opening, reference_column) = if !align_with_def && indentation != keyword_column {
+        (
+            context.source()[def_line_start + indentation..keyword.end_offset()]
+                .trim()
+                .to_string(),
+            indentation,
+        )
+    } else {
+        ("def".to_string(), keyword_column)
+    };
+    context.replace(
+        format!(
+            "`end` at {end_line}, {actual} is not aligned with `{opening}` at {def_line}, {reference_column}."
+        ),
+        end.start_offset()..end.end_offset(),
+        end_line_start..end.start_offset(),
+        " ".repeat(expected),
+    );
 }
 
 fn parameter_alignment(context: &mut CopContext<'_, '_>) {

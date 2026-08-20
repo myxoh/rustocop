@@ -110,6 +110,15 @@ fixture_test!(
 );
 
 fixture_test!(
+    aligns_multiline_def_endings_without_flagging_one_line_methods,
+    "def_end_alignment_real_project_regression",
+    "/project/db/fixtures/development/03_project.rb",
+    "Layout/DefEndAlignment",
+    true,
+    RubyVersion::default()
+);
+
+fixture_test!(
     accepts_multibyte_offsets_at_node_ends,
     "unicode_node_end_real_project_regression",
     "/project/activerecord/test/cases/base_test.rb",
