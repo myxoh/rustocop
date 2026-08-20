@@ -9,11 +9,6 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
         Box::new(SafeNavigation),
         Box::new(SelectByKind),
         Box::new(SelectByRange),
-        report(
-            "Style/InverseMethods",
-            "!items.include?(",
-            "Use the inverse predicate method instead of negating this call.",
-        ),
         custom("Lint/UselessAccessModifier", useless_access_modifier),
         custom("Style/ArgumentsForwarding", arguments_forwarding),
         report(

@@ -5,7 +5,6 @@ use std::collections::HashSet;
 pub(super) fn cops() -> Vec<Box<dyn Cop>> {
     vec![
         custom("Lint/ScriptPermission", script_permission),
-        custom("Style/MagicCommentFormat", magic_comment_format),
         custom("Lint/RedundantCopDisableDirective", redundant_disable),
     ]
 }
@@ -21,25 +20,6 @@ fn script_permission(context: &mut CopContext<'_, '_>) {
             .is_ok_and(|metadata| metadata.permissions().mode() & 0o111 == 0)
         {
             context.report("Script file is not executable.", 0..2);
-        }
-    }
-}
-
-fn magic_comment_format(context: &mut CopContext<'_, '_>) {
-    for (offset, line) in context.source_file().lines().take(3) {
-        for (old, new) in [
-            ("#frozen_string_literal:", "# frozen_string_literal:"),
-            ("# encoding =", "# encoding:"),
-            ("# coding =", "# coding:"),
-        ] {
-            if let Some(at) = line.find(old) {
-                context.replace(
-                    "Incorrect magic comment format.",
-                    offset + at..offset + at + old.len(),
-                    offset + at..offset + at + old.len(),
-                    new,
-                );
-            }
         }
     }
 }

@@ -13,7 +13,6 @@ define_cops! {
     SymbolArray => "Style/SymbolArray" => node(as_array_node, symbol_array),
     FetchEnvVar => "Style/FetchEnvVar" => source(fetch_env_var),
     StringConcatenation => "Style/StringConcatenation" => call(string_concatenation),
-    Lambda => "Style/Lambda" => source(lambda_literal),
     FormatString => "Style/FormatString" => source(format_string),
     WordArray => "Style/WordArray" => stateful_node_rule(as_array_node, WordArrayRule, WordArrayState, on_array),
 }
@@ -622,22 +621,6 @@ fn concatenation_inspect_string(value: &str) -> String {
         .replace('\r', "\\r")
         .replace('\t', "\\t");
     format!("\"{escaped}\"")
-}
-
-fn lambda_literal(context: &mut CopContext<'_, '_>) {
-    if context.policy().enforced_style("literal") != "literal" {
-        return;
-    }
-    context.replace_code(
-        "lambda {",
-        "-> {",
-        "Use the lambda literal syntax for all lambdas.",
-    );
-    context.replace_code(
-        "lambda do",
-        "-> do",
-        "Use the lambda literal syntax for all lambdas.",
-    );
 }
 
 fn format_string(context: &mut CopContext<'_, '_>) {

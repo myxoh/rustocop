@@ -9,7 +9,6 @@ define_cops! {
     FileRead => "Style/FileRead" => source(file_read),
     FileWrite => "Style/FileWrite" => source(file_write),
     IfWithSemicolon => "Style/IfWithSemicolon" => source(if_with_semicolon),
-    MethodDefParentheses => "Style/MethodDefParentheses" => source(method_def_parentheses),
     WhileUntilModifier => "Style/WhileUntilModifier" => node_rule_aliases(WhileUntilModifierRule, on_while => [as_while_node, as_until_node]),
 }
 
@@ -151,51 +150,6 @@ fn if_with_semicolon(context: &mut CopContext<'_, '_>) {
             start..start + code.len(),
             replacement,
         );
-    }
-}
-
-fn method_def_parentheses(context: &mut CopContext<'_, '_>) {
-    let style = context
-        .policy()
-        .enforced_style("require_parentheses")
-        .to_string();
-    for (offset, line) in context.source_file().lines() {
-        let trimmed = line.trim_start();
-        let Some(signature) = trimmed.strip_prefix("def ") else {
-            continue;
-        };
-        let name_end = signature.find([' ', '(']).unwrap_or(signature.len());
-        let raw_parameters = signature[name_end..].trim_start();
-        let parameters = raw_parameters
-            .split_once(';')
-            .map_or(raw_parameters, |(parameters, _)| parameters)
-            .trim_end();
-        if parameters.is_empty() {
-            continue;
-        }
-        let indent = line.len() - trimmed.len();
-        if style == "require_parentheses" && !parameters.starts_with('(') {
-            let gap = signature[name_end..].len() - raw_parameters.len();
-            let start = offset + indent + "def ".len() + name_end + gap;
-            context.replace(
-                "Use def with parentheses when there are parameters.",
-                start..start + parameters.len(),
-                start - gap..start + parameters.len(),
-                format!("({parameters})"),
-            );
-        } else if style != "require_parentheses"
-            && parameters.starts_with('(')
-            && parameters.ends_with(')')
-        {
-            let start = offset + line.find('(').unwrap_or(0);
-            let end = offset + line.rfind(')').unwrap_or(line.len() - 1) + 1;
-            context.replace(
-                "Do not use parentheses for method parameters.",
-                start..end,
-                start..end,
-                parameters.trim_matches(['(', ')']),
-            );
-        }
     }
 }
 

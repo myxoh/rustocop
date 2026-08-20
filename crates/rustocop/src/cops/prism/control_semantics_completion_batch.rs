@@ -2,7 +2,6 @@ use super::*;
 
 define_cops! {
     SafeNavigationConsistency => "Lint/SafeNavigationConsistency" => source(safe_navigation_consistency),
-    MissingElse => "Style/MissingElse" => source(missing_else),
     CombinableDefined => "Style/CombinableDefined" => source(combinable_defined),
     For => "Style/For" => source(for_loop),
     ClassAndModuleChildren => "Style/ClassAndModuleChildren" => source(class_module_children),
@@ -29,23 +28,6 @@ fn safe_navigation_consistency(context: &mut CopContext<'_, '_>) {
                 offset + dot..offset + dot + 1,
                 offset + dot..offset + dot + 1,
                 "&.",
-            );
-        }
-    }
-}
-
-fn missing_else(context: &mut CopContext<'_, '_>) {
-    let lines = context.source_file().lines().collect::<Vec<_>>();
-    for window in lines.windows(3) {
-        if window[0].1.trim_start().starts_with("case ")
-            && window[1].1.trim_start().starts_with("when ")
-            && window[2].1.trim() == "end"
-        {
-            context.insert(
-                "Do not use `case` without an `else`.",
-                window[2].0..window[2].0 + 3,
-                window[2].0,
-                "else\n  nil\n",
             );
         }
     }

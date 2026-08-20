@@ -1,4 +1,4 @@
-use super::catalog_cop::{custom, report};
+use super::catalog_cop::custom;
 use super::*;
 
 mod registry;
@@ -8,11 +8,6 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
         custom("Lint/UnreachableLoop", unreachable_loop),
         custom("Style/IdenticalConditionalBranches", identical_branches),
         custom("Style/InfiniteLoop", infinite_loop),
-        report(
-            "Style/MapCompactWithConditionalBlock",
-            ".map { |x| if ",
-            "Use `filter_map` instead of `map` followed by `compact`.",
-        ),
         custom("Lint/EmptyConditionalBody", empty_conditional),
     ];
     cops.extend(registry::cops());

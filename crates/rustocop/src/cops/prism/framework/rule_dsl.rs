@@ -221,6 +221,11 @@ macro_rules! dispatch_rubocop_callback {
             $rule.on_block(&typed_node);
         }
     };
+    ($rule:ident, $node:ident, on_lambda) => {
+        if let Some(typed_node) = $node.as_lambda_node() {
+            $rule.on_lambda(&typed_node);
+        }
+    };
     ($rule:ident, $node:ident, on_while) => {
         if let Some(typed_node) = $node.as_while_node() {
             $rule.on_while(&typed_node);
@@ -261,6 +266,16 @@ macro_rules! dispatch_rubocop_callback {
             $rule.on_hash(&typed_node);
         }
     };
+    ($rule:ident, $node:ident, on_case) => {
+        if let Some(typed_node) = $node.as_case_node() {
+            $rule.on_case(&typed_node);
+        }
+    };
+    ($rule:ident, $node:ident, on_yield) => {
+        if let Some(typed_node) = $node.as_yield_node() {
+            $rule.on_yield(&typed_node);
+        }
+    };
     ($rule:ident, $node:ident, on_casgn) => {
         if $node.as_constant_write_node().is_some()
             || $node.as_constant_path_write_node().is_some()
@@ -289,6 +304,9 @@ macro_rules! rubocop_callback_matches {
     ($node:ident, on_block) => {
         $node.as_block_node().is_some()
     };
+    ($node:ident, on_lambda) => {
+        $node.as_lambda_node().is_some()
+    };
     ($node:ident, on_while) => {
         $node.as_while_node().is_some()
     };
@@ -312,6 +330,12 @@ macro_rules! rubocop_callback_matches {
     };
     ($node:ident, on_hash) => {
         $node.as_hash_node().is_some()
+    };
+    ($node:ident, on_case) => {
+        $node.as_case_node().is_some()
+    };
+    ($node:ident, on_yield) => {
+        $node.as_yield_node().is_some()
     };
     ($node:ident, on_casgn) => {
         $node.as_constant_write_node().is_some()

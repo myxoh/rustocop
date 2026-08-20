@@ -3,13 +3,10 @@ use super::*;
 define_cops! {
     HashTransformKeys => "Style/HashTransformKeys" => source(hash_transform_keys),
     HashTransformValues => "Style/HashTransformValues" => source(hash_transform_values),
-    MapToSet => "Style/MapToSet" => source(map_to_set),
     HashEachMethods => "Style/HashEachMethods" => source(hash_each_methods),
     HashFetchChain => "Style/HashFetchChain" => source(hash_fetch_chain),
-    MapToHash => "Style/MapToHash" => source(map_to_hash),
     HashExcept => "Style/HashExcept" => source(hash_except),
     HashSlice => "Style/HashSlice" => source(hash_slice),
-    MapIntoArray => "Style/MapIntoArray" => source(map_into_array),
     CollectionMethods => "Style/CollectionMethods" => source(collection_methods),
     Sample => "Style/Sample" => call(sample),
 }
@@ -27,19 +24,6 @@ fn hash_transform_values(context: &mut CopContext<'_, '_>) {
         ".map { |k, v| [k, yield(v)] }.to_h",
         ".transform_values { |v| yield(v) }",
         "Prefer `transform_values` over `map.to_h`.",
-    );
-}
-
-fn map_to_set(context: &mut CopContext<'_, '_>) {
-    context.replace_code(
-        ".map(&:to_s).to_set",
-        ".to_set(&:to_s)",
-        "Pass a block to `to_set` instead of calling `map.to_set`.",
-    );
-    context.replace_code(
-        ".collect(&:to_s).to_set",
-        ".to_set(&:to_s)",
-        "Pass a block to `to_set` instead of calling `collect.to_set`.",
     );
 }
 
@@ -108,19 +92,6 @@ fn hash_fetch_chain(context: &mut CopContext<'_, '_>) {
     let _ = source;
 }
 
-fn map_to_hash(context: &mut CopContext<'_, '_>) {
-    context.replace_code(
-        ".map(&:itself).to_h",
-        ".to_h",
-        "Pass a block to `to_h` instead of calling `map.to_h`.",
-    );
-    context.replace_code(
-        ".collect(&:itself).to_h",
-        ".to_h",
-        "Pass a block to `to_h` instead of calling `collect.to_h`.",
-    );
-}
-
 fn hash_except(context: &mut CopContext<'_, '_>) {
     context.replace_code(
         ".reject { |key, _| keys.include?(key) }",
@@ -134,14 +105,6 @@ fn hash_slice(context: &mut CopContext<'_, '_>) {
         ".select { |key, _| keys.include?(key) }",
         ".slice(*keys)",
         "Prefer `slice` over `select`.",
-    );
-}
-
-fn map_into_array(context: &mut CopContext<'_, '_>) {
-    context.replace_code(
-        ".each_with_object([])",
-        ".filter_map",
-        "Prefer `filter_map` over `each_with_object` when building an array.",
     );
 }
 

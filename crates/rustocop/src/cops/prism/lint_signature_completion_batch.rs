@@ -9,8 +9,6 @@ define_cops! {
     UnmodifiedReduceAccumulator => "Lint/UnmodifiedReduceAccumulator" => source(unmodified_reduce_accumulator),
     DocumentationMethod => "Style/DocumentationMethod" => source(documentation_method),
     RedundantSplatExpansion => "Lint/RedundantSplatExpansion" => source(redundant_splat_expansion),
-    MethodCallWithArgsParentheses => "Style/MethodCallWithArgsParentheses" => source(method_call_parentheses),
-    ModuleMemberExistenceCheck => "Style/ModuleMemberExistenceCheck" => source(module_member_existence_check),
 }
 
 fn syntax(error: &Diagnostic<'_>, context: &mut CopContext<'_, '_>) {
@@ -241,76 +239,5 @@ fn redundant_splat_expansion(context: &mut CopContext<'_, '_>) {
             );
         }
         search = close + 1;
-    }
-}
-
-fn method_call_parentheses(context: &mut CopContext<'_, '_>) {
-    if context.policy().enforced_style("require_parentheses") != "require_parentheses" {
-        return;
-    }
-    for (offset, line) in context.source_file().lines() {
-        let trimmed = line.trim();
-        if trimmed.starts_with(['#', ':'])
-            || [
-                "class ", "module ", "def ", "super ", "raise ", "return ", "yield ", "alias ",
-                "undef ",
-            ]
-            .iter()
-            .any(|keyword| trimmed.starts_with(keyword))
-            || trimmed.contains('=')
-            || trimmed.contains('(')
-        {
-            continue;
-        }
-        let Some((method, argument)) = trimmed.split_once(char::is_whitespace) else {
-            continue;
-        };
-        let argument = argument.trim();
-        if argument.is_empty()
-            || argument.starts_with(['+', '-', '*', '/', '%', '<', '>', '=', '&', '|'])
-            || method.ends_with(['+', '-', '*', '/', '%', '<', '>', '='])
-        {
-            continue;
-        }
-        if !method
-            .bytes()
-            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'_' | b'.'))
-        {
-            continue;
-        }
-        let start = offset + line.find(trimmed).unwrap_or(0);
-        context.replace(
-            "Use parentheses for method calls with arguments.",
-            start..start + trimmed.len(),
-            start..start + trimmed.len(),
-            format!("{method}({argument})"),
-        );
-    }
-}
-
-fn module_member_existence_check(context: &mut CopContext<'_, '_>) {
-    for (old, new) in [
-        (".constants.include?(", ".const_defined?("),
-        (".methods.include?(", ".respond_to?("),
-        (".instance_methods.include?(", ".method_defined?("),
-    ] {
-        for start in context.source_file().code_offsets(old) {
-            let Some(close) = context.source()[start + old.len()..]
-                .find(')')
-                .map(|at| start + old.len() + at)
-            else {
-                continue;
-            };
-            let argument = &context.source()[start + old.len()..close];
-            if argument.contains(',') || argument.trim_start().starts_with(['*', '&']) {
-                continue;
-            }
-            context.replace(
-                "Use the dedicated module member existence predicate.",
-                start..start + old.len(),
-                start..start + old.len(),
-                new,
-            );
-        }
     }
 }

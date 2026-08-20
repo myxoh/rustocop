@@ -293,6 +293,7 @@ module Rustocop
 
     class ProjectScanner
       EXCLUDED_COMPONENTS = %w[.git coverage ee enterprise log node_modules public tmp].freeze
+      PROJECT_CANDIDATE_LIMIT = 6
 
       def initialize(root:, projects:, rubocop:, config_path:, cache_root: nil)
         @root = root
@@ -312,6 +313,8 @@ module Rustocop
         @projects.each do |project|
           source_root = project.fetch("source_root")
           report = run_project(project, cops)
+          project_positive_counts = Hash.new(0)
+          project_positive_paths = Hash.new { |hash, cop| hash[cop] = {} }
           offenses_by_file = Hash.new { |hash, key| hash[key] = Hash.new { |inner, cop| inner[cop] = [] } }
           report.fetch("files", []).each do |file|
             path = File.expand_path(file.fetch("path"), @root)
@@ -322,10 +325,14 @@ module Rustocop
               line = offense.dig("location", "start_line")
               offenses_by_file[path][cop] << line
               next unless File.file?(path)
+              next if project_positive_counts[cop] >= PROJECT_CANDIDATE_LIMIT
+              next if project_positive_paths[cop][path]
 
               source = File.binread(path).encode("UTF-8", invalid: :replace, undef: :replace)
               snippet = @extractor.extract(source, line, required_markers: markers.fetch(cop, []))
               positives[cop] << real_record(project, source_root, path, line, snippet)
+              project_positive_counts[cop] += 1
+              project_positive_paths[cop][path] = true
             end
           end
           collect_negative_candidates(project, source_root, cops, markers, offenses_by_file, negatives)
@@ -401,6 +408,7 @@ module Rustocop
       end
 
       def collect_negative_candidates(project, source_root, cops, markers, offenses, output)
+        project_counts = Hash.new(0)
         files = Dir.glob(File.join(source_root, "**/*.rb"), File::FNM_DOTMATCH).sort.reject do |path|
           relative = Pathname(path).relative_path_from(Pathname(source_root)).to_s
           relative.split(File::SEPARATOR).any? do |component|
@@ -408,19 +416,23 @@ module Rustocop
           end
         end
         files.each do |path|
-          break if cops.all? { |cop| output[cop].length >= 40 }
+          break if cops.all? { |cop| project_counts[cop] >= PROJECT_CANDIDATE_LIMIT }
 
           source = File.binread(path).encode("UTF-8", invalid: :replace, undef: :replace)
           source.each_line.with_index(1) do |line_source, line|
+            line_tokens = lexical_tokens(line_source)
+            next if line_tokens.empty?
+
             cops.each do |cop|
-              next if output[cop].length >= 40
+              next if project_counts[cop] >= PROJECT_CANDIDATE_LIMIT
               next if offenses.fetch(path, {}).fetch(cop, []).include?(line)
-              next unless marker_match?(line_source, markers.fetch(cop, []))
+              next if (markers.fetch(cop, []) & line_tokens).empty?
 
               snippet = @extractor.extract(source, line, required_markers: markers.fetch(cop, []))
               next if snippet.strip.empty?
 
               output[cop] << real_record(project, source_root, path, line, snippet)
+              project_counts[cop] += 1
             end
           end
         end
@@ -436,12 +448,12 @@ module Rustocop
         }
       end
 
-      def marker_match?(line, markers)
-        Ripper.lex(line).any? do |_position, type, token, _state|
-          %i[on_ident on_const on_op on_kw].include?(type) && markers.include?(token)
-        end
+      def lexical_tokens(line)
+        Ripper.lex(line).filter_map do |_position, type, token, _state|
+          token if %i[on_ident on_const on_op on_kw].include?(type)
+        end.uniq
       rescue ArgumentError
-        false
+        []
       end
 
       def diverse(items, limit)
@@ -482,6 +494,8 @@ module Rustocop
         workers = Array.new(@jobs) do
           Thread.new do
             loop do
+              break if mutex.synchronize { accepted.length >= 2 }
+
               candidate = queue.pop(true)
               result = verify(cop, candidate)
               expected_polarity = positive ? result.fetch("rubocop_offenses").positive? : result.fetch("rubocop_offenses").zero?
