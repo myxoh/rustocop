@@ -6,7 +6,7 @@ the authoritative records in `qualification/work/`.
 ## References
 
 - RuboCop 1.87.0: `e5b788dba181ad94de30cfbad661c5d6aa08a4e5`
-- Current native Rust source: `01196d5f11cb10acd9701db86e87d8c3d7dd9dbb`
+- Current native Rust source: `15032c62724a1bfcd1d7199a9342188ff3b96ee4`
 - Complete five-check records: 185 / 606
 - Currently qualified: 167 / 606 (27.6%)
 - Complete records requiring revalidation: 18

@@ -345,10 +345,14 @@ If the implementation is useful but does not meet that contract, leave it
 Heuristic. Passing a few representative examples is not verification.
 
 For qualification batches, prepare the repetitive evidence and a source-shape
-review packet automatically:
+review packet only after the broad project gate identifies exact, exercised
+candidates:
 
 ```sh
-bundle exec ruby script/prepare_qualification_batch.rb --count 10
+bundle exec ruby script/audit_qualification_projects.rb \
+  --from-position 391 --count 30
+bundle exec ruby script/prepare_qualification_batch.rb \
+  --cops Style/First,Style/Second
 ```
 
 The generated files remain under `tmp/qualification/` and retain a pending

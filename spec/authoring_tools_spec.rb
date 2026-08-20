@@ -104,4 +104,22 @@ RSpec.describe "cop authoring tools" do
     expect(record.dig("sources", "rubocop")).to end_with("style/semicolon.rb")
     expect(record.dig("sources", "rustocop")).not_to be_empty
   end
+
+  it "previews a reverse-order real-project qualification gate" do
+    stdout, stderr, status = run_script(
+      "audit_qualification_projects.rb",
+      "--from-position",
+      "391",
+      "--count",
+      "2",
+      "--dry-run"
+    )
+
+    expect(status).to be_success
+    expect(stderr).to eq("")
+    expect(stdout.lines.map(&:chomp)).to eq([
+      "391\tStyle/FileRead",
+      "390\tStyle/FileOpen"
+    ])
+  end
 end

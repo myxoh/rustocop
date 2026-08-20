@@ -73,13 +73,33 @@ rerun and the SHA is updated.
 
 ## Preparing a batch
 
-Generate the next ten unrecorded cops in reverse matrix order with:
+Run the broad real-project gate before preparing per-cop evidence:
 
 ```sh
-bundle exec ruby script/prepare_qualification_batch.rb --count 10
+bundle exec ruby script/audit_qualification_projects.rb \
+  --from-position 391 --count 30
 ```
 
-The command first runs every captured upstream diagnostic and correction case,
+The gate builds the release binary from a clean Rust tree, runs the selected
+cops together across the pinned Chatwoot, RubyGems.org, and GitLab CE corpora,
+and compares complete diagnostic signatures. It automatically isolates a
+crashing cop so the remainder of the batch can finish. Its JSON and Markdown
+reports classify every cop as `exact_active`, `dormant`, `mismatch`, or `crash`.
+
+Only `exact_active` cops proceed to upstream, correction, evidence, and manual
+source-boundary review. Dormant cops have not been exercised; mismatching and
+crashing cops become separate implementation tasks. A project-exact result is
+still only a candidate: manual comparison must probe semantic branches that the
+real projects and captured upstream cases do not exercise.
+
+Pass only those surviving cop names to the evidence preparer:
+
+```sh
+bundle exec ruby script/prepare_qualification_batch.rb \
+  --cops Style/First,Style/Second
+```
+
+The preparer first runs every captured upstream diagnostic and correction case,
 then scans the three pinned project corpora for real-world examples. It writes a
 pending YAML record and a side-by-side review packet under `tmp/qualification/`.
 Real-world candidates are retained only when RuboCop and Rustocop agree on both

@@ -48,7 +48,7 @@ requires the recorded Rust files to be unchanged from that record's pinned SHA.
 185 cops have complete five-check records. 18 of those
 records are currently invalidated by later changes to their Rust source, leaving
 **167 currently qualified cops**. The RuboCop reference is
-`e5b788dba181ad94de30cfbad661c5d6aa08a4e5`; the current native Rust source is `01196d5f11cb10acd9701db86e87d8c3d7dd9dbb`.
+`e5b788dba181ad94de30cfbad661c5d6aa08a4e5`; the current native Rust source is `15032c62724a1bfcd1d7199a9342188ff3b96ee4`.
 
 | Department | Currently qualified | Complete records | Stale records |
 | --- | ---: | ---: | ---: |
