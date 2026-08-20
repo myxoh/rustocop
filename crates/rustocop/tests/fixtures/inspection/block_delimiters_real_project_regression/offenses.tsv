@@ -1,0 +1,2 @@
+cop	line	column	last_line	last_column	correctable	corrected	message
+Style/BlockDelimiters	1	49	1	50	false	false	Prefer `{...}` over `do...end` for single-line blocks.

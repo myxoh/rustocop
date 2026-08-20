@@ -90,7 +90,7 @@ impl Cop for Semicolon {
 }
 
 fn line_start(source: &str, offset: usize) -> usize {
-    source[..offset].rfind('\n').map_or(0, |at| at + 1)
+    SourceFile::new(source).line_start(offset)
 }
 
 fn endless_range_ending_at(root: &Node<'_>, offset: usize) -> Option<std::ops::Range<usize>> {

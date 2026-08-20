@@ -72,7 +72,7 @@ impl<'source> SourceFile<'source> {
     }
 
     pub(super) fn line_range(self, offset: usize) -> Range<usize> {
-        let offset = offset.min(self.source.len());
+        let offset = self.char_boundary_at_or_before(offset);
         let start = self.line_start(offset);
         let end = self.source[offset..]
             .find('\n')
@@ -87,16 +87,17 @@ impl<'source> SourceFile<'source> {
         let end = if range.end >= self.source.len() {
             self.source.len()
         } else {
-            self.source[range.end..]
+            let range_end = self.char_boundary_at_or_before(range.end);
+            self.source[range_end..]
                 .find('\n')
-                .map_or(range.end, |position| range.end + position + 1)
+                .map_or(range_end, |position| range_end + position + 1)
         };
         start..end
     }
 
     /// Returns the byte offset of the physical line containing `offset`.
     pub(super) fn line_start(self, offset: usize) -> usize {
-        let offset = offset.min(self.source.len());
+        let offset = self.char_boundary_at_or_before(offset);
         self.source[..offset]
             .rfind('\n')
             .map_or(0, |position| position + 1)
@@ -105,7 +106,7 @@ impl<'source> SourceFile<'source> {
     /// Returns the byte offset immediately before the line ending. For CRLF,
     /// both line-ending bytes are excluded.
     pub(super) fn line_end(self, offset: usize) -> usize {
-        let offset = offset.min(self.source.len());
+        let offset = self.char_boundary_at_or_before(offset);
         let end = self.source[offset..]
             .find('\n')
             .map_or(self.source.len(), |position| offset + position);
@@ -168,12 +169,12 @@ impl<'source> SourceFile<'source> {
     /// Zero-based character column. Prism locations use byte offsets, while
     /// RuboCop diagnostics and layout rules reason in characters.
     pub(super) fn column(self, offset: usize) -> usize {
-        let offset = offset.min(self.source.len());
+        let offset = self.char_boundary_at_or_before(offset);
         self.source[self.line_start(offset)..offset].chars().count()
     }
 
     pub(super) fn whitespace_before(self, offset: usize) -> Range<usize> {
-        let end = offset.min(self.source.len());
+        let end = self.char_boundary_at_or_before(offset);
         let start = self.source[..end]
             .trim_end_matches(char::is_whitespace)
             .len();
@@ -181,13 +182,21 @@ impl<'source> SourceFile<'source> {
     }
 
     pub(super) fn whitespace_after(self, offset: usize) -> Range<usize> {
-        let start = offset.min(self.source.len());
+        let start = self.char_boundary_at_or_before(offset);
         let count = self.source[start..]
             .chars()
             .take_while(|character| character.is_whitespace())
             .map(char::len_utf8)
             .sum::<usize>();
         start..start + count
+    }
+
+    fn char_boundary_at_or_before(self, offset: usize) -> usize {
+        let mut offset = offset.min(self.source.len());
+        while !self.source.is_char_boundary(offset) {
+            offset -= 1;
+        }
+        offset
     }
 
     /// Finds source text outside ordinary quoted strings and line comments.
@@ -290,5 +299,20 @@ mod tests {
         assert_eq!(source.line(2), "  café");
         assert_eq!(source.column(cafe_end), 6);
         assert_eq!(source.indentation(cafe_end + 2), cafe_end + 2..cafe_end + 3);
+    }
+
+    #[test]
+    fn accepts_offsets_inside_multibyte_characters() {
+        let text = "one\n  なまえ\n  [:🇺🇸]\n";
+        let source = SourceFile::new(text);
+        for offset in 0..=text.len() {
+            let _ = source.line_start(offset);
+            let _ = source.line_end(offset);
+            let _ = source.line(offset);
+            let _ = source.column(offset);
+        }
+        let name = text.find('な').unwrap();
+        assert_eq!(source.line(name + 1), "  なまえ");
+        assert_eq!(source.column(name + 1), 2);
     }
 }

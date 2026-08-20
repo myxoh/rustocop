@@ -182,11 +182,23 @@ fn block_delimiters(context: &mut CopContext<'_, '_>) {
         if line.contains(" do ") && line.trim_end().ends_with(" end") {
             let start = offset + line.find(" do ").unwrap_or(0);
             let end = offset + line.rfind(" end").unwrap_or(line.len());
+            let body_start = start - offset + 4;
+            let body_end = end - offset;
+            let body = if body_start <= body_end {
+                &line[body_start..body_end]
+            } else {
+                ""
+            };
+            let message = "Prefer `{...}` over `do...end` for single-line blocks.";
+            if body.is_empty() {
+                context.report(message, start + 1..start + 3);
+                continue;
+            }
             context.replace(
-                "Prefer `{...}` over `do...end` for a single-line block.",
+                message,
                 start..end + 4,
                 start..end + 4,
-                format!(" {{ {} }}", &line[start - offset + 4..end - offset]),
+                format!(" {{ {body} }}"),
             );
         }
     }

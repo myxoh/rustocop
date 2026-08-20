@@ -74,6 +74,24 @@ macro_rules! fixture_test {
 // New-cop generator registrations are inserted directly below this line.
 
 fixture_test!(
+    accepts_multibyte_offsets_at_node_ends,
+    "unicode_node_end_real_project_regression",
+    "/project/activerecord/test/cases/base_test.rb",
+    "Style/TrailingMethodEndStatement,Style/TrailingCommaInArrayLiteral,Style/Semicolon",
+    false,
+    RubyVersion::default()
+);
+
+fixture_test!(
+    handles_empty_single_line_do_end_block,
+    "block_delimiters_real_project_regression",
+    "/project/railties/lib/rails/application/bootstrap.rb",
+    "Style/BlockDelimiters",
+    true,
+    RubyVersion::default()
+);
+
+fixture_test!(
     accepts_percent_text_in_utf8_interpolation,
     "percent_literal_real_project_regression",
     "/project/lib/seeders/reports/report_data_seeder.rb",
