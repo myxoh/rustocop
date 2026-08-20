@@ -2,13 +2,10 @@ use ruby_prism::{CallNode, Node, RangeNode};
 
 use super::*;
 
-define_rule!(NegativeArrayIndexRule);
-
 define_cops! {
-    NegativeArrayIndex => "Style/NegativeArrayIndex" => call_rule(
+    NegativeArrayIndex => "Style/NegativeArrayIndex" => rubocop_callbacks(
         NegativeArrayIndexRule,
-        on_send,
-        restrict [b"[]"]
+        [on_send restrict [b"[]"]]
     ),
 }
 

@@ -3,14 +3,11 @@ use super::*;
 mod elsif_conversion;
 use elsif_conversion::*;
 
-define_rule!(MultilineTernaryOperatorRule);
-
 define_cops! {
     IfInsideElse => "Style/IfInsideElse" => source(if_inside_else),
-    MultilineTernaryOperator => "Style/MultilineTernaryOperator" => node_rule(
-        as_if_node,
+    MultilineTernaryOperator => "Style/MultilineTernaryOperator" => rubocop_callbacks(
         MultilineTernaryOperatorRule,
-        on_if
+        [on_if]
     ),
     CaseLikeIf => "Style/CaseLikeIf" => source(case_like_if),
 }

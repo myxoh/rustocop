@@ -40,12 +40,17 @@ Use this order of preference:
 | One method call shape | `call` | `&CallNode` |
 | One Prism node kind | `node` | A typed Prism node |
 | A small set of node kinds | `any_node` | `&Node` |
+| A side-by-side RuboCop port | `rubocop_callbacks` | `Rule::on_send`, `Rule::on_if`, and other typed callbacks |
 | Truly lexical or file-level behavior | `source` | `&mut CopContext` |
 | A parser diagnostic | `parse_error` | `&Diagnostic` |
 
 Most new cops should use `call` or typed `node`. Use `any_node` only when the
 same rule genuinely handles several AST shapes. Use `source` for contracts such
 as magic comments or initial file indentation—not as a shortcut around Prism.
+When an existing Ruby cop already divides the semantics cleanly across
+`on_send`, `on_if`, or several related callbacks, use `rubocop_callbacks` so a
+reviewer can compare those methods directly. The shared adapter owns Prism's
+casts and Ruby-to-Prism event aliases.
 
 For `Style/Send`, the answer depends on whether `send` is an actual call, so
 `call` is the correct choice.
@@ -74,6 +79,16 @@ ruby script/new_cop.rb Style/Example node --node-cast as_if_node
 
 # Several intentional node shapes
 ruby script/new_cop.rb Lint/Example any_node
+
+# Preserve RuboCop callback names in a side-by-side port
+ruby script/new_cop.rb Style/Example rubocop --callbacks on_send
+ruby script/new_cop.rb Style/LoopExample rubocop \
+  --callbacks on_block,on_while,on_until,on_for
+
+# Mirror RESTRICT_ON_SEND without writing dispatch code
+ruby script/new_cop.rb Style/Example rubocop \
+  --callbacks on_send \
+  --restrict-methods length,size
 
 # A path-sensitive, correctable cop
 ruby script/new_cop.rb Bundler/Example call \

@@ -7,14 +7,11 @@ struct NegatedIfElseState {
     corrected: Vec<std::ops::Range<usize>>,
 }
 
-define_stateful_rule!(NegatedIfElseConditionRule, NegatedIfElseState);
-
 define_cops! {
-    NegatedIfElseCondition => "Style/NegatedIfElseCondition" => stateful_node_rule(
-        as_if_node,
+    NegatedIfElseCondition => "Style/NegatedIfElseCondition" => stateful_rubocop_callbacks(
         NegatedIfElseConditionRule,
         NegatedIfElseState,
-        on_if
+        [on_if]
     ),
 }
 

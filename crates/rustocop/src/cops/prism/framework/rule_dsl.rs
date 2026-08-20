@@ -196,7 +196,192 @@ macro_rules! define_any_node_rule_cop {
     };
 }
 
+/// Maps RuboCop callback names to their Prism node representation. A callback
+/// remains visible under its Ruby name while this adapter owns the parser-
+/// specific cast. Callbacks such as `on_casgn` deliberately cover several
+/// Prism write nodes because Parser exposes them as one RuboCop event.
+macro_rules! dispatch_rubocop_callback {
+    ($rule:ident, $node:ident, on_send) => {
+        if let Some(typed_node) = $node.as_call_node() {
+            $rule.on_send(&typed_node);
+        }
+    };
+    ($rule:ident, $node:ident, on_if) => {
+        if let Some(typed_node) = $node.as_if_node() {
+            $rule.on_if(&typed_node);
+        }
+    };
+    ($rule:ident, $node:ident, on_unless) => {
+        if let Some(typed_node) = $node.as_unless_node() {
+            $rule.on_unless(&typed_node);
+        }
+    };
+    ($rule:ident, $node:ident, on_block) => {
+        if let Some(typed_node) = $node.as_block_node() {
+            $rule.on_block(&typed_node);
+        }
+    };
+    ($rule:ident, $node:ident, on_while) => {
+        if let Some(typed_node) = $node.as_while_node() {
+            $rule.on_while(&typed_node);
+        }
+    };
+    ($rule:ident, $node:ident, on_until) => {
+        if let Some(typed_node) = $node.as_until_node() {
+            $rule.on_until(&typed_node);
+        }
+    };
+    ($rule:ident, $node:ident, on_for) => {
+        if let Some(typed_node) = $node.as_for_node() {
+            $rule.on_for(&typed_node);
+        }
+    };
+    ($rule:ident, $node:ident, on_def) => {
+        if let Some(typed_node) = $node.as_def_node() {
+            $rule.on_def(&typed_node);
+        }
+    };
+    ($rule:ident, $node:ident, on_class) => {
+        if let Some(typed_node) = $node.as_class_node() {
+            $rule.on_class(&typed_node);
+        }
+    };
+    ($rule:ident, $node:ident, on_module) => {
+        if let Some(typed_node) = $node.as_module_node() {
+            $rule.on_module(&typed_node);
+        }
+    };
+    ($rule:ident, $node:ident, on_array) => {
+        if let Some(typed_node) = $node.as_array_node() {
+            $rule.on_array(&typed_node);
+        }
+    };
+    ($rule:ident, $node:ident, on_hash) => {
+        if let Some(typed_node) = $node.as_hash_node() {
+            $rule.on_hash(&typed_node);
+        }
+    };
+    ($rule:ident, $node:ident, on_casgn) => {
+        if $node.as_constant_write_node().is_some()
+            || $node.as_constant_path_write_node().is_some()
+            || $node.as_constant_or_write_node().is_some()
+            || $node.as_constant_path_or_write_node().is_some()
+            || $node.as_constant_and_write_node().is_some()
+            || $node.as_constant_path_and_write_node().is_some()
+            || $node.as_constant_operator_write_node().is_some()
+            || $node.as_constant_path_operator_write_node().is_some()
+        {
+            $rule.on_casgn($node);
+        }
+    };
+}
+
+macro_rules! rubocop_callback_matches {
+    ($node:ident, on_send) => {
+        $node.as_call_node().is_some()
+    };
+    ($node:ident, on_if) => {
+        $node.as_if_node().is_some()
+    };
+    ($node:ident, on_unless) => {
+        $node.as_unless_node().is_some()
+    };
+    ($node:ident, on_block) => {
+        $node.as_block_node().is_some()
+    };
+    ($node:ident, on_while) => {
+        $node.as_while_node().is_some()
+    };
+    ($node:ident, on_until) => {
+        $node.as_until_node().is_some()
+    };
+    ($node:ident, on_for) => {
+        $node.as_for_node().is_some()
+    };
+    ($node:ident, on_def) => {
+        $node.as_def_node().is_some()
+    };
+    ($node:ident, on_class) => {
+        $node.as_class_node().is_some()
+    };
+    ($node:ident, on_module) => {
+        $node.as_module_node().is_some()
+    };
+    ($node:ident, on_array) => {
+        $node.as_array_node().is_some()
+    };
+    ($node:ident, on_hash) => {
+        $node.as_hash_node().is_some()
+    };
+    ($node:ident, on_casgn) => {
+        $node.as_constant_write_node().is_some()
+            || $node.as_constant_path_write_node().is_some()
+            || $node.as_constant_or_write_node().is_some()
+            || $node.as_constant_path_or_write_node().is_some()
+            || $node.as_constant_and_write_node().is_some()
+            || $node.as_constant_path_and_write_node().is_some()
+            || $node.as_constant_operator_write_node().is_some()
+            || $node.as_constant_path_operator_write_node().is_some()
+    };
+}
+
+/// Defines one cop adapter from the same callback names visible in RuboCop.
+/// Multiple callbacks share one rule object and one cop-scoped context.
+macro_rules! define_rubocop_callback_rule_cop {
+    ($type:ident => $name:literal => $rule:ident [$($callback:ident),+ $(,)?]) => {
+        struct $type;
+
+        impl Cop for $type {
+            fn name(&self) -> &'static str { $name }
+
+            fn on_node_with_state<'pr>(&self, node: &Node<'pr>, ancestors: &[Node<'pr>], source: &str, context: &mut Context, _state: &mut dyn Any) {
+                if !($(rubocop_callback_matches!(node, $callback))||+) { return; }
+                let mut context = context.cop_context(self.name(), source, ancestors);
+                let mut rule = $rule::new(&mut context);
+                $(dispatch_rubocop_callback!(rule, node, $callback);)+
+            }
+        }
+    };
+    ($type:ident => $name:literal => $rule:ident [on_send restrict [$($method:literal),+ $(,)?]]) => {
+        struct $type;
+
+        impl Cop for $type {
+            fn name(&self) -> &'static str { $name }
+
+            fn on_node_with_state<'pr>(&self, node: &Node<'pr>, ancestors: &[Node<'pr>], source: &str, context: &mut Context, _state: &mut dyn Any) {
+                let Some(call) = node.as_call_node() else { return; };
+                if ![$($method.as_slice()),+].contains(&call.method_name()) { return; }
+                let mut context = context.cop_context(self.name(), source, ancestors);
+                $rule::new(&mut context).on_send(&call);
+            }
+        }
+    };
+}
+
+macro_rules! define_stateful_rubocop_callback_rule_cop {
+    ($type:ident => $name:literal => $rule:ident<$state:ident> [$($callback:ident),+ $(,)?]) => {
+        struct $type;
+
+        impl Cop for $type {
+            fn name(&self) -> &'static str { $name }
+            fn investigation_state(&self) -> Box<dyn Any> { Box::new($state::default()) }
+            fn on_new_investigation(&self, state: &mut dyn Any) {
+                *state.downcast_mut::<$state>().expect("cop state type") = $state::default();
+            }
+            fn on_node_with_state<'pr>(&self, node: &Node<'pr>, ancestors: &[Node<'pr>], source: &str, context: &mut Context, state: &mut dyn Any) {
+                if !($(rubocop_callback_matches!(node, $callback))||+) { return; }
+                let state = state.downcast_mut::<$state>().expect("cop state type");
+                let mut context = context.cop_context(self.name(), source, ancestors);
+                let mut rule = $rule::new(&mut context, state);
+                $(dispatch_rubocop_callback!(rule, node, $callback);)+
+            }
+        }
+    };
+}
+
 pub(super) use {
-    define_any_node_rule_cop, define_call_rule_cop, define_node_rule_cop, define_rule,
-    define_stateful_call_rule_cop, define_stateful_node_rule_cop, define_stateful_rule,
+    define_any_node_rule_cop, define_call_rule_cop, define_node_rule_cop,
+    define_rubocop_callback_rule_cop, define_rule, define_stateful_call_rule_cop,
+    define_stateful_node_rule_cop, define_stateful_rubocop_callback_rule_cop, define_stateful_rule,
+    dispatch_rubocop_callback, rubocop_callback_matches,
 };

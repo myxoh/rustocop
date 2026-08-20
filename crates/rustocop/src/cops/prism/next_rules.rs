@@ -1,30 +1,33 @@
-use ruby_prism::{Location, Node, StatementsNode};
+use ruby_prism::{BlockNode, ForNode, Location, Node, StatementsNode, UntilNode, WhileNode};
 
 use super::*;
 
-define_rule!(NextRule);
-
 define_cops! {
-    Next => "Style/Next" => any_node_rule(NextRule, on_iteration),
+    Next => "Style/Next" => rubocop_callbacks(NextRule, [on_block, on_while, on_until, on_for]),
 }
 
 impl NextRule<'_, '_, '_> {
-    fn on_iteration(&mut self, node: &Node<'_>) {
-        let body = if let Some(block) = node.as_block_node() {
-            let Some(call) = self.ancestors().iter().rev().find_map(Node::as_call_node) else {
-                return;
-            };
-            return_unless!(enumerator_method(call.name().as_slice()));
-            block.body().and_then(|body| body.as_statements_node())
-        } else if let Some(loop_node) = node.as_while_node() {
-            loop_node.statements()
-        } else if let Some(loop_node) = node.as_until_node() {
-            loop_node.statements()
-        } else if let Some(loop_node) = node.as_for_node() {
-            loop_node.statements()
-        } else {
+    fn on_block(&mut self, node: &BlockNode<'_>) {
+        let Some(call) = self.ancestors().iter().rev().find_map(Node::as_call_node) else {
             return;
         };
+        return_unless!(enumerator_method(call.name().as_slice()));
+        self.check_body(node.body().and_then(|body| body.as_statements_node()));
+    }
+
+    fn on_while(&mut self, node: &WhileNode<'_>) {
+        self.check_body(node.statements());
+    }
+
+    fn on_until(&mut self, node: &UntilNode<'_>) {
+        self.check_body(node.statements());
+    }
+
+    fn on_for(&mut self, node: &ForNode<'_>) {
+        self.check_body(node.statements());
+    }
+
+    fn check_body(&mut self, body: Option<StatementsNode<'_>>) {
         let Some(body) = body else { return };
         self.check(&body);
     }

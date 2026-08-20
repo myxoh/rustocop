@@ -62,4 +62,26 @@ RSpec.describe "cop authoring tools" do
       "checks_style_generated_family_example"
     )
   end
+
+  it "previews a Ruby-shaped cop with RuboCop callback names" do
+    stdout, stderr, status = run_script(
+      "new_cop.rb",
+      "Style/GeneratedRubyShape",
+      "rubocop",
+      "--callbacks",
+      "on_block,on_while,on_until",
+      "--dry-run"
+    )
+
+    expect(status).to be_success
+    expect(stderr).to eq("")
+    expect(stdout).to include(
+      'GeneratedRubyShape => "Style/GeneratedRubyShape" => rubocop_callbacks(',
+      "GeneratedRubyShapeRule, [on_block, on_while, on_until]",
+      "impl GeneratedRubyShapeRule<'_, '_, '_>",
+      "fn on_block(&mut self, node: &ruby_prism::BlockNode<'_>)",
+      "fn on_while(&mut self, node: &ruby_prism::WhileNode<'_>)",
+      "fn on_until(&mut self, node: &ruby_prism::UntilNode<'_>)"
+    )
+  end
 end

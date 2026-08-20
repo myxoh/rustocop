@@ -2,10 +2,8 @@ use ruby_prism::Node;
 
 use super::*;
 
-define_rule!(MutableConstantRule);
-
 define_cops! {
-    MutableConstant => "Style/MutableConstant" => any_node_rule(MutableConstantRule, on_casgn),
+    MutableConstant => "Style/MutableConstant" => rubocop_callbacks(MutableConstantRule, [on_casgn]),
 }
 
 impl MutableConstantRule<'_, '_, '_> {

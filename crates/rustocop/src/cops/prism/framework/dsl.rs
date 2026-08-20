@@ -245,6 +245,18 @@ macro_rules! define_cop_entry {
     ($type:ident => $name:literal => node_rule_aliases($rule:ident, $callback:ident => [$($cast:ident),+ $(,)?])) => {
         define_any_node_rule_cop!($type => $name => $rule::$callback aliases [$($cast),+]);
     };
+    ($type:ident => $name:literal => rubocop_callbacks($rule:ident, [on_send restrict [$($method:literal),+ $(,)?]])) => {
+        define_rule!($rule);
+        define_rubocop_callback_rule_cop!($type => $name => $rule [on_send restrict [$($method),+]]);
+    };
+    ($type:ident => $name:literal => rubocop_callbacks($rule:ident, [$($callback:ident),+ $(,)?])) => {
+        define_rule!($rule);
+        define_rubocop_callback_rule_cop!($type => $name => $rule [$($callback),+]);
+    };
+    ($type:ident => $name:literal => stateful_rubocop_callbacks($rule:ident, $state:ident, [$($callback:ident),+ $(,)?])) => {
+        define_stateful_rule!($rule, $state);
+        define_stateful_rubocop_callback_rule_cop!($type => $name => $rule<$state> [$($callback),+]);
+    };
     ($type:ident => $name:literal => any_node($check:path)) => {
         define_any_node_cop!($type => $name => $check);
     };

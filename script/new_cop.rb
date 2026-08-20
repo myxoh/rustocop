@@ -13,7 +13,9 @@ options = {
   dry_run: false,
   family: nil,
   fixture_path: "/project/example.rb",
-  node_cast: "as_call_node"
+  node_cast: "as_call_node",
+  rubocop_callbacks: ["on_send"],
+  restrict_methods: []
 }
 OptionParser.new do |parser|
   parser.banner = "Usage: ruby script/new_cop.rb Department/CopName KIND [options]"
@@ -28,11 +30,17 @@ OptionParser.new do |parser|
     options[:family] = family
   end
   parser.on("--node-cast METHOD", "Prism Node cast for node cops") { |cast| options[:node_cast] = cast }
+  parser.on("--callbacks LIST", "comma-separated RuboCop callbacks for rubocop cops") do |callbacks|
+    options[:rubocop_callbacks] = callbacks.split(",").map(&:strip)
+  end
+  parser.on("--restrict-methods LIST", "comma-separated on_send method names") do |methods|
+    options[:restrict_methods] = methods.split(",").map(&:strip)
+  end
 end.parse!
 
 cop_name = ARGV.shift or abort "missing cop name"
 kind = ARGV.shift || "call"
-abort "kind must be call, node, any_node, or source" unless %w[call node any_node source].include?(kind)
+abort "kind must be call, node, any_node, source, or rubocop" unless %w[call node any_node source rubocop].include?(kind)
 abort "cop name must contain only Ruby constant-name characters" unless cop_name.match?(/\A[A-Z][A-Za-z0-9]*\/[A-Z][A-Za-z0-9]*\z/)
 department, short_name = cop_name.split("/", 2)
 abort "cop name must look like Department/CopName" unless department && short_name
@@ -46,6 +54,7 @@ module_name = options[:family] || fixture_name
 abort "family module must use snake_case" unless module_name.match?(/\A[a-z][a-z0-9_]*\z/)
 type_name = short_name.gsub(/[^A-Za-z0-9]/, "")
 callback_name = options[:family] ? snake : "check"
+rule_name = "#{type_name}Rule"
 path = File.join(PRISM_ROOT, "#{module_name}.rs")
 if options[:family]
   abort "family module does not exist: #{path}" unless File.exist?(path)
@@ -54,6 +63,32 @@ else
 end
 fixture = File.join(ROOT, "crates/rustocop/tests/fixtures/inspection", fixture_name)
 abort "#{fixture} already exists" if File.exist?(fixture)
+
+rubocop_node_types = {
+  "on_send" => "CallNode",
+  "on_if" => "IfNode",
+  "on_unless" => "UnlessNode",
+  "on_block" => "BlockNode",
+  "on_while" => "WhileNode",
+  "on_until" => "UntilNode",
+  "on_for" => "ForNode",
+  "on_def" => "DefNode",
+  "on_class" => "ClassNode",
+  "on_module" => "ModuleNode",
+  "on_array" => "ArrayNode",
+  "on_hash" => "HashNode",
+  "on_casgn" => "Node"
+}.freeze
+
+if kind == "rubocop"
+  unknown = options.fetch(:rubocop_callbacks) - rubocop_node_types.keys
+  abort "unsupported RuboCop callbacks: #{unknown.join(', ')}" unless unknown.empty?
+  abort "at least one RuboCop callback is required" if options.fetch(:rubocop_callbacks).empty?
+  if options.fetch(:restrict_methods).any?
+    abort "--restrict-methods requires callbacks to be exactly on_send" unless options.fetch(:rubocop_callbacks) == ["on_send"]
+    abort "restricted method names must be Ruby identifiers or operators" unless options.fetch(:restrict_methods).all? { |method| method.match?(/\A[^\s,]+\z/) }
+  end
+end
 
 callback = case kind
            when "call"
@@ -89,10 +124,42 @@ callback = case kind
                    let _ = source;
                }
              RUST
+           when "rubocop"
+             methods = options.fetch(:rubocop_callbacks).map do |name|
+               node_type = rubocop_node_types.fetch(name)
+               body = if name == "on_send"
+                        <<~RUST.chomp
+                          return_unless!(match_call(node).named(b"replace_me").matches());
+                          add_offense!(self, node.message_loc(), message: "Replace with the upstream RuboCop message.", |corrector| {
+                              corrector.replace(node.message_loc(), "replacement");
+                          });
+                        RUST
+                      else
+                        "let _ = node;"
+                      end
+               <<~RUST
+                 fn #{name}(&mut self, node: &ruby_prism::#{node_type}<'_>) {
+                 #{body.lines.map { |line| "    #{line}" }.join.rstrip}
+                 }
+               RUST
+             end.join("\n")
+             <<~RUST
+               impl #{rule_name}<'_, '_, '_> {
+               #{methods.lines.map { |line| "    #{line}" }.join.rstrip}
+               }
+             RUST
            end
 
 declaration = if kind == "node"
                 "node(#{options.fetch(:node_cast)}, #{callback_name})"
+              elsif kind == "rubocop"
+                callback_list = if options.fetch(:restrict_methods).any?
+                                  methods = options.fetch(:restrict_methods).map { |method| "b#{method.dump}" }.join(", ")
+                                  "on_send restrict [#{methods}]"
+                                else
+                                  options.fetch(:rubocop_callbacks).join(", ")
+                                end
+                "rubocop_callbacks(#{rule_name}, [#{callback_list}])"
               else
                 "#{kind}(#{callback_name})"
               end

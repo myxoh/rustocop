@@ -16,6 +16,8 @@ Every concise cop is declared once inside `define_cops!`:
 | `call(handler)` | `fn(&CallNode, &mut CopContext)` | One method-call shape |
 | `node(as_if_node, handler)` | `fn(&IfNode, &mut CopContext)` | One typed Prism node |
 | `any_node(handler)` | `fn(&Node, &mut CopContext)` | Several intentional node kinds |
+| `rubocop_callbacks(Rule, [on_send, ...])` | inherent `Rule::on_*` methods | A port that should retain RuboCop's callback shape |
+| `stateful_rubocop_callbacks(Rule, State, [on_if, ...])` | inherent `Rule::on_*` methods plus per-file state | A stateful Ruby-shaped port |
 | `source(handler)` | `fn(&mut CopContext)` | Lexical or file-level rules |
 | `parse_error(handler)` | `fn(&Diagnostic, &mut CopContext)` | Parser diagnostics already produced by Prism |
 
@@ -31,6 +33,52 @@ define_cops! {
 The generated marker types are stateless and `Sync`. Per-file state belongs in
 the callback/context, never in a cop instance.
 
+### Ruby-shaped callback ports
+
+Use `rubocop_callbacks` when translating or repairing a cop whose Ruby callback
+structure is useful during side-by-side review. The declaration creates the
+rule object, maps callback names to typed Prism nodes, and rejects unrelated
+nodes before constructing a cop context:
+
+```rust
+define_cops! {
+    Next => "Style/Next" => rubocop_callbacks(
+        NextRule,
+        [on_block, on_while, on_until, on_for]
+    ),
+}
+
+impl NextRule<'_, '_, '_> {
+    fn on_block(&mut self, node: &ruby_prism::BlockNode<'_>) {
+        // Same responsibility as RuboCop's on_block.
+    }
+
+    fn on_while(&mut self, node: &ruby_prism::WhileNode<'_>) {
+        // Shared semantic helpers remain ordinary Rust methods/functions.
+    }
+}
+```
+
+Supported callback names currently include `on_send`, `on_if`, `on_unless`,
+`on_block`, `on_while`, `on_until`, `on_for`, `on_def`, `on_class`, `on_module`,
+`on_array`, `on_hash`, and `on_casgn`. `on_casgn` owns the mapping from Ruby's
+single callback to Prism's constant-write variants. A restricted call cop can
+keep RuboCop's `RESTRICT_ON_SEND` intent visible:
+
+```rust
+define_cops! {
+    Example => "Style/Example" => rubocop_callbacks(
+        ExampleRule,
+        [on_send restrict [b"length", b"size"]]
+    ),
+}
+```
+
+Use `stateful_rubocop_callbacks` only when callbacks must share per-file state;
+the state is reset for every investigation. Add a callback mapping to the
+framework only when it represents a recurring RuboCop event, rather than
+putting cop-specific semantics into the dispatcher.
+
 ## Start a cop
 
 Generate the module, registry wiring, and focused fixture shell:
@@ -39,6 +87,8 @@ Generate the module, registry wiring, and focused fixture shell:
 ruby script/new_cop.rb Style/Example call
 ruby script/new_cop.rb Lint/Example node --node-cast as_if_node
 ruby script/new_cop.rb Style/SeveralShapes any_node
+ruby script/new_cop.rb Style/RubyShaped rubocop --callbacks on_send
+ruby script/new_cop.rb Style/LoopRule rubocop --callbacks on_block,on_while,on_until
 ruby script/new_cop.rb Layout/Example source
 ruby script/new_cop.rb Bundler/Example call --fixture-path /project/Gemfile --autocorrect
 ```
