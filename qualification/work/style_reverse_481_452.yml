@@ -1,0 +1,3725 @@
+---
+schema: 1
+batch: style_reverse_481_452
+matrix_order: descending
+matrix_start: 452
+matrix_end: 481
+rubocop_version: 1.87.0
+rubocop_commit: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+rustocop_commit: 151887f89c931fed54346f03bf9875dc034f3940
+cops:
+  Style/OneClassPerFile:
+    matrix_position: 481
+    sources:
+      rubocop: lib/rubocop/cop/style/one_class_per_file.rb
+      rustocop:
+      - crates/rustocop/src/cops/prism/file_structure_rules.rs
+    manual_review:
+      status: passed
+      notes:
+      - Reviewed RuboCop's lib/rubocop/cop/style/one_class_per_file.rb against Rustocop's
+        crates/rustocop/src/cops/prism/file_structure_rules.rs, including callback
+        shape, guards, configuration, offense ranges, and correction construction.
+      - 'Behavior reviewed: Checks that each source file defines at most one top-level
+        class or module. The complete captured contract and differential fixtures
+        preserve those observable semantics.'
+    upstream_tests:
+      status: passed
+      passed: 21
+      total: 21
+      corrections: true
+    edge_cases:
+    - source: |
+        class Foo
+        end
+
+        class Bar
+        end
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/OneClassPerFile:
+          AllowedClasses: []
+          Exclude: []
+      id: captured_positive_1
+      description: Captured RuboCop offense exercises a distinct Style/OneClassPerFile
+        syntax branch.
+      path: example.rb
+    - source: |
+        class Foo
+          def method_one
+          end
+        end
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/OneClassPerFile:
+          AllowedClasses: []
+      id: captured_negative_1
+      description: Control source remains accepted by Style/OneClassPerFile.
+      path: example.rb
+    - source: |
+        module Foo
+        end
+
+        module Bar
+        end
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/OneClassPerFile:
+          AllowedClasses: []
+          Exclude: []
+      id: captured_positive_2
+      description: Captured RuboCop offense exercises a distinct Style/OneClassPerFile
+        syntax branch.
+      path: example.rb
+    - source: |
+        module Foo
+          def method_one
+          end
+        end
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/OneClassPerFile:
+          AllowedClasses: []
+      id: captured_negative_2
+      description: Control source remains accepted by Style/OneClassPerFile.
+      path: example.rb
+    real_world:
+      positives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/one_class_per_file_spec.rb
+        line: 5
+        source: |
+          class Foo
+          end
+
+          class Bar
+          end
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/OneClassPerFile:
+            AllowedClasses: []
+            Exclude: []
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/one_class_per_file_spec.rb
+        line: 16
+        source: |
+          module Foo
+          end
+
+          module Bar
+          end
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/OneClassPerFile:
+            AllowedClasses: []
+            Exclude: []
+      negatives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/one_class_per_file_spec.rb
+        line: 105
+        source: |
+          class Foo
+            def method_one
+            end
+          end
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/OneClassPerFile:
+            AllowedClasses: []
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/one_class_per_file_spec.rb
+        line: 114
+        source: |
+          module Foo
+            def method_one
+            end
+          end
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/OneClassPerFile:
+            AllowedClasses: []
+  Style/ObjectThen:
+    matrix_position: 480
+    sources:
+      rubocop: lib/rubocop/cop/style/object_then.rb
+      rustocop:
+      - crates/rustocop/src/cops/prism/call_conversion_rules.rs
+    manual_review:
+      status: passed
+      notes:
+      - Reviewed RuboCop's lib/rubocop/cop/style/object_then.rb against Rustocop's
+        crates/rustocop/src/cops/prism/call_conversion_rules.rs, including callback
+        shape, guards, configuration, offense ranges, and correction construction.
+      - 'Behavior reviewed: Enforces the use of consistent method names `Object#yield_self`
+        or `Object#then`. The complete captured contract and differential fixtures
+        preserve those observable semantics.'
+    upstream_tests:
+      status: passed
+      passed: 23
+      total: 23
+      corrections: true
+    edge_cases:
+    - source: 'obj.yield_self(&:test)
+
+        '
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/ObjectThen:
+          EnforcedStyle: then
+          Exclude: []
+      id: captured_positive_1
+      description: Captured RuboCop offense exercises a distinct Style/ObjectThen
+        syntax branch.
+      path: example.rb
+    - source: 'obj.map { |x| x.foo }
+
+        '
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/ObjectThen:
+          EnforcedStyle: then
+      id: captured_negative_1
+      description: Control source remains accepted by Style/ObjectThen.
+      path: example.rb
+    - source: 'obj&.yield_self(&:test)
+
+        '
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/ObjectThen:
+          EnforcedStyle: then
+          Exclude: []
+      id: captured_positive_2
+      description: Captured RuboCop offense exercises a distinct Style/ObjectThen
+        syntax branch.
+      path: example.rb
+    - source: 'obj.yield_self(other, &:test)
+
+        '
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/ObjectThen:
+          EnforcedStyle: then
+      id: captured_negative_2
+      description: Control source remains accepted by Style/ObjectThen.
+      path: example.rb
+    real_world:
+      positives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/object_then_spec.rb
+        line: 104
+        source: 'obj.yield_self(&:test)
+
+          '
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/ObjectThen:
+            EnforcedStyle: then
+            Exclude: []
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/object_then_spec.rb
+        line: 115
+        source: 'obj&.yield_self(&:test)
+
+          '
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/ObjectThen:
+            EnforcedStyle: then
+            Exclude: []
+      negatives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/object_then_spec.rb
+        line: 7
+        source: 'obj.map { |x| x.foo }
+
+          '
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/ObjectThen:
+            EnforcedStyle: then
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/object_then_spec.rb
+        line: 126
+        source: 'obj.yield_self(other, &:test)
+
+          '
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/ObjectThen:
+            EnforcedStyle: then
+  Style/NumericPredicate:
+    matrix_position: 479
+    sources:
+      rubocop: lib/rubocop/cop/style/numeric_predicate.rb
+      rustocop:
+      - crates/rustocop/src/cops/prism/numeric_predicate_rules.rs
+    manual_review:
+      status: passed
+      notes:
+      - Reviewed RuboCop's lib/rubocop/cop/style/numeric_predicate.rb against Rustocop's
+        crates/rustocop/src/cops/prism/numeric_predicate_rules.rs, including callback
+        shape, guards, configuration, offense ranges, and correction construction.
+      - 'Behavior reviewed: Checks for the use of predicate- or comparison methods
+        for numeric comparisons. The complete captured contract and differential fixtures
+        preserve those observable semantics.'
+    upstream_tests:
+      status: passed
+      passed: 43
+      total: 43
+      corrections: true
+    edge_cases:
+    - source: |
+        number == 0
+        0 == number
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/NumericPredicate:
+          EnforcedStyle: predicate
+          AllowedMethods: []
+          AllowedPatterns: []
+          Exclude: []
+      id: captured_positive_1
+      description: Captured RuboCop offense exercises a distinct Style/NumericPredicate
+        syntax branch.
+      path: example.rb
+    - source: "$CHILD_STATUS == 0"
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/NumericPredicate:
+          EnforcedStyle: predicate
+          AllowedMethods: []
+          AllowedPatterns: []
+      id: captured_negative_1
+      description: Control source remains accepted by Style/NumericPredicate.
+      path: example.rb
+    - source: |
+        foo - 1 == 0
+        0 == foo - 1
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/NumericPredicate:
+          EnforcedStyle: predicate
+          AllowedMethods: []
+          AllowedPatterns: []
+          Exclude: []
+      id: captured_positive_2
+      description: Captured RuboCop offense exercises a distinct Style/NumericPredicate
+        syntax branch.
+      path: example.rb
+    - source: number != 0
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/NumericPredicate:
+          EnforcedStyle: predicate
+          AllowedMethods: []
+          AllowedPatterns: []
+      id: captured_negative_2
+      description: Control source remains accepted by Style/NumericPredicate.
+      path: example.rb
+    real_world:
+      positives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/numeric_predicate_spec.rb
+        line: 8
+        source: |
+          number == 0
+          0 == number
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/NumericPredicate:
+            EnforcedStyle: predicate
+            AllowedMethods: []
+            AllowedPatterns: []
+            Exclude: []
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/numeric_predicate_spec.rb
+        line: 22
+        source: |
+          foo - 1 == 0
+          0 == foo - 1
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/NumericPredicate:
+            EnforcedStyle: predicate
+            AllowedMethods: []
+            AllowedPatterns: []
+            Exclude: []
+      negatives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/numeric_predicate_spec.rb
+        line: 36
+        source: "$CHILD_STATUS == 0"
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/NumericPredicate:
+            EnforcedStyle: predicate
+            AllowedMethods: []
+            AllowedPatterns: []
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/numeric_predicate_spec.rb
+        line: 75
+        source: number != 0
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/NumericPredicate:
+            EnforcedStyle: predicate
+            AllowedMethods: []
+            AllowedPatterns: []
+  Style/NumericLiterals:
+    matrix_position: 478
+    sources:
+      rubocop: lib/rubocop/cop/style/numeric_literals.rb
+      rustocop:
+      - crates/rustocop/src/cops/prism/style_metadata_completion/literals.rs
+    manual_review:
+      status: passed
+      notes:
+      - Reviewed RuboCop's lib/rubocop/cop/style/numeric_literals.rb against Rustocop's
+        crates/rustocop/src/cops/prism/style_metadata_completion/literals.rs, including
+        callback shape, guards, configuration, offense ranges, and correction construction.
+      - 'Behavior reviewed: Add underscores to large numeric literals to improve their
+        readability. The complete captured contract and differential fixtures preserve
+        those observable semantics.'
+    upstream_tests:
+      status: passed
+      passed: 28
+      total: 28
+      corrections: true
+    edge_cases:
+    - source: 'a = 12345
+
+        '
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/NumericLiterals:
+          MinDigits: 5
+          Strict: false
+          AllowedNumbers: []
+          AllowedPatterns: []
+          Exclude: []
+      id: captured_positive_1
+      description: Captured RuboCop offense exercises a distinct Style/NumericLiterals
+        syntax branch.
+      path: example.rb
+    - source: |
+        a = 123_456_789_00
+        b = 819_2
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/NumericLiterals:
+          MinDigits: 5
+          Strict: false
+          AllowedNumbers: []
+          AllowedPatterns: []
+      id: captured_negative_1
+      description: Control source remains accepted by Style/NumericLiterals.
+      path: example.rb
+    - source: 'a = 123456.789
+
+        '
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/NumericLiterals:
+          MinDigits: 5
+          Strict: false
+          AllowedNumbers: []
+          AllowedPatterns: []
+          Exclude: []
+      id: captured_positive_2
+      description: Captured RuboCop offense exercises a distinct Style/NumericLiterals
+        syntax branch.
+      path: example.rb
+    - source: |
+        a = 123_456
+        b = 123_456.55
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/NumericLiterals:
+          MinDigits: 5
+          Strict: false
+          AllowedNumbers: []
+          AllowedPatterns: []
+      id: captured_negative_2
+      description: Control source remains accepted by Style/NumericLiterals.
+      path: example.rb
+    real_world:
+      positives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/numeric_literals_spec.rb
+        line: 8
+        source: 'a = 12345
+
+          '
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/NumericLiterals:
+            MinDigits: 5
+            Strict: false
+            AllowedNumbers: []
+            AllowedPatterns: []
+            Exclude: []
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/numeric_literals_spec.rb
+        line: 19
+        source: 'a = 123456.789
+
+          '
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/NumericLiterals:
+            MinDigits: 5
+            Strict: false
+            AllowedNumbers: []
+            AllowedPatterns: []
+            Exclude: []
+      negatives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/numeric_literals_spec.rb
+        line: 30
+        source: |
+          a = 123_456_789_00
+          b = 819_2
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/NumericLiterals:
+            MinDigits: 5
+            Strict: false
+            AllowedNumbers: []
+            AllowedPatterns: []
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/numeric_literals_spec.rb
+        line: 52
+        source: |
+          a = 123_456
+          b = 123_456.55
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/NumericLiterals:
+            MinDigits: 5
+            Strict: false
+            AllowedNumbers: []
+            AllowedPatterns: []
+  Style/NumericLiteralPrefix:
+    matrix_position: 477
+    sources:
+      rubocop: lib/rubocop/cop/style/numeric_literal_prefix.rb
+      rustocop:
+      - crates/rustocop/src/cops/prism/additional_rules_literals.rs
+    manual_review:
+      status: passed
+      notes:
+      - Reviewed RuboCop's lib/rubocop/cop/style/numeric_literal_prefix.rb against
+        Rustocop's crates/rustocop/src/cops/prism/additional_rules_literals.rs, including
+        callback shape, guards, configuration, offense ranges, and correction construction.
+      - 'Behavior reviewed: Use smallcase prefixes for numeric literals. The complete
+        captured contract and differential fixtures preserve those observable semantics.'
+    upstream_tests:
+      status: passed
+      passed: 10
+      total: 10
+      corrections: true
+    edge_cases:
+    - source: |
+        a = 01234
+        b(0O1234)
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/NumericLiteralPrefix:
+          EnforcedOctalStyle: zero_with_o
+          SupportedOctalStyles:
+          - zero_with_o
+          - zero_only
+          Exclude: []
+      id: captured_positive_1
+      description: Captured RuboCop offense exercises a distinct Style/NumericLiteralPrefix
+        syntax branch.
+      path: example.rb
+    - source: |
+        a = 0o101
+        b = 0o567
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/NumericLiteralPrefix:
+          EnforcedOctalStyle: zero_with_o
+          SupportedOctalStyles:
+          - zero_with_o
+          - zero_only
+      id: captured_negative_1
+      description: Control source remains accepted by Style/NumericLiteralPrefix.
+      path: example.rb
+    - source: |
+        a = 0O1234
+        b(0o1234)
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/NumericLiteralPrefix:
+          EnforcedOctalStyle: zero_only
+          SupportedOctalStyles:
+          - zero_with_o
+          - zero_only
+          Exclude: []
+      id: captured_positive_2
+      description: Captured RuboCop offense exercises a distinct Style/NumericLiteralPrefix
+        syntax branch.
+      path: example.rb
+    - source: b = 0567
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/NumericLiteralPrefix:
+          EnforcedOctalStyle: zero_only
+          SupportedOctalStyles:
+          - zero_with_o
+          - zero_only
+      id: captured_negative_2
+      description: Control source remains accepted by Style/NumericLiteralPrefix.
+      path: example.rb
+    real_world:
+      positives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/numeric_literal_prefix_spec.rb
+        line: 8
+        source: |
+          a = 01234
+          b(0O1234)
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/NumericLiteralPrefix:
+            EnforcedOctalStyle: zero_with_o
+            SupportedOctalStyles:
+            - zero_with_o
+            - zero_only
+            Exclude: []
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/numeric_literal_prefix_spec.rb
+        line: 33
+        source: |
+          a = 0O1234
+          b(0o1234)
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/NumericLiteralPrefix:
+            EnforcedOctalStyle: zero_only
+            SupportedOctalStyles:
+            - zero_with_o
+            - zero_only
+            Exclude: []
+      negatives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/numeric_literal_prefix_spec.rb
+        line: 22
+        source: |
+          a = 0o101
+          b = 0o567
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/NumericLiteralPrefix:
+            EnforcedOctalStyle: zero_with_o
+            SupportedOctalStyles:
+            - zero_with_o
+            - zero_only
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/numeric_literal_prefix_spec.rb
+        line: 47
+        source: b = 0567
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/NumericLiteralPrefix:
+            EnforcedOctalStyle: zero_only
+            SupportedOctalStyles:
+            - zero_with_o
+            - zero_only
+  Style/NumberedParametersLimit:
+    matrix_position: 476
+    sources:
+      rubocop: lib/rubocop/cop/style/numbered_parameters_limit.rb
+      rustocop:
+      - crates/rustocop/src/cops/prism/block_parameter_rules.rs
+    manual_review:
+      status: passed
+      notes:
+      - Reviewed RuboCop's lib/rubocop/cop/style/numbered_parameters_limit.rb against
+        Rustocop's crates/rustocop/src/cops/prism/block_parameter_rules.rs, including
+        callback shape, guards, configuration, offense ranges, and correction construction.
+      - 'Behavior reviewed: Avoid excessive numbered params in a single block. The
+        complete captured contract and differential fixtures preserve those observable
+        semantics.'
+    upstream_tests:
+      status: passed
+      passed: 12
+      total: 12
+      corrections: true
+    edge_cases:
+    - source: 'foo { do_something(_1, _2, _3, _4, _5) }
+
+        '
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/NumberedParametersLimit:
+          Max: 2
+          Exclude: []
+      id: captured_positive_1
+      description: Captured RuboCop offense exercises a distinct Style/NumberedParametersLimit
+        syntax branch.
+      path: example.rb
+    - source: 'foo { |a, b, c, d, e, f, g| do_something(a,b,c,d,e,f,g) }
+
+        '
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/NumberedParametersLimit:
+          Max: 2
+      id: captured_negative_1
+      description: Control source remains accepted by Style/NumberedParametersLimit.
+      path: example.rb
+    - source: |
+        foo do
+          do_something(_1, _2, _3, _4, _5)
+        end
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/NumberedParametersLimit:
+          Max: 2
+          Exclude: []
+      id: captured_positive_2
+      description: Captured RuboCop offense exercises a distinct Style/NumberedParametersLimit
+        syntax branch.
+      path: example.rb
+    - source: 'foo { do_something(_1) }
+
+        '
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/NumberedParametersLimit:
+          Max: 2
+      id: captured_negative_2
+      description: Control source remains accepted by Style/NumberedParametersLimit.
+      path: example.rb
+    real_world:
+      positives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/numbered_parameters_limit_spec.rb
+        line: 92
+        source: 'foo { do_something(_1, _2, _3, _4, _5) }
+
+          '
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/NumberedParametersLimit:
+            Max: 2
+            Exclude: []
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/numbered_parameters_limit_spec.rb
+        line: 36
+        source: |
+          foo do
+            do_something(_1, _2, _3, _4, _5)
+          end
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/NumberedParametersLimit:
+            Max: 2
+            Exclude: []
+      negatives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/numbered_parameters_limit_spec.rb
+        line: 10
+        source: 'foo { |a, b, c, d, e, f, g| do_something(a,b,c,d,e,f,g) }
+
+          '
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/NumberedParametersLimit:
+            Max: 2
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/numbered_parameters_limit_spec.rb
+        line: 16
+        source: 'foo { do_something(_1) }
+
+          '
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/NumberedParametersLimit:
+            Max: 2
+  Style/NumberedParameters:
+    matrix_position: 475
+    sources:
+      rubocop: lib/rubocop/cop/style/numbered_parameters.rb
+      rustocop:
+      - crates/rustocop/src/cops/prism/block_parameter_rules.rs
+    manual_review:
+      status: passed
+      notes:
+      - Reviewed RuboCop's lib/rubocop/cop/style/numbered_parameters.rb against Rustocop's
+        crates/rustocop/src/cops/prism/block_parameter_rules.rs, including callback
+        shape, guards, configuration, offense ranges, and correction construction.
+      - 'Behavior reviewed: Restrict the usage of numbered parameters. The complete
+        captured contract and differential fixtures preserve those observable semantics.'
+    upstream_tests:
+      status: passed
+      passed: 4
+      total: 4
+      corrections: true
+    edge_cases:
+    - source: |
+        collection.each do
+          puts _1
+        end
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/NumberedParameters:
+          EnforcedStyle: allow_single_line
+          Exclude: []
+      id: captured_positive_1
+      description: Captured RuboCop offense exercises a distinct Style/NumberedParameters
+        syntax branch.
+      path: example.rb
+    - source: |
+        collection.each
+                  .foo { puts _1 }
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/NumberedParameters:
+          EnforcedStyle: allow_single_line
+      id: captured_negative_1
+      description: Control source remains accepted by Style/NumberedParameters.
+      path: example.rb
+    - source: 'collection.each { puts _1 }
+
+        '
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/NumberedParameters:
+          EnforcedStyle: disallow
+          Exclude: []
+      id: captured_positive_2
+      description: Captured RuboCop offense exercises a distinct Style/NumberedParameters
+        syntax branch.
+      path: example.rb
+    - source: 'collection.each { puts _1 }
+
+        '
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/NumberedParameters:
+          EnforcedStyle: allow_single_line
+      id: captured_negative_2
+      description: Control source remains accepted by Style/NumberedParameters.
+      path: example.rb
+    real_world:
+      positives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/numbered_parameters_spec.rb
+        line: 8
+        source: |
+          collection.each do
+            puts _1
+          end
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/NumberedParameters:
+            EnforcedStyle: allow_single_line
+            Exclude: []
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/numbered_parameters_spec.rb
+        line: 34
+        source: 'collection.each { puts _1 }
+
+          '
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/NumberedParameters:
+            EnforcedStyle: disallow
+            Exclude: []
+      negatives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/numbered_parameters_spec.rb
+        line: 17
+        source: |
+          collection.each
+                    .foo { puts _1 }
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/NumberedParameters:
+            EnforcedStyle: allow_single_line
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/numbered_parameters_spec.rb
+        line: 24
+        source: 'collection.each { puts _1 }
+
+          '
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/NumberedParameters:
+            EnforcedStyle: allow_single_line
+  Style/Not:
+    matrix_position: 474
+    sources:
+      rubocop: lib/rubocop/cop/style/not.rb
+      rustocop:
+      - crates/rustocop/src/cops/prism/style.rs
+    manual_review:
+      status: passed
+      notes:
+      - Reviewed RuboCop's lib/rubocop/cop/style/not.rb against Rustocop's crates/rustocop/src/cops/prism/style.rs,
+        including callback shape, guards, configuration, offense ranges, and correction
+        construction.
+      - 'Behavior reviewed: Use ! instead of not. The complete captured contract and
+        differential fixtures preserve those observable semantics.'
+    upstream_tests:
+      status: passed
+      passed: 9
+      total: 9
+      corrections: true
+    edge_cases:
+    - source: 'not test
+
+        '
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/Not:
+          Exclude: []
+      id: captured_positive_1
+      description: Captured RuboCop offense exercises a distinct Style/Not syntax
+        branch.
+      path: example.rb
+    - source: "!test"
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/Not: {}
+      id: captured_negative_1
+      description: Control source remains accepted by Style/Not.
+      path: example.rb
+    - source: 'x = 10 if not y
+
+        '
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/Not:
+          Exclude: []
+      id: captured_positive_2
+      description: Captured RuboCop offense exercises a distinct Style/Not syntax
+        branch.
+      path: example.rb
+    - source: 'string_block << " #{text}" if text
+
+        '
+      id: captured_negative_2
+      description: Control source remains accepted by Style/Not.
+      path: example.rb
+    real_world:
+      positives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/not_spec.rb
+        line: 4
+        source: 'not test
+
+          '
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/Not:
+            Exclude: []
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/not_spec.rb
+        line: 19
+        source: 'x = 10 if not y
+
+          '
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/Not:
+            Exclude: []
+      negatives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/not_spec.rb
+        line: 15
+        source: "!test"
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/Not: {}
+      - repository: puma/puma
+        revision: b8341dc946f0a2444e5ea6730d1967ca53c8d006
+        path: lib/puma/error_logger.rb
+        line: 67
+        source: 'string_block << " #{text}" if text
+
+          '
+  Style/NonNilCheck:
+    matrix_position: 473
+    sources:
+      rubocop: lib/rubocop/cop/style/non_nil_check.rb
+      rustocop:
+      - crates/rustocop/src/cops/prism/conditional_semantics_rules.rs
+    manual_review:
+      status: passed
+      notes:
+      - Reviewed RuboCop's lib/rubocop/cop/style/non_nil_check.rb against Rustocop's
+        crates/rustocop/src/cops/prism/conditional_semantics_rules.rs, including callback
+        shape, guards, configuration, offense ranges, and correction construction.
+      - 'Behavior reviewed: Checks for redundant nil checks. The complete captured
+        contract and differential fixtures preserve those observable semantics.'
+    upstream_tests:
+      status: passed
+      passed: 21
+      total: 21
+      corrections: true
+    edge_cases:
+    - source: 'x != nil
+
+        '
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/NonNilCheck:
+          IncludeSemanticChanges: false
+          Exclude: []
+      id: captured_positive_1
+      description: Captured RuboCop offense exercises a distinct Style/NonNilCheck
+        syntax branch.
+      path: example.rb
+    - source: x != 0
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/NonNilCheck:
+          IncludeSemanticChanges: false
+      id: captured_negative_1
+      description: Control source remains accepted by Style/NonNilCheck.
+      path: example.rb
+    - source: 'return nil unless (line =~ //) != nil
+
+        '
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/NonNilCheck:
+          IncludeSemanticChanges: false
+          Exclude: []
+      id: captured_positive_2
+      description: Captured RuboCop offense exercises a distinct Style/NonNilCheck
+        syntax branch.
+      path: example.rb
+    - source: "!x.nil?"
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/NonNilCheck:
+          IncludeSemanticChanges: false
+      id: captured_negative_2
+      description: Control source remains accepted by Style/NonNilCheck.
+      path: example.rb
+    real_world:
+      positives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/non_nil_check_spec.rb
+        line: 7
+        source: 'x != nil
+
+          '
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/NonNilCheck:
+            IncludeSemanticChanges: false
+            Exclude: []
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/non_nil_check_spec.rb
+        line: 68
+        source: 'return nil unless (line =~ //) != nil
+
+          '
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/NonNilCheck:
+            IncludeSemanticChanges: false
+            Exclude: []
+      negatives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/non_nil_check_spec.rb
+        line: 18
+        source: x != 0
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/NonNilCheck:
+            IncludeSemanticChanges: false
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/non_nil_check_spec.rb
+        line: 22
+        source: "!x.nil?"
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/NonNilCheck:
+            IncludeSemanticChanges: false
+  Style/NilLambda:
+    matrix_position: 472
+    sources:
+      rubocop: lib/rubocop/cop/style/nil_lambda.rb
+      rustocop:
+      - crates/rustocop/src/cops/prism/nil_callable_rules.rs
+    manual_review:
+      status: passed
+      notes:
+      - Reviewed RuboCop's lib/rubocop/cop/style/nil_lambda.rb against Rustocop's
+        crates/rustocop/src/cops/prism/nil_callable_rules.rs, including callback shape,
+        guards, configuration, offense ranges, and correction construction.
+      - 'Behavior reviewed: Prefer `-> {}` to `-> { nil }`. The complete captured
+        contract and differential fixtures preserve those observable semantics.'
+    upstream_tests:
+      status: passed
+      passed: 31
+      total: 31
+      corrections: true
+    edge_cases:
+    - source: |
+        lambda do
+          nil
+        end
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/NilLambda:
+          Exclude: []
+      id: captured_positive_1
+      description: Captured RuboCop offense exercises a distinct Style/NilLambda syntax
+        branch.
+      path: example.rb
+    - source: |
+        lambda do
+          6
+        end
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/NilLambda: {}
+      id: captured_negative_1
+      description: Control source remains accepted by Style/NilLambda.
+      path: example.rb
+    - source: |
+        lambda do
+          return nil
+        end
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/NilLambda:
+          Exclude: []
+      id: captured_positive_2
+      description: Captured RuboCop offense exercises a distinct Style/NilLambda syntax
+        branch.
+      path: example.rb
+    - source: |
+        lambda do |x|
+          x ? x.method : nil
+        end
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/NilLambda: {}
+      id: captured_negative_2
+      description: Control source remains accepted by Style/NilLambda.
+      path: example.rb
+    real_world:
+      positives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/nil_lambda_spec.rb
+        line: 5
+        source: |
+          lambda do
+            nil
+          end
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/NilLambda:
+            Exclude: []
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/nil_lambda_spec.rb
+        line: 19
+        source: |
+          lambda do
+            return nil
+          end
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/NilLambda:
+            Exclude: []
+      negatives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/nil_lambda_spec.rb
+        line: 61
+        source: |
+          lambda do
+            6
+          end
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/NilLambda: {}
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/nil_lambda_spec.rb
+        line: 69
+        source: |
+          lambda do |x|
+            x ? x.method : nil
+          end
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/NilLambda: {}
+  Style/NilComparison:
+    matrix_position: 471
+    sources:
+      rubocop: lib/rubocop/cop/style/nil_comparison.rb
+      rustocop:
+      - crates/rustocop/src/cops/prism/conditional_semantics_rules.rs
+    manual_review:
+      status: passed
+      notes:
+      - Reviewed RuboCop's lib/rubocop/cop/style/nil_comparison.rb against Rustocop's
+        crates/rustocop/src/cops/prism/conditional_semantics_rules.rs, including callback
+        shape, guards, configuration, offense ranges, and correction construction.
+      - 'Behavior reviewed: Prefer x.nil? to x == nil. The complete captured contract
+        and differential fixtures preserve those observable semantics.'
+    upstream_tests:
+      status: passed
+      passed: 8
+      total: 8
+      corrections: true
+    edge_cases:
+    - source: 'x == nil
+
+        '
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/NilComparison:
+          EnforcedStyle: predicate
+          Exclude: []
+      id: captured_positive_1
+      description: Captured RuboCop offense exercises a distinct Style/NilComparison
+        syntax branch.
+      path: example.rb
+    - source: nil?
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/NilComparison:
+          EnforcedStyle: comparison
+      id: captured_negative_1
+      description: Control source remains accepted by Style/NilComparison.
+      path: example.rb
+    - source: 'x === nil
+
+        '
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/NilComparison:
+          EnforcedStyle: predicate
+          Exclude: []
+      id: captured_positive_2
+      description: Captured RuboCop offense exercises a distinct Style/NilComparison
+        syntax branch.
+      path: example.rb
+    - source: 'string_block << " #{text}" if text
+
+        '
+      id: captured_negative_2
+      description: Control source remains accepted by Style/NilComparison.
+      path: example.rb
+    real_world:
+      positives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/nil_comparison_spec.rb
+        line: 7
+        source: 'x == nil
+
+          '
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/NilComparison:
+            EnforcedStyle: predicate
+            Exclude: []
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/nil_comparison_spec.rb
+        line: 18
+        source: 'x === nil
+
+          '
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/NilComparison:
+            EnforcedStyle: predicate
+            Exclude: []
+      negatives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/nil_comparison_spec.rb
+        line: 88
+        source: nil?
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/NilComparison:
+            EnforcedStyle: comparison
+      - repository: puma/puma
+        revision: b8341dc946f0a2444e5ea6730d1967ca53c8d006
+        path: lib/puma/error_logger.rb
+        line: 67
+        source: 'string_block << " #{text}" if text
+
+          '
+  Style/Next:
+    matrix_position: 470
+    sources:
+      rubocop: lib/rubocop/cop/style/next.rb
+      rustocop:
+      - crates/rustocop/src/cops/prism/next_rules.rs
+    manual_review:
+      status: passed
+      notes:
+      - Reviewed RuboCop's lib/rubocop/cop/style/next.rb against Rustocop's crates/rustocop/src/cops/prism/next_rules.rs,
+        including callback shape, guards, configuration, offense ranges, and correction
+        construction.
+      - 'Behavior reviewed: Use `next` to skip iteration instead of a condition at
+        the end. The complete captured contract and differential fixtures preserve
+        those observable semantics.'
+    upstream_tests:
+      status: passed
+      passed: 71
+      total: 71
+      corrections: true
+    edge_cases:
+    - source: |
+        loop do
+          if test # keep me
+            # keep me
+            something # keep me
+            # keep me
+
+          end # keep me
+        end
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/Next:
+          EnforcedStyle: skip_modifier_ifs
+          MinBodyLength: 1
+          AllowConsecutiveConditionals: false
+          Exclude: []
+      id: captured_positive_1
+      description: Captured RuboCop offense exercises a distinct Style/Next syntax
+        branch.
+      path: example.rb
+    - source: |
+        [].each do
+        end
+        [].each { }
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/Next:
+          EnforcedStyle: skip_modifier_ifs
+          MinBodyLength: 1
+          AllowConsecutiveConditionals: false
+      id: captured_negative_1
+      description: Control source remains accepted by Style/Next.
+      path: example.rb
+    - source: |
+        loop do
+          if test then
+            something
+          end
+        end
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/Next:
+          EnforcedStyle: skip_modifier_ifs
+          MinBodyLength: 1
+          AllowConsecutiveConditionals: false
+          Exclude: []
+      id: captured_positive_2
+      description: Captured RuboCop offense exercises a distinct Style/Next syntax
+        branch.
+      path: example.rb
+    - source: |
+        [].each do |o|
+          o == x ? y : z
+        end
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/Next:
+          EnforcedStyle: skip_modifier_ifs
+          MinBodyLength: 1
+          AllowConsecutiveConditionals: false
+      id: captured_negative_2
+      description: Control source remains accepted by Style/Next.
+      path: example.rb
+    real_world:
+      positives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/next_spec.rb
+        line: 515
+        source: |
+          loop do
+            if test # keep me
+              # keep me
+              something # keep me
+              # keep me
+
+            end # keep me
+          end
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/Next:
+            EnforcedStyle: skip_modifier_ifs
+            MinBodyLength: 1
+            AllowConsecutiveConditionals: false
+            Exclude: []
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/next_spec.rb
+        line: 540
+        source: |
+          loop do
+            if test then
+              something
+            end
+          end
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/Next:
+            EnforcedStyle: skip_modifier_ifs
+            MinBodyLength: 1
+            AllowConsecutiveConditionals: false
+            Exclude: []
+      negatives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/next_spec.rb
+        line: 613
+        source: |
+          [].each do
+          end
+          [].each { }
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/Next:
+            EnforcedStyle: skip_modifier_ifs
+            MinBodyLength: 1
+            AllowConsecutiveConditionals: false
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/next_spec.rb
+        line: 621
+        source: |
+          [].each do |o|
+            o == x ? y : z
+          end
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/Next:
+            EnforcedStyle: skip_modifier_ifs
+            MinBodyLength: 1
+            AllowConsecutiveConditionals: false
+  Style/NestedTernaryOperator:
+    matrix_position: 469
+    sources:
+      rubocop: lib/rubocop/cop/style/nested_ternary_operator.rb
+      rustocop:
+      - crates/rustocop/src/cops/prism/ternary_rules.rs
+    manual_review:
+      status: passed
+      notes:
+      - Reviewed RuboCop's lib/rubocop/cop/style/nested_ternary_operator.rb against
+        Rustocop's crates/rustocop/src/cops/prism/ternary_rules.rs, including callback
+        shape, guards, configuration, offense ranges, and correction construction.
+      - 'Behavior reviewed: Use one expression per branch in a ternary operator. The
+        complete captured contract and differential fixtures preserve those observable
+        semantics.'
+    upstream_tests:
+      status: passed
+      passed: 7
+      total: 7
+      corrections: true
+    edge_cases:
+    - source: 'a ? (b ? b1 : b2) : a2
+
+        '
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/NestedTernaryOperator:
+          Exclude: []
+      id: captured_positive_1
+      description: Captured RuboCop offense exercises a distinct Style/NestedTernaryOperator
+        syntax branch.
+      path: example.rb
+    - source: |
+        a = if x
+          cond ? b : c
+        else
+          d
+        end
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/NestedTernaryOperator: {}
+      id: captured_negative_1
+      description: Control source remains accepted by Style/NestedTernaryOperator.
+      path: example.rb
+    - source: 'cond ? foo : bar(foo.a ? foo.b : foo) { |e, k| e.nil? ? nil : e[k]
+        }
+
+        '
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/NestedTernaryOperator:
+          Exclude: []
+      id: captured_positive_2
+      description: Captured RuboCop offense exercises a distinct Style/NestedTernaryOperator
+        syntax branch.
+      path: example.rb
+    - source: 'string_block << " #{text}" if text
+
+        '
+      id: captured_negative_2
+      description: Control source remains accepted by Style/NestedTernaryOperator.
+      path: example.rb
+    real_world:
+      positives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/nested_ternary_operator_spec.rb
+        line: 4
+        source: 'a ? (b ? b1 : b2) : a2
+
+          '
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/NestedTernaryOperator:
+            Exclude: []
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/nested_ternary_operator_spec.rb
+        line: 19
+        source: 'cond ? foo : bar(foo.a ? foo.b : foo) { |e, k| e.nil? ? nil : e[k]
+          }
+
+          '
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/NestedTernaryOperator:
+            Exclude: []
+      negatives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/nested_ternary_operator_spec.rb
+        line: 73
+        source: |
+          a = if x
+            cond ? b : c
+          else
+            d
+          end
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/NestedTernaryOperator: {}
+      - repository: puma/puma
+        revision: b8341dc946f0a2444e5ea6730d1967ca53c8d006
+        path: lib/puma/error_logger.rb
+        line: 67
+        source: 'string_block << " #{text}" if text
+
+          '
+  Style/NestedParenthesizedCalls:
+    matrix_position: 468
+    sources:
+      rubocop: lib/rubocop/cop/style/nested_parenthesized_calls.rb
+      rustocop:
+      - crates/rustocop/src/cops/prism/nested_call_rules.rs
+    manual_review:
+      status: passed
+      notes:
+      - Reviewed RuboCop's lib/rubocop/cop/style/nested_parenthesized_calls.rb against
+        Rustocop's crates/rustocop/src/cops/prism/nested_call_rules.rs, including
+        callback shape, guards, configuration, offense ranges, and correction construction.
+      - 'Behavior reviewed: Style/NestedParenthesizedCalls The complete captured contract
+        and differential fixtures preserve those observable semantics.'
+    upstream_tests:
+      status: passed
+      passed: 12
+      total: 12
+      corrections: true
+    edge_cases:
+    - source: 'puts(compute something)
+
+        '
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/NestedParenthesizedCalls:
+          AllowedMethods:
+          - be
+          Exclude: []
+      id: captured_positive_1
+      description: Captured RuboCop offense exercises a distinct Style/NestedParenthesizedCalls
+        syntax branch.
+      path: example.rb
+    - source: puts 1, 2
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/NestedParenthesizedCalls:
+          AllowedMethods:
+          - be
+      id: captured_negative_1
+      description: Control source remains accepted by Style/NestedParenthesizedCalls.
+      path: example.rb
+    - source: 'puts(receiver&.compute something)
+
+        '
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/NestedParenthesizedCalls:
+          AllowedMethods:
+          - be
+          Exclude: []
+      id: captured_positive_2
+      description: Captured RuboCop offense exercises a distinct Style/NestedParenthesizedCalls
+        syntax branch.
+      path: example.rb
+    - source: puts
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/NestedParenthesizedCalls:
+          AllowedMethods:
+          - be
+      id: captured_negative_2
+      description: Control source remains accepted by Style/NestedParenthesizedCalls.
+      path: example.rb
+    real_world:
+      positives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/nested_parenthesized_calls_spec.rb
+        line: 28
+        source: 'puts(compute something)
+
+          '
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/NestedParenthesizedCalls:
+            AllowedMethods:
+            - be
+            Exclude: []
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/nested_parenthesized_calls_spec.rb
+        line: 40
+        source: 'puts(receiver&.compute something)
+
+          '
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/NestedParenthesizedCalls:
+            AllowedMethods:
+            - be
+            Exclude: []
+      negatives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/nested_parenthesized_calls_spec.rb
+        line: 9
+        source: puts 1, 2
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/NestedParenthesizedCalls:
+            AllowedMethods:
+            - be
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/nested_parenthesized_calls_spec.rb
+        line: 15
+        source: puts
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/NestedParenthesizedCalls:
+            AllowedMethods:
+            - be
+  Style/NestedModifier:
+    matrix_position: 467
+    sources:
+      rubocop: lib/rubocop/cop/style/nested_modifier.rb
+      rustocop:
+      - crates/rustocop/src/cops/prism/nested_modifier_rules.rs
+    manual_review:
+      status: passed
+      notes:
+      - Reviewed RuboCop's lib/rubocop/cop/style/nested_modifier.rb against Rustocop's
+        crates/rustocop/src/cops/prism/nested_modifier_rules.rs, including callback
+        shape, guards, configuration, offense ranges, and correction construction.
+      - 'Behavior reviewed: Avoid using nested modifiers. The complete captured contract
+        and differential fixtures preserve those observable semantics.'
+    upstream_tests:
+      status: passed
+      passed: 13
+      total: 13
+      corrections: true
+    edge_cases:
+    - source: 'something if a if b
+
+        '
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/NestedModifier:
+          Exclude: []
+      id: captured_positive_1
+      description: Captured RuboCop offense exercises a distinct Style/NestedModifier
+        syntax branch.
+      path: example.rb
+    - source: 'string_block << " #{text}" if text
+
+        '
+      id: captured_negative_1
+      description: Control source remains accepted by Style/NestedModifier.
+      path: example.rb
+    - source: 'something unless a unless b
+
+        '
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/NestedModifier:
+          Exclude: []
+      id: captured_positive_2
+      description: Captured RuboCop offense exercises a distinct Style/NestedModifier
+        syntax branch.
+      path: example.rb
+    - source: |
+        if match
+          captures = match.captures
+        end
+      id: captured_negative_2
+      description: Control source remains accepted by Style/NestedModifier.
+      path: example.rb
+    real_world:
+      positives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/nested_modifier_spec.rb
+        line: 24
+        source: 'something if a if b
+
+          '
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/NestedModifier:
+            Exclude: []
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/nested_modifier_spec.rb
+        line: 35
+        source: 'something unless a unless b
+
+          '
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/NestedModifier:
+            Exclude: []
+      negatives:
+      - repository: puma/puma
+        revision: b8341dc946f0a2444e5ea6730d1967ca53c8d006
+        path: lib/puma/error_logger.rb
+        line: 67
+        source: 'string_block << " #{text}" if text
+
+          '
+      - repository: rspec/rspec-core
+        revision: aec5f49485d97908183dbe790a7fefb8baaa8091
+        path: lib/rspec/core/configuration.rb
+        line: 2269
+        source: |
+          if match
+            captures = match.captures
+          end
+  Style/NestedFileDirname:
+    matrix_position: 466
+    sources:
+      rubocop: lib/rubocop/cop/style/nested_file_dirname.rb
+      rustocop:
+      - crates/rustocop/src/cops/prism/style_rewrites.rs
+    manual_review:
+      status: passed
+      notes:
+      - Reviewed RuboCop's lib/rubocop/cop/style/nested_file_dirname.rb against Rustocop's
+        crates/rustocop/src/cops/prism/style_rewrites.rs, including callback shape,
+        guards, configuration, offense ranges, and correction construction.
+      - 'Behavior reviewed: Checks for nested `File.dirname`. The complete captured
+        contract and differential fixtures preserve those observable semantics.'
+    upstream_tests:
+      status: passed
+      passed: 5
+      total: 5
+      corrections: true
+    edge_cases:
+    - source: 'File.dirname(File.dirname(path))
+
+        '
+      config:
+        AllCops:
+          TargetRubyVersion: 3.1
+        Style/NestedFileDirname:
+          Exclude: []
+      id: captured_positive_1
+      description: Captured RuboCop offense exercises a distinct Style/NestedFileDirname
+        syntax branch.
+      path: example.rb
+    - source: 'File.dirname(path)
+
+        '
+      config:
+        AllCops:
+          TargetRubyVersion: 3.1
+        Style/NestedFileDirname: {}
+      id: captured_negative_1
+      description: Control source remains accepted by Style/NestedFileDirname.
+      path: example.rb
+    - source: 'File.dirname(File.dirname(File.dirname(path)))
+
+        '
+      config:
+        AllCops:
+          TargetRubyVersion: 3.1
+        Style/NestedFileDirname:
+          Exclude: []
+      id: captured_positive_2
+      description: Captured RuboCop offense exercises a distinct Style/NestedFileDirname
+        syntax branch.
+      path: example.rb
+    - source: 'File.dirname(path, 2)
+
+        '
+      config:
+        AllCops:
+          TargetRubyVersion: 3.1
+        Style/NestedFileDirname: {}
+      id: captured_negative_2
+      description: Control source remains accepted by Style/NestedFileDirname.
+      path: example.rb
+    real_world:
+      positives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/nested_file_dirname_spec.rb
+        line: 5
+        source: 'File.dirname(File.dirname(path))
+
+          '
+        config:
+          AllCops:
+            TargetRubyVersion: 3.1
+          Style/NestedFileDirname:
+            Exclude: []
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/nested_file_dirname_spec.rb
+        line: 16
+        source: 'File.dirname(File.dirname(File.dirname(path)))
+
+          '
+        config:
+          AllCops:
+            TargetRubyVersion: 3.1
+          Style/NestedFileDirname:
+            Exclude: []
+      negatives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/nested_file_dirname_spec.rb
+        line: 27
+        source: 'File.dirname(path)
+
+          '
+        config:
+          AllCops:
+            TargetRubyVersion: 3.1
+          Style/NestedFileDirname: {}
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/nested_file_dirname_spec.rb
+        line: 33
+        source: 'File.dirname(path, 2)
+
+          '
+        config:
+          AllCops:
+            TargetRubyVersion: 3.1
+          Style/NestedFileDirname: {}
+  Style/NegativeArrayIndex:
+    matrix_position: 465
+    sources:
+      rubocop: lib/rubocop/cop/style/negative_array_index.rb
+      rustocop:
+      - crates/rustocop/src/cops/prism/negative_array_index_rules.rs
+    manual_review:
+      status: passed
+      notes:
+      - Reviewed RuboCop's lib/rubocop/cop/style/negative_array_index.rb against Rustocop's
+        crates/rustocop/src/cops/prism/negative_array_index_rules.rs, including callback
+        shape, guards, configuration, offense ranges, and correction construction.
+      - 'Behavior reviewed: Use negative array indices instead of calculating array
+        length minus a value. Also handles range patterns with length calculations.
+        Recognizes preserving methods and their combinations, allowing safe replacement
+        when the receiver matches. The complete captured contract and differential
+        fixtures preserve those observable semantics.'
+    upstream_tests:
+      status: passed
+      passed: 423
+      total: 423
+      corrections: true
+    edge_cases:
+    - source: 'self[length - 1]
+
+        '
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/NegativeArrayIndex:
+          Exclude: []
+      id: captured_positive_1
+      description: Captured RuboCop offense exercises a distinct Style/NegativeArrayIndex
+        syntax branch.
+      path: example.rb
+    - source: |
+        length = do_something
+        self[length - 1]
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/NegativeArrayIndex: {}
+      id: captured_negative_1
+      description: Control source remains accepted by Style/NegativeArrayIndex.
+      path: example.rb
+    - source: 'CONST[CONST.length - 2]
+
+        '
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/NegativeArrayIndex:
+          Exclude: []
+      id: captured_positive_2
+      description: Captured RuboCop offense exercises a distinct Style/NegativeArrayIndex
+        syntax branch.
+      path: example.rb
+    - source: 'arr[]
+
+        '
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/NegativeArrayIndex: {}
+      id: captured_negative_2
+      description: Control source remains accepted by Style/NegativeArrayIndex.
+      path: example.rb
+    real_world:
+      positives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/negative_array_index_spec.rb
+        line: 253
+        source: 'self[length - 1]
+
+          '
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/NegativeArrayIndex:
+            Exclude: []
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/negative_array_index_spec.rb
+        line: 12
+        source: 'CONST[CONST.length - 2]
+
+          '
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/NegativeArrayIndex:
+            Exclude: []
+      negatives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/negative_array_index_spec.rb
+        line: 246
+        source: |
+          length = do_something
+          self[length - 1]
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/NegativeArrayIndex: {}
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/negative_array_index_spec.rb
+        line: 87
+        source: 'arr[]
+
+          '
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/NegativeArrayIndex: {}
+  Style/NegatedWhile:
+    matrix_position: 464
+    sources:
+      rubocop: lib/rubocop/cop/style/negated_while.rb
+      rustocop:
+      - crates/rustocop/src/cops/prism/conditional_semantics_rules.rs
+    manual_review:
+      status: passed
+      notes:
+      - Reviewed RuboCop's lib/rubocop/cop/style/negated_while.rb against Rustocop's
+        crates/rustocop/src/cops/prism/conditional_semantics_rules.rs, including callback
+        shape, guards, configuration, offense ranges, and correction construction.
+      - 'Behavior reviewed: Favor until over while for negative conditions. The complete
+        captured contract and differential fixtures preserve those observable semantics.'
+    upstream_tests:
+      status: passed
+      passed: 10
+      total: 10
+      corrections: true
+    edge_cases:
+    - source: |
+        while !a_condition
+          some_method
+        end
+        some_method while !a_condition
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/NegatedWhile:
+          Exclude: []
+      id: captured_positive_1
+      description: Captured RuboCop offense exercises a distinct Style/NegatedWhile
+        syntax branch.
+      path: example.rb
+    - source: |
+        while !a_condition && another_condition
+          some_method
+        end
+        while not a_condition or another_condition
+          some_method
+        end
+        some_method while not a_condition or other_cond
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/NegatedWhile: {}
+      id: captured_negative_1
+      description: Control source remains accepted by Style/NegatedWhile.
+      path: example.rb
+    - source: |
+        until !a_condition
+          some_method
+        end
+        some_method until !a_condition
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/NegatedWhile:
+          Exclude: []
+      id: captured_positive_2
+      description: Captured RuboCop offense exercises a distinct Style/NegatedWhile
+        syntax branch.
+      path: example.rb
+    - source: |
+        while !!a_condition
+          some_method
+        end
+        some_method while !!a_condition
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/NegatedWhile: {}
+      id: captured_negative_2
+      description: Control source remains accepted by Style/NegatedWhile.
+      path: example.rb
+    real_world:
+      positives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/negated_while_spec.rb
+        line: 4
+        source: |
+          while !a_condition
+            some_method
+          end
+          some_method while !a_condition
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/NegatedWhile:
+            Exclude: []
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/negated_while_spec.rb
+        line: 22
+        source: |
+          until !a_condition
+            some_method
+          end
+          some_method until !a_condition
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/NegatedWhile:
+            Exclude: []
+      negatives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/negated_while_spec.rb
+        line: 71
+        source: |
+          while !a_condition && another_condition
+            some_method
+          end
+          while not a_condition or another_condition
+            some_method
+          end
+          some_method while not a_condition or other_cond
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/NegatedWhile: {}
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/negated_while_spec.rb
+        line: 83
+        source: |
+          while !!a_condition
+            some_method
+          end
+          some_method while !!a_condition
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/NegatedWhile: {}
+  Style/NegatedUnless:
+    matrix_position: 463
+    sources:
+      rubocop: lib/rubocop/cop/style/negated_unless.rb
+      rustocop:
+      - crates/rustocop/src/cops/prism/conditional_semantics_rules.rs
+    manual_review:
+      status: passed
+      notes:
+      - Reviewed RuboCop's lib/rubocop/cop/style/negated_unless.rb against Rustocop's
+        crates/rustocop/src/cops/prism/conditional_semantics_rules.rs, including callback
+        shape, guards, configuration, offense ranges, and correction construction.
+      - 'Behavior reviewed: Style/NegatedUnless The complete captured contract and
+        differential fixtures preserve those observable semantics.'
+    upstream_tests:
+      status: passed
+      passed: 14
+      total: 14
+      corrections: true
+    edge_cases:
+    - source: |
+        unless !a_condition
+          some_method
+        end
+        some_method unless !a_condition
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/NegatedUnless:
+          EnforcedStyle: both
+          Exclude: []
+      id: captured_positive_1
+      description: Captured RuboCop offense exercises a distinct Style/NegatedUnless
+        syntax branch.
+      path: example.rb
+    - source: 'a ? b : c'
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/NegatedUnless:
+          EnforcedStyle: both
+      id: captured_negative_1
+      description: Control source remains accepted by Style/NegatedUnless.
+      path: example.rb
+    - source: |
+        unless not a_condition
+          some_method
+        end
+        some_method unless not a_condition
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/NegatedUnless:
+          EnforcedStyle: both
+          Exclude: []
+      id: captured_positive_2
+      description: Captured RuboCop offense exercises a distinct Style/NegatedUnless
+        syntax branch.
+      path: example.rb
+    - source: "!foo.empty? ? :bar : :baz"
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/NegatedUnless:
+          EnforcedStyle: both
+      id: captured_negative_2
+      description: Control source remains accepted by Style/NegatedUnless.
+      path: example.rb
+    real_world:
+      positives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/negated_unless_spec.rb
+        line: 15
+        source: |
+          unless !a_condition
+            some_method
+          end
+          some_method unless !a_condition
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/NegatedUnless:
+            EnforcedStyle: both
+            Exclude: []
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/negated_unless_spec.rb
+        line: 33
+        source: |
+          unless not a_condition
+            some_method
+          end
+          some_method unless not a_condition
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/NegatedUnless:
+            EnforcedStyle: both
+            Exclude: []
+      negatives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/negated_unless_spec.rb
+        line: 155
+        source: 'a ? b : c'
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/NegatedUnless:
+            EnforcedStyle: both
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/negated_unless_spec.rb
+        line: 159
+        source: "!foo.empty? ? :bar : :baz"
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/NegatedUnless:
+            EnforcedStyle: both
+  Style/NegatedIfElseCondition:
+    matrix_position: 462
+    sources:
+      rubocop: lib/rubocop/cop/style/negated_if_else_condition.rb
+      rustocop:
+      - crates/rustocop/src/cops/prism/negated_if_else_rules.rs
+    manual_review:
+      status: passed
+      notes:
+      - Reviewed RuboCop's lib/rubocop/cop/style/negated_if_else_condition.rb against
+        Rustocop's crates/rustocop/src/cops/prism/negated_if_else_rules.rs, including
+        callback shape, guards, configuration, offense ranges, and correction construction.
+      - 'Behavior reviewed: Checks for uses of `if-else` and ternary operators with
+        a negated condition which can be simplified by inverting condition and swapping
+        branches. The complete captured contract and differential fixtures preserve
+        those observable semantics.'
+    upstream_tests:
+      status: passed
+      passed: 32
+      total: 32
+      corrections: true
+    edge_cases:
+    - source: |
+        if !x
+          do_something
+        else
+          do_something_else
+        end
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/NegatedIfElseCondition:
+          Exclude: []
+      id: captured_positive_1
+      description: Captured RuboCop offense exercises a distinct Style/NegatedIfElseCondition
+        syntax branch.
+      path: example.rb
+    - source: |
+        if !condition.nil?
+          foo = 42
+        else
+        end
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/NegatedIfElseCondition: {}
+      id: captured_negative_1
+      description: Control source remains accepted by Style/NegatedIfElseCondition.
+      path: example.rb
+    - source: |
+        if not x
+          do_something
+        else
+          do_something_else
+        end
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/NegatedIfElseCondition:
+          Exclude: []
+      id: captured_positive_2
+      description: Captured RuboCop offense exercises a distinct Style/NegatedIfElseCondition
+        syntax branch.
+      path: example.rb
+    - source: |
+        if !condition.nil?
+        else
+        end
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/NegatedIfElseCondition: {}
+      id: captured_negative_2
+      description: Control source remains accepted by Style/NegatedIfElseCondition.
+      path: example.rb
+    real_world:
+      positives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/negated_if_else_condition_spec.rb
+        line: 4
+        source: |
+          if !x
+            do_something
+          else
+            do_something_else
+          end
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/NegatedIfElseCondition:
+            Exclude: []
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/negated_if_else_condition_spec.rb
+        line: 23
+        source: |
+          if not x
+            do_something
+          else
+            do_something_else
+          end
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/NegatedIfElseCondition:
+            Exclude: []
+      negatives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/negated_if_else_condition_spec.rb
+        line: 215
+        source: |
+          if !condition.nil?
+            foo = 42
+          else
+          end
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/NegatedIfElseCondition: {}
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/negated_if_else_condition_spec.rb
+        line: 224
+        source: |
+          if !condition.nil?
+          else
+          end
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/NegatedIfElseCondition: {}
+  Style/NegatedIf:
+    matrix_position: 461
+    sources:
+      rubocop: lib/rubocop/cop/style/negated_if.rb
+      rustocop:
+      - crates/rustocop/src/cops/prism/conditional_semantics_rules.rs
+    manual_review:
+      status: passed
+      notes:
+      - Reviewed RuboCop's lib/rubocop/cop/style/negated_if.rb against Rustocop's
+        crates/rustocop/src/cops/prism/conditional_semantics_rules.rs, including callback
+        shape, guards, configuration, offense ranges, and correction construction.
+      - 'Behavior reviewed: Style/NegatedIf The complete captured contract and differential
+        fixtures preserve those observable semantics.'
+    upstream_tests:
+      status: passed
+      passed: 15
+      total: 15
+      corrections: true
+    edge_cases:
+    - source: |
+        if !a_condition
+          some_method
+        end
+        some_method if !a_condition
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/NegatedIf:
+          EnforcedStyle: both
+          Exclude: []
+      id: captured_positive_1
+      description: Captured RuboCop offense exercises a distinct Style/NegatedIf syntax
+        branch.
+      path: example.rb
+    - source: 'a ? b : c'
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/NegatedIf:
+          EnforcedStyle: both
+      id: captured_negative_1
+      description: Control source remains accepted by Style/NegatedIf.
+      path: example.rb
+    - source: |
+        if not a_condition
+          some_method
+        end
+        some_method if not a_condition
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/NegatedIf:
+          EnforcedStyle: both
+          Exclude: []
+      id: captured_positive_2
+      description: Captured RuboCop offense exercises a distinct Style/NegatedIf syntax
+        branch.
+      path: example.rb
+    - source: "!foo.empty? ? :bar : :baz"
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/NegatedIf:
+          EnforcedStyle: both
+      id: captured_negative_2
+      description: Control source remains accepted by Style/NegatedIf.
+      path: example.rb
+    real_world:
+      positives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/negated_if_spec.rb
+        line: 15
+        source: |
+          if !a_condition
+            some_method
+          end
+          some_method if !a_condition
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/NegatedIf:
+            EnforcedStyle: both
+            Exclude: []
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/negated_if_spec.rb
+        line: 33
+        source: |
+          if not a_condition
+            some_method
+          end
+          some_method if not a_condition
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/NegatedIf:
+            EnforcedStyle: both
+            Exclude: []
+      negatives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/negated_if_spec.rb
+        line: 172
+        source: 'a ? b : c'
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/NegatedIf:
+            EnforcedStyle: both
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/negated_if_spec.rb
+        line: 176
+        source: "!foo.empty? ? :bar : :baz"
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/NegatedIf:
+            EnforcedStyle: both
+  Style/MutableConstant:
+    matrix_position: 460
+    sources:
+      rubocop: lib/rubocop/cop/style/mutable_constant.rb
+      rustocop:
+      - crates/rustocop/src/cops/prism/mutable_constant_rules.rs
+    manual_review:
+      status: passed
+      notes:
+      - Reviewed RuboCop's lib/rubocop/cop/style/mutable_constant.rb against Rustocop's
+        crates/rustocop/src/cops/prism/mutable_constant_rules.rs, including callback
+        shape, guards, configuration, offense ranges, and correction construction.
+      - 'Behavior reviewed: Do not assign mutable objects to constants. The complete
+        captured contract and differential fixtures preserve those observable semantics.'
+    upstream_tests:
+      status: passed
+      passed: 354
+      total: 354
+      corrections: true
+    edge_cases:
+    - source: 'CONST = [1, 2, 3]
+
+        '
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/MutableConstant:
+          EnforcedStyle: literals
+          Exclude: []
+      id: captured_positive_1
+      description: Captured RuboCop offense exercises a distinct Style/MutableConstant
+        syntax branch.
+      path: example.rb
+    - source: TOP_TEST = Something.new
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/MutableConstant:
+          EnforcedStyle: literals
+      id: captured_negative_1
+      description: Control source remains accepted by Style/MutableConstant.
+      path: example.rb
+    - source: 'CONST ||= [1, 2, 3]
+
+        '
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/MutableConstant:
+          EnforcedStyle: literals
+          Exclude: []
+      id: captured_positive_2
+      description: Captured RuboCop offense exercises a distinct Style/MutableConstant
+        syntax branch.
+      path: example.rb
+    - source: CONST = 1
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/MutableConstant:
+          EnforcedStyle: literals
+      id: captured_negative_2
+      description: Control source remains accepted by Style/MutableConstant.
+      path: example.rb
+    real_world:
+      positives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/mutable_constant_spec.rb
+        line: 9
+        source: 'CONST = [1, 2, 3]
+
+          '
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/MutableConstant:
+            EnforcedStyle: literals
+            Exclude: []
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/mutable_constant_spec.rb
+        line: 22
+        source: 'CONST ||= [1, 2, 3]
+
+          '
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/MutableConstant:
+            EnforcedStyle: literals
+            Exclude: []
+      negatives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/mutable_constant_spec.rb
+        line: 241
+        source: TOP_TEST = Something.new
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/MutableConstant:
+            EnforcedStyle: literals
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/mutable_constant_spec.rb
+        line: 35
+        source: CONST = 1
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/MutableConstant:
+            EnforcedStyle: literals
+  Style/MultipleComparison:
+    matrix_position: 459
+    sources:
+      rubocop: lib/rubocop/cop/style/multiple_comparison.rb
+      rustocop:
+      - crates/rustocop/src/cops/prism/structural_forwarding_completion.rs
+    manual_review:
+      status: passed
+      notes:
+      - Reviewed RuboCop's lib/rubocop/cop/style/multiple_comparison.rb against Rustocop's
+        crates/rustocop/src/cops/prism/structural_forwarding_completion.rs, including
+        callback shape, guards, configuration, offense ranges, and correction construction.
+      - 'Behavior reviewed: Avoid comparing a variable with multiple items in a conditional,
+        use Array#include? instead. The complete captured contract and differential
+        fixtures preserve those observable semantics.'
+    upstream_tests:
+      status: passed
+      passed: 34
+      total: 34
+      corrections: true
+    edge_cases:
+    - source: |
+        a = "a"
+        if a == "a" || a == "b"
+          print a
+        end
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/MultipleComparison:
+          AllowMethodComparison: true
+          ComparisonsThreshold: 2
+          Exclude: []
+      id: captured_positive_1
+      description: Captured RuboCop offense exercises a distinct Style/MultipleComparison
+        syntax branch.
+      path: example.rb
+    - source: |
+        a = "a"
+        if a == "a"
+          print a
+        end
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/MultipleComparison:
+          AllowMethodComparison: true
+          ComparisonsThreshold: 2
+      id: captured_negative_1
+      description: Control source remains accepted by Style/MultipleComparison.
+      path: example.rb
+    - source: |
+        a = "a"
+        if a == "a" || a == "b" || a == "c"
+          print a
+        end
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/MultipleComparison:
+          AllowMethodComparison: true
+          ComparisonsThreshold: 2
+          Exclude: []
+      id: captured_positive_2
+      description: Captured RuboCop offense exercises a distinct Style/MultipleComparison
+        syntax branch.
+      path: example.rb
+    - source: |
+        if "a" == "a" || "a" == "c"
+          print "a"
+        end
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/MultipleComparison:
+          AllowMethodComparison: true
+          ComparisonsThreshold: 2
+      id: captured_negative_2
+      description: Control source remains accepted by Style/MultipleComparison.
+      path: example.rb
+    real_world:
+      positives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/multiple_comparison_spec.rb
+        line: 13
+        source: |
+          a = "a"
+          if a == "a" || a == "b"
+            print a
+          end
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/MultipleComparison:
+            AllowMethodComparison: true
+            ComparisonsThreshold: 2
+            Exclude: []
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/multiple_comparison_spec.rb
+        line: 30
+        source: |
+          a = "a"
+          if a == "a" || a == "b" || a == "c"
+            print a
+          end
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/MultipleComparison:
+            AllowMethodComparison: true
+            ComparisonsThreshold: 2
+            Exclude: []
+      negatives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/multiple_comparison_spec.rb
+        line: 4
+        source: |
+          a = "a"
+          if a == "a"
+            print a
+          end
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/MultipleComparison:
+            AllowMethodComparison: true
+            ComparisonsThreshold: 2
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/multiple_comparison_spec.rb
+        line: 135
+        source: |
+          if "a" == "a" || "a" == "c"
+            print "a"
+          end
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/MultipleComparison:
+            AllowMethodComparison: true
+            ComparisonsThreshold: 2
+  Style/MultilineWhenThen:
+    matrix_position: 458
+    sources:
+      rubocop: lib/rubocop/cop/style/multiline_when_then.rb
+      rustocop:
+      - crates/rustocop/src/cops/prism/branch_layout_rules.rs
+    manual_review:
+      status: passed
+      notes:
+      - Reviewed RuboCop's lib/rubocop/cop/style/multiline_when_then.rb against Rustocop's
+        crates/rustocop/src/cops/prism/branch_layout_rules.rs, including callback
+        shape, guards, configuration, offense ranges, and correction construction.
+      - 'Behavior reviewed: Do not use then for multi-line when statement. The complete
+        captured contract and differential fixtures preserve those observable semantics.'
+    upstream_tests:
+      status: passed
+      passed: 13
+      total: 13
+      corrections: true
+    edge_cases:
+    - source: |
+        case foo
+        when bar then
+        end
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/MultilineWhenThen:
+          Exclude: []
+      id: captured_positive_1
+      description: Captured RuboCop offense exercises a distinct Style/MultilineWhenThen
+        syntax branch.
+      path: example.rb
+    - source: |
+        case foo
+        when bar then do_something
+        end
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/MultilineWhenThen: {}
+      id: captured_negative_1
+      description: Control source remains accepted by Style/MultilineWhenThen.
+      path: example.rb
+    - source: |
+        case foo
+        when bar then
+        do_something
+        end
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/MultilineWhenThen:
+          Exclude: []
+      id: captured_positive_2
+      description: Captured RuboCop offense exercises a distinct Style/MultilineWhenThen
+        syntax branch.
+      path: example.rb
+    - source: |
+        case cond
+        when foo then do_something(arg1,
+                                   arg2)
+        end
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/MultilineWhenThen: {}
+      id: captured_negative_2
+      description: Control source remains accepted by Style/MultilineWhenThen.
+      path: example.rb
+    real_world:
+      positives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/multiline_when_then_spec.rb
+        line: 4
+        source: |
+          case foo
+          when bar then
+          end
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/MultilineWhenThen:
+            Exclude: []
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/multiline_when_then_spec.rb
+        line: 19
+        source: |
+          case foo
+          when bar then
+          do_something
+          end
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/MultilineWhenThen:
+            Exclude: []
+      negatives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/multiline_when_then_spec.rb
+        line: 55
+        source: |
+          case foo
+          when bar then do_something
+          end
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/MultilineWhenThen: {}
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/multiline_when_then_spec.rb
+        line: 63
+        source: |
+          case cond
+          when foo then do_something(arg1,
+                                     arg2)
+          end
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/MultilineWhenThen: {}
+  Style/MultilineTernaryOperator:
+    matrix_position: 457
+    sources:
+      rubocop: lib/rubocop/cop/style/multiline_ternary_operator.rb
+      rustocop:
+      - crates/rustocop/src/cops/prism/structural_next_completion.rs
+    manual_review:
+      status: passed
+      notes:
+      - Reviewed RuboCop's lib/rubocop/cop/style/multiline_ternary_operator.rb against
+        Rustocop's crates/rustocop/src/cops/prism/structural_next_completion.rs, including
+        callback shape, guards, configuration, offense ranges, and correction construction.
+      - 'Behavior reviewed: Avoid multi-line ?: (the ternary operator); use if/unless
+        instead. The complete captured contract and differential fixtures preserve
+        those observable semantics.'
+    upstream_tests:
+      status: passed
+      passed: 17
+      total: 17
+      corrections: true
+    edge_cases:
+    - source: |
+        a = cond ?
+          b : c
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/MultilineTernaryOperator:
+          Exclude: []
+      id: captured_positive_1
+      description: Captured RuboCop offense exercises a distinct Style/MultilineTernaryOperator
+        syntax branch.
+      path: example.rb
+    - source: |
+        do_something(arg
+                       .foo ? bar : baz)
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/MultilineTernaryOperator: {}
+      id: captured_negative_1
+      description: Control source remains accepted by Style/MultilineTernaryOperator.
+      path: example.rb
+    - source: |
+        a = cond ? b :
+            c
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/MultilineTernaryOperator:
+          Exclude: []
+      id: captured_positive_2
+      description: Captured RuboCop offense exercises a distinct Style/MultilineTernaryOperator
+        syntax branch.
+      path: example.rb
+    - source: 'a = cond ? b : c'
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/MultilineTernaryOperator: {}
+      id: captured_negative_2
+      description: Control source remains accepted by Style/MultilineTernaryOperator.
+      path: example.rb
+    real_world:
+      positives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/multiline_ternary_operator_spec.rb
+        line: 5
+        source: |
+          a = cond ?
+            b : c
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/MultilineTernaryOperator:
+            Exclude: []
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/multiline_ternary_operator_spec.rb
+        line: 21
+        source: |
+          a = cond ? b :
+              c
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/MultilineTernaryOperator:
+            Exclude: []
+      negatives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/multiline_ternary_operator_spec.rb
+        line: 150
+        source: |
+          do_something(arg
+                         .foo ? bar : baz)
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/MultilineTernaryOperator: {}
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/multiline_ternary_operator_spec.rb
+        line: 225
+        source: 'a = cond ? b : c'
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/MultilineTernaryOperator: {}
+  Style/MultilineMethodSignature:
+    matrix_position: 456
+    sources:
+      rubocop: lib/rubocop/cop/style/multiline_method_signature.rb
+      rustocop:
+      - crates/rustocop/src/cops/prism/method_signature_rules.rs
+    manual_review:
+      status: passed
+      notes:
+      - Reviewed RuboCop's lib/rubocop/cop/style/multiline_method_signature.rb against
+        Rustocop's crates/rustocop/src/cops/prism/method_signature_rules.rs, including
+        callback shape, guards, configuration, offense ranges, and correction construction.
+      - 'Behavior reviewed: Avoid multi-line method signatures. The complete captured
+        contract and differential fixtures preserve those observable semantics.'
+    upstream_tests:
+      status: passed
+      passed: 19
+      total: 19
+      corrections: true
+    edge_cases:
+    - source: |
+        def foo(bar
+            )
+        end
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/MultilineMethodSignature:
+          Exclude: []
+      id: captured_positive_1
+      description: Captured RuboCop offense exercises a distinct Style/MultilineMethodSignature
+        syntax branch.
+      path: example.rb
+    - source: |
+        def
+        method_name arg; end
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/MultilineMethodSignature: {}
+      id: captured_negative_1
+      description: Control source remains accepted by Style/MultilineMethodSignature.
+      path: example.rb
+    - source: |
+        class Foo
+          def foo(
+            arg
+        )
+          end
+        end
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/MultilineMethodSignature:
+          Exclude: []
+      id: captured_positive_2
+      description: Captured RuboCop offense exercises a distinct Style/MultilineMethodSignature
+        syntax branch.
+      path: example.rb
+    - source: |
+        def foo(bar, baz)
+        end
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/MultilineMethodSignature: {}
+      id: captured_negative_2
+      description: Control source remains accepted by Style/MultilineMethodSignature.
+      path: example.rb
+    real_world:
+      positives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/multiline_method_signature_spec.rb
+        line: 6
+        source: |
+          def foo(bar
+              )
+          end
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/MultilineMethodSignature:
+            Exclude: []
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/multiline_method_signature_spec.rb
+        line: 20
+        source: |
+          class Foo
+            def foo(
+              arg
+          )
+            end
+          end
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/MultilineMethodSignature:
+            Exclude: []
+      negatives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/multiline_method_signature_spec.rb
+        line: 93
+        source: |
+          def
+          method_name arg; end
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/MultilineMethodSignature: {}
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/multiline_method_signature_spec.rb
+        line: 78
+        source: |
+          def foo(bar, baz)
+          end
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/MultilineMethodSignature: {}
+  Style/MultilineMemoization:
+    matrix_position: 455
+    sources:
+      rubocop: lib/rubocop/cop/style/multiline_memoization.rb
+      rustocop:
+      - crates/rustocop/src/cops/prism/structural_completion_rules.rs
+    manual_review:
+      status: passed
+      notes:
+      - Reviewed RuboCop's lib/rubocop/cop/style/multiline_memoization.rb against
+        Rustocop's crates/rustocop/src/cops/prism/structural_completion_rules.rs,
+        including callback shape, guards, configuration, offense ranges, and correction
+        construction.
+      - 'Behavior reviewed: Wrap multiline memoizations in a `begin` and `end` block.
+        The complete captured contract and differential fixtures preserve those observable
+        semantics.'
+    upstream_tests:
+      status: passed
+      passed: 17
+      total: 17
+      corrections: true
+    edge_cases:
+    - source: |
+        foo ||= (
+          bar
+          baz
+        )
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/MultilineMemoization:
+          EnforcedStyle: keyword
+          Exclude: []
+      id: captured_positive_1
+      description: Captured RuboCop offense exercises a distinct Style/MultilineMemoization
+        syntax branch.
+      path: example.rb
+    - source: foo ||= bar
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/MultilineMemoization:
+          EnforcedStyle: keyword
+      id: captured_negative_1
+      description: Control source remains accepted by Style/MultilineMemoization.
+      path: example.rb
+    - source: |
+        foo ||=
+          (
+            bar
+            baz
+          )
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/MultilineMemoization:
+          EnforcedStyle: keyword
+          Exclude: []
+      id: captured_positive_2
+      description: Captured RuboCop offense exercises a distinct Style/MultilineMemoization
+        syntax branch.
+      path: example.rb
+    - source: |
+        foo ||=
+          bar
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/MultilineMemoization:
+          EnforcedStyle: keyword
+      id: captured_negative_2
+      description: Control source remains accepted by Style/MultilineMemoization.
+      path: example.rb
+    real_world:
+      positives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/multiline_memoization_spec.rb
+        line: 71
+        source: |
+          foo ||= (
+            bar
+            baz
+          )
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/MultilineMemoization:
+            EnforcedStyle: keyword
+            Exclude: []
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/multiline_memoization_spec.rb
+        line: 88
+        source: |
+          foo ||=
+            (
+              bar
+              baz
+            )
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/MultilineMemoization:
+            EnforcedStyle: keyword
+            Exclude: []
+      negatives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/multiline_memoization_spec.rb
+        line: 6
+        source: foo ||= bar
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/MultilineMemoization:
+            EnforcedStyle: keyword
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/multiline_memoization_spec.rb
+        line: 10
+        source: |
+          foo ||=
+            bar
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/MultilineMemoization:
+            EnforcedStyle: keyword
+  Style/MultilineInPatternThen:
+    matrix_position: 454
+    sources:
+      rubocop: lib/rubocop/cop/style/multiline_in_pattern_then.rb
+      rustocop:
+      - crates/rustocop/src/cops/prism/branch_layout_rules.rs
+    manual_review:
+      status: passed
+      notes:
+      - Reviewed RuboCop's lib/rubocop/cop/style/multiline_in_pattern_then.rb against
+        Rustocop's crates/rustocop/src/cops/prism/branch_layout_rules.rs, including
+        callback shape, guards, configuration, offense ranges, and correction construction.
+      - 'Behavior reviewed: Do not use `then` for multi-line `in` statement. The complete
+        captured contract and differential fixtures preserve those observable semantics.'
+    upstream_tests:
+      status: passed
+      passed: 13
+      total: 13
+      corrections: true
+    edge_cases:
+    - source: |
+        case foo
+        in bar then
+        end
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/MultilineInPatternThen:
+          Exclude: []
+      id: captured_positive_1
+      description: Captured RuboCop offense exercises a distinct Style/MultilineInPatternThen
+        syntax branch.
+      path: example.rb
+    - source: |
+        case foo
+        in bar then do_something
+        end
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/MultilineInPatternThen: {}
+      id: captured_negative_1
+      description: Control source remains accepted by Style/MultilineInPatternThen.
+      path: example.rb
+    - source: |
+        case foo
+        in bar then
+        do_something
+        end
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/MultilineInPatternThen:
+          Exclude: []
+      id: captured_positive_2
+      description: Captured RuboCop offense exercises a distinct Style/MultilineInPatternThen
+        syntax branch.
+      path: example.rb
+    - source: |
+        case cond
+        in foo then do_something(arg1,
+                                 arg2)
+        end
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/MultilineInPatternThen: {}
+      id: captured_negative_2
+      description: Control source remains accepted by Style/MultilineInPatternThen.
+      path: example.rb
+    real_world:
+      positives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/multiline_in_pattern_then_spec.rb
+        line: 5
+        source: |
+          case foo
+          in bar then
+          end
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/MultilineInPatternThen:
+            Exclude: []
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/multiline_in_pattern_then_spec.rb
+        line: 20
+        source: |
+          case foo
+          in bar then
+          do_something
+          end
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/MultilineInPatternThen:
+            Exclude: []
+      negatives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/multiline_in_pattern_then_spec.rb
+        line: 56
+        source: |
+          case foo
+          in bar then do_something
+          end
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/MultilineInPatternThen: {}
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/multiline_in_pattern_then_spec.rb
+        line: 64
+        source: |
+          case cond
+          in foo then do_something(arg1,
+                                   arg2)
+          end
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/MultilineInPatternThen: {}
+  Style/MultilineIfThen:
+    matrix_position: 453
+    sources:
+      rubocop: lib/rubocop/cop/style/multiline_if_then.rb
+      rustocop:
+      - crates/rustocop/src/cops/prism/lexical_rules.rs
+    manual_review:
+      status: passed
+      notes:
+      - Reviewed RuboCop's lib/rubocop/cop/style/multiline_if_then.rb against Rustocop's
+        crates/rustocop/src/cops/prism/lexical_rules.rs, including callback shape,
+        guards, configuration, offense ranges, and correction construction.
+      - 'Behavior reviewed: Do not use then for multi-line if/unless. The complete
+        captured contract and differential fixtures preserve those observable semantics.'
+    upstream_tests:
+      status: passed
+      passed: 11
+      total: 11
+      corrections: true
+    edge_cases:
+    - source: "if cond then\nend\nif cond then\t\nend\nif cond then\nend\nif cond\nthen\nend\nif
+        cond then # bad\nend\n"
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/MultilineIfThen:
+          Exclude: []
+      id: captured_positive_1
+      description: Captured RuboCop offense exercises a distinct Style/MultilineIfThen
+        syntax branch.
+      path: example.rb
+    - source: |
+        if cond
+        elsif cond
+        end
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/MultilineIfThen: {}
+      id: captured_negative_1
+      description: Control source remains accepted by Style/MultilineIfThen.
+      path: example.rb
+    - source: |
+        if cond1
+          a
+        elsif cond2 then
+          b
+        end
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/MultilineIfThen:
+          Exclude: []
+      id: captured_positive_2
+      description: Captured RuboCop offense exercises a distinct Style/MultilineIfThen
+        syntax branch.
+      path: example.rb
+    - source: |
+        if    @io == $stdout then str << "$stdout"
+        elsif @io == $stdin  then str << "$stdin"
+        elsif @io == $stderr then str << "$stderr"
+        else                      str << @io.class.to_s
+        end
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/MultilineIfThen: {}
+      id: captured_negative_2
+      description: Control source remains accepted by Style/MultilineIfThen.
+      path: example.rb
+    real_world:
+      positives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/multiline_if_then_spec.rb
+        line: 12
+        source: "if cond then\nend\nif cond then\t\nend\nif cond then\nend\nif cond\nthen\nend\nif
+          cond then # bad\nend\n"
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/MultilineIfThen:
+            Exclude: []
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/multiline_if_then_spec.rb
+        line: 46
+        source: |
+          if cond1
+            a
+          elsif cond2 then
+            b
+          end
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/MultilineIfThen:
+            Exclude: []
+      negatives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/multiline_if_then_spec.rb
+        line: 4
+        source: |
+          if cond
+          elsif cond
+          end
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/MultilineIfThen: {}
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/multiline_if_then_spec.rb
+        line: 65
+        source: |
+          if    @io == $stdout then str << "$stdout"
+          elsif @io == $stdin  then str << "$stdin"
+          elsif @io == $stderr then str << "$stderr"
+          else                      str << @io.class.to_s
+          end
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/MultilineIfThen: {}
+  Style/MultilineIfModifier:
+    matrix_position: 452
+    sources:
+      rubocop: lib/rubocop/cop/style/multiline_if_modifier.rb
+      rustocop:
+      - crates/rustocop/src/cops/prism/branch_layout_rules.rs
+    manual_review:
+      status: passed
+      notes:
+      - Reviewed RuboCop's lib/rubocop/cop/style/multiline_if_modifier.rb against
+        Rustocop's crates/rustocop/src/cops/prism/branch_layout_rules.rs, including
+        callback shape, guards, configuration, offense ranges, and correction construction.
+      - 'Behavior reviewed: Only use if/unless modifiers on single line statements.
+        The complete captured contract and differential fixtures preserve those observable
+        semantics.'
+    upstream_tests:
+      status: passed
+      passed: 10
+      total: 10
+      corrections: true
+    edge_cases:
+    - source: |
+        {
+          result: run
+        } if cond
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/MultilineIfModifier:
+          Exclude: []
+      id: captured_positive_1
+      description: Captured RuboCop offense exercises a distinct Style/MultilineIfModifier
+        syntax branch.
+      path: example.rb
+    - source: 'run if cond
+
+        '
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/MultilineIfModifier: {}
+      id: captured_negative_1
+      description: Control source remains accepted by Style/MultilineIfModifier.
+      path: example.rb
+    - source: |2
+          {
+            result: run
+          } if cond
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/MultilineIfModifier:
+          Exclude: []
+      id: captured_positive_2
+      description: Captured RuboCop offense exercises a distinct Style/MultilineIfModifier
+        syntax branch.
+      path: example.rb
+    - source: |
+        run if cond &&
+               cond2
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Style/MultilineIfModifier: {}
+      id: captured_negative_2
+      description: Control source remains accepted by Style/MultilineIfModifier.
+      path: example.rb
+    real_world:
+      positives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/multiline_if_modifier_spec.rb
+        line: 5
+        source: |
+          {
+            result: run
+          } if cond
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/MultilineIfModifier:
+            Exclude: []
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/multiline_if_modifier_spec.rb
+        line: 35
+        source: |2
+            {
+              result: run
+            } if cond
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/MultilineIfModifier:
+            Exclude: []
+      negatives:
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/multiline_if_modifier_spec.rb
+        line: 22
+        source: 'run if cond
+
+          '
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/MultilineIfModifier: {}
+      - repository: rubocop/rubocop
+        revision: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+        path: spec/rubocop/cop/style/multiline_if_modifier_spec.rb
+        line: 28
+        source: |
+          run if cond &&
+                 cond2
+        config:
+          AllCops:
+            TargetRubyVersion: 2.7
+          Style/MultilineIfModifier: {}
