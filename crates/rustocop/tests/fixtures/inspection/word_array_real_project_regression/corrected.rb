@@ -14,3 +14,13 @@ DIRECTORIES = [
   ['Controller tests',  'test/controllers'],
   ['Helper tests',      'test/helpers'],
 ]
+
+tmp_yaml ["empty", "yml"], "" do
+end
+
+MIXED_ROWS = [
+  ["foo"],
+  [1],
+  %w[foo bar],
+  [1, 2, 3],
+]

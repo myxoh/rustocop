@@ -36,7 +36,7 @@ fn symbol_array(node: &ruby_prism::ArrayNode<'_>, context: &mut CopContext<'_, '
                 .iter()
                 .any(|element| element.as_symbol_node().is_none())
             || bracket_array_has_comment(node, context)
-            || ambiguous_symbol_percent_context(node, context)
+            || invalid_percent_array_context(node, context)
             || complex_symbol_content(&elements, false, context)
         {
             return;
@@ -71,7 +71,7 @@ fn symbol_array(node: &ruby_prism::ArrayNode<'_>, context: &mut CopContext<'_, '
     context.replace(message, node.location(), node.location(), replacement);
 }
 
-fn ambiguous_symbol_percent_context(
+fn invalid_percent_array_context(
     node: &ruby_prism::ArrayNode<'_>,
     context: &CopContext<'_, '_>,
 ) -> bool {
@@ -640,6 +640,7 @@ impl WordArrayRule<'_, '_, '_> {
                 elements.iter().any(|element| element.as_string_node().is_none())
                     || complex_content(&elements, self)
                     || self.within_matrix_of_complex_content()
+                    || invalid_percent_array_context(node, self)
             );
             self.check_bracketed_array(node, &elements);
         } else if opening_source.starts_with("%w") || opening_source.starts_with("%W") {
@@ -701,7 +702,10 @@ impl WordArrayRule<'_, '_, '_> {
 }
 
 fn complex_content(elements: &[Node<'_>], context: &CopContext<'_, '_>) -> bool {
-    elements.iter().any(|element| !simple_word(element, context))
+    elements
+        .iter()
+        .filter(|element| element.as_string_node().is_some())
+        .any(|element| !simple_word(element, context))
 }
 
 fn invalid_percent_array_contents(elements: &[Node<'_>]) -> bool {
