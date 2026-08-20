@@ -8,7 +8,6 @@ define_cops! {
     HashEachMethods => "Style/HashEachMethods" => source(hash_each_methods),
     HashFetchChain => "Style/HashFetchChain" => source(hash_fetch_chain),
     PartitionInsteadOfDoubleSelect => "Style/PartitionInsteadOfDoubleSelect" => source(partition_double_select),
-    RedundantFilterChain => "Style/RedundantFilterChain" => source(redundant_filter_chain),
     MapToHash => "Style/MapToHash" => source(map_to_hash),
     HashExcept => "Style/HashExcept" => source(hash_except),
     HashSlice => "Style/HashSlice" => source(hash_slice),
@@ -130,24 +129,6 @@ fn partition_double_select(context: &mut CopContext<'_, '_>) {
                 start..offset + line.len(),
             );
         }
-    }
-}
-
-fn redundant_filter_chain(context: &mut CopContext<'_, '_>) {
-    for chain in [".select.select", ".filter.filter", ".reject.reject"] {
-        context.replace_code(
-            chain,
-            chain.split('.').nth(1).map_or(chain, |method| {
-                if method == "select" {
-                    ".select"
-                } else if method == "filter" {
-                    ".filter"
-                } else {
-                    ".reject"
-                }
-            }),
-            "Combine chained filtering calls.",
-        );
     }
 }
 

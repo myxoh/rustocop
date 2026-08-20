@@ -9,12 +9,6 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
             "[-1]",
             "Prefer negative array indexing over `fetch`.",
         ),
-        replace(
-            "Style/RedundantFormat",
-            "format('%s', value)",
-            "value.to_s",
-            "Use `to_s` instead of formatting a single `%s` value.",
-        ),
         custom("Lint/DuplicateMethods", duplicate_methods),
         custom(
             "Style/AccessModifierDeclarations",

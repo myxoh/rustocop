@@ -153,6 +153,8 @@ cop_modules!(
     resource_and_precedence_rules,
     require_rules,
     redundant_freeze_completion,
+    redundant_filter_chain_rules,
+    redundant_format_rules,
     redundant_line_continuation_rules,
     redundant_min_max_by_rules,
     redundant_parentheses_rules,
