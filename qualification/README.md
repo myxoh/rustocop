@@ -101,3 +101,10 @@ The recorded Rust SHA is the most recent commit that changed `crates/rustocop`,
 not merely the current repository HEAD. Preparation refuses to run while that
 tree has staged or unstaged changes, preventing evidence from being pinned to a
 commit that does not contain the tested native source.
+
+Regenerate the README summary and the detailed per-cop ledger after adding or
+repinning qualification records:
+
+```sh
+bundle exec ruby script/generate_qualification_progress.rb
+```

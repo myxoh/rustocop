@@ -134,6 +134,21 @@ records.each do |cop, record|
   passed[cop][1] = manual_ok
   errors << "#{cop}: incomplete manual source review" unless manual_ok
 
+  baseline = record.fetch("rustocop_commit").to_s
+  source_current = baseline.match?(/\A[0-9a-f]{40}\z/) && rust_sources.any?
+  if source_current
+    _output, _stderr, exists = Open3.capture3("git", "cat-file", "-e", "#{baseline}^{commit}")
+    source_current &&= exists.success?
+  end
+  if source_current
+    _output, _stderr, unchanged = Open3.capture3(
+      "git", "diff", "--quiet", baseline, "--", *rust_sources
+    )
+    source_current &&= unchanged.success?
+  end
+  passed[cop][:source_current] = source_current
+  errors << "#{cop}: native Rust source differs from qualification commit #{baseline}" unless source_current
+
   upstream = record.fetch("upstream_tests")
   upstream_ok = upstream["status"] == "passed" && upstream["corrections"] == true &&
                 upstream["total"].to_i.positive? && upstream["passed"] == upstream["total"]
@@ -211,19 +226,6 @@ if options[:require_complete]
     positions = document.fetch("cops").values.map { |record| record["matrix_position"] }
     errors << "#{document['batch']}: records must cover #{finish} down through #{start}" unless positions == expected
   end
-  commits = records.values.map { |record| record["rustocop_commit"] }.uniq
-  errors << "qualification records do not share one Rust commit" unless commits.one?
-  baseline = commits.first.to_s
-  if baseline == "pending" || !baseline.match?(/\A[0-9a-f]{40}\z/)
-    errors << "qualification Rust commit is not finalized"
-  else
-    _output, _stderr, exists = Open3.capture3("git", "cat-file", "-e", "#{baseline}^{commit}")
-    errors << "qualification Rust commit does not exist: #{baseline}" unless exists.success?
-    _output, _stderr, unchanged = Open3.capture3(
-      "git", "diff", "--quiet", baseline, "--", "crates/rustocop"
-    )
-    errors << "native Rust source differs from qualification commit #{baseline}" unless unchanged.success?
-  end
 end
 
 puts "Qualification records: #{records.length} cops"
@@ -231,7 +233,11 @@ puts "Qualification records: #{records.length} cops"
   count = passed.count { |_cop, checks| checks[check] }
   puts "Check #{check}: #{count}/606"
 end
-fully_qualified = passed.count { |_cop, checks| (1..5).all? { |check| checks[check] } }
+source_current = passed.count { |_cop, checks| checks[:source_current] }
+puts "Current Rust source: #{source_current}/606"
+fully_qualified = passed.count do |_cop, checks|
+  checks[:source_current] && (1..5).all? { |check| checks[check] }
+end
 puts "Fully qualified: #{fully_qualified}/606"
 
 unless errors.empty?

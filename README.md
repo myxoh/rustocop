@@ -30,23 +30,41 @@ results only. They do not count toward the qualification ledger below.
 
 ## Cop qualification progress
 
-Qualification restarted from zero on 2026-08-19. No cop inherits credit from
-the previous captured-spec status. A cop is qualified only after satisfying all
-five independent checks against the pinned source revisions.
+<!-- generated:qualification-progress:start -->
+Qualification restarted from zero on 2026-08-19; the table now reflects the
+authoritative records under `qualification/work/`. "Recorded evidence" means
+a record contains all required evidence. "Current-source credit" additionally
+requires the recorded Rust files to be unchanged from that record's pinned SHA.
 
-| Check | Evidence required for each cop | Passed cops | Progress | RuboCop source | Rustocop source |
-| --- | --- | ---: | ---: | --- | --- |
-| 1. Manual source verification | Manually compare the Ruby and Rust implementations and record the review. | 0 / 606 | 0% | `e5b788dba181ad94de30cfbad661c5d6aa08a4e5` | `6618213c1ff6fdd651af4e58b0ccf77af0e49890` |
-| 2. Ported upstream unit tests | Pass the unit tests ported from the original Ruby cop. | 0 / 606 | 0% | `e5b788dba181ad94de30cfbad661c5d6aa08a4e5` | `6618213c1ff6fdd651af4e58b0ccf77af0e49890` |
-| 3. Edge-case fixtures | Pass at least four independently designed edge-case fixtures for that cop. | 0 / 606 | 0% | `e5b788dba181ad94de30cfbad661c5d6aa08a4e5` | `6618213c1ff6fdd651af4e58b0ccf77af0e49890` |
-| 4. Real-world true positives | Match RuboCop on at least two genuine offenses from real projects. | 0 / 606 | 0% | `e5b788dba181ad94de30cfbad661c5d6aa08a4e5` | `6618213c1ff6fdd651af4e58b0ccf77af0e49890` |
-| 5. Real-world true negatives | Stay silent, like RuboCop, on at least two plausible non-offenses from real projects. | 0 / 606 | 0% | `e5b788dba181ad94de30cfbad661c5d6aa08a4e5` | `6618213c1ff6fdd651af4e58b0ccf77af0e49890` |
-| **Fully qualified** | **Pass all five checks above.** | **0 / 606** | **0%** | `e5b788dba181ad94de30cfbad661c5d6aa08a4e5` | `6618213c1ff6fdd651af4e58b0ccf77af0e49890` |
+| Check | Recorded evidence | Current-source credit | Current progress |
+| --- | ---: | ---: | ---: |
+| 1. Manual source verification | 155 / 606 | 138 / 606 | 22.8% |
+| 2. Ported upstream unit tests | 155 / 606 | 138 / 606 | 22.8% |
+| 3. Edge-case fixtures | 155 / 606 | 138 / 606 | 22.8% |
+| 4. Real-world true positives | 155 / 606 | 138 / 606 | 22.8% |
+| 5. Real-world true negatives | 155 / 606 | 138 / 606 | 22.8% |
+| **Fully qualified** | **155 / 606** | **138 / 606** | **22.8%** |
 
-The RuboCop reference is tag `v1.87.0`. The Rustocop reference is the native
-implementation baseline immediately before this qualification reset. Future
-reviews must record new revisions explicitly so evidence cannot silently be
-carried across implementation changes.
+155 cops have complete five-check records. 17 of those
+records are currently invalidated by later changes to their Rust source, leaving
+**138 currently qualified cops**. The RuboCop reference is
+`e5b788dba181ad94de30cfbad661c5d6aa08a4e5`; the current native Rust source is `b56ffcb3840742b3c6845860b50b18c7f81d8b69`.
+
+| Department | Currently qualified | Complete records | Stale records |
+| --- | ---: | ---: | ---: |
+| `Bundler` | 0 / 7 | 0 | 0 |
+| `Gemspec` | 0 / 10 | 0 | 0 |
+| `Layout` | 0 / 100 | 0 | 0 |
+| `Lint` | 0 / 154 | 0 | 0 |
+| `Metrics` | 0 / 10 | 0 | 0 |
+| `Migration` | 0 / 1 | 0 | 0 |
+| `Naming` | 0 / 19 | 0 | 0 |
+| `Security` | 0 / 7 | 0 | 0 |
+| `Style` | 138 / 298 | 155 | 17 |
+
+See [the detailed qualification ledger](docs/qualification-progress.md) for
+batch totals, every recorded cop, pinned SHAs, and the records needing revalidation.
+<!-- generated:qualification-progress:end -->
 
 ## Performance
 
@@ -211,7 +229,8 @@ especially cautious with anything marked heuristic.
   reproducible end-to-end timings and JSON parity checks for the shared
   500-file, 20-cop corpus.
 
-No native cop is currently presented as fully qualified.
+Current qualification totals and invalidated records are reported in the
+[generated qualification ledger](docs/qualification-progress.md).
 
 ## Native architecture
 
@@ -223,8 +242,9 @@ against 500 generated and committed Ruby fixture files, both cop-by-cop and as a
 single corpus, and compares their JSON reports directly with RuboCop.
 
 The native registry contains entries for all 606 RuboCop 1.87 built-ins. The
-qualification ledger intentionally starts at zero regardless of previous
-captured diagnostic or correction results.
+qualification ledger intentionally started at zero regardless of previous
+captured diagnostic or correction results; current progress is generated from
+the new five-check records above.
 
 ## Upstream RuboCop contract
 
