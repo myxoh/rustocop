@@ -1,0 +1,18 @@
+AllCops:
+  DisabledByDefault: true
+  Exclude: []
+  NewCops: disable
+  ParserEngine: parser_prism
+  SuggestExtensions: false
+  TargetRubyVersion: 3.4
+
+Style/InverseMethods:
+  InverseMethods:
+    any?: none?
+    blank?: present?
+    ==: "!="
+  InverseBlocks:
+    select: reject
+
+Style/NegatedUnless:
+  EnforcedStyle: prefix

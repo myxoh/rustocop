@@ -2,3 +2,5 @@ cop	file	config	repository	source_path
 Style/MutableConstant	strict_mutable_constants.rb	strict.yml	chatwoot/chatwoot	app/models/automation_rule.rb
 Style/UnlessLogicalOperators	nested_unless_logical_operator.rb	strict.yml	chatwoot/chatwoot	app/controllers/api/v1/accounts/data_imports_controller.rb
 Metrics/CollectionLiteralLength	collection_length_threshold.rb	strict.yml	gitlabhq/gitlabhq	spec/models/application_setting_spec.rb
+Style/InverseMethods	custom_inverse_methods.rb	policy.yml	configuration mutation	custom inverse map
+Style/NegatedUnless	negated_unless_prefix.rb	policy.yml	configuration mutation	prefix-only style
