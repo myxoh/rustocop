@@ -233,7 +233,11 @@ fn space_before_first_arg(node: &CallNode<'_>, context: &mut CopContext<'_, '_>)
     }
     context.replace(
         "Put one space between the method name and the first argument.",
-        space.clone(),
+        if space.is_empty() {
+            argument_start..argument_start.saturating_sub(1)
+        } else {
+            space.clone()
+        },
         space,
         " ",
     );

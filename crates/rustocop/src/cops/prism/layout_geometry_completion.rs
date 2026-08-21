@@ -143,10 +143,16 @@ fn on_block(&mut self, node: &Node<'_>) {
     {
         return;
     }
-    let Some(last) = body.and_then(last_block_body_expression) else {
-        return;
-    };
-    let edit = last.location().end_offset()..closing.start_offset();
+    let content_end = body
+        .and_then(last_block_body_expression)
+        .map(|last| last.location().end_offset())
+        .or_else(|| {
+            self.source()[location.start_offset()..closing.start_offset()]
+                .rfind('|')
+                .map(|offset| location.start_offset() + offset + 1)
+        });
+    let Some(content_end) = content_end else { return };
+    let edit = content_end..closing.start_offset();
     let between = self.source().get(edit.clone()).unwrap_or_default();
     let preserved = between.trim_start_matches(char::is_whitespace);
     if preserved.starts_with(';') {

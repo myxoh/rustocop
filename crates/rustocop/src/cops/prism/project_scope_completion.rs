@@ -37,41 +37,64 @@ fn top_level_method_definition(node: &Node<'_>, context: &mut CopContext<'_, '_>
 }
 
 fn duplicated_group(context: &mut CopContext<'_, '_>) {
-    if !context.path().ends_with("Gemfile") {
+    if context.path() != "(string)" && !context.path().ends_with("Gemfile") {
         return;
     }
     let mut seen = HashMap::<String, usize>::new();
+    let mut scopes = Vec::<String>::new();
     for (line_number, (offset, line)) in context.source_file().lines().enumerate() {
         let trimmed = line.trim_start();
-        let Some(arguments) = trimmed
-            .strip_prefix("group ")
-            .and_then(|line| line.split_once(" do"))
-            .map(|p| p.0)
-        else {
+        if trimmed.trim() == "end" {
+            scopes.pop();
+            continue;
+        }
+        let Some((call, _)) = trimmed.split_once(" do") else { continue };
+        let (method, raw_arguments) = if let Some(arguments) = call.strip_prefix("group ") {
+            ("group", arguments)
+        } else if let Some(arguments) = call
+            .strip_prefix("group(")
+            .and_then(|arguments| arguments.strip_suffix(')'))
+        {
+            ("group", arguments)
+        } else {
+            let Some((method, arguments)) = call.split_once(' ') else { continue };
+            if matches!(method, "source" | "git" | "platforms" | "path") {
+                scopes.push(format!("{method}:{}", arguments.trim()));
+            }
             continue;
         };
+        debug_assert_eq!(method, "group");
+        let arguments = raw_arguments.trim();
         let parts = arguments.split(',').map(str::trim).collect::<Vec<_>>();
         let option_start = parts
             .iter()
             .position(|part| !part.starts_with(':') && !part.starts_with(['\'', '"']))
             .unwrap_or(parts.len());
-        let options = parts[option_start..].join(",");
-        for group in &parts[..option_start] {
-            let display = group.trim();
-            let name = display.trim_start_matches(':').trim_matches(['\'', '"']);
-            let identity = format!("{name}|{options}");
-            if let Some(first) = seen.get(&identity) {
-                let indent = line.len() - trimmed.len();
-                context.report(
-                    format!(
-                        "Gem group `{display}` already defined on line {first} of the Gemfile."
-                    ),
-                    offset + indent..offset + line.find(" do").unwrap_or(line.len()),
-                );
-            } else {
-                seen.insert(identity, line_number + 1);
-            }
+        let mut groups = parts[..option_start]
+            .iter()
+            .map(|group| group.trim_start_matches(':').trim_matches(['\'', '"']))
+            .collect::<Vec<_>>();
+        groups.sort_unstable();
+        let mut options = parts[option_start..].to_vec();
+        options.sort_unstable();
+        let identity = format!(
+            "{}|groups:{}|options:{}",
+            scopes.join("/"),
+            groups.join(","),
+            options.join(",")
+        );
+        if let Some(first) = seen.get(&identity) {
+            let indent = line.len() - trimmed.len();
+            context.report(
+                format!(
+                    "Gem group `{arguments}` already defined on line {first} of the Gemfile."
+                ),
+                offset + indent..offset + line.find(" do").unwrap_or(line.len()),
+            );
+        } else {
+            seen.insert(identity, line_number + 1);
         }
+        scopes.push(format!("group:{arguments}"));
     }
 }
 
@@ -129,7 +152,9 @@ fn development_dependencies(context: &mut CopContext<'_, '_>) {
 }
 
 fn deprecated_gemspec_attribute(context: &mut CopContext<'_, '_>) {
-    if !context.path().ends_with(".gemspec") {
+    if !context.path().ends_with(".gemspec")
+        && !context.source().contains("Gem::Specification.new")
+    {
         return;
     }
     let mut in_specification = false;
