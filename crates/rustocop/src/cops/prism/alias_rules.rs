@@ -18,7 +18,10 @@ fn inspect_alias_keyword(
     style: &str,
     context: &mut CopContext<'_, '_>,
 ) {
-    if inside_instance_eval(context) {
+    if inside_instance_eval(context)
+        || node.new_name().as_global_variable_read_node().is_some()
+        || node.old_name().as_global_variable_read_node().is_some()
+    {
         return;
     }
     let file = context.source_file();
@@ -33,20 +36,9 @@ fn inspect_alias_keyword(
     if style == "prefer_alias" && inside_instance_method {
         return;
     }
-    let unsafe_alias_context = context.ancestors().iter().rev().any(|ancestor| {
-        ancestor.as_block_node().is_some()
-            || ancestor
-                .as_def_node()
-                .is_some_and(|definition| definition.receiver().is_some())
-    });
+    let scope = alias_scope(context);
 
-    if style == "prefer_alias_method" || unsafe_alias_context {
-        if style == "prefer_alias" && (interpolated || !unsafe_alias_context) {
-            return;
-        }
-        if inside_instance_method {
-            return;
-        }
+    if style == "prefer_alias_method" || matches!(scope, AliasScope::Dynamic) {
         let replacement = format!(
             "alias_method {}, {}",
             as_symbol(new_name),
@@ -79,11 +71,8 @@ fn inspect_alias_method(node: &CallNode<'_>, style: &str, context: &mut CopConte
     if style != "prefer_alias"
         || call_name(node) != b"alias_method"
         || node.receiver().is_some()
-        || context.inside_method()
-        || context
-            .ancestors()
-            .iter()
-            .any(|ancestor| ancestor.as_block_node().is_some() || assignment_node(ancestor))
+        || !matches!(alias_scope(context), AliasScope::Lexical(_))
+        || context.ancestors().iter().any(assignment_node)
     {
         return;
     }
@@ -115,20 +104,8 @@ fn inspect_alias_method(node: &CallNode<'_>, style: &str, context: &mut CopConte
     }) {
         return;
     }
-    let location = if context
-        .ancestors()
-        .iter()
-        .any(|ancestor| ancestor.as_class_node().is_some())
-    {
-        "in a class body"
-    } else if context
-        .ancestors()
-        .iter()
-        .any(|ancestor| ancestor.as_module_node().is_some())
-    {
-        "in a module body"
-    } else {
-        "at the top level"
+    let AliasScope::Lexical(location) = alias_scope(context) else {
+        return;
     };
     context.replace(
         format!("Use `alias` instead of `alias_method` {location}."),
@@ -140,6 +117,27 @@ fn inspect_alias_method(node: &CallNode<'_>, style: &str, context: &mut CopConte
             names[1].trim_start_matches(':')
         ),
     );
+}
+
+#[derive(Clone, Copy)]
+enum AliasScope {
+    Lexical(&'static str),
+    Dynamic,
+}
+
+fn alias_scope(context: &CopContext<'_, '_>) -> AliasScope {
+    for ancestor in context.ancestors().iter().rev() {
+        if ancestor.as_class_node().is_some() {
+            return AliasScope::Lexical("in a class body");
+        }
+        if ancestor.as_module_node().is_some() {
+            return AliasScope::Lexical("in a module body");
+        }
+        if ancestor.as_def_node().is_some() || ancestor.as_block_node().is_some() {
+            return AliasScope::Dynamic;
+        }
+    }
+    AliasScope::Lexical("at the top level")
 }
 
 fn as_symbol(name: &str) -> String {
