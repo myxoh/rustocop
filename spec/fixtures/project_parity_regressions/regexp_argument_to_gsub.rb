@@ -1,0 +1,1 @@
+fixture.gsub!(%r{="/}, replacement)

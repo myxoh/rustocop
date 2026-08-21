@@ -107,6 +107,9 @@ fixture. Cop-level parity cases belong in
 regressions can use `crates/rustocop/tests/fixtures/inspection/` with a
 `provenance.yml`. Keep the repository, revision, path, and triggering line;
 include a nearby clean control and exact autocorrection when applicable.
+Unresolved minimized cases live in `mismatches.tsv` and run as pending examples
+in `spec/project_parity_mismatches_spec.rb`. A fix must make its pending example
+unexpectedly pass, then move that row into `manifest.tsv`.
 
 After unit and upstream checks pass, commit the Rust source before running the
 ten-project gate:
