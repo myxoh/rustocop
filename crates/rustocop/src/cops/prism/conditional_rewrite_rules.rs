@@ -62,7 +62,12 @@ impl RedundantConditionalRule<'_, '_, '_> {
 }
 
 fn comparison_condition(node: &Node<'_>) -> bool {
-    node.as_call_node().is_some_and(|call| matches!(call.name().as_slice(), b"==" | b"!=" | b"===" | b"<" | b">" | b"<=" | b">=" | b"<=>" | b"=~" | b"!~"))
+    node.as_call_node().is_some_and(|call| {
+        matches!(
+            call.name().as_slice(),
+            b"==" | b"!=" | b"===" | b"<" | b">" | b"<=" | b">="
+        )
+    })
 }
 
 impl ParenthesesAroundConditionRule<'_, '_, '_> {
