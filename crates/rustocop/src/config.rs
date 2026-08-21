@@ -66,6 +66,7 @@ impl CopConfig {
         overrides: HashMap<String, HashMap<String, ConfigValue>>,
     ) {
         for (cop, entries) in overrides {
+            let percent_literal_delimiters = cop == "Style/PercentLiteralDelimiters";
             let target = base.entry(cop).or_default();
             for (key, value) in entries {
                 match (target.get_mut(&key), value) {
@@ -79,6 +80,12 @@ impl CopConfig {
                             symbol_values: override_symbols,
                         },
                     ) => {
+                        if percent_literal_delimiters
+                            && key == "PreferredDelimiters"
+                            && override_values.contains_key("default")
+                        {
+                            values.clear();
+                        }
                         values.extend(override_values);
                         symbol_values.extend(override_symbols);
                     }

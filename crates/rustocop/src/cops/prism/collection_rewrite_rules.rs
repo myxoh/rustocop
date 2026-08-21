@@ -275,7 +275,7 @@ fn partition_candidate(
     let call_start = node.location().start_offset();
     let call_range = call_start..call_end;
     let (container, local_variable, sibling_group, sibling_index) =
-        statement_container(node, context, positions)?;
+        statement_container(call_range.clone(), context, positions)?;
     let full_line = context.source_file().full_line_range(container.clone());
     let call_source = context.source()[call_range.clone()].to_string();
     Some(PartitionCandidate {
@@ -309,7 +309,7 @@ fn block_parameter_source(block: &BlockNode<'_>, file: SourceFile<'_>) -> Option
 }
 
 fn statement_container(
-    node: &CallNode<'_>,
+    call_range: std::ops::Range<usize>,
     context: &CopContext<'_, '_>,
     positions: &HashMap<(usize, usize), (std::ops::Range<usize>, usize)>,
 ) -> Option<(
@@ -318,20 +318,12 @@ fn statement_container(
     std::ops::Range<usize>,
     usize,
 )> {
-    let parent = context.parent()?;
-    if let Some(statements) = parent.as_statements_node() {
-        let location = node.location();
-        let container = location.start_offset()..location.end_offset();
-        let (group, index) = positions.get(&(container.start, container.end))?.clone();
-        let statement_location = statements.location();
-        if group.start != statement_location.start_offset()
-            || group.end != statement_location.end_offset()
-        {
-            return None;
-        }
-        return Some((container, None, group, index));
+    if let Some((group, index)) = positions.get(&(call_range.start, call_range.end)) {
+        let container = call_range;
+        return Some((container, None, group.clone(), *index));
     }
 
+    let parent = context.parent()?;
     let file = context.source_file();
     let (location, local_variable) = if let Some(write) = parent.as_local_variable_write_node() {
         (write.location(), Some(file.at(&write.name_loc()).to_string()))
