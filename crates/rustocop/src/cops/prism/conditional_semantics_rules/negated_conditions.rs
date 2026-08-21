@@ -74,10 +74,9 @@ fn check_negated_loop(
     message: &str,
     context: &mut CopContext<'_, '_>,
 ) {
-    let Some(predicate) = single_negative_expression(predicate) else {
+    let Some(predicate_location) = single_negative_location(&predicate) else {
         return;
     };
-    let predicate_location = predicate.location();
     let source = context.source_file().at(&predicate_location);
     let relative = if source.starts_with("not ") {
         Some((0, 4))
@@ -109,9 +108,12 @@ fn check_negated_loop(
     );
 }
 
-fn single_negative_expression(mut predicate: Node<'_>) -> Option<Node<'_>> {
-    while let Some(parentheses) = predicate.as_parentheses_node() {
-        predicate = parentheses.body().and_then(single_expression)?;
+fn single_negative_location<'pr>(
+    predicate: &Node<'pr>,
+) -> Option<ruby_prism::Location<'pr>> {
+    if let Some(parentheses) = predicate.as_parentheses_node() {
+        let inner = parentheses.body().and_then(single_expression)?;
+        return single_negative_location(&inner);
     }
     let call = predicate.as_call_node()?;
     (call.name().as_slice() == b"!"
@@ -120,7 +122,7 @@ fn single_negative_expression(mut predicate: Node<'_>) -> Option<Node<'_>> {
                 .as_call_node()
                 .is_some_and(|inner| inner.name().as_slice() == b"!")
         }))
-    .then_some(predicate)
+    .then(|| predicate.location())
 }
 
 fn check_negated_conditional(
@@ -137,14 +139,10 @@ fn check_negated_conditional(
         "postfix" if !modifier => return,
         _ => {}
     }
-    let predicate_location = predicate.location();
-    let predicate_source = context.source_file().at(&predicate_location);
-    if predicate_source.starts_with("!!")
-        || predicate_source.contains(" && ")
-        || predicate_source.contains(" or ")
-    {
+    let Some(predicate_location) = single_negative_location(predicate) else {
         return;
-    }
+    };
+    let predicate_source = context.source_file().at(&predicate_location);
     let negation = if predicate_source.starts_with("not ") {
         predicate_location.start_offset()..predicate_location.start_offset() + 4
     } else if predicate_source.starts_with('!') {
