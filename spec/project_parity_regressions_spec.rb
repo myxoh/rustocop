@@ -81,6 +81,7 @@ RSpec.describe "real-project parity regressions" do
     Lint/ParenthesesAsGroupedExpression
     Lint/RedundantRegexpQuantifiers
     Style/Alias
+    Style/ClassMethodsDefinitions
   ]
   fixture_root = File.join(ROOT, "spec", "fixtures", "project_parity_regressions")
   config = File.join(fixture_root, "rubocop.yml")
