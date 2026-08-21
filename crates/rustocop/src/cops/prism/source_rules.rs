@@ -19,6 +19,9 @@ declare_source_cops! {
 }
 
 fn add_runtime_dependency(source: &str, context: &mut Reporter<'_>) {
+    if !context.path().ends_with(".gemspec") {
+        return;
+    }
     for dot in find_all(source, ".add_runtime_dependency") {
         let start = dot + 1;
         let end = start + "add_runtime_dependency".len();
@@ -217,8 +220,13 @@ fn duplicate_elsif(source: &str, context: &mut Reporter<'_>) {
         let trimmed = line.trim_start();
         if let Some(condition) = trimmed.strip_prefix("if ") {
             seen.clear();
-            seen.insert(condition.to_string());
+            if !multiline_condition(condition) {
+                seen.insert(condition.to_string());
+            }
         } else if let Some(condition) = trimmed.strip_prefix("elsif ") {
+            if multiline_condition(condition) {
+                continue;
+            }
             let start = offset + line.len() - trimmed.len() + 6;
             if !seen.insert(condition.to_string()) {
                 context.report(
@@ -230,6 +238,10 @@ fn duplicate_elsif(source: &str, context: &mut Reporter<'_>) {
             seen.clear();
         }
     }
+}
+
+fn multiline_condition(condition: &str) -> bool {
+    condition.trim_end().ends_with("&&") || condition.trim_end().ends_with("||")
 }
 
 fn ensure_return(source: &str, context: &mut Reporter<'_>) {

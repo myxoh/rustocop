@@ -1,4 +1,6 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+
+use ruby_prism::{CaseMatchNode, Node};
 
 use super::*;
 
@@ -8,7 +10,7 @@ define_cops! {
     DuplicatedGroup => "Bundler/DuplicatedGroup" => source(duplicated_group),
     DevelopmentDependencies => "Gemspec/DevelopmentDependencies" => source(development_dependencies),
     DeprecatedAttributeAssignment => "Gemspec/DeprecatedAttributeAssignment" => source(deprecated_gemspec_attribute),
-    DuplicateMatchPattern => "Lint/DuplicateMatchPattern" => source(duplicate_match_pattern),
+    DuplicateMatchPattern => "Lint/DuplicateMatchPattern" => rubocop_callbacks(DuplicateMatchPatternRule, [on_case_match]),
     ConstantName => "Naming/ConstantName" => source(constant_name),
     ConstantVisibility => "Style/ConstantVisibility" => source(constant_visibility),
     RedundantSelfAssignment => "Style/RedundantSelfAssignment" => source(scope_rules::redundant_self_assignment),
@@ -176,44 +178,54 @@ fn deprecated_gemspec_attribute(context: &mut CopContext<'_, '_>) {
     }
 }
 
-fn duplicate_match_pattern(context: &mut CopContext<'_, '_>) {
-    let mut seen = HashMap::<String, usize>::new();
-    for (offset, line) in context.source_file().lines() {
-        let trimmed = line.trim_start();
-        let Some(pattern) = trimmed.strip_prefix("in ") else {
-            continue;
-        };
-        let raw_pattern = pattern.trim();
-        let (pattern, guard) = raw_pattern
-            .split_once(" if ")
-            .map(|(pattern, guard)| (pattern, format!("if {guard}")))
-            .or_else(|| {
-                raw_pattern
-                    .split_once(" unless ")
-                    .map(|(pattern, guard)| (pattern, format!("unless {guard}")))
-            })
-            .unwrap_or((raw_pattern, String::new()));
-        let mut alternatives = pattern
-            .split('|')
-            .map(canonical_pattern)
-            .collect::<Vec<_>>();
-        alternatives.sort_unstable();
-        let identity = format!("{}|{guard}", alternatives.join(" | "));
-        if let std::collections::hash_map::Entry::Vacant(entry) = seen.entry(identity) {
-            entry.insert(offset);
-        } else {
-            let start = offset + line.find(pattern).unwrap_or(0);
-            context.report(
-                "Duplicate `in` pattern detected.",
-                start..start + pattern.len(),
-            );
+impl DuplicateMatchPatternRule<'_, '_, '_> {
+    fn on_case_match(&mut self, node: &CaseMatchNode<'_>) {
+        let mut seen = HashSet::new();
+        for branch in node
+            .conditions()
+            .iter()
+            .filter_map(|condition| condition.as_in_node())
+        {
+            let (pattern, identity) = match_pattern_identity(branch.pattern(), self.source_file());
+            if !seen.insert(identity) {
+                self.report("Duplicate `in` pattern detected.", pattern.location());
+            }
         }
     }
 }
 
+fn match_pattern_identity<'pr>(pattern: Node<'pr>, file: SourceFile<'_>) -> (Node<'pr>, String) {
+    if let Some(condition) = pattern.as_if_node() {
+        if let Some(body) = only_statement(condition.statements()) {
+            let identity = format!(
+                "{}if{}",
+                canonical_pattern(file.node(&body)),
+                file.node(&condition.predicate())
+            );
+            return (body, identity);
+        }
+    }
+    if let Some(condition) = pattern.as_unless_node() {
+        if let Some(body) = only_statement(condition.statements()) {
+            let identity = format!(
+                "{}unless{}",
+                canonical_pattern(file.node(&body)),
+                file.node(&condition.predicate())
+            );
+            return (body, identity);
+        }
+    }
+    let identity = canonical_pattern(file.node(&pattern));
+    (pattern, identity)
+}
+
 fn canonical_pattern(pattern: &str) -> String {
     let pattern = pattern.trim();
-    if pattern.contains(',') && !pattern.contains(['[', '(']) {
+    if pattern.contains('|') {
+        let mut alternatives = pattern.split('|').map(str::trim).collect::<Vec<_>>();
+        alternatives.sort_unstable();
+        alternatives.join(" | ")
+    } else if pattern.contains(',') && !pattern.contains(['[', '(']) {
         let mut elements = pattern.split(',').map(str::trim).collect::<Vec<_>>();
         elements.sort_unstable();
         elements.join(", ")

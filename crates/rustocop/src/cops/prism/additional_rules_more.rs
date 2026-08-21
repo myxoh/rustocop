@@ -36,10 +36,16 @@ fn leading_empty_lines(source: &str, reporter: &mut Reporter<'_>) {
 }
 
 fn empty_block_parameter(source: &str, reporter: &mut Reporter<'_>) {
-    for start in all_offsets(source, "||") {
+    for start in SourceFile::new(source).code_offsets("||") {
         let before = source[..start].trim_end();
-        if before.ends_with("do") || before.ends_with('{') {
-            let edit = if before.ends_with("do") {
+        let do_block = before.strip_suffix("do").is_some_and(|prefix| {
+            prefix
+                .chars()
+                .last()
+                .is_none_or(|character| !character.is_alphanumeric() && character != '_')
+        });
+        if do_block || before.ends_with('{') {
+            let edit = if do_block {
                 start.saturating_sub(1)..start + 2
             } else {
                 start..start + 2 + usize::from(source.as_bytes().get(start + 2) == Some(&b' '))
