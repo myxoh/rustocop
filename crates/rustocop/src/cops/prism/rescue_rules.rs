@@ -35,7 +35,16 @@ fn suppressed_rescue(node: &ruby_prism::RescueNode<'_>, context: &mut CopContext
     }
     let keyword = node.keyword_loc();
     let offense = if body.is_empty() {
-        let mut end = node.location().end_offset().max(keyword.end_offset());
+        let mut end = node
+            .reference()
+            .map(|reference| reference.location().end_offset())
+            .or_else(|| {
+                node.exceptions()
+                    .iter()
+                    .last()
+                    .map(|exception| exception.location().end_offset())
+            })
+            .unwrap_or_else(|| keyword.end_offset());
         if context.source().as_bytes().get(end) == Some(&b';') {
             end += 1;
         }
@@ -47,17 +56,21 @@ fn suppressed_rescue(node: &ruby_prism::RescueNode<'_>, context: &mut CopContext
 }
 
 fn comments_follow_rescue(node: &ruby_prism::RescueNode<'_>, context: &CopContext<'_, '_>) -> bool {
-    let start = node.keyword_loc().end_offset();
-    let end = context
-        .ancestors()
-        .iter()
-        .rev()
-        .map(|ancestor| ancestor.location().end_offset())
-        .find(|end| *end > start)
-        .unwrap_or(context.source().len());
+    let start = context
+        .source_file()
+        .line_start(node.keyword_loc().start_offset());
+    let Some(end) = context.ancestors().iter().rev().find_map(|ancestor| {
+        let enclosing = ancestor.as_def_node().is_some()
+            || ancestor.as_block_node().is_some()
+            || ancestor
+                .as_begin_node()
+                .is_some_and(|begin| begin.begin_keyword_loc().is_some());
+        enclosing.then(|| ancestor.location().end_offset())
+    }) else {
+        return false;
+    };
     context.source()[start..end]
         .lines()
-        .take_while(|line| !matches!(line.trim(), "end" | "else" | "ensure"))
         .any(|line| line.trim_start().starts_with('#'))
 }
 

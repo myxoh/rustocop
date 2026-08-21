@@ -93,3 +93,4 @@ Style/ClassEqualityComparison	class_equality_targets.rb	rails/rails	ba4f7369aee7
 Style/NumericLiterals	numeric_literal_minus_ranges.rb	sidekiq/sidekiq	82ad4e221869b2ecf0c772da7fdb95ed23139eb1	test/retry_test.rb
 Style/AccessModifierDeclarations	access_modifier_call_shapes.rb	rails/rails	ba4f7369aee71f9f38d67bdbf0e8571fb372b535	actioncable/lib/action_cable.rb
 Style/RequireOrder	require_order_ast_boundaries.rb	gitlabhq/gitlabhq	67a526442c20d20b6e80ebf916bd766b54018c5e	qa/spec/spec_helper.rb
+Lint/SuppressedException	suppressed_exception_ranges.rb	discourse/discourse	cec79c60b354e37e9a119544860123b122a995e0	app/models/user_avatar.rb
