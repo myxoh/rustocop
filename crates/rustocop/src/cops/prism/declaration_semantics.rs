@@ -3,7 +3,7 @@ use super::*;
 define_cops! {
     IneffectiveAccessModifier => "Lint/IneffectiveAccessModifier" => node(as_def_node, ineffective_access_modifier),
     DefWithParentheses => "Style/DefWithParentheses" => node(as_def_node, def_with_parentheses),
-    MissingRespondToMissing => "Style/MissingRespondToMissing" => any_node(missing_respond_to_missing),
+    MissingRespondToMissing => "Style/MissingRespondToMissing" => node(as_def_node, missing_respond_to_missing),
 }
 
 fn ineffective_access_modifier(node: &ruby_prism::DefNode<'_>, context: &mut CopContext<'_, '_>) {
@@ -83,42 +83,54 @@ fn def_with_parentheses(node: &ruby_prism::DefNode<'_>, context: &mut CopContext
     );
 }
 
-fn missing_respond_to_missing(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
-    let body = if let Some(class) = node.as_class_node() {
-        class.body()
-    } else if let Some(module) = node.as_module_node() {
-        module.body()
-    } else {
+fn missing_respond_to_missing(node: &ruby_prism::DefNode<'_>, context: &mut CopContext<'_, '_>) {
+    if node.name().as_slice() != b"method_missing" {
         return;
+    }
+    let scope = context.ancestors().iter().rev().find(|ancestor| {
+        ancestor.as_class_node().is_some()
+            || ancestor.as_module_node().is_some()
+            || ancestor.as_singleton_class_node().is_some()
+            || ancestor.as_block_node().is_some()
+    });
+    let Some(scope) = scope else {
+        return;
+    };
+    let body = if let Some(class) = scope.as_class_node() {
+        class.body()
+    } else if let Some(module) = scope.as_module_node() {
+        module.body()
+    } else if let Some(singleton) = scope.as_singleton_class_node() {
+        singleton.body()
+    } else if let Some(block) = scope.as_block_node() {
+        block.body()
+    } else {
+        None
     };
     let Some(body) = body else {
         return;
     };
     let mut methods = ScopeMethods::default();
     methods.visit(&body);
-    for (location, singleton) in methods.missing {
-        if singleton && methods.singleton_respond || !singleton && methods.instance_respond {
-            continue;
-        }
+    let singleton = node.receiver().is_some();
+    if !(singleton && methods.singleton_respond || !singleton && methods.instance_respond) {
         context.report(
             "When using `method_missing`, define `respond_to_missing?`.",
-            location,
+            node.location(),
         );
     }
 }
 
 #[derive(Default)]
-struct ScopeMethods<'pr> {
-    missing: Vec<(ruby_prism::Location<'pr>, bool)>,
+struct ScopeMethods {
     instance_respond: bool,
     singleton_respond: bool,
 }
 
-impl<'pr> Visit<'pr> for ScopeMethods<'pr> {
+impl<'pr> Visit<'pr> for ScopeMethods {
     fn visit_def_node(&mut self, node: &ruby_prism::DefNode<'pr>) {
         let singleton = node.receiver().is_some();
         match node.name().as_slice() {
-            b"method_missing" => self.missing.push((node.location(), singleton)),
             b"respond_to_missing?" if singleton => self.singleton_respond = true,
             b"respond_to_missing?" => self.instance_respond = true,
             _ => {}
