@@ -71,21 +71,17 @@ fn comparison_target(
     representation: Representation,
     context: &CopContext<'_, '_>,
 ) -> Option<String> {
-    if let Some(path) = constant_path(node) {
-        return Some(render_constant_path(&path));
-    }
     let Representation::Name(method) = representation else {
-        return None;
+        return Some(context.source_file().node(node).to_string());
     };
     if let Some(string) = node.as_string_node() {
         let name = String::from_utf8_lossy(string.unescaped());
-        if !valid_constant_name(&name) {
-            return None;
-        }
         let prefix = if context
             .ancestors()
             .iter()
-            .any(|ancestor| ancestor.as_module_node().is_some())
+            .any(|ancestor| {
+                ancestor.as_class_node().is_some() || ancestor.as_module_node().is_some()
+            })
         {
             "::"
         } else {
@@ -93,28 +89,23 @@ fn comparison_target(
         };
         return Some(format!("{prefix}{name}"));
     }
-    let call = node.as_call_node()?;
-    if call_name(&call) != method || argument_count(&call) != 0 {
+    if let Some(call) = node.as_call_node() {
+        if call_name(&call) == method && argument_count(&call) == 0 {
+            let class_call = call.receiver()?.as_call_node()?;
+            if call_name(&class_call) == b"class" && argument_count(&class_call) == 0 {
+                return Some(context.source_file().node(&class_call.as_node()).to_string());
+            }
+        }
         return None;
     }
-    constant_path(&call.receiver()?).map(|parts| render_constant_path(&parts))
-}
-
-fn render_constant_path(parts: &[&[u8]]) -> String {
-    parts
-        .iter()
-        .map(|part| String::from_utf8_lossy(part))
-        .collect::<Vec<_>>()
-        .join("::")
-}
-
-fn valid_constant_name(name: &str) -> bool {
-    name.split("::").all(|part| {
-        part.as_bytes().first().is_some_and(u8::is_ascii_uppercase)
-            && part
-                .bytes()
-                .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
-    })
+    if node.as_local_variable_read_node().is_some()
+        || node.as_instance_variable_read_node().is_some()
+        || node.as_class_variable_read_node().is_some()
+        || node.as_global_variable_read_node().is_some()
+    {
+        return None;
+    }
+    Some(context.source_file().node(node).to_string())
 }
 
 fn allowed_method(context: &CopContext<'_, '_>) -> bool {

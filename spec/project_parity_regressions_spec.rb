@@ -92,6 +92,7 @@ RSpec.describe "real-project parity regressions" do
     Lint/EmptyConditionalBody
     Style/DateTime
     Layout/TrailingEmptyLines
+    Style/ClassEqualityComparison
   ]
   fixture_root = File.join(ROOT, "spec", "fixtures", "project_parity_regressions")
   config = File.join(fixture_root, "rubocop.yml")
