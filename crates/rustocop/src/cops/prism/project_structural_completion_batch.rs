@@ -5,7 +5,7 @@ define_cops! {
     ClassStructure => "Layout/ClassStructure" => source(class_structure),
     ModuleLength => "Metrics/ModuleLength" => source(module_length),
     EmptyLineAfterMultilineCondition => "Layout/EmptyLineAfterMultilineCondition" => source(empty_after_multiline_condition),
-    DeprecatedOpenSSLConstant => "Lint/DeprecatedOpenSSLConstant" => source(deprecated_openssl),
+    DeprecatedOpenSSLConstant => "Lint/DeprecatedOpenSSLConstant" => call(deprecated_openssl),
 }
 
 fn required_ruby_version(context: &mut CopContext<'_, '_>) {
@@ -148,47 +148,103 @@ fn empty_after_multiline_condition(context: &mut CopContext<'_, '_>) {
     }
 }
 
-fn deprecated_openssl(context: &mut CopContext<'_, '_>) {
-    let source = context.source();
-    let needle = "OpenSSL::Cipher::";
-    let mut search = 0;
-    while let Some(relative) = source[search..].find(needle) {
-        let start = search + relative;
-        let Some(end_relative) = source[start..].find(')') else {
-            break;
-        };
-        let end = start + end_relative + 1;
-        let call = &source[start..end];
-        let Some((cipher, args)) = call[needle.len()..].split_once(".new(") else {
-            search = end;
-            continue;
-        };
-        let pieces = args
-            .trim_end_matches(')')
-            .split(',')
-            .map(|piece| piece.trim().trim_matches(['\'', '"', ':']))
-            .collect::<Vec<_>>();
-        let name = if pieces.len() == 2 {
-            format!(
-                "{}-{}-{}",
-                cipher.to_lowercase(),
-                pieces[0].to_lowercase(),
-                pieces[1].to_lowercase()
-            )
-        } else {
-            format!(
-                "{}-{}",
-                cipher.to_lowercase(),
-                pieces.first().unwrap_or(&"").to_lowercase()
-            )
-        };
-        let replacement = format!("OpenSSL::Cipher.new('{name}')");
-        context.replace(
-            format!("Use `{replacement}` instead of `{call}`."),
-            start..end,
-            start..end,
-            replacement,
-        );
-        search = end;
+fn deprecated_openssl(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
+    if !matches!(call_name(node), b"new" | b"digest") {
+        return;
     }
+    let Some(receiver) = node.receiver() else {
+        return;
+    };
+    let Some(path) = constant_path(&receiver) else {
+        return;
+    };
+    if path.len() != 3
+        || path[0] != b"OpenSSL"
+        || !matches!(path[1], b"Cipher" | b"Digest")
+        || rejected_openssl_argument(node)
+    {
+        return;
+    }
+
+    let algorithm = String::from_utf8_lossy(path[2]);
+    let method = String::from_utf8_lossy(call_name(node));
+    let replacement_args = if path[1] == b"Cipher" {
+        cipher_replacement_args(node, &algorithm, context)
+    } else {
+        let mut arguments = vec![format!("'{algorithm}'")];
+        if let Some(call_arguments) = node.arguments() {
+            arguments.extend(
+                call_arguments
+                    .arguments()
+                    .iter()
+                    .map(|argument| context.source_file().node(&argument).to_string()),
+            );
+        }
+        arguments.join(", ")
+    };
+    let parent = String::from_utf8_lossy(path[1]);
+    let replacement = format!("OpenSSL::{parent}.{method}({replacement_args})");
+    let original = context.source_file().node(&node.as_node());
+    context.replace_call(
+        node,
+        format!("Use `{replacement}` instead of `{original}`."),
+        replacement,
+    );
+}
+
+fn rejected_openssl_argument(node: &CallNode<'_>) -> bool {
+    node.arguments().is_some_and(|arguments| {
+        arguments.arguments().iter().any(|argument| {
+            argument.as_local_variable_read_node().is_some()
+                || argument.as_instance_variable_read_node().is_some()
+                || argument.as_class_variable_read_node().is_some()
+                || argument.as_global_variable_read_node().is_some()
+                || argument.as_call_node().is_some()
+                || constant_path(&argument).is_some()
+        })
+    })
+}
+
+fn cipher_replacement_args(
+    node: &CallNode<'_>,
+    algorithm: &str,
+    context: &CopContext<'_, '_>,
+) -> String {
+    if algorithm == "Cipher" {
+        return first_argument(node)
+            .map(|argument| context.source_file().node(&argument).to_string())
+            .unwrap_or_default();
+    }
+
+    let no_argument_algorithm = matches!(algorithm, "BF" | "DES" | "IDEA" | "RC4");
+    let mut parts = if no_argument_algorithm {
+        vec![algorithm.to_lowercase()]
+    } else {
+        algorithm
+            .as_bytes()
+            .chunks(3)
+            .map(|part| String::from_utf8_lossy(part).to_lowercase())
+            .collect::<Vec<_>>()
+    };
+    let no_arguments = argument_count(node) == 0;
+    if let Some(arguments) = node.arguments() {
+        for argument in arguments.arguments().iter() {
+            let source = if let Some(string) = argument.as_string_node() {
+                String::from_utf8_lossy(string.unescaped()).into_owned()
+            } else {
+                context.source_file().node(&argument).to_string()
+            };
+            parts.extend(
+                source
+                    .replace([':', '\''], "")
+                    .split('-')
+                    .map(str::to_lowercase),
+            );
+        }
+    }
+    if no_arguments && !no_argument_algorithm {
+        parts.push("cbc".to_string());
+    }
+    parts.truncate(3);
+    format!("'{}'", parts.join("-"))
 }
