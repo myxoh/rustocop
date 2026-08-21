@@ -67,6 +67,18 @@ class RustocopFallback
         options[:only] = require_value(arg)
       when /\A--only=(.+)\z/
         options[:only] = Regexp.last_match(1)
+      when "--resolved-enabled-cops"
+        options[:only] = require_value(arg)
+      when /\A--resolved-enabled-cops=(.*)\z/
+        options[:only] = Regexp.last_match(1)
+      when "--resolved-non-native-cops"
+        require_value(arg)
+      when /\A--resolved-non-native-cops=/, "--included-non-native-cops"
+        next
+      when "--config", "-c"
+        require_value(arg)
+      when /\A--config=/
+        next
       when "--stdin"
         options[:stdin_path] = require_value(arg)
       when /\A--stdin=(.+)\z/

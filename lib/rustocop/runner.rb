@@ -18,7 +18,13 @@ module Rustocop
       executable = selected_executable
       warn "rustocop: using Ruby fallback at #{executable}" if fallback?(executable) && ENV["RUSTOCOP_WARN_FALLBACK"]
 
-      Kernel.exec(runtime_environment, executable, *@argv)
+      resolution = RubocopConfiguration.resolve(argv)
+      warn RubocopConfiguration::WARNING if resolution.warn_about_non_native_cops
+
+      Kernel.exec(runtime_environment.merge(resolution.environment), executable, *resolution.arguments)
+    rescue RuntimeError => e
+      warn "rustocop: #{e.message}"
+      2
     rescue SystemCallError => e
       warn "rustocop: failed to launch #{executable}: #{e.message}"
       2

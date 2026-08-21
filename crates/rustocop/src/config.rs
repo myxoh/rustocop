@@ -21,6 +21,8 @@ pub(crate) struct RunOptions {
     pub(crate) parallelism: Parallelism,
     pub(crate) rubocop_loaders: Vec<(String, String)>,
     pub(crate) config_path: Option<String>,
+    pub(crate) include_non_native_cops: bool,
+    pub(crate) non_native_cops: Vec<String>,
     pub(crate) inspection: InspectionConfig,
 }
 

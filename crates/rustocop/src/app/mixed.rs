@@ -10,6 +10,9 @@ use crate::engine::{expanded_path, InspectionResult};
 use crate::model::Offense;
 
 pub(super) fn custom_cops(options: &RunOptions) -> Option<Vec<String>> {
+    if options.include_non_native_cops && !options.non_native_cops.is_empty() {
+        return Some(options.non_native_cops.clone());
+    }
     if options.rubocop_loaders.is_empty() {
         return None;
     }

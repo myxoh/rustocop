@@ -162,8 +162,11 @@ exe/rustocop --only Style/ArrayJoin /path/to/project
 # Run a department
 exe/rustocop --only Style /path/to/project
 
-# Pass the target config. Only part of RuboCop's config is understood so far.
+# Project .rubocop.yml files are discovered automatically. An explicit config is also supported.
 exe/rustocop --config /path/to/project/.rubocop.yml /path/to/project
+
+# Include enabled extension and custom cops through RuboCop (substantially slower)
+exe/rustocop --included-non-native-cops /path/to/project
 
 # Delegate an explicitly selected custom cop while built-in cops stay native
 exe/rustocop --require ./lib/rubocop/cop/custom/no_foo.rb \
@@ -185,9 +188,21 @@ exe/rustocop --jobs 4 /path/to/project
 exe/rustocop --show-cops
 ```
 
-Custom delegation requires `--require` or `--plugin` and an explicit `--only`
-list. Names advertised by `--show-cops` remain native; unknown names are passed
-to RuboCop. Mixed runs currently reject autocorrection and `--stdin`, because
+For normal runs, the Ruby entrypoint asks RuboCop to resolve the effective
+configuration, including inherited configuration, plugins, department settings,
+`DisabledByDefault`, and `NewCops`. Rustocop runs the enabled cops from the base
+RuboCop package. Enabled extension and custom cops are ignored with a warning by
+default; `--included-non-native-cops` delegates those cops back to RuboCop and
+merges their results. This is substantially slower because the delegated files
+are parsed a second time in Ruby.
+
+Resolving a project configuration also loads RuboCop before native inspection,
+which can add several hundred milliseconds to short runs. Explicit `--only`
+runs with no discoverable project or user configuration keep the fast path and
+do not load RuboCop.
+
+Explicit `--require`/`--plugin` plus `--only` custom-cop delegation remains
+supported. Mixed runs currently reject autocorrection and `--stdin`, because
 independent native and Ruby correction passes would not have safe ordering
 semantics.
 
