@@ -56,6 +56,7 @@ RSpec.describe "real-project parity regressions" do
     Lint/NestedPercentLiteral
     Lint/NumberConversion
     Lint/UnreachableLoop
+    Style/Dir
   ]
   fixture_root = File.join(ROOT, "spec", "fixtures", "project_parity_regressions")
   config = File.join(fixture_root, "rubocop.yml")

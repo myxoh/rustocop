@@ -92,6 +92,7 @@ cop_modules!(
     deprecated_api_rules,
     directive_completion,
     dig_rules,
+    dir_rules,
     double_splat_rules,
     empty_method_rules,
     enum_argument_rules,

@@ -53,3 +53,4 @@ Lint/BinaryOperatorWithIdenticalOperands	equivalent_binary_operands.rb	gitlabhq/
 Lint/NestedPercentLiteral	nested_percent_literal_elements.rb	discourse/discourse	cec79c60b354e37e9a119544860123b122a995e0	spec/services/tags/bulk_create_spec.rb
 Lint/NumberConversion	number_conversion_conditions.rb	mperham/sidekiq	1bb4aa06e6f7433d8616a90a677ebd7a4ad72d13	lib/sidekiq/job_retry.rb
 Lint/UnreachableLoop	unreachable_each_loops.rb	rails/rails	ba4f7369aee71f9f38d67bdbf0e8571fb372b535	actionpack/test/controller/live_stream_test.rb
+Style/Dir	embedded_file_directory.rb	rspec/rspec-core	aec5f494cdccb3d60be26589569b009e856027b3	spec/support/spec_files.rb

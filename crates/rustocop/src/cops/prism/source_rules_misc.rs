@@ -3,32 +3,12 @@ use std::collections::HashSet;
 use super::*;
 
 declare_source_cops! {
-    Dir => "Style/Dir" => dir_method,
     DuplicateRescueException => "Lint/DuplicateRescueException" => duplicate_rescue,
     EmptyClass => "Lint/EmptyClass" => empty_class,
     ImplicitRuntimeError => "Style/ImplicitRuntimeError" => implicit_runtime_error,
     EnvHome => "Style/EnvHome" => env_home,
     ClassCheck => "Style/ClassCheck" => class_check,
     AsciiComments => "Style/AsciiComments" => ascii_comments,
-}
-
-fn dir_method(source: &str, context: &mut Reporter<'_>) {
-    for (offset, line) in source_lines(source) {
-        let trimmed = line.trim();
-        let normalized = trimmed.replace("::File", "File");
-        if matches!(
-            normalized.as_str(),
-            "File.expand_path(File.dirname(__FILE__))" | "File.dirname(File.realpath(__FILE__))"
-        ) {
-            let start = offset + line.len() - line.trim_start().len();
-            context.replace(
-                "Use `__dir__` to get an absolute path to the current file's directory.",
-                start..start + trimmed.len(),
-                start..start + trimmed.len(),
-                "__dir__",
-            );
-        }
-    }
 }
 
 fn duplicate_rescue(source: &str, context: &mut Reporter<'_>) {
