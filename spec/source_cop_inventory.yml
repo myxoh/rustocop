@@ -684,7 +684,7 @@ entries:
   review: unreviewed
 - cop: Style/BlockComments
   pipeline: prism_source
-  source: crates/rustocop/src/cops/prism/additional_rules.rs
+  source: crates/rustocop/src/cops/prism/block_comments_rules.rs
   review: unreviewed
 - cop: Style/BlockDelimiters
   pipeline: prism_source

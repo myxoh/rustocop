@@ -65,6 +65,7 @@ cop_modules!(
     assignment_completion_rules,
     assignment_rewrite_rules,
     block_association_rules,
+    block_comments_rules,
     block_parameter_rules,
     block_chain_rules,
     block_arity_rules,

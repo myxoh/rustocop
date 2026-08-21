@@ -8,7 +8,6 @@ use literal_layout::*;
 
 declare_source_cops! {
     RubyVersionGlobalsUsage => "Gemspec/RubyVersionGlobalsUsage" => ruby_version_globals,
-    BlockComments => "Style/BlockComments" => block_comments,
     InsecureProtocolSource => "Bundler/InsecureProtocolSource" => insecure_protocol_source,
     DisjunctiveAssignmentInConstructor => "Lint/DisjunctiveAssignmentInConstructor" => disjunctive_assignment,
     RefinementImportMethods => "Lint/RefinementImportMethods" => refinement_import_methods,
@@ -40,46 +39,6 @@ fn ruby_version_globals(source: &str, reporter: &mut Reporter<'_>) {
                 );
             }
         }
-    }
-}
-
-fn block_comments(source: &str, reporter: &mut Reporter<'_>) {
-    let mut cursor = 0;
-    while let Some(relative_start) = source[cursor..].find("=begin\n") {
-        let start = cursor + relative_start;
-        let Some(relative_end) = source[start + 7..].find("=end") else {
-            break;
-        };
-        let marker_end = start + 7 + relative_end + 4;
-        let end = if source.as_bytes().get(marker_end) == Some(&b'\n') {
-            marker_end + 1
-        } else {
-            marker_end
-        };
-        let body = &source[start + 7..start + 7 + relative_end];
-        let replacement = body
-            .lines()
-            .map(|line| {
-                if line.is_empty() {
-                    "#".to_string()
-                } else {
-                    format!("# {line}")
-                }
-            })
-            .collect::<Vec<_>>()
-            .join("\n");
-        let replacement = if replacement.is_empty() {
-            String::new()
-        } else {
-            format!("{replacement}\n")
-        };
-        reporter.replace(
-            "Do not use block comments.",
-            start..end,
-            start..end,
-            replacement,
-        );
-        cursor = end;
     }
 }
 
