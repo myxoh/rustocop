@@ -71,6 +71,8 @@ struct LogicalOperatorVisitor {
 }
 
 impl<'pr> Visit<'pr> for LogicalOperatorVisitor {
+    fn visit_block_node(&mut self, _node: &ruby_prism::BlockNode<'pr>) {}
+
     fn visit_and_node(&mut self, node: &ruby_prism::AndNode<'pr>) {
         self.tokens.insert(node.operator_loc().as_slice().to_vec());
         ruby_prism::visit_and_node(self, node);

@@ -40,6 +40,9 @@ pub(super) fn negated_unless(
 
 pub(super) fn negated_while(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
     if let Some(loop_node) = node.as_while_node() {
+        if loop_node.is_begin_modifier() {
+            return;
+        }
         check_negated_loop(
             loop_node.location(),
             loop_node.keyword_loc(),
@@ -49,6 +52,9 @@ pub(super) fn negated_while(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
             context,
         );
     } else if let Some(loop_node) = node.as_until_node() {
+        if loop_node.is_begin_modifier() {
+            return;
+        }
         check_negated_loop(
             loop_node.location(),
             loop_node.keyword_loc(),
@@ -68,11 +74,11 @@ fn check_negated_loop(
     message: &str,
     context: &mut CopContext<'_, '_>,
 ) {
+    let Some(predicate) = single_negative_expression(predicate) else {
+        return;
+    };
     let predicate_location = predicate.location();
     let source = context.source_file().at(&predicate_location);
-    if source.starts_with("!!") || source.contains(" && ") || source.contains(" or ") {
-        return;
-    }
     let relative = if source.starts_with("not ") {
         Some((0, 4))
     } else if source.starts_with('!') {
@@ -101,6 +107,20 @@ fn check_negated_loop(
             ),
         ],
     );
+}
+
+fn single_negative_expression(mut predicate: Node<'_>) -> Option<Node<'_>> {
+    while let Some(parentheses) = predicate.as_parentheses_node() {
+        predicate = parentheses.body().and_then(single_expression)?;
+    }
+    let call = predicate.as_call_node()?;
+    (call.name().as_slice() == b"!"
+        && call.receiver().is_some_and(|receiver| {
+            !receiver
+                .as_call_node()
+                .is_some_and(|inner| inner.name().as_slice() == b"!")
+        }))
+    .then_some(predicate)
 }
 
 fn check_negated_conditional(

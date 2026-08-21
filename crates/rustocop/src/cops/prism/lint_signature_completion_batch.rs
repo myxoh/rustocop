@@ -162,17 +162,82 @@ fn non_atomic_file_operation(context: &mut CopContext<'_, '_>) {
 
 fn unmodified_reduce_accumulator(context: &mut CopContext<'_, '_>) {
     for (offset, line) in context.source_file().lines() {
-        if !(line.contains(".reduce") || line.contains(".inject")) {
-            continue;
-        }
-        let Some(pipe) = line.find('|') else { continue };
-        let Some(close) = line[pipe + 1..].find('|').map(|at| pipe + 1 + at) else {
+        let Some(method) = line
+            .find(".reduce")
+            .or_else(|| line.find(".inject"))
+        else {
             continue;
         };
-        let accumulator = line[pipe + 1..close].split(',').next().unwrap_or("").trim();
+        let pipes = line[method..]
+            .match_indices('|')
+            .map(|(at, _)| method + at)
+            .collect::<Vec<_>>();
+        let candidates = pipes
+            .windows(2)
+            .filter_map(|pair| {
+                let prefix = line[..pair[0]].trim_end();
+                let brace_block = prefix.ends_with('{');
+                let do_block = prefix
+                    .strip_suffix("do")
+                    .is_some_and(|before| before.is_empty() || before.ends_with(char::is_whitespace));
+                let parameters = &line[pair[0] + 1..pair[1]];
+                ((brace_block || do_block)
+                    && parameters.bytes().all(|byte| {
+                        byte.is_ascii_alphanumeric()
+                            || matches!(byte, b'_' | b',' | b' ' | b'*' | b';')
+                    }))
+                .then_some((pair[0], pair[1], do_block))
+            })
+            .collect::<Vec<_>>();
+        let selected = candidates
+            .iter()
+            .rev()
+            .find(|(_, _, do_block)| *do_block)
+            .or_else(|| candidates.first());
+        let Some(&(pipe, close, _)) = selected else {
+            continue;
+        };
+        let mut parameters = line[pipe + 1..close].split(',').map(str::trim);
+        let accumulator = parameters.next().unwrap_or("");
+        let element = parameters.next().unwrap_or("");
         let body = &line[close + 1..];
-        if !accumulator.is_empty()
-            && body.contains('}')
+        if accumulator.is_empty() {
+            continue;
+        }
+        let expression_start = body.rfind(';').map_or(0, |at| at + 1);
+        let expression = &body[expression_start..];
+        let leading = expression.len() - expression.trim_start().len();
+        let returned = expression.trim().trim_end_matches('}').trim_end();
+        if let Some(relative_index) = returned
+            .strip_prefix(accumulator)
+            .filter(|suffix| suffix.starts_with('['))
+            .map(|_| expression_start + leading)
+        {
+            let Some(end) = body[relative_index..]
+                .find(']')
+                .map(|at| relative_index + at + 1)
+            else {
+                continue;
+            };
+            let index_argument = &body[relative_index + accumulator.len() + 1..end - 1];
+            let tail = returned[end - relative_index..].trim();
+            let assignment = tail.starts_with('=') && !tail.starts_with("==");
+            if !tail.is_empty() && !assignment {
+                continue;
+            }
+            if !assignment && index_argument.trim() == element {
+                continue;
+            }
+            let method_name = if line[method..].starts_with(".inject") {
+                "inject"
+            } else {
+                "reduce"
+            };
+            context.report(
+                format!("Do not return an element of the accumulator in `{method_name}`."),
+                offset + close + 1 + relative_index..offset + close + 1 + end,
+            );
+        } else if body.contains('}')
             && !body.trim_start().starts_with('}')
             && !body.contains(accumulator)
         {
