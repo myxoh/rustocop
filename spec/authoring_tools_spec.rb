@@ -85,29 +85,9 @@ RSpec.describe "cop authoring tools" do
     )
   end
 
-  it "prepares a pending qualification record without running external scans" do
+  it "previews a reverse-order real-project parity audit" do
     stdout, stderr, status = run_script(
-      "prepare_qualification_batch.rb",
-      "--cops",
-      "Style/Semicolon",
-      "--no-real-world",
-      "--no-verify-upstream",
-      "--dry-run"
-    )
-
-    expect(status).to be_success
-    expect(stderr).to eq("")
-    document = YAML.safe_load(stdout)
-    record = document.fetch("cops").fetch("Style/Semicolon")
-    expect(record.dig("manual_review", "status")).to eq("pending")
-    expect(record.fetch("edge_cases").length).to eq(4)
-    expect(record.dig("sources", "rubocop")).to end_with("style/semicolon.rb")
-    expect(record.dig("sources", "rustocop")).not_to be_empty
-  end
-
-  it "previews a reverse-order real-project qualification gate" do
-    stdout, stderr, status = run_script(
-      "audit_qualification_projects.rb",
+      "audit_project_parity.rb",
       "--from-position",
       "391",
       "--count",

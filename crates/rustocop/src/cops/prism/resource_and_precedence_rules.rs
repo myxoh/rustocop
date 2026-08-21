@@ -63,12 +63,21 @@ fn file_open(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
                         && receiver.location().end_offset() == node.location().end_offset()
                 })
     });
+    let discarded_statement = context
+        .parent()
+        .and_then(|parent| parent.as_statements_node())
+        .is_some_and(|statements| {
+            statements.body().iter().last().is_some_and(|last| {
+                last.location().start_offset() != node.location().start_offset()
+                    || last.location().end_offset() != node.location().end_offset()
+            })
+        });
     let discarded_at_top_level = !context.inside_method()
         && context.ancestors().iter().all(|ancestor| {
             ancestor.as_program_node().is_some() || ancestor.as_statements_node().is_some()
         });
 
-    if used_unsafely || discarded_at_top_level {
+    if used_unsafely || discarded_statement || discarded_at_top_level {
         context.report_call(
             node,
             "`File.open` without a block may leak a file descriptor; use the block form.",

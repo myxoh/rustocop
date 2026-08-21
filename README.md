@@ -26,45 +26,48 @@ false positives, false negatives, and breaking changes.
 The repository contains native registry entries for all 606 RuboCop built-in
 cops, but that is an implementation inventory, not a correctness claim. The old
 **verified**, **heuristic**, and **missing** labels describe captured-suite
-results only. They do not count toward the qualification ledger below.
+results only and are not a current trust signal.
 
-## Cop qualification progress
+## Validation standard
 
-<!-- generated:qualification-progress:start -->
-Qualification restarted from zero on 2026-08-19; the table now reflects the
-authoritative records under `qualification/work/`. "Recorded evidence" means
-a record contains all required evidence. "Current-source credit" additionally
-requires the recorded Rust files to be unchanged from that record's pinned SHA.
+The gold standard is executable behavior checked against RuboCop 1.87.0:
 
-| Check | Recorded evidence | Current-source credit | Current progress |
-| --- | ---: | ---: | ---: |
-| 1. Manual source verification | 185 / 606 | 167 / 606 | 27.6% |
-| 2. Ported upstream unit tests | 185 / 606 | 167 / 606 | 27.6% |
-| 3. Edge-case fixtures | 185 / 606 | 167 / 606 | 27.6% |
-| 4. Real-world true positives | 185 / 606 | 167 / 606 | 27.6% |
-| 5. Real-world true negatives | 185 / 606 | 167 / 606 | 27.6% |
-| **Fully qualified** | **185 / 606** | **167 / 606** | **27.6%** |
+1. RuboCop-derived upstream, adversarial, autocorrection, and minimized
+   real-project fixtures must pass with matching diagnostics and corrected
+   source.
+2. Complete diagnostic signatures must match across all ten pinned real
+   projects: path, cop, severity, message, and complete source range.
 
-185 cops have complete five-check records. 18 of those
-records are currently invalidated by later changes to their Rust source, leaving
-**167 currently qualified cops**. The RuboCop reference is
-`e5b788dba181ad94de30cfbad661c5d6aa08a4e5`; the current native Rust source is `15032c62724a1bfcd1d7199a9342188ff3b96ee4`.
+A registered cop with no exercised fixture is unvalidated. A cop exercised by
+the fixture corpus is **fixture-validated**. A cop with exact output on every
+pinned project is **project-exact**. Neither offense-count similarity nor an old
+manual review record is accepted as compatibility evidence.
 
-| Department | Currently qualified | Complete records | Stale records |
-| --- | ---: | ---: | ---: |
-| `Bundler` | 0 / 7 | 0 | 0 |
-| `Gemspec` | 0 / 10 | 0 | 0 |
-| `Layout` | 0 / 100 | 0 | 0 |
-| `Lint` | 0 / 154 | 0 | 0 |
-| `Metrics` | 0 / 10 | 0 | 0 |
-| `Migration` | 0 / 1 | 0 | 0 |
-| `Naming` | 0 / 19 | 0 | 0 |
-| `Security` | 0 / 7 | 0 | 0 |
-| `Style` | 167 / 298 | 185 | 18 |
+## Ten-project output parity
 
-See [the detailed qualification ledger](docs/qualification-progress.md) for
-batch totals, every recorded cop, pinned SHAs, and the records needing revalidation.
-<!-- generated:qualification-progress:end -->
+The real-project matrix asks whether each cop emits the same path, severity,
+message, and source range as RuboCop across 54,146 Ruby files in ten projects.
+
+The latest complete 606-cop checkpoint found 173 project-exact cops, 73
+dormant cops, 359 mismatches, no Rust crashes, and one RuboCop command-line
+error.
+
+| Real-project classification | Complete checkpoint |
+| --- | ---: |
+| Project-exact | 173 / 606 (28.5%) |
+| Exact but dormant | 73 / 606 |
+| Mismatching | 359 / 606 |
+| Rust crashes | 0 / 606 |
+| RuboCop `--only` limitation | 1 / 606 |
+
+The checkpoint is bound to Rust source `84c8a3f` and native binary SHA-256
+`c1a789c3c97f3a56b771430e3ceacbc77f21469923ff433de1399219ee9b1d03`.
+Project-exact status is the strongest current diagnostic evidence. Unexercised
+configuration and autocorrection branches still require RuboCop-derived
+fixtures.
+
+See [the real-project parity report](docs/real-project-parity.md) for the ten
+projects, exact cops, limitations, and reproduction commands.
 
 ## Performance
 
@@ -203,8 +206,9 @@ bundle exec rubocop
 ```
 
 Do not remove RuboCop from CI just because rustocop is fast on your machine.
-Check the [support matrix](docs/cop-support.md) before depending on a cop, and be
-especially cautious with anything marked heuristic.
+Check the [real-project parity report](docs/real-project-parity.md) and the
+fixture coverage before depending on a cop. The legacy support matrix is not a
+trust signal.
 
 ## Current support
 
@@ -219,18 +223,14 @@ especially cautious with anything marked heuristic.
   cops are intentionally excluded.
 - A shared Prism parse and AST visitor powers the native cop registry. The
   previous captured-suite classification reported 361 cops as verified and 245
-  as heuristic, but those historical labels grant no credit in the new
-  five-check qualification ledger.
+  as heuristic; those historical labels are not current compatibility evidence.
 - `--show-cops` prints the native support registry.
 - [The legacy captured-suite support matrix](docs/cop-support.md) records the
   old verified, heuristic, and missing classification. It is retained as
-  engineering evidence, not as the current qualification record.
+  historical engineering evidence only.
 - [The RuboCop + Prism performance verification](docs/performance.md) records
   reproducible end-to-end timings and JSON parity checks for the shared
   500-file, 20-cop corpus.
-
-Current qualification totals and invalidated records are reported in the
-[generated qualification ledger](docs/qualification-progress.md).
 
 ## Native architecture
 
@@ -241,10 +241,9 @@ and applied as one batch. The differential compatibility suite runs 20 cops
 against 500 generated and committed Ruby fixture files, both cop-by-cop and as a
 single corpus, and compares their JSON reports directly with RuboCop.
 
-The native registry contains entries for all 606 RuboCop 1.87 built-ins. The
-qualification ledger intentionally started at zero regardless of previous
-captured diagnostic or correction results; current progress is generated from
-the new five-check records above.
+The native registry contains entries for all 606 RuboCop 1.87 built-ins. That
+number does not imply compatibility; fixture validation and project parity are
+the only current behavioral evidence.
 
 ## Upstream RuboCop contract
 
@@ -257,9 +256,10 @@ declared by RuboCop itself.
 The capture harness executes RuboCop's test DSL and records the resulting
 source, configuration, path, Ruby version, offenses, and correction. It does
 not infer expectations by scraping spec source. All 606 registered built-in
-cops have executable captured cases. This is useful historical evidence, but it
-does not satisfy any new qualification check until that cop is explicitly
-reviewed and recorded under the five-check process.
+cops have executable captured cases. These cases are the upstream fixture
+oracle: they become compatibility evidence only when Rustocop matches the
+captured diagnostics and corrections. Project-exact output is the broader guard
+against cases absent from upstream specs.
 
 ```sh
 bundle exec ruby script/extract_upstream_cop_specs.rb
@@ -268,7 +268,7 @@ bundle exec ruby script/compare_upstream_cop_specs.rb
 
 Generated corpora and reports live under `tmp/` and are intentionally ignored.
 The comparison command is diagnostic-only for now; correction parity remains a
-separate required gate before a cop can be marked fully upstream-compatible.
+separate required gate before a cop can be called fixture-validated.
 
 ## Development
 
@@ -300,9 +300,10 @@ bundle exec ruby script/generate_compatibility_corpus.rb
 bundle exec ruby script/generate_compatibility_corpus.rb --check
 ```
 
-The correctness corpus is status-checked and may contain only Verified cops.
-Benchmarks use the separate pinned `benchmark/corpus.json`, so improving a
-correctness fixture does not silently redefine historical performance work.
+The reproducible 500-example corpus is one fixture layer, not a compatibility
+claim by itself. Benchmarks use the separate pinned `benchmark/corpus.json`, so
+improving a correctness fixture does not silently redefine historical
+performance work.
 
 Run the complete upstream differential with its non-regression gate, then
 regenerate the prioritized remaining-cop queue:

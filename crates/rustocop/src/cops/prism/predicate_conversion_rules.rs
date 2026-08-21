@@ -259,16 +259,18 @@ fn dir_empty(context: &mut CopContext<'_, '_>) {
         return;
     }
     for (line_start, line) in context.source_file().lines() {
-        let indentation = line.len() - line.trim_start().len();
-        let expression = line.trim();
+        let Some(candidate_start) = line.find("Dir.") else {
+            continue;
+        };
+        let expression = line[candidate_start..].trim_end();
         let leading_not = expression.starts_with('!');
         let candidate = expression.strip_prefix('!').unwrap_or(expression);
         let Some((argument, negative)) = dir_conversion(candidate) else {
             continue;
         };
         let replacement = format!("{}Dir.empty?({argument})", if negative { "!" } else { "" });
-        let start = line_start + indentation + usize::from(leading_not);
-        let end = line_start + indentation + expression.len();
+        let start = line_start + candidate_start + usize::from(leading_not);
+        let end = line_start + candidate_start + expression.len();
         context.replace(
             format!("Use `{replacement}` instead."),
             start..end,

@@ -2,17 +2,27 @@
 
 ## Preserve the compatibility contract
 
-1. Start from RuboCop's own cop specs. Add the relevant upstream cases to the
-   compatibility corpus before claiming support.
-2. “Verified” means the upstream cases pass with matching offense locations,
-   messages where asserted, configuration behavior, and autocorrection.
-   Pattern-based or partial behavior must remain documented as heuristic.
-3. Update `docs/cop-support.md` whenever a cop changes status. Never inflate the
-   supported count to describe a registered name without compatible behavior.
-4. Trusted compatibility and benchmark corpora may contain only cops listed in
-   `fully_compatible_cops`. A test for an incomplete implementation must be
-   registered as a focused heuristic regression in
-   `spec/cop_test_classifications.yml`; do not let it imply broader parity.
+1. Start from RuboCop's own cop specs and captured expectations.
+2. Add offending, clean, adversarial, configuration, and correction fixtures;
+   compare complete RuboCop diagnostics and corrected source.
+3. Turn every real-project discrepancy into a minimized, provenance-backed
+   fixture so it cannot recur silently.
+4. Run the cop across all ten pinned projects before making a compatibility
+   claim. Representative examples and aggregate offense counts are insufficient.
+
+Use evidence labels precisely:
+
+- **registered** means only that the native registry advertises the cop;
+- **fixture-validated** means the RuboCop-derived fixture corpus passes,
+  including corrections where applicable;
+- **project-exact** means complete diagnostic signatures match on all ten pinned
+  projects for one committed Rust binary.
+
+Never turn a focused audit into a repository-wide claim. If the full 606-cop
+matrix is older than `HEAD`, report its commit and reconcile only cops that have
+been re-audited at the current Rust source. Call the result a reconciled estimate,
+not a fresh full-matrix measurement. The current distinction and counts are
+documented in [real-project output parity](docs/real-project-parity.md).
 
 ## Put code in the right layer
 
@@ -90,10 +100,33 @@ upstream suite. Performance comparisons must use identical files, configuration,
 Ruby version, warmup, and process model; report medians and disclose whether
 RuboCop's Prism parser was enabled.
 
+Every real-project discrepancy used to change a cop must become a minimized
+fixture under `crates/rustocop/tests/fixtures/inspection/`. Keep its repository,
+revision, path, and source line in `provenance.yml`; include the triggering case,
+the closest clean control, and exact autocorrection when the cop is correctable.
+
+After unit and upstream checks pass, commit the Rust source before running the
+ten-project gate:
+
+```sh
+bundle exec ruby script/audit_project_parity.rb \
+  --cops Department/First,Department/Second \
+  --report tmp/project-parity/current-head.json \
+  --markdown tmp/project-parity/current-head.md
+```
+
+The gate rejects an uncommitted Rust tree and records the tested Rust commit and
+release-binary SHA-256. Compare paths, severities, messages, and full source
+ranges; equal offense counts are insufficient. If later work changes an audited
+cop or a shared helper it depends on, re-run that cop at the new commit before
+calling it current. Project-exact is a statement about the pinned corpus and
+configuration; fixture coverage remains required for autocorrection and
+unexercised branches.
+
 Use `--baseline spec/upstream/rubocop-1.87.0/status.yml` for the full diagnostic
-run. The gate accepts improvements but rejects aggregate or Verified-cop
-regressions. Regenerate `docs/remaining-cops.md` from that complete report; the
-generator deliberately refuses focused or truncated reports.
+run. The gate accepts improvements but rejects aggregate or previously passing
+fixture regressions. Regenerate `docs/remaining-cops.md` from that complete
+report; the generator deliberately refuses focused or truncated reports.
 
 `quality:test_contracts` also checks that the committed 500-example corpus is
 exactly reproducible. Use `script/generate_compatibility_corpus.rb --check` for
@@ -105,10 +138,3 @@ The same gate checks `spec/source_cop_inventory.yml`. New source-wide callbacks
 must appear there and begin as `unreviewed`; classify them as `lexical` only
 when raw source is the actual contract, or `syntax_aware_migrate` when the rule
 belongs on Prism nodes. Legacy text cops remain `temporary_text` until migrated.
-
-After a complete differential run, report promotion drift with:
-
-```sh
-bundle exec ruby script/report_compatibility_drift.rb tmp/full-compatibility.json \
-  --output tmp/compatibility-promotion-drift.md
-```

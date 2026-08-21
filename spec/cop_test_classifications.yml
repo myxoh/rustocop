@@ -2,10 +2,51 @@ version: 1.87.0
 non_behavioral_files:
   - spec/rustocop/executable_spec.rb
 heuristic_regressions:
+  Lint/DuplicateSetElement:
+    - spec/project_parity_regressions_spec.rb
+  Style/MapCompactWithConditionalBlock:
+    - spec/project_parity_regressions_spec.rb
   Lint/Syntax:
     - crates/rustocop/src/cops/prism/tests/integration.rs
+  Layout/BlockEndNewline:
+    - crates/rustocop/src/engine/fixture_tests.rs
+    - crates/rustocop/tests/fixtures/inspection/block_end_newline_real_project_regression/offenses.tsv
+  Layout/DefEndAlignment:
+    - crates/rustocop/src/engine/fixture_tests.rs
+    - crates/rustocop/tests/fixtures/inspection/def_end_alignment_real_project_regression/offenses.tsv
+  Layout/MultilineMethodArgumentLineBreaks:
+    - crates/rustocop/src/engine/fixture_tests.rs
+    - crates/rustocop/tests/fixtures/inspection/multiline_element_line_breaks_real_project_regression/offenses.tsv
+  Layout/MultilineMethodParameterLineBreaks:
+    - crates/rustocop/src/engine/fixture_tests.rs
+    - crates/rustocop/tests/fixtures/inspection/multiline_element_line_breaks_real_project_regression/offenses.tsv
+  Layout/ParameterAlignment:
+    - crates/rustocop/src/engine/fixture_tests.rs
+    - crates/rustocop/tests/fixtures/inspection/parameter_alignment_real_project_regression/offenses.tsv
+  Lint/UnderscorePrefixedVariableName:
+    - crates/rustocop/src/engine/fixture_tests.rs
+    - crates/rustocop/tests/fixtures/inspection/underscore_prefixed_variable_real_project_regression/offenses.tsv
+  Lint/UnusedMethodArgument:
+    - crates/rustocop/src/engine/fixture_tests.rs
+  Style/BlockDelimiters:
+    - crates/rustocop/src/engine/fixture_tests.rs
+    - crates/rustocop/tests/fixtures/inspection/block_delimiters_real_project_regression/offenses.tsv
   Style/GuardClause:
     - crates/rustocop/src/engine/fixture_tests.rs
-    - crates/rustocop/tests/fixtures/inspection/style_guard_clause_regression/offenses.tsv
+  Style/InvertibleUnlessCondition:
+    - crates/rustocop/src/engine/config_tests.rs
+  Style/PercentLiteralDelimiters:
+    - crates/rustocop/src/engine/config_tests.rs
+    - crates/rustocop/src/engine/fixture_tests.rs
+    - crates/rustocop/tests/fixtures/inspection/percent_literal_interpolated_array_real_project_regression/offenses.tsv
+  Style/RegexpLiteral:
+    - crates/rustocop/src/engine/fixture_tests.rs
+    - crates/rustocop/tests/fixtures/inspection/regexp_literal_parent_real_project_regression/offenses.tsv
+  Style/StringLiterals:
+    - crates/rustocop/src/engine/fixture_tests.rs
+    - crates/rustocop/tests/fixtures/inspection/string_literals_parser_shape_real_project_regression/offenses.tsv
+  Style/WordArray:
+    - crates/rustocop/src/engine/fixture_tests.rs
+    - crates/rustocop/tests/fixtures/inspection/word_array_real_project_regression/offenses.tsv
   Lint/AmbiguousRange:
     - real_fixtures/21_zxcvbn_ambiguous_ranges/source.yml

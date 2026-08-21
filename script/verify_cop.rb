@@ -9,7 +9,6 @@ cop_name = ARGV.fetch(0) { abort "Usage: ruby script/verify_cop.rb Department/Co
 manifest = File.join(root, "crates/rustocop/Cargo.toml")
 native = File.join(root, "crates/rustocop/target/debug/rustocop")
 comparison = File.join(root, "script/compare_upstream_cop_specs.rb")
-support_generator = File.join(root, "script/generate_cop_support.rb")
 report = File.join(root, "tmp/verify-#{cop_name.tr('/', '_').downcase}.json")
 
 build = system("cargo", "build", "--manifest-path", manifest)
@@ -25,10 +24,8 @@ command = [
 success = system(environment, *command)
 
 if success
-  docs_updated = system(environment, RbConfig.ruby, support_generator)
-  abort "support documentation generation failed" unless docs_updated
   puts "#{cop_name} passes every captured diagnostic and correction case."
-  puts "Run the full upstream comparison before promoting it to Verified."
+  puts "Run the ten-project parity audit before calling it project-exact."
 else
   if File.file?(report)
     results = JSON.parse(File.read(report)).fetch("results", {})

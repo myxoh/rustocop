@@ -27,7 +27,6 @@ namespace :quality do
   task :test_contracts do
     ruby "script/check_test_cop_classifications.rb"
     ruby "script/check_hardening_contracts.rb"
-    ruby "script/generate_qualification_progress.rb", "--check"
     ruby "script/generate_source_cop_inventory.rb", "--check"
     ruby "script/generate_compatibility_corpus.rb", "--check"
   end

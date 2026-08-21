@@ -196,6 +196,10 @@ Style/Send	1	8	1	11	false	false	Prefer `Object#__send__` or `Object#public_send`
 
 Keep these fixture cases deliberately small. The upstream contract provides
 breadth; the local fixture should explain the implementation's riskiest edge.
+Every expected offense must come from RuboCop 1.87.0, including its message,
+character range, correctability, and corrected state. Do not hand-adjust a
+snapshot to make the Rust test pass. Provenance-backed fixtures must also record
+the repository, revision, path, and original line in `provenance.yml`.
 
 For a correctable cop generated with `--autocorrect`, edit `corrected.rb` to the
 exact expected final source. The fixture runner checks offenses and corrected
@@ -205,6 +209,12 @@ Run the Rust tests while iterating:
 
 ```sh
 cargo test --manifest-path crates/rustocop/Cargo.toml
+```
+
+Then run the captured RuboCop oracle for the cop, including corrections:
+
+```sh
+ruby script/verify_cop.rb Style/Example
 ```
 
 ## 7. Add a correction only after detection matches
@@ -323,41 +333,40 @@ Before adding a local body, modifier, argument, source-geometry, or call-shape
 helper, check `framework/node_helpers.rs`, `framework/matchers.rs`, and nearby
 family modules.
 
-## 11. Promote support deliberately
+## 11. Establish compatibility with executable evidence
 
-Only mark a cop Verified when:
+Call a cop fixture-validated only when:
 
 - every captured diagnostic case passes;
 - every captured correction assertion passes;
 - the local fixture covers the implementation's risky edge;
-- the full comparison shows no regression;
-- normal Rust and Ruby project gates pass.
+- real-project regressions have minimized fixtures with provenance; and
+- normal Rust and Ruby fixture suites pass.
 
-Then add the cop to `fully_compatible_cops` and update the diagnostic totals in
-`spec/upstream/rubocop-1.87.0/status.yml`, followed by:
+Passing a few representative examples is not validation. Project-exact status
+additionally requires the complete ten-project comparison below.
 
-```sh
-RUSTOCOP_NATIVE_PATH=crates/rustocop/target/debug/rustocop \
-  bundle exec ruby script/generate_cop_support.rb
-```
-
-If the implementation is useful but does not meet that contract, leave it
-Heuristic. Passing a few representative examples is not verification.
-
-For qualification batches, prepare the repetitive evidence and a source-shape
-review packet only after the broad project gate identifies exact, exercised
-candidates:
+After the focused fixtures pass, audit the cop against all ten pinned projects:
 
 ```sh
-bundle exec ruby script/audit_qualification_projects.rb \
-  --from-position 391 --count 30
-bundle exec ruby script/prepare_qualification_batch.rb \
-  --cops Style/First,Style/Second
+bundle exec ruby script/audit_project_parity.rb \
+  --cops Style/First,Style/Second \
+  --report tmp/project-parity/current-head.json \
+  --markdown tmp/project-parity/current-head.md
 ```
 
-The generated files remain under `tmp/qualification/` and retain a pending
-manual-review status. See [the qualification evidence guide](../qualification/README.md)
-for explicit cop selection, reverse matrix resumption, caching, and promotion.
+Project parity compares complete diagnostic signatures. A dormant result is not
+validation: add or locate an exercising fixture before making a compatibility
+claim.
+
+When a real-project mismatch drives an implementation change, copy the smallest
+triggering example into a provenance-backed inspection fixture and add a nearby
+clean control. For correctable cops, compare the complete corrected file with
+RuboCop. Once the implementation and full Rust suite pass, commit the Rust tree
+and re-run every changed cop together through the ten-project gate. The report's
+Rust commit and binary SHA-256 must describe the code being claimed; an older
+exact report is historical evidence after that cop or a shared dependency
+changes.
 
 ## Final checklist
 
@@ -367,5 +376,8 @@ for explicit cop selection, reverse matrix resumption, caching, and promotion.
 - [ ] Added offending, clean, adversarial, and correction fixtures as relevant.
 - [ ] Implemented configuration and Ruby-version branches from the contract.
 - [ ] Ran the focused upstream verifier with corrections.
+- [ ] Added a minimized, provenance-backed real-project regression fixture.
+- [ ] Compared complete ten-project signatures, not just offense counts.
+- [ ] Bound the final audit to the committed Rust source and binary SHA-256.
 - [ ] Ran Rust, Clippy, architecture, Ruby, and full-regression gates.
 - [ ] Updated status and regenerated support documentation only after passing.

@@ -78,13 +78,7 @@ fn empty_line_after_magic_comment(context: &mut CopContext<'_, '_>) {
         if index == 0 && trimmed.starts_with("#!") {
             continue;
         }
-        if trimmed.starts_with("# frozen_string_literal:")
-            || trimmed.starts_with("# encoding:")
-            || trimmed.starts_with("# coding:")
-            || trimmed.starts_with("# warn_indent:")
-            || trimmed.starts_with("# shareable_constant_value:")
-            || trimmed.starts_with("# typed:")
-            || matches!(trimmed, "# rbs_inline: enabled" | "# rbs_inline: disabled")
+        if is_magic_comment(trimmed)
         {
             last_magic = Some(index);
             continue;
@@ -107,6 +101,18 @@ fn empty_line_after_magic_comment(context: &mut CopContext<'_, '_>) {
         *offset,
         "\n",
     );
+}
+
+fn is_magic_comment(line: &str) -> bool {
+    line.starts_with("# frozen_string_literal:")
+        || line.starts_with("# encoding:")
+        || line.starts_with("# coding:")
+        || (line.starts_with("# -*-")
+            && (line.contains(" encoding:") || line.contains(" coding:")))
+        || line.starts_with("# warn_indent:")
+        || line.starts_with("# shareable_constant_value:")
+        || line.starts_with("# typed:")
+        || matches!(line, "# rbs_inline: enabled" | "# rbs_inline: disabled")
 }
 
 fn space_in_lambda_literal(context: &mut CopContext<'_, '_>) {

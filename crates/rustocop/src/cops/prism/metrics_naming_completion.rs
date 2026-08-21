@@ -150,6 +150,8 @@ fn collection_literal_length(node: &Node<'_>, context: &mut CopContext<'_, '_>) 
         array.elements().len()
     } else if let Some(hash) = node.as_hash_node() {
         hash.elements().len()
+    } else if let Some(hash) = node.as_keyword_hash_node() {
+        hash.elements().len()
     } else if let Some(call) = node.as_call_node() {
         if call_name(&call) == b"[]" && root_constant(call.receiver(), b"Set") {
             argument_count(&call)

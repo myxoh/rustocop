@@ -109,7 +109,10 @@ fn implicit_runtime_error(source: &str, context: &mut Reporter<'_>) {
 fn env_home(source: &str, context: &mut Reporter<'_>) {
     for (offset, line) in source_lines(source) {
         let trimmed = line.trim();
-        let normalized = trimmed.strip_prefix("::").unwrap_or(trimmed);
+        let expression = trimmed
+            .rsplit_once('=')
+            .map_or(trimmed, |(_, right)| right.trim());
+        let normalized = expression.strip_prefix("::").unwrap_or(expression);
         if matches!(
             normalized,
             "ENV['HOME']"
@@ -119,11 +122,11 @@ fn env_home(source: &str, context: &mut Reporter<'_>) {
                 | "ENV.fetch('HOME', nil)"
                 | "ENV.fetch(\"HOME\", nil)"
         ) {
-            let start = offset + line.len() - line.trim_start().len();
+            let start = offset + line.find(expression).unwrap_or(0);
             context.replace(
                 "Use `Dir.home` instead.",
-                start..start + trimmed.len(),
-                start..start + trimmed.len(),
+                start..start + expression.len(),
+                start..start + expression.len(),
                 "Dir.home",
             );
         }

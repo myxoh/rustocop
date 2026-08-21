@@ -8,9 +8,9 @@ require "optparse"
 require "pathname"
 require "rbconfig"
 require "time"
-require_relative "../lib/rustocop/qualification_batch"
+require_relative "../lib/rustocop/project_corpus"
 
-gem "rubocop", "=#{Rustocop::QualificationBatch::RUBOCOP_VERSION}"
+gem "rubocop", "=#{Rustocop::ProjectCorpus::RUBOCOP_VERSION}"
 require "rubocop"
 
 ROOT = File.expand_path("..", __dir__)
@@ -31,7 +31,7 @@ options = {
 }
 
 OptionParser.new do |parser|
-  parser.banner = "Usage: ruby script/audit_qualification_projects.rb [options]"
+  parser.banner = "Usage: ruby script/audit_project_parity.rb [options]"
   parser.on("--cops NAMES", "comma-separated cop names") { |value| options[:cops] = value.split(",").map(&:strip) }
   parser.on("--from-position POSITION", Integer, "one-based sorted matrix position") { |value| options[:from_position] = value }
   parser.on("--count COUNT", Integer, "reverse-order cop count (default: 30)") { |value| options[:count] = value }
@@ -83,10 +83,10 @@ abort "native binary not found: #{options[:native]}" unless File.executable?(opt
 abort "configuration not found: #{options[:config]}" unless File.file?(options[:config])
 
 positions = cops.map { |cop| matrix.index(cop) + 1 }
-options[:report] ||= File.join(ROOT, "tmp/qualification/project-gate-#{positions.max}-#{positions.min}.json")
+options[:report] ||= File.join(ROOT, "tmp/project-parity/project-gate-#{positions.max}-#{positions.min}.json")
 options[:markdown] ||= options[:report].sub(/\.json\z/, ".md")
 
-projects = Rustocop::QualificationBatch::PROJECTS.map do |project|
+projects = Rustocop::ProjectCorpus::PROJECTS.map do |project|
   corpus = File.join(
     ROOT, "tmp/project-benchmarks/corpora",
     "#{project.fetch('name')}-#{project.fetch('revision')}"
@@ -96,11 +96,11 @@ projects = Rustocop::QualificationBatch::PROJECTS.map do |project|
 end
 
 rubocop_version = RuboCop::Version::STRING
-abort "loaded RuboCop #{rubocop_version}, expected #{Rustocop::QualificationBatch::RUBOCOP_VERSION}" unless
-  rubocop_version == Rustocop::QualificationBatch::RUBOCOP_VERSION
+abort "loaded RuboCop #{rubocop_version}, expected #{Rustocop::ProjectCorpus::RUBOCOP_VERSION}" unless
+  rubocop_version == Rustocop::ProjectCorpus::RUBOCOP_VERSION
 rubocop = [
   RbConfig.ruby,
-  Gem.bin_path("rubocop", "rubocop", "=#{Rustocop::QualificationBatch::RUBOCOP_VERSION}")
+  Gem.bin_path("rubocop", "rubocop", "=#{Rustocop::ProjectCorpus::RUBOCOP_VERSION}")
 ].freeze
 
 def capture(command)
@@ -299,7 +299,7 @@ combined = survivors.to_h do |cop|
   ruby = values.sum { |row| row.fetch("rubocop") }
   exact = values.sum { |row| row.fetch("exact") }
   classification = if rust == ruby && exact == ruby
-                     ruby.zero? ? "dormant" : "exact_active"
+                     ruby.zero? ? "dormant" : "project_exact"
                    else
                      "mismatch"
                    end
@@ -350,12 +350,12 @@ rows = cops.map do |cop|
 end
 summary = combined.values.group_by { |row| row.fetch("classification") }.transform_values(&:length)
 markdown = <<~MARKDOWN
-  # Qualification project gate: positions #{positions.max}–#{positions.min}
+  # Ten-project parity audit: positions #{positions.max}–#{positions.min}
 
   Generated against Rust source `#{report.fetch('rust_commit')}` and RuboCop
   #{report.fetch('rubocop_version')} across the pinned project corpora.
 
-  - Exact and active: #{summary.fetch('exact_active', 0)}
+  - Project-exact: #{summary.fetch('project_exact', 0)}
   - Exact but dormant: #{summary.fetch('dormant', 0)}
   - Mismatching: #{summary.fetch('mismatch', 0)}
   - Crashing: #{summary.fetch('crash', 0)}
@@ -365,9 +365,9 @@ markdown = <<~MARKDOWN
   | --- | ---: | ---: | ---: | --- |
   #{rows.join("\n")}
 
-  Exact-active cops are candidates for upstream, correction, evidence, and source
-  boundary review. Dormant, mismatching, crashing, and engine-error cops receive
-  no qualification credit.
+  Project-exact cops match complete diagnostic signatures across every pinned
+  project. Dormant cops were not exercised; mismatching, crashing, and
+  engine-error cops are not compatible with this corpus.
 MARKDOWN
 FileUtils.mkdir_p(File.dirname(options[:markdown]))
 File.write(options[:markdown], markdown)

@@ -51,6 +51,7 @@ fn duplicate_hash_key(context: &mut CopContext<'_, '_>) {
 
 fn duplicate_set_element(context: &mut CopContext<'_, '_>) {
     let source = context.source();
+    report_duplicate_percent_symbol_sets(source, context);
     for marker in ["Set["] {
         let mut search = 0;
         while let Some(relative) = source[search..].find(marker) {
@@ -82,6 +83,42 @@ fn duplicate_set_element(context: &mut CopContext<'_, '_>) {
             }
             search = close + 1;
         }
+    }
+}
+
+fn report_duplicate_percent_symbol_sets(source: &str, context: &mut CopContext<'_, '_>) {
+    let mut search = 0;
+    while let Some(relative) = source[search..].find("%i[") {
+        let open = search + relative + 2;
+        let Some(close_relative) = source[open + 1..].find(']') else {
+            break;
+        };
+        let close = open + 1 + close_relative;
+        if !source[close + 1..].trim_start().starts_with(".to_set") {
+            search = close + 1;
+            continue;
+        }
+        let body = &source[open + 1..close];
+        let mut seen = Vec::<&str>::new();
+        let mut cursor = 0;
+        for value in body.split_whitespace() {
+            let relative_start = body[cursor..].find(value).unwrap_or(0) + cursor;
+            let value_start = open + 1 + relative_start;
+            if seen.contains(&value) {
+                let removal_start = source[..value_start]
+                    .rfind(char::is_whitespace)
+                    .unwrap_or(value_start);
+                context.remove(
+                    "Remove the duplicate element in Set.",
+                    value_start..value_start + value.len(),
+                    removal_start..value_start + value.len(),
+                );
+            } else {
+                seen.push(value);
+            }
+            cursor = relative_start + value.len();
+        }
+        search = close + 1;
     }
 }
 

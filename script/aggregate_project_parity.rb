@@ -8,13 +8,13 @@ require "time"
 
 ROOT = File.expand_path("..", __dir__)
 options = {
-  input: File.join(ROOT, "tmp/qualification/remaining-project-gates/*.json"),
-  report: File.join(ROOT, "tmp/qualification/remaining-project-gate.json"),
-  markdown: File.join(ROOT, "tmp/qualification/remaining-project-gate.md")
+  input: File.join(ROOT, "tmp/project-parity/batches/*.json"),
+  report: File.join(ROOT, "tmp/project-parity/all-cops.json"),
+  markdown: File.join(ROOT, "tmp/project-parity/all-cops.md")
 }
 
 OptionParser.new do |parser|
-  parser.banner = "Usage: ruby script/aggregate_qualification_project_gates.rb [options]"
+  parser.banner = "Usage: ruby script/aggregate_project_parity.rb [options]"
   parser.on("--input GLOB") { |value| options[:input] = File.expand_path(value) }
   parser.on("--report PATH") { |value| options[:report] = File.expand_path(value) }
   parser.on("--markdown PATH") { |value| options[:markdown] = File.expand_path(value) }
@@ -66,7 +66,7 @@ payload = {
 FileUtils.mkdir_p(File.dirname(options[:report]))
 File.write(options[:report], JSON.pretty_generate(payload))
 
-exact = ordered.select { |_cop, row| row.fetch("classification") == "exact_active" }
+exact = ordered.select { |_cop, row| row.fetch("classification") == "project_exact" }
 failures = ordered.select { |_cop, row| %w[crash rubocop_error].include?(row.fetch("classification")) }
 failure_details = reports.flat_map do |report|
   report.fetch("crashes", []).map { |item| item.merge("classification" => "crash") } +
@@ -93,7 +93,7 @@ markdown = <<~MARKDOWN
 
   | Classification | Cops |
   | --- | ---: |
-  | Exact and active | #{summary.fetch('exact_active', 0)} |
+  | Project-exact | #{summary.fetch('project_exact', 0)} |
   | Exact but dormant | #{summary.fetch('dormant', 0)} |
   | Diagnostic mismatch | #{summary.fetch('mismatch', 0)} |
   | Rustocop crash | #{summary.fetch('crash', 0)} |
@@ -104,10 +104,10 @@ markdown = <<~MARKDOWN
   seconds in Rustocop and #{format('%.1f', timing.fetch('rubocop'))} seconds in
   RuboCop. Timings exclude crash/error isolation probes.
 
-  ## Exact-active candidates
+  ## Project-exact cops
 
-  These #{exact.length} cops advance only to upstream, correction, evidence, and
-  manual source-boundary review. They are not qualified by this gate alone.
+  These #{exact.length} cops match complete diagnostic signatures across every
+  pinned project. Fixture and autocorrection coverage remain separate requirements.
 
   #{exact.map { |cop, _row| "- `#{cop}`" }.join("\n")}
 

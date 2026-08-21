@@ -10,7 +10,7 @@ require "shellwords"
 require "tempfile"
 require "time"
 require_relative "support/benchmark"
-require_relative "../lib/rustocop/qualification_batch"
+require_relative "../lib/rustocop/project_corpus"
 
 extend BenchmarkSupport
 
@@ -44,7 +44,7 @@ PROJECT_LICENSES = {
   "rspec-core" => "MIT",
   "homebrew" => "BSD-2-Clause"
 }.freeze
-PROJECTS = Rustocop::QualificationBatch::PROJECTS.map do |project|
+PROJECTS = Rustocop::ProjectCorpus::PROJECTS.map do |project|
   project.merge("license" => PROJECT_LICENSES.fetch(project.fetch("name")))
 end.freeze
 EXCLUDED_COMPONENTS = %w[

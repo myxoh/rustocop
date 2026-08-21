@@ -194,7 +194,13 @@ fn or_assignment_to_constant(source: &str, reporter: &mut Reporter<'_>) {
 
 fn ordered_magic_comments(source: &str, reporter: &mut Reporter<'_>) {
     let lines = source_lines(source).collect::<Vec<_>>();
-    let encoding = lines.iter().position(|(_, line)| {
+    let leading = lines.iter().take_while(|(offset, line)| {
+        let trimmed = line.trim();
+        trimmed.is_empty()
+            || trimmed.starts_with('#')
+            || (*offset == 0 && trimmed.starts_with("#!"))
+    });
+    let encoding = leading.clone().position(|(_, line)| {
         let trimmed = line.trim();
         trimmed.starts_with("# encoding:")
             || trimmed.starts_with("# coding:")
@@ -202,6 +208,12 @@ fn ordered_magic_comments(source: &str, reporter: &mut Reporter<'_>) {
     });
     let frozen = lines
         .iter()
+        .take_while(|(offset, line)| {
+            let trimmed = line.trim();
+            trimmed.is_empty()
+                || trimmed.starts_with('#')
+                || (*offset == 0 && trimmed.starts_with("#!"))
+        })
         .position(|(_, line)| line.trim().starts_with("# frozen_string_literal:"));
     let (Some(encoding), Some(frozen)) = (encoding, frozen) else {
         return;
