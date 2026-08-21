@@ -24,7 +24,11 @@ impl RedundantBeginRule<'_, '_, '_> {
         let assignment = parent.filter(|parent| parent.as_def_node().is_none())
             .and_then(|parent| assignment_around_begin(parent, begin_keyword.start_offset(), self.source_file()));
         return_if!(assignment.is_some() && statements.len() != 1);
-        return_if!(parent.is_some_and(|parent| parent.as_call_node().is_some()) && assignment.is_none());
+        return_if!(parent.is_some_and(|parent| {
+            parent.as_call_node().is_some()
+                || parent.as_and_node().is_some()
+                || parent.as_or_node().is_some()
+        }));
         return_if!(self.ancestors().iter().any(|ancestor| ancestor.as_lambda_node().is_some()));
 
         let endless_definition = parent.and_then(Node::as_def_node).is_some_and(|definition| definition.equal_loc().is_some());
