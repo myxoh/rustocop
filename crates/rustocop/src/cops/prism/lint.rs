@@ -300,14 +300,73 @@ impl Cop for SelfAssignment {
         source: &str,
         context: &mut Context,
     ) {
-        let Some(write) = node.as_local_variable_write_node() else {
+        let simple = if let Some(write) = node.as_local_variable_write_node() {
+            Some((write.name_loc(), write.value(), write.location()))
+        } else if let Some(write) = node.as_instance_variable_write_node() {
+            Some((write.name_loc(), write.value(), write.location()))
+        } else if let Some(write) = node.as_class_variable_write_node() {
+            Some((write.name_loc(), write.value(), write.location()))
+        } else if let Some(write) = node.as_global_variable_write_node() {
+            Some((write.name_loc(), write.value(), write.location()))
+        } else if let Some(write) = node.as_constant_write_node() {
+            Some((write.name_loc(), write.value(), write.location()))
+        } else {
+            None
+        };
+        if let Some((name, value, location)) = simple {
+            if source_at(source, &name) == source_at(source, &value.location()) {
+                context.report(self.name(), "Self-assignment detected.", location);
+            }
+            return;
+        }
+
+        let Some(call) = node.as_call_node() else {
             return;
         };
-        let value = write.value();
-        if source_at(source, &write.name_loc()) == source_at(source, &value.location()) {
-            context.report(self.name(), "Self-assignment detected.", write.location());
+        let Some(receiver) = call.receiver() else {
+            return;
+        };
+        let arguments = call
+            .arguments()
+            .map(|arguments| arguments.arguments().iter().collect::<Vec<_>>())
+            .unwrap_or_default();
+        let self_assignment = if call_name(&call) == b"[]=" && arguments.len() >= 2 {
+            let Some(value_call) = arguments.last().and_then(Node::as_call_node) else {
+                return;
+            };
+            let keys = &arguments[..arguments.len() - 1];
+            let value_keys = value_call
+                .arguments()
+                .map(|arguments| arguments.arguments().iter().collect::<Vec<_>>())
+                .unwrap_or_default();
+            call_name(&value_call) == b"[]"
+                && same_node_source(source, &receiver, &value_call.receiver())
+                && keys.len() == value_keys.len()
+                && keys.iter().all(|key| key.as_call_node().is_none())
+                && keys.iter().zip(value_keys.iter()).all(|(left, right)| {
+                    source_at(source, &left.location()) == source_at(source, &right.location())
+                })
+        } else if call_name(&call).ends_with(b"=") && arguments.len() == 1 {
+            let Some(value_call) = arguments[0].as_call_node() else {
+                return;
+            };
+            let assigned_name = &call_name(&call)[..call_name(&call).len() - 1];
+            call_name(&value_call) == assigned_name
+                && argument_count(&value_call) == 0
+                && same_node_source(source, &receiver, &value_call.receiver())
+        } else {
+            false
+        };
+        if self_assignment {
+            context.report(self.name(), "Self-assignment detected.", call.location());
         }
     }
+}
+
+fn same_node_source(source: &str, left: &Node<'_>, right: &Option<Node<'_>>) -> bool {
+    right.as_ref().is_some_and(|right| {
+        source_at(source, &left.location()) == source_at(source, &right.location())
+    })
 }
 
 struct ToJson;
