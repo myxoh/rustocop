@@ -4,7 +4,7 @@ use super::*;
 define_cops! {
     EmptyFile => "Lint/EmptyFile" => source(empty_file),
     NumericLiteralPrefix => "Style/NumericLiteralPrefix" => source(numeric_literal_prefix),
-    NestedPercentLiteral => "Lint/NestedPercentLiteral" => source(nested_percent_literal),
+    NestedPercentLiteral => "Lint/NestedPercentLiteral" => node(as_array_node, nested_percent_literal),
     RescueException => "Lint/RescueException" => source(rescue_exception),
     OpenStructUse => "Style/OpenStructUse" => any_node(open_struct_use),
 }
@@ -65,16 +65,34 @@ fn numeric_literal_prefix(reporter: &mut CopContext<'_, '_>) {
     }
 }
 
-fn nested_percent_literal(reporter: &mut CopContext<'_, '_>) {
-    let source = reporter.source();
-    for (offset, line) in source_lines(source) {
-        let trimmed = line.trim();
-        let nested = trimmed.starts_with("%i[") && trimmed[3..].contains("%i[")
-            || trimmed.starts_with("%W[") && trimmed[3..].contains("%W[");
-        if nested {
-            let start = offset + line.len() - line.trim_start().len();
-            reporter.report("Within percent literals, nested percent literals do not function and may be unwanted in the result.", start..offset + line.len());
-        }
+fn nested_percent_literal(node: &ruby_prism::ArrayNode<'_>, context: &mut CopContext<'_, '_>) {
+    let Some(opening) = node.opening_loc() else {
+        return;
+    };
+    if !matches!(opening.as_slice(), bytes if bytes.starts_with(b"%w") || bytes.starts_with(b"%W") || bytes.starts_with(b"%i") || bytes.starts_with(b"%I")) {
+        return;
+    }
+    let contains_percent_literal = node.elements().iter().any(|element| {
+        let content = if let Some(string) = element.as_string_node() {
+            string.unescaped().to_vec()
+        } else if let Some(symbol) = element.as_symbol_node() {
+            symbol.unescaped().to_vec()
+        } else {
+            return false;
+        };
+        [b"%i".as_slice(), b"%I", b"%q", b"%Q", b"%r", b"%s", b"%w", b"%W", b"%x", b"%"]
+            .into_iter()
+            .any(|prefix| {
+                content.strip_prefix(prefix).is_some_and(|rest| {
+                    rest.first().is_some_and(|byte| !byte.is_ascii_alphanumeric() && *byte != b'_')
+                })
+            })
+    });
+    if contains_percent_literal {
+        context.report(
+            "Within percent literals, nested percent literals do not function and may be unwanted in the result.",
+            node.location(),
+        );
     }
 }
 
