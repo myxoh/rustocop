@@ -25,7 +25,9 @@ impl Engine {
     ) -> Inspection {
         let parsed = parse(source.as_bytes());
         let mut context = Context::new(autocorrect, path, target_ruby_version, cop_config);
-        let has_parse_errors = parsed.errors().next().is_some();
+        let has_unrecoverable_parse_errors = parsed
+            .errors()
+            .any(|error| !is_context_only_parse_error(error.message()));
         for error in parsed.errors() {
             for cop in self
                 .registry
@@ -36,7 +38,7 @@ impl Engine {
                 cop.on_parse_error(&error, source, &mut context);
             }
         }
-        if has_parse_errors {
+        if has_unrecoverable_parse_errors {
             return context.finish(source);
         }
         for cop in self
@@ -67,4 +69,15 @@ impl Engine {
         runner.visit(&parsed.node());
         context.finish(source)
     }
+}
+
+fn is_context_only_parse_error(message: &str) -> bool {
+    matches!(
+        message,
+        "Invalid break"
+            | "Invalid next"
+            | "Invalid redo"
+            | "Invalid retry without rescue"
+            | "Invalid yield"
+    )
 }
