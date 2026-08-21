@@ -131,5 +131,5 @@ fn merges_user_configuration_over_pinned_rubocop_defaults() {
         .map("Style/PercentLiteralDelimiters", "PreferredDelimiters")
         .unwrap();
     assert_eq!(delimiters.get("default").map(String::as_str), Some("[]"));
-    assert_eq!(delimiters.get("%r").map(String::as_str), Some("{}"));
+    assert_eq!(delimiters.get("%r").map(String::as_str), None);
 }

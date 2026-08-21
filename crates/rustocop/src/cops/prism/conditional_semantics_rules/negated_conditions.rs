@@ -112,7 +112,8 @@ fn single_negative_location<'pr>(
     predicate: &Node<'pr>,
 ) -> Option<ruby_prism::Location<'pr>> {
     if let Some(parentheses) = predicate.as_parentheses_node() {
-        let inner = parentheses.body().and_then(single_expression)?;
+        let statements = parentheses.body()?.as_statements_node()?;
+        let inner = statements.body().last()?;
         return single_negative_location(&inner);
     }
     let call = predicate.as_call_node()?;
