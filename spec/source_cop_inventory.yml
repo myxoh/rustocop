@@ -600,7 +600,7 @@ entries:
   review: unreviewed
 - cop: Lint/UriRegexp
   pipeline: prism_source
-  source: crates/rustocop/src/cops/prism/additional_rules_more.rs
+  source: crates/rustocop/src/cops/prism/uri_regexp_rules.rs
   review: unreviewed
 - cop: Lint/UselessConstantScoping
   pipeline: prism_source

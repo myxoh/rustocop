@@ -241,6 +241,7 @@ cop_modules!(
     trailing_comma_completion,
     trailing_argument_comma_rules,
     trailing_underscore_rules,
+    uri_regexp_rules,
     while_until_do_rules,
     yoda_condition_rules,
     string_conversion_rules,

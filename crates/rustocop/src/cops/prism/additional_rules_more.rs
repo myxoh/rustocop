@@ -12,7 +12,6 @@ declare_source_cops! {
     OrAssignmentToConstant => "Lint/OrAssignmentToConstant" => or_assignment_to_constant,
     OrderedMagicComments => "Lint/OrderedMagicComments" => ordered_magic_comments,
     DuplicateRequire => "Lint/DuplicateRequire" => duplicate_require,
-    UriRegexp => "Lint/UriRegexp" => uri_regexp,
 }
 
 fn leading_empty_lines(source: &str, reporter: &mut Reporter<'_>) {
@@ -258,36 +257,6 @@ fn duplicate_require(source: &str, reporter: &mut Reporter<'_>) {
                 format!("Duplicate `{method}` detected."),
                 start..offset + line.len(),
                 offset..line_end(source, offset),
-            );
-        }
-    }
-}
-
-fn uri_regexp(source: &str, reporter: &mut Reporter<'_>) {
-    let parser = if reporter.target_ruby_version().at_least(3, 4) {
-        "RFC2396_PARSER"
-    } else {
-        "DEFAULT_PARSER"
-    };
-    for prefix in ["::URI", "URI"] {
-        let needle = format!("{prefix}.regexp");
-        for start in all_offsets(source, &needle) {
-            if prefix == "URI" && start >= 2 && &source[start - 2..start] == "::" {
-                continue;
-            }
-            let operator = start + prefix.len();
-            let selector = operator + 1;
-            let end =
-                line_end(source, start).saturating_sub(usize::from(source[start..].contains('\n')));
-            let old = &source[start..end];
-            let replacement = old.replacen(&needle, &format!("{prefix}::{parser}.make_regexp"), 1);
-            reporter.replace(
-                format!(
-                    "`{old}` is obsolete and should not be used. Instead, use `{replacement}`."
-                ),
-                selector..selector + 6,
-                operator..selector + 6,
-                format!("::{parser}.make_regexp"),
             );
         }
     }
