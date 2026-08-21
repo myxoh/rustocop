@@ -5,11 +5,39 @@ use super::*;
 define_rule!(OperatorMethodCallRule);
 
 define_cops! {
+    SpaceAroundMethodCallOperator => "Layout/SpaceAroundMethodCallOperator" => any_node(space_around_method_call_operator),
     OperatorMethodCall => "Style/OperatorMethodCall" => call_rule(
         OperatorMethodCallRule,
         on_send,
         restrict [b"|", b"^", b"&", b"<=>", b"==", b"===", b"=~", b">", b">=", b"<", b"<=", b"<<", b">>", b"+", b"-", b"*", b"/", b"%", b"**", b"~", b"!", b"!=", b"!~"]
     ),
+}
+
+fn space_around_method_call_operator(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
+    let Some(call) = node.as_call_node() else {
+        return;
+    };
+    let (Some(receiver), Some(operator), Some(selector)) =
+        (call.receiver(), call.call_operator_loc(), call.message_loc())
+    else {
+        return;
+    };
+    for range in [
+        receiver.location().end_offset()..operator.start_offset(),
+        operator.end_offset()..selector.start_offset(),
+    ] {
+        if range.start < range.end
+            && context.source()[range.clone()]
+                .bytes()
+                .all(|byte| matches!(byte, b' ' | b'\t'))
+        {
+            context.remove(
+                "Avoid using spaces around a method call operator.",
+                range.clone(),
+                range,
+            );
+        }
+    }
 }
 
 impl OperatorMethodCallRule<'_, '_, '_> {

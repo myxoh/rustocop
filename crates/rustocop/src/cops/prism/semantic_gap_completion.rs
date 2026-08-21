@@ -80,8 +80,17 @@ fn constant_overwritten_in_rescue(context: &mut CopContext<'_, '_>) {
         let Some(marker) = line.find("rescue => ") else {
             continue;
         };
-        let value = line[marker + 10..].trim();
-        if value.is_empty() || !value.bytes().any(|byte| byte.is_ascii_uppercase()) {
+        let value = line[marker + 10..]
+            .split('#')
+            .next()
+            .unwrap_or_default()
+            .trim();
+        let constant = value.trim_start_matches("::");
+        if constant.is_empty()
+            || !constant
+                .split("::")
+                .all(|part| part.as_bytes().first().is_some_and(u8::is_ascii_uppercase))
+        {
             continue;
         }
         let arrow = offset + marker + 7;

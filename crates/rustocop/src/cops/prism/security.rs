@@ -87,7 +87,7 @@ impl Cop for CompoundHash {
         let mut inside_hash = false;
         for (offset, line) in SourceFile::new(source).lines() {
             let trimmed = line.trim();
-            if trimmed.starts_with("def hash") {
+            if matches!(trimmed, "def hash" | "def hash()") {
                 inside_hash = true;
                 continue;
             }

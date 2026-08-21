@@ -157,14 +157,27 @@ fn disjunctive_assignment(source: &str, reporter: &mut Reporter<'_>) {
 }
 
 fn refinement_import_methods(source: &str, reporter: &mut Reporter<'_>) {
-    if !reporter.target_ruby_version().at_least(3, 1)
-        || !source.contains("refine ")
-        || !source.contains(" do\n")
-    {
+    if !reporter.target_ruby_version().at_least(3, 1) {
         return;
     }
+    let mut refinement_indent = None;
     for (offset, line) in source_lines(source) {
         let trimmed = line.trim_start();
+        let indentation = line.len() - trimmed.len();
+        if refinement_indent.is_none() && trimmed.starts_with("refine ") && trimmed.ends_with(" do") {
+            refinement_indent = Some(indentation);
+            continue;
+        }
+        let Some(refine_indent) = refinement_indent else {
+            continue;
+        };
+        if trimmed == "end" && indentation == refine_indent {
+            refinement_indent = None;
+            continue;
+        }
+        if indentation <= refine_indent {
+            continue;
+        }
         let method = if trimmed.starts_with("include ") {
             "include"
         } else if trimmed.starts_with("prepend ") {

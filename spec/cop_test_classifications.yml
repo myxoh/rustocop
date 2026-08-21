@@ -2,6 +2,8 @@ version: 1.87.0
 non_behavioral_files:
   - spec/rustocop/executable_spec.rb
 heuristic_regressions:
+  Layout/SpaceAroundMethodCallOperator:
+    - spec/project_parity_regressions_spec.rb
   Lint/DuplicateSetElement:
     - spec/project_parity_regressions_spec.rb
   Style/MapCompactWithConditionalBlock:
@@ -12,6 +14,10 @@ heuristic_regressions:
     - spec/project_parity_regressions_spec.rb
   Style/RedundantSelfAssignmentBranch:
     - spec/project_parity_regressions_spec.rb
+  Style/InfiniteLoop:
+    - spec/project_parity_regressions_spec.rb
+  Style/RescueStandardError:
+    - spec/fixtures/project_parity_regressions/rescue_variable_with_directive.rb
   Lint/Syntax:
     - crates/rustocop/src/cops/prism/tests/integration.rs
   Layout/BlockEndNewline:
