@@ -14,13 +14,17 @@ fn require_parentheses(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
         return;
     }
 
-    let Some(argument) = only_argument(node) else {
+    let Some(arguments) = node.arguments() else {
+        return;
+    };
+    let arguments = arguments.arguments();
+    let Some(first_argument) = arguments.iter().next() else {
         return;
     };
     let message = "Use parentheses in the method call to avoid confusion about precedence.";
 
-    if let Some(conditional) = argument.as_if_node() {
-        if matches!(call_name(node), b"[]" | b"[]=") || node.name().as_slice().ends_with(b"=") {
+    if let Some(conditional) = first_argument.as_if_node().filter(is_ternary) {
+        if matches!(call_name(node), b"[]" | b"[]=") || assignment_method(node) {
             return;
         }
         let predicate = conditional.predicate();
@@ -33,9 +37,25 @@ fn require_parentheses(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
         return;
     }
 
-    if call_name(node).ends_with(b"?") && is_boolean_operator(&argument) {
+    if call_name(node).ends_with(b"?")
+        && arguments
+            .iter()
+            .last()
+            .is_some_and(|argument| is_boolean_operator(&argument))
+    {
         context.report_call(node, message);
     }
+}
+
+fn is_ternary(node: &ruby_prism::IfNode<'_>) -> bool {
+    node.if_keyword_loc().is_none()
+        && node.then_keyword_loc().is_some()
+        && node.end_keyword_loc().is_none()
+}
+
+fn assignment_method(node: &CallNode<'_>) -> bool {
+    let name = call_name(node);
+    name.ends_with(b"=") && !matches!(name, b"==" | b"===" | b"!=" | b"<=" | b">=")
 }
 
 fn is_boolean_operator(node: &Node<'_>) -> bool {
