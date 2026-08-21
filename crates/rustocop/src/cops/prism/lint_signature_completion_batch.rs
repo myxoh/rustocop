@@ -43,42 +43,179 @@ fn format_parameter_mismatch(context: &mut CopContext<'_, '_>) {
 }
 
 fn unused_block_argument(context: &mut CopContext<'_, '_>) {
-    for (offset, line) in context.source_file().lines() {
-        let Some(first_pipe) = line.find('|') else {
-            continue;
-        };
-        let Some(second_pipe) = line[first_pipe + 1..]
-            .find('|')
-            .map(|at| first_pipe + 1 + at)
-        else {
-            continue;
-        };
-        let body = &line[second_pipe + 1..];
-        if body.contains('=') {
+    let source = context.source().to_string();
+    let ignore_empty = context.config_bool("IgnoreEmptyBlocks", true);
+    let allow_keywords = context.config_bool("AllowUnusedKeywordArguments", false);
+    let mut groups = block_parameter_groups(&source);
+    groups.extend(lambda_parameter_groups(&source));
+    for group in groups {
+        let body_end = block_body_end(&source, group.body_start);
+        let body = &source[group.body_start..body_end];
+        if ignore_empty && body.trim_matches([' ', '\t', '\r', '\n', '}', ';']).is_empty() {
             continue;
         }
-        for argument in line[first_pipe + 1..second_pipe].split(',').map(str::trim) {
-            if argument.is_empty()
-                || argument.starts_with('_')
-                || body
-                    .split(|c: char| !c.is_ascii_alphanumeric() && c != '_')
-                    .any(|word| word == argument)
-            {
-                continue;
+        if body.contains("binding") && !body.contains("binding(") && !body.contains("def ") {
+            continue;
+        }
+        let unused = group
+            .parameters
+            .iter()
+            .filter(|parameter| {
+                !parameter.name.starts_with('_')
+                    && !(allow_keywords && parameter.keyword)
+                    && !(if parameter.local {
+                        body.split(|character: char| {
+                            !character.is_ascii_alphanumeric() && character != '_'
+                        })
+                        .any(|word| word == parameter.name)
+                    } else {
+                        block_variable_read(body, &parameter.name)
+                    })
+            })
+            .collect::<Vec<_>>();
+        for parameter in &unused {
+            let all_unused = unused.len() == group.parameters.len();
+            let message = unused_block_message(parameter, &group, all_unused);
+            if parameter.keyword {
+                context.report(message, parameter.range.clone());
+            } else {
+                context.replace(
+                    message,
+                    parameter.range.clone(),
+                    parameter.range.clone(),
+                    format!("_{}", parameter.name),
+                );
             }
-            let start = offset
-                + first_pipe
-                + 1
-                + line[first_pipe + 1..second_pipe]
-                    .find(argument)
-                    .unwrap_or(0);
-            context.replace(
-                "Unused block argument.",
-                start..start + argument.len(),
-                start..start + argument.len(),
-                format!("_{argument}"),
-            );
         }
+    }
+}
+
+struct BlockParameterGroup {
+    parameters: Vec<BlockParameterInfo>,
+    body_start: usize,
+    lambda: bool,
+    define_method: bool,
+}
+
+struct BlockParameterInfo {
+    name: String,
+    range: std::ops::Range<usize>,
+    keyword: bool,
+    local: bool,
+}
+
+fn block_parameter_groups(source: &str) -> Vec<BlockParameterGroup> {
+    let mut groups = Vec::new();
+    let mut cursor = 0;
+    while let Some(open) = source[cursor..].find('|').map(|at| cursor + at) {
+        let Some(close) = source[open + 1..].find('|').map(|at| open + 1 + at) else {
+            break;
+        };
+        if source.as_bytes().get(open.wrapping_sub(1)) == Some(&b'|') {
+            cursor = close + 1;
+            continue;
+        }
+        let prefix = &source[source[..open].rfind('\n').map_or(0, |at| at + 1)..open];
+        if prefix.contains(" do") || prefix.contains('{') {
+            groups.push(BlockParameterGroup {
+                parameters: parse_block_parameters(source, open + 1, close),
+                body_start: close + 1,
+                lambda: false,
+                define_method: prefix.contains("define_method"),
+            });
+        }
+        cursor = close + 1;
+    }
+    groups
+}
+
+fn lambda_parameter_groups(source: &str) -> Vec<BlockParameterGroup> {
+    source
+        .match_indices("->")
+        .filter_map(|(arrow, _)| {
+            let open = source[arrow + 2..].find('(').map(|at| arrow + 2 + at)?;
+            let close = source[open + 1..].find(')').map(|at| open + 1 + at)?;
+            let body_start = source[close + 1..].find('{').map(|at| close + 2 + at)?;
+            Some(BlockParameterGroup {
+                parameters: parse_block_parameters(source, open + 1, close),
+                body_start,
+                lambda: true,
+                define_method: false,
+            })
+        })
+        .collect()
+}
+
+fn parse_block_parameters(source: &str, start: usize, end: usize) -> Vec<BlockParameterInfo> {
+    let local_start = source[start..end].find(';').map(|at| start + at);
+    let mut search = start;
+    source[start..end]
+        .split([',', ';'])
+        .filter_map(|raw| {
+            let token = raw.trim();
+            let name = token
+                .trim_start_matches('*')
+                .split(['=', ':'])
+                .next()
+                .unwrap_or("")
+                .trim();
+            let relative = source[search..end].find(name)? + search;
+            search = relative + name.len();
+            (!name.is_empty()).then(|| BlockParameterInfo {
+                name: name.to_string(),
+                range: relative..relative + name.len(),
+                keyword: token.contains(':'),
+                local: local_start.is_some_and(|separator| relative > separator),
+            })
+        })
+        .collect()
+}
+
+fn block_body_end(source: &str, start: usize) -> usize {
+    let brace = source[start..].find('}').map(|at| start + at);
+    let ending = source[start..]
+        .match_indices("\nend")
+        .map(|(at, _)| start + at)
+        .next();
+    brace.into_iter().chain(ending).min().unwrap_or(source.len())
+}
+
+fn block_variable_read(body: &str, name: &str) -> bool {
+    body.lines().any(|line| {
+        let inspected = line.split_once('=').map_or(line, |(_, right)| right);
+        inspected.match_indices(name).any(|(at, _)| {
+            let before = inspected.as_bytes().get(at.wrapping_sub(1)).copied();
+            let after = inspected.as_bytes().get(at + name.len()).copied();
+            let boundary = |byte: Option<u8>| {
+                byte.is_none_or(|byte| !byte.is_ascii_alphanumeric() && byte != b'_')
+            };
+            boundary(before)
+                && boundary(after)
+                && inspected[..at].matches('\'').count() % 2 == 0
+                && inspected[..at].matches('"').count() % 2 == 0
+        })
+    })
+}
+
+fn unused_block_message(
+    parameter: &BlockParameterInfo,
+    group: &BlockParameterGroup,
+    all_unused: bool,
+) -> String {
+    if parameter.local {
+        return format!("Unused block local variable - `{}`.", parameter.name);
+    }
+    let prefix = format!("Unused block argument - `{}`.", parameter.name);
+    if group.lambda && all_unused {
+        return format!("{prefix} If it's necessary, use `_` or `_{}` as an argument name to indicate that it won't be used. Also consider using a proc without arguments instead of a lambda if you want it to accept any arguments but don't care about them.", parameter.name);
+    }
+    if group.define_method || !all_unused {
+        return format!("{prefix} If it's necessary, use `_` or `_{}` as an argument name to indicate that it won't be used.", parameter.name);
+    }
+    if group.parameters.len() == 1 {
+        format!("{prefix} You can omit the argument if you don't care about it.")
+    } else {
+        format!("{prefix} You can omit all the arguments if you don't care about them.")
     }
 }
 

@@ -1,6 +1,6 @@
 use super::catalog_cop::{custom, report};
 use super::*;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 
 pub(super) fn cops() -> Vec<Box<dyn Cop>> {
     vec![
@@ -158,7 +158,7 @@ fn memoized_variable(context: &mut CopContext<'_, '_>) {
     let lines = context.source_file().lines().collect::<Vec<_>>();
     let mut method = None::<String>;
     for (index, (offset, line)) in lines.iter().copied().enumerate() {
-        if let Some(definition) = line.trim_start().strip_prefix("def ") {
+        if let Some(definition) = line.split_once("def ").map(|(_, definition)| definition) {
             method = Some(
                 definition
                     .split(['(', ' '])
@@ -168,14 +168,20 @@ fn memoized_variable(context: &mut CopContext<'_, '_>) {
                     .next()
                     .unwrap_or("")
                     .trim_start_matches('_')
-                    .trim_end_matches(['?', '!'])
                     .to_string(),
             );
         }
         if let Some(at) = line.find("@") {
+            let memo_is_last = index + 1 < lines.len()
+                && (lines[index + 1].1.trim() == "end"
+                    || (line[at..].contains("begin")
+                        && lines[index + 1..]
+                            .iter()
+                            .rev()
+                            .take(2)
+                            .all(|(_, line)| line.trim() == "end")));
             if line[at..].contains("||=")
-                && index + 1 < lines.len()
-                && lines[index + 1].1.trim() == "end"
+                && memo_is_last
             {
                 let name = line[at + 1..]
                     .split(|character: char| !character.is_ascii_alphanumeric() && character != '_')
@@ -184,11 +190,21 @@ fn memoized_variable(context: &mut CopContext<'_, '_>) {
                 let normalized = name.trim_start_matches('_');
                 if method
                     .as_deref()
-                    .is_some_and(|method| !method.starts_with("initialize") && method != normalized)
+                    .is_some_and(|method| {
+                        !method.starts_with("initialize")
+                            && method.trim_end_matches(['?', '!', '=']) != normalized
+                    })
                 {
-                    context.report(
-                        "Memoized variable name should match the method name.",
+                    let method = method.as_deref().unwrap_or("");
+                    let actual = format!("@{name}");
+                    let expected = format!("@{}", method.trim_end_matches(['?', '!', '=']));
+                    context.replace(
+                        format!(
+                            "Memoized variable `{actual}` does not match method name `{method}`. Use `{expected}` instead."
+                        ),
                         offset + at..offset + at + name.len() + 1,
+                        offset + at..offset + at + name.len() + 1,
+                        expected,
                     );
                 }
             }
@@ -200,18 +216,23 @@ fn memoized_variable(context: &mut CopContext<'_, '_>) {
 }
 
 fn file_name(context: &mut CopContext<'_, '_>) {
+    if context.source().starts_with("#!") {
+        return;
+    }
     let Some(file) = std::path::Path::new(context.path())
         .file_name()
         .and_then(|name| name.to_str())
     else {
         return;
     };
-    if file.ends_with(".rb")
-        && file
-            .bytes()
-            .any(|byte| byte.is_ascii_uppercase() || byte == b'-')
+    if file
+        .bytes()
+        .any(|byte| byte.is_ascii_uppercase() || byte == b'-')
     {
-        context.report("The name of this source file should use snake_case.", 0..0);
+        context.report(
+            format!("The name of this source file (`{file}`) should use snake_case."),
+            0..0,
+        );
     }
 }
 
@@ -255,57 +276,97 @@ fn variable_number(context: &mut CopContext<'_, '_>) {
 }
 
 fn variable_name(context: &mut CopContext<'_, '_>) {
-    if context.policy().enforced_style("snake_case") != "snake_case"
-        || !context.config_values("AllowedPatterns").is_empty()
-    {
+    let style = context.policy().enforced_style("snake_case").to_string();
+    if !context.config_values("AllowedPatterns").is_empty() {
         return;
     }
+    let allowed = context.config_values("AllowedIdentifiers").to_vec();
     for (offset, line) in context.source_file().lines() {
-        let Some((name, _)) = line.split_once(" = ") else {
-            continue;
-        };
-        let name = name.trim();
-        let bare = name.trim_start_matches(['@', '$']);
-        if bare
-            .bytes()
-            .next()
-            .is_some_and(|byte| byte.is_ascii_uppercase())
-            || context
-                .config_values("AllowedIdentifiers")
-                .iter()
-                .any(|allowed| allowed == bare)
-        {
-            continue;
+        let mut candidates = Vec::<&str>::new();
+        if let Some((_, tail)) = line.trim_start().strip_prefix("def ").and_then(|line| line.split_once('(')) {
+            if let Some((parameters, _)) = tail.rsplit_once(')') {
+                candidates.extend(parameters.split(','));
+            }
         }
-        if name.bytes().any(|byte| byte.is_ascii_uppercase())
-            && name.bytes().any(|byte| byte.is_ascii_lowercase())
-        {
-            let start = offset + line.find(name).unwrap_or(0);
+        if let Some(first) = line.find('|') {
+            if let Some(last) = line[first + 1..].find('|').map(|at| first + 1 + at) {
+                candidates.extend(line[first + 1..last].split([',', ';']));
+            }
+        }
+        if !line.trim_start().starts_with("def ") {
+            if let Some((left, _)) = line.split_once('=') {
+            if !left.ends_with(['=', '!', '<', '>']) {
+                candidates.extend(left.split(','));
+            }
+            }
+        }
+        let mut search_from = 0;
+        for candidate in candidates {
+            let token = candidate
+                .trim()
+                .trim_start_matches(['*', '&'])
+                .split(['=', ':'])
+                .next()
+                .unwrap_or("")
+                .trim();
+            let bare = token.trim_start_matches(['@', '$']);
+            if bare.is_empty()
+                || allowed.iter().any(|allowed| allowed == bare)
+                || !invalid_variable_name(bare, &style)
+            {
+                continue;
+            }
+            let start = offset
+                + line[search_from..]
+                    .find(token)
+                    .map_or(0, |relative| search_from + relative);
+            search_from = start - offset + token.len();
             context.report(
-                "Use snake_case for variable names.",
-                start..start + name.len(),
+                format!("Use {style} for variable names."),
+                start..start + token.len(),
             );
         }
     }
 }
 
+fn invalid_variable_name(name: &str, style: &str) -> bool {
+    let name = name.trim_start_matches('_');
+    if style == "camelCase" {
+        name.contains('_') || name.bytes().next().is_some_and(|byte| byte.is_ascii_uppercase())
+    } else {
+        name.bytes().any(|byte| byte.is_ascii_uppercase())
+    }
+}
+
 fn useless_assignment(context: &mut CopContext<'_, '_>) {
-    let source = context.source().to_string();
-    let mut assignments = HashMap::<String, (usize, usize)>::new();
-    for (offset, line) in context.source_file().lines() {
+    let lines = context.source_file().lines().collect::<Vec<_>>();
+    for (index, (offset, line)) in lines.iter().copied().enumerate() {
         if let Some((name, _)) = line.split_once(" = ") {
             let name = name.trim();
-            if !name.is_empty() {
-                assignments.insert(
-                    name.to_string(),
-                    (offset + line.find(name).unwrap_or(0), name.len()),
+            if !name.starts_with(['@', '$'])
+            && !name.is_empty()
+            && name
+                .bytes()
+                .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
+                && !lines[index + 1..]
+                    .iter()
+                    .take_while(|(_, later)| later.trim() != "end")
+                    .any(|(_, later)| {
+                        later
+                            .split(|character: char| {
+                                !character.is_ascii_alphanumeric() && character != '_'
+                            })
+                            .any(|word| word == name)
+                    })
+            {
+                let start = offset + line.find(name).unwrap_or(0);
+                context.replace(
+                    format!("Useless assignment to variable - `{name}`."),
+                    start..start + name.len(),
+                    start..start + name.len(),
+                    name,
                 );
             }
-        }
-    }
-    for (name, (start, len)) in assignments {
-        if name.starts_with("unused") && source.match_indices(&name).count() == 1 {
-            context.report("Useless assignment to variable.", start..start + len);
         }
     }
 }

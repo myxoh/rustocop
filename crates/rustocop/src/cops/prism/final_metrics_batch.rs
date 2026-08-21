@@ -87,8 +87,13 @@ fn complexity(context: &mut CopContext<'_, '_>, perceived: bool) {
             0
         };
     if score > max {
+        let metric = if perceived {
+            "Perceived complexity"
+        } else {
+            "Cyclomatic complexity"
+        };
         context.report(
-            format!("Perceived complexity is too high. [{score}/{max}]"),
+            format!("{metric} for `{method}` is too high. [{score}/{max}]"),
             lines[start].0..lines[end.saturating_sub(1)].0 + lines[end.saturating_sub(1)].1.len(),
         );
     }

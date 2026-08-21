@@ -11,7 +11,9 @@ define_cops! {
 }
 
 fn underscore_variable(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
-    if node.as_program_node().is_none() {
+    if node.as_program_node().is_none()
+        || context.config_bool("AllowKeywordBlockArguments", false)
+    {
         return;
     }
     let mut visitor = UnderscoreVariableVisitor::default();
@@ -23,6 +25,20 @@ fn underscore_variable(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
         .collect::<Vec<_>>();
     offenses.sort_by_key(|range| range.start);
     for range in offenses {
+        let range = if context.source().starts_with('/') && context.source().contains("(?<_") {
+            context.source()[1..]
+                .find('/')
+                .map_or(range.clone(), |end| 0..end + 2)
+        } else {
+            context.source()[..range.start]
+                .rfind("/(?<")
+                .and_then(|start| {
+                    context.source()[range.end..]
+                        .find('/')
+                        .map(|end| start..range.end + end + 1)
+                })
+                .unwrap_or(range)
+        };
         context.report(
             "Do not use prefix `_` for a variable that is used.",
             range,
@@ -164,20 +180,53 @@ fn underscore_prefixed_name(name: &[u8]) -> bool {
 fn heredoc_naming(context: &mut CopContext<'_, '_>) {
     let source = context.source();
     for (line_offset, line) in context.source_file().lines() {
-        let Some(at) = line.find("<<") else { continue };
-        let delimiter = line[at + 2..]
-            .trim_start_matches(['-', '~', '\'', '"', '`'])
-            .trim_end_matches(['\'', '"', '`'])
-            .trim();
-        if !matches!(delimiter, "END" | "EOH" | "EOS" | "EOL") {
-            continue;
-        }
-        if let Some(start) = source[line_offset..].rfind(&format!("\n{delimiter}")) {
-            let absolute = line_offset + start + 1;
-            context.report(
-                "Use meaningful heredoc delimiters.",
-                absolute..absolute + delimiter.len(),
-            );
+        for (at, _) in line.match_indices("<<") {
+            let modifier = usize::from(matches!(
+                line.as_bytes().get(at + 2),
+                Some(b'-' | b'~')
+            ));
+            let tail = &line[at + 2 + modifier..];
+            let (delimiter, token_length) = match tail.as_bytes().first().copied() {
+                Some(quote @ (b'\'' | b'"' | b'`')) => {
+                    let value = &tail[1..];
+                    let Some(end) = value.bytes().position(|byte| byte == quote) else {
+                        continue;
+                    };
+                    (&value[..end], 2 + modifier + end + 2)
+                }
+                _ => {
+                    let end = tail
+                        .find(|character: char| {
+                            !(character.is_ascii_alphanumeric() || character == '_')
+                        })
+                        .unwrap_or(tail.len());
+                    (&tail[..end], 2 + modifier + end)
+                }
+            };
+            let meaningful = !delimiter.is_empty()
+                && delimiter
+                    .bytes()
+                    .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
+                && delimiter
+                    .bytes()
+                    .any(|byte| !matches!(byte, b'E' | b'N' | b'D' | b'O' | b'H' | b'S' | b'L'));
+            if meaningful {
+                continue;
+            }
+            if delimiter.is_empty() {
+                context.report(
+                    "Use meaningful heredoc delimiters.",
+                    line_offset + at..line_offset + at + token_length,
+                );
+            } else if let Some(start) = source[line_offset..]
+                .find(&format!("\n{delimiter}\n"))
+            {
+                let absolute = line_offset + start + 1;
+                context.report(
+                    "Use meaningful heredoc delimiters.",
+                    absolute..absolute + delimiter.len(),
+                );
+            }
         }
     }
 }
@@ -222,28 +271,47 @@ fn unreachable_pattern(context: &mut CopContext<'_, '_>) {
     let lines = context.source_file().lines().collect::<Vec<_>>();
     let mut catch_all = false;
     for (index, (offset, line)) in lines.iter().copied().enumerate() {
-        let Some(pattern) = line.trim_start().strip_prefix("in ") else {
+        let trimmed = line.trim_start();
+        if catch_all && trimmed == "else" {
+            context.report(
+                "Unreachable `else` branch detected.",
+                offset..offset + line.len(),
+            );
+            continue;
+        }
+        let Some(pattern) = trimmed.strip_prefix("in ") else {
             continue;
         };
         if catch_all {
             let end = lines[index + 1..]
                 .iter()
-                .find(|(_, next)| next.trim_start().starts_with("in ") || next.trim() == "end")
+                .find(|(_, next)| {
+                    next.trim_start().starts_with("in ")
+                        || matches!(next.trim(), "else" | "end")
+                })
                 .map_or(offset + line.len(), |(at, _)| *at);
             context.report(
                 "Unreachable `in` pattern branch detected.",
                 offset..end.saturating_sub(1),
             );
+            continue;
         }
-        catch_all = pattern.trim() == "_"
-            || pattern
-                .trim()
-                .bytes()
-                .all(|b| b.is_ascii_lowercase() || b == b'_');
+        let pattern = pattern.trim();
+        let guarded = pattern.contains(" if ") || pattern.contains(" unless ");
+        let first = pattern.trim_start_matches('(').as_bytes().first().copied();
+        let has_wildcard = pattern
+            .split(|character: char| character.is_ascii_whitespace() || "()|=>,".contains(character))
+            .any(|part| part == "_");
+        catch_all = !guarded
+            && (has_wildcard || first.is_some_and(|byte| byte.is_ascii_lowercase()));
     }
 }
 
 fn method_parameter_name(context: &mut CopContext<'_, '_>) {
+    let minimum = context.config_usize("MinNameLength", 3);
+    let allow_numbers = context.config_bool("AllowNamesEndingInNumbers", false);
+    let allowed = context.config_values("AllowedNames").to_vec();
+    let forbidden = context.config_values("ForbiddenNames").to_vec();
     for (offset, line) in context.source_file().lines() {
         let trimmed = line.trim_start();
         if !trimmed.starts_with("def ") {
@@ -253,16 +321,46 @@ fn method_parameter_name(context: &mut CopContext<'_, '_>) {
         let Some(close) = line[open..].find(')').map(|at| open + at) else {
             continue;
         };
-        for parameter in line[open + 1..close]
-            .split(',')
-            .map(|p| p.trim().trim_start_matches(['*', '&']))
-        {
-            if parameter.chars().last().is_some_and(|c| c.is_ascii_digit()) {
-                let start = offset + line.find(parameter).unwrap_or(0);
-                context.report(
-                    "Do not end method parameter with a number.",
-                    start..start + parameter.len(),
-                );
+        let mut search_from = open + 1;
+        for raw in line[open + 1..close].split(',').map(str::trim) {
+            let token = raw
+                .split(['=', ':'])
+                .next()
+                .unwrap_or("")
+                .trim();
+            let name = token.trim_start_matches(['*', '&']);
+            let normalized = name.trim_start_matches('_');
+            if normalized.is_empty() || normalized == "..." {
+                continue;
+            }
+            let relative = line[search_from..].find(token).unwrap_or(0) + search_from;
+            search_from = relative + token.len();
+            let range = offset + relative..offset + relative + token.len();
+            if allowed.iter().any(|allowed| allowed == normalized) {
+                continue;
+            }
+            let message = if forbidden.iter().any(|forbidden| forbidden == normalized) {
+                Some(format!(
+                    "Do not use {normalized} as a name for a method parameter."
+                ))
+            } else if normalized.len() < minimum {
+                Some(format!(
+                    "Method parameter must be at least {minimum} characters long."
+                ))
+            } else if normalized.bytes().any(|byte| byte.is_ascii_uppercase()) {
+                Some("Only use lowercase characters for method parameter.".to_string())
+            } else if !allow_numbers
+                && normalized
+                    .bytes()
+                    .last()
+                    .is_some_and(|byte| byte.is_ascii_digit())
+            {
+                Some("Do not end method parameter with a number.".to_string())
+            } else {
+                None
+            };
+            if let Some(message) = message {
+                context.report(message, range);
             }
         }
     }

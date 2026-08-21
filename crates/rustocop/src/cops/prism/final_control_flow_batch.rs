@@ -22,12 +22,29 @@ impl Cop for UnreachableLoop {
     fn on_node<'pr>(
         &self,
         node: &Node<'pr>,
-        _ancestors: &[Node<'pr>],
+        ancestors: &[Node<'pr>],
         source: &str,
         context: &mut Context,
     ) {
         let statements = if let Some(call) = node.as_call_node() {
-            if call.name().as_slice() != b"each" {
+            let name = call.name().as_slice();
+            if !matches!(name, b"each" | b"map" | b"times" | b"loop") {
+                return;
+            }
+            let cop_context = context.cop_context(self.name(), source, ancestors);
+            if !cop_context.config_values("AllowedPatterns").is_empty()
+                && source_at(source, &node.location()).starts_with("exactly(")
+            {
+                return;
+            }
+            if ancestors.last().and_then(Node::as_call_node).is_some_and(|parent| {
+                parent
+                    .receiver()
+                    .is_some_and(|receiver| {
+                        receiver.location().start_offset() == node.location().start_offset()
+                            && receiver.location().end_offset() == node.location().end_offset()
+                    })
+            }) {
                 return;
             }
             call.block()
@@ -50,13 +67,25 @@ impl Cop for UnreachableLoop {
         let Some((index, _)) = statements
             .iter()
             .enumerate()
-            .find(|(_, statement)| terminating_loop_statement(statement))
+            .find(|(_, statement)| {
+                let statement_source = source_at(source, &statement.location());
+                terminating_loop_statement(statement)
+                    && !statement_source.contains("|| next")
+                    && !statement_source.contains("|| redo")
+            })
         else {
             return;
         };
         if statements[..index]
             .iter()
-            .any(|statement| contains_continue_keyword(source_at(source, &statement.location())))
+            .any(|statement| {
+                (statement.as_call_node().is_none_or(|call| call.block().is_none()))
+                    && source_at(source, &statement.location())
+                        .split(|character: char| {
+                            !character.is_ascii_alphanumeric() && character != '_'
+                        })
+                        .any(|word| matches!(word, "next" | "redo"))
+            })
         {
             return;
         }
@@ -104,13 +133,37 @@ fn terminating_loop_statement(node: &Node<'_>) -> bool {
         };
         return terminating_loop_statement(&if_branch) && terminating_loop_statement(&else_branch);
     }
+    if let Some(case_node) = node.as_case_node() {
+        let Some(else_branch) = case_node
+            .else_clause()
+            .and_then(|branch| only_statement(branch.statements()))
+        else {
+            return false;
+        };
+        return terminating_loop_statement(&else_branch)
+            && case_node.conditions().iter().all(|condition| {
+                condition.as_when_node().is_some_and(|branch| {
+                    only_statement(branch.statements())
+                        .is_some_and(|statement| terminating_loop_statement(&statement))
+                })
+            });
+    }
+    if let Some(case_node) = node.as_case_match_node() {
+        let Some(else_branch) = case_node
+            .else_clause()
+            .and_then(|branch| only_statement(branch.statements()))
+        else {
+            return false;
+        };
+        return terminating_loop_statement(&else_branch)
+            && case_node.conditions().iter().all(|condition| {
+                condition.as_in_node().is_some_and(|branch| {
+                    only_statement(branch.statements())
+                        .is_some_and(|statement| terminating_loop_statement(&statement))
+                })
+            });
+    }
     false
-}
-
-fn contains_continue_keyword(source: &str) -> bool {
-    source
-        .split(|character: char| !character.is_alphanumeric() && character != '_')
-        .any(|part| matches!(part, "next" | "redo"))
 }
 
 fn identical_branches(context: &mut CopContext<'_, '_>) {

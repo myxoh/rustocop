@@ -19,16 +19,40 @@ fn check_accessor_method_name(
     }
     for (index, line) in lines.iter().enumerate() {
         let trimmed = line.body.trim_start();
-        let Some(name) = trimmed.strip_prefix("def ").and_then(first_identifier) else {
+        let Some(signature) = trimmed.strip_prefix("def ") else {
             continue;
         };
-        if name.starts_with("get_") || name.starts_with("set_") {
+        let signature = signature.strip_prefix("self.").unwrap_or(signature);
+        let Some(name) = first_identifier(signature) else {
+            continue;
+        };
+        if name.ends_with(['!', '?']) || signature[name.len()..].starts_with('=') {
+            continue;
+        }
+        let arguments = method_arguments(trimmed);
+        let raw_arguments = trimmed
+            .split_once('(')
+            .and_then(|(_, tail)| tail.rsplit_once(')'))
+            .map_or("", |(arguments, _)| arguments.trim());
+        let single_required_argument = arguments.len() == 1
+            && ![',', '=', ':', '*', '&']
+                .iter()
+                .any(|character| raw_arguments.contains(*character))
+            && raw_arguments != "...";
+        let (message, offending) = if name.starts_with("get_") && arguments.is_empty() {
+            ("Do not prefix reader method names with `get_`.", true)
+        } else if name.starts_with("set_") && single_required_argument {
+            ("Do not prefix writer method names with `set_`.", true)
+        } else {
+            ("", false)
+        };
+        if offending {
             push_offense(
                 offenses,
                 cop,
-                "Do not prefix reader method names with `get_` or writer method names with `set_`.",
+                message,
                 index + 1,
-                line.body.find("def").unwrap_or(0) + 5,
+                line.body.find(name).unwrap_or(0) + 1,
                 name.len(),
                 CorrectionStatus::Unavailable,
             );
@@ -73,6 +97,12 @@ fn check_unused_method_argument(
             .map(|line| line.body.as_str())
             .collect::<Vec<&str>>()
             .join("\n");
+        if body.lines().any(|line| line.trim() == "super")
+            || (body.contains("binding") && !body.contains("binding(") && !body.contains("def "))
+        {
+            index = end + 1;
+            continue;
+        }
         report_unused_arguments(&args, &body, line, index, offenses, cop);
         index = end + 1;
     }
@@ -110,17 +140,35 @@ fn report_unused_arguments(
     cop: &'static str,
 ) {
     for argument in arguments {
-        if argument.starts_with('_') || body.contains(argument) {
+        if argument.starts_with('_')
+            || body
+                .split(|character: char| !character.is_ascii_alphanumeric() && character != '_')
+                .any(|word| word == argument)
+        {
             continue;
         }
+        let keyword = signature_line
+            .find(argument)
+            .and_then(|start| signature_line.as_bytes().get(start + argument.len()))
+            == Some(&b':');
         push_offense(
             offenses,
             cop,
-            &format!("Unused method argument - `{}`.", argument),
+            &if keyword {
+                format!("Unused method argument - `{argument}`.")
+            } else {
+                format!(
+                    "Unused method argument - `{argument}`. If it's necessary, use `_` or `_{argument}` as an argument name to indicate that it won't be used. If it's unnecessary, remove it."
+                )
+            },
             index + 1,
             signature_line.find(argument).unwrap_or(0) + 1,
             argument.len(),
-            CorrectionStatus::Unavailable,
+            if keyword {
+                CorrectionStatus::Unavailable
+            } else {
+                CorrectionStatus::Pending
+            },
         );
     }
 }
