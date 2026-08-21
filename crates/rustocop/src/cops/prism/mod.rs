@@ -303,6 +303,9 @@ pub(super) trait Cop: Sync {
     }
     fn on_source(&self, _source: &str, _context: &mut Context) {}
     fn on_parse_error(&self, _error: &Diagnostic<'_>, _source: &str, _context: &mut Context) {}
+    fn visits_recovered_nodes(&self) -> bool {
+        false
+    }
     fn investigation_state(&self) -> Box<dyn Any> {
         Box::new(())
     }

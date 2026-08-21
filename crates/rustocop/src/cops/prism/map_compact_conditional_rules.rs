@@ -103,13 +103,13 @@ fn conditional_expression<'pr>(node: &Node<'pr>, parameter: &str, file: SourceFi
 
 fn if_selection<'pr>(node: &IfNode<'pr>, parameter: &str, file: SourceFile<'_>) -> Option<(Node<'pr>, &'static str)> {
     let truthy = node.statements().and_then(|statements| statements.body().iter().last())
-        .map_or(BranchValue::Skipped, |value| branch_value(&value, parameter, file, false));
+        .map_or(BranchValue::Skipped, |value| branch_value(&value, parameter, file, true));
     let falsey = match node.subsequent() {
         None => BranchValue::Skipped,
         Some(subsequent) if subsequent.as_if_node().is_some() => return None,
         Some(subsequent) => subsequent.as_else_node().and_then(|else_node| else_node.statements())
             .and_then(|statements| statements.body().iter().last())
-            .map_or(BranchValue::Skipped, |value| branch_value(&value, parameter, file, false)),
+            .map_or(BranchValue::Skipped, |value| branch_value(&value, parameter, file, true)),
     };
     match (truthy, falsey) {
         (BranchValue::Returned, BranchValue::Skipped) => Some((node.predicate(), "select")),
@@ -120,10 +120,10 @@ fn if_selection<'pr>(node: &IfNode<'pr>, parameter: &str, file: SourceFile<'_>) 
 
 fn unless_selection<'pr>(node: &UnlessNode<'pr>, parameter: &str, file: SourceFile<'_>) -> Option<(Node<'pr>, &'static str)> {
     let false_condition = node.statements().and_then(|statements| statements.body().iter().last())
-        .map_or(BranchValue::Skipped, |value| branch_value(&value, parameter, file, false));
+        .map_or(BranchValue::Skipped, |value| branch_value(&value, parameter, file, true));
     let true_condition = node.else_clause().and_then(|else_node| else_node.statements())
         .and_then(|statements| statements.body().iter().last())
-        .map_or(BranchValue::Skipped, |value| branch_value(&value, parameter, file, false));
+        .map_or(BranchValue::Skipped, |value| branch_value(&value, parameter, file, true));
     match (true_condition, false_condition) {
         (BranchValue::Returned, BranchValue::Skipped) => Some((node.predicate(), "select")),
         (BranchValue::Skipped, BranchValue::Returned) => Some((node.predicate(), "reject")),

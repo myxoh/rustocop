@@ -3,7 +3,7 @@ use ruby_prism::{BlockNode, DefNode, IfNode, Node, StatementsNode, UnlessNode};
 use super::*;
 
 define_cops! {
-    GuardClause => "Style/GuardClause" => rubocop_callbacks(
+    GuardClause => "Style/GuardClause" => recovery_rubocop_callbacks(
         GuardClauseRule,
         [on_def, on_block, on_if, on_unless]
     ),

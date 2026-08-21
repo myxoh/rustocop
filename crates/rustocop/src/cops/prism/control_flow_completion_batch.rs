@@ -36,25 +36,34 @@ fn combinable_loops(context: &mut CopContext<'_, '_>) {
 }
 
 fn each_for_simple_loop(context: &mut CopContext<'_, '_>) {
-    let source = context.source();
-    let mut search = 0;
-    while let Some(relative) = source[search..].find(").each") {
-        let each = search + relative;
-        let Some(open) = source[..each].rfind("(0...") else {
-            break;
-        };
-        let number = &source[open + 5..each];
-        if !number.bytes().all(|byte| byte.is_ascii_digit()) {
-            search = each + 6;
+    for (offset, line) in context.source_file().lines() {
+        let Some(each) = line.find(".each") else { continue };
+        let safe_navigation = line.as_bytes().get(each.saturating_sub(1)) == Some(&b'&');
+        let receiver_end = each - usize::from(safe_navigation);
+        let Some(open) = line[..receiver_end].rfind('(') else { continue };
+        if line.as_bytes().get(receiver_end.saturating_sub(1)) != Some(&b')') { continue; }
+        let range = &line[open + 1..receiver_end - 1];
+        let (start, end, inclusive) = if let Some((start, end)) = range.split_once("...") {
+            (start, end, false)
+        } else if let Some((start, end)) = range.split_once("..") {
+            (start, end, true)
+        } else {
             continue;
+        };
+        let (Ok(start_number), Ok(end_number)) = (start.parse::<usize>(), end.parse::<usize>()) else { continue };
+        let offense_end = each + ".each".len();
+        let block_header = line[offense_end..].trim_start();
+        if block_header.starts_with('{') || block_header.starts_with("do") {
+            let delimiter = if block_header.starts_with('{') { '}' } else { '\n' };
+            let header = block_header.split(delimiter).next().unwrap_or(block_header);
+            if header.contains('|') { continue; }
         }
-        let offense_end = each + ").each".len();
+        let iterations = end_number.saturating_sub(start_number) + usize::from(inclusive);
         context.replace(
             "Use `Integer#times` for a simple loop which iterates a fixed number of times.",
-            open..offense_end,
-            open..offense_end,
-            format!("{number}.times"),
+            offset + open..offset + offense_end,
+            offset + open..offset + offense_end,
+            format!("{iterations}.times"),
         );
-        search = offense_end;
     }
 }

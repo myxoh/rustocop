@@ -38,7 +38,7 @@ impl Engine {
                 cop.on_parse_error(&error, source, &mut context);
             }
         }
-        if has_unrecoverable_parse_errors {
+        if has_unrecoverable_parse_errors && self.registry.recovered_node_cops.is_empty() {
             return context.finish(source);
         }
         for cop in self
@@ -65,6 +65,11 @@ impl Engine {
             source,
             ancestors: Vec::new(),
             investigation_states: &mut investigation_states,
+            node_cops: if has_unrecoverable_parse_errors {
+                &self.registry.recovered_node_cops
+            } else {
+                &self.registry.node_cops
+            },
         };
         runner.visit(&parsed.node());
         context.finish(source)
