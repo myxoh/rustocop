@@ -67,3 +67,4 @@ Style/SymbolProc	safe_navigation_symbol_proc.rb	gitlabhq/gitlabhq	67a526442c20d2
 Lint/ScriptPermission	non_executable_script.rb	rails/rails	ba4f7369aee71f9f38d67bdbf0e8571fb372b535	guides/rails_guides/epub.rb
 Lint/UriRegexp	nested_uri_regexp_calls.rb	discourse/discourse	cec79c60b354e37e9a119544860123b122a995e0	lib/url_helper.rb
 Layout/HeredocArgumentClosingParenthesis	heredoc_parenthesis_end_scope.rb	gitlabhq/gitlabhq	67a526442c20d20b6e80ebf916bd766b54018c5e	spec/support/helpers/repo_helpers.rb
+Style/ClassCheck	class_check_calls_only.rb	rails/rails	ba4f7369aee71f9f38d67bdbf0e8571fb372b535	activesupport/lib/active_support/time_with_zone.rb

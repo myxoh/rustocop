@@ -700,7 +700,7 @@ entries:
   review: unreviewed
 - cop: Style/ClassCheck
   pipeline: prism_source
-  source: crates/rustocop/src/cops/prism/source_rules_misc.rs
+  source: crates/rustocop/src/cops/prism/class_check_rules.rs
   review: unreviewed
 - cop: Style/ClassMethods
   pipeline: prism_source

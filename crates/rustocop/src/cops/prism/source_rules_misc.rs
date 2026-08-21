@@ -7,7 +7,6 @@ declare_source_cops! {
     EmptyClass => "Lint/EmptyClass" => empty_class,
     ImplicitRuntimeError => "Style/ImplicitRuntimeError" => implicit_runtime_error,
     EnvHome => "Style/EnvHome" => env_home,
-    ClassCheck => "Style/ClassCheck" => class_check,
     AsciiComments => "Style/AsciiComments" => ascii_comments,
 }
 
@@ -110,22 +109,6 @@ fn env_home(source: &str, context: &mut Reporter<'_>) {
                 "Dir.home",
             );
         }
-    }
-}
-
-fn class_check(source: &str, context: &mut Reporter<'_>) {
-    let (bad, good) = if context.policy().enforced_style("is_a?") == "kind_of?" {
-        ("is_a?", "kind_of?")
-    } else {
-        ("kind_of?", "is_a?")
-    };
-    for (start, _) in source.match_indices(bad) {
-        context.replace(
-            format!("Prefer `Object#{good}` over `Object#{bad}`."),
-            start..start + bad.len(),
-            start..start + bad.len(),
-            good,
-        );
     }
 }
 

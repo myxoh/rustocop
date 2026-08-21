@@ -74,6 +74,7 @@ cop_modules!(
     bundler_completion,
     call_conversion_rules,
     class_comparison_rules,
+    class_check_rules,
     class_definition_rules,
     class_methods_completion,
     compact_syntax_completion,
