@@ -7,6 +7,7 @@ require "open3"
 require "optparse"
 require "thread"
 require "tmpdir"
+require "time"
 require "yaml"
 require_relative "../lib/rustocop/compatibility_baseline"
 require_relative "../lib/rustocop/config_serialization"
@@ -232,7 +233,14 @@ by_cop = results.group_by { |result| result.fetch("cop") }.sort.to_h.transform_v
     "failures" => cop_results.reject { |result| result.fetch("passed") }
   }
 end
+rust_commit, _git_error, git_status = Open3.capture3(
+  "git", "log", "-1", "--format=%H", "--", "crates/rustocop", chdir: root
+)
 summary = {
+  "generated_at" => Time.now.iso8601,
+  "rust_commit" => git_status.success? ? rust_commit.strip : nil,
+  "native_sha256" => Digest::SHA256.file(native).hexdigest,
+  "fixture_corpus_sha256" => Digest::SHA256.file(options[:corpus]).hexdigest,
   "rubocop_version" => "1.87.0",
   "cases" => results.length,
   "passed_cases" => results.count { |result| result.fetch("passed") },

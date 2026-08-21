@@ -72,8 +72,9 @@ Project-exact status is the strongest current diagnostic evidence. Unexercised
 configuration and autocorrection branches still require RuboCop-derived
 fixtures.
 
-See [the real-project parity report](docs/real-project-parity.md) for the ten
-projects, exact cops, limitations, and reproduction commands.
+See [the compatibility evidence table](docs/compatibility.md) for fixture and
+project matching by cop, and [the real-project parity report](docs/real-project-parity.md)
+for the ten projects, limitations, and reproduction commands.
 
 ## Performance
 
@@ -202,8 +203,8 @@ bundle exec rubocop
 ```
 
 Do not remove RuboCop from CI just because rustocop is fast on your machine.
-Check the [real-project parity report](docs/real-project-parity.md) and the
-[per-cop evidence matrix](docs/cop-support.md) before depending on a cop.
+Check the [compatibility evidence table](docs/compatibility.md) and the
+[real-project parity report](docs/real-project-parity.md) before depending on a cop.
 
 ## Current support
 
