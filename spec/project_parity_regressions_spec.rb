@@ -63,6 +63,7 @@ RSpec.describe "real-project parity regressions" do
     Style/BlockComments
     Lint/RequireParentheses
     Style/EmptyCaseCondition
+    Lint/MissingSuper
   ]
   fixture_root = File.join(ROOT, "spec", "fixtures", "project_parity_regressions")
   config = File.join(fixture_root, "rubocop.yml")

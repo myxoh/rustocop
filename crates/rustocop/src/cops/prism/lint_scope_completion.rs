@@ -77,11 +77,7 @@ fn missing_super(node: &ruby_prism::DefNode<'_>, context: &mut CopContext<'_, '_
     if name != b"initialize" && !callback {
         return;
     }
-    let method_source = context.source_file().at(&node.location());
-    if method_source
-        .split(|character: char| !character.is_ascii_alphanumeric() && character != '_')
-        .any(|word| word == "super")
-    {
+    if contains_super(node) {
         return;
     }
     let allowed_parent = |parent: &str| {
@@ -96,26 +92,26 @@ fn missing_super(node: &ruby_prism::DefNode<'_>, context: &mut CopContext<'_, '_
         .iter()
         .rev()
         .find_map(Node::as_class_node);
-    let class_new = context.ancestors().iter().rev().find_map(|ancestor| {
-        let call = ancestor.as_call_node()?;
-        (call_name(&call) == b"new" && root_constant(call.receiver(), b"Class")).then_some(call)
-    });
     let applies = if callback {
-        in_class.is_some()
-    } else if let Some(call) = class_new {
-        first_argument(&call)
-            .is_some_and(|parent| !allowed_parent(node_source(context.source(), &parent)))
-    } else if let Some(class) = in_class {
-        let nested_block = context
-            .ancestors()
-            .iter()
-            .rev()
-            .take_while(|ancestor| ancestor.as_class_node().is_none())
-            .any(|ancestor| ancestor.as_block_node().is_some());
-        !nested_block
-            && class
-                .superclass()
+        context.ancestors().iter().rev().any(|ancestor| {
+            ancestor.as_class_node().is_some()
+                || ancestor.as_singleton_class_node().is_some()
+                || ancestor.as_module_node().is_some()
+        })
+    } else if let Some(block) = context
+        .ancestors()
+        .iter()
+        .rev()
+        .find_map(Node::as_block_node)
+    {
+        class_new_call_for_block(&block, context).is_some_and(|call| {
+            first_argument(&call)
                 .is_some_and(|parent| !allowed_parent(node_source(context.source(), &parent)))
+        })
+    } else if let Some(class) = in_class {
+        class
+            .superclass()
+            .is_some_and(|parent| !allowed_parent(node_source(context.source(), &parent)))
     } else {
         false
     };
@@ -128,4 +124,39 @@ fn missing_super(node: &ruby_prism::DefNode<'_>, context: &mut CopContext<'_, '_
         "Call `super` to invoke callback defined in the parent class."
     };
     context.report(message, node.location());
+}
+
+fn class_new_call_for_block<'pr>(
+    block: &ruby_prism::BlockNode<'pr>,
+    context: &CopContext<'_, 'pr>,
+) -> Option<ruby_prism::CallNode<'pr>> {
+    context.ancestors().iter().rev().find_map(|ancestor| {
+        let call = ancestor.as_call_node()?;
+        let call_block = call.block()?;
+        let same_block = call_block.location().start_offset() == block.location().start_offset()
+            && call_block.location().end_offset() == block.location().end_offset();
+        (same_block && call_name(&call) == b"new" && root_constant(call.receiver(), b"Class"))
+            .then_some(call)
+    })
+}
+
+fn contains_super(node: &ruby_prism::DefNode<'_>) -> bool {
+    struct SuperFinder(bool);
+
+    impl<'pr> Visit<'pr> for SuperFinder {
+        fn visit_super_node(&mut self, _node: &ruby_prism::SuperNode<'pr>) {
+            self.0 = true;
+        }
+
+        fn visit_forwarding_super_node(&mut self, _node: &ruby_prism::ForwardingSuperNode<'pr>) {
+            self.0 = true;
+        }
+    }
+
+    let Some(body) = node.body() else {
+        return false;
+    };
+    let mut finder = SuperFinder(false);
+    finder.visit(&body);
+    finder.0
 }
