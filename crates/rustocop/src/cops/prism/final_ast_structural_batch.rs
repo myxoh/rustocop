@@ -334,13 +334,165 @@ fn useless_access_modifier(context: &mut CopContext<'_, '_>) {
     }
 }
 
-fn access_modifier_declarations(context: &mut CopContext<'_, '_>) {
-    if context.policy().enforced_style("group") != "group" {
-        return;
+struct AccessModifierDeclarations;
+
+impl Cop for AccessModifierDeclarations {
+    fn name(&self) -> &'static str {
+        "Style/AccessModifierDeclarations"
     }
-    for start in context.source_file().code_offsets("private def ") {
-        context.report("Use an access modifier on its own line.", start..start + 12);
+
+    fn on_node<'pr>(
+        &self,
+        node: &Node<'pr>,
+        ancestors: &[Node<'pr>],
+        source: &str,
+        context: &mut Context,
+    ) {
+        let Some(call) = node.as_call_node() else {
+            return;
+        };
+        if call.receiver().is_some()
+            || !matches!(
+                call_name(&call),
+                b"private" | b"protected" | b"public" | b"module_function"
+            )
+            || argument_count(&call) == 0
+            || ancestors.iter().any(|ancestor| ancestor.as_def_node().is_some())
+        {
+            return;
+        }
+        let mut context = context.cop_context(self.name(), source, ancestors);
+        if context.policy().enforced_style("group") != "group"
+            || allowed_inline_modifier(&call, &context)
+            || right_sibling_same_inline_modifier(&call, &context)
+        {
+            return;
+        }
+        let Some(selector) = call.message_loc() else {
+            return;
+        };
+        let modifier = context.source_file().at(&selector).to_string();
+        let message = format!(
+            "`{modifier}` should not be inlined in method definitions."
+        );
+        let argument = first_argument(&call).expect("modifier has arguments");
+        if let Some(definition) = argument.as_def_node() {
+            let indentation = context
+                .source_file()
+                .indentation_text(selector.start_offset());
+            context.replace(
+                message,
+                &selector,
+                selector.end_offset()..definition.location().start_offset(),
+                format!("\n{indentation}"),
+            );
+        } else {
+            context.replace(message, &selector, &selector, modifier);
+        }
     }
+}
+
+fn right_sibling_same_inline_modifier(
+    node: &CallNode<'_>,
+    context: &CopContext<'_, '_>,
+) -> bool {
+    let start = node.location().start_offset();
+    context.ancestors().iter().rev().any(|ancestor| {
+        let statements = if let Some(program) = ancestor.as_program_node() {
+            Some(program.statements())
+        } else if let Some(class) = ancestor.as_class_node() {
+            class.body().and_then(|body| body.as_statements_node())
+        } else if let Some(module) = ancestor.as_module_node() {
+            module.body().and_then(|body| body.as_statements_node())
+        } else if let Some(singleton) = ancestor.as_singleton_class_node() {
+            singleton.body().and_then(|body| body.as_statements_node())
+        } else if let Some(begin) = ancestor.as_begin_node() {
+            begin.statements()
+        } else {
+            None
+        };
+        statements.is_some_and(|statements| {
+            let direct_child = statements
+                .body()
+                .iter()
+                .any(|child| child.location().start_offset() == start);
+            direct_child
+                && statements.body().iter().any(|sibling| {
+                    let Some(call) = sibling.as_call_node() else {
+                        return false;
+                    };
+                    call.location().start_offset() > start
+                        && call.receiver().is_none()
+                        && call_name(&call) == call_name(node)
+                        && argument_count(&call) > 0
+                        && !allowed_inline_modifier(&call, context)
+                })
+        })
+    })
+}
+
+fn allowed_inline_modifier(node: &CallNode<'_>, context: &CopContext<'_, '_>) -> bool {
+    if direct_block_parent(context.ancestors()) {
+        return true;
+    }
+    let arguments = node
+        .arguments()
+        .map(|arguments| arguments.arguments().iter().collect::<Vec<_>>())
+        .unwrap_or_default();
+    if context.config_bool("AllowModifiersOnSymbols", true)
+        && arguments.iter().all(symbol_or_allowed_splat)
+    {
+        return true;
+    }
+    let Some(call) = arguments
+        .first()
+        .and_then(|argument| argument.as_call_node())
+    else {
+        return false;
+    };
+    call.receiver().is_none()
+        && (context.config_bool("AllowModifiersOnAttrs", true)
+            && matches!(
+                call_name(&call),
+                b"attr" | b"attr_reader" | b"attr_writer" | b"attr_accessor"
+            )
+            || context.config_bool("AllowModifiersOnAliasMethod", true)
+                && call_name(&call) == b"alias_method")
+}
+
+fn direct_block_parent(ancestors: &[Node<'_>]) -> bool {
+    let Some(parent) = ancestors.last() else {
+        return false;
+    };
+    if parent.as_block_node().is_some() {
+        return true;
+    }
+    let Some(statements) = parent.as_statements_node() else {
+        return false;
+    };
+    if statements.body().len() != 1 {
+        return false;
+    }
+    ancestors[..ancestors.len() - 1]
+        .iter()
+        .rev()
+        .find(|ancestor| ancestor.as_statements_node().is_none())
+        .is_some_and(|ancestor| ancestor.as_block_node().is_some())
+}
+
+fn symbol_or_allowed_splat(argument: &Node<'_>) -> bool {
+    if argument.as_symbol_node().is_some() {
+        return true;
+    }
+    argument
+        .as_splat_node()
+        .and_then(|splat| splat.expression())
+        .is_some_and(|expression| {
+            expression.as_array_node().is_some()
+                || expression.as_constant_read_node().is_some()
+                || expression.as_constant_path_node().is_some()
+                || expression.as_call_node().is_some()
+        })
 }
 
 fn arguments_forwarding(context: &mut CopContext<'_, '_>) {

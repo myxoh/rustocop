@@ -4,10 +4,7 @@ use super::*;
 pub(super) fn cops() -> Vec<Box<dyn Cop>> {
     vec![
         custom("Lint/DuplicateMethods", duplicate_methods),
-        custom(
-            "Style/AccessModifierDeclarations",
-            access_modifier_declarations,
-        ),
+        Box::new(AccessModifierDeclarations),
         replace(
             "Lint/RedundantTypeConversion",
             "String(value.to_s)",
