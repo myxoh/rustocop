@@ -285,8 +285,8 @@ It:
 4. prints the first mismatch on failure;
 5. writes the full report under `tmp/`.
 
-A focused pass is necessary but not sufficient for promotion. Registry,
-traversal, matching, and corrections can affect other cops.
+A focused pass is necessary but not sufficient for a compatibility claim.
+Registry, traversal, matching, and corrections can affect other cops.
 
 ## 10. Run the project gates
 
@@ -310,17 +310,9 @@ RUSTOCOP_NATIVE_PATH=crates/rustocop/target/debug/rustocop \
   --report tmp/full-compatibility.json
 ```
 
-The baseline option allows improvements while rejecting fewer passing cases,
-fewer passing cops, a changed corpus, or any regression in a Verified cop.
-After a full run, regenerate the implementation queue with:
-
-```sh
-RUSTOCOP_NATIVE_PATH=crates/rustocop/target/debug/rustocop \
-  bundle exec ruby script/generate_remaining_cop_plan.rb \
-  tmp/full-compatibility.json
-```
-
-This updates `docs/remaining-cops.md` and its machine-readable YAML companion.
+The baseline option preserves the captured upstream regression layer while
+allowing improvements. It does not generate the public work queue; that queue
+comes from complete real-project signatures.
 
 For layout cops, use `SourceFile`'s `line_start`, `line_end`, `line`,
 `line_range`, `full_line_range`, `indentation`, `indentation_text`, `same_line`,
@@ -335,7 +327,7 @@ family modules.
 
 ## 11. Establish compatibility with executable evidence
 
-Call a cop fixture-validated only when:
+Call a cop fixture-covered only when:
 
 - every captured diagnostic case passes;
 - every captured correction assertion passes;
@@ -343,8 +335,8 @@ Call a cop fixture-validated only when:
 - real-project regressions have minimized fixtures with provenance; and
 - normal Rust and Ruby fixture suites pass.
 
-Passing a few representative examples is not validation. Project-exact status
-additionally requires the complete ten-project comparison below.
+Passing a few representative examples is not compatibility. Project-exact
+status additionally requires the complete ten-project comparison below.
 
 After the focused fixtures pass, audit the cop against all ten pinned projects:
 
@@ -380,4 +372,4 @@ changes.
 - [ ] Compared complete ten-project signatures, not just offense counts.
 - [ ] Bound the final audit to the committed Rust source and binary SHA-256.
 - [ ] Ran Rust, Clippy, architecture, Ruby, and full-regression gates.
-- [ ] Updated status and regenerated support documentation only after passing.
+- [ ] Regenerated public evidence docs only from a complete 606-cop audit.

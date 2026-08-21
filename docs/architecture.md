@@ -100,8 +100,9 @@ coordinated edits without replacing an unnecessarily large source region.
   modules. A cop cannot discover files, format reports, or invoke the engine.
 - `config` and `model` are leaf modules. They cannot depend on the
   application, engine, or cop implementations.
-- Specs and the extracted upstream corpus are the compatibility contract. A cop
-  is not verified merely because it recognizes representative text.
+- Differential fixtures and complete project signatures are the compatibility
+  contract. A cop is not compatible merely because it recognizes representative
+  text or passes the captured upstream examples.
 
 `script/check_architecture.rb` enforces the root layout, dependency direction,
 module line ceilings, and the 50-line limit on `main.rs`. Clippy owns

@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "fileutils"
+require "digest"
 require "json"
 require "open-uri"
 require "open3"
@@ -257,8 +258,15 @@ results = PROJECTS.map do |project|
   )
 end
 
+rust_commit, rust_commit_status = Open3.capture2(
+  "git", "log", "-1", "--format=%H", "--", "crates/rustocop", chdir: ROOT
+)
+raise "could not determine the Rust source commit" unless rust_commit_status.success?
+
 report = {
   "generated_at" => Time.now.iso8601,
+  "rust_commit" => rust_commit.strip,
+  "native_sha256" => Digest::SHA256.file(NATIVE).hexdigest,
   "environment" => {
     "ruby" => RUBY_VERSION,
     "rubocop" => "1.87.0",

@@ -1,7 +1,9 @@
 # RuboCop-shaped rule DSL performance
 
-Measured on 2026-08-19 after refactoring eight verified cops to class-like rule
-objects, typed callback registration, and per-investigation state.
+Measured on 2026-08-19 after refactoring eight fixture-covered cops to
+class-like rule objects, typed callback registration, and per-investigation
+state. This is a revision-to-revision historical comparison, not a current
+compatibility claim.
 
 ## Revisions
 

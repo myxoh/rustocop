@@ -50,7 +50,8 @@ recurring concept, not to hide logic that belongs to one cop.
 
 Before starting a cross-cutting subsystem, check the
 [substantial-work roadmap](docs/substantial-work.md). It owns multi-stage
-correctness and architecture work; `docs/remaining-cops.md` owns individual cop
+correctness and architecture work; the generated
+[`docs/remaining-cops.md`](docs/remaining-cops.md) owns current project-parity
 failures and `docs/bottlenecks.md` owns measured performance work.
 
 ## Add a cop
@@ -101,9 +102,11 @@ Ruby version, warmup, and process model; report medians and disclose whether
 RuboCop's Prism parser was enabled.
 
 Every real-project discrepancy used to change a cop must become a minimized
-fixture under `crates/rustocop/tests/fixtures/inspection/`. Keep its repository,
-revision, path, and source line in `provenance.yml`; include the triggering case,
-the closest clean control, and exact autocorrection when the cop is correctable.
+fixture. Cop-level parity cases belong in
+`spec/fixtures/project_parity_regressions/manifest.tsv`; shared parser/engine
+regressions can use `crates/rustocop/tests/fixtures/inspection/` with a
+`provenance.yml`. Keep the repository, revision, path, and triggering line;
+include a nearby clean control and exact autocorrection when applicable.
 
 After unit and upstream checks pass, commit the Rust source before running the
 ten-project gate:
@@ -123,10 +126,17 @@ calling it current. Project-exact is a statement about the pinned corpus and
 configuration; fixture coverage remains required for autocorrection and
 unexercised branches.
 
-Use `--baseline spec/upstream/rubocop-1.87.0/status.yml` for the full diagnostic
-run. The gate accepts improvements but rejects aggregate or previously passing
-fixture regressions. Regenerate `docs/remaining-cops.md` from that complete
-report; the generator deliberately refuses focused or truncated reports.
+Use `--baseline spec/upstream/rubocop-1.87.0/status.yml` for the full captured
+diagnostic run. That gate accepts improvements while preserving its regression
+baseline. Generate the public evidence matrix and work queue only from a
+complete real-project audit:
+
+```sh
+ruby script/generate_project_parity_docs.rb \
+  tmp/project-parity/all-cops-current.json
+```
+
+The generator rejects focused or truncated reports.
 
 `quality:test_contracts` also checks that the committed 500-example corpus is
 exactly reproducible. Use `script/generate_compatibility_corpus.rb --check` for

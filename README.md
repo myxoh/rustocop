@@ -24,9 +24,10 @@ linter. Until then, expect incomplete cop and configuration compatibility,
 false positives, false negatives, and breaking changes.
 
 The repository contains native registry entries for all 606 RuboCop built-in
-cops, but that is an implementation inventory, not a correctness claim. The old
-**verified**, **heuristic**, and **missing** labels describe captured-suite
-results only and are not a current trust signal.
+cops, but that is an implementation inventory, not a correctness claim. Public
+support evidence now comes from RuboCop-derived fixtures and complete
+ten-project signatures; the old Verified/Heuristic qualification scoreboard is
+not used.
 
 ## Validation standard
 
@@ -38,30 +39,35 @@ The gold standard is executable behavior checked against RuboCop 1.87.0:
 2. Complete diagnostic signatures must match across all ten pinned real
    projects: path, cop, severity, message, and complete source range.
 
-A registered cop with no exercised fixture is unvalidated. A cop exercised by
-the fixture corpus is **fixture-validated**. A cop with exact output on every
-pinned project is **project-exact**. Neither offense-count similarity nor an old
-manual review record is accepted as compatibility evidence.
+A registered cop with no exercised fixture is unvalidated. A cop with exact
+output on every pinned project is **project-exact** for that corpus and
+configuration. Neither offense-count similarity, a captured-case label, nor an
+old manual review record is accepted as compatibility evidence.
+
+The minimized real-project corpus currently contains 100 cases, plus five
+configuration-mutation cases. These are regression coverage, not a substitute
+for the complete project comparison.
 
 ## Ten-project output parity
 
 The real-project matrix asks whether each cop emits the same path, severity,
 message, and source range as RuboCop across 54,146 Ruby files in ten projects.
 
-The latest complete 606-cop checkpoint found 173 project-exact cops, 73
-dormant cops, 359 mismatches, no Rust crashes, and one RuboCop command-line
-error.
+The complete audit of current Rust source found 256 project-exact cops, 90
+dormant cops, 259 mismatches, no Rust crashes, and one RuboCop command-line
+error. The mismatches are real; the recent repair work improved the matrix but
+did not reduce it to zero.
 
 | Real-project classification | Complete checkpoint |
 | --- | ---: |
-| Project-exact | 173 / 606 (28.5%) |
-| Exact but dormant | 73 / 606 |
-| Mismatching | 359 / 606 |
+| Project-exact | 256 / 606 (42.2%) |
+| Exact but dormant | 90 / 606 |
+| Mismatching | 259 / 606 |
 | Rust crashes | 0 / 606 |
 | RuboCop `--only` limitation | 1 / 606 |
 
-The checkpoint is bound to Rust source `84c8a3f` and native binary SHA-256
-`c1a789c3c97f3a56b771430e3ceacbc77f21469923ff433de1399219ee9b1d03`.
+The checkpoint is bound to Rust source `9e4b1d3` and native binary SHA-256
+`3ea33de397f56e8ce1afc50c96761eb207ef7a1af2705ede7f7eeaec324147a2`.
 Project-exact status is the strongest current diagnostic evidence. Unexercised
 configuration and autocorrection branches still require RuboCop-derived
 fixtures.
@@ -73,15 +79,15 @@ projects, exact cops, limitations, and reproduction commands.
 
 <!-- generated:rubocop-prism:start -->
 On the pinned 500-file, 20-cop benchmark corpus, rustocop is currently
-about 60 times faster than RuboCop with Prism. Both tools produced identical
+about 42 times faster than RuboCop with Prism. Both tools produced identical
 normalized JSON before measurement.
 
 | Files | rustocop | RuboCop (Prism) | Speedup |
 | ---: | ---: | ---: | ---: |
-| 1 | 3.04 ms | 402.38 ms | 132.45× |
-| 25 | 3.49 ms | 400.83 ms | 114.72× |
-| 100 | 4.50 ms | 412.80 ms | 91.65× |
-| 500 | 7.79 ms | 467.51 ms | 60.02× |
+| 1 | 5.41 ms | 417.51 ms | 77.20× |
+| 25 | 6.01 ms | 432.35 ms | 71.96× |
+| 100 | 6.92 ms | 438.53 ms | 63.40× |
+| 500 | 11.66 ms | 494.82 ms | 42.44× |
 <!-- generated:rubocop-prism:end -->
 
 This uses RuboCop 1.87.0 with Prism, caching disabled, and server mode disabled.
@@ -100,14 +106,14 @@ bundle exec ruby script/benchmark_rubocop_prism.rb
 <!-- generated:mixed-custom:start -->
 Rustocop can keep recognized built-in cops native while delegating explicitly
 selected Ruby custom cops to RuboCop. On the same 500 files, 20 native cops plus
-one custom cop took 455.44 ms, versus 8.98 ms for pure native Rustocop and
-474.89 ms for pure RuboCop.
+one custom cop took 498.24 ms, versus 10.86 ms for pure native Rustocop and
+508.84 ms for pure RuboCop.
 
 | 500-file mode | Median |
 | --- | ---: |
-| Pure native, 20 built-in cops | **8.98 ms** |
-| Mixed, 20 native + 1 Ruby custom cop | **455.44 ms** |
-| Pure RuboCop, all 21 cops | **474.89 ms** |
+| Pure native, 20 built-in cops | **10.86 ms** |
+| Mixed, 20 native + 1 Ruby custom cop | **498.24 ms** |
+| Pure RuboCop, all 21 cops | **508.84 ms** |
 <!-- generated:mixed-custom:end -->
 
 The mixed report exactly matched RuboCop, but the Ruby custom cop still imposed
@@ -115,23 +121,13 @@ almost all of RuboCop's startup and parsing cost. See the [mixed custom-cop
 benchmark](benchmark/mixed-custom-cops.md) for entrypoint overhead, p95 results,
 and methodology.
 
-### Real Rails projects
+### Real-project performance
 
-The sustained-workload benchmark runs deliberately strict built-in rules over
-three pinned open-source Rails projects. Unlike the small compatibility corpus,
-these reports are not yet identical: the exact-match column is the new
-correctness target, matching path, cop, severity, message, and source range.
-
-| Project | Ruby files | rustocop, 4 workers | RuboCop Prism | Speedup | Exact matches / RuboCop offenses |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| [Chatwoot](https://github.com/chatwoot/chatwoot/tree/8d93d69e8e356216e85c28de7c4240e66b8e83fa) | 1,842 | **104 ms** | 5.72 s | **54.9×** | 429 / 48,951 |
-| [RubyGems.org](https://github.com/rubygems/rubygems.org/tree/3201f8831866f82eb9acd7f66287a978d0e59079) | 1,337 | **50 ms** | 2.69 s | **53.4×** | 273 / 4,195 |
-| [GitLab CE](https://github.com/gitlabhq/gitlabhq/tree/67a526442c20d20b6e80ebf916bd766b54018c5e) | 30,894 | **1.82 s** | 106.18 s | **58.5×** | 6,780 / 698,393 |
-
-All timings are medians from five measured runs after warmup, with RuboCop's
-cache and server disabled. The configuration intentionally forces offenses
-using eight core cops; no custom cops or extensions are loaded. See the
-[project benchmark methodology and full median/p95 results](benchmark/project-benchmarks.md).
+The repository also has a sustained-workload runner for all ten pinned
+projects. The checked-in timing table is a dated 2026-08-19 three-project
+baseline and is no longer presented as current correctness evidence. See the
+[project benchmark note](benchmark/project-benchmarks.md) for those historical
+timings and the stronger requirements for publishing a replacement run.
 
 ## Using it locally
 
@@ -207,8 +203,7 @@ bundle exec rubocop
 
 Do not remove RuboCop from CI just because rustocop is fast on your machine.
 Check the [real-project parity report](docs/real-project-parity.md) and the
-fixture coverage before depending on a cop. The legacy support matrix is not a
-trust signal.
+[per-cop evidence matrix](docs/cop-support.md) before depending on a cop.
 
 ## Current support
 
@@ -216,18 +211,12 @@ trust signal.
 - Native binary contract: `libexec/rustocop-native`
 - Development fallback: `libexec/rustocop-ruby`
 - Rust source: `crates/rustocop`
-- Compatibility coverage: `Layout/TrailingWhitespace` JSON output and exit
-  status for file and stdin input
-- Native checks for the RuboCop, Rails, RSpec, Bundler, Layout, Metrics, Naming,
-  Style, and Lint cops listed in the project seed config. Singulate-specific
-  cops are intentionally excluded.
-- A shared Prism parse and AST visitor powers the native cop registry. The
-  previous captured-suite classification reported 361 cops as verified and 245
-  as heuristic; those historical labels are not current compatibility evidence.
+- Native registry entries for all 606 RuboCop 1.87 built-ins. RuboCop extension
+  departments and project-specific cops are not native.
+- A shared Prism parse and AST visitor powers the native cop registry.
 - `--show-cops` prints the native support registry.
-- [The legacy captured-suite support matrix](docs/cop-support.md) records the
-  old verified, heuristic, and missing classification. It is retained as
-  historical engineering evidence only.
+- [The built-in cop evidence matrix](docs/cop-support.md) records current
+  project status and whether a minimized project regression exists.
 - [The RuboCop + Prism performance verification](docs/performance.md) records
   reproducible end-to-end timings and JSON parity checks for the shared
   500-file, 20-cop corpus.
@@ -268,7 +257,7 @@ bundle exec ruby script/compare_upstream_cop_specs.rb
 
 Generated corpora and reports live under `tmp/` and are intentionally ignored.
 The comparison command is diagnostic-only for now; correction parity remains a
-separate required gate before a cop can be called fixture-validated.
+separate required fixture gate.
 
 ## Development
 
@@ -305,8 +294,7 @@ claim by itself. Benchmarks use the separate pinned `benchmark/corpus.json`, so
 improving a correctness fixture does not silently redefine historical
 performance work.
 
-Run the complete upstream differential with its non-regression gate, then
-regenerate the prioritized remaining-cop queue:
+Run the complete upstream differential with its non-regression gate:
 
 ```sh
 RUSTOCOP_NATIVE_PATH=crates/rustocop/target/debug/rustocop \
@@ -314,18 +302,21 @@ RUSTOCOP_NATIVE_PATH=crates/rustocop/target/debug/rustocop \
   --baseline spec/upstream/rubocop-1.87.0/status.yml \
   --report tmp/full-compatibility.json
 
-RUSTOCOP_NATIVE_PATH=crates/rustocop/target/debug/rustocop \
-  bundle exec ruby script/generate_remaining_cop_plan.rb \
-  tmp/full-compatibility.json
-
 bundle exec ruby script/report_compatibility_drift.rb \
   tmp/full-compatibility.json \
   --output tmp/compatibility-promotion-drift.md
 ```
 
-The generated [remaining-cop plan](docs/remaining-cops.md) distinguishes partial
-implementations, quick structural additions, and cops blocked on shared engine
-capabilities.
+Generate the public per-cop matrix and current gap queue only from a complete
+ten-project audit:
+
+```sh
+ruby script/generate_project_parity_docs.rb \
+  tmp/project-parity/all-cops-current.json
+```
+
+The generated [gap queue](docs/remaining-cops.md) is ordered by unmatched
+complete signatures and deliberately ignores the retired qualification labels.
 
 Build the native binary when Rust is installed:
 

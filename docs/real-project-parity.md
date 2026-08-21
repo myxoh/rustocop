@@ -12,28 +12,28 @@ cases, and configuration branches that the projects do not exercise.
 
 ## Latest realistic status
 
-The latest complete 606-cop checkpoint was generated from Rust source
-`84c8a3f842c709662f961009b8f1a74ae6fa3ea7` and native binary SHA-256
-`c1a789c3c97f3a56b771430e3ceacbc77f21469923ff433de1399219ee9b1d03`.
+The latest complete 606-cop checkpoint was generated on 2026-08-21 from Rust
+source `9e4b1d38c2ae7dacacc544b46fb2de8b4111ed8f` and native binary SHA-256
+`3ea33de397f56e8ce1afc50c96761eb207ef7a1af2705ede7f7eeaec324147a2`.
 It reported:
 
 | Classification | Complete checkpoint |
 | --- | ---: |
-| Project-exact | 173 |
-| Exact but dormant | 73 |
-| Mismatching | 359 |
+| Project-exact | 256 |
+| Exact but dormant | 90 |
+| Mismatching | 259 |
 | Rust crash | 0 |
 | RuboCop gate error | 1 |
 
 The remaining RuboCop error is `Lint/RedundantCopDisableDirective`, which
-RuboCop refuses to run with `--only`. The previous Rust crash was
-`Style/CommentAnnotation`; its UTF-8 failure is fixed and included in the
-complete checkpoint.
+RuboCop refuses to run with `--only`. Rustocop completed the matrix without a
+crash. The 259 mismatching cops are current failures, not estimates inherited
+from the older checkpoint.
 
-The current working batch fixes ten one-diagnostic mismatches. Its minimized
-fixtures match RuboCop and its focused ten-project audit is exact. That result
-is intentionally not folded into the table until the Rust changes are
-committed and the audit records their source commit and binary SHA-256.
+The minimized project-regression corpus contains 100 cases and the
+configuration-mutation corpus contains five. They preserve fixed pathological
+examples, while the complete matrix catches interactions and unrepresented
+syntax across the full 54,146-file corpus.
 
 ## Pinned projects
 

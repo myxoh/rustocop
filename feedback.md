@@ -1,6 +1,9 @@
 # Maintainer feedback
 
-Reviewed on 2026-08-18 against the current working tree.
+> Historical review: this records the repository state on 2026-08-18, before
+> the ten-project parity workflow. Its old cop counts and qualification labels
+> are not current support evidence. See `docs/real-project-parity.md` and
+> `docs/cop-support.md` for the current model.
 
 ## Implemented follow-ups
 

@@ -51,16 +51,16 @@ and server mode disabled. Results are medians of seven runs after two warmups.
 <!-- generated:mixed-custom-results:start -->
 | Variant | Median | p95 | Relative to native binary |
 | --- | ---: | ---: | ---: |
-| Rustocop native binary, 20 built-in cops | 8.98 ms | 12.93 ms | 1.0× |
-| Rustocop Ruby entrypoint, 20 built-in cops | 88.68 ms | 91.71 ms | 9.9× |
-| Mixed native binary, 20 native + 1 custom cop | 455.44 ms | 460.53 ms | 50.7× |
-| Mixed Ruby entrypoint, 20 native + 1 custom cop | 530.62 ms | 540.34 ms | 59.1× |
-| RuboCop, custom cop only | 448.95 ms | 454.71 ms | 50.0× |
-| RuboCop, all 20 built-ins + custom cop | 474.89 ms | 481.18 ms | 52.9× |
+| Rustocop native binary, 20 built-in cops | 10.86 ms | 11.45 ms | 1.0× |
+| Rustocop Ruby entrypoint, 20 built-in cops | 95.61 ms | 99.32 ms | 8.8× |
+| Mixed native binary, 20 native + 1 custom cop | 498.24 ms | 507.18 ms | 45.9× |
+| Mixed Ruby entrypoint, 20 native + 1 custom cop | 573.14 ms | 612.80 ms | 52.8× |
+| RuboCop, custom cop only | 482.53 ms | 491.37 ms | 44.4× |
+| RuboCop, all 20 built-ins + custom cop | 508.84 ms | 519.27 ms | 46.8× |
 
-The direct mixed run was 4.1% faster than pure RuboCop and produced
+The direct mixed run was 2.1% faster than pure RuboCop and produced
 identical normalized JSON. One Ruby custom cop still made this tiny-corpus run
-50.7 times slower than pure native Rustocop because RuboCop must
+45.9 times slower than pure native Rustocop because RuboCop must
 start Ruby, load the custom cop, and build a second set of Prism trees.
 <!-- generated:mixed-custom-results:end -->
 
