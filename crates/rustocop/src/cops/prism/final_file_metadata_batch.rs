@@ -19,7 +19,17 @@ fn script_permission(context: &mut CopContext<'_, '_>) {
         if std::fs::metadata(context.path())
             .is_ok_and(|metadata| metadata.permissions().mode() & 0o111 == 0)
         {
-            context.report("Script file is not executable.", 0..2);
+            let file = std::path::Path::new(context.path())
+                .file_name()
+                .map_or_else(
+                    || context.path().to_string(),
+                    |name| name.to_string_lossy().into_owned(),
+                );
+            let shebang = 0..context.source_file().line_end(0);
+            context.report(
+                format!("Script file {file} doesn't have execute permission."),
+                shebang,
+            );
         }
     }
 }
