@@ -1,4 +1,5 @@
 use super::*;
+use std::collections::HashSet;
 
 mod registry;
 
@@ -241,33 +242,125 @@ fn register_empty_conditional(
     context.replace(message, offense, location, replacement);
 }
 
-fn unreachable_code(context: &mut CopContext<'_, '_>) {
-    let redefines_raise = context.source().lines().any(|line| {
-        let line = line.trim_start();
-        line.starts_with("def raise")
-            || line.starts_with("def self.raise")
-            || line.starts_with("def fail")
-            || line.starts_with("def self.fail")
-    });
-    let dynamic_receiver = context.source().contains("instance_eval");
-    let lines = context.source_file().lines().collect::<Vec<_>>();
-    for window in lines.windows(2) {
-        let terminator = window[0].1.trim();
-        if matches!(terminator, "raise" | "fail") && (redefines_raise || dynamic_receiver) {
-            continue;
-        }
-        if matches!(terminator, "return" | "break" | "next" | "raise" | "fail")
-            && !window[1].1.trim().is_empty()
-            && !matches!(window[1].1.trim(), "end" | "else" | "ensure" | "rescue")
-            && window[0].1.len() - window[0].1.trim_start().len()
-                == window[1].1.len() - window[1].1.trim_start().len()
-        {
-            context.report(
-                "Unreachable code detected.",
-                window[1].0..window[1].0 + window[1].1.len(),
-            );
+struct UnreachableCode;
+
+impl Cop for UnreachableCode {
+    fn name(&self) -> &'static str {
+        "Lint/UnreachableCode"
+    }
+
+    fn on_node<'pr>(
+        &self,
+        node: &Node<'pr>,
+        _ancestors: &[Node<'pr>],
+        source: &str,
+        context: &mut Context,
+    ) {
+        let Some(statements) = node.as_statements_node() else {
+            return;
+        };
+        let redefined = redefined_flow_methods(source);
+        let inside_instance_eval = source.contains("instance_eval");
+        let body = statements.body().iter().collect::<Vec<_>>();
+        for pair in body.windows(2) {
+            if flow_expression(&pair[0], &redefined, inside_instance_eval) {
+                context.report(
+                    self.name(),
+                    "Unreachable code detected.",
+                    pair[1].location(),
+                );
+            }
         }
     }
+}
+
+fn redefined_flow_methods(source: &str) -> HashSet<Vec<u8>> {
+    source
+        .lines()
+        .filter_map(|line| {
+            let definition = line.trim_start().strip_prefix("def ")?;
+            let name = definition
+                .strip_prefix("self.")
+                .unwrap_or(definition)
+                .split(|character: char| !(character.is_alphanumeric() || character == '_'))
+                .next()?;
+            matches!(name, "raise" | "fail" | "throw" | "exit" | "exit!" | "abort")
+                .then(|| name.as_bytes().to_vec())
+        })
+        .collect()
+}
+
+fn flow_expression(
+    node: &Node<'_>,
+    redefined: &HashSet<Vec<u8>>,
+    inside_instance_eval: bool,
+) -> bool {
+    if node.as_return_node().is_some()
+        || node.as_next_node().is_some()
+        || node.as_break_node().is_some()
+        || node.as_retry_node().is_some()
+        || node.as_redo_node().is_some()
+    {
+        return true;
+    }
+    if let Some(call) = node.as_call_node() {
+        let flow = matches!(
+            call_name(&call),
+            b"raise" | b"fail" | b"throw" | b"exit" | b"exit!" | b"abort"
+        );
+        if !flow || call.receiver().is_some() && !root_constant(call.receiver(), b"Kernel") {
+            return false;
+        }
+        return call.receiver().is_some()
+            || !inside_instance_eval && !redefined.contains(call_name(&call));
+    }
+    if let Some(begin) = node.as_begin_node() {
+        if begin.rescue_clause().is_some() || begin.ensure_clause().is_some() {
+            return false;
+        }
+        return begin.statements().is_some_and(|statements| {
+            statements
+                .body()
+                .iter()
+                .any(|statement| flow_expression(&statement, redefined, inside_instance_eval))
+        });
+    }
+    if let Some(condition) = node.as_if_node() {
+        let Some(if_branch) = condition.statements() else {
+            return false;
+        };
+        let Some(else_branch) = condition
+            .subsequent()
+            .and_then(|branch| branch.as_else_node())
+            .and_then(|branch| branch.statements())
+        else {
+            return false;
+        };
+        return branch_flows(&if_branch, redefined, inside_instance_eval)
+            && branch_flows(&else_branch, redefined, inside_instance_eval);
+    }
+    if let Some(condition) = node.as_unless_node() {
+        let Some(if_branch) = condition.statements() else {
+            return false;
+        };
+        let Some(else_branch) = condition.else_clause().and_then(|branch| branch.statements()) else {
+            return false;
+        };
+        return branch_flows(&if_branch, redefined, inside_instance_eval)
+            && branch_flows(&else_branch, redefined, inside_instance_eval);
+    }
+    false
+}
+
+fn branch_flows(
+    statements: &ruby_prism::StatementsNode<'_>,
+    redefined: &HashSet<Vec<u8>>,
+    inside_instance_eval: bool,
+) -> bool {
+    statements
+        .body()
+        .iter()
+        .any(|statement| flow_expression(&statement, redefined, inside_instance_eval))
 }
 
 fn literal_condition(context: &mut CopContext<'_, '_>) {

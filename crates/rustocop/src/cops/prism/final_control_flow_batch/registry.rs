@@ -14,7 +14,7 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
             "Rescue an exception class rather than a string literal.",
         ),
         custom("Lint/DuplicateBranch", identical_branches),
-        custom("Lint/UnreachableCode", unreachable_code),
+        Box::new(UnreachableCode),
         custom("Lint/LiteralAsCondition", literal_condition),
     ]
 }
