@@ -79,6 +79,7 @@ RSpec.describe "real-project parity regressions" do
     Gemspec/RequireMFA
     Layout/ConditionPosition
     Lint/ParenthesesAsGroupedExpression
+    Lint/RedundantRegexpQuantifiers
   ]
   fixture_root = File.join(ROOT, "spec", "fixtures", "project_parity_regressions")
   config = File.join(fixture_root, "rubocop.yml")

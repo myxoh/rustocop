@@ -1,4 +1,4 @@
-use super::catalog_cop::{custom, replace, report};
+use super::catalog_cop::{custom, report};
 use super::*;
 use std::collections::HashSet;
 
@@ -8,12 +8,7 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
             "Lint/DuplicateRegexpCharacterClassElement",
             duplicate_character_class,
         ),
-        replace(
-            "Lint/RedundantRegexpQuantifiers",
-            "{1}",
-            "",
-            "Use a single regexp atom instead of a `{1}` quantifier.",
-        ),
+        Box::new(RedundantRegexpQuantifiers),
         Box::new(UnescapedBracketInRegexp),
         report(
             "Lint/AmbiguousRegexpLiteral",
@@ -28,6 +23,130 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
         custom("Lint/OutOfRangeRegexpRef", out_of_range_ref),
         Box::new(SelectByRegexp),
     ]
+}
+
+struct RedundantRegexpQuantifiers;
+
+impl Cop for RedundantRegexpQuantifiers {
+    fn name(&self) -> &'static str {
+        "Lint/RedundantRegexpQuantifiers"
+    }
+
+    fn on_node<'pr>(
+        &self,
+        node: &Node<'pr>,
+        _ancestors: &[Node<'pr>],
+        source: &str,
+        context: &mut Context,
+    ) {
+        let Some(regexp) = node.as_regular_expression_node() else {
+            return;
+        };
+        let content = regexp.content_loc();
+        let body = &source[content.start_offset()..content.end_offset()];
+        let mut search = 0;
+        while let Some(relative) = body[search..].find("(?:") {
+            let group_start = search + relative;
+            let Some(close) = matching_regexp_group(body, group_start) else {
+                break;
+            };
+            let Some((outer, outer_end)) = greedy_simple_quantifier(body, close + 1) else {
+                search = group_start + 3;
+                continue;
+            };
+            let Some((inner_start, inner)) = trailing_greedy_quantifier(&body[group_start + 3..close])
+            else {
+                search = group_start + 3;
+                continue;
+            };
+            let atom = &body[group_start + 3..group_start + 3 + inner_start];
+            if !single_regexp_atom(atom) {
+                search = group_start + 3;
+                continue;
+            }
+            let replacement = if inner == outer { inner } else { "*" };
+            let absolute_inner = content.start_offset() + group_start + 3 + inner_start;
+            let offense = absolute_inner..content.start_offset() + outer_end;
+            context.replace(
+                self.name(),
+                format!(
+                    "Replace redundant quantifiers `{inner}` and `{outer}` with a single `{replacement}`."
+                ),
+                offense.clone(),
+                offense,
+                format!("{replacement})"),
+            );
+            search = outer_end;
+        }
+    }
+}
+
+fn matching_regexp_group(source: &str, start: usize) -> Option<usize> {
+    let bytes = source.as_bytes();
+    let mut depth = 0_usize;
+    let mut in_class = false;
+    let mut index = start;
+    while index < bytes.len() {
+        if bytes[index] == b'\\' {
+            index += 2;
+            continue;
+        }
+        if bytes[index] == b'[' {
+            in_class = true;
+        } else if bytes[index] == b']' && in_class {
+            in_class = false;
+        } else if !in_class && bytes[index] == b'(' {
+            depth += 1;
+        } else if !in_class && bytes[index] == b')' {
+            depth -= 1;
+            if depth == 0 {
+                return Some(index);
+            }
+        }
+        index += 1;
+    }
+    None
+}
+
+fn greedy_simple_quantifier(source: &str, start: usize) -> Option<(&str, usize)> {
+    let quantifier = source.get(start..start + 1)?;
+    if !matches!(quantifier, "+" | "*" | "?")
+        || source.get(start + 1..start + 2).is_some_and(|next| matches!(next, "+" | "?"))
+    {
+        return None;
+    }
+    Some((quantifier, start + 1))
+}
+
+fn trailing_greedy_quantifier(source: &str) -> Option<(usize, &str)> {
+    let start = source.len().checked_sub(1)?;
+    let quantifier = source.get(start..)?;
+    matches!(quantifier, "+" | "*" | "?").then_some((start, quantifier))
+}
+
+fn single_regexp_atom(source: &str) -> bool {
+    let bytes = source.as_bytes();
+    if source.chars().count() == 1 {
+        return true;
+    }
+    if bytes.first() == Some(&b'\\') {
+        return bytes.len() == 2;
+    }
+    if bytes.first() == Some(&b'[') && bytes.last() == Some(&b']') {
+        let mut escaped = false;
+        return bytes[1..bytes.len() - 1].iter().all(|byte| {
+            if escaped {
+                escaped = false;
+                true
+            } else if *byte == b'\\' {
+                escaped = true;
+                true
+            } else {
+                *byte != b']'
+            }
+        });
+    }
+    false
 }
 
 struct UnescapedBracketInRegexp;
