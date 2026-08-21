@@ -71,6 +71,7 @@ RSpec.describe "real-project parity regressions" do
     Lint/UriRegexp
     Layout/HeredocArgumentClosingParenthesis
     Style/ClassCheck
+    Style/PercentQLiterals
   ]
   fixture_root = File.join(ROOT, "spec", "fixtures", "project_parity_regressions")
   config = File.join(fixture_root, "rubocop.yml")

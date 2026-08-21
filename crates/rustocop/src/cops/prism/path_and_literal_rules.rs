@@ -245,7 +245,15 @@ fn percent_q_literals(node: &ruby_prism::StringNode<'_>, context: &mut CopContex
     let upper = opening_source.starts_with(b"%Q");
     let wants_upper = context.policy().enforced_style("lower_case_q") == "upper_case_q";
     let content = context.source_file().at(&node.content_loc());
-    if upper == wants_upper || content.contains('\\') || wants_upper && content.contains("#{") {
+    // RuboCop's parser_prism adapter represents multiline percent strings as a
+    // `dstr` made up of line-sized `str` children. PercentQLiterals only
+    // implements `on_str`, and none of those children owns the `%Q` opening,
+    // so the cop deliberately leaves the whole multiline literal alone.
+    if upper == wants_upper
+        || content.contains('\n')
+        || content.contains('\\')
+        || wants_upper && content.contains("#{")
+    {
         return;
     }
     let (message, replacement) = if wants_upper {
