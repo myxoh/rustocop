@@ -9,6 +9,9 @@ define_cops! {
 }
 
 fn require_mfa(context: &mut CopContext<'_, '_>) {
+    if !context.path().ends_with(".gemspec") {
+        return;
+    }
     let source = context.source();
     if !source.contains("Gem::Specification.new") {
         return;
