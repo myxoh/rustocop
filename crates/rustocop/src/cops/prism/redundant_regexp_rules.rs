@@ -270,6 +270,10 @@ fn single_element_character_classes(source: &str, extended: bool) -> Vec<Charact
     let mut classes = Vec::new();
     let mut index = 0;
     while index < bytes.len() {
+        if bytes[index] == b'\\' {
+            index += escape_token_length(&source[index..]).max(2);
+            continue;
+        }
         if extended && bytes[index] == b'#' {
             index = source[index..]
                 .find('\n')

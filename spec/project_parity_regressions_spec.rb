@@ -75,6 +75,7 @@ RSpec.describe "real-project parity regressions" do
     Lint/DeprecatedOpenSSLConstant
     Style/KeywordParametersOrder
     Style/Proc
+    Style/RedundantRegexpCharacterClass
   ]
   fixture_root = File.join(ROOT, "spec", "fixtures", "project_parity_regressions")
   config = File.join(fixture_root, "rubocop.yml")
