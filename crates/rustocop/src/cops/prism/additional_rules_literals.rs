@@ -6,7 +6,7 @@ define_cops! {
     NumericLiteralPrefix => "Style/NumericLiteralPrefix" => source(numeric_literal_prefix),
     NestedPercentLiteral => "Lint/NestedPercentLiteral" => source(nested_percent_literal),
     RescueException => "Lint/RescueException" => source(rescue_exception),
-    OpenStructUse => "Style/OpenStructUse" => source(open_struct_use),
+    OpenStructUse => "Style/OpenStructUse" => any_node(open_struct_use),
 }
 
 fn empty_file(reporter: &mut CopContext<'_, '_>) {
@@ -95,20 +95,22 @@ fn rescue_exception(reporter: &mut CopContext<'_, '_>) {
     }
 }
 
-fn open_struct_use(reporter: &mut CopContext<'_, '_>) {
-    let source = reporter.source();
-    for name in ["::OpenStruct", "OpenStruct"] {
-        for start in all_offsets(source, name) {
-            if name == "OpenStruct" && start >= 2 && &source[start - 2..start] == "::" {
-                continue;
-            }
-            let prefixed = start > 0
-                && matches!(source.as_bytes()[start - 1], b':' | b'_' | b'A'..=b'Z' | b'a'..=b'z');
-            let line_start = source[..start].rfind('\n').map_or(0, |offset| offset + 1);
-            let declaration = matches!(source[line_start..start].trim(), "class" | "module");
-            if !prefixed && !declaration {
-                reporter.report("Avoid using `OpenStruct`; use `Struct`, `Hash`, a class or test doubles instead.", start..start + name.len());
-            }
-        }
+fn open_struct_use(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
+    if !node_is_root_constant(node, b"OpenStruct") {
+        return;
+    }
+    let definition = context.parent().is_some_and(|parent| {
+        parent
+            .as_class_node()
+            .is_some_and(|class| same_location(&class.constant_path(), node))
+            || parent
+                .as_module_node()
+                .is_some_and(|module| same_location(&module.constant_path(), node))
+    });
+    if !definition {
+        context.report(
+            "Avoid using `OpenStruct`; use `Struct`, `Hash`, a class or test doubles instead.",
+            node.location(),
+        );
     }
 }

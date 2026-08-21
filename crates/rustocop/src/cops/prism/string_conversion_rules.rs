@@ -12,6 +12,16 @@ define_cops! {
 }
 
 fn string_hash_keys(node: &ruby_prism::AssocNode<'_>, context: &mut CopContext<'_, '_>) {
+    if node.key().as_source_file_node().is_some() {
+        let key = node.key();
+        context.replace(
+            "Prefer symbols instead of strings as hash keys.",
+            key.location(),
+            key.location(),
+            ruby_symbol_inspect(context.source_file().node(&key)),
+        );
+        return;
+    }
     let Some(key) = node.key().as_string_node() else {
         return;
     };
@@ -360,7 +370,7 @@ fn string_literals_in_interpolation(
     );
 }
 
-fn double_quotes_required(source: &str) -> bool {
+pub(super) fn double_quotes_required(source: &str) -> bool {
     if source.contains('\'') {
         return true;
     }
@@ -402,7 +412,7 @@ fn redundant_interpolation_unfreeze(node: &CallNode<'_>, context: &mut CopContex
         let Some(argument) = only_argument(node) else {
             return;
         };
-        if argument.as_interpolated_string_node().is_none() {
+        if !interpolated_string_has_interpolation(&argument) {
             return;
         }
         let Some(selector) = node.message_loc() else {
@@ -426,9 +436,7 @@ fn redundant_interpolation_unfreeze(node: &CallNode<'_>, context: &mut CopContex
     let Some(interpolated) = receiver.as_interpolated_string_node() else {
         return;
     };
-    if !interpolated.parts().iter().any(|part| {
-        part.as_embedded_variable_node().is_some() || part.as_embedded_statements_node().is_some()
-    }) {
+    if !interpolated_string_has_interpolation(&interpolated.as_node()) {
         return;
     }
     if interpolated.opening_loc().is_some_and(|opening| {
@@ -446,6 +454,18 @@ fn redundant_interpolation_unfreeze(node: &CallNode<'_>, context: &mut CopContex
         receiver.location().end_offset()..node.location().end_offset()
     };
     context.remove(MESSAGE, &selector, edit);
+}
+
+fn interpolated_string_has_interpolation(node: &Node<'_>) -> bool {
+    if node.as_embedded_variable_node().is_some() || node.as_embedded_statements_node().is_some() {
+        return true;
+    }
+    node.as_interpolated_string_node().is_some_and(|string| {
+        string
+            .parts()
+            .iter()
+            .any(|part| interpolated_string_has_interpolation(&part))
+    })
 }
 
 fn redundant_interpolation(node: &InterpolatedStringNode<'_>, context: &mut CopContext<'_, '_>) {

@@ -11,8 +11,8 @@ fn nested_ternary_operator(node: &ruby_prism::IfNode<'_>, context: &mut CopConte
     let Some(outer) = context
         .ancestors()
         .iter()
-        .find_map(Node::as_if_node)
-        .filter(is_ternary)
+        .filter_map(Node::as_if_node)
+        .find(is_ternary)
     else {
         return;
     };

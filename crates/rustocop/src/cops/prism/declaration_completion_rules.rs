@@ -223,41 +223,41 @@ fn redundant_struct_keyword_init(node: &CallNode<'_>, context: &mut CopContext<'
     {
         return;
     }
-    let Some(opening) = node.opening_loc() else {
+    let Some(arguments) = node.arguments() else {
         return;
     };
-    let Some(closing) = node.closing_loc() else {
+    let Some(last_argument) = arguments.arguments().iter().last() else {
         return;
     };
-    let source = context.source();
-    let arguments = super::source_syntax::top_level_elements(
-        source,
-        opening.end_offset(),
-        closing.start_offset(),
-    );
-    if arguments
-        .iter()
-        .any(|range| source[range.clone()].trim() == "keyword_init: false")
-    {
+    let pairs = if let Some(keyword_hash) = last_argument.as_keyword_hash_node() {
+        keyword_hash.elements().iter().filter_map(|element| element.as_assoc_node()).collect::<Vec<_>>()
+    } else if let Some(hash) = last_argument.as_hash_node() {
+        hash.elements().iter().filter_map(|element| element.as_assoc_node()).collect::<Vec<_>>()
+    } else {
+        return;
+    };
+    let keyword_init = |pair: &ruby_prism::AssocNode<'_>| {
+        pair.key()
+            .as_symbol_node()
+            .is_some_and(|key| key.unescaped() == b"keyword_init")
+    };
+    if pairs.iter().any(|pair| keyword_init(pair) && pair.value().as_false_node().is_some()) {
         return;
     }
-    for argument in arguments.iter().filter(|range| {
-        matches!(
-            source[(*range).clone()].trim(),
-            "keyword_init: true" | "keyword_init: nil"
-        )
+    for (index, pair) in pairs.iter().enumerate().filter(|(_, pair)| {
+        keyword_init(pair)
+            && (pair.value().as_true_node().is_some() || pair.value().as_nil_node().is_some())
     }) {
-        let value = source[argument.clone()]
-            .split_once(':')
-            .map_or("", |(_, value)| value.trim());
-        let edit_start = source[..argument.start]
-            .rfind(',')
-            .filter(|comma| *comma >= opening.end_offset())
-            .unwrap_or(argument.start);
+        let value = context.source_file().node(&pair.value());
+        let offense = pair.location();
+        let edit_start = index
+            .checked_sub(1)
+            .and_then(|previous| pairs.get(previous))
+            .map_or(offense.start_offset(), |previous| previous.location().end_offset());
         context.remove(
             format!("Remove the redundant `keyword_init: {value}`."),
-            argument.clone(),
-            edit_start..argument.end,
+            &offense,
+            edit_start..offense.end_offset(),
         );
     }
 }

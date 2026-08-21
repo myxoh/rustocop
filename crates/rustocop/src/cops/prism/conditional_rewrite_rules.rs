@@ -350,7 +350,8 @@ fn modifier_expression(node: &Node<'_>) -> bool {
 }
 
 fn safe_assignment(node: &Node<'_>) -> bool {
-    node.as_local_variable_write_node().is_some()
+    node.as_multi_write_node().is_some()
+        || node.as_local_variable_write_node().is_some()
         || node.as_instance_variable_write_node().is_some()
         || node.as_class_variable_write_node().is_some()
         || node.as_global_variable_write_node().is_some()

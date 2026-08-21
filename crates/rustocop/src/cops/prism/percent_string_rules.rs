@@ -127,7 +127,7 @@ fn redundant_percent_q(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
     let allowed = if kind == 'q' {
         single && double || escaped_non_backslash || single && content.contains("#{")
     } else {
-        single && double || content.contains('\\') || dynamic && double
+        double && (single || dynamic || super::string_conversion_rules::double_quotes_required(source))
     };
     if allowed {
         return;
