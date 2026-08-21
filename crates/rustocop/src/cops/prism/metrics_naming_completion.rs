@@ -146,6 +146,16 @@ fn parameter_lists(node: &ruby_prism::DefNode<'_>, context: &mut CopContext<'_, 
 
 fn collection_literal_length(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
     let threshold = context.config_usize("LengthThreshold", 250);
+    if context
+        .ancestors()
+        .iter()
+        .any(|ancestor| {
+            ancestor.location().start_offset() == node.location().start_offset()
+                && collection_element_count(ancestor).is_some_and(|count| count >= threshold)
+        })
+    {
+        return;
+    }
     let count = if let Some(array) = node.as_array_node() {
         array.elements().len()
     } else if let Some(hash) = node.as_hash_node() {
@@ -158,6 +168,18 @@ fn collection_literal_length(node: &Node<'_>, context: &mut CopContext<'_, '_>) 
         } else {
             return;
         }
+    } else if let Some(rescue) = node.as_rescue_node() {
+        let exceptions = rescue.exceptions().iter().collect::<Vec<_>>();
+        if exceptions.len() >= threshold {
+            let Some((first, last)) = exceptions.first().zip(exceptions.last()) else {
+                return;
+            };
+            context.report(
+                "Avoid hard coding large quantities of data in code. Prefer reading the data from an external source.",
+                first.location().start_offset()..last.location().end_offset(),
+            );
+        }
+        return;
     } else {
         return;
     };
@@ -166,6 +188,21 @@ fn collection_literal_length(node: &Node<'_>, context: &mut CopContext<'_, '_>) 
             node,
             "Avoid hard coding large quantities of data in code. Prefer reading the data from an external source.",
         );
+    }
+}
+
+fn collection_element_count(node: &Node<'_>) -> Option<usize> {
+    if let Some(array) = node.as_array_node() {
+        Some(array.elements().len())
+    } else if let Some(hash) = node.as_hash_node() {
+        Some(hash.elements().len())
+    } else if let Some(hash) = node.as_keyword_hash_node() {
+        Some(hash.elements().len())
+    } else if let Some(call) = node.as_call_node() {
+        (call_name(&call) == b"[]" && root_constant(call.receiver(), b"Set"))
+            .then(|| argument_count(&call))
+    } else {
+        None
     }
 }
 
