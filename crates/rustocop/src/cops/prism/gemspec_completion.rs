@@ -51,8 +51,8 @@ fn require_mfa(context: &mut CopContext<'_, '_>) {
             .map_or(source.len(), |newline| metadata + newline + 1)
     } else {
         source
-            .find('\n')
-            .map_or(source.len(), |newline| newline + 1)
+            .rfind("\nend")
+            .map_or(source.len(), |closing| closing + 1)
     };
     let mut prefix = String::new();
     if source.contains(".metadata = {") {
@@ -156,7 +156,7 @@ fn ordered_dependencies(context: &mut CopContext<'_, '_>) {
                 name.to_string()
             } else {
                 name.chars()
-                    .filter(|character| character.is_alphanumeric())
+                    .filter(|character| !matches!(character, '-' | '_'))
                     .collect()
             }
         };

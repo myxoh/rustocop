@@ -12,13 +12,13 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
         custom("Layout/RescueEnsureAlignment", end_alignment),
         custom("Layout/HashAlignment", hash_alignment),
         custom("Layout/SpaceAroundOperators", operator_spacing),
-        custom(
-            "Layout/EmptyLinesAroundAccessModifier",
-            empty_around_access_modifier,
-        ),
         custom("Layout/HeredocIndentation", heredoc_indentation),
-        custom("Layout/SpaceAroundKeyword", space_around_keyword),
-        custom("Layout/FirstArgumentIndentation", continuation_indentation),
+        replace(
+            "Layout/SpaceAroundKeyword",
+            "! defined?",
+            "!defined?",
+            "Space around keyword detected.",
+        ),
         custom(
             "Layout/MultilineMethodCallIndentation",
             continuation_indentation,

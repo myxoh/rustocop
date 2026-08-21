@@ -5,23 +5,22 @@ mod registry;
 
 pub(super) fn cops() -> Vec<Box<dyn Cop>> {
     let mut cops = vec![
-        custom(
-            "Layout/EmptyLinesAfterModuleInclusion",
-            empty_after_inclusion,
-        ),
-        custom("Layout/DotPosition", dot_position),
         replace(
             "Layout/SpaceAroundBlockParameters",
             "{|",
             "{ |",
             "Space missing around block parameters.",
         ),
-        custom("Layout/EmptyLineBetweenDefs", empty_between_defs),
         custom(
             "Layout/SpaceInsideReferenceBrackets",
             reference_bracket_spacing,
         ),
-        custom("Layout/BlockAlignment", end_alignment),
+        replace(
+            "Layout/SpaceAroundMethodCallOperator",
+            " &. ",
+            "&.",
+            "Space around method call operator detected.",
+        ),
         custom(
             "Layout/MultilineOperationIndentation",
             continuation_indentation,

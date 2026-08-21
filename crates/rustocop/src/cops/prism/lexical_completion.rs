@@ -71,10 +71,14 @@ fn redundant_heredoc_delimiter_quotes(context: &mut CopContext<'_, '_>) {
 fn closing_heredoc_indentation(context: &mut CopContext<'_, '_>) {
     let lines = context.source_file().lines().collect::<Vec<_>>();
     for (index, (_, line)) in lines.iter().enumerate() {
-        let Some(marker) = line.find("<<-") else {
+        let Some(marker) = line.find("<<-").or_else(|| line.find("<<~")) else {
             continue;
         };
-        let identifier = line[marker + 3..]
+        let marker_tail = line[marker + 3..].trim_start();
+        let identifier_tail = marker_tail
+            .strip_prefix(['\'', '"', '`'])
+            .unwrap_or(marker_tail);
+        let identifier = identifier_tail
             .chars()
             .take_while(|character| character.is_ascii_alphanumeric() || *character == '_')
             .collect::<String>();
@@ -99,7 +103,10 @@ fn closing_heredoc_indentation(context: &mut CopContext<'_, '_>) {
         }
         let offense = *closing_offset..closing_offset + closing_indent + identifier.len();
         context.replace(
-            format!("`{identifier}` is not aligned with `<<-{identifier}`."),
+            format!(
+                "`{identifier}` is not aligned with `{}`.",
+                line.trim()
+            ),
             offense,
             *closing_offset..closing_offset + closing_indent,
             " ".repeat(opening_indent),

@@ -25,7 +25,7 @@ pub(crate) fn sort_offenses(offenses: &mut [Offense]) {
 
 fn prism_offense(source: &str, index: &SourceIndex, finding: prism::Finding) -> Offense {
     let (line, column) = index.position(source, finding.start_offset);
-    let empty_location = finding.start_offset == 0 && finding.end_offset == 0;
+    let empty_location = finding.start_offset == finding.end_offset;
     let ends_at_newline = finding.end_offset > finding.start_offset
         && source.as_bytes().get(finding.end_offset - 1) == Some(&b'\n');
     let reversed_empty = finding.end_offset < finding.start_offset;
@@ -43,8 +43,10 @@ fn prism_offense(source: &str, index: &SourceIndex, finding: prism::Finding) -> 
     let (last_line, last_column) =
         if reversed_empty && finding.start_offset == source.len() && source.ends_with('\n') {
             (line, 0)
-        } else if empty_location {
+        } else if empty_location && finding.start_offset == 0 {
             (1, 0)
+        } else if empty_location {
+            index.position(source, finding.start_offset)
         } else if ends_at_newline {
             let (line, _) = index.position(source, finding.end_offset);
             // RuboCop's JSON formatter reports the beginning of the following
@@ -63,10 +65,13 @@ fn prism_offense(source: &str, index: &SourceIndex, finding: prism::Finding) -> 
         column,
         last_line,
         last_column,
-        length: source
-            .get(finding.start_offset..finding.end_offset)
-            .map_or(0, |range| range.chars().count())
-            .max(1),
+        length: if empty_location {
+            0
+        } else {
+            source
+                .get(finding.start_offset..finding.end_offset)
+                .map_or(1, |range| range.chars().count().max(1))
+        },
     }
 }
 

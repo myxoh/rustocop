@@ -178,9 +178,11 @@ fn deprecated_gemspec_attribute(context: &mut CopContext<'_, '_>) {
         if !in_specification {
             continue;
         }
-        let Some(left) = [" += ", " = "]
-            .into_iter()
-            .find_map(|operator| trimmed.split_once(operator).map(|parts| parts.0))
+        let Some((left, operator)) = [" += ", " = "].into_iter().find_map(|operator| {
+            trimmed
+                .split_once(operator)
+                .map(|parts| (parts.0, operator))
+        })
         else {
             continue;
         };
@@ -192,6 +194,9 @@ fn deprecated_gemspec_attribute(context: &mut CopContext<'_, '_>) {
             attribute,
             "date" | "rubygems_version" | "specification_version" | "test_files"
         ) {
+            continue;
+        }
+        if operator == " += " && attribute != "test_files" {
             continue;
         }
         let indent = line.len() - trimmed.len();

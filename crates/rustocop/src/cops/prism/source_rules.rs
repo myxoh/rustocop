@@ -22,14 +22,26 @@ fn add_runtime_dependency(source: &str, context: &mut Reporter<'_>) {
     if !context.path().ends_with(".gemspec") && !source.contains("Gem::Specification.new") {
         return;
     }
-    for dot in find_all(source, ".add_runtime_dependency") {
+    const METHOD: &str = "add_runtime_dependency";
+    for (offset, line) in source_lines(source) {
+        let Some(dot) = line.find(&format!(".{METHOD}")) else {
+            continue;
+        };
         let start = dot + 1;
-        let end = start + "add_runtime_dependency".len();
-        if source.as_bytes().get(end) == Some(&b'(') {
+        let end = start + METHOD.len();
+        let after = line[end..].trim_start();
+        let has_argument = if let Some(arguments) = after.strip_prefix('(') {
+            arguments
+                .split_once(')')
+                .is_some_and(|(arguments, _)| !arguments.trim().is_empty())
+        } else {
+            !after.is_empty() && !after.starts_with('#')
+        };
+        if has_argument {
             context.replace(
                 "Use `add_dependency` instead of `add_runtime_dependency`.",
-                start..end,
-                start..end,
+                offset + start..offset + end,
+                offset + start..offset + end,
                 "add_dependency",
             );
         }
