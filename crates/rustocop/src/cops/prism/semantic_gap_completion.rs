@@ -6,7 +6,7 @@ define_cops! {
     RedundantAssignment => "Style/RedundantAssignment" => source(redundant_assignment),
     ConstantResolution => "Lint/ConstantResolution" => source(constant_resolution),
     ReturnInVoidContext => "Lint/ReturnInVoidContext" => node(as_return_node, return_in_void_context),
-    AmbiguousEndlessMethodDefinition => "Style/AmbiguousEndlessMethodDefinition" => source(ambiguous_endless_method_definition),
+    AmbiguousEndlessMethodDefinition => "Style/AmbiguousEndlessMethodDefinition" => node(as_def_node, ambiguous_endless_method_definition),
     NestedMethodDefinition => "Lint/NestedMethodDefinition" => node(as_def_node, nested_method_definition),
     UselessConstantScoping => "Lint/UselessConstantScoping" => source(useless_constant_scoping),
 }
@@ -220,39 +220,120 @@ fn return_in_void_context(node: &ruby_prism::ReturnNode<'_>, context: &mut CopCo
     );
 }
 
-fn ambiguous_endless_method_definition(context: &mut CopContext<'_, '_>) {
-    for (offset, line) in context.source_file().lines() {
-        let trimmed = line.trim_start();
-        if !trimmed.starts_with("def ") || !trimmed.contains(" = ") {
-            continue;
-        }
-        if trimmed
-            .split_once(" = ")
-            .is_some_and(|(_, body)| body.starts_with('('))
-        {
-            continue;
-        }
-        let Some((operator, at)) = [" and ", " or ", " if ", " unless ", " while ", " until "]
-            .iter()
-            .find_map(|operator| trimmed.find(operator).map(|at| (*operator, at)))
-        else {
-            continue;
-        };
-        let keyword = operator.trim();
-        let equal = trimmed.find(" = ").unwrap();
-        let header = &trimmed[..equal];
-        let body = &trimmed[equal + 3..at];
-        let suffix = &trimmed[at..];
-        let indent = " ".repeat(line.len() - trimmed.len());
-        let replacement = format!("{header}\n{indent}  {body}\n{indent}end{suffix}");
-        let start = offset + line.len() - trimmed.len();
-        context.replace(
-            format!("Avoid using `{keyword}` statements with endless methods."),
-            start..offset + line.len(),
-            start..offset + line.len(),
-            replacement,
-        );
+fn ambiguous_endless_method_definition(
+    node: &ruby_prism::DefNode<'_>,
+    context: &mut CopContext<'_, '_>,
+) {
+    if !context.target_ruby_version().at_least(3, 0) || node.equal_loc().is_none() {
+        return;
     }
+    let Some(operation) = context
+        .ancestors()
+        .iter()
+        .rev()
+        .find(|ancestor| ancestor.as_statements_node().is_none())
+    else {
+        return;
+    };
+    let Some((offense, keyword)) = ambiguous_endless_operation(operation, node) else {
+        return;
+    };
+    let Some(replacement) = multiline_endless_method(node, context) else {
+        return;
+    };
+    context.replace(
+        format!("Avoid using `{keyword}` statements with endless methods."),
+        offense,
+        node.location(),
+        replacement,
+    );
+}
+
+fn ambiguous_endless_operation(
+    operation: &Node<'_>,
+    definition: &ruby_prism::DefNode<'_>,
+) -> Option<(std::ops::Range<usize>, &'static str)> {
+    let definition_location = definition.location();
+    let direct_definition = |body: Option<Node<'_>>| {
+        body.is_some_and(|body| {
+            body.as_def_node().is_some_and(|body| {
+                body.location().start_offset() == definition_location.start_offset()
+                    && body.location().end_offset() == definition_location.end_offset()
+            })
+        })
+    };
+    let range = || operation.location().start_offset()..operation.location().end_offset();
+
+    if let Some(conditional) = operation.as_if_node() {
+        let keyword = conditional.if_keyword_loc()?;
+        if keyword.start_offset() > definition_location.end_offset()
+            && conditional.end_keyword_loc().is_none()
+            && conditional.subsequent().is_none()
+            && direct_definition(only_statement(conditional.statements()))
+        {
+            return Some((range(), "if"));
+        }
+    } else if let Some(conditional) = operation.as_unless_node() {
+        if conditional.keyword_loc().start_offset() > definition_location.end_offset()
+            && conditional.end_keyword_loc().is_none()
+            && conditional.else_clause().is_none()
+            && direct_definition(only_statement(conditional.statements()))
+        {
+            return Some((range(), "unless"));
+        }
+    } else if let Some(logical) = operation.as_and_node() {
+        if logical.operator_loc().as_slice() == b"and"
+            && direct_definition(Some(logical.left()))
+        {
+            return Some((range(), "and"));
+        }
+    } else if let Some(logical) = operation.as_or_node() {
+        if logical.operator_loc().as_slice() == b"or"
+            && direct_definition(Some(logical.left()))
+        {
+            return Some((range(), "or"));
+        }
+    } else if let Some(loop_node) = operation.as_while_node() {
+        if loop_node.keyword_loc().start_offset() > definition_location.end_offset()
+            && loop_node.closing_loc().is_none()
+            && direct_definition(only_statement(loop_node.statements()))
+        {
+            return Some((range(), "while"));
+        }
+    } else if let Some(loop_node) = operation.as_until_node() {
+        if loop_node.keyword_loc().start_offset() > definition_location.end_offset()
+            && loop_node.closing_loc().is_none()
+            && direct_definition(only_statement(loop_node.statements()))
+        {
+            return Some((range(), "until"));
+        }
+    }
+    None
+}
+
+fn multiline_endless_method(
+    node: &ruby_prism::DefNode<'_>,
+    context: &CopContext<'_, '_>,
+) -> Option<String> {
+    let file = context.source_file();
+    let receiver = node
+        .receiver()
+        .map(|receiver| format!("{}.", file.node(&receiver)))
+        .unwrap_or_default();
+    let name = file.at(&node.name_loc());
+    let arguments = match (node.lparen_loc(), node.rparen_loc(), node.parameters()) {
+        (Some(left), Some(right), _) => file
+            .slice(left.start_offset()..right.end_offset())
+            .unwrap_or_default()
+            .to_string(),
+        (_, _, Some(parameters)) => format!(" {}", file.at(&parameters.location())),
+        _ => String::new(),
+    };
+    let body = node.body().and_then(single_expression)?;
+    Some(format!(
+        "def {receiver}{name}{arguments}\n  {}\nend",
+        file.node(&body)
+    ))
 }
 
 fn nested_method_definition(node: &ruby_prism::DefNode<'_>, context: &mut CopContext<'_, '_>) {
