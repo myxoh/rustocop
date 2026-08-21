@@ -58,23 +58,11 @@ pub(super) fn numeric_literals(node: &Node<'_>, context: &mut CopContext<'_, '_>
     }
     let formatted = formatted.chars().rev().collect::<String>();
     let replacement = source.replacen(integer, &formatted, 1);
-    let extended_start = context.source()[..location.start_offset()]
-        .rfind('-')
-        .filter(|minus| {
-            context.source()[*minus + 1..location.start_offset()]
-                .bytes()
-                .all(|byte| byte.is_ascii_whitespace())
-        })
-        .unwrap_or(location.start_offset());
     context.replace(
         "Use underscores(_) as thousands separator and separate every 3 digits with them.",
-        extended_start..location.end_offset(),
-        extended_start..location.end_offset(),
-        if extended_start < location.start_offset() {
-            format!("-{replacement}")
-        } else {
-            replacement
-        },
+        &location,
+        &location,
+        replacement,
     );
 }
 

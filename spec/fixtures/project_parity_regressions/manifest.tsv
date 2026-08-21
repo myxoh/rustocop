@@ -90,3 +90,4 @@ Lint/EmptyConditionalBody	empty_conditional_branch_shapes.rb	sidekiq/sidekiq	82a
 Style/DateTime	date_time_call_shapes.rb	rails/rails	ba4f7369aee71f9f38d67bdbf0e8571fb372b535	activesupport/lib/active_support/core_ext/date/calculations.rb
 Layout/TrailingEmptyLines	trailing_empty_line_plural.rb	rails/rails	ba4f7369aee71f9f38d67bdbf0e8571fb372b535	actiontext/test/dummy/app/models/page.rb
 Style/ClassEqualityComparison	class_equality_targets.rb	rails/rails	ba4f7369aee71f9f38d67bdbf0e8571fb372b535	activerecord/lib/active_record/associations/join_dependency/join_part.rb
+Style/NumericLiterals	numeric_literal_minus_ranges.rb	sidekiq/sidekiq	82ad4e221869b2ecf0c772da7fdb95ed23139eb1	test/retry_test.rb
