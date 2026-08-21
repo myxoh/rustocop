@@ -3,10 +3,6 @@ use super::*;
 
 pub(super) fn cops() -> Vec<Box<dyn Cop>> {
     vec![
-        custom(
-            "Layout/HeredocArgumentClosingParenthesis",
-            heredoc_parenthesis,
-        ),
         replace(
             "Layout/SpaceInsideArrayPercentLiteral",
             "%w[ ",

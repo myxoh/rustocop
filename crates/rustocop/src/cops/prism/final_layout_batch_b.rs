@@ -181,23 +181,6 @@ fn continuation_indentation(context: &mut CopContext<'_, '_>) {
     }
 }
 
-fn heredoc_parenthesis(context: &mut CopContext<'_, '_>) {
-    let lines = context.source_file().lines().collect::<Vec<_>>();
-    for window in lines.windows(2) {
-        if window[0]
-            .1
-            .bytes()
-            .all(|byte| byte.is_ascii_uppercase() || byte == b'_')
-            && window[1].1.trim() == ")"
-        {
-            context.report(
-                "Put the closing parenthesis on the same line as the heredoc terminator.",
-                window[1].0..window[1].0 + window[1].1.len(),
-            );
-        }
-    }
-}
-
 fn hash_alignment(context: &mut CopContext<'_, '_>) {
     if context
         .config_values("EnforcedHashRocketStyle")

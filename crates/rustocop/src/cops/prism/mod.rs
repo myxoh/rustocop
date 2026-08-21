@@ -125,6 +125,7 @@ cop_modules!(
     hash_subset_rules,
     hash_syntax_rules,
     hash_transform_rules,
+    heredoc_argument_closing_parenthesis_rules,
     heredoc_call_rules,
     iteration_redundancy_rules,
     interpolation_condition_rules,
