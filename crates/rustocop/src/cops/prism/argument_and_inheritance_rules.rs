@@ -186,7 +186,6 @@ fn preceding_exception_class(
 
 fn date_time(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     if call_name(node) == b"to_datetime"
-        && node.receiver().is_some()
         && argument_count(node) == 0
         && !context.config_bool("AllowCoercion", false)
     {
@@ -203,9 +202,27 @@ fn date_time(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
         .as_constant_path_node()
         .map(|path| path.name_loc())
         .unwrap_or_else(|| receiver.location());
+    let offense = if node
+        .block()
+        .and_then(|block| block.as_block_node())
+        .is_some()
+    {
+        let end = node
+            .closing_loc()
+            .map(|closing| closing.end_offset())
+            .or_else(|| {
+                node.arguments()
+                    .map(|arguments| arguments.location().end_offset())
+            })
+            .or_else(|| node.message_loc().map(|message| message.end_offset()))
+            .unwrap_or_else(|| node.location().end_offset());
+        node.location().start_offset()..end
+    } else {
+        node.location().start_offset()..node.location().end_offset()
+    };
     context.replace(
         "Prefer `Time` over `DateTime`.",
-        node.location(),
+        offense,
         edit,
         "Time",
     );
