@@ -13,7 +13,8 @@ fn on_send(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     let Some(heredoc) = arguments
         .arguments()
         .iter()
-        .find_map(|argument| heredoc_locations(&argument))
+        .filter_map(|argument| heredoc_locations(&argument))
+        .last()
     else {
         return;
     };

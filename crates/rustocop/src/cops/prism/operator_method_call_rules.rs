@@ -5,7 +5,7 @@ use super::*;
 define_rule!(OperatorMethodCallRule);
 
 define_cops! {
-    SpaceAroundMethodCallOperator => "Layout/SpaceAroundMethodCallOperator" => any_node(space_around_method_call_operator),
+    SpaceAroundMethodCallOperator => "Layout/SpaceAroundMethodCallOperator" => source(space_around_method_call_operator),
     OperatorMethodCall => "Style/OperatorMethodCall" => call_rule(
         OperatorMethodCallRule,
         on_send,
@@ -13,28 +13,48 @@ define_cops! {
     ),
 }
 
-fn space_around_method_call_operator(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
-    let Some(call) = node.as_call_node() else {
-        return;
-    };
-    let (Some(receiver), Some(operator), Some(selector)) =
-        (call.receiver(), call.call_operator_loc(), call.message_loc())
-    else {
-        return;
-    };
-    for range in [
-        receiver.location().end_offset()..operator.start_offset(),
-        operator.end_offset()..selector.start_offset(),
-    ] {
-        if range.start < range.end
-            && context.source()[range.clone()]
+fn space_around_method_call_operator(context: &mut CopContext<'_, '_>) {
+    let file = context.source_file();
+    let source = context.source();
+    let mut operators = file.code_offsets("::");
+    operators.extend(file.code_offsets("&."));
+    operators.extend(file.code_offsets(".").into_iter().filter(|offset| {
+        source.as_bytes().get(offset.wrapping_sub(1)) != Some(&b'&')
+    }));
+    operators.sort_unstable();
+    operators.dedup();
+    for start in operators {
+        let width = if source[start..].starts_with("::") || source[start..].starts_with("&.") {
+            2
+        } else {
+            1
+        };
+        let end = start + width;
+        let right_end = end
+            + source[end..]
                 .bytes()
-                .all(|byte| matches!(byte, b' ' | b'\t'))
+                .take_while(|byte| matches!(byte, b' ' | b'\t'))
+                .count();
+        if right_end > end && source.as_bytes().get(right_end) != Some(&b'#') {
+            context.remove(
+                "Avoid using spaces around a method call operator.",
+                end..right_end,
+                end..right_end,
+            );
+        }
+        let line_start = file.line_start(start);
+        let left_start = source[line_start..start].trim_end_matches([' ', '\t']).len() + line_start;
+        let receiver_prefix = source[line_start..left_start].trim_end();
+        if left_start < start
+            && receiver_prefix
+                .as_bytes()
+                .last()
+                .is_some_and(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'_' | b')' | b']'))
         {
             context.remove(
                 "Avoid using spaces around a method call operator.",
-                range.clone(),
-                range,
+                left_start..start,
+                left_start..start,
             );
         }
     }

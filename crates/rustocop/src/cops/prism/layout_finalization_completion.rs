@@ -212,6 +212,8 @@ fn trailing_empty_lines(context: &mut CopContext<'_, '_>) {
         "Trailing blank line missing.".to_string()
     } else if newline_count == 0 {
         "Final newline missing.".to_string()
+    } else if final_blank {
+        format!("{blank_lines} trailing blank lines instead of 1 detected.")
     } else {
         format!("{blank_lines} trailing blank lines detected.")
     };

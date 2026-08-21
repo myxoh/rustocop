@@ -91,7 +91,9 @@ struct Dependency {
 }
 
 fn ordered_dependencies(context: &mut CopContext<'_, '_>) {
-    if !context.path().ends_with(".gemspec") {
+    if !context.path().ends_with(".gemspec")
+        && !context.source().contains("Gem::Specification.new")
+    {
         return;
     }
     let source = context.source();

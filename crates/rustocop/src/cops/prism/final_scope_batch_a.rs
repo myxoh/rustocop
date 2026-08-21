@@ -16,11 +16,7 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
         ),
         custom("Naming/HeredocDelimiterCase", heredoc_case),
         custom("Naming/BlockForwarding", block_forwarding),
-        report(
-            "Lint/AmbiguousAssignment",
-            "= puts ",
-            "Wrap the right hand side in parentheses to avoid ambiguity.",
-        ),
+        custom("Lint/AmbiguousAssignment", ambiguous_assignment),
         custom(
             "Naming/RescuedExceptionsVariableName",
             rescued_exception_name,
@@ -29,6 +25,17 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
     ];
     cops.extend(naming::cops());
     cops
+}
+
+fn ambiguous_assignment(context: &mut CopContext<'_, '_>) {
+    for (needle, operator) in [("=-", "-"), ("=+", "+"), ("=*", "*"), ("=!", "!")] {
+        for start in context.source_file().code_offsets(needle) {
+            context.report(
+                format!("Suspicious assignment detected. Did you mean `{operator}=`?"),
+                start..start + needle.len(),
+            );
+        }
+    }
 }
 
 fn shadowed_exception(context: &mut CopContext<'_, '_>) {

@@ -45,7 +45,10 @@ struct GemDeclaration {
 
 fn ordered_gems(context: &mut CopContext<'_, '_>) {
     let filename = context.path().rsplit('/').next().unwrap_or(context.path());
-    if !matches!(filename, "Gemfile" | "gems.rb") && !filename.ends_with(".gemfile") {
+    if filename != "(string)"
+        && !matches!(filename, "Gemfile" | "gems.rb")
+        && !filename.ends_with(".gemfile")
+    {
         return;
     }
     let source = context.source();

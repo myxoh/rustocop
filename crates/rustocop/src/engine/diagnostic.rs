@@ -40,17 +40,20 @@ fn prism_offense(source: &str, index: &SourceIndex, finding: prism::Finding) -> 
     while last_offset > finding.start_offset && !source.is_char_boundary(last_offset) {
         last_offset -= 1;
     }
-    let (last_line, last_column) = if empty_location {
-        (1, 0)
-    } else if ends_at_newline {
-        let (line, _) = index.position(source, finding.end_offset);
-        // RuboCop's JSON formatter reports the beginning of the following
-        // line as column one even though Parser's internal range column is
-        // zero for a range ending exactly at a newline.
-        (line, 1)
-    } else {
-        index.position(source, last_offset)
-    };
+    let (last_line, last_column) =
+        if reversed_empty && finding.start_offset == source.len() && source.ends_with('\n') {
+            (line, 0)
+        } else if empty_location {
+            (1, 0)
+        } else if ends_at_newline {
+            let (line, _) = index.position(source, finding.end_offset);
+            // RuboCop's JSON formatter reports the beginning of the following
+            // line as column one even though Parser's internal range column is
+            // zero for a range ending exactly at a newline.
+            (line, 1)
+        } else {
+            index.position(source, last_offset)
+        };
     Offense {
         cop_name: finding.cop_name.to_string(),
         message: finding.message,
@@ -140,5 +143,29 @@ mod tests {
             },
         );
         assert_eq!((newline.last_line, newline.last_column), (2, 1));
+
+        let missing_trailing_blank = prism_offense(
+            "value\n",
+            &SourceIndex::new("value\n"),
+            prism::Finding {
+                cop_name: "Layout/TrailingEmptyLines",
+                message: "Trailing blank line missing.".to_string(),
+                correctable: true,
+                corrected: false,
+                start_offset: 6,
+                end_offset: 5,
+            },
+        );
+        assert_eq!(
+            (missing_trailing_blank.line, missing_trailing_blank.column),
+            (2, 1)
+        );
+        assert_eq!(
+            (
+                missing_trailing_blank.last_line,
+                missing_trailing_blank.last_column
+            ),
+            (2, 0)
+        );
     }
 }
