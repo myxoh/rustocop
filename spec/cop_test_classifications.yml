@@ -6,6 +6,12 @@ heuristic_regressions:
     - spec/project_parity_regressions_spec.rb
   Style/MapCompactWithConditionalBlock:
     - spec/project_parity_regressions_spec.rb
+  Style/MapToSet:
+    - spec/project_parity_regressions_spec.rb
+  Style/MutableConstant:
+    - spec/project_parity_regressions_spec.rb
+  Style/RedundantSelfAssignmentBranch:
+    - spec/project_parity_regressions_spec.rb
   Lint/Syntax:
     - crates/rustocop/src/cops/prism/tests/integration.rs
   Layout/BlockEndNewline:

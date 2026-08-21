@@ -176,10 +176,9 @@ fn redundant_capital_w(source: &str, context: &mut Reporter<'_>) {
             b'{' => '}',
             _ => continue,
         };
-        let Some(relative_end) = source[start + 3..].find(close) else {
+        let Some(end) = percent_literal_end(source, start + 2, open, close as u8) else {
             continue;
         };
-        let end = start + 3 + relative_end + 1;
         let body = &source[start + 3..end - 1];
         if !body.contains("#{") && !body.contains('\\') {
             context.replace(
@@ -190,6 +189,26 @@ fn redundant_capital_w(source: &str, context: &mut Reporter<'_>) {
             );
         }
     }
+}
+
+fn percent_literal_end(source: &str, open: usize, left: u8, right: u8) -> Option<usize> {
+    let mut depth = 0_usize;
+    let mut escaped = false;
+    for (index, byte) in source.as_bytes().iter().copied().enumerate().skip(open) {
+        if escaped {
+            escaped = false;
+        } else if byte == b'\\' {
+            escaped = true;
+        } else if byte == left {
+            depth += 1;
+        } else if byte == right {
+            depth -= 1;
+            if depth == 0 {
+                return Some(index + 1);
+            }
+        }
+    }
+    None
 }
 
 fn duplicate_elsif(source: &str, context: &mut Reporter<'_>) {

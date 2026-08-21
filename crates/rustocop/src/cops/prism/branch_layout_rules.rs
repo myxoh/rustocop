@@ -109,11 +109,21 @@ fn multiline_if_modifier(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
                 && outer_keyword.start_offset() != outer_location.start_offset()
         })
     });
+    let file = context.source_file();
+    let body_is_multiline = body
+        .as_call_node()
+        .and_then(|call| call.block())
+        .and_then(|block| block.as_block_node())
+        .is_none_or(|block| {
+            !file.same_line(
+                block.opening_loc().start_offset(),
+                block.closing_loc().end_offset(),
+            )
+        })
+        && !file.same_line(body.location().start_offset(), body.location().end_offset());
     if keyword.start_offset() == location.start_offset()
         || nested_in_same_modifier
-        || context
-            .source_file()
-            .same_line(body.location().start_offset(), body.location().end_offset())
+        || !body_is_multiline
     {
         return;
     }
@@ -121,7 +131,7 @@ fn multiline_if_modifier(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
         .source_file()
         .indentation(location.start_offset())
         .len();
-    let rendered = render_conditional(node, base, context.source_file());
+    let rendered = render_conditional(node, base, file);
     let replacement = rendered
         .strip_prefix(&" ".repeat(base))
         .unwrap_or(&rendered);

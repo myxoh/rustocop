@@ -12,6 +12,11 @@ RSpec.describe "real-project parity regressions" do
     Style/FileEmpty
     Style/FileOpen
     Style/MapCompactWithConditionalBlock
+    Style/MapToSet
+    Style/MultilineIfModifier
+    Style/MutableConstant
+    Style/RedundantCapitalW
+    Style/RedundantSelfAssignmentBranch
   ]
   fixture_root = File.join(ROOT, "spec", "fixtures", "project_parity_regressions")
   config = File.join(fixture_root, "rubocop.yml")

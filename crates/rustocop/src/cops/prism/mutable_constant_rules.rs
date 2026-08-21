@@ -158,7 +158,12 @@ fn frozen_string_literal(node: &Node<'_>, source: &str, ruby_version: RubyVersio
         && source
             .lines()
             .take(3)
-            .any(|line| line.trim() == "# frozen_string_literal: true")
+            .any(|line| {
+                matches!(
+                    line.trim(),
+                    "# frozen_string_literal: true" | "#frozen_string_literal: true"
+                )
+            })
 }
 
 fn shareable_constant_value(node: &Node<'_>, source: &str, ruby_version: RubyVersion) -> bool {
