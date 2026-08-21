@@ -6,11 +6,7 @@ define_cops! {
 }
 
 fn gem_filename(context: &mut CopContext<'_, '_>) {
-    let raw_path = context.path();
-    let path = raw_path
-        .find("/spec/")
-        .map(|at| &raw_path[at + 1..])
-        .unwrap_or_else(|| raw_path.rsplit('/').next().unwrap_or(raw_path));
+    let path = context.path();
     let filename = path.rsplit('/').next().unwrap_or(path);
     let style = context.policy().enforced_style("Gemfile");
     let message = match (style, filename) {
@@ -118,7 +114,7 @@ fn ordered_gems(context: &mut CopContext<'_, '_>) {
             name.to_ascii_lowercase()
         } else {
             name.chars()
-                .filter(|character| character.is_alphanumeric())
+                .filter(|character| !matches!(character, '-' | '_'))
                 .collect::<String>()
                 .to_ascii_lowercase()
         }

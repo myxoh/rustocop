@@ -30,7 +30,7 @@ fn ruby_version_globals(source: &str, reporter: &mut Reporter<'_>) {
         "::RUBY_VERSION",
         "RUBY_VERSION",
     ] {
-        for start in all_offsets(source, name) {
+        for start in code_offsets(source, name) {
             let prefixed =
                 start > 0 && matches!(source.as_bytes()[start - 1], b':' | b'_' | b'A'..=b'Z');
             if !prefixed {
@@ -41,6 +41,39 @@ fn ruby_version_globals(source: &str, reporter: &mut Reporter<'_>) {
             }
         }
     }
+}
+
+fn code_offsets(source: &str, needle: &str) -> Vec<usize> {
+    let bytes = source.as_bytes();
+    let needle = needle.as_bytes();
+    let mut offsets = Vec::new();
+    let mut quote = None;
+    let mut escaped = false;
+    let mut comment = false;
+    let mut index = 0;
+    while index < bytes.len() {
+        let byte = bytes[index];
+        if comment {
+            comment = byte != b'\n';
+        } else if let Some(delimiter) = quote {
+            if escaped {
+                escaped = false;
+            } else if byte == b'\\' {
+                escaped = true;
+            } else if byte == delimiter {
+                quote = None;
+            }
+        } else if byte == b'#' {
+            comment = true;
+        } else if matches!(byte, b'\'' | b'"') {
+            quote = Some(byte);
+        } else if bytes[index..].starts_with(needle) {
+            offsets.push(index);
+            index += needle.len().saturating_sub(1);
+        }
+        index += 1;
+    }
+    offsets
 }
 
 fn block_comments(source: &str, reporter: &mut Reporter<'_>) {
@@ -84,8 +117,20 @@ fn block_comments(source: &str, reporter: &mut Reporter<'_>) {
 }
 
 fn insecure_protocol_source(source: &str, reporter: &mut Reporter<'_>) {
-    for symbol in [":gemcutter", ":rubygems", ":rubyforge"] {
-        for start in all_offsets(source, symbol) {
+    for (offset, line) in source_lines(source) {
+        let trimmed = line.trim_start();
+        let Some(argument) = trimmed
+            .strip_prefix("source ")
+            .or_else(|| trimmed.strip_prefix("source("))
+        else {
+            continue;
+        };
+        let leading = line.len() - trimmed.len();
+        for symbol in [":gemcutter", ":rubygems", ":rubyforge"] {
+            if !argument.starts_with(symbol) {
+                continue;
+            }
+            let start = offset + leading + trimmed.find(symbol).unwrap_or(0);
             let end = start + symbol.len();
             reporter.replace(
                 format!("The source `{symbol}` is deprecated because HTTP requests are insecure. Please change your source to 'https://rubygems.org' if possible, or 'http://rubygems.org' if not."),
@@ -94,16 +139,20 @@ fn insecure_protocol_source(source: &str, reporter: &mut Reporter<'_>) {
                 "'https://rubygems.org'",
             );
         }
-    }
-    if !reporter.config_bool("AllowHttpProtocol", true) {
-        for start in all_offsets(source, "'http://rubygems.org'") {
-            let end = start + "'http://rubygems.org'".len();
-            reporter.replace(
-                "Use `https://rubygems.org` instead of `http://rubygems.org`.",
-                start..end,
-                start..end,
-                "'https://rubygems.org'",
-            );
+        if !reporter.config_bool("AllowHttpProtocol", true) {
+            for literal in ["'http://rubygems.org'", "\"http://rubygems.org\""] {
+                if !argument.starts_with(literal) {
+                    continue;
+                }
+                let start = offset + leading + trimmed.find(literal).unwrap_or(0);
+                let end = start + literal.len();
+                reporter.replace(
+                    "Use `https://rubygems.org` instead of `http://rubygems.org`.",
+                    start..end,
+                    start..end,
+                    "'https://rubygems.org'",
+                );
+            }
         }
     }
 }
@@ -167,9 +216,19 @@ fn refinement_import_methods(source: &str, reporter: &mut Reporter<'_>) {
 }
 
 fn attribute_assignment(source: &str, reporter: &mut Reporter<'_>) {
+    let Some(specification) = source_lines(source).find_map(|(_, line)| {
+        line.contains("Gem::Specification.new")
+            .then(|| line.split('|').nth(1).map(str::trim))
+            .flatten()
+    }) else {
+        return;
+    };
     let mut direct = HashSet::new();
     for (_, line) in source_lines(source) {
-        if let Some(rest) = line.trim().strip_prefix("spec.") {
+        if let Some(rest) = line
+            .trim()
+            .strip_prefix(&format!("{specification}."))
+        {
             if let Some((name, _)) = rest.split_once(" = ") {
                 direct.insert(name.to_string());
             }
@@ -177,7 +236,7 @@ fn attribute_assignment(source: &str, reporter: &mut Reporter<'_>) {
     }
     for (offset, line) in source_lines(source) {
         let trimmed = line.trim_start();
-        let Some(rest) = trimmed.strip_prefix("spec.") else {
+        let Some(rest) = trimmed.strip_prefix(&format!("{specification}.")) else {
             continue;
         };
         let Some(bracket) = rest.find('[') else {

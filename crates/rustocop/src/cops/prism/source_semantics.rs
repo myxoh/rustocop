@@ -45,9 +45,23 @@ fn gem_version(context: &mut CopContext<'_, '_>) {
         if allowed.iter().any(|allowed| allowed == name) {
             continue;
         }
-        let rest = &call[name.len() + call.find(name).unwrap_or(0)..];
-        let metadata = rest.contains("branch:") || rest.contains("ref:") || rest.contains("tag:");
-        let positional_version = rest.matches(['\'', '"']).count() >= 2;
+        let rest = call
+            .find(name)
+            .map_or("", |at| &call[at + name.len() + 1..]);
+        let metadata = ["branch:", "ref:", "tag:"]
+            .iter()
+            .any(|keyword| rest.contains(keyword));
+        let positional_version = rest.split(',').skip(1).any(|argument| {
+            let argument = argument.trim();
+            if !argument.starts_with(['\'', '"']) {
+                return false;
+            }
+            let version = argument.trim_matches(['\'', '"']).trim_start();
+            let version = version
+                .trim_start_matches(['~', '<', '>', '='])
+                .trim_start();
+            version.as_bytes().first().is_some_and(u8::is_ascii_digit)
+        });
         let specified = positional_version || metadata;
         if forbidden != specified {
             continue;

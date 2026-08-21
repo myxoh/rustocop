@@ -99,6 +99,7 @@ fn warning_cop(cop_name: &str) -> bool {
                 | "Gemspec/RequiredRubyVersion"
                 | "Layout/BeginEndAlignment"
                 | "Layout/DefEndAlignment"
+                | "Layout/EndAlignment"
         )
 }
 

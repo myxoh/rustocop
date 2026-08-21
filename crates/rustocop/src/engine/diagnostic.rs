@@ -25,7 +25,7 @@ pub(crate) fn sort_offenses(offenses: &mut [Offense]) {
 
 fn prism_offense(source: &str, index: &SourceIndex, finding: prism::Finding) -> Offense {
     let (line, column) = index.position(source, finding.start_offset);
-    let empty_location = finding.start_offset == 0 && finding.end_offset == 0;
+    let empty_location = finding.start_offset == finding.end_offset;
     let ends_at_newline = finding.end_offset > finding.start_offset
         && source.as_bytes().get(finding.end_offset - 1) == Some(&b'\n');
     let reversed_empty = finding.end_offset < finding.start_offset;
@@ -41,7 +41,7 @@ fn prism_offense(source: &str, index: &SourceIndex, finding: prism::Finding) -> 
         last_offset -= 1;
     }
     let (last_line, last_column) = if empty_location {
-        (1, 0)
+        index.position(source, finding.start_offset)
     } else if ends_at_newline {
         let (line, _) = index.position(source, finding.end_offset);
         (line, 0)
@@ -57,10 +57,7 @@ fn prism_offense(source: &str, index: &SourceIndex, finding: prism::Finding) -> 
         column,
         last_line,
         last_column,
-        length: finding
-            .end_offset
-            .saturating_sub(finding.start_offset)
-            .max(1),
+        length: finding.end_offset.saturating_sub(finding.start_offset),
     }
 }
 
@@ -122,7 +119,9 @@ mod tests {
                 end_offset: 0,
             },
         );
-        assert_eq!((empty.last_line, empty.last_column), (1, 0));
+        assert_eq!((empty.line, empty.column), (1, 1));
+        assert_eq!((empty.last_line, empty.last_column), (1, 1));
+        assert_eq!(empty.length, 0);
 
         let newline = prism_offense(
             "comment\n",

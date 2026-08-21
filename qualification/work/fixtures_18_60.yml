@@ -1,0 +1,3679 @@
+---
+schema: 1
+batch: fixtures_18_60
+rubocop_version: 1.87.0
+rubocop_commit: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+rustocop_commit: pending
+cops:
+  Layout/AccessModifierIndentation:
+    matrix_position: 18
+    edge_cases:
+    - id: upstream_edge_1
+      description: RuboCop::Cop::Layout::AccessModifierIndentation when EnforcedStyle
+        is set to indent registers an offense and corrects misaligned private
+      path: example.rb
+      config:
+        Layout/AccessModifierIndentation:
+          EnforcedStyle: indent
+          SupportedStyles:
+          - indent
+          - outdent
+        Layout/IndentationWidth:
+          Width: 2
+      source: |
+        class Test
+
+        private
+
+          def test; end
+        end
+    - id: upstream_edge_2
+      description: RuboCop::Cop::Layout::AccessModifierIndentation when EnforcedStyle
+        is set to indent registers an offense and corrects misaligned private in module
+      path: example.rb
+      config:
+        Layout/AccessModifierIndentation:
+          EnforcedStyle: indent
+          SupportedStyles:
+          - indent
+          - outdent
+        Layout/IndentationWidth:
+          Width: 2
+      source: |
+        module Test
+
+         private
+
+          def test; end
+        end
+    - id: upstream_edge_3
+      description: RuboCop::Cop::Layout::AccessModifierIndentation when EnforcedStyle
+        is set to indent registers an offense and corrects misaligned module_function
+        in module
+      path: example.rb
+      config:
+        Layout/AccessModifierIndentation:
+          EnforcedStyle: indent
+          SupportedStyles:
+          - indent
+          - outdent
+        Layout/IndentationWidth:
+          Width: 2
+      source: |
+        module Test
+
+         module_function
+
+          def test; end
+        end
+    - id: upstream_edge_4
+      description: RuboCop::Cop::Layout::AccessModifierIndentation when EnforcedStyle
+        is set to indent registers an offense and corrects correct + opposite alignment
+      path: example.rb
+      config:
+        Layout/AccessModifierIndentation:
+          EnforcedStyle: indent
+          SupportedStyles:
+          - indent
+          - outdent
+        Layout/IndentationWidth:
+          Width: 2
+      source: |
+        module Test
+
+          public
+
+        private
+
+          def test; end
+        end
+    real_world:
+      positives: []
+      negatives: []
+  Layout/ArgumentAlignment:
+    matrix_position: 19
+    edge_cases:
+    - id: upstream_edge_1
+      description: Accepts a short multiline call aligned with its first argument.
+      path: example.rb
+      config:
+        Layout/ArgumentAlignment:
+          EnforcedStyle: with_first_argument
+        Layout/IndentationWidth:
+          Width: 2
+      source: |
+        function(a,
+                 b)
+    - id: upstream_edge_2
+      description: Accepts arguments that all begin on lines after the opening parenthesis.
+      path: example.rb
+      config:
+        Layout/ArgumentAlignment:
+          EnforcedStyle: with_first_argument
+        Layout/IndentationWidth:
+          Width: 2
+      source: |
+        function(
+          a,
+          b
+        )
+    - id: upstream_edge_3
+      description: Ignores a single-line call with nested indexing.
+      path: example.rb
+      config:
+        Layout/ArgumentAlignment:
+          EnforcedStyle: with_first_argument
+        Layout/IndentationWidth:
+          Width: 2
+      source: find(path, source, special[sexp[0]])
+    - id: upstream_edge_4
+      description: RuboCop::Cop::Layout::ArgumentAlignment aligned with first argument
+        accepts multiline []= method call
+      path: example.rb
+      config:
+        Layout/ArgumentAlignment:
+          EnforcedStyle: with_first_argument
+        Layout/IndentationWidth:
+          Width: 2
+      source: |
+        Test.config["something"] =
+         true
+    real_world:
+      positives: []
+      negatives: []
+  Layout/ArrayAlignment:
+    matrix_position: 20
+    edge_cases:
+    - id: upstream_edge_1
+      description: Accepts a compact multiline array aligned with its first element.
+      path: example.rb
+      config:
+        Layout/ArrayAlignment:
+          EnforcedStyle: with_first_element
+        Layout/IndentationWidth:
+          Width: 2
+      source: |
+        array = [a,
+                 b]
+    - id: upstream_edge_2
+      description: RuboCop::Cop::Layout::ArrayAlignment when aligned with first parameter
+        accepts aligned array keys
+      path: example.rb
+      config:
+        Layout/ArrayAlignment:
+          EnforcedStyle: with_first_element
+        Layout/IndentationWidth:
+          Width: 2
+      source: |
+        array = [a,
+                 b,
+                 c,
+                 d]
+    - id: upstream_edge_3
+      description: RuboCop::Cop::Layout::ArrayAlignment when aligned with first parameter
+        accepts single line array
+      path: example.rb
+      config:
+        Layout/ArrayAlignment:
+          EnforcedStyle: with_first_element
+        Layout/IndentationWidth:
+          Width: 2
+      source: array = [ a, b ]
+    - id: upstream_edge_4
+      description: RuboCop::Cop::Layout::ArrayAlignment when aligned with first parameter
+        accepts several elements per line
+      path: example.rb
+      config:
+        Layout/ArrayAlignment:
+          EnforcedStyle: with_first_element
+        Layout/IndentationWidth:
+          Width: 2
+      source: |
+        array = [ a, b,
+                  c, d ]
+    real_world:
+      positives: []
+      negatives: []
+  Layout/AssignmentIndentation:
+    matrix_position: 21
+    edge_cases:
+    - id: upstream_edge_1
+      description: RuboCop::Cop::Layout::AssignmentIndentation registers an offense
+        for incorrectly indented rhs
+      path: example.rb
+      config:
+        Layout/AssignmentIndentation:
+          IndentationWidth:
+        Layout/IndentationWidth:
+          Width: 2
+      source: |
+        a =
+        if b ; end
+    - id: upstream_edge_2
+      description: RuboCop::Cop::Layout::AssignmentIndentation allows assignments
+        that do not start on a newline
+      path: example.rb
+      config:
+        Layout/AssignmentIndentation:
+          IndentationWidth:
+        Layout/IndentationWidth:
+          Width: 2
+      source: |
+        a = if b
+              foo
+            end
+    - id: upstream_edge_3
+      description: RuboCop::Cop::Layout::AssignmentIndentation allows a properly indented
+        rhs
+      path: example.rb
+      config:
+        Layout/AssignmentIndentation:
+          IndentationWidth:
+        Layout/IndentationWidth:
+          Width: 2
+      source: |
+        a =
+          if b ; end
+    - id: upstream_edge_4
+      description: RuboCop::Cop::Layout::AssignmentIndentation allows a properly indented
+        rhs with fullwidth characters
+      path: example.rb
+      config:
+        Layout/AssignmentIndentation:
+          IndentationWidth:
+        Layout/IndentationWidth:
+          Width: 2
+      source: |
+        f 'Ｒｕｂｙ', a =
+                        b
+    real_world:
+      positives: []
+      negatives: []
+  Layout/BeginEndAlignment:
+    matrix_position: 22
+    edge_cases:
+    - id: upstream_edge_1
+      description: RuboCop::Cop::Layout::BeginEndAlignment behaves like aligned accepts
+        matching begin ... end
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/BeginEndAlignment:
+          Description: Align ends corresponding to begins correctly.
+          Enabled: true
+          VersionAdded: '0.91'
+          EnforcedStyleAlignWith: begin
+          SupportedStylesAlignWith:
+          - start_of_line
+          - begin
+          Severity: warning
+          AutoCorrect: always
+      source: "begin \nend"
+    - id: upstream_edge_2
+      description: RuboCop::Cop::Layout::BeginEndAlignment behaves like misaligned
+        registers an offense for mismatched begin <newline> end  and autocorrects
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/BeginEndAlignment:
+          Description: Align ends corresponding to begins correctly.
+          Enabled: true
+          VersionAdded: '0.91'
+          EnforcedStyleAlignWith: begin
+          SupportedStylesAlignWith:
+          - start_of_line
+          - begin
+          Severity: warning
+          AutoCorrect: always
+      source: |
+        begin
+          end
+    - id: upstream_edge_3
+      description: RuboCop::Cop::Layout::BeginEndAlignment behaves like aligned accepts
+        matching puts 1; begin ... end
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/BeginEndAlignment:
+          Description: Align ends corresponding to begins correctly.
+          Enabled: true
+          VersionAdded: '0.91'
+          EnforcedStyleAlignWith: begin
+          SupportedStylesAlignWith:
+          - start_of_line
+          - begin
+          Severity: warning
+          AutoCorrect: always
+      source: "puts 1; begin \n        end"
+    - id: upstream_edge_4
+      description: RuboCop::Cop::Layout::BeginEndAlignment when EnforcedStyleAlignWith
+        is start_of_line behaves like aligned accepts matching puts 1; begin ... end
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/BeginEndAlignment:
+          Description: Align ends corresponding to begins correctly.
+          Enabled: true
+          VersionAdded: '0.91'
+          EnforcedStyleAlignWith: start_of_line
+          SupportedStylesAlignWith:
+          - start_of_line
+          - begin
+          Severity: warning
+          AutoCorrect: always
+      source: "puts 1; begin \nend"
+    real_world:
+      positives: []
+      negatives: []
+  Layout/BlockAlignment:
+    matrix_position: 23
+    edge_cases:
+    - id: upstream_edge_1
+      description: RuboCop::Cop::Layout::BlockAlignment accepts a block end that does
+        not begin its line
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/BlockAlignment:
+          Description: Align block ends correctly.
+          Enabled: true
+          VersionAdded: '0.53'
+          EnforcedStyleAlignWith: either
+          SupportedStylesAlignWith:
+          - either
+          - start_of_block
+          - start_of_line
+          AutoCorrect: always
+      source: |
+        scope :bar, lambda { joins(:baz)
+                             .distinct }
+    - id: upstream_edge_2
+      description: RuboCop::Cop::Layout::BlockAlignment accepts end aligned with a
+        variable
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/BlockAlignment:
+          Description: Align block ends correctly.
+          Enabled: true
+          VersionAdded: '0.53'
+          EnforcedStyleAlignWith: either
+          SupportedStylesAlignWith:
+          - either
+          - start_of_block
+          - start_of_line
+          AutoCorrect: always
+      source: |
+        variable = test do |ala|
+        end
+    - id: upstream_edge_3
+      description: RuboCop::Cop::Layout::BlockAlignment registers an offense for mismatched
+        block end with a variable
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/BlockAlignment:
+          Description: Align block ends correctly.
+          Enabled: true
+          VersionAdded: '0.53'
+          EnforcedStyleAlignWith: either
+          SupportedStylesAlignWith:
+          - either
+          - start_of_block
+          - start_of_line
+          AutoCorrect: always
+      source: |
+        variable = test do |ala|
+          end
+    - id: upstream_edge_4
+      description: RuboCop::Cop::Layout::BlockAlignment accepts end aligned with an
+        instance variable
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/BlockAlignment:
+          Description: Align block ends correctly.
+          Enabled: true
+          VersionAdded: '0.53'
+          EnforcedStyleAlignWith: either
+          SupportedStylesAlignWith:
+          - either
+          - start_of_block
+          - start_of_line
+          AutoCorrect: always
+      source: |
+        @variable = test do |ala|
+        end
+    real_world:
+      positives: []
+      negatives: []
+  Layout/BlockEndNewline:
+    matrix_position: 24
+    edge_cases:
+    - id: upstream_edge_1
+      description: RuboCop::Cop::Layout::BlockEndNewline accepts a one-liner
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/BlockEndNewline:
+          Description: Put end statement of multiline block on its own line.
+          Enabled: true
+          VersionAdded: '0.49'
+          AutoCorrect: always
+      source: test do foo end
+    - id: upstream_edge_2
+      description: RuboCop::Cop::Layout::BlockEndNewline accepts multiline blocks
+        with newlines before the end
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/BlockEndNewline:
+          Description: Put end statement of multiline block on its own line.
+          Enabled: true
+          VersionAdded: '0.49'
+          AutoCorrect: always
+      source: |
+        test do
+          foo
+        end
+    - id: upstream_edge_3
+      description: RuboCop::Cop::Layout::BlockEndNewline does not register an offense
+        when multiline blocks with newlines before the `; end`
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/BlockEndNewline:
+          Description: Put end statement of multiline block on its own line.
+          Enabled: true
+          VersionAdded: '0.49'
+          AutoCorrect: always
+      source: |
+        test do
+          foo
+        ; end
+    - id: upstream_edge_4
+      description: RuboCop::Cop::Layout::BlockEndNewline registers an offense and
+        corrects when multiline block end is not on its own line
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/BlockEndNewline:
+          Description: Put end statement of multiline block on its own line.
+          Enabled: true
+          VersionAdded: '0.49'
+          AutoCorrect: always
+      source: |
+        test do
+          foo end
+    real_world:
+      positives: []
+      negatives: []
+  Layout/CaseIndentation:
+    matrix_position: 25
+    edge_cases:
+    - id: upstream_edge_1
+      description: 'RuboCop::Cop::Layout::CaseIndentation with EnforcedStyle: case
+        with IndentOneStep: false `case` ... `when` registers an offense and corrects
+        a `when` clause that is indented deeper than `case`'
+      path: example.rb
+      config:
+        Layout/CaseIndentation:
+          Description: Indentation of when in a case/(when|in)/[else/]end.
+          StyleGuide: "#indent-when-to-case"
+          Enabled: true
+          VersionAdded: '0.49'
+          VersionChanged: '1.16'
+          EnforcedStyle: case
+          SupportedStyles:
+          - case
+          - end
+          IndentOneStep: false
+          IndentationWidth:
+        Layout/IndentationWidth:
+          Width: 2
+      source: |
+        case a
+            when 0 then return
+            else
+                case b
+                 when 1 then return
+                end
+        end
+    - id: upstream_edge_2
+      description: 'RuboCop::Cop::Layout::CaseIndentation with EnforcedStyle: case
+        with IndentOneStep: false `case` ... `when` accepts a `when` clause that''s
+        equally indented with `case`'
+      path: example.rb
+      config:
+        Layout/CaseIndentation:
+          Description: Indentation of when in a case/(when|in)/[else/]end.
+          StyleGuide: "#indent-when-to-case"
+          Enabled: true
+          VersionAdded: '0.49'
+          VersionChanged: '1.16'
+          EnforcedStyle: case
+          SupportedStyles:
+          - case
+          - end
+          IndentOneStep: false
+          IndentationWidth:
+        Layout/IndentationWidth:
+          Width: 2
+      source: |
+        y = case a
+            when 0 then raise
+            when 0 then return
+            else
+              z = case b
+                  when 1 then return
+                  when 1 then raise
+                  end
+            end
+        case c
+        when 2 then encoding
+        end
+    - id: upstream_edge_3
+      description: 'RuboCop::Cop::Layout::CaseIndentation with EnforcedStyle: case
+        with IndentOneStep: false `case` ... `when` doesn''t get confused by strings
+        with `case` in them'
+      path: example.rb
+      config:
+        Layout/CaseIndentation:
+          Description: Indentation of when in a case/(when|in)/[else/]end.
+          StyleGuide: "#indent-when-to-case"
+          Enabled: true
+          VersionAdded: '0.49'
+          VersionChanged: '1.16'
+          EnforcedStyle: case
+          SupportedStyles:
+          - case
+          - end
+          IndentOneStep: false
+          IndentationWidth:
+        Layout/IndentationWidth:
+          Width: 2
+      source: |
+        a = "case"
+        case x
+        when 0
+        end
+    - id: upstream_edge_4
+      description: 'RuboCop::Cop::Layout::CaseIndentation with EnforcedStyle: case
+        with IndentOneStep: false `case` ... `when` doesn''t get confused by symbols
+        named `case` or `when`'
+      path: example.rb
+      config:
+        Layout/CaseIndentation:
+          Description: Indentation of when in a case/(when|in)/[else/]end.
+          StyleGuide: "#indent-when-to-case"
+          Enabled: true
+          VersionAdded: '0.49'
+          VersionChanged: '1.16'
+          EnforcedStyle: case
+          SupportedStyles:
+          - case
+          - end
+          IndentOneStep: false
+          IndentationWidth:
+        Layout/IndentationWidth:
+          Width: 2
+      source: |
+        KEYWORDS = { :case => true, :when => true }
+        case type
+        when 0
+          ParameterNode
+        when 1
+          MethodCallNode
+        end
+    real_world:
+      positives: []
+      negatives: []
+  Layout/ClassStructure:
+    matrix_position: 26
+    edge_cases:
+    - id: upstream_edge_1
+      description: Accepts a class method before a public instance method.
+      path: example.rb
+      config:
+        Layout/ClassStructure:
+          ExpectedOrder:
+          - module_inclusion
+          - constants
+          - attribute_macros
+          - delegate
+          - macros
+          - public_class_methods
+          - initializer
+          - public_methods
+          - protected_attribute_macros
+          - protected_methods
+          - private_attribute_macros
+          - private_delegate
+          - private_methods
+          Categories:
+            attribute_macros:
+            - attr_accessor
+            - attr_reader
+            - attr_writer
+            macros:
+            - validates
+            - validate
+            module_inclusion:
+            - prepend
+            - extend
+            - include
+      source: |
+        class Foo
+          def self.class_method; end
+          def instance_method; end
+        end
+    - id: upstream_edge_2
+      description: Accepts a class containing only a public instance method.
+      path: example.rb
+      config:
+        Layout/ClassStructure:
+          ExpectedOrder:
+          - module_inclusion
+          - constants
+          - attribute_macros
+          - delegate
+          - macros
+          - public_class_methods
+          - initializer
+          - public_methods
+          - protected_attribute_macros
+          - protected_methods
+          - private_attribute_macros
+          - private_delegate
+          - private_methods
+          Categories:
+            attribute_macros:
+            - attr_accessor
+            - attr_reader
+            - attr_writer
+            macros:
+            - validates
+            - validate
+            module_inclusion:
+            - prepend
+            - extend
+            - include
+      source: |
+        class Foo
+          def instance_method; end
+        end
+    - id: upstream_edge_3
+      description: Accepts a class containing only a public class method.
+      path: example.rb
+      config:
+        Layout/ClassStructure:
+          ExpectedOrder:
+          - module_inclusion
+          - constants
+          - attribute_macros
+          - delegate
+          - macros
+          - public_class_methods
+          - initializer
+          - public_methods
+          - protected_attribute_macros
+          - protected_methods
+          - private_attribute_macros
+          - private_delegate
+          - private_methods
+          Categories:
+            attribute_macros:
+            - attr_accessor
+            - attr_reader
+            - attr_writer
+            macros:
+            - validates
+            - validate
+            module_inclusion:
+            - prepend
+            - extend
+            - include
+      source: |
+        class Foo
+          def self.class_method; end
+        end
+    - id: upstream_edge_4
+      description: Accepts constants, class methods, initializer, and public methods in order.
+      path: example.rb
+      config:
+        Layout/ClassStructure:
+          ExpectedOrder:
+          - module_inclusion
+          - constants
+          - attribute_macros
+          - delegate
+          - macros
+          - public_class_methods
+          - initializer
+          - public_methods
+          - protected_attribute_macros
+          - protected_methods
+          - private_attribute_macros
+          - private_delegate
+          - private_methods
+          Categories:
+            attribute_macros:
+            - attr_accessor
+            - attr_reader
+            - attr_writer
+            macros:
+            - validates
+            - validate
+            module_inclusion:
+            - prepend
+            - extend
+            - include
+      source: |
+        class Foo
+          LIMIT = 10
+          def self.build; end
+          def initialize; end
+          def call; end
+        end
+    real_world:
+      positives: []
+      negatives: []
+  Layout/ClosingHeredocIndentation:
+    matrix_position: 27
+    edge_cases:
+    - id: upstream_edge_1
+      description: RuboCop::Cop::Layout::ClosingHeredocIndentation accepts correctly
+        indented closing heredoc
+      path: example.rb
+      config:
+        Layout/ClosingHeredocIndentation:
+          Enabled: true
+      source: |
+        class Test
+          def foo
+            <<-SQL
+              bar
+            SQL
+          end
+        end
+    - id: upstream_edge_2
+      description: RuboCop::Cop::Layout::ClosingHeredocIndentation accepts correctly
+        indented closing heredoc when heredoc contents is after closing heredoc
+      path: example.rb
+      config:
+        Layout/ClosingHeredocIndentation:
+          Enabled: true
+      source: |
+        include_examples :offense,
+                         <<-EOS
+                           foo
+                             bar
+                         EOS
+    - id: upstream_edge_3
+      description: RuboCop::Cop::Layout::ClosingHeredocIndentation accepts correctly
+        indented closing heredoc when heredoc contents with blank line
+      path: example.rb
+      config:
+        Layout/ClosingHeredocIndentation:
+          Enabled: true
+      source: |
+        def_node_matcher :eval_without_location?, <<~PATTERN
+          {
+            (send $(send _ $:sort ...) ${:[] :at :slice} {(int 0) (int -1)})
+
+            (send $(send _ $:sort_by _) ${:last :first})
+          }
+        PATTERN
+    - id: upstream_edge_4
+      description: RuboCop::Cop::Layout::ClosingHeredocIndentation accepts correctly
+        indented closing heredoc when aligned at the beginning of method definition
+      path: example.rb
+      config:
+        Layout/ClosingHeredocIndentation:
+          Enabled: true
+      source: |
+        include_examples :offense,
+                         <<-EOS
+          bar
+        EOS
+    real_world:
+      positives: []
+      negatives: []
+  Layout/ClosingParenthesisIndentation:
+    matrix_position: 28
+    edge_cases:
+    - id: upstream_edge_1
+      description: RuboCop::Cop::Layout::ClosingParenthesisIndentation accepts begin
+        nodes that are not grouped expressions
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/ClosingParenthesisIndentation:
+          Description: Checks the indentation of hanging closing parentheses.
+          Enabled: true
+          VersionAdded: '0.49'
+          VersionChanged: '1.86'
+          IndentationWidth:
+          AutoCorrect: always
+      source: |
+        def a
+          x
+          y
+        end
+    - id: upstream_edge_2
+      description: RuboCop::Cop::Layout::ClosingParenthesisIndentation for method
+        calls with line break before 1st parameter registers an offense for misaligned
+        )
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/ClosingParenthesisIndentation:
+          Description: Checks the indentation of hanging closing parentheses.
+          Enabled: true
+          VersionAdded: '0.49'
+          VersionChanged: '1.86'
+          IndentationWidth:
+          AutoCorrect: always
+      source: |
+        some_method(
+          a
+          )
+    - id: upstream_edge_3
+      description: RuboCop::Cop::Layout::ClosingParenthesisIndentation for method
+        calls with line break before 1st parameter accepts a correctly aligned )
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/ClosingParenthesisIndentation:
+          Description: Checks the indentation of hanging closing parentheses.
+          Enabled: true
+          VersionAdded: '0.49'
+          VersionChanged: '1.86'
+          IndentationWidth:
+          AutoCorrect: always
+      source: |
+        some_method(
+          a
+        )
+    - id: upstream_edge_4
+      description: RuboCop::Cop::Layout::ClosingParenthesisIndentation for method
+        calls with no line break before 1st parameter registers an offense for misaligned
+        )
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/ClosingParenthesisIndentation:
+          Description: Checks the indentation of hanging closing parentheses.
+          Enabled: true
+          VersionAdded: '0.49'
+          VersionChanged: '1.86'
+          IndentationWidth:
+          AutoCorrect: always
+      source: |
+        some_method(a
+        )
+    real_world:
+      positives: []
+      negatives: []
+  Layout/CommentIndentation:
+    matrix_position: 29
+    edge_cases:
+    - id: upstream_edge_1
+      description: RuboCop::Cop::Layout::CommentIndentation when allow_for_alignment
+        is false registers an offense for comments with extra indentation
+      path: example.rb
+      config:
+        Layout/IndentationWidth:
+          Width: 2
+        Layout/CommentIndentation:
+          AllowForAlignment: false
+      source: |
+        def compile_sequence(seq, seq_var)
+          @seq_var = seq_var # Holds the name of the variable holding the AST::Node we are matching
+
+          context.with_temp_variables do |cur_child, cur_index, previous_index|
+            @cur_child_var = cur_child        # To hold the current child node
+            @cur_index_var = cur_index        # To hold the current child index (always >= 0)
+            @prev_index_var = previous_index  # To hold the child index before we enter the looping nodes
+            @cur_index = :seq_head            # Can be any of:
+                                              #   :seq_head : when the current child is actually the sequence head
+                                              #   :variadic_mode : child index held by @cur_index_var
+                                              #   >= 0 : when the current child index is known (from the beginning)
+                                              #   < 0 : when the index is known from the end, where -1 is *past the end*,
+                                              #         -2 is the last child, etc...
+                                              #         This shift of 1 from standard Ruby indices is stored in DELTA
+            @in_sync = false                  # `true` iff `@cur_child_var` and `@cur_index_var` correspond to `@cur_index`
+                                              # Must be true if `@cur_index` is `:variadic_mode`
+            compile_terms(seq)
+          end
+        end
+    - id: upstream_edge_2
+      description: RuboCop::Cop::Layout::CommentIndentation when allow_for_alignment
+        is false behaves like any allow_for_alignment registers offenses and corrects
+        before __END__ but not after
+      path: example.rb
+      config:
+        Layout/IndentationWidth:
+          Width: 2
+        Layout/CommentIndentation:
+          AllowForAlignment: false
+      source: |2
+         #
+        __END__
+          #
+    - id: upstream_edge_3
+      description: RuboCop::Cop::Layout::CommentIndentation when allow_for_alignment
+        is false behaves like any allow_for_alignment registers an offense and corrects
+      path: example.rb
+      config:
+        Layout/IndentationWidth:
+          Width: 2
+        Layout/CommentIndentation:
+          AllowForAlignment: false
+      source: |2
+         # comment 1
+         # comment 2
+         # comment 3
+        hash1 = { a: 0,
+             # comment 4
+                  bb: 1,
+                  ccc: 2 }
+          if a
+          #
+            b
+          # this is accepted
+          elsif aa
+            # so is this
+          elsif bb
+        #
+          else
+           #
+          end
+          case a
+          # this is accepted
+          when 0
+            # so is this
+          when 1
+             #
+            b
+          when 2
+            # this is also accepted
+          end
+          case a
+          # this is accepted
+          in 0
+            # so is this
+          in 1
+          #
+            b
+          in 2
+            # this is also accepted
+          end
+    - id: upstream_edge_4
+      description: RuboCop::Cop::Layout::CommentIndentation when allow_for_alignment
+        is false behaves like any allow_for_alignment on outer level accepts a correctly
+        indented comment
+      path: example.rb
+      config:
+        Layout/IndentationWidth:
+          Width: 2
+        Layout/CommentIndentation:
+          AllowForAlignment: false
+      source: "# comment"
+    real_world:
+      positives: []
+      negatives: []
+  Layout/ConditionPosition:
+    matrix_position: 30
+    edge_cases:
+    - id: upstream_edge_1
+      description: RuboCop::Cop::Layout::ConditionPosition registers an offense and
+        corrects for condition on the next line
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/ConditionPosition:
+          Description: Checks for condition placed in a confusing position relative
+            to the keyword.
+          StyleGuide: "#same-line-condition"
+          Enabled: true
+          VersionAdded: '0.53'
+          VersionChanged: '0.83'
+          AutoCorrect: always
+      source: |
+        if
+        x == 10
+        end
+    - id: upstream_edge_2
+      description: RuboCop::Cop::Layout::ConditionPosition accepts condition on the
+        same line
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/ConditionPosition:
+          Description: Checks for condition placed in a confusing position relative
+            to the keyword.
+          StyleGuide: "#same-line-condition"
+          Enabled: true
+          VersionAdded: '0.53'
+          VersionChanged: '0.83'
+          AutoCorrect: always
+      source: |
+        if x == 10
+         bala
+        end
+    - id: upstream_edge_3
+      description: RuboCop::Cop::Layout::ConditionPosition accepts condition on a
+        different line for modifiers
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/ConditionPosition:
+          Description: Checks for condition placed in a confusing position relative
+            to the keyword.
+          StyleGuide: "#same-line-condition"
+          Enabled: true
+          VersionAdded: '0.53'
+          VersionChanged: '0.83'
+          AutoCorrect: always
+      source: |
+        do_something if
+          something && something_else
+    - id: upstream_edge_4
+      description: RuboCop::Cop::Layout::ConditionPosition registers an offense and
+        corrects for condition on the next line
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/ConditionPosition:
+          Description: Checks for condition placed in a confusing position relative
+            to the keyword.
+          StyleGuide: "#same-line-condition"
+          Enabled: true
+          VersionAdded: '0.53'
+          VersionChanged: '0.83'
+          AutoCorrect: always
+      source: |
+        unless
+        x == 10
+        end
+    real_world:
+      positives: []
+      negatives: []
+  Layout/DefEndAlignment:
+    matrix_position: 31
+    edge_cases:
+    - id: upstream_edge_1
+      description: RuboCop::Cop::Layout::DefEndAlignment when EnforcedStyleAlignWith
+        is start_of_line behaves like misaligned registers an offense for mismatched
+        def test <newline> end  and autocorrects
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/DefEndAlignment:
+          Description: Align ends corresponding to defs correctly.
+          Enabled: true
+          VersionAdded: '0.53'
+          EnforcedStyleAlignWith: start_of_line
+          SupportedStylesAlignWith:
+          - start_of_line
+          - def
+          Severity: warning
+          AutoCorrect: true
+      source: |
+        def test
+          end
+    - id: upstream_edge_2
+      description: RuboCop::Cop::Layout::DefEndAlignment when EnforcedStyleAlignWith
+        is start_of_line behaves like misaligned registers an offense for mismatched
+        def Test.test <newline> end  and autocorrects
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/DefEndAlignment:
+          Description: Align ends corresponding to defs correctly.
+          Enabled: true
+          VersionAdded: '0.53'
+          EnforcedStyleAlignWith: start_of_line
+          SupportedStylesAlignWith:
+          - start_of_line
+          - def
+          Severity: warning
+          AutoCorrect: true
+      source: |
+        def Test.test
+          end
+    - id: upstream_edge_3
+      description: "RuboCop::Cop::Layout::DefEndAlignment when EnforcedStyleAlignWith
+        is start_of_line behaves like aligned accepts matching \uFEFFdef ... end"
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/DefEndAlignment:
+          Description: Align ends corresponding to defs correctly.
+          Enabled: true
+          VersionAdded: '0.53'
+          EnforcedStyleAlignWith: start_of_line
+          SupportedStylesAlignWith:
+          - start_of_line
+          - def
+          Severity: warning
+          AutoCorrect: true
+      source: "\uFEFFdef test\nend"
+    - id: upstream_edge_4
+      description: RuboCop::Cop::Layout::DefEndAlignment when EnforcedStyleAlignWith
+        is start_of_line behaves like aligned accepts matching def ... end
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/DefEndAlignment:
+          Description: Align ends corresponding to defs correctly.
+          Enabled: true
+          VersionAdded: '0.53'
+          EnforcedStyleAlignWith: start_of_line
+          SupportedStylesAlignWith:
+          - start_of_line
+          - def
+          Severity: warning
+          AutoCorrect: true
+      source: |-
+        def test
+        end
+    real_world:
+      positives: []
+      negatives: []
+  Layout/DotPosition:
+    matrix_position: 32
+    edge_cases:
+    - id: upstream_edge_1
+      description: RuboCop::Cop::Layout::DotPosition Leading dots style registers
+        an offense for trailing dot in multi-line call
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/DotPosition:
+          Description: Checks the position of the dot in multi-line method calls.
+          StyleGuide: "#consistent-multi-line-chains"
+          Enabled: true
+          VersionAdded: '0.49'
+          EnforcedStyle: leading
+          SupportedStyles:
+          - leading
+          - trailing
+          AutoCorrect: always
+      source: |
+        something.
+          method_name
+    - id: upstream_edge_2
+      description: RuboCop::Cop::Layout::DotPosition Leading dots style registers
+        an offense for correct + opposite
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/DotPosition:
+          Description: Checks the position of the dot in multi-line method calls.
+          StyleGuide: "#consistent-multi-line-chains"
+          Enabled: true
+          VersionAdded: '0.49'
+          EnforcedStyle: leading
+          SupportedStyles:
+          - leading
+          - trailing
+          AutoCorrect: always
+      source: |
+        something
+          .method_name
+        something.
+          method_name
+    - id: upstream_edge_3
+      description: RuboCop::Cop::Layout::DotPosition Leading dots style registers
+        an offense for only dot line
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/DotPosition:
+          Description: Checks the position of the dot in multi-line method calls.
+          StyleGuide: "#consistent-multi-line-chains"
+          Enabled: true
+          VersionAdded: '0.49'
+          EnforcedStyle: leading
+          SupportedStyles:
+          - leading
+          - trailing
+          AutoCorrect: always
+      source: |
+        foo
+          .bar
+          .
+          baz
+    - id: upstream_edge_4
+      description: RuboCop::Cop::Layout::DotPosition Leading dots style accepts leading
+        do in multi-line method call
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/DotPosition:
+          Description: Checks the position of the dot in multi-line method calls.
+          StyleGuide: "#consistent-multi-line-chains"
+          Enabled: true
+          VersionAdded: '0.49'
+          EnforcedStyle: leading
+          SupportedStyles:
+          - leading
+          - trailing
+          AutoCorrect: always
+      source: |
+        something
+          .method_name
+    real_world:
+      positives: []
+      negatives: []
+  Layout/ElseAlignment:
+    matrix_position: 33
+    edge_cases:
+    - id: upstream_edge_1
+      description: RuboCop::Cop::Layout::ElseAlignment accepts a ternary if
+      path: example.rb
+      config:
+        Layout/EndAlignment:
+          Enabled: true
+          EnforcedStyleAlignWith: variable
+      source: 'cond ? func1 : func2'
+    - id: upstream_edge_2
+      description: RuboCop::Cop::Layout::ElseAlignment with if statement registers
+        an offense for misaligned else
+      path: example.rb
+      config:
+        Layout/EndAlignment:
+          Enabled: true
+          EnforcedStyleAlignWith: variable
+      source: |
+        if cond
+          func1
+         else
+         func2
+        end
+    - id: upstream_edge_3
+      description: RuboCop::Cop::Layout::ElseAlignment with if statement registers
+        an offense for misaligned elsif
+      path: example.rb
+      config:
+        Layout/EndAlignment:
+          Enabled: true
+          EnforcedStyleAlignWith: variable
+      source: |2
+            if a1
+              b1
+          elsif a2
+              b2
+            end
+    - id: upstream_edge_4
+      description: RuboCop::Cop::Layout::ElseAlignment with if statement accepts indentation
+        after else when if is on new line after assignment
+      path: example.rb
+      config:
+        Layout/EndAlignment:
+          Enabled: true
+          EnforcedStyleAlignWith: variable
+      source: |
+        Rails.application.config.ideal_postcodes_key =
+          if Rails.env.production? || Rails.env.staging?
+            "AAAA-AAAA-AAAA-AAAA"
+          else
+            "BBBB-BBBB-BBBB-BBBB"
+          end
+    real_world:
+      positives: []
+      negatives: []
+  Layout/EmptyComment:
+    matrix_position: 34
+    edge_cases:
+    - id: upstream_edge_1
+      description: RuboCop::Cop::Layout::EmptyComment registers an offense and corrects
+        using single line empty comment
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/EmptyComment:
+          Description: Checks empty comment.
+          Enabled: true
+          AutoCorrect: always
+          VersionAdded: '0.53'
+          VersionChanged: '1.61'
+          AllowBorderComment: true
+          AllowMarginComment: true
+      source: "#\n"
+    - id: upstream_edge_2
+      description: RuboCop::Cop::Layout::EmptyComment registers an offense and corrects
+        using multiline empty comments
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/EmptyComment:
+          Description: Checks empty comment.
+          Enabled: true
+          AutoCorrect: always
+          VersionAdded: '0.53'
+          VersionChanged: '1.61'
+          AllowBorderComment: true
+          AllowMarginComment: true
+      source: |
+        #
+        #
+    - id: upstream_edge_3
+      description: RuboCop::Cop::Layout::EmptyComment registers an offense and corrects
+        using an empty comment next to code
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/EmptyComment:
+          Description: Checks empty comment.
+          Enabled: true
+          AutoCorrect: always
+          VersionAdded: '0.53'
+          VersionChanged: '1.61'
+          AllowBorderComment: true
+          AllowMarginComment: true
+      source: |
+        def foo #
+          something
+        end
+    - id: upstream_edge_4
+      description: RuboCop::Cop::Layout::EmptyComment registers an offense and corrects
+        when using an empty comment next to code after comment line
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/EmptyComment:
+          Description: Checks empty comment.
+          Enabled: true
+          AutoCorrect: always
+          VersionAdded: '0.53'
+          VersionChanged: '1.61'
+          AllowBorderComment: true
+          AllowMarginComment: true
+      source: |
+        # comment
+        def foo #
+          something
+        end
+    real_world:
+      positives: []
+      negatives: []
+  Layout/EmptyLineAfterGuardClause:
+    matrix_position: 35
+    edge_cases:
+    - id: upstream_edge_1
+      description: RuboCop::Cop::Layout::EmptyLineAfterGuardClause does not register
+        an offense when the clause is not followed by other code
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/EmptyLineAfterGuardClause:
+          Description: Add empty line after guard clause.
+          Enabled: true
+          VersionAdded: '0.56'
+          VersionChanged: '0.59'
+          AutoCorrect: always
+      source: 'return unless item.positive?
+
+        '
+    - id: upstream_edge_2
+      description: RuboCop::Cop::Layout::EmptyLineAfterGuardClause registers an offense
+        and corrects a guard clause not followed by empty line
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/EmptyLineAfterGuardClause:
+          Description: Add empty line after guard clause.
+          Enabled: true
+          VersionAdded: '0.56'
+          VersionChanged: '0.59'
+          AutoCorrect: always
+      source: |
+        def foo
+          return if need_return?
+          foobar
+        end
+    - id: upstream_edge_3
+      description: RuboCop::Cop::Layout::EmptyLineAfterGuardClause registers an offense
+        and corrects a guard clause is before `begin`
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/EmptyLineAfterGuardClause:
+          Description: Add empty line after guard clause.
+          Enabled: true
+          VersionAdded: '0.56'
+          VersionChanged: '0.59'
+          AutoCorrect: always
+      source: |
+        def foo
+          return another_object if something_different?
+          begin
+            bar
+          rescue SomeException
+            baz
+          end
+        end
+    - id: upstream_edge_4
+      description: RuboCop::Cop::Layout::EmptyLineAfterGuardClause registers an offense
+        and corrects a `raise` guard clause not followed by empty line when `unless`
+        condition is after heredoc
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/EmptyLineAfterGuardClause:
+          Description: Add empty line after guard clause.
+          Enabled: true
+          VersionAdded: '0.56'
+          VersionChanged: '0.59'
+          AutoCorrect: always
+      source: |
+        def foo
+          raise ArgumentError, <<-MSG unless path
+            Must be called with mount point
+          MSG
+          bar
+        end
+    real_world:
+      positives: []
+      negatives: []
+  Layout/EmptyLineAfterMagicComment:
+    matrix_position: 36
+    edge_cases:
+    - id: upstream_edge_1
+      description: RuboCop::Cop::Layout::EmptyLineAfterMagicComment registers an offense
+        for code that immediately follows comment
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/EmptyLineAfterMagicComment:
+          Description: Add an empty line after magic comments to separate them from
+            code.
+          StyleGuide: "#separate-magic-comments-from-code"
+          Enabled: true
+          VersionAdded: '0.49'
+          AutoCorrect: always
+      source: |
+        # frozen_string_literal: true
+
+        class Foo; end
+    - id: upstream_edge_2
+      description: 'RuboCop::Cop::Layout::EmptyLineAfterMagicComment registers an
+        offense when code that immediately follows `rbs_inline: enabled` comment'
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/EmptyLineAfterMagicComment:
+          Description: Add an empty line after magic comments to separate them from
+            code.
+          StyleGuide: "#separate-magic-comments-from-code"
+          Enabled: true
+          VersionAdded: '0.49'
+          AutoCorrect: always
+      source: |
+        # rbs_inline: enabled
+
+        class Foo; end
+    - id: upstream_edge_3
+      description: 'RuboCop::Cop::Layout::EmptyLineAfterMagicComment registers an
+        offense when code that immediately follows `rbs_inline: disabled` comment'
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/EmptyLineAfterMagicComment:
+          Description: Add an empty line after magic comments to separate them from
+            code.
+          StyleGuide: "#separate-magic-comments-from-code"
+          Enabled: true
+          VersionAdded: '0.49'
+          AutoCorrect: always
+      source: |
+        # rbs_inline: disabled
+
+        class Foo; end
+    - id: upstream_edge_4
+      description: 'RuboCop::Cop::Layout::EmptyLineAfterMagicComment does not register
+        an offense when code that immediately follows `rbs_inline: invalid_value`
+        comment'
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/EmptyLineAfterMagicComment:
+          Description: Add an empty line after magic comments to separate them from
+            code.
+          StyleGuide: "#separate-magic-comments-from-code"
+          Enabled: true
+          VersionAdded: '0.49'
+          AutoCorrect: always
+      source: |
+        # rbs_inline: invalid_value
+        class Foo; end
+    real_world:
+      positives: []
+      negatives: []
+  Layout/EmptyLineAfterMultilineCondition:
+    matrix_position: 37
+    edge_cases:
+    - id: upstream_edge_1
+      description: RuboCop::Cop::Layout::EmptyLineAfterMultilineCondition registers
+        an offense when no new line after `if` with multiline condition
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/EmptyLineAfterMultilineCondition:
+          Description: Enforces empty line after multiline condition.
+          Enabled: true
+          VersionAdded: '0.90'
+          References:
+          - https://github.com/airbnb/ruby#multiline-if-newline
+          AutoCorrect: always
+      source: |
+        if multiline &&
+           condition
+          do_something
+        end
+    - id: upstream_edge_2
+      description: RuboCop::Cop::Layout::EmptyLineAfterMultilineCondition does not
+        register an offense when new line after `if` with multiline condition
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/EmptyLineAfterMultilineCondition:
+          Description: Enforces empty line after multiline condition.
+          Enabled: true
+          VersionAdded: '0.90'
+          References:
+          - https://github.com/airbnb/ruby#multiline-if-newline
+          AutoCorrect: always
+      source: |
+        if multiline &&
+           condition
+
+          do_something
+        end
+    - id: upstream_edge_3
+      description: RuboCop::Cop::Layout::EmptyLineAfterMultilineCondition does not
+        register an offense for `if` with single line condition
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/EmptyLineAfterMultilineCondition:
+          Description: Enforces empty line after multiline condition.
+          Enabled: true
+          VersionAdded: '0.90'
+          References:
+          - https://github.com/airbnb/ruby#multiline-if-newline
+          AutoCorrect: always
+      source: |
+        if singleline
+          do_something
+        end
+    - id: upstream_edge_4
+      description: RuboCop::Cop::Layout::EmptyLineAfterMultilineCondition registers
+        an offense when no new line after modifier `if` with multiline condition
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/EmptyLineAfterMultilineCondition:
+          Description: Enforces empty line after multiline condition.
+          Enabled: true
+          VersionAdded: '0.90'
+          References:
+          - https://github.com/airbnb/ruby#multiline-if-newline
+          AutoCorrect: always
+      source: |
+        do_something if multiline &&
+                        condition
+        do_something_else
+    real_world:
+      positives: []
+      negatives: []
+  Layout/EmptyLineBetweenDefs:
+    matrix_position: 38
+    edge_cases:
+    - id: upstream_edge_1
+      description: RuboCop::Cop::Layout::EmptyLineBetweenDefs finds offenses in inner
+        classes
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/EmptyLineBetweenDefs:
+          Description: Use empty lines between class/module/method defs.
+          StyleGuide: "#empty-lines-between-methods"
+          Enabled: true
+          VersionAdded: '0.49'
+          VersionChanged: '1.23'
+          EmptyLineBetweenMethodDefs: true
+          EmptyLineBetweenClassDefs: true
+          EmptyLineBetweenModuleDefs: true
+          DefLikeMacros: []
+          AllowAdjacentOneLineDefs: false
+          NumberOfEmptyLines: 1
+          AutoCorrect: always
+      source: |
+        class K
+          def m
+          end
+
+          class J
+            def n
+            end
+            def o
+            end
+          end
+
+          # checks something
+          def p
+          end
+        end
+    - id: upstream_edge_2
+      description: RuboCop::Cop::Layout::EmptyLineBetweenDefs accepts a def that follows
+        a line with code
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/EmptyLineBetweenDefs:
+          Description: Use empty lines between class/module/method defs.
+          StyleGuide: "#empty-lines-between-methods"
+          Enabled: true
+          VersionAdded: '0.49'
+          VersionChanged: '1.23'
+          EmptyLineBetweenMethodDefs: true
+          EmptyLineBetweenClassDefs: true
+          EmptyLineBetweenModuleDefs: true
+          DefLikeMacros: []
+          AllowAdjacentOneLineDefs: false
+          NumberOfEmptyLines: 1
+          AutoCorrect: always
+      source: |
+        x = 0
+        def m
+        end
+    - id: upstream_edge_3
+      description: RuboCop::Cop::Layout::EmptyLineBetweenDefs accepts a def that follows
+        code and a comment
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/EmptyLineBetweenDefs:
+          Description: Use empty lines between class/module/method defs.
+          StyleGuide: "#empty-lines-between-methods"
+          Enabled: true
+          VersionAdded: '0.49'
+          VersionChanged: '1.23'
+          EmptyLineBetweenMethodDefs: true
+          EmptyLineBetweenClassDefs: true
+          EmptyLineBetweenModuleDefs: true
+          DefLikeMacros: []
+          AllowAdjacentOneLineDefs: false
+          NumberOfEmptyLines: 1
+          AutoCorrect: always
+      source: |
+        x = 0
+        # 123
+        def m
+        end
+    - id: upstream_edge_4
+      description: RuboCop::Cop::Layout::EmptyLineBetweenDefs accepts the first def
+        without leading empty line in a class
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/EmptyLineBetweenDefs:
+          Description: Use empty lines between class/module/method defs.
+          StyleGuide: "#empty-lines-between-methods"
+          Enabled: true
+          VersionAdded: '0.49'
+          VersionChanged: '1.23'
+          EmptyLineBetweenMethodDefs: true
+          EmptyLineBetweenClassDefs: true
+          EmptyLineBetweenModuleDefs: true
+          DefLikeMacros: []
+          AllowAdjacentOneLineDefs: false
+          NumberOfEmptyLines: 1
+          AutoCorrect: always
+      source: |
+        class K
+          def m
+          end
+        end
+    real_world:
+      positives: []
+      negatives: []
+  Layout/EmptyLines:
+    matrix_position: 39
+    edge_cases:
+    - id: upstream_edge_1
+      description: RuboCop::Cop::Layout::EmptyLines registers an offense for consecutive
+        empty lines
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/EmptyLines:
+          Description: Don't use several empty lines in a row.
+          StyleGuide: "#two-or-more-empty-lines"
+          Enabled: true
+          VersionAdded: '0.49'
+          AutoCorrect: always
+      source: |
+        test = 5
+
+        top
+    - id: upstream_edge_2
+      description: RuboCop::Cop::Layout::EmptyLines does not register an offense when
+        there are no tokens
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/EmptyLines:
+          Description: Don't use several empty lines in a row.
+          StyleGuide: "#two-or-more-empty-lines"
+          Enabled: true
+          VersionAdded: '0.49'
+          AutoCorrect: always
+      source: "#comment"
+    - id: upstream_edge_3
+      description: RuboCop::Cop::Layout::EmptyLines does not register an offense for
+        comments
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/EmptyLines:
+          Description: Don't use several empty lines in a row.
+          StyleGuide: "#two-or-more-empty-lines"
+          Enabled: true
+          VersionAdded: '0.49'
+          AutoCorrect: always
+      source: |
+        test
+
+        #comment
+        top
+    - id: upstream_edge_4
+      description: RuboCop::Cop::Layout::EmptyLines does not register an offense for
+        empty lines in a string
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/EmptyLines:
+          Description: Don't use several empty lines in a row.
+          StyleGuide: "#two-or-more-empty-lines"
+          Enabled: true
+          VersionAdded: '0.49'
+          AutoCorrect: always
+      source: |
+        result = "test
+
+
+
+                                          string"
+    real_world:
+      positives: []
+      negatives: []
+  Layout/EmptyLinesAfterModuleInclusion:
+    matrix_position: 40
+    edge_cases:
+    - id: upstream_edge_1
+      description: RuboCop::Cop::Layout::EmptyLinesAfterModuleInclusion registers
+        an offense and corrects for code that immediately follows include
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/EmptyLinesAfterModuleInclusion:
+          Description: Keeps track of empty lines after module inclusion methods.
+          StyleGuide: "#empty-lines-after-module-inclusion"
+          Enabled: true
+          VersionAdded: '1.79'
+          AutoCorrect: always
+      source: |
+        include Foo
+        def do_something
+        end
+    - id: upstream_edge_2
+      description: RuboCop::Cop::Layout::EmptyLinesAfterModuleInclusion registers
+        an offense and corrects for code that immediately follows include with comment
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/EmptyLinesAfterModuleInclusion:
+          Description: Keeps track of empty lines after module inclusion methods.
+          StyleGuide: "#empty-lines-after-module-inclusion"
+          Enabled: true
+          VersionAdded: '1.79'
+          AutoCorrect: always
+      source: |
+        include Foo # my comment
+        def do_something
+        end
+    - id: upstream_edge_3
+      description: RuboCop::Cop::Layout::EmptyLinesAfterModuleInclusion registers
+        an offense and corrects for code that immediately follows include and comment
+        line
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/EmptyLinesAfterModuleInclusion:
+          Description: Keeps track of empty lines after module inclusion methods.
+          StyleGuide: "#empty-lines-after-module-inclusion"
+          Enabled: true
+          VersionAdded: '1.79'
+          AutoCorrect: always
+      source: |
+        include Foo
+        # my comment
+        def do_something
+        end
+    - id: upstream_edge_4
+      description: RuboCop::Cop::Layout::EmptyLinesAfterModuleInclusion registers
+        an offense and corrects for include and `rubocop:enable` comment line
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/EmptyLinesAfterModuleInclusion:
+          Description: Keeps track of empty lines after module inclusion methods.
+          StyleGuide: "#empty-lines-after-module-inclusion"
+          Enabled: true
+          VersionAdded: '1.79'
+          AutoCorrect: always
+      source: |
+        # rubocop:disable Department/Cop
+        include Foo
+        # rubocop:enable Department/Cop
+        def do_something
+        end
+    real_world:
+      positives: []
+      negatives: []
+  Layout/EmptyLinesAroundAccessModifier:
+    matrix_position: 41
+    edge_cases:
+    - id: upstream_edge_1
+      description: RuboCop::Cop::Layout::EmptyLinesAroundAccessModifier EnforcedStyle
+        is `around` requires blank line before private
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/EmptyLinesAroundAccessModifier:
+          Description: Keep blank lines around access modifiers.
+          StyleGuide: "#empty-lines-around-access-modifier"
+          Enabled: true
+          VersionAdded: '0.49'
+          EnforcedStyle: around
+          SupportedStyles:
+          - around
+          - only_before
+          References:
+          - https://edgeguides.rubyonrails.org/contributing_to_ruby_on_rails.html#follow-the-coding-conventions
+          AutoCorrect: always
+      source: |
+        class Test
+          something
+          private
+
+          def test; end
+        end
+    - id: upstream_edge_2
+      description: RuboCop::Cop::Layout::EmptyLinesAroundAccessModifier EnforcedStyle
+        is `around` requires blank line after private
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/EmptyLinesAroundAccessModifier:
+          Description: Keep blank lines around access modifiers.
+          StyleGuide: "#empty-lines-around-access-modifier"
+          Enabled: true
+          VersionAdded: '0.49'
+          EnforcedStyle: around
+          SupportedStyles:
+          - around
+          - only_before
+          References:
+          - https://edgeguides.rubyonrails.org/contributing_to_ruby_on_rails.html#follow-the-coding-conventions
+          AutoCorrect: always
+      source: |
+        class Test
+          something
+
+          private
+          def test; end
+        end
+    - id: upstream_edge_3
+      description: RuboCop::Cop::Layout::EmptyLinesAroundAccessModifier EnforcedStyle
+        is `around` ignores comment line before private
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/EmptyLinesAroundAccessModifier:
+          Description: Keep blank lines around access modifiers.
+          StyleGuide: "#empty-lines-around-access-modifier"
+          Enabled: true
+          VersionAdded: '0.49'
+          EnforcedStyle: around
+          SupportedStyles:
+          - around
+          - only_before
+          References:
+          - https://edgeguides.rubyonrails.org/contributing_to_ruby_on_rails.html#follow-the-coding-conventions
+          AutoCorrect: always
+      source: |
+        class Test
+          something
+
+          # This comment is fine
+          private
+
+          def test; end
+        end
+    - id: upstream_edge_4
+      description: RuboCop::Cop::Layout::EmptyLinesAroundAccessModifier EnforcedStyle
+        is `around` ignores private inside a method call
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/EmptyLinesAroundAccessModifier:
+          Description: Keep blank lines around access modifiers.
+          StyleGuide: "#empty-lines-around-access-modifier"
+          Enabled: true
+          VersionAdded: '0.49'
+          EnforcedStyle: around
+          SupportedStyles:
+          - around
+          - only_before
+          References:
+          - https://edgeguides.rubyonrails.org/contributing_to_ruby_on_rails.html#follow-the-coding-conventions
+          AutoCorrect: always
+      source: |
+        class Test
+          def private?
+            private
+          end
+        end
+    real_world:
+      positives: []
+      negatives: []
+  Layout/EmptyLinesAroundArguments:
+    matrix_position: 42
+    edge_cases:
+    - id: upstream_edge_1
+      description: RuboCop::Cop::Layout::EmptyLinesAroundArguments when extra lines
+        registers and autocorrects offense for empty line before arg
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/EmptyLinesAroundArguments:
+          Description: Keeps track of empty lines around method arguments.
+          Enabled: true
+          VersionAdded: '0.52'
+          AutoCorrect: always
+      source: |
+        foo(
+          bar
+        )
+    - id: upstream_edge_2
+      description: RuboCop::Cop::Layout::EmptyLinesAroundArguments when extra lines
+        registers and autocorrects offense for empty line after arg
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/EmptyLinesAroundArguments:
+          Description: Keeps track of empty lines around method arguments.
+          Enabled: true
+          VersionAdded: '0.52'
+          AutoCorrect: always
+      source: |
+        bar(
+          [baz, qux]
+        )
+    - id: upstream_edge_3
+      description: RuboCop::Cop::Layout::EmptyLinesAroundArguments when extra lines
+        registers and autocorrects offense for empty line between args
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/EmptyLinesAroundArguments:
+          Description: Keeps track of empty lines around method arguments.
+          Enabled: true
+          VersionAdded: '0.52'
+          AutoCorrect: always
+      source: |
+        foo.do_something(
+          baz,
+          qux: 0
+        )
+    - id: upstream_edge_4
+      description: RuboCop::Cop::Layout::EmptyLinesAroundArguments when extra lines
+        registers and autocorrects offenses when multiple empty lines are detected
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/EmptyLinesAroundArguments:
+          Description: Keeps track of empty lines around method arguments.
+          Enabled: true
+          VersionAdded: '0.52'
+          AutoCorrect: always
+      source: |
+        foo(
+          baz,
+          qux,
+          biz,
+        )
+    real_world:
+      positives: []
+      negatives: []
+  Layout/EmptyLinesAroundAttributeAccessor:
+    matrix_position: 43
+    edge_cases:
+    - id: upstream_edge_1
+      description: RuboCop::Cop::Layout::EmptyLinesAroundAttributeAccessor registers
+        an offense and corrects for code that immediately follows accessor
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/EmptyLinesAroundAttributeAccessor:
+          Description: Keep blank lines around attribute accessors.
+          StyleGuide: "#empty-lines-around-attribute-accessor"
+          Enabled: true
+          VersionAdded: '0.83'
+          VersionChanged: '0.84'
+          AllowAliasSyntax: true
+          AllowedMethods:
+          - alias_method
+          - public
+          - protected
+          - private
+          AutoCorrect: always
+      source: |
+        attr_accessor :foo
+        def do_something
+        end
+    - id: upstream_edge_2
+      description: RuboCop::Cop::Layout::EmptyLinesAroundAttributeAccessor registers
+        an offense and corrects for code that immediately follows accessor with comment
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/EmptyLinesAroundAttributeAccessor:
+          Description: Keep blank lines around attribute accessors.
+          StyleGuide: "#empty-lines-around-attribute-accessor"
+          Enabled: true
+          VersionAdded: '0.83'
+          VersionChanged: '0.84'
+          AllowAliasSyntax: true
+          AllowedMethods:
+          - alias_method
+          - public
+          - protected
+          - private
+          AutoCorrect: always
+      source: |
+        attr_accessor :foo # comment
+        def do_something
+        end
+    - id: upstream_edge_3
+      description: RuboCop::Cop::Layout::EmptyLinesAroundAttributeAccessor registers
+        an offense and corrects for an attribute accessor and comment line
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/EmptyLinesAroundAttributeAccessor:
+          Description: Keep blank lines around attribute accessors.
+          StyleGuide: "#empty-lines-around-attribute-accessor"
+          Enabled: true
+          VersionAdded: '0.83'
+          VersionChanged: '0.84'
+          AllowAliasSyntax: true
+          AllowedMethods:
+          - alias_method
+          - public
+          - protected
+          - private
+          AutoCorrect: always
+      source: |
+        attr_accessor :foo
+        # comment
+        def do_something
+        end
+    - id: upstream_edge_4
+      description: RuboCop::Cop::Layout::EmptyLinesAroundAttributeAccessor registers
+        an offense and corrects for some attribute accessors and comment line
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/EmptyLinesAroundAttributeAccessor:
+          Description: Keep blank lines around attribute accessors.
+          StyleGuide: "#empty-lines-around-attribute-accessor"
+          Enabled: true
+          VersionAdded: '0.83'
+          VersionChanged: '0.84'
+          AllowAliasSyntax: true
+          AllowedMethods:
+          - alias_method
+          - public
+          - protected
+          - private
+          AutoCorrect: always
+      source: |
+        attr_accessor :foo
+        attr_reader :bar
+        attr_writer :baz
+        # comment
+        def do_something
+        end
+    real_world:
+      positives: []
+      negatives: []
+  Layout/EmptyLinesAroundBeginBody:
+    matrix_position: 44
+    edge_cases:
+    - id: upstream_edge_1
+      description: RuboCop::Cop::Layout::EmptyLinesAroundBeginBody registers an offense
+        for begin body starting with a blank
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/EmptyLinesAroundBeginBody:
+          Description: Keeps track of empty lines around begin-end bodies.
+          StyleGuide: "#empty-lines-around-bodies"
+          Enabled: true
+          VersionAdded: '0.49'
+          AutoCorrect: always
+      source: |
+        begin
+          foo
+        end
+    - id: upstream_edge_2
+      description: RuboCop::Cop::Layout::EmptyLinesAroundBeginBody registers an offense
+        for ensure body ending
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/EmptyLinesAroundBeginBody:
+          Description: Keeps track of empty lines around begin-end bodies.
+          StyleGuide: "#empty-lines-around-bodies"
+          Enabled: true
+          VersionAdded: '0.49'
+          AutoCorrect: always
+      source: |
+        begin
+          foo
+        ensure
+          bar
+        end
+    - id: upstream_edge_3
+      description: RuboCop::Cop::Layout::EmptyLinesAroundBeginBody registers an offense
+        for begin body ending with a blank
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/EmptyLinesAroundBeginBody:
+          Description: Keeps track of empty lines around begin-end bodies.
+          StyleGuide: "#empty-lines-around-bodies"
+          Enabled: true
+          VersionAdded: '0.49'
+          AutoCorrect: always
+      source: |
+        begin
+          foo
+        end
+    - id: upstream_edge_4
+      description: RuboCop::Cop::Layout::EmptyLinesAroundBeginBody registers an offense
+        for begin body starting in method
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/EmptyLinesAroundBeginBody:
+          Description: Keeps track of empty lines around begin-end bodies.
+          StyleGuide: "#empty-lines-around-bodies"
+          Enabled: true
+          VersionAdded: '0.49'
+          AutoCorrect: always
+      source: |
+        def bar
+          begin
+            foo
+          end
+        end
+    real_world:
+      positives: []
+      negatives: []
+  Layout/EmptyLinesAroundBlockBody:
+    matrix_position: 45
+    edge_cases:
+    - id: upstream_edge_1
+      description: RuboCop::Cop::Layout::EmptyLinesAroundBlockBody when EnforcedStyle
+        is no_empty_lines for { } block registers an offense for block body starting
+        with a blank
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/EmptyLinesAroundBlockBody:
+          Description: Keeps track of empty lines around block bodies.
+          StyleGuide: "#empty-lines-around-bodies"
+          Enabled: true
+          VersionAdded: '0.49'
+          EnforcedStyle: no_empty_lines
+          SupportedStyles:
+          - empty_lines
+          - no_empty_lines
+          AutoCorrect: always
+      source: |
+        some_method {
+          do_something
+        }
+    - id: upstream_edge_2
+      description: RuboCop::Cop::Layout::EmptyLinesAroundBlockBody when EnforcedStyle
+        is no_empty_lines for { } block registers an offense for block body ending
+        with a blank
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/EmptyLinesAroundBlockBody:
+          Description: Keeps track of empty lines around block bodies.
+          StyleGuide: "#empty-lines-around-bodies"
+          Enabled: true
+          VersionAdded: '0.49'
+          EnforcedStyle: no_empty_lines
+          SupportedStyles:
+          - empty_lines
+          - no_empty_lines
+          AutoCorrect: always
+      source: |
+        some_method {
+          do_something
+        }
+    - id: upstream_edge_3
+      description: RuboCop::Cop::Layout::EmptyLinesAroundBlockBody when EnforcedStyle
+        is no_empty_lines for { } block accepts block body starting with a line with
+        spaces
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/EmptyLinesAroundBlockBody:
+          Description: Keeps track of empty lines around block bodies.
+          StyleGuide: "#empty-lines-around-bodies"
+          Enabled: true
+          VersionAdded: '0.49'
+          EnforcedStyle: no_empty_lines
+          SupportedStyles:
+          - empty_lines
+          - no_empty_lines
+          AutoCorrect: always
+      source: "some_method {\n  \n  do_something\n}\n"
+    - id: upstream_edge_4
+      description: RuboCop::Cop::Layout::EmptyLinesAroundBlockBody when EnforcedStyle
+        is no_empty_lines for { } block registers an offense for block body starting
+        with a blank passed to a multi-line method call
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/EmptyLinesAroundBlockBody:
+          Description: Keeps track of empty lines around block bodies.
+          StyleGuide: "#empty-lines-around-bodies"
+          Enabled: true
+          VersionAdded: '0.49'
+          EnforcedStyle: no_empty_lines
+          SupportedStyles:
+          - empty_lines
+          - no_empty_lines
+          AutoCorrect: always
+      source: |
+        some_method arg,
+          another_arg {
+          do_something
+        }
+    real_world:
+      positives: []
+      negatives: []
+  Layout/EmptyLinesAroundClassBody:
+    matrix_position: 46
+    edge_cases:
+    - id: upstream_edge_1
+      description: RuboCop::Cop::Layout::EmptyLinesAroundClassBody when EnforcedStyle
+        is no_empty_lines registers an offense for class body starting with a blank
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/EmptyLinesAroundClassBody:
+          Description: Keeps track of empty lines around class bodies.
+          StyleGuide: "#empty-lines-around-bodies"
+          Enabled: true
+          VersionAdded: '0.49'
+          VersionChanged: '0.53'
+          EnforcedStyle: no_empty_lines
+          SupportedStyles:
+          - empty_lines
+          - empty_lines_except_namespace
+          - empty_lines_special
+          - no_empty_lines
+          - beginning_only
+          - ending_only
+          AutoCorrect: always
+      source: |
+        class SomeClass
+          do_something
+        end
+    - id: upstream_edge_2
+      description: RuboCop::Cop::Layout::EmptyLinesAroundClassBody when EnforcedStyle
+        is no_empty_lines registers an offense for class body ending with a blank
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/EmptyLinesAroundClassBody:
+          Description: Keeps track of empty lines around class bodies.
+          StyleGuide: "#empty-lines-around-bodies"
+          Enabled: true
+          VersionAdded: '0.49'
+          VersionChanged: '0.53'
+          EnforcedStyle: no_empty_lines
+          SupportedStyles:
+          - empty_lines
+          - empty_lines_except_namespace
+          - empty_lines_special
+          - no_empty_lines
+          - beginning_only
+          - ending_only
+          AutoCorrect: always
+      source: |
+        class SomeClass
+          do_something
+        end
+    - id: upstream_edge_3
+      description: RuboCop::Cop::Layout::EmptyLinesAroundClassBody when EnforcedStyle
+        is no_empty_lines autocorrects singleton class body containing only a blank
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/EmptyLinesAroundClassBody:
+          Description: Keeps track of empty lines around class bodies.
+          StyleGuide: "#empty-lines-around-bodies"
+          Enabled: true
+          VersionAdded: '0.49'
+          VersionChanged: '0.53'
+          EnforcedStyle: no_empty_lines
+          SupportedStyles:
+          - empty_lines
+          - empty_lines_except_namespace
+          - empty_lines_special
+          - no_empty_lines
+          - beginning_only
+          - ending_only
+          AutoCorrect: always
+      source: |
+        class << self
+          do_something
+        end
+    - id: upstream_edge_4
+      description: RuboCop::Cop::Layout::EmptyLinesAroundClassBody when EnforcedStyle
+        is no_empty_lines registers an offense for singleton class body ending with
+        a blank
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/EmptyLinesAroundClassBody:
+          Description: Keeps track of empty lines around class bodies.
+          StyleGuide: "#empty-lines-around-bodies"
+          Enabled: true
+          VersionAdded: '0.49'
+          VersionChanged: '0.53'
+          EnforcedStyle: no_empty_lines
+          SupportedStyles:
+          - empty_lines
+          - empty_lines_except_namespace
+          - empty_lines_special
+          - no_empty_lines
+          - beginning_only
+          - ending_only
+          AutoCorrect: always
+      source: |
+        class << self
+          do_something
+        end
+    real_world:
+      positives: []
+      negatives: []
+  Layout/EmptyLinesAroundExceptionHandlingKeywords:
+    matrix_position: 47
+    edge_cases:
+    - id: upstream_edge_1
+      description: RuboCop::Cop::Layout::EmptyLinesAroundExceptionHandlingKeywords
+        registers an offense for above rescue keyword with a blank
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/EmptyLinesAroundExceptionHandlingKeywords:
+          Description: Keeps track of empty lines around exception handling keywords.
+          StyleGuide: "#empty-lines-around-bodies"
+          Enabled: true
+          VersionAdded: '0.49'
+          AutoCorrect: always
+      source: |
+        begin
+          f1
+        rescue
+          f2
+        end
+    - id: upstream_edge_2
+      description: RuboCop::Cop::Layout::EmptyLinesAroundExceptionHandlingKeywords
+        registers an offense for rescue section starting with a blank
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/EmptyLinesAroundExceptionHandlingKeywords:
+          Description: Keeps track of empty lines around exception handling keywords.
+          StyleGuide: "#empty-lines-around-bodies"
+          Enabled: true
+          VersionAdded: '0.49'
+          AutoCorrect: always
+      source: |
+        begin
+          f1
+        rescue
+          f2
+        end
+    - id: upstream_edge_3
+      description: RuboCop::Cop::Layout::EmptyLinesAroundExceptionHandlingKeywords
+        registers an offense for rescue section ending with a blank
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/EmptyLinesAroundExceptionHandlingKeywords:
+          Description: Keeps track of empty lines around exception handling keywords.
+          StyleGuide: "#empty-lines-around-bodies"
+          Enabled: true
+          VersionAdded: '0.49'
+          AutoCorrect: always
+      source: |
+        begin
+          f1
+        rescue
+          f2
+        else
+          f3
+        end
+    - id: upstream_edge_4
+      description: RuboCop::Cop::Layout::EmptyLinesAroundExceptionHandlingKeywords
+        registers an offense for rescue section ending for method definition a blank
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/EmptyLinesAroundExceptionHandlingKeywords:
+          Description: Keeps track of empty lines around exception handling keywords.
+          StyleGuide: "#empty-lines-around-bodies"
+          Enabled: true
+          VersionAdded: '0.49'
+          AutoCorrect: always
+      source: |
+        def foo
+          f1
+        rescue
+          f2
+        else
+          f3
+        end
+    real_world:
+      positives: []
+      negatives: []
+  Layout/EmptyLinesAroundMethodBody:
+    matrix_position: 48
+    edge_cases:
+    - id: upstream_edge_1
+      description: RuboCop::Cop::Layout::EmptyLinesAroundMethodBody registers an offense
+        for method body starting with a blank
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/EmptyLinesAroundMethodBody:
+          Description: Keeps track of empty lines around method bodies.
+          StyleGuide: "#empty-lines-around-bodies"
+          Enabled: true
+          VersionAdded: '0.49'
+          AutoCorrect: always
+      source: |
+        def some_method
+          do_something
+        end
+    - id: upstream_edge_2
+      description: RuboCop::Cop::Layout::EmptyLinesAroundMethodBody accepts method
+        body starting with a line with spaces
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/EmptyLinesAroundMethodBody:
+          Description: Keeps track of empty lines around method bodies.
+          StyleGuide: "#empty-lines-around-bodies"
+          Enabled: true
+          VersionAdded: '0.49'
+          AutoCorrect: always
+      source: "def some_method\n  \n  do_something\nend"
+    - id: upstream_edge_3
+      description: RuboCop::Cop::Layout::EmptyLinesAroundMethodBody registers an offense
+        for class method body starting with a blank
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/EmptyLinesAroundMethodBody:
+          Description: Keeps track of empty lines around method bodies.
+          StyleGuide: "#empty-lines-around-bodies"
+          Enabled: true
+          VersionAdded: '0.49'
+          AutoCorrect: always
+      source: |
+        def Test.some_method
+          do_something
+        end
+    - id: upstream_edge_4
+      description: RuboCop::Cop::Layout::EmptyLinesAroundMethodBody registers an offense
+        for method body ending with a blank
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/EmptyLinesAroundMethodBody:
+          Description: Keeps track of empty lines around method bodies.
+          StyleGuide: "#empty-lines-around-bodies"
+          Enabled: true
+          VersionAdded: '0.49'
+          AutoCorrect: always
+      source: |
+        def some_method
+          do_something
+        end
+    real_world:
+      positives: []
+      negatives: []
+  Layout/EmptyLinesAroundModuleBody:
+    matrix_position: 49
+    edge_cases:
+    - id: upstream_edge_1
+      description: RuboCop::Cop::Layout::EmptyLinesAroundModuleBody when EnforcedStyle
+        is no_empty_lines registers an offense for module body starting with a blank
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/EmptyLinesAroundModuleBody:
+          Description: Keeps track of empty lines around module bodies.
+          StyleGuide: "#empty-lines-around-bodies"
+          Enabled: true
+          VersionAdded: '0.49'
+          EnforcedStyle: no_empty_lines
+          SupportedStyles:
+          - empty_lines
+          - empty_lines_except_namespace
+          - empty_lines_special
+          - no_empty_lines
+          AutoCorrect: always
+      source: |
+        module SomeModule
+          do_something
+        end
+    - id: upstream_edge_2
+      description: RuboCop::Cop::Layout::EmptyLinesAroundModuleBody when EnforcedStyle
+        is no_empty_lines registers an offense for module body ending with a blank
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/EmptyLinesAroundModuleBody:
+          Description: Keeps track of empty lines around module bodies.
+          StyleGuide: "#empty-lines-around-bodies"
+          Enabled: true
+          VersionAdded: '0.49'
+          EnforcedStyle: no_empty_lines
+          SupportedStyles:
+          - empty_lines
+          - empty_lines_except_namespace
+          - empty_lines_special
+          - no_empty_lines
+          AutoCorrect: always
+      source: |
+        module SomeModule
+          do_something
+        end
+    - id: upstream_edge_3
+      description: RuboCop::Cop::Layout::EmptyLinesAroundModuleBody when EnforcedStyle
+        is no_empty_lines autocorrects beginning and end
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/EmptyLinesAroundModuleBody:
+          Description: Keeps track of empty lines around module bodies.
+          StyleGuide: "#empty-lines-around-bodies"
+          Enabled: true
+          VersionAdded: '0.49'
+          EnforcedStyle: no_empty_lines
+          SupportedStyles:
+          - empty_lines
+          - empty_lines_except_namespace
+          - empty_lines_special
+          - no_empty_lines
+          AutoCorrect: always
+      source: |
+        module SomeModule
+          do_something
+        end
+    - id: upstream_edge_4
+      description: RuboCop::Cop::Layout::EmptyLinesAroundModuleBody when EnforcedStyle
+        is empty_lines registers an offense for module body not starting or ending
+        with a blank
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/EmptyLinesAroundModuleBody:
+          Description: Keeps track of empty lines around module bodies.
+          StyleGuide: "#empty-lines-around-bodies"
+          Enabled: true
+          VersionAdded: '0.49'
+          EnforcedStyle: empty_lines
+          SupportedStyles:
+          - empty_lines
+          - empty_lines_except_namespace
+          - empty_lines_special
+          - no_empty_lines
+          AutoCorrect: always
+      source: |
+        module SomeModule
+
+          do_something
+
+        end
+    real_world:
+      positives: []
+      negatives: []
+  Layout/EndAlignment:
+    matrix_position: 50
+    edge_cases:
+    - id: upstream_edge_1
+      description: RuboCop::Cop::Layout::EndAlignment can handle ternary if
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/EndAlignment:
+          Description: Align ends correctly.
+          Enabled: true
+          VersionAdded: '0.53'
+          EnforcedStyleAlignWith: keyword
+          SupportedStylesAlignWith:
+          - keyword
+          - variable
+          - start_of_line
+          Severity: warning
+          AutoCorrect: true
+      source: 'a = cond ? x : y'
+    - id: upstream_edge_2
+      description: RuboCop::Cop::Layout::EndAlignment can handle modifier if
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/EndAlignment:
+          Description: Align ends correctly.
+          Enabled: true
+          VersionAdded: '0.53'
+          EnforcedStyleAlignWith: keyword
+          SupportedStylesAlignWith:
+          - keyword
+          - variable
+          - start_of_line
+          Severity: warning
+          AutoCorrect: true
+      source: a = x if cond
+    - id: upstream_edge_3
+      description: "RuboCop::Cop::Layout::EndAlignment behaves like aligned accepts
+        matching \uFEFFclass ... end"
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/EndAlignment:
+          Description: Align ends correctly.
+          Enabled: true
+          VersionAdded: '0.53'
+          EnforcedStyleAlignWith: keyword
+          SupportedStylesAlignWith:
+          - keyword
+          - variable
+          - start_of_line
+          Severity: warning
+          AutoCorrect: true
+      source: "\uFEFFclass Test\nend"
+    - id: upstream_edge_4
+      description: RuboCop::Cop::Layout::EndAlignment behaves like aligned accepts
+        matching class ... end
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/EndAlignment:
+          Description: Align ends correctly.
+          Enabled: true
+          VersionAdded: '0.53'
+          EnforcedStyleAlignWith: keyword
+          SupportedStylesAlignWith:
+          - keyword
+          - variable
+          - start_of_line
+          Severity: warning
+          AutoCorrect: true
+      source: |-
+        class Test
+        end
+    real_world:
+      positives: []
+      negatives: []
+  Layout/EndOfLine:
+    matrix_position: 51
+    edge_cases:
+    - id: upstream_edge_1
+      description: RuboCop::Cop::Layout::EndOfLine when EnforcedStyle is native registers
+        an offense for an incorrect EOL
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/EndOfLine:
+          Description: Use Unix-style line endings.
+          StyleGuide: "#crlf"
+          Enabled: true
+          VersionAdded: '0.49'
+          EnforcedStyle: native
+          SupportedStyles:
+          - native
+          - lf
+          - crlf
+          AutoCorrect: always
+      source: |
+        x = 0
+        y = 1
+    - id: upstream_edge_2
+      description: RuboCop::Cop::Layout::EndOfLine when EnforcedStyle is crlf registers
+        an offense for CR+LF
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/EndOfLine:
+          Description: Use Unix-style line endings.
+          StyleGuide: "#crlf"
+          Enabled: true
+          VersionAdded: '0.49'
+          EnforcedStyle: crlf
+          SupportedStyles:
+          - native
+          - lf
+          - crlf
+          AutoCorrect: always
+      source: value = 1
+    - id: upstream_edge_3
+      description: RuboCop::Cop::Layout::EndOfLine when EnforcedStyle is crlf does
+        not register offense for no CR at end of file
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/EndOfLine:
+          Description: Use Unix-style line endings.
+          StyleGuide: "#crlf"
+          Enabled: true
+          VersionAdded: '0.49'
+          EnforcedStyle: crlf
+          SupportedStyles:
+          - native
+          - lf
+          - crlf
+          AutoCorrect: always
+      source: x=0
+    - id: upstream_edge_4
+      description: RuboCop::Cop::Layout::EndOfLine when EnforcedStyle is crlf does
+        not register offenses after __END__
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/EndOfLine:
+          Description: Use Unix-style line endings.
+          StyleGuide: "#crlf"
+          Enabled: true
+          VersionAdded: '0.49'
+          EnforcedStyle: crlf
+          SupportedStyles:
+          - native
+          - lf
+          - crlf
+          AutoCorrect: always
+      source: "x=0\r\n__END__\nx=0\n"
+    real_world:
+      positives: []
+      negatives: []
+  Layout/ExtraSpacing:
+    matrix_position: 52
+    edge_cases:
+    - id: upstream_edge_1
+      description: RuboCop::Cop::Layout::ExtraSpacing when AllowForAlignment is true
+        registers an offense and corrects when a character is vertically aligned
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/ExtraSpacing:
+          Description: Do not use unnecessary spacing.
+          Enabled: true
+          VersionAdded: '0.49'
+          AllowForAlignment: true
+          AllowBeforeTrailingComments: false
+          ForceEqualSignAlignment: false
+          AutoCorrect: always
+      source: |
+        d_is_vertically_aligned  do
+          _______________________d
+        end
+    - id: upstream_edge_2
+      description: RuboCop::Cop::Layout::ExtraSpacing when AllowForAlignment is true
+        behaves like common behavior registers an offense and corrects alignment with
+        token not preceded by space
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/ExtraSpacing:
+          Description: Do not use unnecessary spacing.
+          Enabled: true
+          VersionAdded: '0.49'
+          AllowForAlignment: true
+          AllowBeforeTrailingComments: false
+          ForceEqualSignAlignment: false
+          AutoCorrect: always
+      source: |
+        website("example.org")
+        name   = "Jill"
+    - id: upstream_edge_3
+      description: RuboCop::Cop::Layout::ExtraSpacing when AllowForAlignment is true
+        behaves like common behavior accepts aligned values of an implicit hash literal
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/ExtraSpacing:
+          Description: Do not use unnecessary spacing.
+          Enabled: true
+          VersionAdded: '0.49'
+          AllowForAlignment: true
+          AllowBeforeTrailingComments: false
+          ForceEqualSignAlignment: false
+          AutoCorrect: always
+      source: |
+        register(street1:    '1 Market',
+                 street2:    '#200',
+                 :city =>    'Some Town',
+                 state:      'CA',
+                 postal_code:'99999-1111')
+    - id: upstream_edge_4
+      description: RuboCop::Cop::Layout::ExtraSpacing when AllowForAlignment is true
+        behaves like common behavior accepts space between key and value in a hash
+        with hash rockets
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/ExtraSpacing:
+          Description: Do not use unnecessary spacing.
+          Enabled: true
+          VersionAdded: '0.49'
+          AllowForAlignment: true
+          AllowBeforeTrailingComments: false
+          ForceEqualSignAlignment: false
+          AutoCorrect: always
+      source: |
+        ospf_h = {
+          'ospfTest'    => {
+            'foo'      => {
+              area: '0.0.0.0', cost: 10, hello: 30, pass: true },
+            'longname' => {
+              area: '1.1.1.38', pass: false },
+            'vlan101'  => {
+              area: '2.2.2.101', cost: 5, hello: 20, pass: true }
+          },
+          'TestOspfInt' => {
+            'x'               => {
+              area: '0.0.0.19' },
+            'vlan290'         => {
+              area: '2.2.2.29', cost: 200, hello: 30, pass: true },
+            'port-channel100' => {
+              area: '3.2.2.29', cost: 25, hello: 50, pass: false }
+          }
+        }
+    real_world:
+      positives: []
+      negatives: []
+  Layout/FirstArgumentIndentation:
+    matrix_position: 53
+    edge_cases:
+    - id: upstream_edge_1
+      description: RuboCop::Cop::Layout::FirstArgumentIndentation when EnforcedStyle
+        is special_for_inner_method_call behaves like common behavior when IndentationWidth:Width
+        is 2 registers an offense and corrects an over-indented first argument
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/FirstArgumentIndentation:
+          Description: Checks the indentation of the first argument in a method call.
+          Enabled: true
+          VersionAdded: '0.68'
+          VersionChanged: '0.77'
+          EnforcedStyle: special_for_inner_method_call
+          SupportedStyles:
+          - consistent
+          - consistent_relative_to_receiver
+          - special_for_inner_method_call
+          - special_for_inner_method_call_in_parentheses
+          IndentationWidth:
+          AutoCorrect: always
+        Layout/IndentationWidth:
+          Width: 2
+      source: |
+        run(
+            :foo,
+            bar: 3
+        )
+    - id: upstream_edge_2
+      description: RuboCop::Cop::Layout::FirstArgumentIndentation when EnforcedStyle
+        is special_for_inner_method_call behaves like common behavior when IndentationWidth:Width
+        is 2 registers an offense and corrects an over-indented first argument of
+        `super`
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/FirstArgumentIndentation:
+          Description: Checks the indentation of the first argument in a method call.
+          Enabled: true
+          VersionAdded: '0.68'
+          VersionChanged: '0.77'
+          EnforcedStyle: special_for_inner_method_call
+          SupportedStyles:
+          - consistent
+          - consistent_relative_to_receiver
+          - special_for_inner_method_call
+          - special_for_inner_method_call_in_parentheses
+          IndentationWidth:
+          AutoCorrect: always
+        Layout/IndentationWidth:
+          Width: 2
+      source: |
+        super(
+            :foo,
+            bar: 3
+        )
+    - id: upstream_edge_3
+      description: RuboCop::Cop::Layout::FirstArgumentIndentation when EnforcedStyle
+        is special_for_inner_method_call behaves like common behavior when IndentationWidth:Width
+        is 2 registers an offense and corrects an over-indented first argument on
+        an alphanumeric method name
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/FirstArgumentIndentation:
+          Description: Checks the indentation of the first argument in a method call.
+          Enabled: true
+          VersionAdded: '0.68'
+          VersionChanged: '0.77'
+          EnforcedStyle: special_for_inner_method_call
+          SupportedStyles:
+          - consistent
+          - consistent_relative_to_receiver
+          - special_for_inner_method_call
+          - special_for_inner_method_call_in_parentheses
+          IndentationWidth:
+          AutoCorrect: always
+        Layout/IndentationWidth:
+          Width: 2
+      source: |
+        self.run(
+            :foo,
+            bar: 3
+        )
+    - id: upstream_edge_4
+      description: RuboCop::Cop::Layout::FirstArgumentIndentation when EnforcedStyle
+        is special_for_inner_method_call behaves like common behavior when IndentationWidth:Width
+        is 2 registers an offense and corrects an over-indented first argument on
+        a pipe method name
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/FirstArgumentIndentation:
+          Description: Checks the indentation of the first argument in a method call.
+          Enabled: true
+          VersionAdded: '0.68'
+          VersionChanged: '0.77'
+          EnforcedStyle: special_for_inner_method_call
+          SupportedStyles:
+          - consistent
+          - consistent_relative_to_receiver
+          - special_for_inner_method_call
+          - special_for_inner_method_call_in_parentheses
+          IndentationWidth:
+          AutoCorrect: always
+        Layout/IndentationWidth:
+          Width: 2
+      source: |
+        self.|(
+            :foo,
+            bar: 3
+        )
+    real_world:
+      positives: []
+      negatives: []
+  Layout/FirstArrayElementIndentation:
+    matrix_position: 54
+    edge_cases:
+    - id: upstream_edge_1
+      description: RuboCop::Cop::Layout::FirstArrayElementIndentation when array is
+        operand accepts correctly indented first element
+      path: example.rb
+      config:
+        Layout/FirstArrayElementIndentation:
+          EnforcedStyle: special_inside_parentheses
+          SupportedStyles:
+          - special_inside_parentheses
+          - consistent
+          - align_brackets
+          IndentationWidth:
+        Layout/IndentationWidth:
+          Width: 2
+      source: |
+        a << [
+          1
+        ]
+    - id: upstream_edge_2
+      description: Accepts a correctly indented array assigned through a setter.
+      path: example.rb
+      config:
+        Layout/FirstArrayElementIndentation:
+          EnforcedStyle: special_inside_parentheses
+          SupportedStyles:
+          - special_inside_parentheses
+          - consistent
+          - align_brackets
+          IndentationWidth:
+        Layout/IndentationWidth:
+          Width: 2
+      source: |
+        config.values = [
+          1
+        ]
+    - id: upstream_edge_3
+      description: Accepts a correctly indented array on an assignment right-hand side.
+      path: example.rb
+      config:
+        Layout/FirstArrayElementIndentation:
+          EnforcedStyle: special_inside_parentheses
+          SupportedStyles:
+          - special_inside_parentheses
+          - consistent
+          - align_brackets
+          IndentationWidth:
+        Layout/IndentationWidth:
+          Width: 2
+      source: |
+        values = [
+          1,
+          2
+        ]
+    - id: upstream_edge_4
+      description: RuboCop::Cop::Layout::FirstArrayElementIndentation when array is
+        operand when indentation width is overridden for this cop accepts correctly
+        indented first element
+      path: example.rb
+      config:
+        Layout/FirstArrayElementIndentation:
+          EnforcedStyle: special_inside_parentheses
+          SupportedStyles:
+          - special_inside_parentheses
+          - consistent
+          - align_brackets
+          IndentationWidth: 4
+        Layout/IndentationWidth:
+          Width: 2
+      source: |
+        a << [
+            1
+        ]
+    real_world:
+      positives: []
+      negatives: []
+  Layout/FirstArrayElementLineBreak:
+    matrix_position: 55
+    edge_cases:
+    - id: upstream_edge_1
+      description: RuboCop::Cop::Layout::FirstArrayElementLineBreak ignores elements
+        listed on a single line
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/FirstArrayElementLineBreak:
+          Description: Checks for a line break before the first element in a multi-line
+            array.
+          Enabled: true
+          VersionAdded: '0.49'
+          AllowImplicitArrayLiterals: false
+          AllowMultilineFinalElement: false
+          AutoCorrect: always
+      source: |
+        b = [
+          :a,
+          :b]
+    - id: upstream_edge_2
+      description: RuboCop::Cop::Layout::FirstArrayElementLineBreak elements listed
+        on the first line registers and corrects the offense
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/FirstArrayElementLineBreak:
+          Description: Checks for a line break before the first element in a multi-line
+            array.
+          Enabled: true
+          VersionAdded: '0.49'
+          AllowImplicitArrayLiterals: false
+          AllowMultilineFinalElement: false
+          AutoCorrect: always
+      source: |
+        a = [:a,
+             :b]
+    - id: upstream_edge_3
+      description: RuboCop::Cop::Layout::FirstArrayElementLineBreak word arrays registers
+        and corrects the offense
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/FirstArrayElementLineBreak:
+          Description: Checks for a line break before the first element in a multi-line
+            array.
+          Enabled: true
+          VersionAdded: '0.49'
+          AllowImplicitArrayLiterals: false
+          AllowMultilineFinalElement: false
+          AutoCorrect: always
+      source: |
+        words = %w[a b c d]
+    - id: upstream_edge_4
+      description: RuboCop::Cop::Layout::FirstArrayElementLineBreak array nested in
+        a method call registers and corrects the offense
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/FirstArrayElementLineBreak:
+          Description: Checks for a line break before the first element in a multi-line
+            array.
+          Enabled: true
+          VersionAdded: '0.49'
+          AllowImplicitArrayLiterals: false
+          AllowMultilineFinalElement: false
+          AutoCorrect: always
+      source: |
+        method([:foo,
+                :bar])
+    real_world:
+      positives: []
+      negatives: []
+  Layout/FirstHashElementIndentation:
+    matrix_position: 56
+    edge_cases:
+    - id: upstream_edge_1
+      description: 'RuboCop::Cop::Layout::FirstHashElementIndentation when the HashAlignment
+        style is separator for : accepts correctly indented first pair'
+      path: example.rb
+      config:
+        Layout/HashAlignment:
+          Enabled: true
+          EnforcedColonStyle: separator
+          EnforcedHashRocketStyle: key
+        Layout/FirstHashElementIndentation:
+          EnforcedStyle: special_inside_parentheses
+          SupportedStyles:
+          - special_inside_parentheses
+          - consistent
+          - align_braces
+          IndentationWidth:
+        Layout/IndentationWidth:
+          Width: 2
+      source: |
+        a << {
+            a: 1,
+          aaa: 222
+        }
+    - id: upstream_edge_2
+      description: 'RuboCop::Cop::Layout::FirstHashElementIndentation when the HashAlignment
+        style is separator for : registers an offense and corrects incorrectly indented
+        first pair with :'
+      path: example.rb
+      config:
+        Layout/HashAlignment:
+          Enabled: true
+          EnforcedColonStyle: separator
+          EnforcedHashRocketStyle: key
+        Layout/FirstHashElementIndentation:
+          EnforcedStyle: special_inside_parentheses
+          SupportedStyles:
+          - special_inside_parentheses
+          - consistent
+          - align_braces
+          IndentationWidth:
+        Layout/IndentationWidth:
+          Width: 2
+      source: |
+        a << {
+               a: 1,
+             aaa: 222
+        }
+    - id: upstream_edge_3
+      description: 'RuboCop::Cop::Layout::FirstHashElementIndentation when the HashAlignment
+        style is separator for : behaves like right brace registers an offense and
+        corrects incorrectly indented }'
+      path: example.rb
+      config:
+        Layout/HashAlignment:
+          Enabled: true
+          EnforcedColonStyle: separator
+          EnforcedHashRocketStyle: key
+        Layout/FirstHashElementIndentation:
+          EnforcedStyle: special_inside_parentheses
+          SupportedStyles:
+          - special_inside_parentheses
+          - consistent
+          - align_braces
+          IndentationWidth:
+        Layout/IndentationWidth:
+          Width: 2
+      source: |
+        a << {
+          }
+    - id: upstream_edge_4
+      description: RuboCop::Cop::Layout::FirstHashElementIndentation when the HashAlignment
+        style is separator for => accepts correctly indented first pair
+      path: example.rb
+      config:
+        Layout/HashAlignment:
+          Enabled: true
+          EnforcedColonStyle: key
+          EnforcedHashRocketStyle: separator
+        Layout/FirstHashElementIndentation:
+          EnforcedStyle: special_inside_parentheses
+          SupportedStyles:
+          - special_inside_parentheses
+          - consistent
+          - align_braces
+          IndentationWidth:
+        Layout/IndentationWidth:
+          Width: 2
+      source: |
+        a << {
+            'a' => 1,
+          'aaa' => 222
+        }
+    real_world:
+      positives: []
+      negatives: []
+  Layout/FirstHashElementLineBreak:
+    matrix_position: 57
+    edge_cases:
+    - id: upstream_edge_1
+      description: RuboCop::Cop::Layout::FirstHashElementLineBreak registers an offense
+        and corrects elements listed on the first line
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/FirstHashElementLineBreak:
+          Description: Checks for a line break before the first element in a multi-line
+            hash.
+          Enabled: true
+          VersionAdded: '0.49'
+          AllowMultilineFinalElement: false
+          AutoCorrect: always
+      source: |
+        a = { a: 1,
+              b: 2 }
+    - id: upstream_edge_2
+      description: RuboCop::Cop::Layout::FirstHashElementLineBreak registers an offense
+        and corrects hash nested in a method call
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/FirstHashElementLineBreak:
+          Description: Checks for a line break before the first element in a multi-line
+            hash.
+          Enabled: true
+          VersionAdded: '0.49'
+          AllowMultilineFinalElement: false
+          AutoCorrect: always
+      source: |
+        method({ foo: 1,
+                 bar: 2 })
+    - id: upstream_edge_3
+      description: RuboCop::Cop::Layout::FirstHashElementLineBreak registers an offense
+        and corrects single element multi-line hash
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/FirstHashElementLineBreak:
+          Description: Checks for a line break before the first element in a multi-line
+            hash.
+          Enabled: true
+          VersionAdded: '0.49'
+          AllowMultilineFinalElement: false
+          AutoCorrect: always
+      source: |
+        { foo: {
+          bar: 2,
+        } }
+    - id: upstream_edge_4
+      description: RuboCop::Cop::Layout::FirstHashElementLineBreak ignores implicit
+        hashes in method calls with parens
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/FirstHashElementLineBreak:
+          Description: Checks for a line break before the first element in a multi-line
+            hash.
+          Enabled: true
+          VersionAdded: '0.49'
+          AllowMultilineFinalElement: false
+          AutoCorrect: always
+      source: |
+        method(
+          foo: 1,
+          bar: 2)
+    real_world:
+      positives: []
+      negatives: []
+  Layout/FirstMethodArgumentLineBreak:
+    matrix_position: 58
+    edge_cases:
+    - id: upstream_edge_1
+      description: RuboCop::Cop::Layout::FirstMethodArgumentLineBreak registers an
+        offense and corrects hash arg spanning multiple lines
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/FirstMethodArgumentLineBreak:
+          Description: Checks for a line break before the first argument in a multi-line
+            method call.
+          Enabled: true
+          VersionAdded: '0.49'
+          AllowMultilineFinalElement: false
+          AllowedMethods: []
+          AutoCorrect: always
+      source: |
+        something(3, bar: 1,
+        baz: 2)
+    - id: upstream_edge_2
+      description: RuboCop::Cop::Layout::FirstMethodArgumentLineBreak registers an
+        offense and corrects hash arg without a line break before the first pair
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/FirstMethodArgumentLineBreak:
+          Description: Checks for a line break before the first argument in a multi-line
+            method call.
+          Enabled: true
+          VersionAdded: '0.49'
+          AllowMultilineFinalElement: false
+          AllowedMethods: []
+          AutoCorrect: always
+      source: |
+        something(bar: 1,
+        baz: 2)
+    - id: upstream_edge_3
+      description: RuboCop::Cop::Layout::FirstMethodArgumentLineBreak ignores arguments
+        listed on a single line
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/FirstMethodArgumentLineBreak:
+          Description: Checks for a line break before the first argument in a multi-line
+            method call.
+          Enabled: true
+          VersionAdded: '0.49'
+          AllowMultilineFinalElement: false
+          AllowedMethods: []
+          AutoCorrect: always
+      source: foo(bar, baz, bing)
+    - id: upstream_edge_4
+      description: RuboCop::Cop::Layout::FirstMethodArgumentLineBreak ignores kwargs
+        listed on a single line when the arguments are used in `super`
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/FirstMethodArgumentLineBreak:
+          Description: Checks for a line break before the first argument in a multi-line
+            method call.
+          Enabled: true
+          VersionAdded: '0.49'
+          AllowMultilineFinalElement: false
+          AllowedMethods: []
+          AutoCorrect: always
+      source: 'super(foo: 1, bar: 2)'
+    real_world:
+      positives: []
+      negatives: []
+  Layout/FirstMethodParameterLineBreak:
+    matrix_position: 59
+    edge_cases:
+    - id: upstream_edge_1
+      description: RuboCop::Cop::Layout::FirstMethodParameterLineBreak registers an
+        offense and corrects params listed on the first line
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/FirstMethodParameterLineBreak:
+          Description: Checks for a line break before the first parameter in a multi-line
+            method parameter definition.
+          Enabled: true
+          VersionAdded: '0.49'
+          AllowMultilineFinalElement: false
+          AutoCorrect: always
+      source: |
+        def foo(bar,
+          baz)
+          do_something
+        end
+    - id: upstream_edge_2
+      description: RuboCop::Cop::Layout::FirstMethodParameterLineBreak registers an
+        offense and corrects params on first line of singleton method
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/FirstMethodParameterLineBreak:
+          Description: Checks for a line break before the first parameter in a multi-line
+            method parameter definition.
+          Enabled: true
+          VersionAdded: '0.49'
+          AllowMultilineFinalElement: false
+          AutoCorrect: always
+      source: |
+        def self.foo(bar,
+          baz)
+          do_something
+        end
+    - id: upstream_edge_3
+      description: RuboCop::Cop::Layout::FirstMethodParameterLineBreak accepts params
+        listed on a single line
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/FirstMethodParameterLineBreak:
+          Description: Checks for a line break before the first parameter in a multi-line
+            method parameter definition.
+          Enabled: true
+          VersionAdded: '0.49'
+          AllowMultilineFinalElement: false
+          AutoCorrect: always
+      source: |
+        def foo(bar, baz, bing)
+          do_something
+        end
+    - id: upstream_edge_4
+      description: RuboCop::Cop::Layout::FirstMethodParameterLineBreak accepts params
+        without parens
+      path: example.rb
+      config:
+        AllCops:
+          TargetRubyVersion: 2.7
+        Layout/FirstMethodParameterLineBreak:
+          Description: Checks for a line break before the first parameter in a multi-line
+            method parameter definition.
+          Enabled: true
+          VersionAdded: '0.49'
+          AllowMultilineFinalElement: false
+          AutoCorrect: always
+      source: |
+        def foo bar,
+          baz
+          do_something
+        end
+    real_world:
+      positives: []
+      negatives: []
+  Layout/FirstParameterIndentation:
+    matrix_position: 60
+    edge_cases:
+    - id: upstream_edge_1
+      description: RuboCop::Cop::Layout::FirstParameterIndentation consistent style
+        no paren method defs ignores
+      path: example.rb
+      config:
+        Layout/FirstParameterIndentation:
+          EnforcedStyle: consistent
+          SupportedStyles:
+          - consistent
+          - align_parentheses
+          IndentationWidth:
+        Layout/IndentationWidth:
+          Width: 2
+      source: |
+        def abc foo, bar, baz
+          foo
+        end
+    - id: upstream_edge_2
+      description: RuboCop::Cop::Layout::FirstParameterIndentation consistent style
+        no paren method defs ignores with hash args
+      path: example.rb
+      config:
+        Layout/FirstParameterIndentation:
+          EnforcedStyle: consistent
+          SupportedStyles:
+          - consistent
+          - align_parentheses
+          IndentationWidth:
+        Layout/IndentationWidth:
+          Width: 2
+      source: |
+        def abc foo: 1, bar: 3, baz: 3
+          foo
+        end
+    - id: upstream_edge_3
+      description: RuboCop::Cop::Layout::FirstParameterIndentation consistent style
+        single line method defs ignores
+      path: example.rb
+      config:
+        Layout/FirstParameterIndentation:
+          EnforcedStyle: consistent
+          SupportedStyles:
+          - consistent
+          - align_parentheses
+          IndentationWidth:
+        Layout/IndentationWidth:
+          Width: 2
+      source: |
+        def abc(foo, bar, baz)
+          foo
+        end
+    - id: upstream_edge_4
+      description: RuboCop::Cop::Layout::FirstParameterIndentation consistent style
+        single line method defs ignores with hash args
+      path: example.rb
+      config:
+        Layout/FirstParameterIndentation:
+          EnforcedStyle: consistent
+          SupportedStyles:
+          - consistent
+          - align_parentheses
+          IndentationWidth:
+        Layout/IndentationWidth:
+          Width: 2
+      source: |
+        def abc(foo: 1, bar: 3, baz: 3)
+          foo
+        end
+    real_world:
+      positives: []
+      negatives: []

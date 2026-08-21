@@ -65,4 +65,13 @@ impl<'pr> Visit<'pr> for Runner<'_, 'pr> {
     fn visit_rescue_node(&mut self, node: &ruby_prism::RescueNode<'pr>) {
         visit_typed_branch!(self, node, as_rescue_node, ruby_prism::visit_rescue_node);
     }
+
+    fn visit_statements_node(&mut self, node: &ruby_prism::StatementsNode<'pr>) {
+        visit_typed_branch!(
+            self,
+            node,
+            as_statements_node,
+            ruby_prism::visit_statements_node
+        );
+    }
 }

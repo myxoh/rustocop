@@ -18,10 +18,7 @@ pub(super) fn after_prism(
     offenses: &mut Vec<Offense>,
 ) {
     check_line_length(lines, options, offenses);
-    check_extra_spacing(lines, options, offenses);
     check_indentation(lines, options, offenses);
-    check_end_alignment(lines, options, offenses);
-    check_first_hash_element_indentation(lines, options, offenses);
 }
 
 fn check_trailing_whitespace(

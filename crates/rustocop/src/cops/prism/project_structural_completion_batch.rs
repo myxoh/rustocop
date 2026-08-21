@@ -4,7 +4,7 @@ define_cops! {
     RequiredRubyVersion => "Gemspec/RequiredRubyVersion" => source(required_ruby_version),
     ClassStructure => "Layout/ClassStructure" => source(class_structure),
     ModuleLength => "Metrics/ModuleLength" => source(module_length),
-    EmptyLineAfterMultilineCondition => "Layout/EmptyLineAfterMultilineCondition" => source(empty_after_multiline_condition),
+    EmptyLineAfterMultilineCondition => "Layout/EmptyLineAfterMultilineCondition" => any_node(empty_after_multiline_condition),
     DeprecatedOpenSSLConstant => "Lint/DeprecatedOpenSSLConstant" => source(deprecated_openssl),
     HashConversion => "Style/HashConversion" => source(hash_conversion),
 }
@@ -124,29 +124,91 @@ fn module_length(context: &mut CopContext<'_, '_>) {
     }
 }
 
-fn empty_after_multiline_condition(context: &mut CopContext<'_, '_>) {
-    let lines = context.source_file().lines().collect::<Vec<_>>();
-    for index in 0..lines.len().saturating_sub(2) {
-        let (offset, line) = lines[index];
-        if !["if ", "unless ", "while ", "until "]
-            .iter()
-            .any(|word| line.contains(word))
-            || !["&&", "||"].iter().any(|op| line.trim_end().ends_with(op))
-        {
-            continue;
+fn empty_after_multiline_condition(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
+    if let Some(condition) = node.as_if_node() {
+        let predicate = condition.predicate();
+        let modifier = condition
+            .if_keyword_loc()
+            .is_some_and(|keyword| keyword.start_offset() != condition.location().start_offset());
+        if !modifier || has_right_sibling(node, context.ancestors()) {
+            check_multiline_condition(&predicate, &predicate, true, context);
         }
-        if lines[index + 2].1.trim().is_empty() {
-            continue;
+    } else if let Some(condition) = node.as_unless_node() {
+        let predicate = condition.predicate();
+        let modifier = condition.keyword_loc().start_offset() != condition.location().start_offset();
+        if !modifier || has_right_sibling(node, context.ancestors()) {
+            check_multiline_condition(&predicate, &predicate, true, context);
         }
-        let start = offset + line.find(['i', 'u', 'w']).unwrap_or(0);
-        let end = lines[index + 1].0 + lines[index + 1].1.len();
-        context.insert(
-            "Use empty line after multiline condition.",
-            start..end,
-            end + 1,
-            "\n",
-        );
+    } else if let Some(condition) = node.as_while_node() {
+        let predicate = condition.predicate();
+        if !condition.is_begin_modifier() || has_right_sibling(node, context.ancestors()) {
+            check_multiline_condition(&predicate, &predicate, true, context);
+        }
+    } else if let Some(condition) = node.as_until_node() {
+        let predicate = condition.predicate();
+        if !condition.is_begin_modifier() || has_right_sibling(node, context.ancestors()) {
+            check_multiline_condition(&predicate, &predicate, true, context);
+        }
+    } else if let Some(branch) = node.as_when_node() {
+        let conditions = branch.conditions().iter().collect::<Vec<_>>();
+        if let (Some(first), Some(last)) = (conditions.first(), conditions.last()) {
+            if !context
+                .source_file()
+                .same_line(first.location().start_offset(), last.location().end_offset())
+            {
+                check_multiline_condition(last, &branch.as_node(), false, context);
+            }
+        }
+    } else if let Some(rescue) = node.as_rescue_node() {
+        let exceptions = rescue.exceptions().iter().collect::<Vec<_>>();
+        if exceptions.len() > 1 {
+            let first = &exceptions[0];
+            let last = exceptions.last().expect("multiple rescue exceptions");
+            if !context
+                .source_file()
+                .same_line(first.location().start_offset(), last.location().end_offset())
+            {
+                check_multiline_condition(last, &rescue.as_node(), false, context);
+            }
+        }
     }
+}
+
+fn check_multiline_condition(
+    condition_end: &Node<'_>,
+    offense: &Node<'_>,
+    require_multiline_node: bool,
+    context: &mut CopContext<'_, '_>,
+) {
+    let location = condition_end.location();
+    let file = context.source_file();
+    if require_multiline_node && file.same_line(location.start_offset(), location.end_offset()) {
+        return;
+    }
+    let condition_line = file.line_range(location.end_offset().saturating_sub(1));
+    if condition_line.end >= context.source().len()
+        || file.line(condition_line.end).trim().is_empty()
+    {
+        return;
+    }
+    context.insert(
+        "Use empty line after multiline condition.",
+        offense.location().start_offset()..offense.location().end_offset(),
+        condition_line.end,
+        "\n",
+    );
+}
+
+fn has_right_sibling(node: &Node<'_>, ancestors: &[Node<'_>]) -> bool {
+    ancestors.iter().rev().any(|ancestor| {
+        ancestor.as_statements_node().is_some_and(|statements| {
+            let body = statements.body().iter().collect::<Vec<_>>();
+            body.iter().position(|sibling| {
+                sibling.location().start_offset() == node.location().start_offset()
+                    && sibling.location().end_offset() == node.location().end_offset()
+            }).is_some_and(|index| index + 1 < body.len())
+        })
+    })
 }
 
 fn deprecated_openssl(context: &mut CopContext<'_, '_>) {

@@ -4,7 +4,7 @@ use super::*;
 pub(super) fn cops() -> Vec<Box<dyn Cop>> {
     vec![
         custom("Layout/MultilineArrayBraceLayout", array_brace_layout),
-        custom("Layout/EmptyLineAfterGuardClause", empty_after_guard),
+        Box::new(EmptyLineAfterGuardClause),
         custom(
             "Layout/LineEndStringConcatenationIndentation",
             align_continuation,

@@ -3,8 +3,8 @@ use super::*;
 define_cops! {
     MultilineMethodParameterLineBreaks => "Layout/MultilineMethodParameterLineBreaks" => source(parameter_line_breaks),
     SpaceBeforeBlockBraces => "Layout/SpaceBeforeBlockBraces" => source(space_before_block_braces),
-    BlockEndNewline => "Layout/BlockEndNewline" => source(block_end_newline),
-    DefEndAlignment => "Layout/DefEndAlignment" => source(def_end_alignment),
+    BlockEndNewline => "Layout/BlockEndNewline" => node(as_block_node, block_end_newline),
+    DefEndAlignment => "Layout/DefEndAlignment" => node(as_def_node, def_end_alignment),
     MultilineMethodArgumentLineBreaks => "Layout/MultilineMethodArgumentLineBreaks" => source(argument_line_breaks),
     ParameterAlignment => "Layout/ParameterAlignment" => source(parameter_alignment),
 }
@@ -88,54 +88,131 @@ fn space_before_block_braces(context: &mut CopContext<'_, '_>) {
     }
 }
 
-fn block_end_newline(context: &mut CopContext<'_, '_>) {
-    for (offset, line) in context.source_file().lines() {
-        for token in ["end", "}"] {
-            let Some(at) = line.rfind(token) else {
-                continue;
-            };
-            if at == 0 || line[..at].trim().is_empty() {
-                continue;
-            }
-            let column = line[..at].chars().count();
-            context.replace(
-                format!(
-                    "Expression at {}, {} should be on its own line.",
-                    context.source()[..offset].matches('\n').count() + 1,
-                    column
-                ),
-                offset + at..offset + at + token.len(),
-                offset + at..offset + at,
-                "\n",
+fn block_end_newline(node: &ruby_prism::BlockNode<'_>, context: &mut CopContext<'_, '_>) {
+    let opening = node.opening_loc();
+    let closing = node.closing_loc();
+    let file = context.source_file();
+    if file.same_line(opening.start_offset(), closing.start_offset()) {
+        return;
+    }
+
+    let line_start = context.source()[..closing.start_offset()]
+        .rfind('\n')
+        .map_or(0, |newline| newline + 1);
+    let before_closing = &context.source()[line_start..closing.start_offset()];
+    if before_closing.trim().is_empty() || before_closing.trim_start().starts_with(';') {
+        return;
+    }
+
+    let whitespace_start =
+        line_start + before_closing.trim_end_matches([' ', '\t']).len();
+    let line = context.source()[..closing.start_offset()]
+        .bytes()
+        .filter(|byte| *byte == b'\n')
+        .count()
+        + 1;
+    let column = closing.start_offset() - line_start + 1;
+    let message = format!("Expression at {line}, {column} should be on its own line.");
+    let block_prefix = &context.source()[opening.end_offset()..closing.start_offset()];
+    if let Some(marker) = last_heredoc_marker(block_prefix) {
+        if let Some((terminator_start, _)) = file
+            .lines()
+            .find(|(start, line)| *start >= closing.end_offset() && line.trim() == marker)
+        {
+            let insertion = file.line_range(terminator_start).end;
+            context.replace_many(
+                message,
+                closing.start_offset()..closing.end_offset(),
+                vec![
+                    (whitespace_start..closing.end_offset(), String::new()),
+                    (insertion..insertion, format!("{}\n", file.at(&closing))),
+                ],
             );
+            return;
         }
     }
+    context.replace(
+        message,
+        closing.start_offset()..closing.end_offset(),
+        whitespace_start..closing.start_offset(),
+        "\n",
+    );
 }
 
-fn def_end_alignment(context: &mut CopContext<'_, '_>) {
-    let lines = context.source_file().lines().collect::<Vec<_>>();
-    let mut stack = Vec::new();
-    for (offset, line) in lines {
-        let trimmed = line.trim_start();
-        let indent = line.len() - trimmed.len();
-        if let Some(definition) = line.find("def ") {
-            stack.push((
-                offset,
-                if definition > 0 { 0 } else { indent },
-                line[..definition + 3].trim().to_string(),
-            ));
-        }
-        if trimmed == "end" {
-            let Some((def_offset, expected, opening)) = stack.pop() else {
-                continue;
-            };
-            if indent != expected {
-                let def_line = context.source()[..def_offset].matches('\n').count() + 1;
-                let end_line = context.source()[..offset].matches('\n').count() + 1;
-                context.replace(format!("`end` at {end_line}, {indent} is not aligned with `{opening}` at {def_line}, {expected}."), offset + indent..offset + line.len(), offset..offset + indent, " ".repeat(expected));
+fn last_heredoc_marker(source: &str) -> Option<&str> {
+    source
+        .match_indices("<<")
+        .filter_map(|(offset, _)| {
+            let mut rest = &source[offset + 2..];
+            rest = rest.strip_prefix(['~', '-']).unwrap_or(rest);
+            if rest.starts_with(['\'', '"']) {
+                rest = &rest[1..];
             }
-        }
+            let length = rest
+                .bytes()
+                .take_while(|byte| byte.is_ascii_alphanumeric() || *byte == b'_')
+                .count();
+            (length > 0).then_some(&rest[..length])
+        })
+        .last()
+}
+
+fn def_end_alignment(node: &ruby_prism::DefNode<'_>, context: &mut CopContext<'_, '_>) {
+    let Some(end_keyword) = node.end_keyword_loc() else {
+        return;
+    };
+    let keyword = node.def_keyword_loc();
+    let source = context.source();
+    let def_line_start = source[..keyword.start_offset()]
+        .rfind('\n')
+        .map_or(0, |newline| newline + 1);
+    let end_line_start = source[..end_keyword.start_offset()]
+        .rfind('\n')
+        .map_or(0, |newline| newline + 1);
+    let start_of_line_column = source[def_line_start..]
+        .bytes()
+        .take_while(|byte| matches!(byte, b' ' | b'\t'))
+        .count();
+    let def_column = keyword.start_offset() - def_line_start;
+    let actual = end_keyword.start_offset() - end_line_start;
+    let expected = if context
+        .config_value("EnforcedStyleAlignWith")
+        .unwrap_or("start_of_line")
+        == "def"
+    {
+        def_column
+    } else {
+        start_of_line_column
+    };
+    if actual == expected {
+        return;
     }
+
+    let def_line = source[..keyword.start_offset()]
+        .bytes()
+        .filter(|byte| *byte == b'\n')
+        .count()
+        + 1;
+    let end_line = source[..end_keyword.start_offset()]
+        .bytes()
+        .filter(|byte| *byte == b'\n')
+        .count()
+        + 1;
+    let reference_end = keyword.end_offset();
+    let reference_start = if expected == def_column {
+        keyword.start_offset()
+    } else {
+        def_line_start + start_of_line_column
+    };
+    let reference = source[reference_start..reference_end].trim_end();
+    context.replace(
+        format!(
+            "`end` at {end_line}, {actual} is not aligned with `{reference}` at {def_line}, {expected}."
+        ),
+        end_keyword.start_offset()..end_keyword.end_offset(),
+        end_line_start..end_keyword.start_offset(),
+        " ".repeat(expected),
+    );
 }
 
 fn parameter_alignment(context: &mut CopContext<'_, '_>) {

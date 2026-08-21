@@ -5,20 +5,12 @@ mod registry;
 
 pub(super) fn cops() -> Vec<Box<dyn Cop>> {
     let mut cops = vec![
-        custom(
-            "Layout/EmptyLinesAfterModuleInclusion",
-            empty_after_inclusion,
-        ),
-        custom("Layout/DotPosition", dot_position),
-        custom("Layout/EmptyLinesAroundModuleBody", empty_around_body),
         replace(
             "Layout/SpaceAroundBlockParameters",
             "{|",
             "{ |",
             "Space missing around block parameters.",
         ),
-        custom("Layout/EmptyLineBetweenDefs", empty_between_defs),
-        custom("Layout/EmptyLinesAroundClassBody", empty_around_body),
         custom(
             "Layout/SpaceInsideReferenceBrackets",
             reference_bracket_spacing,
@@ -29,7 +21,6 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
             "&.",
             "Space around method call operator detected.",
         ),
-        custom("Layout/BlockAlignment", end_alignment),
         custom(
             "Layout/MultilineOperationIndentation",
             continuation_indentation,
@@ -98,25 +89,6 @@ fn array_literal_spacing(context: &mut CopContext<'_, '_>) {
                     offset + at + 1..offset + at + 2,
                 );
             }
-        }
-    }
-}
-
-fn empty_around_body(context: &mut CopContext<'_, '_>) {
-    if context.policy().enforced_style("no_empty_lines") != "no_empty_lines" {
-        return;
-    }
-    let lines = context.source_file().lines().collect::<Vec<_>>();
-    for window in lines.windows(2) {
-        if (window[0].1.trim_start().starts_with("class ")
-            || window[0].1.trim_start().starts_with("module "))
-            && window[1].1.trim().is_empty()
-        {
-            context.remove(
-                "Extra empty line detected at body beginning.",
-                window[1].0..window[1].0,
-                window[1].0..window[1].0 + 1,
-            );
         }
     }
 }

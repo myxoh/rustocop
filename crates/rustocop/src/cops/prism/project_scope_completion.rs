@@ -20,38 +20,114 @@ fn duplicated_group(context: &mut CopContext<'_, '_>) {
         return;
     }
     let mut seen = HashMap::<String, usize>::new();
+    let mut scopes = vec![String::new()];
     for (line_number, (offset, line)) in context.source_file().lines().enumerate() {
         let trimmed = line.trim_start();
+        if trimmed.trim() == "end" {
+            if scopes.len() > 1 {
+                scopes.pop();
+            }
+            continue;
+        }
+        let current_scope = scopes.last().cloned().unwrap_or_default();
+        let opens_block = trimmed.contains(" do") || trimmed.ends_with("do");
+        let source_scope = ["source", "git", "platforms", "path"]
+            .into_iter()
+            .find(|name| {
+                trimmed.starts_with(&format!("{name} "))
+                    || trimmed.starts_with(&format!("{name}("))
+            })
+            .map(|name| {
+                let argument = trimmed
+                    .strip_prefix(name)
+                    .unwrap_or_default()
+                    .trim_start_matches('(')
+                    .split(" do")
+                    .next()
+                    .unwrap_or_default()
+                    .trim_end_matches(')')
+                    .trim();
+                format!("{name}{argument}")
+            });
         let Some(arguments) = trimmed
             .strip_prefix("group ")
+            .or_else(|| trimmed.strip_prefix("group("))
             .and_then(|line| line.split_once(" do"))
             .map(|p| p.0)
         else {
+            if opens_block {
+                scopes.push(source_scope.unwrap_or(current_scope));
+            }
             continue;
         };
-        let parts = arguments.split(',').map(str::trim).collect::<Vec<_>>();
+        let arguments = arguments.trim_end_matches(')').trim();
+        let parts = split_group_arguments(arguments);
         let option_start = parts
             .iter()
-            .position(|part| !part.starts_with(':') && !part.starts_with(['\'', '"']))
+            .position(|part| {
+                !part.starts_with(':') && !part.starts_with(['\'', '"', '*'])
+            })
             .unwrap_or(parts.len());
-        let options = parts[option_start..].join(",");
-        for group in &parts[..option_start] {
-            let display = group.trim();
-            let name = display.trim_start_matches(':').trim_matches(['\'', '"']);
-            let identity = format!("{name}|{options}");
-            if let Some(first) = seen.get(&identity) {
-                let indent = line.len() - trimmed.len();
-                context.report(
-                    format!(
-                        "Gem group `{display}` already defined on line {first} of the Gemfile."
-                    ),
-                    offset + indent..offset + line.find(" do").unwrap_or(line.len()),
-                );
-            } else {
-                seen.insert(identity, line_number + 1);
-            }
+        let mut attributes = parts[..option_start]
+            .iter()
+            .map(|part| {
+                part.trim()
+                    .trim_start_matches(':')
+                    .trim_matches(['\'', '"'])
+                    .to_string()
+            })
+            .collect::<Vec<_>>();
+        if option_start < parts.len() {
+            let mut options = parts[option_start..]
+                .iter()
+                .map(|part| part.trim().to_string())
+                .collect::<Vec<_>>();
+            options.sort();
+            attributes.push(options.join(", "));
+        }
+        attributes.sort();
+        let identity = format!("{current_scope}|{}", attributes.join(""));
+        let display = parts.join(", ");
+        if let Some(first) = seen.get(&identity) {
+            let indent = line.len() - trimmed.len();
+            context.report(
+                format!("Gem group `{display}` already defined on line {first} of the Gemfile."),
+                offset + indent..offset + line.find(" do").unwrap_or(line.len()),
+            );
+        } else {
+            seen.insert(identity, line_number + 1);
+        }
+        if opens_block {
+            scopes.push(current_scope);
         }
     }
+}
+
+fn split_group_arguments(source: &str) -> Vec<&str> {
+    let mut arguments = Vec::new();
+    let mut start = 0;
+    let mut depth = 0usize;
+    let mut quote = None;
+    for (index, byte) in source.bytes().enumerate() {
+        if let Some(delimiter) = quote {
+            if byte == delimiter && source.as_bytes().get(index.wrapping_sub(1)) != Some(&b'\\') {
+                quote = None;
+            }
+            continue;
+        }
+        match byte {
+            b'\'' | b'"' => quote = Some(byte),
+            b'[' | b'{' | b'(' => depth += 1,
+            b']' | b'}' | b')' => depth = depth.saturating_sub(1),
+            b',' if depth == 0 => {
+                arguments.push(source[start..index].trim());
+                start = index + 1;
+            }
+            _ => {}
+        }
+    }
+    arguments.push(source[start..].trim());
+    arguments
 }
 
 fn development_dependencies(context: &mut CopContext<'_, '_>) {
@@ -129,9 +205,11 @@ fn deprecated_gemspec_attribute(context: &mut CopContext<'_, '_>) {
         if !in_specification {
             continue;
         }
-        let Some(left) = [" += ", " = "]
-            .into_iter()
-            .find_map(|operator| trimmed.split_once(operator).map(|parts| parts.0))
+        let Some((left, operator)) = [" += ", " = "].into_iter().find_map(|operator| {
+            trimmed
+                .split_once(operator)
+                .map(|parts| (parts.0, operator))
+        })
         else {
             continue;
         };
@@ -143,6 +221,12 @@ fn deprecated_gemspec_attribute(context: &mut CopContext<'_, '_>) {
             attribute,
             "date" | "rubygems_version" | "specification_version" | "test_files"
         ) {
+            continue;
+        }
+        // Under RuboCop's Prism parser, only `test_files` is represented in
+        // the op-assignment shape accepted by this cop. The other deprecated
+        // attributes are checked for ordinary writer assignment only.
+        if operator == " += " && attribute != "test_files" {
             continue;
         }
         let indent = line.len() - trimmed.len();
