@@ -8,7 +8,7 @@ define_cops! {
     FirstMethodParameterLineBreak => "Layout/FirstMethodParameterLineBreak" => source(first_method_parameter_line_break),
     MultilineHashKeyLineBreaks => "Layout/MultilineHashKeyLineBreaks" => source(multiline_hash_key_line_breaks),
     SingleLineBlockChain => "Layout/SingleLineBlockChain" => source(single_line_block_chain),
-    ConditionPosition => "Layout/ConditionPosition" => source(condition_position),
+    ConditionPosition => "Layout/ConditionPosition" => any_node(condition_position),
 }
 
 fn first_array_element_line_break(context: &mut CopContext<'_, '_>) {
@@ -319,26 +319,44 @@ fn single_line_block_chain(context: &mut CopContext<'_, '_>) {
     }
 }
 
-fn condition_position(context: &mut CopContext<'_, '_>) {
-    let lines = context.source_file().lines().collect::<Vec<_>>();
-    for pair in lines.windows(2) {
-        let (keyword_start, keyword_line) = pair[0];
-        let (condition_line_start, condition_line) = pair[1];
-        let keyword = keyword_line.trim();
-        if !matches!(keyword, "if" | "unless" | "while" | "until" | "elsif") {
-            continue;
-        }
-        let condition = condition_line.trim();
-        if condition.is_empty() {
-            continue;
-        }
-        let start = condition_line_start + condition_line.len() - condition_line.trim_start().len();
-        let end = start + condition.len();
-        context.replace(
-            format!("Place the condition on the same line as `{keyword}`."),
-            start..end,
-            keyword_start + keyword_line.len()..start,
-            " ",
-        );
+fn condition_position(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
+    let (keyword, predicate) = if let Some(condition) = node.as_if_node() {
+        let Some(keyword) = condition.if_keyword_loc() else {
+            return;
+        };
+        (keyword, condition.predicate())
+    } else if let Some(condition) = node.as_unless_node() {
+        (condition.keyword_loc(), condition.predicate())
+    } else if let Some(condition) = node.as_while_node() {
+        (condition.keyword_loc(), condition.predicate())
+    } else if let Some(condition) = node.as_until_node() {
+        (condition.keyword_loc(), condition.predicate())
+    } else {
+        return;
+    };
+    let predicate_location = predicate.location();
+    if keyword.start_offset() != node.location().start_offset()
+        || context
+            .source_file()
+            .same_line(keyword.start_offset(), predicate_location.start_offset())
+    {
+        return;
     }
+
+    let keyword_source = context.source_file().at(&keyword);
+    let predicate_source = context.source_file().node(&predicate);
+    let removal = context.source_file().full_line_range(
+        predicate_location.start_offset()..predicate_location.end_offset(),
+    );
+    context.replace_many(
+        format!("Place the condition on the same line as `{keyword_source}`."),
+        &predicate_location,
+        vec![
+            (
+                keyword.end_offset()..keyword.end_offset(),
+                format!(" {predicate_source}"),
+            ),
+            (removal, String::new()),
+        ],
+    );
 }

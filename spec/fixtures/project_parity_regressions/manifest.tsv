@@ -74,3 +74,4 @@ Style/KeywordParametersOrder	positional_symbol_keyword_order.rb	gitlabhq/gitlabh
 Style/Proc	proc_literal_block_shape.rb	gitlabhq/gitlabhq	67a526442c20d20b6e80ebf916bd766b54018c5e	gems/gitlab-utils/spec/gitlab/xml_converter_spec.rb
 Style/RedundantRegexpCharacterClass	redundant_space_regexp_class.rb	rails/rails	ba4f7369aee71f9f38d67bdbf0e8571fb372b535	activesupport/test/clean_logger_test.rb
 Gemspec/RequireMFA	require_mfa_gemspec_scope.rb	gitlabhq/gitlabhq	67a526442c20d20b6e80ebf916bd766b54018c5e	spec/models/blob_viewer/gemspec_spec.rb
+Layout/ConditionPosition	condition_position_syntax_scope.rb	gitlabhq/gitlabhq	67a526442c20d20b6e80ebf916bd766b54018c5e	spec/requests/api/graphql/ci/catalog/resource_spec.rb
