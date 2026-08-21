@@ -284,7 +284,7 @@ impl Cop for TrailingCommaInBlockArgs {
     fn on_node<'pr>(
         &self,
         node: &Node<'pr>,
-        _ancestors: &[Node<'pr>],
+        ancestors: &[Node<'pr>],
         source: &str,
         context: &mut Context,
     ) {
@@ -300,9 +300,7 @@ impl Cop for TrailingCommaInBlockArgs {
         let Some(parameter_nodes) = block_parameters.parameters() else {
             return;
         };
-        if block_argument_count(&parameter_nodes) <= 1 {
-            return;
-        }
+        let argument_count = block_argument_count(&parameter_nodes);
         let text = source_at(source, &parameters.location());
         let Some(first_pipe) = text.find('|') else {
             return;
@@ -311,11 +309,42 @@ impl Cop for TrailingCommaInBlockArgs {
             return;
         };
         let arguments = &text[first_pipe + 1..last_pipe];
-        if arguments.contains(';') || !arguments.trim_end().ends_with(',') {
+        if argument_count > 1 && !arguments.contains(';') && arguments.trim_end().ends_with(',') {
+            let comma = parameters.location().start_offset()
+                + first_pipe
+                + 1
+                + arguments.trim_end().len()
+                - 1;
+            context.remove(
+                self.name(),
+                "Useless trailing comma present in block arguments.",
+                (comma, comma + 1),
+                (comma, comma + 1),
+            );
             return;
         }
-        let comma =
-            parameters.location().start_offset() + first_pipe + 1 + arguments.trim_end().len() - 1;
+        if argument_count <= 1 {
+            return;
+        }
+        let Some(inner_parameters) = ancestors.iter().rev().find_map(|ancestor| {
+            let call = ancestor.as_call_node()?;
+            let receiver = call.receiver()?.as_call_node()?;
+            receiver
+                .block()?
+                .as_block_node()?
+                .parameters()?
+                .as_block_parameters_node()
+        }) else {
+            return;
+        };
+        let inner_text = source_at(source, &inner_parameters.location());
+        let Some(comma) = inner_text.rfind(',') else {
+            return;
+        };
+        if inner_text[comma + 1..].trim() != "|" {
+            return;
+        }
+        let comma = inner_parameters.location().start_offset() + comma;
         context.remove(
             self.name(),
             "Useless trailing comma present in block arguments.",

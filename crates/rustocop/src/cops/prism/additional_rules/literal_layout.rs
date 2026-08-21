@@ -23,8 +23,13 @@ pub(super) fn empty_heredoc(source: &str, reporter: &mut Reporter<'_>) {
             )
             + identifier;
         let body_start = offset + line.len() + 1;
-        if source[body_start..].starts_with(&format!("{label}\n")) {
-            let full_end = body_start + label.len() + 1;
+        let closing_line = source[body_start..].lines().next().unwrap_or_default();
+        if closing_line.trim() == label {
+            let full_end = body_start
+                + closing_line.len()
+                + usize::from(
+                    source.as_bytes().get(body_start + closing_line.len()) == Some(&b'\n'),
+                );
             let quotes = if reporter.related_config_value("Style/StringLiterals", "EnforcedStyle")
                 == Some("double_quotes")
             {

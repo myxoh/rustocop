@@ -16,6 +16,8 @@ heuristic_regressions:
     - spec/project_parity_regressions_spec.rb
   Style/InfiniteLoop:
     - spec/project_parity_regressions_spec.rb
+  Style/CombinableDefined:
+    - spec/project_parity_regressions_spec.rb
   Style/RescueStandardError:
     - spec/fixtures/project_parity_regressions/rescue_variable_with_directive.rb
   Lint/Syntax:

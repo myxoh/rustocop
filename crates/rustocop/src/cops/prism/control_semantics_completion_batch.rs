@@ -36,16 +36,52 @@ fn safe_navigation_consistency(context: &mut CopContext<'_, '_>) {
 }
 
 fn combinable_defined(context: &mut CopContext<'_, '_>) {
-    context.replace_code(
-        "defined?(foo) && defined?(bar)",
-        "defined?(foo && bar)",
-        "Combine nested `defined?` calls.",
-    );
-    context.replace_code(
-        "defined?(foo) || defined?(bar)",
-        "defined?(foo || bar)",
-        "Combine nested `defined?` calls.",
-    );
+    let source = context.source();
+    let mut search = 0;
+    while let Some(relative) = source[search..].find("defined?(") {
+        let first_start = search + relative;
+        let first_open = first_start + "defined?".len();
+        let Some(first_close) =
+            super::source_syntax::matching_delimiter(source, first_open, b'(', b')')
+        else {
+            break;
+        };
+        let tail = &source[first_close + 1..];
+        let whitespace = tail.len() - tail.trim_start_matches([' ', '\t']).len();
+        let tail = &tail[whitespace..];
+        let Some(after_operator) = tail
+            .strip_prefix("&&")
+            .or_else(|| tail.strip_prefix("and"))
+        else {
+            search = first_close + 1;
+            continue;
+        };
+        let operator_tail = after_operator.trim_start_matches([' ', '\t']);
+        if !operator_tail.starts_with("defined?(") {
+            search = first_close + 1;
+            continue;
+        }
+        let second_start = source.len() - operator_tail.len();
+        let second_open = second_start + "defined?".len();
+        let Some(second_close) =
+            super::source_syntax::matching_delimiter(source, second_open, b'(', b')')
+        else {
+            break;
+        };
+        let first_subject = source[first_open + 1..first_close].trim();
+        let second_subject = source[second_open + 1..second_close].trim();
+        if second_subject
+            .strip_prefix(first_subject)
+            .is_some_and(|suffix| suffix.starts_with('.') || suffix.starts_with("::"))
+        {
+            context.remove(
+                "Combine nested `defined?` calls.",
+                first_start..second_close + 1,
+                first_start..second_start,
+            );
+        }
+        search = second_close + 1;
+    }
 }
 
 impl ForRule<'_, '_, '_> {
