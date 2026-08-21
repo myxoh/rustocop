@@ -44,9 +44,9 @@ output on every pinned project is **project-exact** for that corpus and
 configuration. Neither offense-count similarity, a captured-case label, nor an
 old manual review record is accepted as compatibility evidence.
 
-The minimized real-project corpus currently contains 100 cases, plus five
-configuration-mutation cases. These are regression coverage, not a substitute
-for the complete project comparison.
+The minimized real-project corpus currently contains 100 passing cases, 12
+pending isolated mismatches, and five configuration-mutation cases. These are
+regression coverage, not a substitute for the complete project comparison.
 
 ## Ten-project output parity
 
