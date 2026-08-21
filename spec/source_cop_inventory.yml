@@ -147,9 +147,9 @@ entries:
   source: crates/rustocop/src/cops/text/mod.rs
   review: temporary_text
 - cop: Style/EmptyLambdaParameter
-  pipeline: legacy_text
-  source: crates/rustocop/src/cops/text/mod.rs
-  review: temporary_text
+  pipeline: prism_source
+  source: crates/rustocop/src/cops/prism/empty_lambda_parameter_rules.rs
+  review: unreviewed
 - cop: Style/EndBlock
   pipeline: legacy_text
   source: crates/rustocop/src/cops/text/mod.rs

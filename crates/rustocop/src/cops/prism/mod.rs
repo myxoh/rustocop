@@ -96,6 +96,7 @@ cop_modules!(
     dir_rules,
     double_splat_rules,
     empty_method_rules,
+    empty_lambda_parameter_rules,
     enum_argument_rules,
     exception_argument_rules,
     exception_rewrite_rules,

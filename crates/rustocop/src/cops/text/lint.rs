@@ -105,23 +105,6 @@ fn check_small_line_cops(
             }
         }
 
-        if options.cop_enabled("Style/EmptyLambdaParameter") {
-            if let Some(start) = original.find("-> ()") {
-                push_offense(
-                    offenses,
-                    "Style/EmptyLambdaParameter",
-                    "Omit parentheses for the empty lambda parameters.",
-                    index + 1,
-                    start + 4,
-                    2,
-                    CorrectionStatus::correctable(options.autocorrect),
-                );
-                if options.autocorrect {
-                    line.body.replace_range(start + 2..start + 5, "");
-                }
-            }
-        }
-
         if options.cop_enabled("Lint/BigDecimalNew") {
             if let Some(new_start) = original.find("BigDecimal.new") {
                 let selector = new_start + "BigDecimal.".len();
