@@ -1,6 +1,6 @@
 use super::catalog_cop::custom;
 use super::*;
-use std::collections::HashSet;
+use std::collections::HashMap;
 
 mod registry;
 
@@ -551,56 +551,423 @@ fn void_expression(context: &mut CopContext<'_, '_>) {
     }
 }
 
-fn duplicate_methods(context: &mut CopContext<'_, '_>) {
-    if context.source().contains("describe ")
-        || context.source().contains("Class.new do")
-        || context.source().contains("Module.new do")
-    {
-        return;
+struct DuplicateMethods;
+
+#[derive(Default)]
+struct DuplicateMethodsState {
+    definitions: HashMap<String, SourceDefinition>,
+    rescue_scopes: HashMap<&'static str, std::collections::HashSet<String>>,
+}
+
+struct SourceDefinition {
+    path: String,
+    line: usize,
+}
+
+impl Cop for DuplicateMethods {
+    fn name(&self) -> &'static str {
+        "Lint/DuplicateMethods"
     }
-    if context
-        .source()
-        .lines()
-        .filter(|line| {
-            ["class ", "module "]
-                .iter()
-                .any(|keyword| line.trim_start().starts_with(keyword))
-        })
-        .count()
-        > 1
-    {
-        return;
+
+    fn investigation_state(&self) -> Box<dyn Any> {
+        Box::new(DuplicateMethodsState::default())
     }
-    let minimum_indent = context
-        .source()
-        .lines()
-        .filter(|line| line.trim_start().starts_with("def "))
-        .map(|line| line.len() - line.trim_start().len())
-        .min()
-        .unwrap_or(0);
-    let mut methods = HashSet::new();
-    for (offset, line) in context.source_file().lines() {
-        if ["class ", "module "]
+
+    fn on_new_investigation(&self, state: &mut dyn Any) {
+        *state
+            .downcast_mut::<DuplicateMethodsState>()
+            .expect("duplicate methods state") = DuplicateMethodsState::default();
+    }
+
+    fn on_node_with_state<'pr>(
+        &self,
+        node: &Node<'pr>,
+        ancestors: &[Node<'pr>],
+        source: &str,
+        context: &mut Context,
+        state: &mut dyn Any,
+    ) {
+        if ancestors
             .iter()
-            .any(|keyword| line.trim_start().starts_with(keyword))
+            .any(|ancestor| ancestor.as_if_node().is_some() || ancestor.as_unless_node().is_some())
         {
-            methods.clear();
+            return;
         }
-        let Some(definition) = line.trim_start().strip_prefix("def ") else {
+        let state = state
+            .downcast_mut::<DuplicateMethodsState>()
+            .expect("duplicate methods state");
+        let mut cop_context = context.cop_context(self.name(), source, ancestors);
+        if let Some(definition) = node.as_def_node() {
+            let name = String::from_utf8_lossy(definition.name().as_slice()).into_owned();
+            let Some(method) = duplicate_method_name(&definition, ancestors, source, &name) else {
+                return;
+            };
+            let key = method_key_with_scope_id(&method, ancestors, source);
+            let offense = definition.def_keyword_loc().start_offset()
+                ..definition.name_loc().end_offset();
+            register_method(state, key, method, offense, &mut cop_context);
+        } else if let Some(call) = node.as_call_node() {
+            register_attribute_methods(&call, ancestors, state, &mut cop_context);
+        }
+    }
+}
+
+fn duplicate_method_name(
+    definition: &ruby_prism::DefNode<'_>,
+    ancestors: &[Node<'_>],
+    source: &str,
+    name: &str,
+) -> Option<String> {
+    match definition.receiver() {
+        None => duplicate_instance_method_name(ancestors, source, name),
+        Some(receiver) if receiver.as_self_node().is_some() => {
+            let scope = rubocop_parent_module_name(ancestors, source)
+                .or_else(|| anonymous_class_scope(ancestors, source).map(|scope| scope.0))?;
+            Some(format!("{scope}.{name}"))
+        }
+        Some(receiver)
+            if receiver.as_constant_read_node().is_some()
+                || receiver.as_constant_path_node().is_some() =>
+        {
+            let receiver = node_text(&receiver, source).trim_start_matches("::");
+            let scope = rubocop_parent_module_name(ancestors, source)?;
+            let qualified = if scope == "Object" || receiver.contains("::") {
+                receiver.to_string()
+            } else {
+                format!("{scope}::{receiver}")
+            };
+            Some(format!("{qualified}.{name}"))
+        }
+        Some(_) => None,
+    }
+}
+
+fn duplicate_instance_method_name(
+    ancestors: &[Node<'_>],
+    source: &str,
+    name: &str,
+) -> Option<String> {
+    if let Some(scope) = rubocop_parent_module_name(ancestors, source) {
+        return Some(format!("{}{name}", humanized_method_scope(&scope)));
+    }
+    if let Some((scope, _scope_id)) = anonymous_class_scope(ancestors, source) {
+        let singleton = ancestors.iter().rev().take_while(|ancestor| {
+            ancestor.as_block_node().is_none()
+        }).any(|ancestor| ancestor.as_singleton_class_node().is_some());
+        let scope = if singleton {
+            format!("#<Class:{scope}>")
+        } else {
+            scope
+        };
+        return Some(format!("{}{name}", humanized_method_scope(&scope)));
+    }
+    let singleton = ancestors
+        .iter()
+        .rev()
+        .find_map(Node::as_singleton_class_node)?;
+    let receiver = singleton.expression().as_call_node()?;
+    Some(format!(
+        "{}.{}",
+        String::from_utf8_lossy(receiver.name().as_slice()),
+        name
+    ))
+}
+
+/// Mirrors rubocop-ast's `Node#parent_module_name`. In particular, an ordinary
+/// block makes the lexical owner unknowable; treating its methods as members of
+/// an enclosing class is the source of a large class of false duplicates.
+fn rubocop_parent_module_name(ancestors: &[Node<'_>], source: &str) -> Option<String> {
+    let mut parts = Vec::new();
+    for (index, ancestor) in ancestors.iter().enumerate() {
+        if let Some(class) = ancestor.as_class_node() {
+            append_scope_part(&mut parts, node_text(&class.constant_path(), source));
+        } else if let Some(module) = ancestor.as_module_node() {
+            append_scope_part(&mut parts, node_text(&module.constant_path(), source));
+        } else if let Some(singleton) = ancestor.as_singleton_class_node() {
+            let expression = singleton.expression();
+            let name = if expression.as_self_node().is_some() {
+                format!("#<Class:{}>", joined_scope(&parts))
+            } else if expression.as_constant_read_node().is_some()
+                || expression.as_constant_path_node().is_some()
+            {
+                format!("#<Class:{}>", node_text(&expression, source).trim_start_matches("::"))
+            } else {
+                return None;
+            };
+            parts.push(name);
+        } else if let Some(write) = ancestor.as_constant_write_node() {
+            if class_or_module_new_call(&write.value()) {
+                append_scope_part(&mut parts, location_text(&write.name_loc(), source));
+            }
+        } else if let Some(write) = ancestor.as_constant_path_write_node() {
+            if class_or_module_new_call(&write.value()) {
+                append_scope_part(&mut parts, location_text(&write.target().location(), source));
+            }
+        } else if ancestor.as_block_node().is_some() {
+            let Some(call) = index.checked_sub(1).and_then(|parent| ancestors[parent].as_call_node())
+            else {
+                return None;
+            };
+            if call_name(&call) == b"class_eval" {
+                if let Some(receiver) = call.receiver() {
+                    if receiver.as_constant_read_node().is_none()
+                        && receiver.as_constant_path_node().is_none()
+                    {
+                        return None;
+                    }
+                    append_scope_part(&mut parts, node_text(&receiver, source));
+                }
+            } else if !class_or_module_new_call(&call.as_node())
+                || !ancestors.get(index.wrapping_sub(2)).is_some_and(|parent| {
+                    parent.as_constant_write_node().is_some()
+                        || parent.as_constant_path_write_node().is_some()
+                })
+            {
+                return None;
+            }
+        }
+    }
+    Some(if parts.is_empty() {
+        "Object".to_string()
+    } else {
+        joined_scope(&parts)
+    })
+}
+
+fn class_or_module_new_call(node: &Node<'_>) -> bool {
+    node.as_call_node().is_some_and(|call| {
+        call_name(&call) == b"new"
+            && (root_constant(call.receiver(), b"Class")
+                || root_constant(call.receiver(), b"Module"))
+    })
+}
+
+fn append_scope_part(parts: &mut Vec<String>, raw: &str) {
+    let name = raw.trim_start_matches("::");
+    if name.contains("::") {
+        parts.clear();
+    }
+    parts.push(name.to_string());
+}
+
+fn joined_scope(parts: &[String]) -> String {
+    parts.join("::")
+}
+
+fn humanized_method_scope(scope: &str) -> String {
+    if let Some(start) = scope.find("#<Class:") {
+        if let Some(name) = scope[start + 8..].strip_suffix('>') {
+            return format!("{name}.");
+        }
+    }
+    format!("{scope}#")
+}
+
+fn anonymous_class_scope(ancestors: &[Node<'_>], source: &str) -> Option<(String, Option<String>)> {
+    let block_index = ancestors
+        .iter()
+        .rposition(|ancestor| ancestor.as_block_node().is_some())?;
+    let call_index = block_index.checked_sub(1)?;
+    let call = ancestors[call_index].as_call_node()?;
+    if !class_or_module_new_call(&call.as_node())
+        || ancestors.get(call_index.wrapping_sub(1)).is_some_and(|parent| {
+            parent.as_local_variable_write_node().is_some()
+        })
+    {
+        return None;
+    }
+    if ancestors[block_index + 1..].iter().any(|ancestor| {
+        ancestor.as_singleton_class_node().is_some_and(|singleton| {
+            singleton.expression().as_self_node().is_none()
+        })
+    }) {
+        return None;
+    }
+    let enclosing = rubocop_parent_module_name(&ancestors[..call_index], source);
+    let base = match enclosing.as_deref() {
+        Some("Object") => "Object".to_string(),
+        Some(enclosing) => format!("{enclosing}::Object"),
+        None => "::Object".to_string(),
+    };
+    let named_scope_id = ancestors[..call_index]
+        .iter()
+        .rev()
+        .find_map(Node::as_call_node)
+        .and_then(|parent| {
+            parent.receiver().and_then(|receiver| {
+                if class_or_module_new_call(&receiver) {
+                    return None;
+                }
+                format!(
+                    "{}.{}",
+                    node_text(&receiver, source),
+                    String::from_utf8_lossy(parent.name().as_slice())
+                )
+                .into()
+            })
+        });
+    let scope_id = named_scope_id.or_else(|| {
+        (duplicate_rescue_scope(&ancestors[..call_index]) != Some("ensure"))
+        .then(|| format!("anonymous: {}", call.location().start_offset()))
+    });
+    Some((base, scope_id))
+}
+
+fn node_text<'a>(node: &Node<'_>, source: &'a str) -> &'a str {
+    let location = node.location();
+    &source[location.start_offset()..location.end_offset()]
+}
+
+fn location_text<'a>(location: &ruby_prism::Location<'_>, source: &'a str) -> &'a str {
+    &source[location.start_offset()..location.end_offset()]
+}
+
+fn method_key_with_scope_id(method: &str, ancestors: &[Node<'_>], source: &str) -> String {
+    let mut key = nested_method_key(method, ancestors);
+    if rubocop_parent_module_name(ancestors, source).is_none() {
+        if let Some(scope_id) = anonymous_class_scope(ancestors, source).and_then(|scope| scope.1) {
+            key.push('@');
+            key.push_str(&scope_id);
+        }
+    }
+    key
+}
+
+fn nested_method_key(method: &str, ancestors: &[Node<'_>]) -> String {
+    ancestors
+        .iter()
+        .rev()
+        .find_map(Node::as_def_node)
+        .map_or_else(|| method.to_string(), |definition| {
+            format!(
+                "{}:{method}",
+                String::from_utf8_lossy(definition.name().as_slice())
+            )
+        })
+}
+
+fn register_attribute_methods(
+    call: &CallNode<'_>,
+    ancestors: &[Node<'_>],
+    state: &mut DuplicateMethodsState,
+    context: &mut CopContext<'_, '_>,
+) {
+    if call.receiver().is_some() {
+        return;
+    }
+    let call_method = call_name(call);
+    let arguments = call
+        .arguments()
+        .into_iter()
+        .flat_map(|arguments| arguments.arguments().iter())
+        .collect::<Vec<_>>();
+    let mut names = Vec::new();
+    if matches!(call_method, b"attr" | b"attr_reader" | b"attr_writer" | b"attr_accessor") {
+        let readable = matches!(call_method, b"attr" | b"attr_reader" | b"attr_accessor");
+        let writable = matches!(call_method, b"attr_writer" | b"attr_accessor");
+        for argument in &arguments {
+            let Some(name) = literal_method_name(argument) else { continue };
+            if readable {
+                names.push(name.clone());
+            }
+            if writable {
+                names.push(format!("{name}="));
+            }
+        }
+    } else if matches!(call_method, b"def_delegator" | b"def_instance_delegator") {
+        if let Some(name) = arguments.get(if arguments.len() >= 3 { 2 } else { 1 })
+            .and_then(|argument| literal_method_name(argument))
+        {
+            names.push(name);
+        }
+    } else if matches!(call_method, b"def_delegators" | b"def_instance_delegators") {
+        names.extend(arguments.iter().skip(1).filter_map(|argument| literal_method_name(argument)));
+    } else {
+        return;
+    }
+    for name in names {
+        let Some(method) = duplicate_instance_method_name(ancestors, context.source(), &name) else {
             continue;
         };
-        if line.len() - line.trim_start().len() != minimum_indent {
-            continue;
-        }
-        let name = definition.split(['(', ' ', ';']).next().unwrap_or("");
-        if !name.is_empty() && !methods.insert(name.to_string()) {
-            let start = offset + line.find(name).unwrap_or(0);
-            context.report(
-                "Method is defined more than once.",
-                start..start + name.len(),
-            );
-        }
+        let key = method_key_with_scope_id(&method, ancestors, context.source());
+        let location = call.location();
+        register_method(
+            state,
+            key,
+            method,
+            location.start_offset()..location.end_offset(),
+            context,
+        );
     }
+}
+
+fn literal_method_name(node: &Node<'_>) -> Option<String> {
+    if let Some(symbol) = node.as_symbol_node() {
+        Some(String::from_utf8_lossy(symbol.unescaped()).into_owned())
+    } else {
+        node.as_string_node()
+            .map(|string| String::from_utf8_lossy(string.unescaped()).into_owned())
+    }
+}
+
+fn register_method(
+    state: &mut DuplicateMethodsState,
+    key: String,
+    method: String,
+    offense: std::ops::Range<usize>,
+    context: &mut CopContext<'_, '_>,
+) {
+    let line = context.source()[..offense.start]
+        .bytes()
+        .filter(|byte| *byte == b'\n')
+        .count()
+        + 1;
+    let path = smart_source_path(context.path());
+    if let Some(previous) = state.definitions.get(&key) {
+        let rescue_scope = duplicate_rescue_scope(context.ancestors());
+        if let Some(rescue_scope) = rescue_scope {
+            if state
+                .rescue_scopes
+                .entry(rescue_scope)
+                .or_default()
+                .insert(key.clone())
+            {
+                state.definitions.insert(key, SourceDefinition { path, line });
+                return;
+            }
+        }
+        let message = format!(
+            "Method `{method}` is defined at both {}:{} and {path}:{line}.",
+            previous.path, previous.line
+        );
+        context.report(message, offense);
+    } else {
+        state.definitions.insert(key, SourceDefinition { path, line });
+    }
+}
+
+fn duplicate_rescue_scope(ancestors: &[Node<'_>]) -> Option<&'static str> {
+    ancestors.iter().rev().find_map(|ancestor| {
+        if ancestor.as_rescue_node().is_some() {
+            Some("rescue")
+        } else if ancestor.as_begin_node().is_some_and(|begin| begin.ensure_clause().is_some()) {
+            // Prism exposes `ensure` through its containing BeginNode rather
+            // than retaining EnsureNode in the investigation ancestor stack.
+            Some("ensure")
+        } else {
+            None
+        }
+    })
+}
+
+fn smart_source_path(path: &str) -> String {
+    let path = std::path::Path::new(path);
+    std::env::current_dir()
+        .ok()
+        .and_then(|current| path.strip_prefix(current).ok().map(|path| path.to_path_buf()))
+        .unwrap_or_else(|| path.to_path_buf())
+        .to_string_lossy()
+        .into_owned()
 }
 
 const SAFE_NAVIGATION_MESSAGE: &str =

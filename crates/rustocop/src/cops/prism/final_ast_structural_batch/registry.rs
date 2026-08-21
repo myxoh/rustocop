@@ -1,9 +1,9 @@
-use super::super::catalog_cop::{custom, replace, report};
+use super::super::catalog_cop::{replace, report};
 use super::*;
 
 pub(super) fn cops() -> Vec<Box<dyn Cop>> {
     vec![
-        custom("Lint/DuplicateMethods", duplicate_methods),
+        Box::new(DuplicateMethods),
         Box::new(AccessModifierDeclarations),
         replace(
             "Lint/RedundantTypeConversion",
