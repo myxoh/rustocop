@@ -163,11 +163,26 @@ impl Cop for UnescapedBracketInRegexp {
         source: &str,
         context: &mut Context,
     ) {
-        let Some(regexp) = node.as_regular_expression_node() else {
+        let (start, end) = if let Some(regexp) = node.as_regular_expression_node() {
+            (
+                regexp.opening_loc().end_offset(),
+                regexp.closing_loc().start_offset(),
+            )
+        } else if let Some(call) = node.as_call_node() {
+            if !matches!(call_name(&call), b"new" | b"compile")
+                || !root_constant(call.receiver(), b"Regexp")
+            {
+                return;
+            }
+            let Some(string) = first_argument(&call).and_then(|argument| argument.as_string_node())
+            else {
+                return;
+            };
+            let content = string.content_loc();
+            (content.start_offset(), content.end_offset())
+        } else {
             return;
         };
-        let start = regexp.opening_loc().end_offset();
-        let end = regexp.closing_loc().start_offset();
         let mut escaped = false;
         let mut character_class_depth = 0_usize;
         for (relative, byte) in source[start..end].bytes().enumerate() {

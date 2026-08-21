@@ -131,19 +131,33 @@ fn heredoc_case(context: &mut CopContext<'_, '_>) {
     for (offset, line) in context.source_file().lines() {
         let Some(at) = line.find("<<") else { continue };
         let delimiter = line[at + 2..]
-            .trim_start_matches(['-', '~', '\'', '"'])
-            .trim_end_matches(['\'', '"'])
+            .trim_start_matches(['-', '~', '\'', '"', '`'])
+            .trim_end_matches(['\'', '"', '`'])
             .trim();
-        if uppercase
-            && !delimiter.is_empty()
-            && delimiter.bytes().any(|byte| byte.is_ascii_lowercase())
-        {
-            let start = offset + line.rfind(delimiter).unwrap_or(at + 2);
+        let wrong_case = if uppercase {
+            delimiter.bytes().any(|byte| byte.is_ascii_lowercase())
+        } else {
+            delimiter.bytes().any(|byte| byte.is_ascii_uppercase())
+        };
+        if !delimiter.is_empty() && wrong_case {
+            let start = context.source()[offset..]
+                .find(&format!("\n{delimiter}"))
+                .map_or(offset + line.rfind(delimiter).unwrap_or(at + 2), |relative| {
+                    offset + relative + 1
+                });
             context.replace(
-                "Use uppercase heredoc delimiters.",
+                if uppercase {
+                    "Use uppercase heredoc delimiters."
+                } else {
+                    "Use lowercase heredoc delimiters."
+                },
                 start..start + delimiter.len(),
                 start..start + delimiter.len(),
-                delimiter.to_ascii_uppercase(),
+                if uppercase {
+                    delimiter.to_ascii_uppercase()
+                } else {
+                    delimiter.to_ascii_lowercase()
+                },
             );
         }
     }
@@ -154,25 +168,79 @@ fn rescued_exception_name(context: &mut CopContext<'_, '_>) {
         .config_value("PreferredName")
         .unwrap_or("e")
         .to_string();
+    let mut rescue_indent = None;
     for (offset, line) in context.source_file().lines() {
-        let Some((_, actual)) = line.split_once("rescue => ") else {
+        if !line.trim_start().starts_with("rescue") {
+            continue;
+        }
+        let indent = line.len() - line.trim_start().len();
+        if rescue_indent.is_some_and(|outer| indent > outer) {
+            continue;
+        }
+        rescue_indent.get_or_insert(indent);
+        let Some((_, actual)) = line.split_once("=>") else {
             continue;
         };
-        let actual = actual.trim();
-        if actual != preferred {
-            let start = offset + line.find(actual).unwrap_or(0);
+        let actual = actual
+            .trim_start()
+            .split(|character: char| !character.is_ascii_alphanumeric() && character != '_')
+            .next()
+            .unwrap_or("");
+        if line
+            .find(actual)
+            .and_then(|start| line.as_bytes().get(start + actual.len()))
+            == Some(&b'.')
+        {
+            continue;
+        }
+        let expected = if actual.starts_with('_') && !preferred.starts_with('_') {
+            format!("_{preferred}")
+        } else {
+            preferred.clone()
+        };
+        if context.source()[..offset].contains(&format!("{preferred} =")) {
+            continue;
+        }
+        if !actual.is_empty() && actual != expected {
+            let start = offset + line.rfind(actual).unwrap_or(0);
             context.replace(
-                format!("Use `{preferred}` instead of `{actual}` for a rescued exception."),
+                format!("Use `{expected}` instead of `{actual}`."),
                 start..start + actual.len(),
                 start..start + actual.len(),
-                &preferred,
+                &expected,
             );
         }
     }
 }
 
 fn block_forwarding(context: &mut CopContext<'_, '_>) {
-    if context.policy().enforced_style("anonymous") != "anonymous" {
+    let style = context.policy().enforced_style("anonymous");
+    if style == "explicit" {
+        let block_name_in_use = context.source().lines().any(|line| {
+            line.trim_start().starts_with("def ") && line.contains("block, &")
+        });
+        for start in context.source_file().code_offsets("&") {
+            let next = context.source().as_bytes().get(start + 1).copied();
+            if next.is_some_and(|byte| byte == b':' || byte == b'_' || byte.is_ascii_alphanumeric()) {
+                continue;
+            }
+            if block_name_in_use {
+                context.report("Use explicit block forwarding.", start..start + 1);
+            } else {
+                context.replace(
+                    "Use explicit block forwarding.",
+                    start..start + 1,
+                    start..start + 1,
+                    "&block",
+                );
+            }
+        }
+        return;
+    }
+    if style != "anonymous" {
+        return;
+    }
+    if !context.target_ruby_version().at_least(3, 1) {
         return;
     }
     let source = context.source();
@@ -182,9 +250,14 @@ fn block_forwarding(context: &mut CopContext<'_, '_>) {
             let line = line.trim_start();
             line == "block" || line.starts_with("block =") || line.starts_with("block ||=")
         })
-        || source
-            .lines()
-            .any(|line| line.trim_start().starts_with("def ") && line.contains(":, &block"))
+        || source.lines().any(|line| {
+            line.trim_start().starts_with("def ")
+                && line
+                    .split_once("&block")
+                    .is_some_and(|(before, _)| before.contains(':'))
+        })
+        || (!context.target_ruby_version().at_least(3, 4)
+            && source.contains("block_method do"))
     {
         return;
     }
