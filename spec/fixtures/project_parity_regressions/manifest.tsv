@@ -59,3 +59,4 @@ Style/MissingRespondToMissing	dynamic_missing_respond_to_missing.rb	rails/rails	
 Style/CaseEquality	uppercase_case_equality_constants.rb	rails/rails	ba4f7369aee71f9f38d67bdbf0e8571fb372b535	actionpack/lib/action_dispatch/testing/integration.rb
 Style/BlockComments	parsed_block_comments.rb	gitlabhq/gitlabhq	67a526442c20d20b6e80ebf916bd766b54018c5e	spec/keeps/helpers/file_helper_spec.rb
 Lint/RequireParentheses	keyword_if_call_arguments.rb	discourse/discourse	cec79c60b354e37e9a119544860123b122a995e0	app/models/emoji.rb
+Style/EmptyCaseCondition	empty_case_return_and_assignment.rb	rspec/rspec-core	aec5f49485d97908183dbe790a7fefb8baaa8091	lib/rspec/core/formatters/helpers.rb

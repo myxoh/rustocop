@@ -34,40 +34,83 @@ fn duplicate_case_condition(node: &ruby_prism::CaseNode<'_>, context: &mut CopCo
 }
 
 fn empty_case_condition(node: &ruby_prism::CaseNode<'_>, context: &mut CopContext<'_, '_>) {
-    if node.predicate().is_some() || node.conditions().is_empty() {
-        return;
-    }
-    let keyword = node.case_keyword_loc();
-    let file = context.source_file();
-    if !context.source()[file.line_start(keyword.start_offset())..keyword.start_offset()]
-        .trim()
-        .is_empty()
+    if node.predicate().is_some()
+        || node.conditions().is_empty()
+        || context.parent().is_some_and(|parent| {
+            parent.as_return_node().is_some()
+                || parent.as_break_node().is_some()
+                || parent.as_next_node().is_some()
+                || parent.as_call_node().is_some()
+        })
     {
         return;
     }
 
-    let line_end = file.line_end(keyword.end_offset());
-    let tail = &context.source()[keyword.end_offset()..line_end];
-    let case_edit = if let Some(comment) = tail.find('#') {
-        keyword.start_offset()..keyword.end_offset() + comment
-    } else {
-        file.line_range(keyword.start_offset())
-    };
-    let mut edits = vec![(case_edit, String::new())];
-    for (index, condition) in node.conditions().iter().enumerate() {
+    let mut branches = Vec::new();
+    for condition in node.conditions().iter() {
         let Some(branch) = condition.as_when_node() else {
             return;
         };
+        if branch
+            .statements()
+            .is_some_and(|statements| contains_return(&statements.as_node()))
+        {
+            return;
+        }
+        branches.push(branch);
+    }
+    if node
+        .else_clause()
+        .and_then(|branch| branch.statements())
+        .is_some_and(|statements| contains_return(&statements.as_node()))
+    {
+        return;
+    }
+
+    let keyword = node.case_keyword_loc();
+    let first_when = branches[0].keyword_loc();
+    let file = context.source_file();
+    let mut edits = vec![(
+        keyword.start_offset()..first_when.end_offset(),
+        "if".to_string(),
+    )];
+    let comments = ruby_prism::parse(context.source().as_bytes())
+        .comments()
+        .filter(|comment| {
+            let start = comment.location().start_offset();
+            keyword.start_offset() <= start && start < first_when.start_offset()
+        })
+        .map(|comment| {
+            format!(
+                "{}{}\n",
+                " ".repeat(file.column(keyword.start_offset())),
+                file.at(&comment.location()).trim_end()
+            )
+        })
+        .collect::<String>();
+    if !comments.is_empty() {
+        edits.push((file.line_start(keyword.start_offset())..file.line_start(keyword.start_offset()), comments));
+    }
+
+    for (index, branch) in branches.iter().enumerate() {
         let branch_keyword = branch.keyword_loc();
-        edits.push((
-            branch_keyword.start_offset()..branch_keyword.end_offset(),
-            if index == 0 { "if" } else { "elsif" }.to_string(),
-        ));
+        if index > 0 {
+            edits.push((
+                branch_keyword.start_offset()..branch_keyword.end_offset(),
+                "elsif".to_string(),
+            ));
+        }
         let conditions = branch.conditions().iter().collect::<Vec<_>>();
         for pair in conditions.windows(2) {
             edits.push((
                 pair[0].location().end_offset()..pair[1].location().start_offset(),
                 " || ".to_string(),
+            ));
+        }
+        if let (Some(last), Some(then_keyword)) = (conditions.last(), branch.then_keyword_loc()) {
+            edits.push((
+                last.location().end_offset()..then_keyword.end_offset(),
+                "\n".to_string(),
             ));
         }
     }
@@ -76,6 +119,20 @@ fn empty_case_condition(node: &ruby_prism::CaseNode<'_>, context: &mut CopContex
         &keyword,
         edits,
     );
+}
+
+fn contains_return(node: &Node<'_>) -> bool {
+    struct ReturnFinder(bool);
+
+    impl<'pr> Visit<'pr> for ReturnFinder {
+        fn visit_return_node(&mut self, _node: &ruby_prism::ReturnNode<'pr>) {
+            self.0 = true;
+        }
+    }
+
+    let mut finder = ReturnFinder(false);
+    finder.visit(node);
+    finder.0
 }
 
 fn mixed_case_range(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
