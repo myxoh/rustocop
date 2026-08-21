@@ -56,3 +56,4 @@ Lint/UnreachableLoop	unreachable_each_loops.rb	rails/rails	ba4f7369aee71f9f38d67
 Style/Dir	embedded_file_directory.rb	rspec/rspec-core	aec5f494cdccb3d60be26589569b009e856027b3	spec/support/spec_files.rb
 Style/LineEndConcatenation	interpolated_line_end_concatenation.rb	mastodon/mastodon	60593f6a8de11effdcf0a0dcb40e22115ae9361a	lib/mastodon/migration_helpers.rb
 Style/MissingRespondToMissing	dynamic_missing_respond_to_missing.rb	rails/rails	ba4f7369aee71f9f38d67bdbf0e8571fb372b535	activerecord/test/cases/relation/where_test.rb
+Style/CaseEquality	uppercase_case_equality_constants.rb	rails/rails	ba4f7369aee71f9f38d67bdbf0e8571fb372b535	actionpack/lib/action_dispatch/testing/integration.rb

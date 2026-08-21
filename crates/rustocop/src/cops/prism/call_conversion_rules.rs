@@ -105,7 +105,8 @@ fn case_equality(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     let constant_path = constant_path(&receiver);
     let constant = constant_path.as_ref().is_some_and(|parts| {
         parts.last().is_some_and(|name| {
-            name.first().is_some_and(u8::is_ascii_uppercase) && !name.contains(&b'_')
+            name.first().is_some_and(u8::is_ascii_uppercase)
+                && name.iter().any(u8::is_ascii_lowercase)
         })
     });
     if constant_path.is_some() && !constant {
