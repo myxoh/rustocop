@@ -1,4 +1,5 @@
 use ruby_prism::{BlockNode, CallNode, Node};
+use std::collections::HashMap;
 
 use super::*;
 
@@ -161,6 +162,8 @@ fn contains_nested_reduce(source: &str) -> bool {
 #[derive(Default)]
 struct PartitionState {
     previous: Option<PartitionCandidate>,
+    statement_positions:
+        Option<HashMap<(usize, usize), (std::ops::Range<usize>, usize)>>,
 }
 
 struct PartitionCandidate {
@@ -174,16 +177,19 @@ struct PartitionCandidate {
     container: std::ops::Range<usize>,
     full_line: std::ops::Range<usize>,
     local_variable: Option<String>,
+    sibling_group: std::ops::Range<usize>,
+    sibling_index: usize,
 }
 
 impl PartitionRule<'_, '_, '_> {
     fn on_send(&mut self, node: &CallNode<'_>) {
-        let Some(candidate) = partition_candidate(node, self) else { return };
+        let Some(candidate) = self.partition_candidate(node) else { return };
         let Some(previous) = self.state.previous.take() else {
             self.state.previous = Some(candidate);
             return;
         };
-        if previous.full_line.end != candidate.full_line.start
+        if previous.sibling_group != candidate.sibling_group
+            || previous.sibling_index + 1 != candidate.sibling_index
             || previous.receiver != candidate.receiver
             || !partition_pair_matches(&previous, &candidate)
         {
@@ -227,9 +233,25 @@ impl PartitionRule<'_, '_, '_> {
             corrector.remove(candidate.full_line.clone());
         });
     }
+
+    fn partition_candidate(&mut self, node: &CallNode<'_>) -> Option<PartitionCandidate> {
+        if self.state.statement_positions.is_none() {
+            self.state.statement_positions = Some(statement_positions(self.source()));
+        }
+        let positions = self
+            .state
+            .statement_positions
+            .as_ref()
+            .expect("initialized statement positions");
+        partition_candidate(node, self.context, positions)
+    }
 }
 
-fn partition_candidate(node: &CallNode<'_>, context: &CopContext<'_, '_>) -> Option<PartitionCandidate> {
+fn partition_candidate(
+    node: &CallNode<'_>,
+    context: &CopContext<'_, '_>,
+    positions: &HashMap<(usize, usize), (std::ops::Range<usize>, usize)>,
+) -> Option<PartitionCandidate> {
     let receiver = context.source_file().node(&node.receiver()?).to_string();
     let method = String::from_utf8_lossy(node.name().as_slice()).into_owned();
     let selector = node.message_loc()?;
@@ -252,8 +274,8 @@ fn partition_candidate(node: &CallNode<'_>, context: &CopContext<'_, '_>) -> Opt
     };
     let call_start = node.location().start_offset();
     let call_range = call_start..call_end;
-    let (container, local_variable) = assignment_container(context.ancestors(), &call_range, context.source_file())
-        .unwrap_or((call_range.clone(), None));
+    let (container, local_variable, sibling_group, sibling_index) =
+        statement_container(node, context, positions)?;
     let full_line = context.source_file().full_line_range(container.clone());
     let call_source = context.source()[call_range.clone()].to_string();
     Some(PartitionCandidate {
@@ -267,6 +289,8 @@ fn partition_candidate(node: &CallNode<'_>, context: &CopContext<'_, '_>) -> Opt
         container,
         full_line,
         local_variable,
+        sibling_group,
+        sibling_index,
     })
 }
 
@@ -284,24 +308,74 @@ fn block_parameter_source(block: &BlockNode<'_>, file: SourceFile<'_>) -> Option
     }
 }
 
-fn assignment_container(ancestors: &[Node<'_>], call: &std::ops::Range<usize>, file: SourceFile<'_>) -> Option<(std::ops::Range<usize>, Option<String>)> {
-    for ancestor in ancestors.iter().rev() {
-        let (location, name) = if let Some(write) = ancestor.as_local_variable_write_node() {
-            (write.location(), Some(file.at(&write.name_loc()).to_string()))
-        } else if let Some(write) = ancestor.as_instance_variable_write_node() {
-            (write.location(), None)
-        } else if let Some(write) = ancestor.as_class_variable_write_node() {
-            (write.location(), None)
-        } else if let Some(write) = ancestor.as_global_variable_write_node() {
-            (write.location(), None)
-        } else {
-            continue;
-        };
-        if location.start_offset() <= call.start && call.end <= location.end_offset() {
-            return Some((location.start_offset()..call.end.max(location.end_offset()), name));
+fn statement_container(
+    node: &CallNode<'_>,
+    context: &CopContext<'_, '_>,
+    positions: &HashMap<(usize, usize), (std::ops::Range<usize>, usize)>,
+) -> Option<(
+    std::ops::Range<usize>,
+    Option<String>,
+    std::ops::Range<usize>,
+    usize,
+)> {
+    let parent = context.parent()?;
+    if let Some(statements) = parent.as_statements_node() {
+        let location = node.location();
+        let container = location.start_offset()..location.end_offset();
+        let (group, index) = positions.get(&(container.start, container.end))?.clone();
+        let statement_location = statements.location();
+        if group.start != statement_location.start_offset()
+            || group.end != statement_location.end_offset()
+        {
+            return None;
+        }
+        return Some((container, None, group, index));
+    }
+
+    let file = context.source_file();
+    let (location, local_variable) = if let Some(write) = parent.as_local_variable_write_node() {
+        (write.location(), Some(file.at(&write.name_loc()).to_string()))
+    } else if let Some(write) = parent.as_instance_variable_write_node() {
+        (write.location(), None)
+    } else if let Some(write) = parent.as_class_variable_write_node() {
+        (write.location(), None)
+    } else if let Some(write) = parent.as_global_variable_write_node() {
+        (write.location(), None)
+    } else {
+        return None;
+    };
+    let container = location.start_offset()..location.end_offset();
+    let (group, index) = positions.get(&(container.start, container.end))?.clone();
+    Some((container, local_variable, group, index))
+}
+
+fn statement_positions(
+    source: &str,
+) -> HashMap<(usize, usize), (std::ops::Range<usize>, usize)> {
+    #[derive(Default)]
+    struct StatementPositions(
+        HashMap<(usize, usize), (std::ops::Range<usize>, usize)>,
+    );
+
+    impl<'pr> Visit<'pr> for StatementPositions {
+        fn visit_statements_node(&mut self, node: &ruby_prism::StatementsNode<'pr>) {
+            let location = node.location();
+            let group = location.start_offset()..location.end_offset();
+            for (index, statement) in node.body().iter().enumerate() {
+                let location = statement.location();
+                self.0.insert(
+                    (location.start_offset(), location.end_offset()),
+                    (group.clone(), index),
+                );
+            }
+            ruby_prism::visit_statements_node(self, node);
         }
     }
-    None
+
+    let parsed = ruby_prism::parse(source.as_bytes());
+    let mut positions = StatementPositions::default();
+    positions.visit(&parsed.node());
+    positions.0
 }
 
 fn partition_pair_matches(left: &PartitionCandidate, right: &PartitionCandidate) -> bool {

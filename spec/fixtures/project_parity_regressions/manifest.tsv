@@ -62,3 +62,4 @@ Lint/RequireParentheses	keyword_if_call_arguments.rb	discourse/discourse	cec79c6
 Style/EmptyCaseCondition	empty_case_return_and_assignment.rb	rspec/rspec-core	aec5f49485d97908183dbe790a7fefb8baaa8091	lib/rspec/core/formatters/helpers.rb
 Lint/MissingSuper	missing_super_block_ancestry.rb	discourse/discourse	cec79c60b354e37e9a119544860123b122a995e0	lib/onebox/engine.rb
 Style/EmptyLambdaParameter	empty_stabby_lambda_parameters.rb	rails/rails	ba4f7369aee71f9f38d67bdbf0e8571fb372b535	actionmailer/test/mailers/proc_mailer.rb
+Style/PartitionInsteadOfDoubleSelect	partition_statement_siblings.rb	discourse/discourse	cec79c60b354e37e9a119544860123b122a995e0	lib/group_manager.rb
