@@ -53,7 +53,10 @@ impl OrAssignmentRule<'_, '_, '_> {
             (condition.predicate(), only_statement(condition.statements())?)
         } else {
             let condition = node.as_if_node()?;
-            if only_statement(condition.statements()).is_some() {
+            if condition
+                .statements()
+                .is_some_and(|statements| statements.body().iter().next().is_some())
+            {
                 return None;
             }
             let assignment = condition.subsequent()?.as_else_node()

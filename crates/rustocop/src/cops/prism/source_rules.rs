@@ -157,6 +157,9 @@ fn class_methods(source: &str, context: &mut Reporter<'_>) {
             let method = line[start + needle.len()..]
                 .split_whitespace()
                 .next()
+                .unwrap_or_default()
+                .split('(')
+                .next()
                 .unwrap_or_default();
             context.replace(
                 format!("Use `self.{method}` instead of `{owner_name}.{method}`."),

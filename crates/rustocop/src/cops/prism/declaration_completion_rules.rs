@@ -162,7 +162,10 @@ fn redundant_initialize(node: &DefNode<'_>, context: &mut CopContext<'_, '_>) {
     }
     let source = context.source_file().at(&node.location());
     let allow_comments = context.config_bool("AllowComments", true);
-    if allow_comments && source.contains('#') {
+    if allow_comments
+        && (source.contains('#')
+            || comments_before_next_statement(node.location().end_offset(), context.source()))
+    {
         return;
     }
     let signature = source.lines().next().unwrap_or_default().trim();
@@ -173,7 +176,7 @@ fn redundant_initialize(node: &DefNode<'_>, context: &mut CopContext<'_, '_>) {
         .map(str::trim)
         .filter(|line| !line.is_empty() && (allow_comments || !line.starts_with('#')))
         .collect::<Vec<_>>();
-    let empty = body_lines.is_empty() && matches!(signature, "def initialize" | "def initialize()");
+    let empty = node.body().is_none() && node.parameters().is_none();
     let redundant_super =
         body_lines.len() == 1 && super_matches_signature(signature, body_lines[0]);
     if !empty && !redundant_super {
@@ -188,6 +191,15 @@ fn redundant_initialize(node: &DefNode<'_>, context: &mut CopContext<'_, '_>) {
     let end = location.end_offset()
         + usize::from(context.source().as_bytes().get(location.end_offset()) == Some(&b'\n'));
     context.remove(message, &location, location.start_offset()..end);
+}
+
+fn comments_before_next_statement(offset: usize, source: &str) -> bool {
+    source[offset..]
+        .lines()
+        .skip(1)
+        .map(str::trim)
+        .find(|line| !line.is_empty())
+        .is_some_and(|line| line.starts_with('#'))
 }
 
 fn super_matches_signature(signature: &str, body: &str) -> bool {

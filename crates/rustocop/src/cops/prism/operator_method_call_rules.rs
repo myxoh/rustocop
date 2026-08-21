@@ -49,6 +49,7 @@ impl OperatorMethodCallRule<'_, '_, '_> {
         return_unless!(arguments.len() == 1);
         let rhs = &arguments[0];
         return_if!(invalid_operator_argument(rhs));
+        return_if!(node.opening_loc().is_some() && method_call_with_parenthesized_arg(rhs));
         let Some(selector) = node.message_loc() else { return };
         return_if!(matches!(node.name().as_slice(), b"~" | b"!") && selector.as_slice() != node.name().as_slice());
 
@@ -99,6 +100,8 @@ fn method_call_with_parenthesized_arg(node: &Node<'_>) -> bool {
         || node.as_float_node().is_some()
         || node.as_string_node().is_some()
         || node.as_symbol_node().is_some()
+        || node.as_array_node().is_some_and(|array| array.elements().iter().next().is_some())
+        || node.as_hash_node().is_some_and(|hash| hash.elements().iter().next().is_some())
         || node.as_local_variable_read_node().is_some()
         || node.as_instance_variable_read_node().is_some()
         || node.as_class_variable_read_node().is_some()

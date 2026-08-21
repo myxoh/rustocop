@@ -329,11 +329,16 @@ fn string_literals_in_interpolation(
     node: &ruby_prism::StringNode<'_>,
     context: &mut CopContext<'_, '_>,
 ) {
-    if !context
+    let inside_interpolation = context
         .ancestors()
         .iter()
         .any(|ancestor| ancestor.as_embedded_statements_node().is_some())
-    {
+        && context.ancestors().iter().any(|ancestor| {
+            ancestor.as_interpolated_string_node().is_some()
+                || ancestor.as_interpolated_symbol_node().is_some()
+                || ancestor.as_interpolated_regular_expression_node().is_some()
+        });
+    if !inside_interpolation {
         return;
     }
     let (Some(opening), Some(closing)) = (node.opening_loc(), node.closing_loc()) else {

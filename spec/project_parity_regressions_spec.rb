@@ -45,6 +45,13 @@ RSpec.describe "real-project parity regressions" do
     Style/RedundantPercentQ
     Style/RedundantStructKeywordInit
     Style/StringHashKeys
+    Gemspec/DeprecatedAttributeAssignment
+    Style/ClassMethods
+    Style/MapToHash
+    Style/OperatorMethodCall
+    Style/OrAssignment
+    Style/RedundantInitialize
+    Style/StringLiteralsInInterpolation
   ]
   fixture_root = File.join(ROOT, "spec", "fixtures", "project_parity_regressions")
   config = File.join(fixture_root, "rubocop.yml")

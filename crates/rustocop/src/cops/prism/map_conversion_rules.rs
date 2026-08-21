@@ -80,7 +80,7 @@ fn map_before_conversion<'pr>(node: &CallNode<'pr>) -> Option<CallNode<'pr>> {
     let literal_block = map
         .block()
         .is_some_and(|block| block.as_block_node().is_some());
-    if !literal_block && !has_symbol_block_pass(&map) {
+    if literal_block && argument_count(&map) != 0 || !literal_block && !has_symbol_block_pass(&map) {
         return None;
     }
     Some(map)
