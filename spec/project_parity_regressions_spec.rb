@@ -98,6 +98,7 @@ RSpec.describe "real-project parity regressions" do
     Style/RequireOrder
     Lint/SuppressedException
     Style/RedundantBegin
+    Layout/FirstMethodParameterLineBreak
   ]
   fixture_root = File.join(ROOT, "spec", "fixtures", "project_parity_regressions")
   config = File.join(fixture_root, "rubocop.yml")

@@ -186,6 +186,12 @@ fn first_parenthesized_list(context: &mut CopContext<'_, '_>, definition: bool) 
         if !source[opening..=closing].contains('\n') || source[opening + 1..].starts_with('\n') {
             continue;
         }
+        let first_line = source[opening + 1..closing]
+            .split_once('\n')
+            .map_or(&source[opening + 1..closing], |(line, _)| line);
+        if first_line.trim_start().starts_with('#') {
+            continue;
+        }
         let Some(first) = top_level_elements(source, opening + 1, closing)
             .first()
             .cloned()
@@ -200,8 +206,10 @@ fn first_parenthesized_list(context: &mut CopContext<'_, '_>, definition: bool) 
         {
             continue;
         }
-        let start =
-            first.start + source[first.clone()].len() - source[first.clone()].trim_start().len();
+        let start = leading_code_offset(source, first.start, first.end);
+        if source[opening + 1..start].contains('\n') {
+            continue;
+        }
         let end =
             first.end - (source[first.clone()].len() - source[first.clone()].trim_end().len());
         let kind = if definition { "parameter" } else { "argument" };
@@ -217,6 +225,22 @@ fn first_parenthesized_list(context: &mut CopContext<'_, '_>, definition: bool) 
             "\n",
         );
     }
+}
+
+fn leading_code_offset(source: &str, mut start: usize, end: usize) -> usize {
+    while start < end {
+        let whitespace = source[start..end]
+            .len()
+            - source[start..end].trim_start().len();
+        start += whitespace;
+        if source.as_bytes().get(start) != Some(&b'#') {
+            break;
+        }
+        start = source[start..end]
+            .find('\n')
+            .map_or(end, |newline| start + newline + 1);
+    }
+    start
 }
 
 fn multiline_hash_key_line_breaks(context: &mut CopContext<'_, '_>) {

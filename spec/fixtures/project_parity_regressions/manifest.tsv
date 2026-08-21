@@ -95,3 +95,4 @@ Style/AccessModifierDeclarations	access_modifier_call_shapes.rb	rails/rails	ba4f
 Style/RequireOrder	require_order_ast_boundaries.rb	gitlabhq/gitlabhq	67a526442c20d20b6e80ebf916bd766b54018c5e	qa/spec/spec_helper.rb
 Lint/SuppressedException	suppressed_exception_ranges.rb	discourse/discourse	cec79c60b354e37e9a119544860123b122a995e0	app/models/user_avatar.rb
 Style/RedundantBegin	redundant_begin_expression_contexts.rb	gitlabhq/gitlabhq	67a526442c20d20b6e80ebf916bd766b54018c5e	app/models/user.rb
+Layout/FirstMethodParameterLineBreak	first_method_parameter_comments.rb	gitlabhq/gitlabhq	67a526442c20d20b6e80ebf916bd766b54018c5e	app/models/tree.rb
