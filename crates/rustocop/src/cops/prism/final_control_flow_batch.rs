@@ -5,7 +5,7 @@ mod registry;
 pub(super) fn cops() -> Vec<Box<dyn Cop>> {
     let mut cops = vec![
         Box::new(UnreachableLoop) as Box<dyn Cop>,
-        super::catalog_cop::custom("Lint/EmptyConditionalBody", empty_conditional),
+        Box::new(EmptyConditionalBody) as Box<dyn Cop>,
     ];
     cops.extend(registry::cops());
     cops
@@ -125,20 +125,120 @@ fn identical_branches(context: &mut CopContext<'_, '_>) {
     }
 }
 
-fn empty_conditional(context: &mut CopContext<'_, '_>) {
-    let lines = context.source_file().lines().collect::<Vec<_>>();
-    for window in lines.windows(2) {
-        if ["if ", "unless ", "while ", "until "]
-            .iter()
-            .any(|keyword| window[0].1.trim_start().starts_with(keyword))
-            && window[1].1.trim() == "end"
-        {
-            context.report(
-                "Avoid empty conditional bodies.",
-                window[0].0..window[1].0 + window[1].1.len(),
-            );
+struct EmptyConditionalBody;
+
+impl Cop for EmptyConditionalBody {
+    fn name(&self) -> &'static str {
+        "Lint/EmptyConditionalBody"
+    }
+
+    fn on_node<'pr>(
+        &self,
+        node: &Node<'pr>,
+        ancestors: &[Node<'pr>],
+        source: &str,
+        context: &mut Context,
+    ) {
+        let mut context = context.cop_context(self.name(), source, ancestors);
+        if let Some(conditional) = node.as_if_node() {
+            check_empty_if(&conditional, &mut context);
+        } else if let Some(conditional) = node.as_unless_node() {
+            check_empty_unless(&conditional, &mut context);
         }
     }
+}
+
+fn check_empty_if(node: &ruby_prism::IfNode<'_>, context: &mut CopContext<'_, '_>) {
+    if node.statements().is_some() {
+        return;
+    }
+    let Some(keyword) = node.if_keyword_loc() else {
+        return;
+    };
+    let kind = if keyword.as_slice() == b"elsif" {
+        "elsif"
+    } else {
+        "if"
+    };
+    let boundary = node.subsequent().map_or_else(
+        || {
+            if kind == "elsif" {
+                node.predicate().location().end_offset()
+            } else {
+                node.location().end_offset()
+            }
+        },
+        |branch| branch.location().start_offset(),
+    );
+    register_empty_conditional(
+        node.location(),
+        node.predicate(),
+        kind,
+        boundary,
+        node.subsequent()
+            .and_then(|branch| branch.as_else_node())
+            .map(|branch| branch.else_keyword_loc()),
+        "unless",
+        context,
+    );
+}
+
+fn check_empty_unless(node: &ruby_prism::UnlessNode<'_>, context: &mut CopContext<'_, '_>) {
+    if node.statements().is_some() {
+        return;
+    }
+    let boundary = node
+        .else_clause()
+        .map_or(node.location().end_offset(), |branch| {
+            branch.location().start_offset()
+        });
+    register_empty_conditional(
+        node.location(),
+        node.predicate(),
+        "unless",
+        boundary,
+        node.else_clause().map(|branch| branch.else_keyword_loc()),
+        "if",
+        context,
+    );
+}
+
+#[allow(clippy::too_many_arguments)]
+fn register_empty_conditional(
+    location: ruby_prism::Location<'_>,
+    predicate: Node<'_>,
+    keyword: &str,
+    boundary: usize,
+    else_keyword: Option<ruby_prism::Location<'_>>,
+    inverse_keyword: &str,
+    context: &mut CopContext<'_, '_>,
+) {
+    let file = context.source_file();
+    if file.same_line(
+        location.start_offset(),
+        location.end_offset().saturating_sub(1),
+    ) {
+        return;
+    }
+    if context.config_bool("AllowComments", true)
+        && context.source()[location.start_offset()..location.end_offset()]
+            .lines()
+            .any(|line| line.trim_start().starts_with('#'))
+    {
+        return;
+    }
+    let message = format!("Avoid `{keyword}` branches without a body.");
+    let offense = location.start_offset()..boundary;
+    let Some(else_keyword) = else_keyword else {
+        context.report(message, offense);
+        return;
+    };
+    let suffix = &context.source()[else_keyword.end_offset()..location.end_offset()];
+    let replacement = format!(
+        "{inverse_keyword} {}{suffix}",
+        context.source_file().node(&predicate)
+    );
+    context.replace(message, offense, location, replacement);
 }
 
 fn unreachable_code(context: &mut CopContext<'_, '_>) {
