@@ -38,7 +38,7 @@ fn suppressed_exception_in_number_conversion(context: &mut CopContext<'_, '_>) {
             let tail = &source[close + 1..];
             let (offense_start, offense_end) = if tail.starts_with(" rescue nil") {
                 (constructor_start, close + 1 + " rescue nil".len())
-            } else if tail.starts_with("\nrescue") {
+            } else if tail.starts_with('\n') {
                 let tail_lines = tail.lines().collect::<Vec<_>>();
                 let rescue = tail_lines.get(1).map_or("", |line| line.trim());
                 let allowed_rescue = rescue == "rescue"
@@ -65,7 +65,13 @@ fn suppressed_exception_in_number_conversion(context: &mut CopContext<'_, '_>) {
                     search = close + 1;
                     continue;
                 }
-                let begin = source[..call_start].rfind("begin").unwrap_or(call_start);
+                let Some(begin) = source[..call_start]
+                    .rfind("begin")
+                    .filter(|begin| begin + "begin".len() <= call_start)
+                else {
+                    search = close + 1;
+                    continue;
+                };
                 if !source[begin + "begin".len()..call_start].trim().is_empty() {
                     search = close + 1;
                     continue;

@@ -450,10 +450,6 @@ entries:
   pipeline: prism_source
   source: crates/rustocop/src/cops/prism/lexical_rules.rs
   review: lexical
-- cop: Lint/DuplicateMatchPattern
-  pipeline: prism_source
-  source: crates/rustocop/src/cops/prism/project_scope_completion.rs
-  review: unreviewed
 - cop: Lint/DuplicateRequire
   pipeline: prism_source
   source: crates/rustocop/src/cops/prism/additional_rules_more.rs

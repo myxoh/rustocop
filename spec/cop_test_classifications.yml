@@ -8,6 +8,8 @@ heuristic_regressions:
     - spec/project_parity_regressions_spec.rb
   Lint/UnmodifiedReduceAccumulator:
     - spec/project_parity_regressions_spec.rb
+  Lint/UnescapedBracketInRegexp:
+    - spec/project_parity_regressions_spec.rb
   Style/InverseMethods:
     - spec/project_parity_regressions_spec.rb
   Style/MapCompactWithConditionalBlock:

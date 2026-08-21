@@ -14,11 +14,7 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
             "",
             "Use a single regexp atom instead of a `{1}` quantifier.",
         ),
-        report(
-            "Lint/UnescapedBracketInRegexp",
-            "/[/",
-            "Regular expression has an unescaped open bracket.",
-        ),
+        Box::new(UnescapedBracketInRegexp),
         report(
             "Lint/AmbiguousRegexpLiteral",
             "puts /",
@@ -32,6 +28,52 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
         custom("Lint/OutOfRangeRegexpRef", out_of_range_ref),
         Box::new(SelectByRegexp),
     ]
+}
+
+struct UnescapedBracketInRegexp;
+
+impl Cop for UnescapedBracketInRegexp {
+    fn name(&self) -> &'static str {
+        "Lint/UnescapedBracketInRegexp"
+    }
+
+    fn on_node<'pr>(
+        &self,
+        node: &Node<'pr>,
+        _ancestors: &[Node<'pr>],
+        source: &str,
+        context: &mut Context,
+    ) {
+        let Some(regexp) = node.as_regular_expression_node() else {
+            return;
+        };
+        let start = regexp.opening_loc().end_offset();
+        let end = regexp.closing_loc().start_offset();
+        let mut escaped = false;
+        let mut character_class_depth = 0_usize;
+        for (relative, byte) in source[start..end].bytes().enumerate() {
+            if escaped {
+                escaped = false;
+            } else if byte == b'\\' {
+                escaped = true;
+            } else if byte == b'[' {
+                character_class_depth += 1;
+            } else if byte == b']' {
+                if character_class_depth > 0 {
+                    character_class_depth -= 1;
+                } else if relative > 0 {
+                    let at = start + relative;
+                    context.replace(
+                        self.name(),
+                        "Regular expression has `]` without escape.",
+                        at..at + 1,
+                        at..at + 1,
+                        "\\]",
+                    );
+                }
+            }
+        }
+    }
 }
 
 struct SelectByRegexp;
