@@ -30,6 +30,11 @@ namespace :quality do
     ruby "script/generate_source_cop_inventory.rb", "--check"
     ruby "script/generate_compatibility_corpus.rb", "--check"
   end
+
+  desc "Compare configured cop mutations against ten pinned real projects"
+  task :configuration_mutations do
+    ruby "script/audit_configuration_mutations.rb"
+  end
 end
 
 namespace :build do
