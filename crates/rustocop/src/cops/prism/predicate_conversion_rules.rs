@@ -1,7 +1,7 @@
 use super::*;
 
 define_cops! {
-    BitwisePredicate => "Style/BitwisePredicate" => source(bitwise_predicate),
+    BitwisePredicate => "Style/BitwisePredicate" => call(bitwise_predicate),
     ComparableBetween => "Style/ComparableBetween" => node(as_and_node, comparable_between),
     DirEmpty => "Style/DirEmpty" => source(dir_empty),
     EvenOdd => "Style/EvenOdd" => call(even_odd),
@@ -194,49 +194,58 @@ fn unwrapped_call(node: Node<'_>) -> Option<CallNode<'_>> {
         .as_call_node()
 }
 
-fn bitwise_predicate(context: &mut CopContext<'_, '_>) {
+fn bitwise_predicate(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     if !context.target_ruby_version().at_least(2, 5) {
         return;
     }
-    for (line_start, line) in context.source_file().lines() {
-        let indentation = line.len() - line.trim_start().len();
-        let expression = line.trim();
-        let Some(close) = expression.find(')') else {
-            continue;
-        };
-        let Some(bitwise) = expression
-            .strip_prefix('(')
-            .and_then(|value| value[..close - 1].split_once(" & "))
-        else {
-            continue;
-        };
-        let (left, right) = bitwise;
-        let tail = &expression[close + 1..];
-        let conversion = match tail {
-            ".positive?" | " > 0" | " >= 1" | " != 0" => Some((left, "anybits?", right)),
-            ".zero?" | " == 0" => Some((left, "nobits?", right)),
-            _ => tail.strip_prefix(" == ").and_then(|compared| {
-                if compared == right {
-                    Some((left, "allbits?", right))
-                } else if compared == left {
-                    Some((right, "allbits?", left))
-                } else {
-                    None
-                }
-            }),
-        };
-        let Some((receiver, method, flags)) = conversion else {
-            continue;
-        };
-        let range = line_start + indentation..line_start + indentation + expression.len();
-        let replacement = format!("{receiver}.{method}({flags})");
-        context.replace(
-            format!("Replace with `{replacement}` for comparison with bit flags."),
-            range.clone(),
-            range,
-            replacement,
-        );
+    if !matches!(call_name(node), b"!=" | b"==" | b">" | b">=" | b"positive?" | b"zero?") {
+        return;
     }
+    let Some(parentheses) = node.receiver().and_then(|receiver| receiver.as_parentheses_node()) else {
+        return;
+    };
+    let Some(bit_operation) = parentheses
+        .body()
+        .and_then(|body| body.as_statements_node())
+        .and_then(|statements| only_statement_in(&statements))
+        .and_then(|statement| statement.as_call_node())
+    else {
+        return;
+    };
+    if call_name(&bit_operation) != b"&" {
+        return;
+    }
+    let (Some(lhs), Some(rhs)) = (bit_operation.receiver(), only_argument(&bit_operation)) else {
+        return;
+    };
+
+    let file = context.source_file();
+    let lhs_source = file.node(&lhs);
+    let rhs_source = file.node(&rhs);
+    let argument = only_argument(node);
+    let argument_source = argument.as_ref().map(|argument| file.node(argument));
+    let method = match call_name(node) {
+        b"positive?" if argument_count(node) == 0 => "anybits?",
+        b">" if argument_source == Some("0") => "anybits?",
+        b">=" if argument_source == Some("1") => "anybits?",
+        b"!=" if argument_source == Some("0") => "anybits?",
+        b"zero?" if argument_count(node) == 0 => "nobits?",
+        b"==" if argument_source == Some("0") => "nobits?",
+        b"==" if argument_source == Some(rhs_source) || argument_source == Some(lhs_source) => {
+            "allbits?"
+        }
+        _ => return,
+    };
+    let preferred = if method == "allbits?" && argument_source == Some(lhs_source) {
+        format!("{rhs_source}.allbits?({lhs_source})")
+    } else {
+        format!("{lhs_source}.{method}({rhs_source})")
+    };
+    context.replace_call(
+        node,
+        format!("Replace with `{preferred}` for comparison with bit flags."),
+        preferred,
+    );
 }
 
 fn dir_empty(context: &mut CopContext<'_, '_>) {
