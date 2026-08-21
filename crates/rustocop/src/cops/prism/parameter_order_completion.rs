@@ -146,5 +146,13 @@ fn required_keyword(parameter: &str) -> bool {
 fn optional_keyword(parameter: &str) -> bool {
     parameter
         .split_once(':')
-        .is_some_and(|(name, value)| !name.starts_with('*') && !value.trim().is_empty())
+        .is_some_and(|(name, value)| valid_keyword_name(name) && !value.trim().is_empty())
+}
+
+fn valid_keyword_name(name: &str) -> bool {
+    let mut characters = name.trim().chars();
+    characters
+        .next()
+        .is_some_and(|character| character == '_' || character.is_alphabetic())
+        && characters.all(|character| character == '_' || character.is_alphanumeric())
 }
