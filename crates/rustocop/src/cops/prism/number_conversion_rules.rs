@@ -71,6 +71,9 @@ fn inside_reported_conversion(node: &CallNode<'_>, context: &CopContext<'_, '_>)
 }
 
 fn block_conversion(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) -> bool {
+    if argument_count(node) != 0 {
+        return false;
+    }
     let Some(argument) = node
         .block()
         .and_then(|block| block.as_block_argument_node())
@@ -96,7 +99,7 @@ fn block_conversion(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) -> bo
 }
 
 fn symbol_argument_conversion(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) -> bool {
-    if !matches!(call_name(node), b"try" | b"send") || node.receiver().is_none() {
+    if node.receiver().is_none() {
         return false;
     }
     let Some(symbol) = only_argument(node).and_then(|argument| argument.as_symbol_node()) else {
