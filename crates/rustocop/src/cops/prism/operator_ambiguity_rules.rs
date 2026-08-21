@@ -8,11 +8,7 @@ define_cops! {
 
 fn parentheses_as_grouped_expression(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     if argument_count(node) != 1
-        || matches!(
-            call_name(node),
-            b"+" | b"-" | b"*" | b"/" | b"%" | b"**" | b"&" | b"|" | b"^" | b"<<" | b">>"
-        )
-        || call_name(node).ends_with(b"=")
+        || grouped_expression_operator_or_setter(call_name(node))
     {
         return;
     }
@@ -34,14 +30,15 @@ fn parentheses_as_grouped_expression(node: &CallNode<'_>, context: &mut CopConte
     if gap.is_empty() || !gap.chars().all(char::is_whitespace) {
         return;
     }
-    if context.ancestors().iter().rev().any(|ancestor| {
-        ancestor.as_call_node().is_some()
-            || ancestor.as_and_node().is_some()
+    if grouped_expression_chained_call(node, context)
+        || context.ancestors().iter().rev().any(|ancestor| {
+            ancestor.as_and_node().is_some()
             || ancestor.as_or_node().is_some()
             || ancestor.as_if_node().is_some()
             || ancestor.as_range_node().is_some()
             || ancestor.as_assoc_node().is_some()
-    }) {
+        })
+    {
         return;
     }
     context.remove(
@@ -52,6 +49,53 @@ fn parentheses_as_grouped_expression(node: &CallNode<'_>, context: &mut CopConte
         selector.end_offset()..opening.start_offset(),
         selector.end_offset()..opening.start_offset(),
     );
+}
+
+fn grouped_expression_operator_or_setter(name: &[u8]) -> bool {
+    matches!(
+        name,
+        b"+" | b"-"
+            | b"*"
+            | b"/"
+            | b"%"
+            | b"**"
+            | b"=="
+            | b"!="
+            | b"==="
+            | b"=~"
+            | b"!~"
+            | b"<"
+            | b">"
+            | b"<="
+            | b">="
+            | b"<=>"
+            | b"<<"
+            | b">>"
+            | b"&"
+            | b"|"
+            | b"^"
+            | b"[]"
+            | b"[]="
+            | b"!"
+            | b"~"
+            | b"+@"
+            | b"-@"
+    ) || name.ends_with(b"=")
+}
+
+fn grouped_expression_chained_call(
+    node: &CallNode<'_>,
+    context: &CopContext<'_, '_>,
+) -> bool {
+    let location = node.location();
+    context.ancestors().iter().rev().any(|ancestor| {
+        ancestor.as_call_node().is_some_and(|call| {
+            call.receiver().is_some_and(|receiver| {
+                receiver.location().start_offset() == location.start_offset()
+                    && receiver.location().end_offset() == location.end_offset()
+            })
+        })
+    })
 }
 
 fn ambiguous_operator_precedence(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
