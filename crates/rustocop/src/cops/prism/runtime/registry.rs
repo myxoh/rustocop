@@ -5,6 +5,7 @@ pub(super) struct Registry {
     pub(super) source_cops: Vec<usize>,
     pub(super) node_cops: Vec<usize>,
     pub(super) parse_error_cops: Vec<usize>,
+    pub(super) recovered_node_cops: Vec<usize>,
 }
 
 impl Registry {
@@ -12,11 +13,17 @@ impl Registry {
         let source_cops = cop_indices(&cops, |phase| phase.visits_source());
         let node_cops = cop_indices(&cops, |phase| phase.visits_nodes());
         let parse_error_cops = cop_indices(&cops, |phase| phase.visits_parse_errors());
+        let recovered_node_cops = cops
+            .iter()
+            .enumerate()
+            .filter_map(|(index, cop)| cop.visits_recovered_nodes().then_some(index))
+            .collect();
         Self {
             cops,
             source_cops,
             node_cops,
             parse_error_cops,
+            recovered_node_cops,
         }
     }
 }

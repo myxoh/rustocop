@@ -68,19 +68,108 @@ fn check_empty_else(lines: &[SourceLine], options: &InspectionConfig, offenses: 
         return;
     }
 
-    for index in 0..lines.len().saturating_sub(1) {
-        if lines[index].body.trim() == "else" && lines[index + 1].body.trim() == "end" {
+    let style = options
+        .cop_config
+        .value(cop, "EnforcedStyle")
+        .unwrap_or("empty");
+    let allow_comments = options
+        .cop_config
+        .bool(cop, "AllowComments")
+        .unwrap_or(false);
+    let missing_else = options
+        .cop_config
+        .value("Style/MissingElse", "EnforcedStyle")
+        .unwrap_or_default();
+    let missing_else_enabled = options
+        .cop_config
+        .bool("Style/MissingElse", "Enabled")
+        .unwrap_or(true);
+    for (index, line) in lines.iter().enumerate() {
+        for (column, _) in line.body.match_indices("else") {
+            let before = line.body.as_bytes().get(column.wrapping_sub(1));
+            let after_keyword = line.body.as_bytes().get(column + 4);
+            if before.is_some_and(|byte| byte.is_ascii_alphanumeric() || *byte == b'_')
+                || after_keyword.is_some_and(|byte| byte.is_ascii_alphanumeric() || *byte == b'_')
+            {
+                continue;
+            }
+            let tail = line.body[column + 4..]
+                .trim()
+                .trim_start_matches(';')
+                .trim();
+            let (empty, nil_only, has_comment) = if !tail.is_empty() {
+                (
+                    tail == "end",
+                    tail == "nil" || tail.starts_with("nil;") || tail.starts_with("nil "),
+                    tail.starts_with('#'),
+                )
+            } else {
+                let mut cursor = index + 1;
+                let mut comment = false;
+                while cursor < lines.len() && lines[cursor].body.trim_start().starts_with('#') {
+                    comment = true;
+                    cursor += 1;
+                }
+                let next = lines
+                    .get(cursor)
+                    .map(|next| next.body.trim())
+                    .unwrap_or_default();
+                let following = lines
+                    .get(cursor + 1)
+                    .map(|next| next.body.trim())
+                    .unwrap_or_default();
+                (next == "end", next == "nil" && following == "end", comment)
+            };
+            let redundant = match style {
+                "nil" => nil_only,
+                "both" => empty || nil_only,
+                _ => empty,
+            };
+            if !redundant || allow_comments && has_comment {
+                continue;
+            }
+            let kind = enclosing_conditional_kind(lines, index, column);
+            let conflicts =
+                missing_else_enabled && (missing_else == "both" || missing_else == kind);
             push_offense(
                 offenses,
                 cop,
                 "Redundant `else`-clause.",
                 index + 1,
-                leading_spaces(&lines[index].body) + 1,
+                column + 1,
                 4,
-                CorrectionStatus::Pending,
+                if conflicts || has_comment {
+                    CorrectionStatus::Unavailable
+                } else {
+                    CorrectionStatus::Pending
+                },
             );
         }
     }
+}
+
+fn enclosing_conditional_kind(lines: &[SourceLine], index: usize, column: usize) -> &'static str {
+    let current = &lines[index].body[..column];
+    if current
+        .rfind("case ")
+        .is_some_and(|case_at| current.rfind("if ").is_none_or(|if_at| case_at > if_at))
+    {
+        return "case";
+    }
+    for line in lines[..=index].iter().rev() {
+        let trimmed = line.body.trim_start();
+        if trimmed.starts_with("case ") || trimmed.contains("= case ") {
+            return "case";
+        }
+        if trimmed.starts_with("if ")
+            || trimmed.starts_with("unless ")
+            || trimmed.contains("= if ")
+            || trimmed.contains("= unless ")
+        {
+            return "if";
+        }
+    }
+    "if"
 }
 
 fn check_hash_like_case(

@@ -55,9 +55,9 @@ impl IfUnlessModifierRule<'_, '_, '_> {
             let comment = source.lines().next().and_then(|line| line.find('#').map(|at| line[at..].trim())).unwrap_or("");
             let mut replacement = format!("{body_source} {kind} {condition_source}");
             if !comment.is_empty() { replacement.push(' '); replacement.push_str(comment); }
-            let line_start = self.source_file().line_start(location.start_offset());
+            let line_start = self.source_file().line_start(keyword.start_offset());
             let line_end = self.source_file().line_end(location.end_offset());
-            let prefix = self.source_file().slice(line_start..location.start_offset()).unwrap_or_default();
+            let prefix = self.source_file().slice(line_start..keyword.start_offset()).unwrap_or_default();
             let suffix = self.source_file().slice(location.end_offset()..line_end).unwrap_or_default();
             return_if!((!comment.is_empty() && !suffix.trim().is_empty()) || suffix.trim_start().starts_with('#'));
             return_if!(conditional_sibling_shares_line(self.source(), &location));
@@ -65,8 +65,7 @@ impl IfUnlessModifierRule<'_, '_, '_> {
             let parenthesized = source.trim_start().starts_with('(')
                 || semantic_parent(self.ancestors()).is_some_and(parent_requires_parentheses);
             if parenthesized { replacement = format!("({replacement})"); }
-            let tab_width = self.related_config_value("Layout/IndentationStyle", "IndentationWidth")
-                .or_else(|| self.related_config_value("Layout/IndentationWidth", "Width"))
+            let tab_width = self.related_config_value("Layout/IndentationWidth", "Width")
                 .and_then(|width| width.parse().ok()).unwrap_or(2);
             return_if!(visual_width(prefix, tab_width) + replacement.chars().count() + suffix.chars().count() > max);
             let message = MODIFIER_MESSAGE.replace("{keyword}", kind);

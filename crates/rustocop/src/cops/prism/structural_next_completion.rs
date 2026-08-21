@@ -5,7 +5,7 @@ use elsif_conversion::*;
 
 define_cops! {
     IfInsideElse => "Style/IfInsideElse" => source(if_inside_else),
-    MultilineTernaryOperator => "Style/MultilineTernaryOperator" => rubocop_callbacks(
+    MultilineTernaryOperator => "Style/MultilineTernaryOperator" => recovery_rubocop_callbacks(
         MultilineTernaryOperatorRule,
         [on_if]
     ),

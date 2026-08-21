@@ -6,6 +6,7 @@ pub(super) struct Runner<'registry, 'context> {
     pub(super) source: &'context str,
     pub(super) ancestors: Vec<Node<'context>>,
     pub(super) investigation_states: &'context mut [Box<dyn Any>],
+    pub(super) node_cops: &'registry [usize],
 }
 
 macro_rules! visit_typed_branch {
@@ -29,7 +30,7 @@ macro_rules! visit_typed_branch {
 
 impl<'pr> Visit<'pr> for Runner<'_, 'pr> {
     fn visit_branch_node_enter(&mut self, node: Node<'pr>) {
-        for index in &self.registry.node_cops {
+        for index in self.node_cops {
             self.registry.cops[*index].on_node_with_state(
                 &node,
                 &self.ancestors,
@@ -46,7 +47,7 @@ impl<'pr> Visit<'pr> for Runner<'_, 'pr> {
     }
 
     fn visit_leaf_node_enter(&mut self, node: Node<'pr>) {
-        for index in &self.registry.node_cops {
+        for index in self.node_cops {
             self.registry.cops[*index].on_node_with_state(
                 &node,
                 &self.ancestors,
@@ -78,7 +79,7 @@ impl<'pr> Visit<'pr> for Runner<'_, 'pr> {
         });
         if !already_entered {
             let generic = node.as_node();
-            for index in &self.registry.node_cops {
+            for index in self.node_cops {
                 self.registry.cops[*index].on_node_with_state(
                     &generic,
                     &self.ancestors,

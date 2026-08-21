@@ -257,6 +257,10 @@ macro_rules! define_cop_entry {
         define_rule!($rule);
         define_rubocop_callback_rule_cop!($type => $name => $rule [$($callback),+]);
     };
+    ($type:ident => $name:literal => recovery_rubocop_callbacks($rule:ident, [$($callback:ident),+ $(,)?])) => {
+        define_rule!($rule);
+        define_recovery_rubocop_callback_rule_cop!($type => $name => $rule [$($callback),+]);
+    };
     ($type:ident => $name:literal => stateful_rubocop_callbacks($rule:ident, $state:ident, [$($callback:ident),+ $(,)?])) => {
         define_stateful_rule!($rule, $state);
         define_stateful_rubocop_callback_rule_cop!($type => $name => $rule<$state> [$($callback),+]);

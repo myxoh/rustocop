@@ -361,42 +361,68 @@ fn bare_symbol(value: &str) -> bool {
 }
 
 fn fetch_env_var(context: &mut CopContext<'_, '_>) {
-    let source = context.source().to_string();
-    for quote in ['\'', '"'] {
-        let needle = format!("ENV[{quote}");
-        let mut search = 0;
-        while let Some(relative) = source[search..].find(&needle) {
-            let start = search + relative;
-            let value_start = start + needle.len();
-            let Some(close) = source[value_start..].find(quote).map(|at| value_start + at) else {
-                break;
-            };
-            if source.as_bytes().get(close + 1) != Some(&b']') {
-                search = close + 1;
-                continue;
+    let default_to_nil = context.config_bool("DefaultToNil", true);
+    let allowed = context.config_values("AllowedVars").to_vec();
+    let mut guarded = Vec::<Vec<String>>::new();
+    for (offset, line) in context.source_file().lines() {
+        let trimmed = line.trim_start();
+        if trimmed == "end" { guarded.pop(); }
+        let conditional = trimmed.starts_with("if ") || trimmed.starts_with("unless ");
+        let mut condition_keys = Vec::new();
+        if conditional {
+            condition_keys.extend(env_keys(line));
+            if let Some(argument) = line.split("ENV.key?(").nth(1).and_then(|tail| tail.split(')').next()) {
+                condition_keys.push(argument.to_string());
             }
-            let key = &source[value_start..close];
-            let before = source[..start].trim_end().as_bytes().last().copied();
-            let after = source[close + 2..].trim_start();
-            if before == Some(b'!')
+            guarded.push(condition_keys.clone());
+        }
+        let mut search = 0;
+        while let Some(relative) = line[search..].find("ENV[") {
+            let start = search + relative;
+            let value_start = start + "ENV[".len();
+            let Some(close) = line[value_start..].find(']').map(|at| value_start + at) else { break };
+            let key = &line[value_start..close];
+            let bare_key = key.trim_matches(['\'', '"']);
+            let before = line[..start].trim_end().as_bytes().last().copied();
+            let after = line[close + 1..].trim_start();
+            let guarded_here = guarded.iter().any(|keys| keys.iter().any(|guarded| guarded == key));
+            if allowed.iter().any(|allowed| allowed == bare_key)
+                || conditional
+                || guarded_here
+                || before == Some(b'!')
                 || after.starts_with(['.', '&'])
                 || after.starts_with("==")
                 || after.starts_with("!=")
-                || after.starts_with("||=")
+                || after.starts_with("||")
                 || after.starts_with("&&=")
+                || after.starts_with('?')
             {
-                search = close + 2;
+                search = close + 1;
                 continue;
             }
+            let default = if default_to_nil { ", nil" } else { "" };
+            let original = &line[start..close + 1];
             context.replace(
-                format!("Use `ENV.fetch({quote}{key}{quote}, nil)` instead of `ENV[{quote}{key}{quote}]`."),
-                start..close + 2,
-                start..close + 2,
-                format!("ENV.fetch({quote}{key}{quote}, nil)"),
+                format!("Use `ENV.fetch({key}{default})` instead of `{original}`."),
+                offset + start..offset + close + 1,
+                offset + start..offset + close + 1,
+                format!("ENV.fetch({key}{default})"),
             );
-            search = close + 2;
+            search = close + 1;
         }
     }
+}
+
+fn env_keys(line: &str) -> Vec<String> {
+    let mut keys = Vec::new();
+    let mut search = 0;
+    while let Some(relative) = line[search..].find("ENV[") {
+        let start = search + relative + "ENV[".len();
+        let Some(close) = line[start..].find(']').map(|at| start + at) else { break };
+        keys.push(line[start..close].to_string());
+        search = close + 1;
+    }
+    keys
 }
 
 fn string_concatenation(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {

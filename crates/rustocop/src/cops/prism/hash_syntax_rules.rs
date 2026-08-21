@@ -3,7 +3,7 @@ use ruby_prism::{AssocNode, HashNode, Node};
 use super::*;
 
 define_cops! {
-    HashSyntax => "Style/HashSyntax" => rubocop_callbacks(HashSyntaxRule, [on_hash, on_keyword_hash]),
+    HashSyntax => "Style/HashSyntax" => recovery_rubocop_callbacks(HashSyntaxRule, [on_hash, on_keyword_hash]),
 }
 
 impl HashSyntaxRule<'_, '_, '_> {

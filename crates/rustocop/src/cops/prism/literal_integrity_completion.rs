@@ -245,11 +245,23 @@ fn double_negation(context: &mut CopContext<'_, '_>) {
                     && (lines[index + 1..]
                         .iter()
                         .find(|(_, next)| !next.trim().is_empty())
-                        .is_some_and(|(_, next)| next.trim() == "end")
+                        .is_some_and(|(_, next)| {
+                            let next = next.trim();
+                            next == "end"
+                                || next == "else"
+                                || next.starts_with("elsif ")
+                                || next.starts_with("when ")
+                                || next.starts_with("in ")
+                        })
                         || returns_after_continuation(
                             &lines[index + 1..],
                             line.len() - line.trim_start().len(),
-                        ))))
+                        )))
+                || (in_conditional_branch(&lines[..index], line.len() - line.trim_start().len())
+                    && lines[index + 1..].iter().find(|(_, next)| !next.trim().is_empty()).is_some_and(|(_, next)| {
+                        let next = next.trim();
+                        next == "end" || next == "else" || next.starts_with("elsif ") || next.starts_with("when ") || next.starts_with("in ")
+                    })))
         {
             continue;
         }
@@ -262,12 +274,38 @@ fn double_negation(context: &mut CopContext<'_, '_>) {
     }
 }
 
+fn in_conditional_branch(lines: &[(usize, &str)], indent: usize) -> bool {
+    lines.iter().rev().find(|(_, line)| {
+        !line.trim().is_empty() && line.len() - line.trim_start().len() < indent
+    }).is_some_and(|(_, line)| {
+        let line = line.trim_start();
+        line.starts_with("if ") || line.starts_with("elsif ") || line == "else"
+            || line.starts_with("case ") || line.starts_with("when ") || line.starts_with("in ")
+    })
+}
+
 fn empty_literal(context: &mut CopContext<'_, '_>) {
     let source = context.source();
+    let string_literal = if context.related_config_value("Style/StringLiterals", "EnforcedStyle") == Some("double_quotes") {
+        "\"\""
+    } else {
+        "''"
+    };
+    let frozen_comment = source.lines().take(2).find_map(|line| {
+        let value = line.trim().strip_prefix("# frozen_string_literal:")?.trim();
+        matches!(value, "true" | "false").then_some(value == "true")
+    });
+    let frozen_strings = frozen_comment.unwrap_or_else(|| {
+        match context.related_config_value("AllCops", "StringLiteralsFrozenByDefault") {
+            Some("true") => true,
+            Some("false") => false,
+            _ => context.related_config_value("Style/FrozenStringLiteralComment", "Enabled") == Some("true"),
+        }
+    });
     for (constructor, literal, kind) in [
         ("Array.new", "[]", "array"),
         ("Hash.new", "{}", "hash"),
-        ("String.new", "''", "string"),
+        ("String.new", string_literal, "string"),
     ] {
         let mut search = 0;
         while let Some(relative) = source[search..].find(constructor) {
@@ -277,6 +315,10 @@ fn empty_literal(context: &mut CopContext<'_, '_>) {
             } else {
                 start
             };
+            if kind == "string" && frozen_strings {
+                search = start + constructor.len();
+                continue;
+            }
             let mut end = start + constructor.len();
             if source.get(end..end + 2) == Some("()") {
                 end += 2;
@@ -294,7 +336,7 @@ fn empty_literal(context: &mut CopContext<'_, '_>) {
             context.replace(
                 format!(
                     "Use {kind} literal `{literal}` instead of `{}`.",
-                    &source[offense_start..end]
+                    if kind == "string" { constructor } else { &source[offense_start..end] }
                 ),
                 offense_start..end,
                 if kind == "hash"

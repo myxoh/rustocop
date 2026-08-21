@@ -252,6 +252,8 @@ fn unmodified_reduce_accumulator(context: &mut CopContext<'_, '_>) {
 
 fn documentation_method(context: &mut CopContext<'_, '_>) {
     let lines = context.source_file().lines().collect::<Vec<_>>();
+    let require_non_public = context.config_bool("RequireForNonPublicMethods", false);
+    let allowed_methods = context.config_values("AllowedMethods").to_vec();
     let mut public = true;
     for (index, (offset, line)) in lines.iter().copied().enumerate() {
         let trimmed = line.trim_start();
@@ -263,24 +265,39 @@ fn documentation_method(context: &mut CopContext<'_, '_>) {
             public = true;
             continue;
         }
-        if !public || !trimmed.starts_with("def ") || trimmed.starts_with("def _") {
-            continue;
-        }
-        let documented = index > 0 && lines[index - 1].1.trim_start().starts_with('#');
+        let Some(def_at) = trimmed.find("def ") else { continue };
+        let prefix = trimmed[..def_at].trim();
+        if !prefix.is_empty() && !matches!(prefix, "private" | "protected" | "private_class_method" | "module_function" | "ruby2_keywords") { continue; }
+        let effective_public = public && !matches!(prefix, "private" | "protected" | "private_class_method");
+        if !effective_public && !require_non_public { continue; }
+        let definition = &trimmed[def_at + "def ".len()..];
+        let name = definition.split(|character: char| character.is_whitespace() || matches!(character, '(' | ';')).next().unwrap_or_default();
+        let bare_name = name.rsplit('.').next().unwrap_or(name);
+        if bare_name == "initialize" || bare_name.starts_with('_') || allowed_methods.iter().any(|allowed| allowed == bare_name) { continue; }
+        let documented = index > 0 && documentation_comment(lines[index - 1].1);
         if !documented {
-            let indent = line.len() - trimmed.len();
-            let end = lines[index + 1..]
-                .iter()
-                .find(|(_, candidate)| candidate.trim() == "end")
-                .map_or(offset + line.len(), |(end, candidate)| {
-                    end + candidate.len()
-                });
+            let line_indent = line.len() - trimmed.len();
+            let offense_indent = if matches!(prefix, "module_function" | "ruby2_keywords") { line_indent } else { line_indent + def_at };
+            let end = if trimmed[def_at..].contains("; end") {
+                offset + line.len()
+            } else {
+                lines[index + 1..]
+                    .iter()
+                    .find(|(_, candidate)| candidate.trim() == "end" && candidate.len() - candidate.trim_start().len() <= line_indent)
+                    .map_or(offset + line.len(), |(end, candidate)| end + candidate.len())
+            };
             context.report(
                 "Missing method documentation comment.",
-                offset + indent..end,
+                offset + offense_indent..end,
             );
         }
     }
+}
+
+fn documentation_comment(line: &str) -> bool {
+    let comment = line.trim_start().strip_prefix('#').map(str::trim).unwrap_or_default();
+    !comment.is_empty()
+        && !["TODO", "FIXME", "OPTIMIZE", "HACK", "rubocop:"].iter().any(|marker| comment.starts_with(marker))
 }
 
 fn redundant_splat_expansion(context: &mut CopContext<'_, '_>) {
