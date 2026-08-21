@@ -55,6 +55,26 @@ fn ordinary_cops_do_not_investigate_recovered_syntax_trees() {
 }
 
 #[test]
+fn ordinary_cops_investigate_trees_with_context_only_parse_errors() {
+    let redundant = inspect("(redo)\n", true, RubyVersion::default(), &|cop| {
+        cop == "Style/RedundantParentheses"
+    });
+
+    assert_eq!(redundant.findings.len(), 1);
+    assert_eq!(redundant.corrected_source, "redo\n");
+
+    let ternary = inspect(
+        "foo = (yield) ? a : b\n",
+        true,
+        RubyVersion::default(),
+        &|cop| cop == "Style/TernaryParentheses",
+    );
+
+    assert_eq!(ternary.findings.len(), 1);
+    assert_eq!(ternary.corrected_source, "foo = yield ? a : b\n");
+}
+
+#[test]
 fn parses_once_and_dispatches_to_enabled_cops() {
     let inspection = inspect(
         "eval(code)\nJSON.load(payload)\n",
