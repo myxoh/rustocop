@@ -61,10 +61,10 @@ impl Cop for ProcLiteral {
     }
 
     fn on_call(&self, node: &CallNode<'_>, context: &mut Context) {
-        if !match_call(node)
+        if node.block().and_then(|block| block.as_block_node()).is_none()
+            || !match_call(node)
             .named(b"new")
             .on_root_constant(b"Proc")
-            .with_block()
             .matches()
         {
             return;
