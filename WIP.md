@@ -1,6 +1,6 @@
 # Work in progress: documentation accuracy audit
 
-Last updated: 2026-08-21T22:18:32-04:00
+Last updated: 2026-08-21T22:36:46-04:00
 
 This file records the state of the documentation audit when work was paused. The
 changes in this commit are intentionally a checkpoint, not a claim that the
@@ -12,8 +12,9 @@ A fresh audit ran all 606 registered cops against the ten-project real-world
 corpus (54,146 Ruby files) using the current Rust source.
 
 - Project evidence updated at: `2026-08-21T22:15:13-04:00`
-- Fixture evidence updated at: `2026-08-21T22:18:32-04:00`
-- Rust source commit: `95ca43471d3d905df411c070b3995594c4ed6baa`
+- Fixture evidence updated at: `2026-08-21T22:36:46-04:00`
+- Fixture source commit: `20caa1a2151458d08cbc72f03f5dc44d5d2fa23a`
+- Project source commit: `95ca43471d3d905df411c070b3995594c4ed6baa`
 - Native extension SHA-256: `a3ad1372d52e2c73626163029c7a0f081e7a6a5592f9513e560ad23dde68ddb6`
 - Project-exact cops: 280
 - Dormant cops (not exercised by these projects): 87

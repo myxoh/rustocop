@@ -48,9 +48,9 @@ The minimized real-project corpus currently contains 126 passing cases, 12
 pending isolated mismatches, and five configuration-mutation cases. These are
 regression coverage, not a substitute for the complete project comparison.
 
-The fixture review updated at `2026-08-21T22:18:32-04:00` matched
-22,614/28,623 captured cases (79.0%); 496/606 cops matched every captured
-fixture. Of those, 269 cops also satisfy the current project-exact gate.
+The fixture review updated at `2026-08-21T22:36:46-04:00` matched
+22,684/28,623 captured cases (79.3%); 507/606 cops matched every captured
+fixture. Of those, 265 cops also satisfy the current project-exact gate.
 
 ## Ten-project output parity
 

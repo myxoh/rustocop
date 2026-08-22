@@ -1,10 +1,10 @@
 {
   "version": 1,
   "kind": "fixture_compatibility",
-  "updated_at": "2026-08-21T22:18:32-04:00",
-  "rust_commit": "95ca43471d3d905df411c070b3995594c4ed6baa",
-  "native_sha256": "a3ad1372d52e2c73626163029c7a0f081e7a6a5592f9513e560ad23dde68ddb6",
-  "fixture_corpus_sha256": "bcd904df32e0a0b8ab3297230efe23cc5e00a1f299a38685e2a1fb1ed467e49d",
+  "updated_at": "2026-08-21T22:36:46-04:00",
+  "rust_commit": "20caa1a2151458d08cbc72f03f5dc44d5d2fa23a",
+  "native_sha256": "cc92fb725b8a4a86d5c82a103795b98055c33ef0a208ffaaa601c6da2fa6381d",
+  "fixture_corpus_sha256": "b42b26bcd3a54e560954db497682624a1ecf1548816eef2f8b30a5b897ec6f9c",
   "rubocop_version": "1.87.0",
   "results": {
     "Bundler/DuplicatedGem": {
@@ -23,9 +23,9 @@
       "status": "compatible"
     },
     "Bundler/GemFilename": {
-      "passed": 7,
+      "passed": 15,
       "total": 15,
-      "status": "mismatch"
+      "status": "compatible"
     },
     "Bundler/GemVersion": {
       "passed": 6,
@@ -83,9 +83,9 @@
       "status": "compatible"
     },
     "Gemspec/RequiredRubyVersion": {
-      "passed": 19,
+      "passed": 21,
       "total": 21,
-      "status": "mismatch"
+      "status": "compatible"
     },
     "Gemspec/RubyVersionGlobalsUsage": {
       "passed": 5,
@@ -188,9 +188,9 @@
       "status": "compatible"
     },
     "Layout/EmptyLineAfterMultilineCondition": {
-      "passed": 20,
+      "passed": 22,
       "total": 22,
-      "status": "mismatch"
+      "status": "compatible"
     },
     "Layout/EmptyLineBetweenDefs": {
       "passed": 45,
@@ -208,9 +208,9 @@
       "status": "compatible"
     },
     "Layout/EmptyLinesAroundAccessModifier": {
-      "passed": 172,
+      "passed": 176,
       "total": 176,
-      "status": "mismatch"
+      "status": "compatible"
     },
     "Layout/EmptyLinesAroundArguments": {
       "passed": 22,
@@ -268,9 +268,9 @@
       "status": "compatible"
     },
     "Layout/FirstArgumentIndentation": {
-      "passed": 138,
+      "passed": 139,
       "total": 139,
-      "status": "mismatch"
+      "status": "compatible"
     },
     "Layout/FirstArrayElementIndentation": {
       "passed": 32,
@@ -368,7 +368,7 @@
       "status": "mismatch"
     },
     "Layout/LineLength": {
-      "passed": 42,
+      "passed": 81,
       "total": 194,
       "status": "mismatch"
     },
@@ -493,9 +493,9 @@
       "status": "mismatch"
     },
     "Layout/SpaceAroundMethodCallOperator": {
-      "passed": 49,
+      "passed": 51,
       "total": 51,
-      "status": "mismatch"
+      "status": "compatible"
     },
     "Layout/SpaceAroundOperators": {
       "passed": 41,
@@ -698,9 +698,9 @@
       "status": "mismatch"
     },
     "Lint/DeprecatedOpenSSLConstant": {
-      "passed": 23,
+      "passed": 24,
       "total": 24,
-      "status": "mismatch"
+      "status": "compatible"
     },
     "Lint/DisjunctiveAssignmentInConstructor": {
       "passed": 7,
@@ -1043,9 +1043,9 @@
       "status": "mismatch"
     },
     "Lint/RedundantCopEnableDirective": {
-      "passed": 19,
+      "passed": 23,
       "total": 23,
-      "status": "mismatch"
+      "status": "compatible"
     },
     "Lint/RedundantDirGlobSort": {
       "passed": 16,
@@ -1148,9 +1148,9 @@
       "status": "compatible"
     },
     "Lint/ScriptPermission": {
-      "passed": 4,
+      "passed": 6,
       "total": 6,
-      "status": "mismatch"
+      "status": "compatible"
     },
     "Lint/SelfAssignment": {
       "passed": 50,
@@ -1463,9 +1463,9 @@
       "status": "compatible"
     },
     "Naming/HeredocDelimiterNaming": {
-      "passed": 18,
+      "passed": 19,
       "total": 19,
-      "status": "mismatch"
+      "status": "compatible"
     },
     "Naming/InclusiveLanguage": {
       "passed": 9,
@@ -1673,9 +1673,9 @@
       "status": "compatible"
     },
     "Style/ClassEqualityComparison": {
-      "passed": 18,
+      "passed": 22,
       "total": 22,
-      "status": "mismatch"
+      "status": "compatible"
     },
     "Style/ClassMethods": {
       "passed": 5,
