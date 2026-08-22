@@ -49,8 +49,8 @@ pending isolated mismatches, and six configuration-mutation cases. These are
 regression coverage, not a substitute for the complete project comparison.
 
 After withdrawing the intentionally pending cops, the fixture review updated at
-`2026-08-22T00:54:05-04:00` contains 26,753 executable cases. The retained
-results match 24,667 cases (92.2%), and 509/558 active cops match every fixture.
+`2026-08-22T12:39:56-04:00` contains 26,753 executable cases. The retained
+results match 24,730 cases (92.4%), and 514/558 active cops match every fixture.
 The generated compatibility table applies source-staleness checks to those
 retained results.
 
