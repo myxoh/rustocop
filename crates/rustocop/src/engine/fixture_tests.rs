@@ -74,6 +74,51 @@ macro_rules! fixture_test {
 // New-cop generator registrations are inserted directly below this line.
 
 fixture_test!(
+    checks_spacing_inside_block_braces,
+    "space_inside_block_braces",
+    "/project/space_inside_block_braces.rb",
+    "Layout/SpaceInsideBlockBraces",
+    true,
+    RubyVersion::default()
+);
+
+fixture_test!(
+    combines_consecutive_equivalent_loops,
+    "combinable_loops",
+    "/project/combinable_loops.rb",
+    "Style/CombinableLoops",
+    true,
+    RubyVersion::default()
+);
+
+fixture_test!(
+    places_multiline_method_definition_braces_symmetrically,
+    "multiline_method_definition_brace_layout",
+    "/project/multiline_method_definition_brace_layout.rb",
+    "Layout/MultilineMethodDefinitionBraceLayout",
+    true,
+    RubyVersion::default()
+);
+
+fixture_test!(
+    detects_shadowed_rescued_exceptions,
+    "shadowed_exception",
+    "/project/shadowed_exception.rb",
+    "Lint/ShadowedException",
+    false,
+    RubyVersion::default()
+);
+
+fixture_test!(
+    rejects_unscoped_constant_definitions_inside_blocks,
+    "constant_definition_in_block",
+    "/project/constant_definition_in_block.rb",
+    "Lint/ConstantDefinitionInBlock",
+    false,
+    RubyVersion::default()
+);
+
+fixture_test!(
     merges_nested_redundant_regexp_quantifiers,
     "redundant_regexp_quantifiers",
     "/project/regexp_quantifiers.rb",

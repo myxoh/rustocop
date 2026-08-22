@@ -6,10 +6,7 @@ mod registry;
 pub(super) fn cops() -> Vec<Box<dyn Cop>> {
     let mut cops = vec![
         custom("Layout/LineContinuationSpacing", line_continuation_spacing),
-        custom(
-            "Layout/MultilineMethodDefinitionBraceLayout",
-            method_definition_brace_layout,
-        ),
+        Box::new(MultilineMethodDefinitionBraceLayout),
         custom("Layout/ArrayAlignment", align_continuation),
         custom("Layout/SpaceInsideParens", space_inside_parens),
         Box::new(ClosingParenthesisIndentation),
@@ -84,15 +81,109 @@ fn method_call_brace_layout(context: &mut CopContext<'_, '_>) {
     brace_layout(context, '(', ')');
 }
 
-fn method_definition_brace_layout(context: &mut CopContext<'_, '_>) {
-    if context
-        .source()
-        .lines()
-        .next()
-        .is_some_and(|line| line.trim_start().starts_with("def "))
-    {
-        brace_layout(context, '(', ')');
+struct MultilineMethodDefinitionBraceLayout;
+
+impl Cop for MultilineMethodDefinitionBraceLayout {
+    fn name(&self) -> &'static str {
+        "Layout/MultilineMethodDefinitionBraceLayout"
     }
+
+    fn on_node<'pr>(
+        &self,
+        node: &Node<'pr>,
+        ancestors: &[Node<'pr>],
+        source: &str,
+        context: &mut Context,
+    ) {
+        let Some(definition) = node.as_def_node() else {
+            return;
+        };
+        let mut context = context.cop_context(self.name(), source, ancestors);
+        check_method_definition_brace_layout(&definition, &mut context);
+    }
+}
+
+fn check_method_definition_brace_layout(
+    definition: &ruby_prism::DefNode<'_>,
+    context: &mut CopContext<'_, '_>,
+) {
+    let (Some(opening), Some(closing), Some(parameters)) = (
+        definition.lparen_loc(),
+        definition.rparen_loc(),
+        definition.parameters(),
+    ) else {
+        return;
+    };
+    let file = context.source_file();
+    if file.same_line(opening.start_offset(), closing.start_offset()) {
+        return;
+    }
+    let parameter_location = parameters.location();
+    let first_parameter = parameter_location.start_offset();
+    let last_parameter = parameter_location.end_offset();
+    if first_parameter == last_parameter {
+        return;
+    }
+    let opening_with_first = file.same_line(opening.start_offset(), first_parameter);
+    let closing_with_last =
+        file.same_line(last_parameter.saturating_sub(1), closing.start_offset());
+    let style = context.policy().enforced_style("symmetrical");
+    let wants_same_line = match style {
+        "same_line" => true,
+        "new_line" => false,
+        _ => opening_with_first,
+    };
+    if wants_same_line == closing_with_last {
+        return;
+    }
+    if wants_same_line && closes_immediately_after_heredoc(context.source(), closing.start_offset())
+    {
+        return;
+    }
+
+    let message = match (style, wants_same_line) {
+        ("same_line", _) => {
+            "Closing method definition brace must be on the same line as the last parameter."
+        }
+        ("new_line", _) => {
+            "Closing method definition brace must be on the line after the last parameter."
+        }
+        (_, true) => "Closing method definition brace must be on the same line as the last parameter when opening brace is on the same line as the first parameter.",
+        (_, false) => "Closing method definition brace must be on the line after the last parameter when opening brace is on a separate line from the first parameter.",
+    };
+    if wants_same_line {
+        let closing_line_start = file.line_start(closing.start_offset());
+        let removal_start = closing_line_start.saturating_sub(1);
+        context.add_offense(&closing, message, |corrector| {
+            corrector.remove(removal_start..closing.end_offset());
+            corrector.replace(last_parameter..last_parameter, ")");
+        });
+    } else {
+        let indentation = file.indentation_text(opening.start_offset());
+        context.insert(
+            message,
+            &closing,
+            closing.start_offset(),
+            format!("\n{indentation}"),
+        );
+    }
+}
+
+fn closes_immediately_after_heredoc(source: &str, closing: usize) -> bool {
+    let closing_line = source[..closing]
+        .rfind('\n')
+        .map_or(0, |newline| newline + 1);
+    let preceding = source[..closing_line.saturating_sub(1)]
+        .lines()
+        .next_back()
+        .map(str::trim)
+        .unwrap_or_default();
+    if preceding.is_empty() {
+        return false;
+    }
+    source[..closing_line]
+        .lines()
+        .any(|line| line.contains("<<") && line.contains(preceding))
 }
 
 fn brace_layout(context: &mut CopContext<'_, '_>, open: char, close: char) {
@@ -279,25 +370,145 @@ fn space_inside_parens(context: &mut CopContext<'_, '_>) {
     }
 }
 
-fn space_inside_block(context: &mut CopContext<'_, '_>) {
-    let no_space = context.policy().enforced_style("space") == "no_space";
-    if !no_space {
+pub(super) struct SpaceInsideBlockBraces;
+
+impl Cop for SpaceInsideBlockBraces {
+    fn name(&self) -> &'static str {
+        "Layout/SpaceInsideBlockBraces"
+    }
+
+    fn on_node<'pr>(
+        &self,
+        node: &Node<'pr>,
+        ancestors: &[Node<'pr>],
+        source: &str,
+        context: &mut Context,
+    ) {
+        let Some(block) = node.as_block_node() else {
+            return;
+        };
+        let mut context = context.cop_context(self.name(), source, ancestors);
+        check_space_inside_block_braces(&block, &mut context);
+    }
+}
+
+fn check_space_inside_block_braces(
+    block: &ruby_prism::BlockNode<'_>,
+    context: &mut CopContext<'_, '_>,
+) {
+    let file = context.source_file();
+    let opening = block.opening_loc();
+    let closing = block.closing_loc();
+    if file.at(&opening) != "{" || file.at(&closing) != "}" {
         return;
     }
-    for (offset, line) in context.source_file().lines() {
-        if let Some(at) = line.find("{ ") {
-            if !line.contains('}')
-                || (line[at + 2..].starts_with('|')
-                    && context.config_bool("SpaceBeforeBlockParameters", true))
-            {
-                continue;
-            }
+
+    let opening_end = opening.end_offset();
+    let closing_start = closing.start_offset();
+    let Some(contents) = file.slice(opening_end..closing_start) else {
+        return;
+    };
+
+    if !contents.contains('\n') && contents.trim().is_empty() {
+        match context
+            .config_value("EnforcedStyleForEmptyBraces")
+            .unwrap_or("no_space")
+        {
+            "no_space" if !contents.is_empty() => context.remove(
+                "Space inside empty braces detected.",
+                opening_end..closing_start,
+                opening_end..closing_start,
+            ),
+            "space" if contents.is_empty() => context.insert(
+                "Space missing inside empty braces.",
+                opening.start_offset()..closing.end_offset(),
+                opening_end,
+                " ",
+            ),
+            _ => {}
+        }
+        return;
+    }
+
+    let style = context.policy().enforced_style("space");
+    let wants_space = style != "no_space";
+    let leading_length = contents
+        .bytes()
+        .take_while(|byte| matches!(byte, b' ' | b'\t'))
+        .count();
+    let trailing_length = contents
+        .bytes()
+        .rev()
+        .take_while(|byte| matches!(byte, b' ' | b'\t'))
+        .count();
+    let first_content = opening_end + leading_length;
+    let has_parameters = context.source().as_bytes().get(first_content) == Some(&b'|');
+
+    if has_parameters {
+        let space_before_parameters = context.config_bool("SpaceBeforeBlockParameters", true);
+        if space_before_parameters && leading_length == 0 {
+            context.insert(
+                "Space between { and | missing.",
+                opening.start_offset()..first_content + 1,
+                opening_end,
+                " ",
+            );
+        } else if !space_before_parameters && leading_length > 0 {
             context.remove(
-                "Space inside block braces detected.",
-                offset + at + 1..offset + at + 2,
-                offset + at + 1..offset + at + 2,
+                "Space between { and | detected.",
+                opening_end..first_content,
+                opening_end..first_content,
             );
         }
+    } else if context.source().as_bytes().get(first_content) != Some(&b'\n')
+        && context.source().as_bytes().get(first_content) != Some(&b'\r')
+        && file.same_line(opening.start_offset(), first_content)
+    {
+        if wants_space && leading_length == 0 {
+            context.insert(
+                "Space missing inside {.",
+                first_content..first_content + 1,
+                opening_end,
+                " ",
+            );
+        } else if !wants_space && leading_length > 0 {
+            context.remove(
+                "Space inside { detected.",
+                opening_end..first_content,
+                opening_end..first_content,
+            );
+        }
+    }
+
+    if !file.same_line(opening.start_offset(), closing_start) {
+        if !wants_space {
+            let opening_indent = file.indentation(opening.start_offset());
+            let closing_indent = file.indentation(closing_start);
+            if closing_indent.end > closing_indent.start + opening_indent.len() {
+                let excess = closing_indent.start + opening_indent.len()..closing_indent.end;
+                context.remove("Space inside } detected.", excess.clone(), excess);
+            }
+        }
+        return;
+    }
+
+    let last_content = closing_start.saturating_sub(trailing_length);
+    let block_delimiters_enabled = context
+        .related_config_value("Style/BlockDelimiters", "Enabled")
+        .is_some_and(|enabled| enabled == "true");
+    if wants_space && (!has_parameters || block_delimiters_enabled) && trailing_length == 0 {
+        context.insert(
+            "Space missing inside }.",
+            closing_start..closing.end_offset(),
+            closing_start,
+            " ",
+        );
+    } else if !wants_space && trailing_length > 0 {
+        context.remove(
+            "Space inside } detected.",
+            last_content..closing_start,
+            last_content..closing_start,
+        );
     }
 }
 

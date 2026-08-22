@@ -14,6 +14,12 @@ require_relative "../lib/rustocop/compatibility_status"
 require_relative "../lib/rustocop/config_serialization"
 
 root = File.expand_path("..", __dir__)
+release_native = File.join(root, "crates/rustocop/target/release/rustocop")
+packaged_native = File.join(root, "libexec/rustocop-native")
+default_native = ENV["RUSTOCOP_NATIVE_PATH"] ||
+                 [release_native, packaged_native]
+                   .select { |path| File.executable?(path) }
+                   .max_by { |path| File.mtime(path) }
 options = {
   corpus: File.join(root, "tmp/rubocop-1.87.0-cop-cases.jsonl"),
   jobs: 8,
@@ -21,7 +27,8 @@ options = {
   only: nil,
   corrections: false,
   baseline: nil,
-  report: File.join(root, "tmp/rubocop-1.87.0-compatibility.json")
+  report: File.join(root, "tmp/rubocop-1.87.0-compatibility.json"),
+  native: default_native
 }
 
 OptionParser.new do |parser|
@@ -34,13 +41,17 @@ OptionParser.new do |parser|
     options[:baseline] = File.expand_path(path)
   end
   parser.on("--report PATH") { |path| options[:report] = File.expand_path(path) }
+  parser.on("--native PATH", "Rustocop executable (defaults to the newest local build)") do |path|
+    options[:native] = File.expand_path(path)
+  end
 end.parse!
 
 if options[:baseline] && (options[:only] || options[:limit] || options[:corrections])
   abort "--baseline requires a complete diagnostic run without --only, --limit-per-cop, or --corrections"
 end
 
-native = ENV.fetch("RUSTOCOP_NATIVE_PATH", File.join(root, "libexec/rustocop-native"))
+native = options[:native]
+abort "native Rustocop executable not found; run cargo build --release" unless native
 abort "native Rustocop executable not found at #{native}" unless File.executable?(native)
 abort "captured corpus not found; run script/extract_upstream_cop_specs.rb" unless File.file?(options[:corpus])
 
@@ -257,12 +268,17 @@ by_cop = results.group_by { |result| result.fetch("cop") }.sort.to_h.transform_v
     "failures" => cop_results.reject { |result| result.fetch("passed") }
   }
 end
+dirty_output, _dirty_error, dirty_status = Open3.capture3(
+  "git", "status", "--porcelain", "--", "crates/rustocop", chdir: root
+)
 rust_commit, _git_error, git_status = Open3.capture3(
   "git", "log", "-1", "--format=%H", "--", "crates/rustocop", chdir: root
 )
 summary = {
   "generated_at" => Time.now.iso8601,
-  "rust_commit" => git_status.success? ? rust_commit.strip : nil,
+  "rust_commit" => if dirty_status.success? && dirty_output.empty? && git_status.success?
+                     rust_commit.strip
+                   end,
   "native_sha256" => Digest::SHA256.file(native).hexdigest,
   "fixture_corpus_sha256" => Digest::SHA256.file(options[:corpus]).hexdigest,
   "rubocop_version" => "1.87.0",

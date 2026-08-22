@@ -6,8 +6,8 @@ mod naming;
 
 pub(super) fn cops() -> Vec<Box<dyn Cop>> {
     let mut cops = vec![
-        custom("Lint/ShadowedException", shadowed_exception),
-        custom("Lint/ConstantDefinitionInBlock", constant_in_block),
+        Box::new(ShadowedException) as Box<dyn Cop>,
+        Box::new(ConstantDefinitionInBlock),
         custom("Lint/ShadowingOuterLocalVariable", shadowing_outer_local),
         report(
             "Lint/LiteralAssignmentInCondition",
@@ -27,6 +27,8 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
 define_any_node_cop!(HeredocDelimiterCase => "Naming/HeredocDelimiterCase" => heredoc_case);
 define_node_cop!(BlockForwarding => "Naming/BlockForwarding" => as_def_node => block_forwarding);
 define_node_cop!(RescuedExceptionsVariableName => "Naming/RescuedExceptionsVariableName" => as_rescue_node => rescued_exception_name);
+define_node_cop!(ShadowedException => "Lint/ShadowedException" => as_rescue_node => shadowed_exception);
+define_any_node_cop!(ConstantDefinitionInBlock => "Lint/ConstantDefinitionInBlock" => constant_in_block);
 
 fn ambiguous_assignment(context: &mut CopContext<'_, '_>) {
     for (needle, operator) in [("=-", "-"), ("=+", "+"), ("=*", "*"), ("=!", "!")] {
@@ -49,50 +51,138 @@ fn ambiguous_assignment(context: &mut CopContext<'_, '_>) {
     }
 }
 
-fn shadowed_exception(context: &mut CopContext<'_, '_>) {
-    let mut rescued = None::<String>;
-    for (offset, line) in context.source_file().lines() {
-        if let Some((_, name)) = line.split_once("rescue => ") {
-            rescued = Some(name.trim().to_string());
-        } else if let Some(name) = &rescued {
-            if let Some(at) = line.find(&format!("{name} =")) {
-                context.report(
-                    "Rescued exception variable is overwritten.",
-                    offset + at..offset + at + name.len(),
-                );
+fn shadowed_exception(node: &ruby_prism::RescueNode<'_>, context: &mut CopContext<'_, '_>) {
+    let current = rescued_exception_names(node, context.source_file());
+    let shadows_within_group = current.iter().enumerate().any(|(index, exception)| {
+        current[index + 1..]
+            .iter()
+            .any(|other| exception_shadows(exception, other) || exception_shadows(other, exception))
+    });
+    let mut shadows_later_group = false;
+    let mut subsequent = node.subsequent();
+    while let Some(later) = subsequent {
+        let later_names = rescued_exception_names(&later, context.source_file());
+        if current.iter().any(|exception| {
+            later_names
+                .iter()
+                .any(|later_exception| exception_shadows(exception, later_exception))
+        }) {
+            shadows_later_group = true;
+            break;
+        }
+        subsequent = later.subsequent();
+    }
+    if !shadows_within_group && !shadows_later_group {
+        return;
+    }
+
+    let end = node
+        .statements()
+        .map(|statements| statements.location().end_offset())
+        .or_else(|| {
+            node.exceptions()
+                .iter()
+                .last()
+                .map(|exception| exception.location().end_offset())
+        })
+        .unwrap_or_else(|| node.keyword_loc().end_offset());
+    context.report(
+        "Do not shadow rescued Exceptions.",
+        node.keyword_loc().start_offset()..end,
+    );
+}
+
+fn rescued_exception_names(node: &ruby_prism::RescueNode<'_>, file: SourceFile<'_>) -> Vec<String> {
+    node.exceptions()
+        .iter()
+        .filter_map(|exception| {
+            if exception.as_splat_node().is_some() {
+                return Some("*".to_string());
             }
-        }
-        if line.trim() == "end" {
-            rescued = None;
-        }
+            if exception.as_constant_read_node().is_none()
+                && exception.as_constant_path_node().is_none()
+            {
+                return None;
+            }
+            Some(file.node(&exception).trim_start_matches("::").to_string())
+        })
+        .collect()
+}
+
+fn exception_shadows(ancestor: &str, descendant: &str) -> bool {
+    if ancestor == descendant && ancestor != "*" {
+        return true;
+    }
+    let descendant = descendant.rsplit("::").next().unwrap_or(descendant);
+    match ancestor.rsplit("::").next().unwrap_or(ancestor) {
+        "Exception" => true,
+        "StandardError" => matches!(
+            descendant,
+            "StandardError"
+                | "ArgumentError"
+                | "EncodingError"
+                | "FiberError"
+                | "IOError"
+                | "EOFError"
+                | "IndexError"
+                | "KeyError"
+                | "StopIteration"
+                | "LocalJumpError"
+                | "NameError"
+                | "NoMethodError"
+                | "RangeError"
+                | "FloatDomainError"
+                | "RegexpError"
+                | "RuntimeError"
+                | "SystemCallError"
+                | "ThreadError"
+                | "TypeError"
+                | "ZeroDivisionError"
+        ),
+        "NameError" => descendant == "NoMethodError",
+        "IndexError" => matches!(descendant, "KeyError" | "StopIteration"),
+        "RangeError" => descendant == "FloatDomainError",
+        "ScriptError" => matches!(
+            descendant,
+            "LoadError" | "NotImplementedError" | "SyntaxError"
+        ),
+        "SignalException" => descendant == "Interrupt",
+        _ => false,
     }
 }
 
-fn constant_in_block(context: &mut CopContext<'_, '_>) {
-    let mut block_depth = 0;
-    for (offset, line) in context.source_file().lines() {
-        let trimmed = line.trim_start();
-        if trimmed.contains(" do") || trimmed.ends_with('{') {
-            block_depth += 1;
-        }
-        if block_depth > 0 {
-            let name = trimmed.split('=').next().unwrap_or("").trim();
-            if !name.is_empty()
-                && name
-                    .bytes()
-                    .all(|byte| byte.is_ascii_uppercase() || byte == b'_')
-            {
-                let start = offset + line.find(name).unwrap_or(0);
-                context.report(
-                    "Do not define constants inside a block.",
-                    start..start + name.len(),
-                );
-            }
-        }
-        if trimmed == "end" && block_depth > 0 {
-            block_depth -= 1;
-        }
+fn constant_in_block(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
+    if node.as_constant_write_node().is_none()
+        && node.as_class_node().is_none()
+        && node.as_module_node().is_none()
+    {
+        return;
     }
+    let Some(block) = context.ancestors().iter().rev().find_map(Node::as_block_node) else {
+        return;
+    };
+    let block_start = block.location().start_offset();
+    let block_method = context.ancestors().iter().rev().find_map(|ancestor| {
+        let call = ancestor.as_call_node()?;
+        call.block()
+            .and_then(|candidate| candidate.as_block_node())
+            .filter(|candidate| candidate.location().start_offset() == block_start)?;
+        Some(String::from_utf8_lossy(call.name().as_slice()).into_owned())
+    });
+    let allowed = block_method.as_deref().is_some_and(|method| {
+        if context.config_contains("AllowedMethods") {
+            context
+                .config_values("AllowedMethods")
+                .iter()
+                .any(|allowed| allowed == method)
+        } else {
+            method == "enums"
+        }
+    });
+    if allowed {
+        return;
+    }
+    context.report_node(node, "Do not define constants this way within a block.");
 }
 
 fn shadowing_outer_local(context: &mut CopContext<'_, '_>) {

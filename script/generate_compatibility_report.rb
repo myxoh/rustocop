@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "fileutils"
+require "digest"
 require "json"
 require "open3"
 require "optparse"
@@ -255,8 +256,18 @@ implementation_paths.values.flatten.uniq.each do |path|
   git_dates[path] = stdout.strip
 end
 
-def changed_implementation_paths(commit)
-  return nil if commit.nil? || commit.empty?
+def changed_implementation_paths(commit, native_sha256:, native_path:)
+  if commit.nil? || commit.empty?
+    return nil unless File.executable?(native_path)
+    return nil unless Digest::SHA256.file(native_path).hexdigest == native_sha256
+
+    latest_source = Dir[File.join(ROOT, "crates", "rustocop", "src", "**", "*.rs")]
+                    .map { |path| File.mtime(path) }
+                    .max
+    return nil if latest_source && latest_source > File.mtime(native_path)
+
+    return {}
+  end
 
   stdout, stderr, status = Open3.capture3(
     "git", "diff", "--name-only", commit, "--", "crates/rustocop/src/cops", chdir: ROOT
@@ -265,8 +276,16 @@ def changed_implementation_paths(commit)
   stdout.lines.map(&:chomp).to_h { |path| [path, true] }
 end
 
-fixture_changes = changed_implementation_paths(fixtures["rust_commit"])
-project_changes = changed_implementation_paths(projects["rust_commit"])
+fixture_changes = changed_implementation_paths(
+  fixtures["rust_commit"],
+  native_sha256: fixtures["native_sha256"],
+  native_path: options[:native]
+)
+project_changes = changed_implementation_paths(
+  projects["rust_commit"],
+  native_sha256: projects["native_sha256"],
+  native_path: options[:native]
+)
 fixture_stale = implementation_paths.transform_values do |paths|
   fixture_changes.nil? || paths.any? { |path| fixture_changes[path.delete_prefix("#{ROOT}/")] }
 end
@@ -352,6 +371,14 @@ fixture_current = fixture_stale.count { |_cop, stale| !stale }
 project_current = project_stale.count { |_cop, stale| !stale }
 
 generated_at = [fixture_timestamp, project_timestamp].max_by { |value| Time.iso8601(value) }
+evidence_source = lambda do |snapshot|
+  commit = snapshot["rust_commit"]
+  if commit && !commit.empty?
+    "`#{commit}`"
+  else
+    "`uncommitted native #{snapshot.fetch("native_sha256")[0, 12]}`"
+  end
+end
 summary_rows = [
   ["Cops with fixture coverage", fixture_cops_hit, cops.length],
   ["Cops with current fixture evidence", fixture_current, cops.length],
@@ -381,8 +408,8 @@ report = <<~MARKDOWN
   Fixture evidence was updated at `#{fixture_timestamp}`. Project
   evidence was updated at `#{project_timestamp}` from
   #{projects.fetch('project_count')} projects and #{projects.fetch('ruby_files')} Ruby files.
-  Fixture source: `#{fixtures.fetch('rust_commit', 'unknown')}`. Project source:
-  `#{projects.fetch('rust_commit', 'unknown')}`.
+  Fixture source: #{evidence_source.call(fixtures)}. Project source:
+  #{evidence_source.call(projects)}.
 
   ## Overall
 

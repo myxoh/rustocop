@@ -10,7 +10,7 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
             align_continuation,
         ),
         custom("Layout/MultilineAssignmentLayout", multiline_assignment),
-        custom("Layout/SpaceInsideBlockBraces", space_inside_block),
+        Box::new(SpaceInsideBlockBraces),
         replace(
             "Layout/SpaceInsideHashLiteralBraces",
             "{  ",
