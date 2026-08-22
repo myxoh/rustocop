@@ -1,6 +1,5 @@
 use super::catalog_cop::{custom, report};
 use super::*;
-use std::collections::HashSet;
 
 pub(super) fn cops() -> Vec<Box<dyn Cop>> {
     vec![
@@ -16,8 +15,325 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
         custom("Lint/UselessAssignment", useless_assignment),
         Box::new(SelfAssignment),
         custom("Naming/MethodName", method_name),
-        custom("Naming/PredicateMethod", predicate_method),
+        Box::new(PredicateMethod),
     ]
+}
+
+struct PredicateMethod;
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum PredicateReturn {
+    Boolean,
+    NonBoolean,
+    Unknown,
+    Super,
+}
+
+impl Cop for PredicateMethod {
+    fn name(&self) -> &'static str {
+        "Naming/PredicateMethod"
+    }
+
+    fn on_node<'pr>(
+        &self,
+        node: &Node<'pr>,
+        ancestors: &[Node<'pr>],
+        source: &str,
+        context: &mut Context,
+    ) {
+        let Some(definition) = node.as_def_node() else {
+            return;
+        };
+        let name = definition.name().as_slice();
+        let Some(body) = definition.body() else {
+            return;
+        };
+        let mut cop_context = context.cop_context(self.name(), source, ancestors);
+        if name == b"initialize"
+            || cop_context.policy().allows_method(name)
+            || cop_context
+                .config_values("AllowedPatterns")
+                .iter()
+                .any(|pattern| {
+                    let pattern = pattern.strip_prefix("\\A").unwrap_or(pattern);
+                    std::str::from_utf8(name).is_ok_and(|name| {
+                        name.starts_with(pattern) || pattern.contains(name.trim_end_matches('?'))
+                    })
+                })
+            || predicate_operator_method(name)
+            || name.ends_with(b"!") && cop_context.config_bool("AllowBangMethods", false)
+        {
+            return;
+        }
+
+        let wayward = cop_context.config_values("WaywardPredicates");
+        let mut collector = PredicateReturnCollector::default();
+        ruby_prism::Visit::visit(&mut collector, &body);
+        let mut values = Vec::new();
+        for value in &collector.returns {
+            if let Some(value) = value {
+                collect_implicit_predicate_returns(value, &wayward, &mut values);
+            } else {
+                values.push(PredicateReturn::NonBoolean);
+            }
+        }
+        collect_implicit_predicate_returns(&body, &wayward, &mut values);
+
+        let conservative =
+            cop_context.config_value("Mode").unwrap_or("conservative") == "conservative";
+        if conservative
+            && values
+                .iter()
+                .any(|value| matches!(value, PredicateReturn::Unknown | PredicateReturn::Super))
+        {
+            return;
+        }
+        let predicate_name = name.ends_with(b"?");
+        let offense = if predicate_name {
+            let has_non_boolean = values.contains(&PredicateReturn::NonBoolean);
+            let has_boolean = values.contains(&PredicateReturn::Boolean);
+            has_non_boolean && (!conservative || !has_boolean)
+        } else {
+            let known = values
+                .iter()
+                .filter(|value| **value != PredicateReturn::Super)
+                .collect::<Vec<_>>();
+            !known.is_empty()
+                && known
+                    .into_iter()
+                    .all(|value| *value == PredicateReturn::Boolean)
+        };
+        if !offense {
+            return;
+        }
+        let message = if predicate_name {
+            "Non-predicate method names should not end with `?`."
+        } else {
+            "Predicate method names should end with `?`."
+        };
+        cop_context.report(message, definition.name_loc());
+    }
+}
+
+#[derive(Default)]
+struct PredicateReturnCollector<'pr> {
+    returns: Vec<Option<Node<'pr>>>,
+}
+
+impl<'pr> ruby_prism::Visit<'pr> for PredicateReturnCollector<'pr> {
+    fn visit_return_node(&mut self, node: &ruby_prism::ReturnNode<'pr>) {
+        let arguments = node.arguments();
+        let values = arguments
+            .as_ref()
+            .map(|arguments| arguments.arguments().iter().collect::<Vec<_>>())
+            .unwrap_or_default();
+        self.returns
+            .push((values.len() == 1).then(|| values.into_iter().next().expect("one value")));
+        ruby_prism::visit_return_node(self, node);
+    }
+
+    fn visit_def_node(&mut self, _node: &ruby_prism::DefNode<'pr>) {}
+}
+
+fn collect_implicit_predicate_returns<'pr>(
+    node: &Node<'pr>,
+    wayward: &[String],
+    values: &mut Vec<PredicateReturn>,
+) {
+    if node.as_return_node().is_some() {
+        return;
+    }
+    if let Some(statements) = node.as_statements_node() {
+        if let Some(last) = statements.body().last() {
+            collect_implicit_predicate_returns(&last, wayward, values);
+        } else {
+            values.push(PredicateReturn::NonBoolean);
+        }
+        return;
+    }
+    if let Some(parentheses) = node.as_parentheses_node() {
+        if let Some(body) = parentheses.body() {
+            collect_implicit_predicate_returns(&body, wayward, values);
+        } else {
+            values.push(PredicateReturn::NonBoolean);
+        }
+        return;
+    }
+    if let Some(conditional) = node.as_if_node() {
+        if let Some(statements) = conditional.statements() {
+            collect_implicit_predicate_returns(&statements.as_node(), wayward, values);
+        } else {
+            values.push(PredicateReturn::NonBoolean);
+        }
+        if let Some(subsequent) = conditional.subsequent() {
+            collect_implicit_predicate_returns(&subsequent, wayward, values);
+        } else {
+            values.push(PredicateReturn::NonBoolean);
+        }
+        return;
+    }
+    if let Some(conditional) = node.as_unless_node() {
+        if let Some(statements) = conditional.statements() {
+            collect_implicit_predicate_returns(&statements.as_node(), wayward, values);
+        } else {
+            values.push(PredicateReturn::NonBoolean);
+        }
+        if let Some(else_node) = conditional.else_clause() {
+            collect_implicit_predicate_returns(&else_node.as_node(), wayward, values);
+        } else {
+            values.push(PredicateReturn::NonBoolean);
+        }
+        return;
+    }
+    if let Some(else_node) = node.as_else_node() {
+        if let Some(statements) = else_node.statements() {
+            collect_implicit_predicate_returns(&statements.as_node(), wayward, values);
+        } else {
+            values.push(PredicateReturn::NonBoolean);
+        }
+        return;
+    }
+    if let Some(logical) = node.as_and_node() {
+        collect_implicit_predicate_returns(&logical.left(), wayward, values);
+        collect_implicit_predicate_returns(&logical.right(), wayward, values);
+        return;
+    }
+    if let Some(logical) = node.as_or_node() {
+        collect_implicit_predicate_returns(&logical.left(), wayward, values);
+        collect_implicit_predicate_returns(&logical.right(), wayward, values);
+        return;
+    }
+    if let Some(case_node) = node.as_case_node() {
+        for branch in case_node.conditions().iter() {
+            if let Some(when_node) = branch.as_when_node() {
+                if let Some(statements) = when_node.statements() {
+                    collect_implicit_predicate_returns(&statements.as_node(), wayward, values);
+                } else {
+                    values.push(PredicateReturn::NonBoolean);
+                }
+            }
+        }
+        if let Some(else_node) = case_node.else_clause() {
+            collect_implicit_predicate_returns(&else_node.as_node(), wayward, values);
+        } else {
+            values.push(PredicateReturn::NonBoolean);
+        }
+        return;
+    }
+    if let Some(case_node) = node.as_case_match_node() {
+        for branch in case_node.conditions().iter() {
+            if let Some(in_node) = branch.as_in_node() {
+                if let Some(statements) = in_node.statements() {
+                    collect_implicit_predicate_returns(&statements.as_node(), wayward, values);
+                } else {
+                    values.push(PredicateReturn::NonBoolean);
+                }
+            }
+        }
+        if let Some(else_node) = case_node.else_clause() {
+            collect_implicit_predicate_returns(&else_node.as_node(), wayward, values);
+        } else {
+            values.push(PredicateReturn::NonBoolean);
+        }
+        return;
+    }
+    if let Some(loop_node) = node.as_while_node() {
+        if let Some(statements) = loop_node.statements() {
+            collect_implicit_predicate_returns(&statements.as_node(), wayward, values);
+        } else {
+            values.push(PredicateReturn::NonBoolean);
+        }
+        return;
+    }
+    if let Some(loop_node) = node.as_until_node() {
+        if let Some(statements) = loop_node.statements() {
+            collect_implicit_predicate_returns(&statements.as_node(), wayward, values);
+        } else {
+            values.push(PredicateReturn::NonBoolean);
+        }
+        return;
+    }
+    values.push(predicate_return_kind(node, wayward));
+}
+
+fn predicate_return_kind(node: &Node<'_>, wayward: &[String]) -> PredicateReturn {
+    if node.as_true_node().is_some() || node.as_false_node().is_some() {
+        return PredicateReturn::Boolean;
+    }
+    if node.as_super_node().is_some() || node.as_forwarding_super_node().is_some() {
+        return PredicateReturn::Super;
+    }
+    if let Some(call) = node.as_call_node() {
+        let name = call.name().as_slice();
+        let boolean = matches!(
+            name,
+            b"==" | b"===" | b"!=" | b"=~" | b"!~" | b"<" | b"<=" | b">" | b">=" | b"<=>" | b"!"
+        ) || name.ends_with(b"?")
+            && !wayward
+                .iter()
+                .any(|configured| configured.as_bytes() == name);
+        return if boolean {
+            PredicateReturn::Boolean
+        } else {
+            PredicateReturn::Unknown
+        };
+    }
+    if predicate_non_boolean_literal(node) {
+        PredicateReturn::NonBoolean
+    } else {
+        PredicateReturn::Unknown
+    }
+}
+
+fn predicate_non_boolean_literal(node: &Node<'_>) -> bool {
+    node.as_string_node().is_some()
+        || node.as_interpolated_string_node().is_some()
+        || node.as_symbol_node().is_some()
+        || node.as_interpolated_symbol_node().is_some()
+        || node.as_integer_node().is_some()
+        || node.as_float_node().is_some()
+        || node.as_rational_node().is_some()
+        || node.as_imaginary_node().is_some()
+        || node.as_array_node().is_some()
+        || node.as_hash_node().is_some()
+        || node.as_nil_node().is_some()
+        || node.as_regular_expression_node().is_some()
+        || node.as_interpolated_regular_expression_node().is_some()
+        || node.as_x_string_node().is_some()
+        || node.as_interpolated_x_string_node().is_some()
+        || node.as_range_node().is_some()
+}
+
+fn predicate_operator_method(name: &[u8]) -> bool {
+    matches!(
+        name,
+        b"+" | b"-"
+            | b"*"
+            | b"**"
+            | b"/"
+            | b"%"
+            | b"=="
+            | b"==="
+            | b"!="
+            | b"=~"
+            | b"!~"
+            | b"<"
+            | b"<="
+            | b">"
+            | b">="
+            | b"<=>"
+            | b"[]"
+            | b"[]="
+            | b"<<"
+            | b">>"
+            | b"&"
+            | b"|"
+            | b"^"
+            | b"~"
+            | b"+@"
+            | b"-@"
+            | b"!"
+    )
 }
 
 struct SelfAssignment;
@@ -180,21 +496,16 @@ fn memoized_variable(context: &mut CopContext<'_, '_>) {
                             .rev()
                             .take(2)
                             .all(|(_, line)| line.trim() == "end")));
-            if line[at..].contains("||=")
-                && memo_is_last
-            {
+            if line[at..].contains("||=") && memo_is_last {
                 let name = line[at + 1..]
                     .split(|character: char| !character.is_ascii_alphanumeric() && character != '_')
                     .next()
                     .unwrap_or("");
                 let normalized = name.trim_start_matches('_');
-                if method
-                    .as_deref()
-                    .is_some_and(|method| {
-                        !method.starts_with("initialize")
-                            && method.trim_end_matches(['?', '!', '=']) != normalized
-                    })
-                {
+                if method.as_deref().is_some_and(|method| {
+                    !method.starts_with("initialize")
+                        && method.trim_end_matches(['?', '!', '=']) != normalized
+                }) {
                     let method = method.as_deref().unwrap_or("");
                     let actual = format!("@{name}");
                     let expected = format!("@{}", method.trim_end_matches(['?', '!', '=']));
@@ -283,7 +594,11 @@ fn variable_name(context: &mut CopContext<'_, '_>) {
     let allowed = context.config_values("AllowedIdentifiers").to_vec();
     for (offset, line) in context.source_file().lines() {
         let mut candidates = Vec::<&str>::new();
-        if let Some((_, tail)) = line.trim_start().strip_prefix("def ").and_then(|line| line.split_once('(')) {
+        if let Some((_, tail)) = line
+            .trim_start()
+            .strip_prefix("def ")
+            .and_then(|line| line.split_once('('))
+        {
             if let Some((parameters, _)) = tail.rsplit_once(')') {
                 candidates.extend(parameters.split(','));
             }
@@ -295,9 +610,9 @@ fn variable_name(context: &mut CopContext<'_, '_>) {
         }
         if !line.trim_start().starts_with("def ") {
             if let Some((left, _)) = line.split_once('=') {
-            if !left.ends_with(['=', '!', '<', '>']) {
-                candidates.extend(left.split(','));
-            }
+                if !left.ends_with(['=', '!', '<', '>']) {
+                    candidates.extend(left.split(','));
+                }
             }
         }
         let mut search_from = 0;
@@ -332,7 +647,11 @@ fn variable_name(context: &mut CopContext<'_, '_>) {
 fn invalid_variable_name(name: &str, style: &str) -> bool {
     let name = name.trim_start_matches('_');
     if style == "camelCase" {
-        name.contains('_') || name.bytes().next().is_some_and(|byte| byte.is_ascii_uppercase())
+        name.contains('_')
+            || name
+                .bytes()
+                .next()
+                .is_some_and(|byte| byte.is_ascii_uppercase())
     } else {
         name.bytes().any(|byte| byte.is_ascii_uppercase())
     }
@@ -344,10 +663,10 @@ fn useless_assignment(context: &mut CopContext<'_, '_>) {
         if let Some((name, _)) = line.split_once(" = ") {
             let name = name.trim();
             if !name.starts_with(['@', '$'])
-            && !name.is_empty()
-            && name
-                .bytes()
-                .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
+                && !name.is_empty()
+                && name
+                    .bytes()
+                    .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
                 && !lines[index + 1..]
                     .iter()
                     .take_while(|(_, later)| later.trim() != "end")
@@ -401,26 +720,6 @@ fn method_name(context: &mut CopContext<'_, '_>) {
             context.report(
                 "Use snake_case for method names.",
                 start..start + name.len(),
-            );
-        }
-    }
-}
-
-fn predicate_method(context: &mut CopContext<'_, '_>) {
-    let lines = context.source_file().lines().collect::<Vec<_>>();
-    let predicates = HashSet::from(["is_", "has_", "does_"]);
-    for (offset, line) in lines {
-        let Some(definition) = line.trim_start().strip_prefix("def ") else {
-            continue;
-        };
-        let name = definition.split(['(', ' ']).next().unwrap_or("");
-        if predicates.iter().any(|prefix| name.starts_with(prefix)) && !name.ends_with('?') {
-            let start = offset + line.find(name).unwrap_or(0);
-            context.insert(
-                "Predicate method names should end with `?`.",
-                start..start + name.len(),
-                start + name.len(),
-                "?",
             );
         }
     }

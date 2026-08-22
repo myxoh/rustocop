@@ -15,7 +15,6 @@ pub(super) fn after_prism(
     options: &InspectionConfig,
     offenses: &mut Vec<Offense>,
 ) {
-    check_conditional_assignment(lines, options, offenses);
     check_empty_else(lines, options, offenses);
     check_hash_like_case(lines, options, offenses);
     super::style_declarations::check(lines, options, offenses);

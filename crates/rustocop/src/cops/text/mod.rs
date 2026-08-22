@@ -17,7 +17,6 @@ pub(crate) const LEGACY_COP_NAMES: &[&str] = &[
     "Layout/LineLength",
     "Layout/TrailingWhitespace",
     "Lint/BigDecimalNew",
-    "Lint/Debugger",
     "Lint/EmptyEnsure",
     "Lint/TrailingCommaInAttributeDeclaration",
     "Lint/UnusedMethodArgument",

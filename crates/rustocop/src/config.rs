@@ -101,6 +101,7 @@ impl CopConfig {
         let mut values = HashMap::<String, HashMap<String, ConfigValue>>::new();
         let mut section = None;
         let mut container_key: Option<String> = None;
+        let mut nested_key: Option<String> = None;
         let source_lines = source.lines().collect::<Vec<_>>();
         let mut line_index = 0;
         while line_index < source_lines.len() {
@@ -109,6 +110,7 @@ impl CopConfig {
             if !line.starts_with(char::is_whitespace) {
                 section = config_section(line);
                 container_key = None;
+                nested_key = None;
                 continue;
             }
             let Some(section) = section.as_ref() else {
@@ -118,6 +120,25 @@ impl CopConfig {
             let indentation = line.len() - line.trim_start().len();
             if let Some(item) = trimmed.strip_prefix("- ") {
                 if let Some(key) = container_key.as_ref() {
+                    if let Some(nested) = nested_key.as_ref() {
+                        let item = clean_config_scalar(item);
+                        let entry = values
+                            .entry(section.clone())
+                            .or_default()
+                            .entry(key.clone())
+                            .or_insert_with(|| ConfigValue::Map {
+                                values: HashMap::new(),
+                                symbol_values: HashMap::new(),
+                            });
+                        if let ConfigValue::Map { values, .. } = entry {
+                            let group = values.entry(nested.clone()).or_default();
+                            if !group.is_empty() {
+                                group.push('\n');
+                            }
+                            group.push_str(&item);
+                            continue;
+                        }
+                    }
                     let entry = values
                         .entry(section.clone())
                         .or_default()
@@ -140,15 +161,39 @@ impl CopConfig {
                 continue;
             }
             if indentation > 2 {
-                if container_key
-                    .as_ref()
-                    .is_some_and(|key| key.contains("Pattern") && trimmed.starts_with("options:"))
-                {
+                if trimmed.starts_with("options:") {
                     continue;
+                }
+                if indentation > 4 {
+                    if let (Some(container), Some(nested), Some((key, value, _))) = (
+                        container_key.as_ref(),
+                        nested_key.as_ref(),
+                        nested_config_pair(trimmed),
+                    ) {
+                        let entry = values
+                            .entry(section.clone())
+                            .or_default()
+                            .entry(container.clone())
+                            .or_insert_with(|| ConfigValue::Map {
+                                values: HashMap::new(),
+                                symbol_values: HashMap::new(),
+                            });
+                        if let ConfigValue::Map { values, .. } = entry {
+                            let encoded = values.entry(nested.clone()).or_default();
+                            if !encoded.is_empty() {
+                                encoded.push('\n');
+                            }
+                            encoded.push_str(&clean_config_scalar(key));
+                            encoded.push('=');
+                            encoded.push_str(&clean_config_scalar(value));
+                        }
+                        continue;
+                    }
                 }
                 if let (Some(container), Some((key, value, symbols))) =
                     (container_key.as_ref(), nested_config_pair(trimmed))
                 {
+                    nested_key = Some(clean_config_scalar(key));
                     insert_config_map_entry(&mut values, section, container, key, value, symbols);
                 }
                 continue;
@@ -186,9 +231,11 @@ impl CopConfig {
             }
             let parsed = if value.is_empty() {
                 container_key = Some(key.to_string());
+                nested_key = None;
                 ConfigValue::List(Vec::new())
             } else if value.starts_with('[') && value.ends_with(']') {
                 container_key = None;
+                nested_key = None;
                 ConfigValue::List(
                     value[1..value.len() - 1]
                         .split(',')
@@ -198,6 +245,7 @@ impl CopConfig {
                 )
             } else {
                 container_key = None;
+                nested_key = None;
                 ConfigValue::Scalar(clean_config_scalar(value))
             };
             values
@@ -338,7 +386,10 @@ fn nested_config_pair(line: &str) -> Option<(&str, &str, bool)> {
         let (key, value) = symbol_pair.split_once(": ")?;
         return Some((key, value.strip_prefix(':')?, true));
     }
-    let (key, value) = line.split_once(':')?;
+    if let Some(key) = line.strip_suffix(':') {
+        return Some((key, "", false));
+    }
+    let (key, value) = line.split_once(": ").or_else(|| line.split_once(':'))?;
     Some((key, value, false))
 }
 

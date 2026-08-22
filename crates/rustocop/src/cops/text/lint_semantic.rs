@@ -4,7 +4,6 @@ use crate::config::InspectionConfig;
 
 pub(super) fn check(lines: &[SourceLine], options: &InspectionConfig, offenses: &mut Vec<Offense>) {
     check_unused_method_argument(lines, options, offenses);
-    check_debugger(lines, options, offenses);
 }
 
 fn check_unused_method_argument(
@@ -117,35 +116,5 @@ fn report_unused_arguments(
                 CorrectionStatus::Pending
             },
         );
-    }
-}
-
-fn check_debugger(lines: &[SourceLine], options: &InspectionConfig, offenses: &mut Vec<Offense>) {
-    let cop = "Lint/Debugger";
-    if !options.cop_enabled(cop) {
-        return;
-    }
-    let debuggers = [
-        "binding.pry",
-        "binding.irb",
-        "debugger",
-        "byebug",
-        "save_and_open_page",
-        "save_and_open_screenshot",
-    ];
-    for (index, line) in lines.iter().enumerate() {
-        for debugger in debuggers {
-            if let Some(position) = strip_comment(&line.body).find(debugger) {
-                push_offense(
-                    offenses,
-                    cop,
-                    "Remove debugger entry point.",
-                    index + 1,
-                    position + 1,
-                    debugger.len(),
-                    CorrectionStatus::Unavailable,
-                );
-            }
-        }
     }
 }

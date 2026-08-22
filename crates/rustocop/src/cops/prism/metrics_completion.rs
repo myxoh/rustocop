@@ -64,7 +64,8 @@ fn method_length(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
 }
 
 fn block_length(node: &ruby_prism::BlockNode<'_>, context: &mut CopContext<'_, '_>) {
-    if context.nearest_call().is_some_and(|call| {
+    let owning_call = context.nearest_call();
+    if owning_call.as_ref().is_some_and(|call| {
         matches!(call_name(&call), b"define_method" | b"new")
             && (call_name(&call) != b"new"
                 || root_constant(call.receiver(), b"Class")
@@ -74,24 +75,46 @@ fn block_length(node: &ruby_prism::BlockNode<'_>, context: &mut CopContext<'_, '
     }) {
         return;
     }
-    if context.nearest_call().is_some_and(|call| {
-        context
-            .config_values("AllowedMethods")
-            .iter()
-            .any(|allowed| allowed.as_bytes() == call_name(&call))
+    if owning_call.as_ref().is_some_and(|call| {
+        let method = String::from_utf8_lossy(call_name(call));
+        let full_name = block_method_name(call, context.source());
+        context.policy().allows_method(call_name(call))
+            || ["AllowedMethods", "IgnoredMethods", "ExcludedMethods"]
+                .iter()
+                .flat_map(|key| context.config_values(key))
+                .any(|allowed| allowed == method.as_ref() || allowed == &full_name)
+            || ["AllowedPatterns", "IgnoredMethods"]
+                .iter()
+                .flat_map(|key| context.config_values(key))
+                .any(|pattern| {
+                    let pattern = pattern.trim_matches(['^', '$']);
+                    method.contains(pattern) || full_name.contains(pattern)
+                })
     }) {
         return;
     }
     let maximum = context.config_usize("Max", 25);
     let count = node.body().map_or(0, |body| {
-        code_lines(
-            context.source_file().at(&body.location()),
-            false,
-            context.config_bool("CountComments", false),
-        )
+        let source = context.source_file().at(&body.location());
+        let mut count = code_lines(source, false, context.config_bool("CountComments", false));
+        if context
+            .config_values("CountAsOne")
+            .iter()
+            .any(|value| value == "array")
+        {
+            count = count.saturating_sub(folded_extra_lines(source, '[', ']'));
+        }
+        if context
+            .config_values("CountAsOne")
+            .iter()
+            .any(|value| value == "hash")
+        {
+            count = count.saturating_sub(folded_extra_lines(source, '{', '}'));
+        }
+        count
     });
     if count > maximum {
-        let offense = context.nearest_call().map_or_else(
+        let offense = owning_call.map_or_else(
             || node.location().start_offset()..node.location().end_offset(),
             |call| call.location().start_offset()..call.location().end_offset(),
         );
@@ -100,6 +123,20 @@ fn block_length(node: &ruby_prism::BlockNode<'_>, context: &mut CopContext<'_, '
             offense,
         );
     }
+}
+
+fn block_method_name(call: &CallNode<'_>, source: &str) -> String {
+    let Some(message) = call.message_loc() else {
+        return String::from_utf8_lossy(call_name(call)).into_owned();
+    };
+    let start = call.receiver().map_or_else(
+        || message.start_offset(),
+        |receiver| receiver.location().start_offset(),
+    );
+    source[start..message.end_offset()]
+        .chars()
+        .filter(|character| !character.is_whitespace())
+        .collect()
 }
 
 fn code_lines(source: &str, exclude_edges: bool, count_comments: bool) -> usize {
@@ -162,7 +199,11 @@ fn abc_size(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
         .unwrap_or_default();
     let assignments = assignment_count(&body);
     let conditions = condition_count(&body);
-    let branches = branch_count(&body, assignments);
+    let branches = branch_count(
+        &body,
+        assignments,
+        context.config_bool("CountRepeatedAttributes", true),
+    );
     let score =
         ((assignments * assignments + branches * branches + conditions * conditions) as f64).sqrt();
     let maximum = context
@@ -184,11 +225,21 @@ fn abc_size(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
 }
 
 fn metric_number(value: f64) -> String {
-    let formatted = format!("{value:.2}");
-    formatted
-        .trim_end_matches('0')
-        .trim_end_matches('.')
-        .to_string()
+    let integer_digits = if value < 1.0 {
+        1
+    } else {
+        value.log10().floor() as usize + 1
+    };
+    let precision = 4_usize.saturating_sub(integer_digits).min(2);
+    let formatted = format!("{value:.precision$}");
+    if formatted.contains('.') {
+        formatted
+            .trim_end_matches('0')
+            .trim_end_matches('.')
+            .to_string()
+    } else {
+        formatted
+    }
 }
 
 fn assignment_count(source: &str) -> usize {
@@ -239,7 +290,7 @@ fn condition_count(source: &str) -> usize {
             .count()
 }
 
-fn branch_count(source: &str, assignments: usize) -> usize {
+fn branch_count(source: &str, assignments: usize, count_repeated_attributes: bool) -> usize {
     let code = source
         .lines()
         .map(|line| line.split('#').next().unwrap_or(line))
@@ -251,6 +302,26 @@ fn branch_count(source: &str, assignments: usize) -> usize {
     let mut bare = 0usize;
     for line in code.lines() {
         let line = line.trim();
+        if count_repeated_attributes
+            && line
+                .bytes()
+                .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'_' | b'?' | b'!'))
+            && !matches!(
+                line,
+                "true"
+                    | "false"
+                    | "nil"
+                    | "self"
+                    | "end"
+                    | "else"
+                    | "break"
+                    | "next"
+                    | "redo"
+                    | "retry"
+            )
+        {
+            bare += 1;
+        }
         if matches!(
             line.split_whitespace().next(),
             Some("p" | "puts" | "print" | "yield" | "raise")

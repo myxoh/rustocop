@@ -25,8 +25,12 @@ define_cops! {
 
 impl RedundantCurrentDirectoryInPathRule<'_, '_, '_> {
     fn on_send(&mut self, node: &CallNode<'_>) {
-        let Some(argument) = first_argument(node) else { return };
-        let Some(string) = argument.as_string_node() else { return };
+        let Some(argument) = first_argument(node) else {
+            return;
+        };
+        let Some(string) = argument.as_string_node() else {
+            return;
+        };
         let path = string.unescaped();
         return_unless!(path.starts_with(b"./"));
         let offense_length = one_current_directory_prefix(path).expect("checked");
@@ -35,7 +39,9 @@ impl RedundantCurrentDirectoryInPathRule<'_, '_, '_> {
             redundant_length += length;
         }
         let source = self.source_file().node(&argument);
-        let Some(source_index) = source.find("./") else { return };
+        let Some(source_index) = source.find("./") else {
+            return;
+        };
         let start = argument.location().start_offset() + source_index;
         add_offense!(self, start..start + offense_length, message: "Remove the redundant current directory path.", |corrector| {
             corrector.remove(start..start + redundant_length);
@@ -44,34 +50,52 @@ impl RedundantCurrentDirectoryInPathRule<'_, '_, '_> {
 }
 
 fn one_current_directory_prefix(path: &[u8]) -> Option<usize> {
-    path.starts_with(b"./").then(|| {
-        1 + path[1..].iter().take_while(|byte| **byte == b'/').count()
-    })
+    path.starts_with(b"./")
+        .then(|| 1 + path[1..].iter().take_while(|byte| **byte == b'/').count())
 }
 
 impl RedundantArgumentRule<'_, '_, '_> {
     fn on_send(&mut self, node: &CallNode<'_>) {
         let name = String::from_utf8_lossy(node.name().as_slice());
         return_if!(node.receiver().is_none() && !matches!(name.as_ref(), "exit" | "exit!"));
-        let Some(argument) = only_argument(node) else { return };
-        let Some(default) = redundant_argument_default(self, name.as_ref()) else { return };
-        let invalid_byte_default = self.config_map("Methods")
-            .and_then(|methods| methods.get("$hex").or_else(|| methods.get("\"$hex\"")))
-            .is_some_and(|hex| hex == "82");
-        return_unless!(argument_matches_default(&argument, default, invalid_byte_default && name == "chomp"));
-        let Some(selector) = node.message_loc() else { return };
+        let Some(argument) = only_argument(node) else {
+            return;
+        };
+        let Some(default) = redundant_argument_default(self, name.as_ref()) else {
+            return;
+        };
+        let invalid_byte_default = default.lines().any(|field| {
+            field
+                .split_once('=')
+                .is_some_and(|(key, value)| key.trim_matches('"') == "$hex" && value == "82")
+        });
+        return_unless!(argument_matches_default(
+            &argument,
+            default,
+            invalid_byte_default && name == "chomp"
+        ));
+        let Some(selector) = node.message_loc() else {
+            return;
+        };
         let argument_source = self.source_file().node(&argument);
         let offense = selector.end_offset()..node.location().end_offset();
-        let message = format!("Argument {argument_source} is redundant because it is implied by default.");
+        let message =
+            format!("Argument {argument_source} is redundant because it is implied by default.");
         add_offense!(self, offense.clone(), message: message, |corrector| {
             corrector.remove(offense);
         });
     }
 }
 
-fn redundant_argument_default<'a>(context: &'a CopContext<'_, '_>, method: &str) -> Option<&'a str> {
+fn redundant_argument_default<'a>(
+    context: &'a CopContext<'_, '_>,
+    method: &str,
+) -> Option<&'a str> {
     if context.config_contains("Methods") {
-        return context.config_map("Methods")?.get(method).map(String::as_str);
+        return context
+            .config_map("Methods")?
+            .get(method)
+            .map(String::as_str);
     }
     match method {
         "join" => Some(""),
@@ -85,12 +109,20 @@ fn redundant_argument_default<'a>(context: &'a CopContext<'_, '_>, method: &str)
     }
 }
 
-fn argument_matches_default(argument: &Node<'_>, default: &str, invalid_byte_default: bool) -> bool {
+fn argument_matches_default(
+    argument: &Node<'_>,
+    default: &str,
+    invalid_byte_default: bool,
+) -> bool {
     if let Some(string) = argument.as_string_node() {
         if invalid_byte_default {
             return string.unescaped() == [0x82];
         }
-        let decoded = if default == r"\n" { b"\n".as_slice() } else { default.as_bytes() };
+        let decoded = if default == r"\n" {
+            b"\n".as_slice()
+        } else {
+            default.as_bytes()
+        };
         return string.unescaped() == decoded;
     }
     if let Some(integer) = argument.as_integer_node() {
@@ -110,9 +142,14 @@ impl OptionHashRule<'_, '_, '_> {
             .is_some_and(|hash| hash.elements().is_empty()));
         let name = String::from_utf8_lossy(node.name().as_slice());
         let suspicious = if self.config_contains("SuspiciousParamNames") {
-            self.config_values("SuspiciousParamNames").iter().any(|candidate| candidate == name.as_ref())
+            self.config_values("SuspiciousParamNames")
+                .iter()
+                .any(|candidate| candidate == name.as_ref())
         } else {
-            matches!(name.as_ref(), "options" | "opts" | "args" | "params" | "parameters")
+            matches!(
+                name.as_ref(),
+                "options" | "opts" | "args" | "params" | "parameters"
+            )
         };
         return_unless!(suspicious);
         let definition = self.ancestors().iter().rev().find_map(Node::as_def_node);
@@ -150,9 +187,14 @@ impl OptionHashRule<'_, '_, '_> {
                     .find_map(Node::as_call_node)
                     .map(|call| call.name().as_slice())
             });
-        let Some(method_name) = method_name else { return };
+        let Some(method_name) = method_name else {
+            return;
+        };
         let method = String::from_utf8_lossy(method_name);
-        return_if!(self.config_values("Allowlist").iter().any(|allowed| allowed == method.as_ref()));
+        return_if!(self
+            .config_values("Allowlist")
+            .iter()
+            .any(|allowed| allowed == method.as_ref()));
         let mut forwarding_super = ForwardingSuperFinder(false);
         if let Some(definition) = definition {
             if let Some(body) = definition.body() {
@@ -164,7 +206,10 @@ impl OptionHashRule<'_, '_, '_> {
             }
         }
         return_if!(forwarding_super.0);
-        self.report("Prefer keyword arguments to options hashes.", node.location());
+        self.report(
+            "Prefer keyword arguments to options hashes.",
+            node.location(),
+        );
     }
 }
 

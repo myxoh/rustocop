@@ -113,6 +113,33 @@ macro_rules! define_call_cop {
 /// Defines a cop callback for one Prism node type. The cast is the Prism
 /// `Node::as_*_node` method used to select that type.
 macro_rules! define_node_cop {
+    ($type:ident => $name:literal => recovered $cast:ident => $check:path) => {
+        struct $type;
+
+        impl Cop for $type {
+            fn name(&self) -> &'static str {
+                $name
+            }
+
+            fn visits_recovered_nodes(&self) -> bool {
+                true
+            }
+
+            fn on_node<'pr>(
+                &self,
+                node: &Node<'pr>,
+                ancestors: &[Node<'pr>],
+                source: &str,
+                context: &mut Context,
+            ) {
+                let Some(typed_node) = node.$cast() else {
+                    return;
+                };
+                let mut cop_context = context.cop_context(self.name(), source, ancestors);
+                $check(&typed_node, &mut cop_context);
+            }
+        }
+    };
     ($type:ident => $name:literal => $cast:ident => $check:path) => {
         struct $type;
 
@@ -218,6 +245,9 @@ macro_rules! define_cops {
 }
 
 macro_rules! define_cop_entry {
+    ($type:ident => $name:literal => recovered_node($cast:ident, $check:path)) => {
+        define_node_cop!($type => $name => recovered $cast => $check);
+    };
     ($type:ident => $name:literal => call($check:path)) => {
         define_call_cop!($type => $name => $check);
     };

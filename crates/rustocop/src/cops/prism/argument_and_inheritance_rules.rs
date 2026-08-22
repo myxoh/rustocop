@@ -7,7 +7,7 @@ const YAML_FILE_READ_MSG: &str = "Use `{prefer}` instead.";
 define_cops! {
     CircularArgumentReference => "Lint/CircularArgumentReference" => any_node(circular_argument_reference),
     InheritException => "Lint/InheritException" => any_node(inherit_exception),
-    NumberedParameterAssignment => "Lint/NumberedParameterAssignment" => node(as_local_variable_write_node, numbered_parameter_assignment),
+    NumberedParameterAssignment => "Lint/NumberedParameterAssignment" => recovered_node(as_local_variable_write_node, numbered_parameter_assignment),
     RaiseException => "Lint/RaiseException" => call(raise_exception),
     DateTime => "Style/DateTime" => call(date_time),
     YAMLFileRead => "Style/YAMLFileRead" => call_rule(YamlFileReadRule, on_send, restrict [b"load", b"safe_load", b"parse"]),
@@ -220,12 +220,7 @@ fn date_time(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     } else {
         node.location().start_offset()..node.location().end_offset()
     };
-    context.replace(
-        "Prefer `Time` over `DateTime`.",
-        offense,
-        edit,
-        "Time",
-    );
+    context.replace("Prefer `Time` over `DateTime`.", offense, edit, "Time");
 }
 
 fn historic_date(node: &CallNode<'_>) -> bool {

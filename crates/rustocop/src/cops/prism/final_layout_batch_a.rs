@@ -26,7 +26,11 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
 }
 
 fn leading_comment_space(context: &mut CopContext<'_, '_>) {
-    let shebang_file = context.source().lines().next().is_some_and(|line| line.starts_with("#!"));
+    let shebang_file = context
+        .source()
+        .lines()
+        .next()
+        .is_some_and(|line| line.starts_with("#!"));
     let config_ru = context.path().rsplit('/').next() == Some("config.ru");
     let gemfile = context.path().rsplit('/').next() == Some("Gemfile");
     let parsed = parse(context.source().as_bytes());
@@ -39,8 +43,7 @@ fn leading_comment_space(context: &mut CopContext<'_, '_>) {
         let content = &comment[1..];
         let hashes = comment.bytes().take_while(|byte| *byte == b'#').count();
         let multiple_hash_comment = hashes > 1
-            && (hashes == comment.len()
-                || comment[hashes..].starts_with(char::is_whitespace));
+            && (hashes == comment.len() || comment[hashes..].starts_with(char::is_whitespace));
         let first_line = context.source_file().line_start(location.start_offset()) == 0;
         if content.is_empty()
             || content.starts_with([' ', '\t'])
@@ -56,8 +59,7 @@ fn leading_comment_space(context: &mut CopContext<'_, '_>) {
                 && (content.starts_with("ruby=") || content.starts_with("ruby-gemset="))
             || context.config_bool("AllowRBSInlineAnnotation", false)
                 && content.starts_with(['[', ':', '|'])
-            || context.config_bool("AllowSteepAnnotation", false)
-                && content.starts_with(['$', ':'])
+            || context.config_bool("AllowSteepAnnotation", false) && content.starts_with(['$', ':'])
         {
             continue;
         }
@@ -133,8 +135,8 @@ fn align_continuation(context: &mut CopContext<'_, '_>) {
 fn line_continuation_spacing(context: &mut CopContext<'_, '_>) {
     let trimmed_source = context.source().trim_start();
     if ["%i", "%I", "%q", "%Q", "%r", "%x", "%W", "%w", "/", "`"]
-            .iter()
-            .any(|prefix| trimmed_source.starts_with(prefix))
+        .iter()
+        .any(|prefix| trimmed_source.starts_with(prefix))
     {
         return;
     }
@@ -195,13 +197,13 @@ fn space_inside_parens(context: &mut CopContext<'_, '_>) {
                 .iter()
                 .any(|range| range.start <= offset && offset < range.end)
             || literal_ranges
-            .iter()
-            .any(|range| range.start <= offset && offset < range.end)
-            && !heredoc_ranges.iter().any(|range| {
-                range.start <= offset
-                    && offset < range.end
-                    && file.same_line(offset, range.start)
-            })
+                .iter()
+                .any(|range| range.start <= offset && offset < range.end)
+                && !heredoc_ranges.iter().any(|range| {
+                    range.start <= offset
+                        && offset < range.end
+                        && file.same_line(offset, range.start)
+                })
     };
     for opening in file.code_offsets("(") {
         if inside_literal(opening) {
@@ -218,7 +220,8 @@ fn space_inside_parens(context: &mut CopContext<'_, '_>) {
             continue;
         }
         let whitespace = opening + 1..whitespace_end;
-        let unwanted = !whitespace.is_empty() && (no_space || next == Some(b')') || compact && next == Some(b'('));
+        let unwanted = !whitespace.is_empty()
+            && (no_space || next == Some(b')') || compact && next == Some(b'('));
         if unwanted {
             context.remove(
                 "Space inside parentheses detected.",
@@ -243,8 +246,14 @@ fn space_inside_parens(context: &mut CopContext<'_, '_>) {
             continue;
         }
         let line_start = file.line_start(closing);
-        let whitespace_start = source[line_start..closing].trim_end_matches([' ', '\t']).len() + line_start;
-        let previous = source.as_bytes().get(whitespace_start.wrapping_sub(1)).copied();
+        let whitespace_start = source[line_start..closing]
+            .trim_end_matches([' ', '\t'])
+            .len()
+            + line_start;
+        let previous = source
+            .as_bytes()
+            .get(whitespace_start.wrapping_sub(1))
+            .copied();
         if whitespace_start == line_start
             || source.as_bytes().get(closing.wrapping_sub(1)) == Some(&b'\n')
             || previous == Some(b'(')
@@ -259,10 +268,7 @@ fn space_inside_parens(context: &mut CopContext<'_, '_>) {
                 whitespace.clone(),
                 whitespace,
             );
-        } else if !no_space
-            && whitespace.is_empty()
-            && !(compact && previous == Some(b')'))
-        {
+        } else if !no_space && whitespace.is_empty() && !(compact && previous == Some(b')')) {
             context.insert(
                 "No space inside parentheses detected.",
                 closing..closing + 1,
@@ -322,17 +328,21 @@ impl Cop for ClosingParenthesisIndentation {
         context: &mut Context,
     ) {
         let inspected = if let Some(call) = node.as_call_node() {
-            call.opening_loc().zip(call.closing_loc()).map(|(left, right)| {
-                let elements = call
-                    .arguments()
-                    .map(|arguments| arguments.arguments().iter().collect())
-                    .unwrap_or_default();
-                (left, right, elements, call.location())
-            })
+            call.opening_loc()
+                .zip(call.closing_loc())
+                .map(|(left, right)| {
+                    let elements = call
+                        .arguments()
+                        .map(|arguments| arguments.arguments().iter().collect())
+                        .unwrap_or_default();
+                    (left, right, elements, call.location())
+                })
         } else if let Some(parentheses) = node.as_parentheses_node() {
             let elements = parentheses.body().map_or_else(Vec::new, |body| {
-                body.as_statements_node()
-                    .map_or_else(|| vec![body], |statements| statements.body().iter().collect())
+                body.as_statements_node().map_or_else(
+                    || vec![body],
+                    |statements| statements.body().iter().collect(),
+                )
             });
             Some((
                 parentheses.opening_loc(),
@@ -364,7 +374,8 @@ impl Cop for ClosingParenthesisIndentation {
         }
         let actual = right_indentation.len();
         let left_column = left.start_offset() - file.line_start(left.start_offset());
-        let node_column = node_location.start_offset() - file.line_start(node_location.start_offset());
+        let node_column =
+            node_location.start_offset() - file.line_start(node_location.start_offset());
         let mut reporter = context.cop_context(self.name(), source, ancestors);
         let expected = if elements.is_empty() {
             let line_indentation = file.indentation(left.start_offset()).len();
@@ -505,7 +516,13 @@ fn comment_indentation(context: &mut CopContext<'_, '_>) {
         .enumerate()
         .filter_map(|(line_index, (offset, line))| {
             let marker = line.find('#')?;
-            Some((line_index, *offset, *line, marker, line[..marker].trim().is_empty()))
+            Some((
+                line_index,
+                *offset,
+                *line,
+                marker,
+                line[..marker].trim().is_empty(),
+            ))
         })
         .collect::<Vec<_>>();
 
@@ -562,10 +579,7 @@ fn comment_indentation(context: &mut CopContext<'_, '_>) {
                 expected_comment_indentation(line, width, outdent_modifiers)
             });
         let offense = offset + column..offset + line.len();
-        let mut edits = vec![(
-            offset..offset + column,
-            " ".repeat(correction_expected),
-        )];
+        let mut edits = vec![(offset..offset + column, " ".repeat(correction_expected))];
         for &(_, preceding_offset, _, preceding_column, preceding_own_line) in
             comments[..comment_index].iter().rev()
         {
@@ -593,11 +607,9 @@ fn expected_comment_indentation(line: &str, width: usize, outdent_modifiers: boo
     let less_indented = trimmed.starts_with("end")
         || trimmed.starts_with([')', '}', ']'])
         || (outdent_modifiers
-            && ["private", "protected", "public"]
-                .iter()
-                .any(|modifier| {
-                    trimmed == *modifier || trimmed.starts_with(&format!("{modifier} "))
-                }));
+            && ["private", "protected", "public"].iter().any(|modifier| {
+                trimmed == *modifier || trimmed.starts_with(&format!("{modifier} "))
+            }));
     indentation + usize::from(less_indented) * width
 }
 
@@ -691,19 +703,13 @@ impl Cop for ElseAlignment {
                     .rev()
                     .find_map(|ancestor| ancestor.as_def_node().map(|def| def.def_keyword_loc()))
                     .or_else(|| {
-                        ancestors
-                            .iter()
-                            .rev()
-                            .find_map(|ancestor| ancestor.as_call_node().map(|call| call.location()))
+                        ancestors.iter().rev().find_map(|ancestor| {
+                            ancestor.as_call_node().map(|call| call.location())
+                        })
                     })
                     .unwrap_or_else(|| rescue.keyword_loc())
             });
-            check_else_alignment(
-                &base,
-                &else_node.else_keyword_loc(),
-                &file,
-                &mut reporter,
-            );
+            check_else_alignment(&base, &else_node.else_keyword_loc(), &file, &mut reporter);
         }
     }
 }
@@ -939,7 +945,10 @@ impl Cop for EmptyLineAfterGuardClause {
 
         let heredoc = guard_heredoc_terminator(node, source);
         let effective_end = heredoc.as_ref().map_or_else(
-            || file.line_range(node.location().end_offset().saturating_sub(1)).end,
+            || {
+                file.line_range(node.location().end_offset().saturating_sub(1))
+                    .end
+            },
             |(_, line_end)| *line_end,
         );
         if effective_end >= source.len() {
@@ -958,14 +967,12 @@ impl Cop for EmptyLineAfterGuardClause {
         } else {
             effective_end
         };
-        let offense = heredoc
-            .map(|(range, _)| range)
-            .unwrap_or_else(|| {
-                guard.1.map_or_else(
-                    || node.location().start_offset()..node.location().end_offset(),
-                    |location| location.start_offset()..location.end_offset(),
-                )
-            });
+        let offense = heredoc.map(|(range, _)| range).unwrap_or_else(|| {
+            guard.1.map_or_else(
+                || node.location().start_offset()..node.location().end_offset(),
+                |location| location.start_offset()..location.end_offset(),
+            )
+        });
         let mut reporter = context.cop_context(self.name(), source, ancestors);
         reporter.insert(
             "Add empty line after guard clause.",
@@ -976,7 +983,9 @@ impl Cop for EmptyLineAfterGuardClause {
     }
 }
 
-fn guard_conditional<'pr>(node: &Node<'pr>) -> Option<(Node<'pr>, Option<ruby_prism::Location<'pr>>)> {
+fn guard_conditional<'pr>(
+    node: &Node<'pr>,
+) -> Option<(Node<'pr>, Option<ruby_prism::Location<'pr>>)> {
     if let Some(condition) = node.as_if_node() {
         let statements = condition.statements()?;
         if statements.body().len() != 1 {
@@ -1016,7 +1025,25 @@ fn is_guard_statement(node: &Node<'_>) -> bool {
 
 fn right_sibling<'pr>(node: &Node<'pr>, ancestors: &[Node<'pr>]) -> Option<Node<'pr>> {
     ancestors.iter().rev().find_map(|ancestor| {
-        let statements = ancestor.as_statements_node()?;
+        let statements = if let Some(program) = ancestor.as_program_node() {
+            Some(program.statements())
+        } else if let Some(definition) = ancestor.as_def_node() {
+            definition.body().and_then(|body| body.as_statements_node())
+        } else if let Some(class) = ancestor.as_class_node() {
+            class.body().and_then(|body| body.as_statements_node())
+        } else if let Some(module) = ancestor.as_module_node() {
+            module.body().and_then(|body| body.as_statements_node())
+        } else if let Some(singleton) = ancestor.as_singleton_class_node() {
+            singleton.body().and_then(|body| body.as_statements_node())
+        } else if let Some(block) = ancestor.as_block_node() {
+            block.body().and_then(|body| body.as_statements_node())
+        } else if let Some(begin) = ancestor.as_begin_node() {
+            begin.statements()
+        } else if let Some(rescue) = ancestor.as_rescue_node() {
+            rescue.statements()
+        } else {
+            ancestor.as_statements_node()
+        }?;
         let mut found = false;
         for sibling in statements.body().iter() {
             if found {

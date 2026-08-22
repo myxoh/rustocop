@@ -15,6 +15,5 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
         ),
         custom("Lint/DuplicateBranch", identical_branches),
         Box::new(UnreachableCode),
-        custom("Lint/LiteralAsCondition", literal_condition),
     ]
 }

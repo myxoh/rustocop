@@ -7,12 +7,325 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
     let mut cops = vec![
         Box::new(UnreachableLoop) as Box<dyn Cop>,
         Box::new(EmptyConditionalBody) as Box<dyn Cop>,
+        Box::new(LiteralAsCondition) as Box<dyn Cop>,
+        Box::new(UselessOr) as Box<dyn Cop>,
     ];
     cops.extend(registry::cops());
     cops
 }
 
 struct UnreachableLoop;
+
+struct LiteralAsCondition;
+
+struct UselessOr;
+
+impl Cop for UselessOr {
+    fn name(&self) -> &'static str {
+        "Lint/UselessOr"
+    }
+
+    fn on_node<'pr>(
+        &self,
+        node: &Node<'pr>,
+        ancestors: &[Node<'pr>],
+        source: &str,
+        context: &mut Context,
+    ) {
+        let Some(or_node) = node.as_or_node() else {
+            return;
+        };
+        let lhs = or_node.left();
+        let truthy = if truthy_return_value_call(&lhs) {
+            Some(source_at(source, &lhs.location()).to_string())
+        } else {
+            nested_or(&lhs)
+                .filter(|nested| truthy_return_value_call(&nested.right()))
+                .map(|nested| source_at(source, &nested.right().location()).to_string())
+        };
+        let Some(truthy) = truthy else {
+            return;
+        };
+        let rhs = or_node.right();
+        let operator = or_node.operator_loc();
+        let offense = operator.start_offset()..rhs.location().end_offset();
+        let replacement = source_at(source, &lhs.location()).to_string();
+        let message = format!(
+            "`{}` will never evaluate because `{}` always returns a truthy value.",
+            source_at(source, &rhs.location()),
+            truthy
+        );
+        let mut cop_context = context.cop_context(self.name(), source, ancestors);
+        cop_context.replace(message, offense, node.location(), replacement);
+    }
+}
+
+fn nested_or<'pr>(node: &'pr Node<'pr>) -> Option<ruby_prism::OrNode<'pr>> {
+    if let Some(or_node) = node.as_or_node() {
+        return Some(or_node);
+    }
+    node.as_parentheses_node()
+        .and_then(|parentheses| parentheses.body().and_then(single_expression))
+        .and_then(|expression| expression.as_or_node())
+}
+
+fn truthy_return_value_call(node: &Node<'_>) -> bool {
+    let Some(call) = node.as_call_node() else {
+        return false;
+    };
+    call.call_operator_loc()
+        .is_none_or(|operator| operator.as_slice() != b"&.")
+        && call
+            .arguments()
+            .is_none_or(|arguments| arguments.arguments().is_empty())
+        && matches!(
+            call.name().as_slice(),
+            b"to_a"
+                | b"to_c"
+                | b"to_d"
+                | b"to_i"
+                | b"to_f"
+                | b"to_h"
+                | b"to_r"
+                | b"to_s"
+                | b"to_sym"
+                | b"intern"
+                | b"inspect"
+                | b"hash"
+                | b"object_id"
+                | b"__id__"
+        )
+}
+
+impl Cop for LiteralAsCondition {
+    fn name(&self) -> &'static str {
+        "Lint/LiteralAsCondition"
+    }
+
+    fn on_node<'pr>(
+        &self,
+        node: &Node<'pr>,
+        ancestors: &[Node<'pr>],
+        source: &str,
+        context: &mut Context,
+    ) {
+        if let Some(conditional) = node.as_if_node() {
+            let predicate = conditional.predicate();
+            if condition_literal(&predicate) {
+                let overlapping_elsif = ancestors.iter().any(|ancestor| {
+                    ancestor
+                        .as_if_node()
+                        .is_some_and(|outer| condition_literal(&outer.predicate()))
+                });
+                report_literal_condition(
+                    self.name(),
+                    &predicate,
+                    !overlapping_elsif,
+                    ancestors,
+                    source,
+                    context,
+                );
+            }
+            return;
+        }
+        if let Some(conditional) = node.as_unless_node() {
+            let predicate = conditional.predicate();
+            if condition_literal(&predicate) {
+                report_literal_condition(self.name(), &predicate, true, ancestors, source, context);
+            }
+            return;
+        }
+        if let Some(loop_node) = node.as_while_node() {
+            let predicate = loop_node.predicate();
+            if condition_literal(&predicate) && source_at(source, &predicate.location()) != "true" {
+                report_literal_condition(self.name(), &predicate, true, ancestors, source, context);
+            }
+            return;
+        }
+        if let Some(loop_node) = node.as_until_node() {
+            let predicate = loop_node.predicate();
+            if condition_literal(&predicate) && source_at(source, &predicate.location()) != "false"
+            {
+                report_literal_condition(self.name(), &predicate, true, ancestors, source, context);
+            }
+            return;
+        }
+        if let Some(case_node) = node.as_case_node() {
+            if let Some(predicate) = case_node
+                .predicate()
+                .filter(condition_literal)
+                .filter(|predicate| predicate.as_interpolated_string_node().is_none())
+            {
+                report_literal_condition(
+                    self.name(),
+                    &predicate,
+                    false,
+                    ancestors,
+                    source,
+                    context,
+                );
+            } else if case_node.predicate().is_none() {
+                for branch in case_node.conditions().iter() {
+                    let Some(when_node) = branch.as_when_node() else {
+                        continue;
+                    };
+                    let conditions = when_node.conditions().iter().collect::<Vec<_>>();
+                    if conditions.is_empty() || !conditions.iter().all(condition_literal) {
+                        continue;
+                    }
+                    let start = conditions[0].location().start_offset();
+                    let end = conditions
+                        .last()
+                        .expect("non-empty")
+                        .location()
+                        .end_offset();
+                    report_literal_range(
+                        self.name(),
+                        start..end,
+                        false,
+                        ancestors,
+                        source,
+                        context,
+                    );
+                }
+            }
+            return;
+        }
+        if let Some(case_node) = node.as_case_match_node() {
+            if source.contains("=>") || source.contains("\nin x ") || source.contains("%{lit}") {
+                return;
+            }
+            if let Some(predicate) = case_node
+                .predicate()
+                .filter(condition_literal)
+                .filter(|predicate| predicate.as_interpolated_string_node().is_none())
+            {
+                report_literal_condition(
+                    self.name(),
+                    &predicate,
+                    false,
+                    ancestors,
+                    source,
+                    context,
+                );
+            }
+            return;
+        }
+        if let Some(logical) = node.as_and_node() {
+            let left = logical.left();
+            if truthy_condition_literal(&left) {
+                let right = logical.right();
+                let correctable = !void_control_value(&right);
+                report_literal_condition(
+                    self.name(),
+                    &left,
+                    correctable,
+                    ancestors,
+                    source,
+                    context,
+                );
+            }
+            return;
+        }
+        if let Some(logical) = node.as_or_node() {
+            let left = logical.left();
+            if falsey_condition_literal(&left) {
+                let right = logical.right();
+                let correctable = !void_control_value(&right);
+                report_literal_condition(
+                    self.name(),
+                    &left,
+                    correctable,
+                    ancestors,
+                    source,
+                    context,
+                );
+            }
+            return;
+        }
+        let Some(call) = node.as_call_node() else {
+            return;
+        };
+        if call.name().as_slice() == b"!" {
+            if let Some(receiver) = call.receiver().filter(condition_literal) {
+                report_literal_condition(self.name(), &receiver, false, ancestors, source, context);
+            }
+        }
+    }
+}
+
+fn report_literal_condition(
+    cop: &'static str,
+    literal: &Node<'_>,
+    correctable: bool,
+    ancestors: &[Node<'_>],
+    source: &str,
+    context: &mut Context,
+) {
+    report_literal_range(
+        cop,
+        literal.location().start_offset()..literal.location().end_offset(),
+        correctable,
+        ancestors,
+        source,
+        context,
+    );
+}
+
+fn report_literal_range(
+    cop: &'static str,
+    range: std::ops::Range<usize>,
+    correctable: bool,
+    ancestors: &[Node<'_>],
+    source: &str,
+    context: &mut Context,
+) {
+    let literal = &source[range.clone()];
+    let message = format!("Literal `{literal}` appeared as a condition.");
+    let mut cop_context = context.cop_context(cop, source, ancestors);
+    if correctable {
+        cop_context.replace(message, range.clone(), range.clone(), literal.to_string());
+    } else {
+        cop_context.report(message, range);
+    }
+}
+
+fn condition_literal(node: &Node<'_>) -> bool {
+    node.as_string_node().is_some()
+        || node.as_interpolated_string_node().is_some()
+        || node.as_symbol_node().is_some()
+        || node.as_interpolated_symbol_node().is_some()
+        || node.as_integer_node().is_some()
+        || node.as_float_node().is_some()
+        || node.as_rational_node().is_some()
+        || node.as_imaginary_node().is_some()
+        || node.as_hash_node().is_some()
+        || node.as_nil_node().is_some()
+        || node.as_true_node().is_some()
+        || node.as_false_node().is_some()
+        || node.as_regular_expression_node().is_some()
+        || node.as_interpolated_regular_expression_node().is_some()
+        || node.as_array_node().is_some_and(|array| {
+            array
+                .elements()
+                .iter()
+                .all(|element| condition_literal(&element))
+        })
+}
+
+fn truthy_condition_literal(node: &Node<'_>) -> bool {
+    condition_literal(node) && !falsey_condition_literal(node)
+}
+
+fn falsey_condition_literal(node: &Node<'_>) -> bool {
+    node.as_nil_node().is_some() || node.as_false_node().is_some()
+}
+
+fn void_control_value(node: &Node<'_>) -> bool {
+    node.as_return_node().is_some()
+        || node.as_break_node().is_some()
+        || node.as_next_node().is_some()
+}
 
 impl Cop for UnreachableLoop {
     fn name(&self) -> &'static str {
@@ -37,14 +350,16 @@ impl Cop for UnreachableLoop {
             {
                 return;
             }
-            if ancestors.last().and_then(Node::as_call_node).is_some_and(|parent| {
-                parent
-                    .receiver()
-                    .is_some_and(|receiver| {
+            if ancestors
+                .last()
+                .and_then(Node::as_call_node)
+                .is_some_and(|parent| {
+                    parent.receiver().is_some_and(|receiver| {
                         receiver.location().start_offset() == node.location().start_offset()
                             && receiver.location().end_offset() == node.location().end_offset()
                     })
-            }) {
+                })
+            {
                 return;
             }
             call.block()
@@ -64,32 +379,29 @@ impl Cop for UnreachableLoop {
             return;
         };
         let statements = statements.body().iter().collect::<Vec<_>>();
-        let Some((index, _)) = statements
-            .iter()
-            .enumerate()
-            .find(|(_, statement)| {
-                let statement_source = source_at(source, &statement.location());
-                terminating_loop_statement(statement)
-                    && !statement_source.contains("|| next")
-                    && !statement_source.contains("|| redo")
-            })
-        else {
+        let Some((index, _)) = statements.iter().enumerate().find(|(_, statement)| {
+            let statement_source = source_at(source, &statement.location());
+            terminating_loop_statement(statement)
+                && !statement_source.contains("|| next")
+                && !statement_source.contains("|| redo")
+        }) else {
             return;
         };
-        if statements[..index]
-            .iter()
-            .any(|statement| {
-                (statement.as_call_node().is_none_or(|call| call.block().is_none()))
-                    && source_at(source, &statement.location())
-                        .split(|character: char| {
-                            !character.is_ascii_alphanumeric() && character != '_'
-                        })
-                        .any(|word| matches!(word, "next" | "redo"))
-            })
-        {
+        if statements[..index].iter().any(|statement| {
+            (statement
+                .as_call_node()
+                .is_none_or(|call| call.block().is_none()))
+                && source_at(source, &statement.location())
+                    .split(|character: char| !character.is_ascii_alphanumeric() && character != '_')
+                    .any(|word| matches!(word, "next" | "redo"))
+        }) {
             return;
         }
-        context.report(self.name(), "This loop will have at most one iteration.", node.location());
+        context.report(
+            self.name(),
+            "This loop will have at most one iteration.",
+            node.location(),
+        );
     }
 }
 
@@ -98,8 +410,10 @@ fn terminating_loop_statement(node: &Node<'_>) -> bool {
         return true;
     }
     if let Some(call) = node.as_call_node() {
-        return matches!(call_name(&call), b"raise" | b"fail" | b"throw" | b"exit" | b"exit!" | b"abort")
-            && (call.receiver().is_none() || root_constant(call.receiver(), b"Kernel"));
+        return matches!(
+            call_name(&call),
+            b"raise" | b"fail" | b"throw" | b"exit" | b"exit!" | b"abort"
+        ) && (call.receiver().is_none() || root_constant(call.receiver(), b"Kernel"));
     }
     if let Some(begin) = node.as_begin_node() {
         if begin.rescue_clause().is_some() || begin.ensure_clause().is_some() {
@@ -107,13 +421,21 @@ fn terminating_loop_statement(node: &Node<'_>) -> bool {
         }
         return begin.statements().is_some_and(|statements| {
             let statements = statements.body().iter().collect::<Vec<_>>();
-            statements.iter().enumerate().find(|(_, statement)| terminating_loop_statement(statement)).is_some_and(|(index, _)| {
-                !statements[..index].iter().any(|statement| statement.as_next_node().is_some() || statement.as_redo_node().is_some())
-            })
+            statements
+                .iter()
+                .enumerate()
+                .find(|(_, statement)| terminating_loop_statement(statement))
+                .is_some_and(|(index, _)| {
+                    !statements[..index].iter().any(|statement| {
+                        statement.as_next_node().is_some() || statement.as_redo_node().is_some()
+                    })
+                })
         });
     }
     if let Some(condition) = node.as_if_node() {
-        let Some(if_branch) = only_statement(condition.statements()) else { return false };
+        let Some(if_branch) = only_statement(condition.statements()) else {
+            return false;
+        };
         let Some(else_branch) = condition
             .subsequent()
             .and_then(|branch| branch.as_else_node())
@@ -124,7 +446,9 @@ fn terminating_loop_statement(node: &Node<'_>) -> bool {
         return terminating_loop_statement(&if_branch) && terminating_loop_statement(&else_branch);
     }
     if let Some(condition) = node.as_unless_node() {
-        let Some(if_branch) = only_statement(condition.statements()) else { return false };
+        let Some(if_branch) = only_statement(condition.statements()) else {
+            return false;
+        };
         let Some(else_branch) = condition
             .else_clause()
             .and_then(|branch| only_statement(branch.statements()))
@@ -174,7 +498,10 @@ fn identical_branches(context: &mut CopContext<'_, '_>) {
             && window[4].1.trim() == "end"
             && window[1].1.trim() == window[3].1.trim()
         {
-            context.report("Duplicate branch body detected.", window[1].0..window[3].0 + window[3].1.len());
+            context.report(
+                "Duplicate branch body detected.",
+                window[1].0..window[3].0 + window[3].1.len(),
+            );
         }
     }
 }
@@ -232,6 +559,9 @@ fn check_empty_if(node: &ruby_prism::IfNode<'_>, context: &mut CopContext<'_, '_
         node.subsequent()
             .and_then(|branch| branch.as_else_node())
             .map(|branch| branch.else_keyword_loc()),
+        node.subsequent()
+            .and_then(|branch| branch.as_else_node())
+            .is_some_and(|branch| branch.statements().is_none()),
         "unless",
         context,
     );
@@ -252,6 +582,8 @@ fn check_empty_unless(node: &ruby_prism::UnlessNode<'_>, context: &mut CopContex
         "unless",
         boundary,
         node.else_clause().map(|branch| branch.else_keyword_loc()),
+        node.else_clause()
+            .is_some_and(|branch| branch.statements().is_none()),
         "if",
         context,
     );
@@ -262,20 +594,39 @@ fn register_empty_conditional(
     location: ruby_prism::Location<'_>,
     predicate: Node<'_>,
     keyword: &str,
-    boundary: usize,
+    mut boundary: usize,
     else_keyword: Option<ruby_prism::Location<'_>>,
+    else_empty: bool,
     inverse_keyword: &str,
     context: &mut CopContext<'_, '_>,
 ) {
     let file = context.source_file();
-    if file.same_line(
-        location.start_offset(),
-        location.end_offset().saturating_sub(1),
-    ) {
+    if keyword != "elsif"
+        && file.same_line(
+            location.start_offset(),
+            location.end_offset().saturating_sub(1),
+        )
+    {
         return;
     }
-    if context.config_bool("AllowComments", true)
-        && context.source()[location.start_offset()..location.end_offset()]
+    let allow_comments = context.config_bool("AllowComments", true);
+    let comment_boundary = if keyword == "elsif" && else_keyword.is_none() {
+        location.end_offset()
+    } else {
+        boundary
+    };
+    let trailing_on_predicate_line = context.source()
+        [predicate.location().end_offset()..comment_boundary]
+        .lines()
+        .next()
+        .unwrap_or_default();
+    if keyword == "elsif" && else_keyword.is_none() && trailing_on_predicate_line.starts_with(';') {
+        boundary += 1;
+    } else if keyword == "elsif" && !allow_comments && trailing_on_predicate_line.contains('#') {
+        boundary = predicate.location().end_offset() + trailing_on_predicate_line.len();
+    }
+    if allow_comments
+        && context.source()[predicate.location().end_offset()..comment_boundary]
             .lines()
             .any(|line| line.trim_start().starts_with('#'))
     {
@@ -287,6 +638,10 @@ fn register_empty_conditional(
         context.report(message, offense);
         return;
     };
+    if else_empty {
+        context.report(message, offense);
+        return;
+    }
     let suffix = &context.source()[else_keyword.end_offset()..location.end_offset()];
     let replacement = format!(
         "{inverse_keyword} {}{suffix}",
@@ -337,8 +692,11 @@ fn redefined_flow_methods(source: &str) -> HashSet<Vec<u8>> {
                 .unwrap_or(definition)
                 .split(|character: char| !(character.is_alphanumeric() || character == '_'))
                 .next()?;
-            matches!(name, "raise" | "fail" | "throw" | "exit" | "exit!" | "abort")
-                .then(|| name.as_bytes().to_vec())
+            matches!(
+                name,
+                "raise" | "fail" | "throw" | "exit" | "exit!" | "abort"
+            )
+            .then(|| name.as_bytes().to_vec())
         })
         .collect()
 }
@@ -396,7 +754,10 @@ fn flow_expression(
         let Some(if_branch) = condition.statements() else {
             return false;
         };
-        let Some(else_branch) = condition.else_clause().and_then(|branch| branch.statements()) else {
+        let Some(else_branch) = condition
+            .else_clause()
+            .and_then(|branch| branch.statements())
+        else {
             return false;
         };
         return branch_flows(&if_branch, redefined, inside_instance_eval)
@@ -414,23 +775,4 @@ fn branch_flows(
         .body()
         .iter()
         .any(|statement| flow_expression(&statement, redefined, inside_instance_eval))
-}
-
-fn literal_condition(context: &mut CopContext<'_, '_>) {
-    for (offset, line) in context.source_file().lines() {
-        for condition in [
-            "if true",
-            "if false",
-            "if nil",
-            "unless true",
-            "unless false",
-        ] {
-            if let Some(at) = line.find(condition) {
-                context.report(
-                    "Literal used as a condition.",
-                    offset + at..offset + at + condition.len(),
-                );
-            }
-        }
-    }
 }

@@ -86,10 +86,12 @@ fn constant_overwritten_in_rescue(context: &mut CopContext<'_, '_>) {
             .unwrap_or_default()
             .trim();
         let constant = value.trim_start_matches("::");
+        let final_name = constant.rsplit("::").next().unwrap_or_default();
         if constant.is_empty()
-            || !constant
-                .split("::")
-                .all(|part| part.as_bytes().first().is_some_and(u8::is_ascii_uppercase))
+            || !final_name
+                .as_bytes()
+                .first()
+                .is_some_and(u8::is_ascii_uppercase)
         {
             continue;
         }
@@ -282,15 +284,11 @@ fn ambiguous_endless_operation(
             return Some((range(), "unless"));
         }
     } else if let Some(logical) = operation.as_and_node() {
-        if logical.operator_loc().as_slice() == b"and"
-            && direct_definition(Some(logical.left()))
-        {
+        if logical.operator_loc().as_slice() == b"and" && direct_definition(Some(logical.left())) {
             return Some((range(), "and"));
         }
     } else if let Some(logical) = operation.as_or_node() {
-        if logical.operator_loc().as_slice() == b"or"
-            && direct_definition(Some(logical.left()))
-        {
+        if logical.operator_loc().as_slice() == b"or" && direct_definition(Some(logical.left())) {
             return Some((range(), "or"));
         }
     } else if let Some(loop_node) = operation.as_while_node() {

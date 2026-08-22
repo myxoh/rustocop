@@ -12,8 +12,7 @@ define_cops! {
 }
 
 fn underscore_variable(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
-    if node.as_program_node().is_none()
-        || context.config_bool("AllowKeywordBlockArguments", false)
+    if node.as_program_node().is_none() || context.config_bool("AllowKeywordBlockArguments", false)
     {
         return;
     }
@@ -40,10 +39,7 @@ fn underscore_variable(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
                 })
                 .unwrap_or(range)
         };
-        context.report(
-            "Do not use prefix `_` for a variable that is used.",
-            range,
-        );
+        context.report("Do not use prefix `_` for a variable that is used.", range);
     }
 }
 
@@ -70,12 +66,7 @@ impl UnderscoreVariableVisitor {
             .copied()
     }
 
-    fn declare(
-        &mut self,
-        name: &[u8],
-        depth: u32,
-        location: ruby_prism::Location<'_>,
-    ) {
+    fn declare(&mut self, name: &[u8], depth: u32, location: ruby_prism::Location<'_>) {
         if !underscore_prefixed_name(name) {
             return;
         }
@@ -96,7 +87,10 @@ impl UnderscoreVariableVisitor {
         let Some(scope) = self.scope_for_depth(depth) else {
             return;
         };
-        self.variables.entry((scope, name.to_vec())).or_default().used = true;
+        self.variables
+            .entry((scope, name.to_vec()))
+            .or_default()
+            .used = true;
     }
 
     fn observe(&mut self, node: &Node<'_>) {
@@ -182,10 +176,7 @@ fn heredoc_naming(context: &mut CopContext<'_, '_>) {
     let source = context.source();
     for (line_offset, line) in context.source_file().lines() {
         for (at, _) in line.match_indices("<<") {
-            let modifier = usize::from(matches!(
-                line.as_bytes().get(at + 2),
-                Some(b'-' | b'~')
-            ));
+            let modifier = usize::from(matches!(line.as_bytes().get(at + 2), Some(b'-' | b'~')));
             let tail = &line[at + 2 + modifier..];
             let (delimiter, token_length) = match tail.as_bytes().first().copied() {
                 Some(quote @ (b'\'' | b'"' | b'`')) => {
@@ -219,9 +210,7 @@ fn heredoc_naming(context: &mut CopContext<'_, '_>) {
                     "Use meaningful heredoc delimiters.",
                     line_offset + at..line_offset + at + token_length,
                 );
-            } else if let Some(start) = source[line_offset..]
-                .find(&format!("\n{delimiter}\n"))
-            {
+            } else if let Some(start) = source[line_offset..].find(&format!("\n{delimiter}\n")) {
                 let absolute = line_offset + start + 1;
                 context.report(
                     "Use meaningful heredoc delimiters.",
@@ -233,14 +222,71 @@ fn heredoc_naming(context: &mut CopContext<'_, '_>) {
 }
 
 fn deprecated_constants(context: &mut CopContext<'_, '_>) {
-    for (old, new) in [("NIL", "nil"), ("TRUE", "true"), ("FALSE", "false")] {
-        for start in context.source_file().code_offsets(old) {
-            context.replace(
-                format!("Use `{new}` instead of `{old}`, deprecated since Ruby 2.4."),
-                start..start + old.len(),
-                start..start + old.len(),
-                new,
-            );
+    let configured = context
+        .config_map("DeprecatedConstants")
+        .cloned()
+        .unwrap_or_default();
+    for (old, details) in configured {
+        let mut alternative = None;
+        let mut deprecated_version = None;
+        for field in details.lines() {
+            let Some((key, value)) = field.split_once('=') else {
+                continue;
+            };
+            match key {
+                "Alternative" => alternative = Some(value),
+                "DeprecatedVersion" => deprecated_version = Some(value),
+                _ => {}
+            }
+        }
+        if deprecated_version.is_some_and(|version| {
+            let mut parts = version
+                .split('.')
+                .filter_map(|part| part.parse::<u16>().ok());
+            let (Some(major), Some(minor)) = (parts.next(), parts.next()) else {
+                return false;
+            };
+            !context.target_ruby_version().at_least(major, minor)
+        }) {
+            continue;
+        }
+        for start in context.source_file().code_offsets(&old) {
+            let root_start = start.checked_sub(2).filter(|root| {
+                &context.source()[*root..start] == "::"
+                    && (*root == 0
+                        || !context.source().as_bytes()[*root - 1].is_ascii_alphanumeric()
+                            && context.source().as_bytes()[*root - 1] != b'_')
+            });
+            if start > 0 && root_start.is_none() {
+                let previous = context.source().as_bytes()[start - 1];
+                if previous.is_ascii_alphanumeric() || matches!(previous, b'_' | b':') {
+                    continue;
+                }
+            }
+            let end = start + old.len();
+            if context
+                .source()
+                .as_bytes()
+                .get(end)
+                .is_some_and(|next| next.is_ascii_alphanumeric() || matches!(next, b'_' | b':'))
+            {
+                continue;
+            }
+            let offense = root_start.unwrap_or(start)..end;
+            let used = &context.source()[offense.clone()];
+            let suffix = deprecated_version
+                .map(|version| format!(", deprecated since Ruby {version}"))
+                .unwrap_or_default();
+            if let Some(alternative) = alternative {
+                context.replace(
+                    format!("Use `{alternative}` instead of `{used}`{suffix}."),
+                    offense.clone(),
+                    offense,
+                    alternative,
+                );
+            } else {
+                context.report(format!("Do not use `{used}`{suffix}."), offense);
+            }
         }
     }
 }
@@ -298,8 +344,7 @@ fn unreachable_pattern(context: &mut CopContext<'_, '_>) {
             let end = lines[index + 1..]
                 .iter()
                 .find(|(_, next)| {
-                    next.trim_start().starts_with("in ")
-                        || matches!(next.trim(), "else" | "end")
+                    next.trim_start().starts_with("in ") || matches!(next.trim(), "else" | "end")
                 })
                 .map_or(offset + line.len(), |(at, _)| *at);
             context.report(
@@ -312,17 +357,16 @@ fn unreachable_pattern(context: &mut CopContext<'_, '_>) {
         let guarded = pattern.contains(" if ") || pattern.contains(" unless ");
         let first = pattern.trim_start_matches('(').as_bytes().first().copied();
         let has_wildcard = pattern
-            .split(|character: char| character.is_ascii_whitespace() || "()|=>,".contains(character))
+            .split(|character: char| {
+                character.is_ascii_whitespace() || "()|=>,".contains(character)
+            })
             .any(|part| part == "_");
-        catch_all = !guarded
-            && (has_wildcard || first.is_some_and(|byte| byte.is_ascii_lowercase()));
+        catch_all =
+            !guarded && (has_wildcard || first.is_some_and(|byte| byte.is_ascii_lowercase()));
     }
 }
 
-fn method_parameter_name(
-    definition: &ruby_prism::DefNode<'_>,
-    context: &mut CopContext<'_, '_>,
-) {
+fn method_parameter_name(definition: &ruby_prism::DefNode<'_>, context: &mut CopContext<'_, '_>) {
     let minimum = context.config_usize("MinNameLength", 3);
     let allow_numbers = context.config_bool("AllowNamesEndingInNumbers", false);
     let allowed = context.config_values("AllowedNames").to_vec();
@@ -365,7 +409,11 @@ fn named_method_parameters(
     parameters: &ruby_prism::ParametersNode<'_>,
 ) -> Vec<(String, std::ops::Range<usize>)> {
     let mut result = Vec::new();
-    for parameter in parameters.requireds().iter().chain(parameters.posts().iter()) {
+    for parameter in parameters
+        .requireds()
+        .iter()
+        .chain(parameters.posts().iter())
+    {
         if let Some(parameter) = parameter.as_required_parameter_node() {
             result.push((
                 String::from_utf8_lossy(parameter.name().as_slice()).into_owned(),
@@ -397,7 +445,10 @@ fn named_method_parameters(
             ));
         }
     }
-    if let Some(parameter) = parameters.rest().and_then(|node| node.as_rest_parameter_node()) {
+    if let Some(parameter) = parameters
+        .rest()
+        .and_then(|node| node.as_rest_parameter_node())
+    {
         if let (Some(name), Some(_)) = (parameter.name(), parameter.name_loc()) {
             result.push((
                 String::from_utf8_lossy(name.as_slice()).into_owned(),
@@ -428,10 +479,7 @@ fn named_method_parameters(
     result
 }
 
-fn accessor_method_name(
-    definition: &ruby_prism::DefNode<'_>,
-    context: &mut CopContext<'_, '_>,
-) {
+fn accessor_method_name(definition: &ruby_prism::DefNode<'_>, context: &mut CopContext<'_, '_>) {
     let name = String::from_utf8_lossy(definition.name().as_slice());
     if name.ends_with(['!', '?', '=']) {
         return;
@@ -447,9 +495,10 @@ fn accessor_method_name(
     });
     let single_required = definition.parameters().is_some_and(|parameters| {
         parameters.requireds().len() == 1
-            && parameters.requireds().first().is_some_and(|node| {
-                node.as_required_parameter_node().is_some()
-            })
+            && parameters
+                .requireds()
+                .first()
+                .is_some_and(|node| node.as_required_parameter_node().is_some())
             && parameter_count == 1
     });
     let message = if name.starts_with("get_") && parameter_count == 0 {

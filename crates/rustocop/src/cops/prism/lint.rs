@@ -300,6 +300,20 @@ impl Cop for SelfAssignment {
         source: &str,
         context: &mut Context,
     ) {
+        if node.as_program_node().is_some() {
+            report_compound_self_assignments(source, context, self.name());
+            return;
+        }
+        let allow_rbs_annotation = {
+            let cop_context = context.cop_context(self.name(), source, &[]);
+            cop_context.config_bool("AllowRBSInlineAnnotation", false)
+        };
+        if allow_rbs_annotation {
+            let line = SourceFile::new(source).line(node.location().start_offset());
+            if line.contains("#:") {
+                return;
+            }
+        }
         let simple = if let Some(write) = node.as_local_variable_write_node() {
             Some((write.name_loc(), write.value(), write.location()))
         } else if let Some(write) = node.as_instance_variable_write_node() {
@@ -359,6 +373,33 @@ impl Cop for SelfAssignment {
         };
         if self_assignment {
             context.report(self.name(), "Self-assignment detected.", call.location());
+        }
+    }
+}
+
+fn report_compound_self_assignments(source: &str, context: &mut Context, cop: &'static str) {
+    let allow_rbs_annotation = {
+        let cop_context = context.cop_context(cop, source, &[]);
+        cop_context.config_bool("AllowRBSInlineAnnotation", false)
+    };
+    for (offset, line) in SourceFile::new(source).lines() {
+        if allow_rbs_annotation && line.contains("#:") {
+            continue;
+        }
+        let code = line.split('#').next().unwrap_or_default().trim_end();
+        let self_assignment = [" ||= ", " &&= "].iter().any(|operator| {
+            code.split_once(operator)
+                .is_some_and(|(left, right)| left.trim() == right.trim())
+        }) || code.split_once(" = ").is_some_and(|(left, right)| {
+            left.contains(',')
+                && left.trim() == right.trim().trim_start_matches('[').trim_end_matches(']')
+        });
+        if self_assignment {
+            context.report(
+                cop,
+                "Self-assignment detected.",
+                offset..offset + code.len(),
+            );
         }
     }
 }

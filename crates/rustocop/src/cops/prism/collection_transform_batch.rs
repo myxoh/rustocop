@@ -1,27 +1,49 @@
 use super::*;
 
 define_cops! {
-    CollectionMethods => "Style/CollectionMethods" => source(collection_methods),
+    CollectionMethods => "Style/CollectionMethods" => call(collection_methods),
     Sample => "Style/Sample" => call(sample),
 }
 
-fn collection_methods(context: &mut CopContext<'_, '_>) {
-    if context.config_value("PreferredMethods").is_none() {
+fn collection_methods(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
+    let method = String::from_utf8_lossy(call_name(node)).to_string();
+    let lookup = method.strip_suffix('!').unwrap_or(&method);
+    let Some(preferred) = context
+        .config_map("PreferredMethods")
+        .and_then(|methods| methods.get(lookup))
+        .cloned()
+    else {
+        return;
+    };
+    let arguments = node
+        .arguments()
+        .map(|arguments| arguments.arguments().iter().collect::<Vec<_>>())
+        .unwrap_or_default();
+    let implicit_block = arguments.last().is_some_and(|argument| {
+        argument.as_block_argument_node().is_some()
+            || argument.as_symbol_node().is_some()
+                && context
+                    .config_values("MethodsAcceptingSymbol")
+                    .iter()
+                    .any(|configured| configured == lookup)
+    });
+    if node.block().is_none() && !implicit_block {
         return;
     }
-    for (old, new) in [
-        (".map", ".collect"),
-        (".find", ".detect"),
-        (".select", ".find_all"),
-    ] {
-        if context.policy().enforced_style("preferred") == "preferred" {
-            context.replace_code(
-                old,
-                new,
-                "Use the configured preferred collection method.",
-            );
-        }
-    }
+    let preferred = if method.ends_with('!') {
+        format!("{preferred}!")
+    } else {
+        preferred
+    };
+    let Some(selector) = node.message_loc() else {
+        return;
+    };
+    context.replace(
+        format!("Prefer `{preferred}` over `{method}`."),
+        &selector,
+        &selector,
+        preferred,
+    );
 }
 
 fn sample(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
@@ -111,9 +133,7 @@ fn sample_collection_size(arguments: &[Node<'_>]) -> Option<Option<i32>> {
             };
             Some(Some(size))
         }
-        [first, second] if sample_integer(first) == Some(0) => {
-            Some(Some(sample_integer(second)?))
-        }
+        [first, second] if sample_integer(first) == Some(0) => Some(Some(sample_integer(second)?)),
         _ => None,
     }
 }

@@ -11,7 +11,6 @@ define_cops! {
     BlockDelimiters => "Style/BlockDelimiters" => source(block_delimiters),
     RedundantSafeNavigation => "Lint/RedundantSafeNavigation" => source(redundant_safe_navigation),
     AndOr => "Style/AndOr" => source(and_or),
-    UselessOr => "Lint/UselessOr" => source(useless_or),
 }
 
 fn safe_navigation_consistency(context: &mut CopContext<'_, '_>) {
@@ -49,9 +48,7 @@ fn combinable_defined(context: &mut CopContext<'_, '_>) {
         let tail = &source[first_close + 1..];
         let whitespace = tail.len() - tail.trim_start_matches([' ', '\t']).len();
         let tail = &tail[whitespace..];
-        let Some(after_operator) = tail
-            .strip_prefix("&&")
-            .or_else(|| tail.strip_prefix("and"))
+        let Some(after_operator) = tail.strip_prefix("&&").or_else(|| tail.strip_prefix("and"))
         else {
             search = first_close + 1;
             continue;
@@ -91,7 +88,8 @@ impl ForRule<'_, '_, '_> {
         let variable = node.index();
         let collection_source = self.source_file().node(&collection);
         let variable_source = self.source_file().node(&variable);
-        let collection_source = if for_collection_needs_parentheses(&collection, collection_source) {
+        let collection_source = if for_collection_needs_parentheses(&collection, collection_source)
+        {
             format!("({collection_source})")
         } else {
             collection_source.to_string()
@@ -108,7 +106,9 @@ impl ForRule<'_, '_, '_> {
         let replacement = format!("{collection_source}{navigation}each do |{variable_source}|");
         let header_end = node
             .do_keyword_loc()
-            .map_or(collection.location().end_offset(), |location| location.end_offset());
+            .map_or(collection.location().end_offset(), |location| {
+                location.end_offset()
+            });
         let edit = node.for_keyword_loc().start_offset()..header_end;
         let offense = node.location();
         add_offense!(self, offense, message: "Prefer `each` over `for`.", |corrector| {
@@ -118,14 +118,18 @@ impl ForRule<'_, '_, '_> {
 
     fn on_block(&mut self, block: &BlockNode<'_>) {
         return_if!(self.policy().enforced_style("each") != "for");
-        let Some(each) = self.parent().and_then(Node::as_call_node) else { return };
+        let Some(each) = self.parent().and_then(Node::as_call_node) else {
+            return;
+        };
         return_unless!(each.name().as_slice() == b"each" && argument_count(&each) == 0);
         let block_source = self
             .source_file()
             .slice(block.location().start_offset()..block.location().end_offset())
             .unwrap_or_default();
         return_if!(block_source.lines().count() <= 1);
-        let Some(receiver) = each.receiver() else { return };
+        let Some(receiver) = each.receiver() else {
+            return;
+        };
         let explicit_parameters = block
             .parameters()
             .and_then(|parameters| parameters.as_block_parameters_node());
@@ -162,9 +166,9 @@ fn for_collection_needs_parentheses(node: &Node<'_>, source: &str) -> bool {
     node.as_and_node().is_some()
         || node.as_or_node().is_some()
         || node.as_range_node().is_some()
-        || node.as_call_node().is_some_and(|call| {
-            matches!(call.name().as_slice(), b"+" | b"-" | b"*" | b"|" | b"&")
-        })
+        || node
+            .as_call_node()
+            .is_some_and(|call| matches!(call.name().as_slice(), b"+" | b"-" | b"*" | b"|" | b"&"))
 }
 
 fn class_module_children(context: &mut CopContext<'_, '_>) {
@@ -267,16 +271,5 @@ fn and_or(context: &mut CopContext<'_, '_>) {
                 );
             }
         }
-    }
-}
-
-fn useless_or(context: &mut CopContext<'_, '_>) {
-    for (old, new) in [
-        (" || false", ""),
-        ("false || ", ""),
-        (" || nil", ""),
-        ("nil || ", ""),
-    ] {
-        context.replace_code(old, new, "This `or` expression is redundant.");
     }
 }
