@@ -12,7 +12,7 @@ fn check_unused_method_argument(
     offenses: &mut Vec<Offense>,
 ) {
     let cop = "Lint/UnusedMethodArgument";
-    if !options.cop_enabled(cop) {
+    if crate::cops::intentionally_pending(cop) || !options.cop_enabled(cop) {
         return;
     }
     let mut index = 0;

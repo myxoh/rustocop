@@ -8,11 +8,13 @@ require "set"
 require "tempfile"
 require "tmpdir"
 require "yaml"
+require_relative "../lib/rustocop/compatibility_status"
 
 ROOT = File.expand_path("..", __dir__)
 RUBOCOP_ROOT = Gem::Specification.find_by_name("rubocop", "1.87.0").full_gem_path
 NATIVE = ENV.fetch("RUSTOCOP_NATIVE_PATH", File.join(ROOT, "libexec/rustocop-native"))
 RUBOCOP_COMMIT = "e5b788dba181ad94de30cfbad661c5d6aa08a4e5"
+ACTIVE_COP_COUNT = Rustocop::CompatibilityStatus.load(root: ROOT).built_in_cops.length
 
 options = {
   upstream: true,
@@ -251,10 +253,10 @@ end
 puts "Qualification records: #{records.length} cops"
 options[:checks].each do |check|
   count = passed.count { |_cop, checks| checks[check] }
-  puts "Check #{check}: #{count}/606"
+  puts "Check #{check}: #{count}/#{ACTIVE_COP_COUNT}"
 end
 fully_qualified = passed.count { |_cop, checks| options[:checks].all? { |check| checks[check] } }
-puts "Passed selected checks: #{fully_qualified}/606"
+puts "Passed selected checks: #{fully_qualified}/#{ACTIVE_COP_COUNT}"
 
 unless errors.empty?
   warn "Qualification failed with #{errors.length} problem(s):"

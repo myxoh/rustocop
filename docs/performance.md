@@ -3,7 +3,7 @@
 The current report compares RuboCop 1.87.0 with Prism 1.9.0. This benchmark
 uses the pinned 500-file benchmark corpus and 20 fixed built-in cops whose
 normalized output is required to match before timing;
-it measures a representative local feedback path, not all 606 cops at once.
+it measures a representative local feedback path, not all active cops at once.
 
 Every size was verified by comparing normalized JSON reports before timing.
 Both tools were identical at every size. Rustocop was built in release mode;

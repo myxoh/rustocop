@@ -6,6 +6,7 @@ require "open3"
 require "optparse"
 require "rbconfig"
 require "time"
+require_relative "../lib/rustocop/compatibility_status"
 
 ROOT = File.expand_path("..", __dir__)
 EVIDENCE_ROOT = File.join(ROOT, "spec", "compatibility_evidence")
@@ -13,6 +14,7 @@ DEFAULT_FIXTURE_SNAPSHOT = File.join(EVIDENCE_ROOT, "fixtures.json")
 DEFAULT_PROJECT_SNAPSHOT = File.join(EVIDENCE_ROOT, "projects.json")
 DEFAULT_OUTPUT = File.join(ROOT, "docs", "compatibility.md")
 RUST_COP_ROOT = File.join(ROOT, "crates", "rustocop", "src", "cops")
+ACTIVE_COPS = Rustocop::CompatibilityStatus.load(root: ROOT).built_in_cops.sort.freeze
 
 options = {
   fixture_snapshot: DEFAULT_FIXTURE_SNAPSHOT,
@@ -60,7 +62,7 @@ if options[:refresh_projects]
   project_markdown = project_report.sub(/\.json\z/, ".md")
   command = [
     RbConfig.ruby, File.join(ROOT, "script", "audit_project_parity.rb"),
-    "--from-position", "606", "--count", "606", "--jobs", options[:jobs].to_s,
+    "--active", "--jobs", options[:jobs].to_s,
     "--report", project_report, "--markdown", project_markdown
   ]
   command << "--refresh-rubocop-reference" if options[:refresh_rubocop_reference]
@@ -194,7 +196,8 @@ if options[:project_report]
     read_json(options[:project_report], "project report"),
     options[:project_report]
   )
-  abort "project report must cover all 606 cops" unless imported.fetch("results").length == 606
+  abort "project report must cover all #{ACTIVE_COPS.length} active cops" unless
+    imported.fetch("results").keys.sort == ACTIVE_COPS
   update_file(
     options[:project_snapshot], formatted_json(imported),
     check: options[:check], label: "project snapshot"
@@ -209,7 +212,7 @@ fixture_results = fixtures.fetch("results")
 project_results = projects.fetch("results")
 cops = (fixture_results.keys | project_results.keys).sort
 abort "compatibility evidence must cover the same cops" unless fixture_results.keys.sort == project_results.keys.sort
-abort "compatibility evidence must cover all 606 cops" unless cops.length == 606
+abort "compatibility evidence must cover the #{ACTIVE_COPS.length} active cops" unless cops == ACTIVE_COPS
 abort "fixture and project evidence use different RuboCop versions" unless
   fixtures.fetch("rubocop_version") == projects.fetch("rubocop_version")
 
@@ -370,6 +373,10 @@ report = <<~MARKDOWN
   Compatibility is binary at the cop level: every exercised fixture must match,
   and project output must have no false positives, false negatives, or signature
   differences. Partial overlap is not classified as compatible.
+
+  This table covers #{ACTIVE_COPS.length} active built-in cops. The 48 cops in
+  [`intentionally_pending_cops.yml`](../spec/upstream/rubocop-#{fixtures.fetch('rubocop_version')}/intentionally_pending_cops.yml)
+  are deliberately unregistered and excluded from both evidence corpora.
 
   Fixture evidence was updated at `#{fixture_timestamp}`. Project
   evidence was updated at `#{project_timestamp}` from

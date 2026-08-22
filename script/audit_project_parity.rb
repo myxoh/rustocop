@@ -10,6 +10,7 @@ require "rbconfig"
 require "time"
 require "zlib"
 require_relative "../lib/rustocop/project_corpus"
+require_relative "../lib/rustocop/compatibility_status"
 
 gem "rubocop", "=#{Rustocop::ProjectCorpus::RUBOCOP_VERSION}"
 require "rubocop"
@@ -24,6 +25,7 @@ RUBOCOP_REFERENCE_VERSION = 2
 
 options = {
   cops: nil,
+  active: false,
   from_position: nil,
   count: 30,
   config: DEFAULT_CONFIG,
@@ -40,6 +42,7 @@ options = {
 OptionParser.new do |parser|
   parser.banner = "Usage: ruby script/audit_project_parity.rb [options]"
   parser.on("--cops NAMES", "comma-separated cop names") { |value| options[:cops] = value.split(",").map(&:strip) }
+  parser.on("--active", "audit every cop in the active Rustocop corpus") { options[:active] = true }
   parser.on("--from-position POSITION", Integer, "one-based sorted matrix position") { |value| options[:from_position] = value }
   parser.on("--count COUNT", Integer, "reverse-order cop count (default: 30)") { |value| options[:count] = value }
   parser.on("--config PATH") { |value| options[:config] = File.expand_path(value) }
@@ -58,7 +61,14 @@ OptionParser.new do |parser|
 end.parse!
 
 matrix = RuboCop::Cop::Registry.global.map(&:cop_name).sort
-cops = options[:cops]
+active_matrix = Rustocop::CompatibilityStatus.load(root: ROOT).built_in_cops.sort
+cops = if options[:active]
+         abort "--active cannot be combined with --cops or --from-position" if
+           options[:cops] || options[:from_position]
+         active_matrix
+       else
+         options[:cops]
+       end
 unless cops
   start = options[:from_position] || matrix.length
   abort "--from-position must be within 1..#{matrix.length}" unless (1..matrix.length).cover?(start)
@@ -67,9 +77,9 @@ end
 unknown = cops - matrix
 abort "unknown cops: #{unknown.join(', ')}" unless unknown.empty?
 abort "no cops selected" if cops.empty?
-if options[:refresh_rubocop_reference] && options[:rubocop_reference] == DEFAULT_RUBOCOP_REFERENCE && cops.sort != matrix
-  abort "refusing to replace the default RuboCop reference with a partial cop selection; " \
-        "pass all cops or use --rubocop-reference PATH"
+if options[:refresh_rubocop_reference] && options[:rubocop_reference] == DEFAULT_RUBOCOP_REFERENCE && cops.sort != active_matrix
+  abort "refusing to replace the default RuboCop reference with a partial active-cop selection; " \
+        "pass --active or use --rubocop-reference PATH"
 end
 
 if options[:dry_run]

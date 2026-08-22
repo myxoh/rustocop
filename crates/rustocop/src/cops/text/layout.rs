@@ -226,6 +226,9 @@ fn check_indentation(
     offenses: &mut Vec<Offense>,
 ) {
     for cop in ["Layout/IndentationConsistency", "Layout/IndentationWidth"] {
+        if crate::cops::intentionally_pending(cop) {
+            continue;
+        }
         if !options.cop_enabled(cop) {
             continue;
         }

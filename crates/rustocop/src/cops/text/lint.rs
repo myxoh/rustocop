@@ -126,7 +126,9 @@ fn check_small_line_cops(
             }
         }
 
-        if options.cop_enabled("Style/InlineComment") {
+        if options.cop_enabled("Style/InlineComment")
+            && !crate::cops::intentionally_pending("Style/InlineComment")
+        {
             if let Some(comment) = original.find('#') {
                 let text = &original[comment..];
                 if !original[..comment].trim().is_empty() && !text.starts_with("# rubocop:") {

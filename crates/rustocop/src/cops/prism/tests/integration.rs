@@ -283,7 +283,7 @@ fn runs_verified_suspicious_call_and_control_flow_cops() {
 }
 
 #[test]
-fn registers_the_twenty_cop_parity_batch() {
+fn registers_the_active_parity_batch() {
     let names = cop_names();
     for cop in [
         "Bundler/GemVersion",
@@ -298,7 +298,6 @@ fn registers_the_twenty_cop_parity_batch() {
         "Lint/RequireRangeParentheses",
         "Lint/RequireRelativeSelfPath",
         "Lint/SharedMutableDefault",
-        "Lint/TopLevelReturnWithArgument",
         "Naming/AsciiIdentifiers",
         "Style/MultilineIfThen",
         "Style/OptionalArguments",

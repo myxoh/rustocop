@@ -1,0 +1,54 @@
+---
+version: 1
+rubocop_version: 1.87.0
+updated_at: '2026-08-22T11:50:53-04:00'
+reason: Existing implementations are intentionally withdrawn because source-pattern or placeholder behavior does not scale to real projects.
+cops:
+  - Layout/ArgumentAlignment
+  - Layout/EmptyLines
+  - Layout/FirstArrayElementIndentation
+  - Layout/FirstArrayElementLineBreak
+  - Layout/FirstHashElementLineBreak
+  - Layout/FirstMethodArgumentLineBreak
+  - Layout/FirstMethodParameterLineBreak
+  - Layout/IndentationConsistency
+  - Layout/IndentationWidth
+  - Layout/LineContinuationLeadingSpace
+  - Layout/LineEndStringConcatenationIndentation
+  - Layout/MultilineArrayBraceLayout
+  - Layout/MultilineBlockLayout
+  - Layout/MultilineHashBraceLayout
+  - Layout/MultilineHashKeyLineBreaks
+  - Layout/MultilineMethodCallBraceLayout
+  - Layout/RedundantLineBreak
+  - Layout/SingleLineBlockChain
+  - Layout/SpaceAfterComma
+  - Layout/SpaceAfterNot
+  - Layout/SpaceAfterSemicolon
+  - Layout/SpaceAroundBlockParameters
+  - Layout/SpaceBeforeComma
+  - Layout/SpaceBeforeComment
+  - Layout/SpaceBeforeSemicolon
+  - Layout/SpaceInsideHashLiteralBraces
+  - Lint/AmbiguousRegexpLiteral
+  - Lint/ArrayLiteralInRegexp
+  - Lint/AssignmentInCondition
+  - Lint/ConstantResolution
+  - Lint/DuplicateHashKey
+  - Lint/DuplicateRegexpCharacterClassElement
+  - Lint/DuplicateRescueException
+  - Lint/LiteralAssignmentInCondition
+  - Lint/NoReturnInBeginEndBlocks
+  - Lint/RescueType
+  - Lint/TopLevelReturnWithArgument
+  - Lint/UnusedMethodArgument
+  - Lint/UselessAssignment
+  - Metrics/AbcSize
+  - Metrics/BlockNesting
+  - Metrics/ClassLength
+  - Metrics/CyclomaticComplexity
+  - Metrics/PerceivedComplexity
+  - Naming/VariableName
+  - Naming/VariableNumber
+  - Style/Copyright
+  - Style/InlineComment

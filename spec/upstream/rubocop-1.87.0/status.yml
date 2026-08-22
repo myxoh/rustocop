@@ -1,13 +1,13 @@
 rubocop_version: 1.87.0
 upstream_rspec:
-  examples: 28479
+  examples: 26613
   failures: 0
-  pending: 6
-captured_cases: 28623
+  pending: 3
+captured_cases: 26755
 diagnostic_baseline:
-  passed_cases: 16243
-  passing_cops: 364
-  total_cops: 606
+  passed_cases: 24667
+  passing_cops: 509
+  total_cops: 558
 fully_compatible_cops:
   - Bundler/DuplicatedGem
   - Bundler/GemFilename
@@ -24,7 +24,6 @@ fully_compatible_cops:
   - Style/CommandLiteral
   - Style/CommentAnnotation
   - Style/CommentedKeyword
-  - Style/Copyright
   - Style/EvalWithLocation
   - Style/ExplicitBlockArgument
   - Style/ItAssignment
@@ -41,26 +40,18 @@ fully_compatible_cops:
   - Gemspec/AttributeAssignment
   - Gemspec/AddRuntimeDependency
   - Gemspec/RubyVersionGlobalsUsage
-  - Layout/EmptyLines
   - Layout/ClosingHeredocIndentation
   - Layout/InitialIndentation
   - Layout/LeadingEmptyLines
   - Layout/MultilineArrayLineBreaks
   - Layout/SpaceAfterMethodName
-  - Layout/SpaceAfterComma
   - Layout/SpaceAfterColon
-  - Layout/SpaceAfterNot
-  - Layout/SpaceAfterSemicolon
-  - Layout/SpaceBeforeComma
-  - Layout/SpaceBeforeComment
-  - Layout/SpaceBeforeSemicolon
   - Layout/SpaceInsideRangeLiteral
   - Lint/BigDecimalNew
   - Lint/BinaryOperatorWithIdenticalOperands
   - Lint/BooleanSymbol
   - Lint/CircularArgumentReference
   - Lint/DuplicateElsifCondition
-  - Lint/DuplicateRescueException
   - Lint/DuplicateRequire
   - Lint/DisjunctiveAssignmentInConstructor
   - Lint/DataDefineOverride
@@ -103,7 +94,6 @@ fully_compatible_cops:
   - Lint/SharedMutableDefault
   - Lint/StructNewOverride
   - Lint/ToJSON
-  - Lint/TopLevelReturnWithArgument
   - Lint/TrailingCommaInAttributeDeclaration
   - Lint/TripleQuotes
   - Lint/UriEscapeUnescape
@@ -151,7 +141,6 @@ fully_compatible_cops:
   - Style/GlobalVars
   - Style/HashLikeCase
   - Style/ImplicitRuntimeError
-  - Style/InlineComment
   - Style/InPatternThen
   - Style/IpAddresses
   - Style/KeywordArgumentsMerging
@@ -328,18 +317,11 @@ fully_compatible_cops:
   - Layout/BeginEndAlignment
   - Layout/ConditionPosition
   - Layout/EndOfLine
-  - Layout/FirstArrayElementLineBreak
-  - Layout/FirstHashElementLineBreak
-  - Layout/FirstMethodArgumentLineBreak
-  - Layout/FirstMethodParameterLineBreak
   - Layout/FirstParameterIndentation
-  - Layout/MultilineHashKeyLineBreaks
-  - Layout/SingleLineBlockChain
   - Layout/SpaceBeforeBrackets
   - Layout/SpaceBeforeFirstArg
   - Layout/SpaceInsideStringInterpolation
   - Lint/ConstantOverwrittenInRescue
-  - Lint/ConstantResolution
   - Lint/CopDirectiveSyntax
   - Lint/MissingCopEnableDirective
   - Lint/NestedMethodDefinition

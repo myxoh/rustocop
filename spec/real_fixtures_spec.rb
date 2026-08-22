@@ -7,8 +7,8 @@ RSpec.describe "real fixtures" do
   fixture_directories = Dir.glob(File.join(fixture_root, "[0-9][0-9]_*"))
   rubocop_environment = { "RUBOCOP_CACHE_ROOT" => File.join(Dir.tmpdir, "rustocop-rubocop-cache") }
 
-  it "contains the initial 20 examples and sourced real-world fixtures" do
-    expect(fixture_directories.length).to be >= 21
+  it "contains the remaining initial examples and sourced real-world fixtures" do
+    expect(fixture_directories.length).to be >= 20
   end
 
   fixture_directories.sort.each do |fixture_directory|

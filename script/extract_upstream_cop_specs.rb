@@ -5,6 +5,7 @@ require "json"
 require "open3"
 require "rbconfig"
 require "rubocop"
+require_relative "../lib/rustocop/compatibility_status"
 
 root = File.expand_path("..", __dir__)
 output = File.expand_path(ARGV.fetch(0, "tmp/rubocop-1.87.0-cop-cases.jsonl"), root)
@@ -24,10 +25,19 @@ env = { "RUSTOCOP_UPSTREAM_CAPTURE" => output }
 status = system(env, *command)
 abort "upstream RuboCop specs failed; capture is incomplete" unless status
 
+compatibility_status = Rustocop::CompatibilityStatus.load(root: root)
+pending = compatibility_status.intentionally_pending_cops.to_h { |cop| [cop, true] }
+retained = File.foreach(output).filter_map do |line|
+  test_case = JSON.parse(line)
+  line unless pending[test_case.fetch("cop")]
+end
+File.write(output, retained.join)
+
 counts = Hash.new(0)
 File.foreach(output) { |line| counts[JSON.parse(line).fetch("cop")] += 1 }
-registered_cops = RuboCop::Cop::Registry.global.map(&:cop_name)
+registered_cops = RuboCop::Cop::Registry.global.map(&:cop_name) - pending.keys
 missing_cops = registered_cops - counts.keys
 abort "capture has no executable cases for: #{missing_cops.sort.join(", ")}" unless missing_cops.empty?
 
-puts "Captured #{counts.values.sum} executable cases for #{counts.length} cops in #{output}"
+puts "Captured #{counts.values.sum} executable cases for #{counts.length} active cops in #{output}"
+puts "Excluded #{pending.length} intentionally-pending cops"

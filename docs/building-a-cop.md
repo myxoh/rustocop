@@ -63,9 +63,10 @@ Preview everything the generator would create:
 ruby script/new_cop.rb Style/Example call --dry-run
 ```
 
-All 606 RuboCop 1.87 built-ins currently have a native implementation. Use the
-generator for a genuinely new cop; when improving parity for an existing cop,
-start from its current family module and fixture instead:
+The active registry contains 558 RuboCop 1.87 built-ins. Another 48 are listed
+in the intentionally-pending manifest and require scalable reimplementation.
+Use the generator for a genuinely new cop; when improving an active cop, start
+from its current family module and fixture instead:
 
 ```sh
 ruby script/new_cop.rb Department/CopName call
@@ -372,4 +373,4 @@ changes.
 - [ ] Compared complete ten-project signatures, not just offense counts.
 - [ ] Bound the final audit to the committed Rust source and binary SHA-256.
 - [ ] Ran Rust, Clippy, architecture, Ruby, and full-regression gates.
-- [ ] Regenerated public evidence docs only from a complete 606-cop audit.
+- [ ] Regenerated public evidence docs only from a complete active-cop audit.

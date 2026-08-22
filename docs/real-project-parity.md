@@ -12,33 +12,39 @@ cases, and configuration branches that the projects do not exercise.
 
 ## Latest realistic status
 
-The latest complete 606-cop checkpoint was generated at
-`2026-08-22T00:26:38-04:00` from Rust source
-`8b5d6b45dc982263abb1163fc74859ca45693763` and native binary SHA-256
-`c3933028fc4d8d52dac731de79e8ad4f567444a60c8bb5cfdd5f9b573967a5f7`.
+The latest complete checkpoint was generated at
+`2026-08-22T00:56:18-04:00` from Rust source
+`7f296411cbe9762b81306f8e45a0072d8b856b59` and native binary SHA-256
+`fb13931fadb0e490cbeebdf070f7cf69648d36376109499c608dda2220801ed3`.
 The stored RuboCop reference was captured at `2026-08-22T00:20:57-04:00`
 and has SHA-256
-`3e49cd91d20e568c632cc6bc8b7ba6465fdd7b05169971dab6ba86671c4955ca`.
-It reported:
+`7ab0a924ce7d2160b96a6092fa054ca3c8bc08097ca4cf3ed7de7a77ddba7771`.
+After excluding the 48 intentionally pending cops, its active-cop slice reports:
 
 | Classification | Complete checkpoint |
 | --- | ---: |
-| Project-exact | 285 |
-| Exact but dormant | 87 |
-| Mismatching | 232 |
+| Project-exact | 284 |
+| Exact but dormant | 85 |
+| Mismatching | 187 |
 | Rust crash | 1 |
 | RuboCop gate error | 1 |
 
-The remaining RuboCop error is `Lint/RedundantCopDisableDirective`, which
+This is retained evidence from before the registry withdrawal and must be
+refreshed after these changes are committed. The remaining RuboCop error is
+`Lint/RedundantCopDisableDirective`, which
 RuboCop refuses to run with `--only`. `Layout/FirstHashElementIndentation`
-crashed Rustocop during the RubyGems.org gate. The 232 mismatching cops and the
+crashed Rustocop during the RubyGems.org gate. The 187 active mismatching cops and the
 crash are current failures, not estimates inherited from the older checkpoint.
 
 The minimized project-regression corpus contains 126 passing cases and 12
 pending isolated mismatches. The
-configuration-mutation corpus contains five. They preserve fixed pathological
+configuration-mutation corpus contains six. They preserve fixed pathological
 examples, while the complete matrix catches interactions and unrepresented
 syntax across the full 54,146-file corpus.
+
+See [the compatibility gap analysis](project-compatibility-gap-analysis.md) for
+why the near-90% fixture result does not imply near-90% project parity and for
+the revised real-project-first repair loop.
 
 ## Pinned projects
 
@@ -64,7 +70,7 @@ RuboCop reference:
 
 ```sh
 bundle exec ruby script/audit_project_parity.rb \
-  --from-position 606 --count 606 \
+  --active \
   --report tmp/project-parity/all-cops-current.json \
   --markdown tmp/project-parity/all-cops-current.md
 ```
@@ -77,7 +83,7 @@ inputs intentionally changes:
 
 ```sh
 bundle exec ruby script/audit_project_parity.rb \
-  --from-position 606 --count 606 \
+  --active \
   --refresh-rubocop-reference \
   --report tmp/project-parity/all-cops-current.json \
   --markdown tmp/project-parity/all-cops-current.md

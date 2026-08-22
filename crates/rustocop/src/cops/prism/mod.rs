@@ -348,7 +348,7 @@ impl Registry {
         let cops = COP_PROVIDERS
             .iter()
             .flat_map(|provide| provide())
-            .filter(|cop| enabled(cop.name()))
+            .filter(|cop| !crate::cops::intentionally_pending(cop.name()) && enabled(cop.name()))
             .collect();
 
         Self::new(cops)

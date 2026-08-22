@@ -10,6 +10,7 @@ require "tmpdir"
 require "time"
 require "yaml"
 require_relative "../lib/rustocop/compatibility_baseline"
+require_relative "../lib/rustocop/compatibility_status"
 require_relative "../lib/rustocop/config_serialization"
 
 root = File.expand_path("..", __dir__)
@@ -46,9 +47,16 @@ abort "captured corpus not found; run script/extract_upstream_cop_specs.rb" unle
 cases = []
 per_cop = Hash.new(0)
 excluded_cases = Hash.new(0)
+pending = Rustocop::CompatibilityStatus.load(root: root).intentionally_pending_cops.to_h do |cop|
+  [cop, true]
+end
 File.foreach(options[:corpus]) do |line|
   test_case = JSON.parse(line)
   cop = test_case.fetch("cop")
+  if pending[cop]
+    excluded_cases["intentionally_pending"] += 1
+    next
+  end
   next if options[:only] && !options[:only].include?(cop)
   if test_case.fetch("lsp", false)
     excluded_cases["lsp"] += 1

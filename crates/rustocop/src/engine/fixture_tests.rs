@@ -209,15 +209,6 @@ fixture_test!(
 );
 
 fixture_test!(
-    accepts_used_argument_in_endless_method,
-    "unused_method_argument_real_project_regression",
-    "/project/app/builders/v2/reports/drilldown_builder.rb",
-    "Lint/UnusedMethodArgument",
-    false,
-    RubyVersion::default()
-);
-
-fixture_test!(
     ignores_dependency_calls_outside_gemspecs,
     "ordered_dependencies_real_project_regression",
     "/project/rubocop/cop/rspec/before_all.rb",

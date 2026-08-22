@@ -1,7 +1,8 @@
 # RuboCop upstream specification snapshot
 
-This directory contains the cop specifications and supporting test data from
-RuboCop 1.87.0. Rustocop uses the snapshot as its compatibility contract.
+This directory started from the cop specifications and supporting test data
+from RuboCop 1.87.0. Rustocop uses the retained active-cop snapshot as its
+compatibility contract.
 
 - Repository: <https://github.com/rubocop/rubocop>
 - Tag: `v1.87.0`
@@ -10,6 +11,8 @@ RuboCop 1.87.0. Rustocop uses the snapshot as its compatibility contract.
   `spec/core_ext/string.rb`, `spec/spec_helper.rb`, and `config`
 - License: MIT; see `LICENSE.txt` in this directory
 
-The files under `spec/rubocop/cop` are preserved as upstream source. Rustocop's
-extractor and compatibility runner live outside this directory so generated
-reports and local adaptations cannot be confused with upstream tests.
+The 48 cops in `intentionally_pending_cops.yml` have had their cop spec files
+removed from the active fixture corpus. The remaining files under
+`spec/rubocop/cop` are preserved upstream source. Rustocop's extractor and
+compatibility runner live outside this directory so generated reports and
+local adaptations cannot be confused with upstream tests.

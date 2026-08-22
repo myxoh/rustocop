@@ -7,8 +7,8 @@ regression layer, not the prioritization scoreboard.
 
 ## Current position
 
-- RuboCop 1.87.0 defines 606 built-in cops, all advertised by the native
-  registry.
+- RuboCop 1.87.0 defines 606 built-in cops. The native registry advertises 558;
+  48 non-scalable implementations are intentionally pending.
 - The executable trust standard is differential: minimized fixtures plus
   complete diagnostic signatures across ten pinned projects.
 - The project-regression corpus currently contains 126 RuboCop-derived cases,
@@ -45,7 +45,7 @@ diagnostic signatures. For each repaired cop:
 3. match RuboCop diagnostics and correction output in the focused fixture;
 4. run all Rust tests and the complete cross-engine fixture corpus;
 5. commit the Rust code, then run the SHA-bound ten-project audit; and
-6. regenerate the public evidence docs only from a complete 606-cop audit.
+6. regenerate the public evidence docs only from a complete active-cop audit.
 
 Focused exact reports are useful development evidence but never replace the
 complete matrix after a shared helper or traversal changes.

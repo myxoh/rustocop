@@ -12,14 +12,11 @@ pub(crate) use crate::model::{push_offense, CorrectionStatus, Offense, SourceLin
 // Prism cops advertise themselves through their registry. These names are the
 // shrinking compatibility surface that still requires the line-based runner.
 pub(crate) const LEGACY_COP_NAMES: &[&str] = &[
-    "Layout/IndentationConsistency",
-    "Layout/IndentationWidth",
     "Layout/LineLength",
     "Layout/TrailingWhitespace",
     "Lint/BigDecimalNew",
     "Lint/EmptyEnsure",
     "Lint/TrailingCommaInAttributeDeclaration",
-    "Lint/UnusedMethodArgument",
     "Lint/UselessElseWithoutRescue",
     "RSpec/EmptyExampleGroup",
     "RSpec/ExampleLength",
@@ -49,7 +46,6 @@ pub(crate) const LEGACY_COP_NAMES: &[&str] = &[
     "Style/HashLikeCase",
     "Style/HashSyntax",
     "Style/IfUnlessModifier",
-    "Style/InlineComment",
     "Style/NumberedParameters",
 ];
 

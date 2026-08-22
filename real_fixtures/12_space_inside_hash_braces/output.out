@@ -1,5 +1,0 @@
-== input.rb ==
-C:  1: 11: [Correctable] Layout/SpaceInsideHashLiteralBraces: Space inside { missing.
-C:  1: 34: [Correctable] Layout/SpaceInsideHashLiteralBraces: Space inside } missing.
-
-1 file inspected, 2 offenses detected, 2 offenses autocorrectable
