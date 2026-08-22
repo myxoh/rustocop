@@ -30,6 +30,13 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
 fn ambiguous_assignment(context: &mut CopContext<'_, '_>) {
     for (needle, operator) in [("=-", "-"), ("=+", "+"), ("=*", "*"), ("=!", "!")] {
         for start in context.source_file().code_offsets(needle) {
+            if !context.source()[..start]
+                .as_bytes()
+                .last()
+                .is_some_and(|byte| byte.is_ascii_whitespace())
+            {
+                continue;
+            }
             context.report(
                 format!("Suspicious assignment detected. Did you mean `{operator}=`?"),
                 start..start + needle.len(),

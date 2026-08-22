@@ -44,7 +44,8 @@ fn space_around_keyword(context: &mut CopContext<'_, '_>) {
             let end = start + keyword.len();
             let before = source.as_bytes().get(start.wrapping_sub(1)).copied();
             let after = source.as_bytes().get(end).copied();
-            if before.is_some_and(|byte| byte.is_ascii_alphabetic() || byte == b'_')
+            if matches!(before, Some(b'.' | b':'))
+                || before.is_some_and(|byte| byte.is_ascii_alphabetic() || byte == b'_')
                 || *keyword != "defined?"
                     && after.is_some_and(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
             {

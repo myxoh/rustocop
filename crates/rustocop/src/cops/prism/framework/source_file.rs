@@ -1,6 +1,6 @@
 use std::ops::Range;
 
-use ruby_prism::{Location, Node};
+use ruby_prism::{parse, Location, Node, Visit};
 
 /// A source-relative edit used while rendering a larger correction.
 ///
@@ -236,6 +236,111 @@ impl<'source> SourceFile<'source> {
             index += 1;
         }
         offsets
+    }
+
+    /// Source ranges occupied by literals whose punctuation must not be
+    /// mistaken for Ruby syntax by source-oriented layout cops.
+    pub(super) fn literal_ranges(self) -> Vec<Range<usize>> {
+        struct LiteralRanges(Vec<Range<usize>>);
+
+        impl LiteralRanges {
+            fn push(&mut self, location: Location<'_>) {
+                self.0
+                    .push(location.start_offset()..location.end_offset());
+            }
+
+            fn push_delimited(
+                &mut self,
+                location: Location<'_>,
+                opening: Option<Location<'_>>,
+                closing: Option<Location<'_>>,
+            ) {
+                let start = opening.map_or(location.start_offset(), |part| part.start_offset());
+                let end = closing.map_or(location.end_offset(), |part| part.end_offset());
+                self.0.push(start..end);
+            }
+        }
+
+        impl<'pr> Visit<'pr> for LiteralRanges {
+            fn visit_string_node(&mut self, node: &ruby_prism::StringNode<'pr>) {
+                self.push_delimited(node.location(), node.opening_loc(), node.closing_loc());
+            }
+
+            fn visit_interpolated_string_node(
+                &mut self,
+                node: &ruby_prism::InterpolatedStringNode<'pr>,
+            ) {
+                self.push_delimited(node.location(), node.opening_loc(), node.closing_loc());
+            }
+
+            fn visit_regular_expression_node(
+                &mut self,
+                node: &ruby_prism::RegularExpressionNode<'pr>,
+            ) {
+                self.push_delimited(
+                    node.location(),
+                    Some(node.opening_loc()),
+                    Some(node.closing_loc()),
+                );
+            }
+
+            fn visit_interpolated_regular_expression_node(
+                &mut self,
+                node: &ruby_prism::InterpolatedRegularExpressionNode<'pr>,
+            ) {
+                self.push_delimited(
+                    node.location(),
+                    Some(node.opening_loc()),
+                    Some(node.closing_loc()),
+                );
+            }
+
+            fn visit_x_string_node(&mut self, node: &ruby_prism::XStringNode<'pr>) {
+                self.push_delimited(
+                    node.location(),
+                    Some(node.opening_loc()),
+                    Some(node.closing_loc()),
+                );
+            }
+
+            fn visit_interpolated_x_string_node(
+                &mut self,
+                node: &ruby_prism::InterpolatedXStringNode<'pr>,
+            ) {
+                self.push_delimited(
+                    node.location(),
+                    Some(node.opening_loc()),
+                    Some(node.closing_loc()),
+                );
+            }
+
+            fn visit_symbol_node(&mut self, node: &ruby_prism::SymbolNode<'pr>) {
+                self.push(node.location());
+            }
+
+            fn visit_interpolated_symbol_node(
+                &mut self,
+                node: &ruby_prism::InterpolatedSymbolNode<'pr>,
+            ) {
+                self.push(node.location());
+            }
+
+            fn visit_array_node(&mut self, node: &ruby_prism::ArrayNode<'pr>) {
+                if node
+                    .opening_loc()
+                    .is_some_and(|opening| opening.as_slice().starts_with(b"%"))
+                {
+                    self.push(node.location());
+                } else {
+                    ruby_prism::visit_array_node(self, node);
+                }
+            }
+        }
+
+        let parsed = parse(self.source.as_bytes());
+        let mut ranges = LiteralRanges(Vec::new());
+        ranges.visit(&parsed.node());
+        ranges.0
     }
 }
 

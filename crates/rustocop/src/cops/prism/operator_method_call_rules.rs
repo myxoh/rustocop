@@ -16,6 +16,7 @@ define_cops! {
 fn space_around_method_call_operator(context: &mut CopContext<'_, '_>) {
     let file = context.source_file();
     let source = context.source();
+    let literal_ranges = file.literal_ranges();
     let mut operators = file.code_offsets("::");
     operators.extend(file.code_offsets("&."));
     operators.extend(file.code_offsets(".").into_iter().filter(|offset| {
@@ -24,6 +25,12 @@ fn space_around_method_call_operator(context: &mut CopContext<'_, '_>) {
     operators.sort_unstable();
     operators.dedup();
     for start in operators {
+        if literal_ranges
+            .iter()
+            .any(|range| range.start <= start && start < range.end)
+        {
+            continue;
+        }
         let width = if source[start..].starts_with("::") || source[start..].starts_with("&.") {
             2
         } else {
