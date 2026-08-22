@@ -102,6 +102,12 @@ RSpec.describe "real-project parity regressions" do
     Style/SafeNavigationChainLength
     Lint/UnreachableCode
     Lint/DuplicateMethods
+    Lint/UnusedBlockArgument
+    Naming/AccessorMethodName
+    Naming/BlockForwarding
+    Naming/HeredocDelimiterCase
+    Naming/MethodParameterName
+    Naming/RescuedExceptionsVariableName
   ]
   fixture_root = File.join(ROOT, "spec", "fixtures", "project_parity_regressions")
   config = File.join(fixture_root, "rubocop.yml")

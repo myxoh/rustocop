@@ -85,19 +85,6 @@ pub(super) fn find_numbered_parameter(line: &str) -> Option<usize> {
     None
 }
 
-pub(super) fn first_identifier(value: &str) -> Option<&str> {
-    let end = value
-        .find(|character: char| {
-            !(character == '_'
-                || character == '?'
-                || character == '!'
-                || character.is_ascii_alphanumeric())
-        })
-        .unwrap_or(value.len());
-    let name = &value[..end];
-    (!name.is_empty()).then_some(name)
-}
-
 pub(super) fn method_arguments(signature: &str) -> Vec<String> {
     let Some(start) = signature.find('(') else {
         return Vec::new();

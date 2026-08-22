@@ -7,7 +7,8 @@ define_cops! {
     DeprecatedConstants => "Lint/DeprecatedConstants" => source(deprecated_constants),
     RedundantCopEnableDirective => "Lint/RedundantCopEnableDirective" => source(redundant_enable),
     UnreachablePatternBranch => "Lint/UnreachablePatternBranch" => source(unreachable_pattern),
-    MethodParameterName => "Naming/MethodParameterName" => source(method_parameter_name),
+    MethodParameterName => "Naming/MethodParameterName" => node(as_def_node, method_parameter_name),
+    AccessorMethodName => "Naming/AccessorMethodName" => node(as_def_node, accessor_method_name),
 }
 
 fn underscore_variable(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
@@ -307,61 +308,148 @@ fn unreachable_pattern(context: &mut CopContext<'_, '_>) {
     }
 }
 
-fn method_parameter_name(context: &mut CopContext<'_, '_>) {
+fn method_parameter_name(
+    definition: &ruby_prism::DefNode<'_>,
+    context: &mut CopContext<'_, '_>,
+) {
     let minimum = context.config_usize("MinNameLength", 3);
     let allow_numbers = context.config_bool("AllowNamesEndingInNumbers", false);
     let allowed = context.config_values("AllowedNames").to_vec();
     let forbidden = context.config_values("ForbiddenNames").to_vec();
-    for (offset, line) in context.source_file().lines() {
-        let trimmed = line.trim_start();
-        if !trimmed.starts_with("def ") {
+    let Some(parameters) = definition.parameters() else {
+        return;
+    };
+    for (name, range) in named_method_parameters(&parameters) {
+        let normalized = name.trim_start_matches('_');
+        if normalized.is_empty() || allowed.iter().any(|allowed| allowed == normalized) {
             continue;
         }
-        let Some(open) = line.find('(') else { continue };
-        let Some(close) = line[open..].find(')').map(|at| open + at) else {
-            continue;
+        let message = if forbidden.iter().any(|forbidden| forbidden == normalized) {
+            Some(format!(
+                "Do not use {normalized} as a name for a method parameter."
+            ))
+        } else if normalized.len() < minimum {
+            Some(format!(
+                "Method parameter must be at least {minimum} characters long."
+            ))
+        } else if normalized.bytes().any(|byte| byte.is_ascii_uppercase()) {
+            Some("Only use lowercase characters for method parameter.".to_string())
+        } else if !allow_numbers
+            && normalized
+                .bytes()
+                .last()
+                .is_some_and(|byte| byte.is_ascii_digit())
+        {
+            Some("Do not end method parameter with a number.".to_string())
+        } else {
+            None
         };
-        let mut search_from = open + 1;
-        for raw in line[open + 1..close].split(',').map(str::trim) {
-            let token = raw
-                .split(['=', ':'])
-                .next()
-                .unwrap_or("")
-                .trim();
-            let name = token.trim_start_matches(['*', '&']);
-            let normalized = name.trim_start_matches('_');
-            if normalized.is_empty() || normalized == "..." {
-                continue;
-            }
-            let relative = line[search_from..].find(token).unwrap_or(0) + search_from;
-            search_from = relative + token.len();
-            let range = offset + relative..offset + relative + token.len();
-            if allowed.iter().any(|allowed| allowed == normalized) {
-                continue;
-            }
-            let message = if forbidden.iter().any(|forbidden| forbidden == normalized) {
-                Some(format!(
-                    "Do not use {normalized} as a name for a method parameter."
-                ))
-            } else if normalized.len() < minimum {
-                Some(format!(
-                    "Method parameter must be at least {minimum} characters long."
-                ))
-            } else if normalized.bytes().any(|byte| byte.is_ascii_uppercase()) {
-                Some("Only use lowercase characters for method parameter.".to_string())
-            } else if !allow_numbers
-                && normalized
-                    .bytes()
-                    .last()
-                    .is_some_and(|byte| byte.is_ascii_digit())
-            {
-                Some("Do not end method parameter with a number.".to_string())
-            } else {
-                None
-            };
-            if let Some(message) = message {
-                context.report(message, range);
-            }
+        if let Some(message) = message {
+            context.report(message, range);
         }
+    }
+}
+
+fn named_method_parameters(
+    parameters: &ruby_prism::ParametersNode<'_>,
+) -> Vec<(String, std::ops::Range<usize>)> {
+    let mut result = Vec::new();
+    for parameter in parameters.requireds().iter().chain(parameters.posts().iter()) {
+        if let Some(parameter) = parameter.as_required_parameter_node() {
+            result.push((
+                String::from_utf8_lossy(parameter.name().as_slice()).into_owned(),
+                parameter.location().start_offset()..parameter.location().end_offset(),
+            ));
+        }
+    }
+    for parameter in parameters.optionals().iter() {
+        if let Some(parameter) = parameter.as_optional_parameter_node() {
+            let location = parameter.name_loc();
+            result.push((
+                String::from_utf8_lossy(parameter.name().as_slice()).into_owned(),
+                location.start_offset()..location.end_offset(),
+            ));
+        }
+    }
+    for parameter in parameters.keywords().iter() {
+        if let Some(parameter) = parameter.as_required_keyword_parameter_node() {
+            let location = parameter.name_loc();
+            result.push((
+                String::from_utf8_lossy(parameter.name().as_slice()).into_owned(),
+                location.start_offset()..location.end_offset().saturating_sub(1),
+            ));
+        } else if let Some(parameter) = parameter.as_optional_keyword_parameter_node() {
+            let location = parameter.name_loc();
+            result.push((
+                String::from_utf8_lossy(parameter.name().as_slice()).into_owned(),
+                location.start_offset()..location.end_offset().saturating_sub(1),
+            ));
+        }
+    }
+    if let Some(parameter) = parameters.rest().and_then(|node| node.as_rest_parameter_node()) {
+        if let (Some(name), Some(_)) = (parameter.name(), parameter.name_loc()) {
+            result.push((
+                String::from_utf8_lossy(name.as_slice()).into_owned(),
+                parameter.location().start_offset()..parameter.location().end_offset(),
+            ));
+        }
+    }
+    if let Some(parameter) = parameters
+        .keyword_rest()
+        .and_then(|node| node.as_keyword_rest_parameter_node())
+    {
+        if let (Some(name), Some(_)) = (parameter.name(), parameter.name_loc()) {
+            result.push((
+                String::from_utf8_lossy(name.as_slice()).into_owned(),
+                parameter.location().start_offset()..parameter.location().end_offset(),
+            ));
+        }
+    }
+    if let Some(parameter) = parameters.block() {
+        if let (Some(name), Some(_)) = (parameter.name(), parameter.name_loc()) {
+            let start = parameter.location().start_offset();
+            result.push((
+                String::from_utf8_lossy(name.as_slice()).into_owned(),
+                start..start + name.as_slice().len(),
+            ));
+        }
+    }
+    result
+}
+
+fn accessor_method_name(
+    definition: &ruby_prism::DefNode<'_>,
+    context: &mut CopContext<'_, '_>,
+) {
+    let name = String::from_utf8_lossy(definition.name().as_slice());
+    if name.ends_with(['!', '?', '=']) {
+        return;
+    }
+    let parameter_count = definition.parameters().map_or(0, |parameters| {
+        parameters.requireds().len()
+            + parameters.optionals().len()
+            + usize::from(parameters.rest().is_some())
+            + parameters.posts().len()
+            + parameters.keywords().len()
+            + usize::from(parameters.keyword_rest().is_some())
+            + usize::from(parameters.block().is_some())
+    });
+    let single_required = definition.parameters().is_some_and(|parameters| {
+        parameters.requireds().len() == 1
+            && parameters.requireds().first().is_some_and(|node| {
+                node.as_required_parameter_node().is_some()
+            })
+            && parameter_count == 1
+    });
+    let message = if name.starts_with("get_") && parameter_count == 0 {
+        Some("Do not prefix reader method names with `get_`.")
+    } else if name.starts_with("set_") && single_required {
+        Some("Do not prefix writer method names with `set_`.")
+    } else {
+        None
+    };
+    if let Some(message) = message {
+        let location = definition.name_loc();
+        context.report(message, location.start_offset()..location.end_offset());
     }
 }

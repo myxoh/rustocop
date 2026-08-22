@@ -3,7 +3,7 @@ use super::*;
 define_cops! {
     Syntax => "Lint/Syntax" => parse_error(syntax),
     FormatParameterMismatch => "Lint/FormatParameterMismatch" => source(format_parameter_mismatch),
-    UnusedBlockArgument => "Lint/UnusedBlockArgument" => source(unused_block_argument),
+    UnusedBlockArgument => "Lint/UnusedBlockArgument" => any_node(unused_block_argument),
     AmbiguousRange => "Lint/AmbiguousRange" => source(ambiguous_range),
     NonAtomicFileOperation => "Lint/NonAtomicFileOperation" => source(non_atomic_file_operation),
     UnmodifiedReduceAccumulator => "Lint/UnmodifiedReduceAccumulator" => source(unmodified_reduce_accumulator),
@@ -42,59 +42,95 @@ fn format_parameter_mismatch(context: &mut CopContext<'_, '_>) {
     }
 }
 
-fn unused_block_argument(context: &mut CopContext<'_, '_>) {
-    let source = context.source().to_string();
+fn unused_block_argument(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
     let ignore_empty = context.config_bool("IgnoreEmptyBlocks", true);
     let allow_keywords = context.config_bool("AllowUnusedKeywordArguments", false);
-    let mut groups = block_parameter_groups(&source);
-    groups.extend(lambda_parameter_groups(&source));
-    for group in groups {
-        let body_end = block_body_end(&source, group.body_start);
-        let body = &source[group.body_start..body_end];
-        if ignore_empty && body.trim_matches([' ', '\t', '\r', '\n', '}', ';']).is_empty() {
-            continue;
-        }
-        if body.contains("binding") && !body.contains("binding(") && !body.contains("def ") {
-            continue;
-        }
-        let unused = group
-            .parameters
-            .iter()
-            .filter(|parameter| {
-                !parameter.name.starts_with('_')
-                    && !(allow_keywords && parameter.keyword)
-                    && !(if parameter.local {
-                        body.split(|character: char| {
-                            !character.is_ascii_alphanumeric() && character != '_'
-                        })
-                        .any(|word| word == parameter.name)
-                    } else {
-                        block_variable_read(body, &parameter.name)
-                    })
+    let (parameters, body, lambda, define_method) = if let Some(block) = node.as_block_node() {
+        let Some(block_parameters) = block
+            .parameters()
+            .and_then(|parameters| parameters.as_block_parameters_node())
+        else {
+            return;
+        };
+        let mut parameters = block_parameters
+            .parameters()
+            .map(|parameters| block_parameter_infos(&parameters))
+            .unwrap_or_default();
+        parameters.extend(block_parameters.locals().iter().filter_map(|local| {
+            local.as_block_local_variable_node().map(|local| BlockParameterInfo {
+                name: String::from_utf8_lossy(local.name().as_slice()).into_owned(),
+                range: local.location().start_offset()..local.location().end_offset(),
+                keyword: false,
+                local: true,
             })
-            .collect::<Vec<_>>();
-        for parameter in &unused {
-            let all_unused = unused.len() == group.parameters.len();
-            let message = unused_block_message(parameter, &group, all_unused);
-            if parameter.keyword {
-                context.report(message, parameter.range.clone());
-            } else {
-                context.replace(
-                    message,
-                    parameter.range.clone(),
-                    parameter.range.clone(),
-                    format!("_{}", parameter.name),
-                );
-            }
-        }
+        }));
+        let define_method = context
+            .parent()
+            .and_then(Node::as_call_node)
+            .is_some_and(|call| call.name().as_slice() == b"define_method");
+        let lambda = context
+            .parent()
+            .and_then(Node::as_call_node)
+            .is_some_and(|call| call.name().as_slice() == b"lambda");
+        (parameters, block.body(), lambda, define_method)
+    } else if let Some(lambda_node) = node.as_lambda_node() {
+        let parameters = lambda_node
+            .parameters()
+            .and_then(|parameters| {
+                parameters.as_parameters_node().or_else(|| {
+                    parameters
+                        .as_block_parameters_node()
+                        .and_then(|block| block.parameters())
+                })
+            })
+            .map(|parameters| block_parameter_infos(&parameters))
+            .unwrap_or_default();
+        (parameters, lambda_node.body(), true, false)
+    } else {
+        return;
+    };
+    if parameters.is_empty() {
+        return;
     }
-}
-
-struct BlockParameterGroup {
-    parameters: Vec<BlockParameterInfo>,
-    body_start: usize,
-    lambda: bool,
-    define_method: bool,
+    let Some(body) = body else {
+        if ignore_empty {
+            return;
+        }
+        let unused = (0..parameters.len()).collect::<Vec<_>>();
+        return report_unused_block_parameters(
+            context,
+            &parameters,
+            &unused,
+            lambda,
+            define_method,
+        );
+    };
+    let body_source = context.source_file().node(&body);
+    if ignore_empty && body_source.trim().is_empty() {
+        return;
+    }
+    let mut reads = BlockParameterReads::default();
+    ruby_prism::Visit::visit(&mut reads, &body);
+    if reads.binding {
+        return;
+    }
+    let unused = parameters
+        .iter()
+        .enumerate()
+        .filter_map(|(index, parameter)| {
+            (!(parameter.name.starts_with('_')
+                || (allow_keywords && parameter.keyword)
+                || reads.names.contains(parameter.name.as_bytes())))
+            .then_some(index)
+        })
+        .collect::<Vec<_>>();
+    report_unused_block_parameters(
+        context,
+        &parameters,
+        &unused,
+        lambda,
+        define_method,
+    );
 }
 
 struct BlockParameterInfo {
@@ -104,115 +140,249 @@ struct BlockParameterInfo {
     local: bool,
 }
 
-fn block_parameter_groups(source: &str) -> Vec<BlockParameterGroup> {
-    let mut groups = Vec::new();
-    let mut cursor = 0;
-    while let Some(open) = source[cursor..].find('|').map(|at| cursor + at) {
-        let Some(close) = source[open + 1..].find('|').map(|at| open + 1 + at) else {
-            break;
-        };
-        if source.as_bytes().get(open.wrapping_sub(1)) == Some(&b'|') {
-            cursor = close + 1;
-            continue;
+fn block_parameter_infos(parameters: &ruby_prism::ParametersNode<'_>) -> Vec<BlockParameterInfo> {
+    let mut result = Vec::new();
+    for parameter in parameters.requireds().iter().chain(parameters.posts().iter()) {
+        if let Some(parameter) = parameter.as_required_parameter_node() {
+            result.push(BlockParameterInfo {
+                name: String::from_utf8_lossy(parameter.name().as_slice()).into_owned(),
+                range: parameter.location().start_offset()..parameter.location().end_offset(),
+                keyword: false,
+                local: false,
+            });
+        } else if parameter.as_multi_target_node().is_some() {
+            let mut targets = ParameterTargetCollector::default();
+            ruby_prism::Visit::visit(&mut targets, &parameter);
+            result.extend(targets.parameters);
         }
-        let prefix = &source[source[..open].rfind('\n').map_or(0, |at| at + 1)..open];
-        if prefix.contains(" do") || prefix.contains('{') {
-            groups.push(BlockParameterGroup {
-                parameters: parse_block_parameters(source, open + 1, close),
-                body_start: close + 1,
-                lambda: false,
-                define_method: prefix.contains("define_method"),
+    }
+    for parameter in parameters.optionals().iter() {
+        if let Some(parameter) = parameter.as_optional_parameter_node() {
+            let location = parameter.name_loc();
+            result.push(BlockParameterInfo {
+                name: String::from_utf8_lossy(parameter.name().as_slice()).into_owned(),
+                range: location.start_offset()..location.end_offset(),
+                keyword: false,
+                local: false,
             });
         }
-        cursor = close + 1;
     }
-    groups
+    for parameter in parameters.keywords().iter() {
+        if let Some(parameter) = parameter.as_required_keyword_parameter_node() {
+            let location = parameter.name_loc();
+            result.push(BlockParameterInfo {
+                name: String::from_utf8_lossy(parameter.name().as_slice()).into_owned(),
+                range: location.start_offset()..location.end_offset().saturating_sub(1),
+                keyword: true,
+                local: false,
+            });
+        } else if let Some(parameter) = parameter.as_optional_keyword_parameter_node() {
+            let location = parameter.name_loc();
+            result.push(BlockParameterInfo {
+                name: String::from_utf8_lossy(parameter.name().as_slice()).into_owned(),
+                range: location.start_offset()..location.end_offset().saturating_sub(1),
+                keyword: true,
+                local: false,
+            });
+        }
+    }
+    for parameter in [parameters.rest(), parameters.keyword_rest()] {
+        let Some(parameter) = parameter else { continue };
+        if let Some(parameter) = parameter.as_rest_parameter_node() {
+            if let (Some(name), Some(location)) = (parameter.name(), parameter.name_loc()) {
+                result.push(BlockParameterInfo {
+                    name: String::from_utf8_lossy(name.as_slice()).into_owned(),
+                    range: location.start_offset()..location.end_offset(),
+                    keyword: false,
+                    local: false,
+                });
+            }
+        } else if let Some(parameter) = parameter.as_keyword_rest_parameter_node() {
+            if let (Some(name), Some(location)) = (parameter.name(), parameter.name_loc()) {
+                result.push(BlockParameterInfo {
+                    name: String::from_utf8_lossy(name.as_slice()).into_owned(),
+                    range: location.start_offset()..location.end_offset(),
+                    keyword: true,
+                    local: false,
+                });
+            }
+        }
+    }
+    if let Some(parameter) = parameters.block() {
+        if let (Some(name), Some(location)) = (parameter.name(), parameter.name_loc()) {
+            result.push(BlockParameterInfo {
+                name: String::from_utf8_lossy(name.as_slice()).into_owned(),
+                range: location.start_offset()..location.end_offset(),
+                keyword: false,
+                local: false,
+            });
+        }
+    }
+    result
 }
 
-fn lambda_parameter_groups(source: &str) -> Vec<BlockParameterGroup> {
-    source
-        .match_indices("->")
-        .filter_map(|(arrow, _)| {
-            let open = source[arrow + 2..].find('(').map(|at| arrow + 2 + at)?;
-            let close = source[open + 1..].find(')').map(|at| open + 1 + at)?;
-            let body_start = source[close + 1..].find('{').map(|at| close + 2 + at)?;
-            Some(BlockParameterGroup {
-                parameters: parse_block_parameters(source, open + 1, close),
-                body_start,
-                lambda: true,
-                define_method: false,
-            })
-        })
-        .collect()
+#[derive(Default)]
+struct ParameterTargetCollector {
+    parameters: Vec<BlockParameterInfo>,
 }
 
-fn parse_block_parameters(source: &str, start: usize, end: usize) -> Vec<BlockParameterInfo> {
-    let local_start = source[start..end].find(';').map(|at| start + at);
-    let mut search = start;
-    source[start..end]
-        .split([',', ';'])
-        .filter_map(|raw| {
-            let token = raw.trim();
-            let name = token
-                .trim_start_matches('*')
-                .split(['=', ':'])
-                .next()
-                .unwrap_or("")
-                .trim();
-            let relative = source[search..end].find(name)? + search;
-            search = relative + name.len();
-            (!name.is_empty()).then(|| BlockParameterInfo {
-                name: name.to_string(),
-                range: relative..relative + name.len(),
-                keyword: token.contains(':'),
-                local: local_start.is_some_and(|separator| relative > separator),
-            })
-        })
-        .collect()
+impl<'pr> ruby_prism::Visit<'pr> for ParameterTargetCollector {
+    fn visit_required_parameter_node(
+        &mut self,
+        node: &ruby_prism::RequiredParameterNode<'pr>,
+    ) {
+        self.parameters.push(BlockParameterInfo {
+            name: String::from_utf8_lossy(node.name().as_slice()).into_owned(),
+            range: node.location().start_offset()..node.location().end_offset(),
+            keyword: false,
+            local: false,
+        });
+    }
+
+    fn visit_local_variable_target_node(
+        &mut self,
+        node: &ruby_prism::LocalVariableTargetNode<'pr>,
+    ) {
+        self.parameters.push(BlockParameterInfo {
+            name: String::from_utf8_lossy(node.name().as_slice()).into_owned(),
+            range: node.location().start_offset()..node.location().end_offset(),
+            keyword: false,
+            local: false,
+        });
+    }
 }
 
-fn block_body_end(source: &str, start: usize) -> usize {
-    let brace = source[start..].find('}').map(|at| start + at);
-    let ending = source[start..]
-        .match_indices("\nend")
-        .map(|(at, _)| start + at)
-        .next();
-    brace.into_iter().chain(ending).min().unwrap_or(source.len())
+#[derive(Default)]
+struct BlockParameterReads {
+    names: std::collections::HashSet<Vec<u8>>,
+    nested_scopes: u32,
+    binding: bool,
 }
 
-fn block_variable_read(body: &str, name: &str) -> bool {
-    body.lines().any(|line| {
-        let inspected = line.split_once('=').map_or(line, |(_, right)| right);
-        inspected.match_indices(name).any(|(at, _)| {
-            let before = inspected.as_bytes().get(at.wrapping_sub(1)).copied();
-            let after = inspected.as_bytes().get(at + name.len()).copied();
-            let boundary = |byte: Option<u8>| {
-                byte.is_none_or(|byte| !byte.is_ascii_alphanumeric() && byte != b'_')
-            };
-            boundary(before)
-                && boundary(after)
-                && inspected[..at].matches('\'').count() % 2 == 0
-                && inspected[..at].matches('"').count() % 2 == 0
-        })
-    })
+impl<'pr> ruby_prism::Visit<'pr> for BlockParameterReads {
+    fn visit_local_variable_read_node(&mut self, node: &ruby_prism::LocalVariableReadNode<'pr>) {
+        if node.depth() == self.nested_scopes {
+            self.names.insert(node.name().as_slice().to_vec());
+        }
+    }
+
+    fn visit_local_variable_write_node(&mut self, node: &ruby_prism::LocalVariableWriteNode<'pr>) {
+        if node.depth() == self.nested_scopes {
+            self.names.insert(node.name().as_slice().to_vec());
+        }
+        ruby_prism::visit_local_variable_write_node(self, node);
+    }
+
+    fn visit_local_variable_operator_write_node(
+        &mut self,
+        node: &ruby_prism::LocalVariableOperatorWriteNode<'pr>,
+    ) {
+        if node.depth() == self.nested_scopes {
+            self.names.insert(node.name().as_slice().to_vec());
+        }
+        ruby_prism::visit_local_variable_operator_write_node(self, node);
+    }
+
+    fn visit_local_variable_or_write_node(
+        &mut self,
+        node: &ruby_prism::LocalVariableOrWriteNode<'pr>,
+    ) {
+        if node.depth() == self.nested_scopes {
+            self.names.insert(node.name().as_slice().to_vec());
+        }
+        ruby_prism::visit_local_variable_or_write_node(self, node);
+    }
+
+    fn visit_local_variable_and_write_node(
+        &mut self,
+        node: &ruby_prism::LocalVariableAndWriteNode<'pr>,
+    ) {
+        if node.depth() == self.nested_scopes {
+            self.names.insert(node.name().as_slice().to_vec());
+        }
+        ruby_prism::visit_local_variable_and_write_node(self, node);
+    }
+
+    fn visit_call_node(&mut self, node: &ruby_prism::CallNode<'pr>) {
+        if node.name().as_slice() == b"binding" && node.arguments().is_none() {
+            self.binding = true;
+        }
+        ruby_prism::visit_call_node(self, node);
+    }
+
+    fn visit_block_node(&mut self, node: &ruby_prism::BlockNode<'pr>) {
+        self.nested_scopes += 1;
+        ruby_prism::visit_block_node(self, node);
+        self.nested_scopes -= 1;
+    }
+
+    fn visit_lambda_node(&mut self, node: &ruby_prism::LambdaNode<'pr>) {
+        self.nested_scopes += 1;
+        ruby_prism::visit_lambda_node(self, node);
+        self.nested_scopes -= 1;
+    }
+
+    fn visit_def_node(&mut self, node: &ruby_prism::DefNode<'pr>) {
+        if let Some(read) = node.receiver().and_then(|receiver| receiver.as_local_variable_read_node()) {
+            self.names.insert(read.name().as_slice().to_vec());
+        }
+    }
+    fn visit_class_node(&mut self, _node: &ruby_prism::ClassNode<'pr>) {}
+    fn visit_module_node(&mut self, _node: &ruby_prism::ModuleNode<'pr>) {}
+}
+
+fn report_unused_block_parameters(
+    context: &mut CopContext<'_, '_>,
+    parameters: &[BlockParameterInfo],
+    unused: &[usize],
+    lambda: bool,
+    define_method: bool,
+) {
+    for &index in unused {
+        let parameter = &parameters[index];
+        let all_unused = unused.len()
+            == parameters
+                .iter()
+                .filter(|candidate| !candidate.name.starts_with('_'))
+                .count();
+        let message = unused_block_message(
+            parameter,
+            lambda,
+            define_method,
+            all_unused,
+            parameters.len(),
+        );
+        if parameter.keyword {
+            context.report(message, parameter.range.clone());
+        } else {
+            context.replace(
+                message,
+                parameter.range.clone(),
+                parameter.range.clone(),
+                format!("_{}", parameter.name),
+            );
+        }
+    }
 }
 
 fn unused_block_message(
     parameter: &BlockParameterInfo,
-    group: &BlockParameterGroup,
+    lambda: bool,
+    define_method: bool,
     all_unused: bool,
+    parameter_count: usize,
 ) -> String {
     if parameter.local {
         return format!("Unused block local variable - `{}`.", parameter.name);
     }
     let prefix = format!("Unused block argument - `{}`.", parameter.name);
-    if group.lambda && all_unused {
+    if lambda && all_unused {
         return format!("{prefix} If it's necessary, use `_` or `_{}` as an argument name to indicate that it won't be used. Also consider using a proc without arguments instead of a lambda if you want it to accept any arguments but don't care about them.", parameter.name);
     }
-    if group.define_method || !all_unused {
+    if define_method || !all_unused {
         return format!("{prefix} If it's necessary, use `_` or `_{}` as an argument name to indicate that it won't be used.", parameter.name);
     }
-    if group.parameters.len() == 1 {
+    if parameter_count == 1 {
         format!("{prefix} You can omit the argument if you don't care about it.")
     } else {
         format!("{prefix} You can omit all the arguments if you don't care about them.")
