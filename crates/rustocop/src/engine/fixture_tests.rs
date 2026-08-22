@@ -74,6 +74,15 @@ macro_rules! fixture_test {
 // New-cop generator registrations are inserted directly below this line.
 
 fixture_test!(
+    merges_nested_redundant_regexp_quantifiers,
+    "redundant_regexp_quantifiers",
+    "/project/regexp_quantifiers.rb",
+    "Lint/RedundantRegexpQuantifiers",
+    true,
+    RubyVersion::default()
+);
+
+fixture_test!(
     scans_utf8_comment_annotations_without_splitting_characters,
     "comment_annotation_utf8_real_project_regression",
     "/project/test/models/user_test.rb",

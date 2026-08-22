@@ -104,6 +104,9 @@ module UpstreamCopCapture
 
   def capture_upstream_case(source, offenses, file: nil, correction: :unspecified)
     path = capture_path(file)
+    runtime_config = capture_json_value(
+      cop.config.to_h.merge(cop.class.cop_name => cop.config.for_cop(cop.class))
+    )
     test_case = {
       "cop" => cop.class.cop_name,
       "source" => source,
@@ -111,11 +114,12 @@ module UpstreamCopCapture
       "ruby_version" => ruby_version.to_s,
       "parser_engine" => parser_engine.to_s,
       "cop_options" => defined?(cop_options) ? cop_options : {},
+      "lsp" => defined?(RuboCop::LSP) && RuboCop::LSP.enabled?,
       # Some upstream specs construct the subject with a custom Config instead
       # of overriding the shared `configuration` helper. Capture what the cop
       # actually received so style and option-sensitive examples remain
       # distinguishable in the differential corpus.
-      "config" => cop.config.to_h,
+      "config" => runtime_config,
       "offenses" => offenses&.map { |offense| capture_offense(offense) }
     }
     if cop.class.cop_name == "Lint/ScriptPermission" && File.file?(path)

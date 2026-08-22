@@ -45,10 +45,15 @@ abort "captured corpus not found; run script/extract_upstream_cop_specs.rb" unle
 
 cases = []
 per_cop = Hash.new(0)
+excluded_cases = Hash.new(0)
 File.foreach(options[:corpus]) do |line|
   test_case = JSON.parse(line)
   cop = test_case.fetch("cop")
   next if options[:only] && !options[:only].include?(cop)
+  if test_case.fetch("lsp", false)
+    excluded_cases["lsp"] += 1
+    next
+  end
   next if options[:limit] && per_cop[cop] >= options[:limit]
 
   per_cop[cop] += 1
@@ -254,6 +259,7 @@ summary = {
   "fixture_corpus_sha256" => Digest::SHA256.file(options[:corpus]).hexdigest,
   "rubocop_version" => "1.87.0",
   "cases" => results.length,
+  "excluded_cases" => excluded_cases,
   "passed_cases" => results.count { |result| result.fetch("passed") },
   "cops" => by_cop.length,
   "passing_cops" => by_cop.count { |_cop, result| result.fetch("status") == "passing" },

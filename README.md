@@ -45,11 +45,11 @@ configuration. Neither offense-count similarity, a captured-case label, nor an
 old manual review record is accepted as compatibility evidence.
 
 The minimized real-project corpus currently contains 126 passing cases, 12
-pending isolated mismatches, and five configuration-mutation cases. These are
+pending isolated mismatches, and six configuration-mutation cases. These are
 regression coverage, not a substitute for the complete project comparison.
 
-The fixture review updated at `2026-08-21T23:40:34-04:00` matched
-25,644/28,623 captured cases (89.6%); 524/606 cops matched every captured
+The fixture review updated at `2026-08-22T00:47:30-04:00` matched
+25,652/28,618 executable captured cases (89.6%); 528/606 cops matched every
 fixture. Of those, 279 cops also satisfy the current project-exact gate.
 
 ## Ten-project output parity

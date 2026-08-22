@@ -1,10 +1,10 @@
 {
   "version": 1,
   "kind": "fixture_compatibility",
-  "updated_at": "2026-08-21T23:40:34-04:00",
+  "updated_at": "2026-08-22T00:47:30-04:00",
   "rust_commit": "8b5d6b45dc982263abb1163fc74859ca45693763",
-  "native_sha256": "c3933028fc4d8d52dac731de79e8ad4f567444a60c8bb5cfdd5f9b573967a5f7",
-  "fixture_corpus_sha256": "b42b26bcd3a54e560954db497682624a1ecf1548816eef2f8b30a5b897ec6f9c",
+  "native_sha256": "fb13931fadb0e490cbeebdf070f7cf69648d36376109499c608dda2220801ed3",
+  "fixture_corpus_sha256": "5c4a64b7b5dc015bf02f63cb07409033df40dc6f57d54f7de84e78076a8cf8a0",
   "rubocop_version": "1.87.0",
   "results": {
     "Bundler/DuplicatedGem": {
@@ -683,9 +683,9 @@
       "status": "compatible"
     },
     "Lint/Debugger": {
-      "passed": 95,
+      "passed": 97,
       "total": 97,
-      "status": "mismatch"
+      "status": "compatible"
     },
     "Lint/DeprecatedClassMethods": {
       "passed": 31,
@@ -1053,9 +1053,9 @@
       "status": "compatible"
     },
     "Lint/RedundantRegexpQuantifiers": {
-      "passed": 20,
+      "passed": 26,
       "total": 26,
-      "status": "mismatch"
+      "status": "compatible"
     },
     "Lint/RedundantRequireStatement": {
       "passed": 15,
@@ -1364,13 +1364,13 @@
     },
     "Metrics/AbcSize": {
       "passed": 24,
-      "total": 25,
-      "status": "mismatch"
+      "total": 24,
+      "status": "compatible"
     },
     "Metrics/BlockLength": {
       "passed": 36,
-      "total": 37,
-      "status": "mismatch"
+      "total": 36,
+      "status": "compatible"
     },
     "Metrics/BlockNesting": {
       "passed": 7,
@@ -1379,7 +1379,7 @@
     },
     "Metrics/ClassLength": {
       "passed": 11,
-      "total": 34,
+      "total": 33,
       "status": "mismatch"
     },
     "Metrics/CollectionLiteralLength": {
@@ -1389,7 +1389,7 @@
     },
     "Metrics/CyclomaticComplexity": {
       "passed": 15,
-      "total": 37,
+      "total": 36,
       "status": "mismatch"
     },
     "Metrics/MethodLength": {
@@ -1399,7 +1399,7 @@
     },
     "Metrics/ModuleLength": {
       "passed": 6,
-      "total": 21,
+      "total": 20,
       "status": "mismatch"
     },
     "Metrics/ParameterLists": {

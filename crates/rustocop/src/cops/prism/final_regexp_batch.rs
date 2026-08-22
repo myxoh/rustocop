@@ -44,39 +44,57 @@ impl Cop for RedundantRegexpQuantifiers {
         };
         let content = regexp.content_loc();
         let body = &source[content.start_offset()..content.end_offset()];
+        let closing =
+            &source[regexp.closing_loc().start_offset()..regexp.closing_loc().end_offset()];
+        let extended = closing
+            .get(1..)
+            .is_some_and(|options| options.contains('x'));
+        let mut offenses = Vec::new();
+        let mut seen_groups = HashSet::new();
         let mut search = 0;
         while let Some(relative) = body[search..].find("(?:") {
             let group_start = search + relative;
+            search = group_start + 3;
+            if seen_groups.contains(&group_start) {
+                continue;
+            }
             let Some(close) = matching_regexp_group(body, group_start) else {
                 break;
             };
-            let Some((outer, outer_end)) = greedy_simple_quantifier(body, close + 1) else {
-                search = group_start + 3;
+            let outer_start = skip_regexp_whitespace(body, close + 1, extended);
+            let Some(outer) = greedy_quantifier(body, outer_start) else {
                 continue;
             };
-            let Some((inner_start, inner)) = trailing_greedy_quantifier(&body[group_start + 3..close])
-            else {
-                search = group_start + 3;
-                continue;
-            };
-            let atom = &body[group_start + 3..group_start + 3 + inner_start];
-            if !single_regexp_atom(atom) {
-                search = group_start + 3;
-                continue;
+            for inner in quantifier_chain(
+                body,
+                group_start + 3,
+                close,
+                extended,
+                &mut seen_groups,
+            ) {
+                let replacement = if inner.normalized == outer.normalized {
+                    inner.normalized
+                } else {
+                    "*"
+                };
+                offenses.push((inner, outer, replacement));
             }
-            let replacement = if inner == outer { inner } else { "*" };
-            let absolute_inner = content.start_offset() + group_start + 3 + inner_start;
-            let offense = absolute_inner..content.start_offset() + outer_end;
+        }
+        offenses.sort_by_key(|(inner, _, _)| std::cmp::Reverse(inner.start));
+        for (inner, outer, replacement) in offenses {
+            let absolute_inner = content.start_offset() + inner.start;
+            let offense = absolute_inner..content.start_offset() + outer.end;
+            let preserved = &body[inner.end..outer.start];
             context.replace(
                 self.name(),
                 format!(
-                    "Replace redundant quantifiers `{inner}` and `{outer}` with a single `{replacement}`."
+                    "Replace redundant quantifiers `{}` and `{}` with a single `{replacement}`.",
+                    inner.source, outer.source
                 ),
                 offense.clone(),
                 offense,
-                format!("{replacement})"),
+                format!("{replacement}{preserved}"),
             );
-            search = outer_end;
         }
     }
 }
@@ -108,20 +126,140 @@ fn matching_regexp_group(source: &str, start: usize) -> Option<usize> {
     None
 }
 
-fn greedy_simple_quantifier(source: &str, start: usize) -> Option<(&str, usize)> {
-    let quantifier = source.get(start..start + 1)?;
-    if !matches!(quantifier, "+" | "*" | "?")
-        || source.get(start + 1..start + 2).is_some_and(|next| matches!(next, "+" | "?"))
+#[derive(Clone, Copy)]
+struct GreedyQuantifier<'a> {
+    start: usize,
+    end: usize,
+    source: &'a str,
+    normalized: &'static str,
+}
+
+fn greedy_quantifier(source: &str, start: usize) -> Option<GreedyQuantifier<'_>> {
+    let first = source.get(start..start + 1)?;
+    let (end, normalized) = match first {
+        "+" => (start + 1, "+"),
+        "*" => (start + 1, "*"),
+        "?" => (start + 1, "?"),
+        "{" => {
+            let relative_end = source.get(start + 1..)?.find('}')?;
+            let end = start + relative_end + 2;
+            let interval = source.get(start..end)?;
+            let normalized = match interval {
+                "{1,}" => "+",
+                "{0,}" | "{,}" => "*",
+                "{0,1}" | "{,1}" => "?",
+                _ => return None,
+            };
+            (end, normalized)
+        }
+        _ => return None,
+    };
+    if source
+        .get(end..end + 1)
+        .is_some_and(|suffix| matches!(suffix, "+" | "?"))
     {
         return None;
     }
-    Some((quantifier, start + 1))
+    Some(GreedyQuantifier {
+        start,
+        end,
+        source: source.get(start..end)?,
+        normalized,
+    })
 }
 
-fn trailing_greedy_quantifier(source: &str) -> Option<(usize, &str)> {
-    let start = source.len().checked_sub(1)?;
-    let quantifier = source.get(start..)?;
-    matches!(quantifier, "+" | "*" | "?").then_some((start, quantifier))
+fn trailing_greedy_quantifier(
+    source: &str,
+    start: usize,
+    end: usize,
+    extended: bool,
+) -> Option<GreedyQuantifier<'_>> {
+    let significant_end = trim_regexp_whitespace_end(source, start, end, extended);
+    let last = source.get(significant_end.checked_sub(1)?..significant_end)?;
+    let quantifier_start = if matches!(last, "+" | "*" | "?") {
+        significant_end - 1
+    } else if last == "}" {
+        source.get(start..significant_end)?.rfind('{')? + start
+    } else {
+        return None;
+    };
+    let quantifier = greedy_quantifier(source, quantifier_start)?;
+    (quantifier.end == significant_end).then_some(quantifier)
+}
+
+fn quantifier_chain<'a>(
+    source: &'a str,
+    start: usize,
+    end: usize,
+    extended: bool,
+    seen_groups: &mut HashSet<usize>,
+) -> Vec<GreedyQuantifier<'a>> {
+    let content_start = skip_regexp_whitespace(source, start, extended);
+    let content_end = trim_regexp_whitespace_end(source, content_start, end, extended);
+    let quantifier = trailing_greedy_quantifier(source, content_start, content_end, extended);
+    let atom_end = trim_regexp_whitespace_end(
+        source,
+        content_start,
+        quantifier.map_or(content_end, |item| item.start),
+        extended,
+    );
+    let Some(atom) = source.get(content_start..atom_end) else {
+        return Vec::new();
+    };
+    if single_regexp_atom(atom) {
+        return quantifier.into_iter().collect();
+    }
+    let Some((nested_start, nested_end)) =
+        noncapturing_group_content(source, content_start, atom_end)
+    else {
+        return Vec::new();
+    };
+    seen_groups.insert(content_start);
+    let mut quantifiers: Vec<_> = quantifier.into_iter().collect();
+    quantifiers.extend(quantifier_chain(
+        source,
+        nested_start,
+        nested_end,
+        extended,
+        seen_groups,
+    ));
+    quantifiers
+}
+
+fn skip_regexp_whitespace(source: &str, mut at: usize, extended: bool) -> usize {
+    if extended {
+        while source
+            .as_bytes()
+            .get(at)
+            .is_some_and(u8::is_ascii_whitespace)
+        {
+            at += 1;
+        }
+    }
+    at
+}
+
+fn trim_regexp_whitespace_end(source: &str, start: usize, mut end: usize, extended: bool) -> usize {
+    if extended {
+        while end > start
+            && source
+                .as_bytes()
+                .get(end - 1)
+                .is_some_and(u8::is_ascii_whitespace)
+        {
+            end -= 1;
+        }
+    }
+    end
+}
+
+fn noncapturing_group_content(source: &str, start: usize, end: usize) -> Option<(usize, usize)> {
+    let group = source.get(start..end)?;
+    if !group.starts_with("(?:") {
+        return None;
+    }
+    let close = matching_regexp_group(group, 0)?;
+    (close + 1 == group.len()).then_some((start + 3, start + close))
 }
 
 fn single_regexp_atom(source: &str) -> bool {

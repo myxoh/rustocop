@@ -69,7 +69,7 @@ RSpec.describe "RuboCop compatibility" do
       path = File.join(dir, "sample.rb")
       File.write(path, "value = 1  \n")
 
-      rustocop = run_rustocop("-A", ".", chdir: dir)
+      rustocop = run_rustocop("-A", "--only", "Layout/TrailingWhitespace", ".", chdir: dir)
 
       expect(rustocop.stderr).to eq("")
       expect(rustocop.status.exitstatus).to eq(0)

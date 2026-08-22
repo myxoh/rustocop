@@ -1,0 +1,11 @@
+AllCops:
+  DisabledByDefault: true
+  NewCops: disable
+  ParserEngine: parser_prism
+  TargetRubyVersion: 3.4
+
+Lint/Debugger:
+  DebuggerMethods:
+    Pry: ~
+    Kernel:
+      - binding.irb

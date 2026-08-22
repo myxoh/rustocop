@@ -1,0 +1,3 @@
+source: rubocop-1.87.0
+cop: Lint/RedundantRegexpQuantifiers
+upstream_spec: spec/rubocop/cop/lint/redundant_regexp_quantifiers_spec.rb

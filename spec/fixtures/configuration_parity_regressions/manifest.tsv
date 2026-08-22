@@ -4,3 +4,4 @@ Style/UnlessLogicalOperators	nested_unless_logical_operator.rb	strict.yml	chatwo
 Metrics/CollectionLiteralLength	collection_length_threshold.rb	strict.yml	gitlabhq/gitlabhq	spec/models/application_setting_spec.rb
 Style/InverseMethods	custom_inverse_methods.rb	policy.yml	configuration mutation	custom inverse map
 Style/NegatedUnless	negated_unless_prefix.rb	policy.yml	configuration mutation	prefix-only style
+Lint/Debugger	debugger_disabled_pry.rb	debugger_groups.yml	configuration mutation	disabled debugger method group
