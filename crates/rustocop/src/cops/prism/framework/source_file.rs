@@ -380,6 +380,21 @@ impl<'source> SourceFile<'source> {
         ranges.visit(&parsed.node());
         ranges.0
     }
+
+    pub(super) fn comment_ranges(self) -> Vec<Range<usize>> {
+        parse(self.source.as_bytes())
+            .comments()
+            .map(|comment| {
+                let location = comment.location();
+                location.start_offset()..location.end_offset()
+            })
+            .collect()
+    }
+
+    pub(super) fn data_section_start(self) -> Option<usize> {
+        self.lines()
+            .find_map(|(offset, line)| (line.trim() == "__END__").then_some(offset))
+    }
 }
 
 #[cfg(test)]

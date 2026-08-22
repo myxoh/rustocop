@@ -3,4 +3,4 @@ translation = <<~MSG.strip
   - en.abstract_controller.action_name
 MSG
 
-content = lines .join("\n")
+content = lines.map { |line| line } .join("\n")

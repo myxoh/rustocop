@@ -17,6 +17,8 @@ fn space_around_method_call_operator(context: &mut CopContext<'_, '_>) {
     let file = context.source_file();
     let source = context.source();
     let literal_ranges = file.literal_ranges();
+    let comment_ranges = file.comment_ranges();
+    let data_section_start = file.data_section_start();
     let mut operators = file.code_offsets("::");
     operators.extend(file.code_offsets("&."));
     operators.extend(file.code_offsets(".").into_iter().filter(|offset| {
@@ -25,7 +27,11 @@ fn space_around_method_call_operator(context: &mut CopContext<'_, '_>) {
     operators.sort_unstable();
     operators.dedup();
     for start in operators {
-        if literal_ranges
+        if data_section_start.is_some_and(|data| data <= start)
+            || comment_ranges
+                .iter()
+                .any(|range| range.start <= start && start < range.end)
+            || literal_ranges
             .iter()
             .any(|range| range.start <= start && start < range.end)
         {
@@ -63,7 +69,7 @@ fn space_around_method_call_operator(context: &mut CopContext<'_, '_>) {
             && receiver_prefix
                 .as_bytes()
                 .last()
-                .is_some_and(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'_' | b')' | b']'))
+                .is_some_and(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'_' | b')' | b']' | b'}'))
         {
             context.remove(
                 "Avoid using spaces around a method call operator.",

@@ -39,10 +39,17 @@ fn space_around_keyword(context: &mut CopContext<'_, '_>) {
         "return", "super", "then", "unless", "until", "when", "while", "yield",
     ];
     let source = context.source();
-    let literal_ranges = context.source_file().literal_ranges();
+    let file = context.source_file();
+    let literal_ranges = file.literal_ranges();
+    let comment_ranges = file.comment_ranges();
+    let data_section_start = file.data_section_start();
     for keyword in KEYWORDS {
         for start in context.source_file().code_offsets(keyword) {
-            if literal_ranges
+            if data_section_start.is_some_and(|data| data <= start)
+                || comment_ranges
+                    .iter()
+                    .any(|range| range.start <= start && start < range.end)
+                || literal_ranges
                 .iter()
                 .any(|range| range.start <= start && start < range.end)
             {
@@ -51,7 +58,10 @@ fn space_around_keyword(context: &mut CopContext<'_, '_>) {
             let end = start + keyword.len();
             let before = source.as_bytes().get(start.wrapping_sub(1)).copied();
             let after = source.as_bytes().get(end).copied();
-            if matches!(before, Some(b'.' | b':'))
+            let line = file.line(start).trim_start();
+            if after == Some(b'?')
+                || *keyword == "then" && line.starts_with("when ")
+                || matches!(before, Some(b'.' | b':'))
                 || before.is_some_and(|byte| byte.is_ascii_alphabetic() || byte == b'_')
                 || *keyword != "defined?"
                     && after.is_some_and(|byte| byte.is_ascii_alphanumeric() || byte == b'_')

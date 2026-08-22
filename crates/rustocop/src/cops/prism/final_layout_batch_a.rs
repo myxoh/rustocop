@@ -190,8 +190,14 @@ fn space_inside_parens(context: &mut CopContext<'_, '_>) {
     let file = context.source_file();
     let literal_ranges = file.literal_ranges();
     let heredoc_ranges = file.heredoc_ranges();
+    let comment_ranges = file.comment_ranges();
+    let data_section_start = file.data_section_start();
     let inside_literal = |offset| {
-        literal_ranges
+        data_section_start.is_some_and(|start| start <= offset)
+            || comment_ranges
+                .iter()
+                .any(|range| range.start <= offset && offset < range.end)
+            || literal_ranges
             .iter()
             .any(|range| range.start <= offset && offset < range.end)
             && !heredoc_ranges.iter().any(|range| {
