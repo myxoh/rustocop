@@ -169,7 +169,10 @@ records.each do |cop, record|
       next if expected == actual && expected_correction == actual_correction
 
       edge_ok = false
-      errors << "#{cop}: edge case #{test_case["id"]} diagnostics or correction differs"
+      differences = []
+      differences << "diagnostics expected=#{expected.inspect} actual=#{actual.inspect}" unless expected == actual
+      differences << "correction differs" unless expected_correction == actual_correction
+      errors << "#{cop}: edge case #{test_case["id"]} #{differences.join('; ')}"
     rescue StandardError => e
       edge_ok = false
       errors << "#{cop}: edge case #{test_case["id"]} failed: #{e.message}"

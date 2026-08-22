@@ -44,7 +44,14 @@ fn prism_offense(source: &str, index: &SourceIndex, finding: prism::Finding) -> 
         if reversed_empty && finding.start_offset == source.len() && source.ends_with('\n') {
             (line, 0)
         } else if empty_location && finding.start_offset == 0 {
-            (1, 0)
+            if matches!(
+                finding.cop_name,
+                "Bundler/GemFilename" | "Gemspec/RequiredRubyVersion"
+            ) {
+                (1, 1)
+            } else {
+                (1, 0)
+            }
         } else if empty_location {
             index.position(source, finding.start_offset)
         } else if ends_at_newline {

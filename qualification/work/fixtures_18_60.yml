@@ -1630,7 +1630,6 @@ cops:
       source: |
         do_something if multiline &&
                         condition
-        do_something_else
     real_world:
       positives: []
       negatives: []
