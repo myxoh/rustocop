@@ -16,6 +16,9 @@ define_cops! {
 fn space_around_method_call_operator(context: &mut CopContext<'_, '_>) {
     let file = context.source_file();
     let source = context.source();
+    let literal_ranges = file.literal_ranges();
+    let comment_ranges = file.comment_ranges();
+    let data_section_start = file.data_section_start();
     let mut operators = file.code_offsets("::");
     operators.extend(file.code_offsets("&."));
     operators.extend(file.code_offsets(".").into_iter().filter(|offset| {
@@ -24,6 +27,22 @@ fn space_around_method_call_operator(context: &mut CopContext<'_, '_>) {
     operators.sort_unstable();
     operators.dedup();
     for start in operators {
+        if data_section_start.is_some_and(|data| data <= start)
+            || comment_ranges
+                .iter()
+                .any(|range| range.start <= start && start < range.end)
+            || literal_ranges
+            .iter()
+            .any(|range| range.start <= start && start < range.end)
+        {
+            continue;
+        }
+        if source[start..].starts_with('.')
+            && (source.as_bytes().get(start.wrapping_sub(1)) == Some(&b'.')
+                || source.as_bytes().get(start + 1) == Some(&b'.'))
+        {
+            continue;
+        }
         let width = if source[start..].starts_with("::") || source[start..].starts_with("&.") {
             2
         } else {
@@ -45,11 +64,12 @@ fn space_around_method_call_operator(context: &mut CopContext<'_, '_>) {
         let line_start = file.line_start(start);
         let left_start = source[line_start..start].trim_end_matches([' ', '\t']).len() + line_start;
         let receiver_prefix = source[line_start..left_start].trim_end();
-        if left_start < start
+        if !source[start..].starts_with("::")
+            && left_start < start
             && receiver_prefix
                 .as_bytes()
                 .last()
-                .is_some_and(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'_' | b')' | b']'))
+                .is_some_and(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'_' | b')' | b']' | b'}'))
         {
             context.remove(
                 "Avoid using spaces around a method call operator.",

@@ -19,7 +19,7 @@ declare_source_cops! {
 }
 
 fn add_runtime_dependency(source: &str, context: &mut Reporter<'_>) {
-    if !context.path().ends_with(".gemspec") && !source.contains("Gem::Specification.new") {
+    if !context.path().ends_with("(string)") && !context.path().ends_with(".gemspec") {
         return;
     }
     const METHOD: &str = "add_runtime_dependency";

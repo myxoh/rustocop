@@ -29,49 +29,27 @@ fn leading_comment_space(context: &mut CopContext<'_, '_>) {
     let shebang_file = context.source().lines().next().is_some_and(|line| line.starts_with("#!"));
     let config_ru = context.path().rsplit('/').next() == Some("config.ru");
     let gemfile = context.path().rsplit('/').next() == Some("Gemfile");
-    let mut embedded_comment = false;
-    for (line_index, (offset, line)) in context.source_file().lines().enumerate() {
-        if line.trim_start().starts_with("=begin") {
-            embedded_comment = true;
+    let parsed = parse(context.source().as_bytes());
+    for parsed_comment in parsed.comments() {
+        if parsed_comment.type_() != ruby_prism::CommentType::InlineComment {
             continue;
         }
-        if line.trim_start().starts_with("=end") {
-            embedded_comment = false;
-            continue;
-        }
-        if embedded_comment {
-            continue;
-        }
-        let mut quote = None;
-        let mut escaped = false;
-        let mut hash = None;
-        for (index, byte) in line.bytes().enumerate() {
-            if escaped {
-                escaped = false;
-            } else if let Some(delimiter) = quote {
-                if byte == b'\\' {
-                    escaped = true;
-                } else if byte == delimiter {
-                    quote = None;
-                }
-            } else if matches!(byte, b'\'' | b'"') {
-                quote = Some(byte);
-            } else if byte == b'#' {
-                hash = Some(index);
-                break;
-            }
-        }
-        let Some(hash) = hash else { continue };
-        let comment = &line[hash..];
+        let location = parsed_comment.location();
+        let comment = context.source_file().at(&location);
         let content = &comment[1..];
+        let hashes = comment.bytes().take_while(|byte| *byte == b'#').count();
+        let multiple_hash_comment = hashes > 1
+            && (hashes == comment.len()
+                || comment[hashes..].starts_with(char::is_whitespace));
+        let first_line = context.source_file().line_start(location.start_offset()) == 0;
         if content.is_empty()
-            || content.starts_with(char::is_whitespace)
-            || content.starts_with('#')
+            || content.starts_with([' ', '\t'])
+            || multiple_hash_comment
             || content.starts_with('=')
             || content.starts_with("++")
             || content.starts_with("--")
             || shebang_file && content.starts_with('!')
-            || line_index == 0 && config_ru && content.starts_with('\\')
+            || first_line && config_ru && content.starts_with('\\')
             || context.config_bool("AllowDoxygenCommentStyle", false) && content.starts_with('*')
             || context.config_bool("AllowGemfileRubyComment", false)
                 && gemfile
@@ -85,8 +63,8 @@ fn leading_comment_space(context: &mut CopContext<'_, '_>) {
         }
         context.insert(
             "Missing space after `#`.",
-            offset + hash..offset + line.len(),
-            offset + hash + 1,
+            location.start_offset()..location.end_offset(),
+            location.start_offset() + 1,
             " ",
         );
     }
@@ -154,14 +132,14 @@ fn align_continuation(context: &mut CopContext<'_, '_>) {
 
 fn line_continuation_spacing(context: &mut CopContext<'_, '_>) {
     let trimmed_source = context.source().trim_start();
-    if context.source().contains("<<")
-        || ["%i", "%I", "%q", "%Q", "%r", "%x", "%W", "%w", "/", "`"]
+    if ["%i", "%I", "%q", "%Q", "%r", "%x", "%W", "%w", "/", "`"]
             .iter()
             .any(|prefix| trimmed_source.starts_with(prefix))
     {
         return;
     }
     let space_style = context.policy().enforced_style("space") == "space";
+    let heredoc_ranges = context.source_file().heredoc_ranges();
     for (offset, line) in context.source_file().lines() {
         if line.trim() == "__END__" {
             break;
@@ -170,6 +148,12 @@ fn line_continuation_spacing(context: &mut CopContext<'_, '_>) {
             continue;
         }
         let slash = line.rfind('\\').unwrap_or(0);
+        if heredoc_ranges
+            .iter()
+            .any(|range| range.start <= offset + slash && offset + slash < range.end)
+        {
+            continue;
+        }
         if !context
             .source_file()
             .code_offsets("\\")
@@ -201,7 +185,28 @@ fn space_inside_parens(context: &mut CopContext<'_, '_>) {
     let compact = style == "compact";
     let source = context.source();
     let file = context.source_file();
+    let literal_ranges = file.literal_ranges();
+    let heredoc_ranges = file.heredoc_ranges();
+    let comment_ranges = file.comment_ranges();
+    let data_section_start = file.data_section_start();
+    let inside_literal = |offset| {
+        data_section_start.is_some_and(|start| start <= offset)
+            || comment_ranges
+                .iter()
+                .any(|range| range.start <= offset && offset < range.end)
+            || literal_ranges
+            .iter()
+            .any(|range| range.start <= offset && offset < range.end)
+            && !heredoc_ranges.iter().any(|range| {
+                range.start <= offset
+                    && offset < range.end
+                    && file.same_line(offset, range.start)
+            })
+    };
     for opening in file.code_offsets("(") {
+        if inside_literal(opening) {
+            continue;
+        }
         let whitespace_end = opening
             + 1
             + source[opening + 1..]
@@ -234,10 +239,16 @@ fn space_inside_parens(context: &mut CopContext<'_, '_>) {
         }
     }
     for closing in file.code_offsets(")") {
+        if inside_literal(closing) {
+            continue;
+        }
         let line_start = file.line_start(closing);
         let whitespace_start = source[line_start..closing].trim_end_matches([' ', '\t']).len() + line_start;
         let previous = source.as_bytes().get(whitespace_start.wrapping_sub(1)).copied();
-        if source.as_bytes().get(closing.wrapping_sub(1)) == Some(&b'\n') || previous == Some(b'(') {
+        if whitespace_start == line_start
+            || source.as_bytes().get(closing.wrapping_sub(1)) == Some(&b'\n')
+            || previous == Some(b'(')
+        {
             continue;
         }
         let whitespace = whitespace_start..closing;
@@ -457,9 +468,10 @@ fn indentation_style(context: &mut CopContext<'_, '_>) {
         }
         let leading = &line[..indentation];
         if spaces_style && leading.contains('\t') {
+            let offense_end = leading.rfind('\t').map_or(indentation, |tab| tab + 1);
             context.replace(
                 "Tab detected in indentation.",
-                offset..offset + indentation,
+                offset..offset + offense_end,
                 offset..offset + indentation,
                 leading.replace('\t', &" ".repeat(width)),
             );
@@ -470,7 +482,7 @@ fn indentation_style(context: &mut CopContext<'_, '_>) {
                 "Space detected in indentation.",
                 offset..offset + offense_end,
                 offset..offset + indentation,
-                format!("{}{}", "\t".repeat(indentation / width), " ".repeat(indentation % width)),
+                "\t".repeat(indentation / width),
             );
         }
     }

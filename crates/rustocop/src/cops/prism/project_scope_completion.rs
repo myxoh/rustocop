@@ -152,7 +152,7 @@ fn development_dependencies(context: &mut CopContext<'_, '_>) {
 }
 
 fn deprecated_gemspec_attribute(context: &mut CopContext<'_, '_>) {
-    if !context.path().ends_with(".gemspec") {
+    if !context.path().ends_with("(string)") && !context.path().ends_with(".gemspec") {
         return;
     }
     let mut in_specification = false;
