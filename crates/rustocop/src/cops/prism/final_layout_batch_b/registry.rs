@@ -59,7 +59,8 @@ fn space_around_keyword(context: &mut CopContext<'_, '_>) {
             let before = source.as_bytes().get(start.wrapping_sub(1)).copied();
             let after = source.as_bytes().get(end).copied();
             let line = file.line(start).trim_start();
-            if after == Some(b'?')
+            if matches!(after, Some(b'?' | b'!'))
+                || line.starts_with(&format!("def {keyword}"))
                 || *keyword == "then" && line.starts_with("when ")
                 || matches!(before, Some(b'.' | b':'))
                 || before.is_some_and(|byte| byte.is_ascii_alphabetic() || byte == b'_')
