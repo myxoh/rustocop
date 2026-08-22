@@ -48,30 +48,30 @@ The minimized real-project corpus currently contains 126 passing cases, 12
 pending isolated mismatches, and five configuration-mutation cases. These are
 regression coverage, not a substitute for the complete project comparison.
 
-The fixture review updated at `2026-08-21T22:36:46-04:00` matched
-22,684/28,623 captured cases (79.3%); 507/606 cops matched every captured
-fixture. Of those, 265 cops also satisfy the current project-exact gate.
+The fixture review updated at `2026-08-21T23:40:34-04:00` matched
+25,644/28,623 captured cases (89.6%); 524/606 cops matched every captured
+fixture. Of those, 279 cops also satisfy the current project-exact gate.
 
 ## Ten-project output parity
 
 The real-project matrix asks whether each cop emits the same path, severity,
 message, and source range as RuboCop across 54,146 Ruby files in ten projects.
 
-The complete audit updated at `2026-08-21T22:15:13-04:00` found 280
-project-exact cops, 87 dormant cops, 237 mismatches, one Rust crash, and one
+The complete audit updated at `2026-08-21T23:57:33-04:00` found 285
+project-exact cops, 87 dormant cops, 232 mismatches, one Rust crash, and one
 RuboCop command-line error. The mismatches and crash are real; the recent
 repair work improved the matrix but did not reduce them to zero.
 
 | Real-project classification | Complete checkpoint |
 | --- | ---: |
-| Project-exact | 280 / 606 (46.2%) |
+| Project-exact | 285 / 606 (47.0%) |
 | Exact but dormant | 87 / 606 |
-| Mismatching | 237 / 606 |
+| Mismatching | 232 / 606 |
 | Rust crashes | 1 / 606 |
 | RuboCop `--only` limitation | 1 / 606 |
 
-The checkpoint is bound to Rust source `95ca434` and native binary SHA-256
-`a3ad1372d52e2c73626163029c7a0f081e7a6a5592f9513e560ad23dde68ddb6`.
+The checkpoint is bound to Rust source `8b5d6b4` and native binary SHA-256
+`c3933028fc4d8d52dac731de79e8ad4f567444a60c8bb5cfdd5f9b573967a5f7`.
 Project-exact status is the strongest current diagnostic evidence. Unexercised
 configuration and autocorrection branches still require RuboCop-derived
 fixtures.
