@@ -38,47 +38,127 @@ fn combinable_defined(context: &mut CopContext<'_, '_>) {
     let source = context.source();
     let mut search = 0;
     while let Some(relative) = source[search..].find("defined?(") {
-        let first_start = search + relative;
-        let first_open = first_start + "defined?".len();
-        let Some(first_close) =
-            super::source_syntax::matching_delimiter(source, first_open, b'(', b')')
-        else {
-            break;
-        };
-        let tail = &source[first_close + 1..];
-        let whitespace = tail.len() - tail.trim_start_matches([' ', '\t']).len();
-        let tail = &tail[whitespace..];
-        let Some(after_operator) = tail.strip_prefix("&&").or_else(|| tail.strip_prefix("and"))
-        else {
-            search = first_close + 1;
+        let chain_start = search + relative;
+        let Some(first) = defined_call_at(source, chain_start) else {
+            search = chain_start + "defined?".len();
             continue;
         };
-        let operator_tail = after_operator.trim_start_matches([' ', '\t']);
-        if !operator_tail.starts_with("defined?(") {
-            search = first_close + 1;
-            continue;
+        let mut calls = vec![first];
+        let mut cursor = calls[0].end;
+        while let Some((next_start, next)) = next_defined_call(source, cursor) {
+            if let Some(previous) = calls.last_mut() {
+                previous.following_operator_end = next_start;
+            }
+            calls.push(next);
+            cursor = calls.last().map_or(cursor, |call| call.end);
+            if next_start >= source.len() {
+                break;
+            }
         }
-        let second_start = source.len() - operator_tail.len();
-        let second_open = second_start + "defined?".len();
-        let Some(second_close) =
-            super::source_syntax::matching_delimiter(source, second_open, b'(', b')')
-        else {
-            break;
-        };
-        let first_subject = source[first_open + 1..first_close].trim();
-        let second_subject = source[second_open + 1..second_close].trim();
-        if second_subject
-            .strip_prefix(first_subject)
-            .is_some_and(|suffix| suffix.starts_with('.') || suffix.starts_with("::"))
-        {
-            context.remove(
-                "Combine nested `defined?` calls.",
-                first_start..second_close + 1,
-                first_start..second_start,
-            );
+
+        let mut offenses = Vec::new();
+        for current in 1..calls.len() {
+            let Some(ancestor) = (0..current)
+                .find(|prior| directly_nested(&calls[*prior].subject, &calls[current].subject))
+            else {
+                continue;
+            };
+            let edit = if calls[ancestor].subject.depth < calls[current].subject.depth {
+                calls[ancestor].start..calls[ancestor].following_operator_end
+            } else {
+                calls[current].preceding_operator_start..calls[current].end
+            };
+            offenses.push((chain_start..calls[current].end, edit));
         }
-        search = second_close + 1;
+        for (offense, edit) in offenses.into_iter().rev() {
+            context.remove("Combine nested `defined?` calls.", offense, edit);
+        }
+        search = calls.last().map_or(chain_start + 1, |call| call.end);
     }
+}
+
+#[derive(Clone)]
+struct DefinedSubject {
+    rooted: bool,
+    parts: Vec<String>,
+    depth: usize,
+}
+
+struct DefinedCall {
+    start: usize,
+    end: usize,
+    preceding_operator_start: usize,
+    following_operator_end: usize,
+    subject: DefinedSubject,
+}
+
+fn defined_call_at(source: &str, start: usize) -> Option<DefinedCall> {
+    let open = start + "defined?".len();
+    let close = super::source_syntax::matching_delimiter(source, open, b'(', b')')?;
+    let subject = defined_subject(source.get(open + 1..close)?.trim())?;
+    Some(DefinedCall {
+        start,
+        end: close + 1,
+        preceding_operator_start: start,
+        following_operator_end: close + 1,
+        subject,
+    })
+}
+
+fn next_defined_call(source: &str, previous_end: usize) -> Option<(usize, DefinedCall)> {
+    let tail = source.get(previous_end..)?;
+    let leading = tail.len() - tail.trim_start_matches([' ', '\t']).len();
+    let operator_start = previous_end + leading;
+    let tail = &tail[leading..];
+    let (operator, after_operator) = if let Some(after) = tail.strip_prefix("&&") {
+        ("&&", after)
+    } else if tail.starts_with("and") && tail.as_bytes().get(3).is_none_or(u8::is_ascii_whitespace)
+    {
+        ("and", &tail[3..])
+    } else {
+        return None;
+    };
+    let spacing = after_operator.len() - after_operator.trim_start_matches([' ', '\t']).len();
+    let next_start = operator_start + operator.len() + spacing;
+    if !source.get(next_start..)?.starts_with("defined?(") {
+        return None;
+    }
+    let mut call = defined_call_at(source, next_start)?;
+    call.preceding_operator_start = previous_end;
+    call.following_operator_end = next_start;
+    Some((next_start, call))
+}
+
+fn defined_subject(source: &str) -> Option<DefinedSubject> {
+    let rooted = source.starts_with("::");
+    let source = source.strip_prefix("::").unwrap_or(source);
+    let parts = source
+        .split(['.', ':'])
+        .filter(|part| !part.is_empty())
+        .map(str::to_string)
+        .collect::<Vec<_>>();
+    if parts.is_empty()
+        || parts.iter().any(|part| {
+            !part
+                .bytes()
+                .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
+        })
+    {
+        return None;
+    }
+    Some(DefinedSubject {
+        rooted,
+        depth: parts.len(),
+        parts,
+    })
+}
+
+fn directly_nested(left: &DefinedSubject, right: &DefinedSubject) -> bool {
+    if left.rooted != right.rooted || left.depth.abs_diff(right.depth) != 1 {
+        return false;
+    }
+    let shared = left.depth.min(right.depth);
+    left.parts[..shared] == right.parts[..shared]
 }
 
 impl ForRule<'_, '_, '_> {

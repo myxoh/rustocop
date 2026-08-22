@@ -1,0 +1,4 @@
+cop	line	column	last_line	last_column	correctable	corrected	message
+Lint/DuplicateSetElement	2	16	2	18	true	true	Remove the duplicate element in Set.
+Lint/DuplicateSetElement	3	26	3	28	true	true	Remove the duplicate element in SortedSet.
+Lint/DuplicateSetElement	4	14	4	17	true	true	Remove the duplicate element in Set.

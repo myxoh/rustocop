@@ -391,64 +391,77 @@ fn unused_block_message(
 
 fn ambiguous_range(context: &mut CopContext<'_, '_>) {
     for (offset, line) in context.source_file().lines() {
-        let indent = line.len() - line.trim_start().len();
         let code = line.trim_start();
-        for operator in ["...", ".."] {
-            if !code.contains(").each do") {
-                if let Some(at) = line.find(operator) {
-                    let rhs = &line[at + operator.len()..];
-                    let left_parenthesized = line[..at].trim_end().starts_with('(');
-                    let right_parenthesized = rhs.trim_start().starts_with('(');
-                    if rhs.contains('.') && left_parenthesized != right_parenthesized {
-                        context.report(
-                            "Wrap complex range boundaries with parentheses to avoid ambiguity.",
-                            offset + at..offset + line.len(),
-                        );
-                    }
-                }
-                continue;
+        if code.starts_with(['\'', '"', '`', '/', ':']) {
+            continue;
+        }
+        let Some((at, operator)) = line
+            .find("...")
+            .map(|at| (at, "..."))
+            .or_else(|| line.find("..").map(|at| (at, "..")))
+        else {
+            continue;
+        };
+        let operator_end = at + operator.len();
+        let unmatched_open = line[..at].rfind('(').filter(|open| {
+            line[*open + 1..at].matches('(').count() >= line[*open + 1..at].matches(')').count()
+        });
+        let left_start = unmatched_open.map_or(0, |open| open + 1);
+        let right_end = unmatched_open
+            .and_then(|_| {
+                line[operator_end..]
+                    .find(')')
+                    .map(|close| operator_end + close)
+            })
+            .unwrap_or(line.len());
+        let require_method_chains = context.config_bool("RequireParenthesesForMethodChains", false);
+        let left = trimmed_boundary(line, left_start..at);
+        let right = trimmed_boundary(line, operator_end..right_end);
+        for boundary in [left, right].into_iter().flatten() {
+            let value = &line[boundary.clone()];
+            if ambiguous_range_boundary(value, require_method_chains) {
+                let absolute = offset + boundary.start..offset + boundary.end;
+                context.replace_many(
+                    "Wrap complex range boundaries with parentheses to avoid ambiguity.",
+                    absolute.clone(),
+                    vec![
+                        (absolute.start..absolute.start, "(".to_string()),
+                        (absolute.end..absolute.end, ")".to_string()),
+                    ],
+                );
             }
-            let Some(at) = code.find(operator) else {
-                continue;
-            };
-            let Some(open) = code[..at].rfind('(') else {
-                continue;
-            };
-            let Some(close) = code[at + operator.len()..]
-                .rfind(").")
-                .map(|relative| at + operator.len() + relative)
-                .or_else(|| code.rfind(')'))
-            else {
-                continue;
-            };
-            let left = &code[open + 1..at];
-            let right = &code[at + operator.len()..close];
-            let boundary = if is_unparenthesized_range_arithmetic(left) {
-                open + 1..at
-            } else if is_unparenthesized_range_arithmetic(right) {
-                at + operator.len()..close
-            } else {
-                continue;
-            };
-            let absolute = offset + indent + boundary.start..offset + indent + boundary.end;
-            context.replace_many(
-                "Wrap complex range boundaries with parentheses to avoid ambiguity.",
-                absolute.clone(),
-                vec![
-                    (absolute.start..absolute.start, "(".to_string()),
-                    (absolute.end..absolute.end, ")".to_string()),
-                ],
-            );
         }
     }
 }
 
-fn is_unparenthesized_range_arithmetic(boundary: &str) -> bool {
-    !boundary.starts_with('(')
-        && !boundary.ends_with(')')
-        && [" + ", " - ", " * ", " / ", " % "]
-            .iter()
-            .any(|operator| boundary.contains(operator))
+fn trimmed_boundary(
+    source: &str,
+    mut range: std::ops::Range<usize>,
+) -> Option<std::ops::Range<usize>> {
+    while range.start < range.end && source.as_bytes()[range.start].is_ascii_whitespace() {
+        range.start += 1;
+    }
+    while range.end > range.start && source.as_bytes()[range.end - 1].is_ascii_whitespace() {
+        range.end -= 1;
+    }
+    (range.start < range.end).then_some(range)
+}
+
+fn ambiguous_range_boundary(boundary: &str, require_method_chains: bool) -> bool {
+    if boundary.starts_with('(') && boundary.ends_with(')') {
+        return false;
+    }
+    if [" || ", " && ", " + ", " - ", " * ", " % "]
+        .iter()
+        .any(|operator| boundary.contains(operator))
+    {
+        return true;
+    }
+    if !boundary.contains('.') {
+        return false;
+    }
+    let receiver = boundary.split('.').next().unwrap_or_default();
+    require_method_chains || receiver.bytes().all(|byte| byte.is_ascii_digit())
 }
 
 fn non_atomic_file_operation(context: &mut CopContext<'_, '_>) {

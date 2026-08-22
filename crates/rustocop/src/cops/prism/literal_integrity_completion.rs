@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use super::*;
 
@@ -52,37 +52,18 @@ fn duplicate_hash_key(context: &mut CopContext<'_, '_>) {
 fn duplicate_set_element(context: &mut CopContext<'_, '_>) {
     let source = context.source();
     report_duplicate_percent_symbol_sets(source, context);
-    for marker in ["Set["] {
-        let mut search = 0;
-        while let Some(relative) = source[search..].find(marker) {
-            let start = search + relative;
-            let open = start + marker.len() - 1;
-            let Some(close_relative) = source[open..].find(']') else {
-                break;
-            };
-            let close = open + close_relative;
-            let body = &source[open + 1..close];
-            let mut seen = Vec::new();
-            for (position, entry) in top_level_entries(body) {
-                let value = entry.trim();
-                let leading = entry.len() - entry.trim_start().len();
-                if value.contains(['(', ')']) || value.contains("#{") {
-                    continue;
-                }
-                if seen.contains(&value) {
-                    let value_start = open + 1 + position + leading;
-                    let comma_start = source[..value_start].rfind(',').unwrap_or(value_start);
-                    context.remove(
-                        "Remove the duplicate element in Set.",
-                        value_start..value_start + value.len(),
-                        comma_start..value_start + value.len(),
-                    );
-                } else {
-                    seen.push(value);
-                }
-            }
-            search = close + 1;
+    let mut inspected = HashSet::new();
+    for (open, _) in source.match_indices('[') {
+        if source[..open].ends_with("%i") || !inspected.insert(open) {
+            continue;
         }
+        let Some(close) = super::source_syntax::matching_delimiter(source, open, b'[', b']') else {
+            continue;
+        };
+        let Some(name) = set_constructor_name(source, open, close) else {
+            continue;
+        };
+        report_duplicate_set_entries(source, open, close, name, context);
     }
 }
 
@@ -94,10 +75,18 @@ fn report_duplicate_percent_symbol_sets(source: &str, context: &mut CopContext<'
             break;
         };
         let close = open + 1 + close_relative;
-        if !source[close + 1..].trim_start().starts_with(".to_set") {
+        let before = &source[..open.saturating_sub(2)];
+        let after = &source[close + 1..];
+        let name = if before.ends_with("SortedSet.new(") {
+            "SortedSet"
+        } else if before.ends_with("Set.new(") {
+            "Set"
+        } else if after.starts_with(".to_set") || after.starts_with("&.to_set") {
+            "Set"
+        } else {
             search = close + 1;
             continue;
-        }
+        };
         let body = &source[open + 1..close];
         let mut seen = Vec::<&str>::new();
         let mut cursor = 0;
@@ -109,7 +98,7 @@ fn report_duplicate_percent_symbol_sets(source: &str, context: &mut CopContext<'
                     .rfind(char::is_whitespace)
                     .unwrap_or(value_start);
                 context.remove(
-                    "Remove the duplicate element in Set.",
+                    format!("Remove the duplicate element in {name}."),
                     value_start..value_start + value.len(),
                     removal_start..value_start + value.len(),
                 );
@@ -120,6 +109,82 @@ fn report_duplicate_percent_symbol_sets(source: &str, context: &mut CopContext<'
         }
         search = close + 1;
     }
+}
+
+fn set_constructor_name(source: &str, open: usize, close: usize) -> Option<&'static str> {
+    let before = &source[..open];
+    if before.ends_with("SortedSet") || before.ends_with("SortedSet.new(") {
+        Some("SortedSet")
+    } else if before.ends_with("Set") || before.ends_with("Set.new(") {
+        let boundary = before
+            .len()
+            .saturating_sub(if before.ends_with("Set.new(") {
+                "Set.new(".len()
+            } else {
+                "Set".len()
+            });
+        if boundary > 0 && source.as_bytes()[boundary - 1].is_ascii_alphanumeric() {
+            None
+        } else {
+            Some("Set")
+        }
+    } else {
+        let after = &source[close + 1..];
+        (after.starts_with(".to_set") || after.starts_with("&.to_set")).then_some("Set")
+    }
+}
+
+fn report_duplicate_set_entries(
+    source: &str,
+    open: usize,
+    close: usize,
+    name: &str,
+    context: &mut CopContext<'_, '_>,
+) {
+    let body = &source[open + 1..close];
+    let mut seen = Vec::new();
+    for (position, entry) in top_level_entries(body) {
+        let value = entry.trim();
+        let leading = entry.len() - entry.trim_start().len();
+        if !stable_set_element(value, &source[..open]) {
+            continue;
+        }
+        if seen.contains(&value) {
+            let value_start = open + 1 + position + leading;
+            let comma_start = source[..value_start].rfind(',').unwrap_or(value_start);
+            context.remove(
+                format!("Remove the duplicate element in {name}."),
+                value_start..value_start + value.len(),
+                comma_start..value_start + value.len(),
+            );
+        } else {
+            seen.push(value);
+        }
+    }
+}
+
+fn stable_set_element(value: &str, preceding_source: &str) -> bool {
+    if value.is_empty()
+        || value.contains("#{")
+        || value.contains("&.")
+        || value.contains(" ? ")
+        || value.contains(['(', ')'])
+    {
+        return false;
+    }
+    let first = value.as_bytes()[0];
+    if matches!(first, b':' | b'@' | b'\'' | b'"')
+        || first.is_ascii_uppercase()
+        || first.is_ascii_digit()
+        || matches!(value, "true" | "false" | "nil")
+    {
+        return true;
+    }
+    preceding_source.lines().any(|line| {
+        let line = line.trim_start();
+        line.strip_prefix(value)
+            .is_some_and(|tail| tail.trim_start().starts_with('='))
+    })
 }
 
 fn numeric_constant_result(context: &mut CopContext<'_, '_>) {
@@ -165,15 +230,21 @@ fn numeric_constant_result(context: &mut CopContext<'_, '_>) {
 fn symbol_conversion(context: &mut CopContext<'_, '_>) {
     let source = context.source();
     for (start, _) in source.match_indices(':') {
+        if source.as_bytes().get(start.wrapping_sub(1)) == Some(&b':')
+            || source.as_bytes().get(start + 1) == Some(&b':')
+        {
+            continue;
+        }
         let tail = &source[start + 1..];
         let name_len = tail
             .bytes()
             .take_while(|byte| byte.is_ascii_alphanumeric() || *byte == b'_')
             .count();
-        if name_len > 0
-            && source.get(start + 1 + name_len..start + 1 + name_len + 7) == Some(".to_sym")
-        {
-            let end = start + 1 + name_len + 7;
+        let conversion = source
+            .get(start + 1 + name_len..)
+            .and_then(symbol_conversion_method);
+        if name_len > 0 && conversion.is_some() {
+            let end = start + 1 + name_len + conversion.unwrap_or_default().len();
             let symbol = &source[start..start + 1 + name_len];
             context.replace(
                 format!("Unnecessary symbol conversion; use `{symbol}` instead."),
@@ -184,37 +255,182 @@ fn symbol_conversion(context: &mut CopContext<'_, '_>) {
         }
     }
     for quote in ['\'', '"'] {
-        let needle = format!("{quote}.to_sym");
-        let mut search = 0;
-        while let Some(relative) = source[search..].find(&needle) {
-            let end = search + relative + needle.len();
-            let Some(start) = source[..end - needle.len()].rfind(quote) else {
-                break;
-            };
-            let value = &source[start + 1..end - needle.len()];
-            if value.contains("#{") || value.contains(' ') || value.is_empty() {
+        for method in [".to_sym", ".intern"] {
+            let needle = format!("{quote}{method}");
+            let mut search = 0;
+            while let Some(relative) = source[search..].find(&needle) {
+                let closing = search + relative;
+                let end = closing + needle.len();
+                let Some(start) = source[..closing].rfind(quote) else {
+                    break;
+                };
+                let value = &source[start + 1..closing];
+                if value.contains(' ') || value.is_empty() {
+                    search = end;
+                    continue;
+                }
+                let replacement = symbol_literal(value, quote);
+                context.replace(
+                    format!("Unnecessary symbol conversion; use `{replacement}` instead."),
+                    start..end,
+                    start..end,
+                    replacement,
+                );
                 search = end;
-                continue;
             }
-            let bare = value.bytes().enumerate().all(|(index, byte)| {
-                byte.is_ascii_alphanumeric()
-                    || byte == b'_'
-                    || (index + 1 == value.len() && matches!(byte, b'!' | b'?' | b'='))
-            });
-            let replacement = if bare {
-                format!(":{value}")
-            } else {
-                format!(":{quote}{value}{quote}")
-            };
-            context.replace(
-                format!("Unnecessary symbol conversion; use `{replacement}` instead."),
-                start..end,
-                start..end,
-                replacement,
-            );
-            search = end;
         }
     }
+
+    for quote in ['\'', '"'] {
+        let needle = format!(":{quote}");
+        let mut search = 0;
+        while let Some(relative) = source[search..].find(&needle) {
+            let start = search + relative;
+            let content_start = start + 2;
+            let Some(relative_close) = source[content_start..].find(quote) else {
+                break;
+            };
+            let close = content_start + relative_close;
+            let value = &source[content_start..close];
+            if bare_symbol_name(value, true) {
+                let replacement = format!(":{value}");
+                context.replace(
+                    format!("Unnecessary symbol conversion; use `{replacement}` instead."),
+                    start..close + 1,
+                    start..close + 1,
+                    replacement,
+                );
+            }
+            search = close + 1;
+        }
+    }
+
+    check_symbol_hash_labels(context);
+}
+
+fn symbol_conversion_method(source: &str) -> Option<&'static str> {
+    [".to_sym", ".intern"]
+        .into_iter()
+        .find(|method| source.starts_with(method))
+}
+
+fn symbol_literal(value: &str, quote: char) -> String {
+    if bare_symbol_name(value, true) && !value.contains("#{") {
+        format!(":{value}")
+    } else {
+        format!(":{quote}{value}{quote}")
+    }
+}
+
+fn bare_symbol_name(value: &str, allow_suffix: bool) -> bool {
+    !value.is_empty()
+        && value.bytes().enumerate().all(|(index, byte)| {
+            byte.is_ascii_alphanumeric()
+                || byte == b'_'
+                || (allow_suffix && index + 1 == value.len() && matches!(byte, b'!' | b'?' | b'='))
+        })
+}
+
+fn check_symbol_hash_labels(context: &mut CopContext<'_, '_>) {
+    let source = context.source();
+    let style = context.policy().enforced_style("strict");
+    let quoted = quoted_hash_labels(source);
+    let quote_all = style == "consistent"
+        && quoted
+            .iter()
+            .any(|label| !bare_symbol_name(&source[label.content.clone()], false));
+
+    if !quote_all {
+        for label in quoted {
+            let value = &source[label.content.clone()];
+            if !bare_symbol_name(value, true) || value.ends_with('=') {
+                continue;
+            }
+            let replacement = format!("{value}:");
+            context.replace(
+                format!("Unnecessary symbol conversion; use `{replacement}` instead."),
+                label.start..label.close + 1,
+                label.start..label.close + 2,
+                replacement,
+            );
+        }
+        return;
+    }
+
+    for label in unquoted_hash_labels(source) {
+        let value = &source[label.start..label.end];
+        let replacement = format!("\"{value}\":");
+        context.replace(
+            format!(
+                "Symbol hash key should be quoted for consistency; use `{replacement}` instead."
+            ),
+            label.start..label.end,
+            label.start..label.end + 1,
+            replacement,
+        );
+    }
+}
+
+struct QuotedHashLabel {
+    start: usize,
+    close: usize,
+    content: std::ops::Range<usize>,
+}
+
+fn quoted_hash_labels(source: &str) -> Vec<QuotedHashLabel> {
+    let bytes = source.as_bytes();
+    let mut labels = Vec::new();
+    let mut at = 0;
+    while at < bytes.len() {
+        let quote = bytes[at];
+        if !matches!(quote, b'\'' | b'"') {
+            at += 1;
+            continue;
+        }
+        let mut close = at + 1;
+        while close < bytes.len() && bytes[close] != quote {
+            close += 1;
+        }
+        if (at == 0 || bytes[at - 1] != b':') && bytes.get(close + 1) == Some(&b':') {
+            labels.push(QuotedHashLabel {
+                start: at,
+                close,
+                content: at + 1..close,
+            });
+        }
+        at = close.saturating_add(1);
+    }
+    labels
+}
+
+struct UnquotedHashLabel {
+    start: usize,
+    end: usize,
+}
+
+fn unquoted_hash_labels(source: &str) -> Vec<UnquotedHashLabel> {
+    let bytes = source.as_bytes();
+    let mut labels = Vec::new();
+    let mut at = 0;
+    while at < bytes.len() {
+        if !bytes[at].is_ascii_alphabetic()
+            || at > 0 && !matches!(bytes[at - 1], b'{' | b',' | b' ' | b'\t' | b'\n')
+        {
+            at += 1;
+            continue;
+        }
+        let start = at;
+        at += 1;
+        while at < bytes.len()
+            && (bytes[at].is_ascii_alphanumeric() || matches!(bytes[at], b'_' | b'!' | b'?'))
+        {
+            at += 1;
+        }
+        if bytes.get(at) == Some(&b':') && bytes.get(at + 1) != Some(&b':') {
+            labels.push(UnquotedHashLabel { start, end: at });
+        }
+    }
+    labels
 }
 
 fn double_negation(context: &mut CopContext<'_, '_>) {

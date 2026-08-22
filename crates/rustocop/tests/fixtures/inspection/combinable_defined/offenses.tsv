@@ -1,0 +1,6 @@
+cop	line	column	last_line	last_column	correctable	corrected	message
+Style/CombinableDefined	1	1	1	35	true	false	Combine nested `defined?` calls.
+Style/CombinableDefined	2	1	2	35	true	false	Combine nested `defined?` calls.
+Style/CombinableDefined	4	1	4	62	true	false	Combine nested `defined?` calls.
+Style/CombinableDefined	4	1	4	35	true	false	Combine nested `defined?` calls.
+Style/CombinableDefined	5	1	5	40	true	false	Combine nested `defined?` calls.

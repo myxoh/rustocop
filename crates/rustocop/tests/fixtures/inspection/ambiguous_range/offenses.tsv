@@ -1,0 +1,5 @@
+cop	line	column	last_line	last_column	correctable	corrected	message
+Lint/AmbiguousRange	1	1	1	6	true	true	Wrap complex range boundaries with parentheses to avoid ambiguity.
+Lint/AmbiguousRange	1	9	1	14	true	true	Wrap complex range boundaries with parentheses to avoid ambiguity.
+Lint/AmbiguousRange	3	5	3	10	true	true	Wrap complex range boundaries with parentheses to avoid ambiguity.
+Lint/AmbiguousRange	4	3	4	8	true	true	Wrap complex range boundaries with parentheses to avoid ambiguity.
