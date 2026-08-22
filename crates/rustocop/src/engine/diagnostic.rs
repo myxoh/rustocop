@@ -72,7 +72,7 @@ fn prism_offense(source: &str, index: &SourceIndex, finding: prism::Finding) -> 
         column,
         last_line,
         last_column,
-        length: if empty_location {
+        length: if empty_location && finding.cop_name != "Layout/EmptyLineAfterMagicComment" {
             0
         } else {
             source
@@ -141,6 +141,21 @@ mod tests {
             },
         );
         assert_eq!((empty.last_line, empty.last_column), (1, 0));
+        assert_eq!(empty.length, 0);
+
+        let inserted_blank_line = prism_offense(
+            "# frozen_string_literal: true\nvalue\n",
+            &SourceIndex::new("# frozen_string_literal: true\nvalue\n"),
+            prism::Finding {
+                cop_name: "Layout/EmptyLineAfterMagicComment",
+                message: "Add an empty line after magic comments.".to_string(),
+                correctable: true,
+                corrected: false,
+                start_offset: 30,
+                end_offset: 30,
+            },
+        );
+        assert_eq!(inserted_blank_line.length, 1);
 
         let newline = prism_offense(
             "comment\n",

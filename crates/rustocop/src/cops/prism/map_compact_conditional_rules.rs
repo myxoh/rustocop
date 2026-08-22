@@ -25,7 +25,11 @@ impl MapCompactWithConditionalBlockRule<'_, '_, '_> {
         };
         let Some(block) = map_call.block().and_then(|block| block.as_block_node()) else { return };
         let Some(parameter) = single_block_parameter(&block, self.source_file()) else { return };
-        let Some((condition, method)) = conditional_selection(&block, &parameter, self.source_file()) else { return };
+        let Some((condition, method)) =
+            conditional_selection(&block, &parameter, self.source_file(), compact)
+        else {
+            return;
+        };
         let Some(selector) = map_call.message_loc() else { return };
         let range = selector.start_offset()..range_end;
         let map_name = String::from_utf8_lossy(map_call.name().as_slice());
@@ -56,14 +60,24 @@ enum BranchValue {
     Other,
 }
 
-fn conditional_selection<'pr>(block: &BlockNode<'pr>, parameter: &str, file: SourceFile<'_>) -> Option<(Node<'pr>, &'static str)> {
+fn conditional_selection<'pr>(
+    block: &BlockNode<'pr>,
+    parameter: &str,
+    file: SourceFile<'_>,
+    explicit_nil_is_skipped: bool,
+) -> Option<(Node<'pr>, &'static str)> {
     let body = block.body()?;
     let Some(statements) = body.as_statements_node() else {
-        return conditional_expression(&body, parameter, file);
+        return conditional_expression(&body, parameter, file, explicit_nil_is_skipped);
     };
     let expressions = statements.body().iter().collect::<Vec<_>>();
     if expressions.len() == 1 {
-        return conditional_expression(&expressions[0], parameter, file);
+        return conditional_expression(
+            &expressions[0],
+            parameter,
+            file,
+            explicit_nil_is_skipped,
+        );
     }
     if expressions.len() == 2 {
         let last = branch_value(&expressions[1], parameter, file, true);
@@ -91,25 +105,35 @@ fn conditional_selection<'pr>(block: &BlockNode<'pr>, parameter: &str, file: Sou
     None
 }
 
-fn conditional_expression<'pr>(node: &Node<'pr>, parameter: &str, file: SourceFile<'_>) -> Option<(Node<'pr>, &'static str)> {
+fn conditional_expression<'pr>(
+    node: &Node<'pr>,
+    parameter: &str,
+    file: SourceFile<'_>,
+    explicit_nil_is_skipped: bool,
+) -> Option<(Node<'pr>, &'static str)> {
     if let Some(if_node) = node.as_if_node() {
-        return if_selection(&if_node, parameter, file);
+        return if_selection(&if_node, parameter, file, explicit_nil_is_skipped);
     }
     if let Some(unless) = node.as_unless_node() {
-        return unless_selection(&unless, parameter, file);
+        return unless_selection(&unless, parameter, file, explicit_nil_is_skipped);
     }
     None
 }
 
-fn if_selection<'pr>(node: &IfNode<'pr>, parameter: &str, file: SourceFile<'_>) -> Option<(Node<'pr>, &'static str)> {
+fn if_selection<'pr>(
+    node: &IfNode<'pr>,
+    parameter: &str,
+    file: SourceFile<'_>,
+    explicit_nil_is_skipped: bool,
+) -> Option<(Node<'pr>, &'static str)> {
     let truthy = node.statements().and_then(|statements| statements.body().iter().last())
-        .map_or(BranchValue::Skipped, |value| branch_value(&value, parameter, file, true));
+        .map_or(BranchValue::Skipped, |value| branch_value(&value, parameter, file, explicit_nil_is_skipped));
     let falsey = match node.subsequent() {
         None => BranchValue::Skipped,
         Some(subsequent) if subsequent.as_if_node().is_some() => return None,
         Some(subsequent) => subsequent.as_else_node().and_then(|else_node| else_node.statements())
             .and_then(|statements| statements.body().iter().last())
-            .map_or(BranchValue::Skipped, |value| branch_value(&value, parameter, file, true)),
+            .map_or(BranchValue::Skipped, |value| branch_value(&value, parameter, file, explicit_nil_is_skipped)),
     };
     match (truthy, falsey) {
         (BranchValue::Returned, BranchValue::Skipped) => Some((node.predicate(), "select")),
@@ -118,12 +142,17 @@ fn if_selection<'pr>(node: &IfNode<'pr>, parameter: &str, file: SourceFile<'_>) 
     }
 }
 
-fn unless_selection<'pr>(node: &UnlessNode<'pr>, parameter: &str, file: SourceFile<'_>) -> Option<(Node<'pr>, &'static str)> {
+fn unless_selection<'pr>(
+    node: &UnlessNode<'pr>,
+    parameter: &str,
+    file: SourceFile<'_>,
+    explicit_nil_is_skipped: bool,
+) -> Option<(Node<'pr>, &'static str)> {
     let false_condition = node.statements().and_then(|statements| statements.body().iter().last())
-        .map_or(BranchValue::Skipped, |value| branch_value(&value, parameter, file, true));
+        .map_or(BranchValue::Skipped, |value| branch_value(&value, parameter, file, explicit_nil_is_skipped));
     let true_condition = node.else_clause().and_then(|else_node| else_node.statements())
         .and_then(|statements| statements.body().iter().last())
-        .map_or(BranchValue::Skipped, |value| branch_value(&value, parameter, file, true));
+        .map_or(BranchValue::Skipped, |value| branch_value(&value, parameter, file, explicit_nil_is_skipped));
     match (true_condition, false_condition) {
         (BranchValue::Returned, BranchValue::Skipped) => Some((node.predicate(), "select")),
         (BranchValue::Skipped, BranchValue::Returned) => Some((node.predicate(), "reject")),

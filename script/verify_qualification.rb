@@ -144,7 +144,7 @@ passed = Hash.new { |hash, cop| hash[cop] = {} }
 records.each do |cop, record|
   if options[:checks].include?(1)
     manual = record.fetch("manual_review", {})
-    ruby_source = File.join(RUBOC_ROOT, record.dig("sources", "rubocop").to_s)
+    ruby_source = File.join(RUBOCOP_ROOT, record.dig("sources", "rubocop").to_s)
     rust_sources = Array(record.dig("sources", "rustocop"))
     manual_ok = manual["status"] == "passed" && Array(manual["notes"]).length >= 2 &&
                 File.file?(ruby_source) && rust_sources.any? &&
