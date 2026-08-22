@@ -57,7 +57,7 @@ fixture. Of those, 279 cops also satisfy the current project-exact gate.
 The real-project matrix asks whether each cop emits the same path, severity,
 message, and source range as RuboCop across 54,146 Ruby files in ten projects.
 
-The complete audit updated at `2026-08-21T23:57:33-04:00` found 285
+The complete audit updated at `2026-08-22T00:26:38-04:00` found 285
 project-exact cops, 87 dormant cops, 232 mismatches, one Rust crash, and one
 RuboCop command-line error. The mismatches and crash are real; the recent
 repair work improved the matrix but did not reduce them to zero.
@@ -72,6 +72,8 @@ repair work improved the matrix but did not reduce them to zero.
 
 The checkpoint is bound to Rust source `8b5d6b4` and native binary SHA-256
 `c3933028fc4d8d52dac731de79e8ad4f567444a60c8bb5cfdd5f9b573967a5f7`.
+Its RuboCop reference SHA-256 is
+`3e49cd91d20e568c632cc6bc8b7ba6465fdd7b05169971dab6ba86671c4955ca`.
 Project-exact status is the strongest current diagnostic evidence. Unexercised
 configuration and autocorrection branches still require RuboCop-derived
 fixtures.
@@ -79,6 +81,11 @@ fixtures.
 See [the compatibility evidence table](docs/compatibility.md) for fixture and
 project matching by cop, and [the real-project parity report](docs/real-project-parity.md)
 for the ten projects, limitations, and reproduction commands.
+
+Complete project audits reuse a checked-in, input-validated RuboCop diagnostic
+reference, so routine compatibility refreshes run only Rustocop. The reference
+is regenerated explicitly when RuboCop, the audit configuration, selected cops,
+or pinned project revisions change.
 
 ## Performance
 

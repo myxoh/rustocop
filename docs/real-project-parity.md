@@ -13,9 +13,12 @@ cases, and configuration branches that the projects do not exercise.
 ## Latest realistic status
 
 The latest complete 606-cop checkpoint was generated at
-`2026-08-21T23:57:33-04:00` from Rust source
+`2026-08-22T00:26:38-04:00` from Rust source
 `8b5d6b45dc982263abb1163fc74859ca45693763` and native binary SHA-256
 `c3933028fc4d8d52dac731de79e8ad4f567444a60c8bb5cfdd5f9b573967a5f7`.
+The stored RuboCop reference was captured at `2026-08-22T00:20:57-04:00`
+and has SHA-256
+`3e49cd91d20e568c632cc6bc8b7ba6465fdd7b05169971dab6ba86671c4955ca`.
 It reported:
 
 | Classification | Complete checkpoint |
@@ -55,8 +58,9 @@ syntax across the full 54,146-file corpus.
 ## Reproducing the complete audit
 
 The audit requires a clean committed Rust tree. It builds the release binary,
-records both the Rust commit and binary SHA-256, runs crash gates first, and
-then compares complete diagnostic signatures:
+records both the Rust commit and binary SHA-256, runs Rust crash gates, and
+then compares complete diagnostic signatures against the checked-in compressed
+RuboCop reference:
 
 ```sh
 bundle exec ruby script/audit_project_parity.rb \
@@ -65,7 +69,30 @@ bundle exec ruby script/audit_project_parity.rb \
   --markdown tmp/project-parity/all-cops-current.md
 ```
 
+That normal command runs only Rustocop. The reference stores RuboCop's
+normalized diagnostic signatures and is accepted only when its RuboCop
+version, strict-config SHA-256, complete cop selection, pinned project
+revisions, and per-project file counts match. Refresh it after any of those
+inputs intentionally changes:
+
+```sh
+bundle exec ruby script/audit_project_parity.rb \
+  --from-position 606 --count 606 \
+  --refresh-rubocop-reference \
+  --report tmp/project-parity/all-cops-current.json \
+  --markdown tmp/project-parity/all-cops-current.md
+```
+
+The one-command documentation refresh uses the stored reference by default;
+add `--refresh-rubocop-reference` only when RuboCop must be rerun:
+
+```sh
+bundle exec ruby script/generate_compatibility_report.rb --refresh-projects
+```
+
 Generated JSON and Markdown under `tmp/project-parity/` are intentionally
-untracked. Any committed claim must include the source commit, binary digest,
-corpus revisions, classification counts, and whether it came from a complete
-matrix or a focused reconciliation.
+untracked. The compressed RuboCop reference under
+`spec/compatibility_evidence/` is tracked. Any committed claim must include the
+source commit, binary digest, reference digest, corpus revisions,
+classification counts, and whether it came from a complete matrix or a focused
+reconciliation.

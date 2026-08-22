@@ -37,6 +37,9 @@ OptionParser.new do |parser|
   parser.on("--refresh-projects", "run the expensive complete project audit before generating") do
     options[:refresh_projects] = true
   end
+  parser.on("--refresh-rubocop-reference", "replace the stored RuboCop reference during project refresh") do
+    options[:refresh_rubocop_reference] = true
+  end
   parser.on("--native PATH") { |path| options[:native] = File.expand_path(path) }
   parser.on("--jobs COUNT", Integer) { |count| options[:jobs] = count }
   parser.on("--fixture-snapshot PATH") { |path| options[:fixture_snapshot] = File.expand_path(path) }
@@ -48,7 +51,9 @@ OptionParser.new do |parser|
 end.parse!
 
 abort "refresh options cannot be combined with --check" if options[:check] &&
-  (options[:refresh_fixtures] || options[:refresh_projects])
+  (options[:refresh_fixtures] || options[:refresh_projects] || options[:refresh_rubocop_reference])
+abort "--refresh-rubocop-reference requires --refresh-projects" if
+  options[:refresh_rubocop_reference] && !options[:refresh_projects]
 
 if options[:refresh_projects]
   project_report = File.join(ROOT, "tmp", "project-parity", "all-cops-current.json")
@@ -58,6 +63,7 @@ if options[:refresh_projects]
     "--from-position", "606", "--count", "606", "--jobs", options[:jobs].to_s,
     "--report", project_report, "--markdown", project_markdown
   ]
+  command << "--refresh-rubocop-reference" if options[:refresh_rubocop_reference]
   abort "complete project audit failed" unless system(*command, chdir: ROOT)
   options[:project_report] = project_report
 end
@@ -151,6 +157,7 @@ def project_snapshot(report, path)
     "rust_commit" => report["rust_commit"],
     "native_sha256" => report["native_sha256"],
     "rubocop_version" => report.fetch("rubocop_version"),
+    "rubocop_reference" => report["rubocop_reference"],
     "project_count" => report.fetch("projects", {}).length,
     "ruby_files" => report.fetch("projects", {}).values.sum { |project| project.fetch("files", 0) },
     "results" => results.sort.to_h

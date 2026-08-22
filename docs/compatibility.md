@@ -1,12 +1,12 @@
 # RuboCop compatibility evidence
 
-Generated at `2026-08-21T23:57:33-04:00` for RuboCop 1.87.0.
+Generated at `2026-08-22T00:26:38-04:00` for RuboCop 1.87.0.
 Compatibility is binary at the cop level: every exercised fixture must match,
 and project output must have no false positives, false negatives, or signature
 differences. Partial overlap is not classified as compatible.
 
 Fixture evidence was updated at `2026-08-21T23:40:34-04:00`. Project
-evidence was updated at `2026-08-21T23:57:33-04:00` from
+evidence was updated at `2026-08-22T00:26:38-04:00` from
 10 projects and 54146 Ruby files.
 Fixture source: `8b5d6b45dc982263abb1163fc74859ca45693763`. Project source:
 `8b5d6b45dc982263abb1163fc74859ca45693763`.
@@ -54,7 +54,7 @@ compatible in the overall totals.
 
 ## Per-cop evidence
 
-| Cop | Implementation file | Implementation updated | Fixture tests<br>(as of 2026-08-21T23:40:34-04:00) | Fixture matching<br>(as of 2026-08-21T23:40:34-04:00) | Project hits<br>(as of 2026-08-21T23:57:33-04:00) | Project matching<br>(as of 2026-08-21T23:57:33-04:00) |
+| Cop | Implementation file | Implementation updated | Fixture tests<br>(as of 2026-08-21T23:40:34-04:00) | Fixture matching<br>(as of 2026-08-21T23:40:34-04:00) | Project hits<br>(as of 2026-08-22T00:26:38-04:00) | Project matching<br>(as of 2026-08-22T00:26:38-04:00) |
 | --- | --- | --- | ---: | ---: | ---: | ---: |
 | `Bundler/DuplicatedGem` | [`crates/rustocop/src/cops/prism/source_rules.rs`](../crates/rustocop/src/cops/prism/source_rules.rs) | 2026-08-21 | 10 | 10/10 (100.0%) | 0 | — (unexercised) |
 | `Bundler/DuplicatedGroup` | [`crates/rustocop/src/cops/prism/project_scope_completion.rs`](../crates/rustocop/src/cops/prism/project_scope_completion.rs) | 2026-08-21 | 21 | 21/21 (100.0%) | 0 | — (unexercised) |
