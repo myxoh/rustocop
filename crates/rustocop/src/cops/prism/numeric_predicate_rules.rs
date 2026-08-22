@@ -109,6 +109,9 @@ fn simple_receiver(node: &Node<'_>) -> bool {
         || node.as_constant_read_node().is_some()
         || node.as_constant_path_node().is_some()
         || node.as_call_node().is_some_and(|call| {
-            call.receiver().is_none() && argument_count(&call) == 0 && call.block().is_none()
+            call.block().is_none()
+                && (call.receiver().is_none() && argument_count(&call) == 0
+                    || call.call_operator_loc().is_some()
+                    || call.opening_loc().is_some())
         })
 }

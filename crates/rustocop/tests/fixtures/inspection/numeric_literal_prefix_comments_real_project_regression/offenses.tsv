@@ -1,0 +1,2 @@
+cop	line	column	last_line	last_column	correctable	corrected	message
+Style/NumericLiteralPrefix	3	8	3	11	true	false	Use 0o for octal literals.

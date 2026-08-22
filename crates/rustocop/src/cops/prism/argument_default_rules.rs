@@ -113,6 +113,13 @@ impl OptionHashRule<'_, '_, '_> {
         };
         return_unless!(suspicious);
         let Some(definition) = self.ancestors().iter().rev().find_map(Node::as_def_node) else { return };
+        let Some(parameters) = definition.parameters() else { return };
+        let last_optional = parameters.optionals().iter().last();
+        return_unless!(last_optional.is_some_and(|optional| {
+            optional.location().start_offset() == node.location().start_offset()
+                && optional.location().end_offset() == node.location().end_offset()
+        }));
+        return_if!(parameters.rest().is_some() || !parameters.posts().is_empty());
         let method = String::from_utf8_lossy(definition.name().as_slice());
         return_if!(self.config_values("Allowlist").iter().any(|allowed| allowed == method.as_ref()));
         let mut forwarding_super = ForwardingSuperFinder(false);

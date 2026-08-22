@@ -1,0 +1,5 @@
+repository: gitlabhq/gitlabhq
+revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+path: tooling/lib/tooling/find_tests.rb
+source_line: 56
+pathological_control: $0 is the program name, not a regexp back-reference

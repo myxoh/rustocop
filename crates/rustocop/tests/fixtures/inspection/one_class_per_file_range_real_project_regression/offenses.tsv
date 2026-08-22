@@ -1,0 +1,2 @@
+cop	line	column	last_line	last_column	correctable	corrected	message
+Style/OneClassPerFile	4	1	4	12	false	false	Do not define multiple classes/modules at the top level in a single file.

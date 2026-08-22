@@ -186,6 +186,7 @@ cop_modules!(
     number_conversion_rules,
     numeric_operation_rules,
     numeric_predicate_rules,
+    preferred_hash_methods_rules,
     one_line_conditional_rules,
     operator_ambiguity_rules,
     operator_method_call_rules,

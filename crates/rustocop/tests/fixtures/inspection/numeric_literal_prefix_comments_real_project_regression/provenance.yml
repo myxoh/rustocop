@@ -1,0 +1,7 @@
+repository: rails/rails
+revision: ba4f96f085c04b3acc2c70c1a2571652e084a120
+path: actionpack/test/dispatch/static_test.rb
+source_line: 738
+pathological_controls:
+  - octal-looking text in a comment
+  - octal-looking text in a string

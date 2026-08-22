@@ -47,7 +47,17 @@ impl NextRule<'_, '_, '_> {
         let style = self.policy().enforced_style("skip_modifier_ifs");
         return_if!(modifier && style == "skip_modifier_ifs");
         let minimum = self.config_usize("MinBodyLength", 1);
-        return_if!(!modifier && condition.body.len() < minimum);
+        let body_lines = condition.body.first().map_or(0, |first| {
+            let end = condition
+                .end_keyword
+                .as_ref()
+                .map_or_else(|| condition.location.end_offset(), Location::start_offset);
+            self.source()[first.location().start_offset()..end]
+                .trim_end()
+                .lines()
+                .count()
+        });
+        return_if!(!modifier && body_lines < minimum);
         if self.config_bool("AllowConsecutiveConditionals", false) && statements.len() >= 2 {
             return_if!(next_condition(&statements[statements.len() - 2]).is_some());
         }

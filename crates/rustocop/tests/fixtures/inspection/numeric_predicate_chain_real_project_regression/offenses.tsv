@@ -1,0 +1,2 @@
+cop	line	column	last_line	last_column	correctable	corrected	message
+Style/NumericPredicate	1	1	1	23	true	false	Use `integer_digits.to_i.positive?` instead of `integer_digits.to_i > 0`.

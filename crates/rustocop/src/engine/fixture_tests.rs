@@ -384,3 +384,93 @@ fixture_test!(
     true,
     RubyVersion::default()
 );
+
+fixture_test!(
+    ignores_hash_method_names_containing_legacy_selectors,
+    "preferred_hash_method_name_real_project_regression",
+    "/project/app/models/portal.rb",
+    "Style/PreferredHashMethods",
+    false,
+    RubyVersion::default()
+);
+
+fixture_test!(
+    distinguishes_program_name_from_perl_backrefs,
+    "perl_backrefs_real_project_regression",
+    "/project/tooling/lib/tooling/find_tests.rb",
+    "Style/PerlBackrefs",
+    false,
+    RubyVersion::default()
+);
+
+fixture_test!(
+    checks_boolean_defaults_in_multiline_definitions,
+    "optional_boolean_multiline_real_project_regression",
+    "/project/lib/gitlab/gitaly_client/operation_service.rb",
+    "Style/OptionalBooleanParameter",
+    false,
+    RubyVersion::default()
+);
+
+fixture_test!(
+    accepts_rest_arguments_after_optional_arguments,
+    "optional_arguments_rest_real_project_regression",
+    "/project/app/helpers/automations_helper.rb",
+    "Style/OptionalArguments",
+    false,
+    RubyVersion::default()
+);
+
+fixture_test!(
+    checks_only_final_optional_hash_argument,
+    "option_hash_nonfinal_real_project_regression",
+    "/project/lib/integrations/slack/client.rb",
+    "Style/OptionHash",
+    false,
+    RubyVersion::default()
+);
+
+fixture_test!(
+    reports_one_class_per_file_keyword_and_name_range,
+    "one_class_per_file_range_real_project_regression",
+    "/project/lib/user_activator.rb",
+    "Style/OneClassPerFile",
+    false,
+    RubyVersion::default()
+);
+
+fixture_test!(
+    preserves_chained_numeric_predicate_receiver,
+    "numeric_predicate_chain_real_project_regression",
+    "/project/app/lib/validation_error_formatter.rb",
+    "Style/NumericPredicate",
+    false,
+    RubyVersion::default()
+);
+
+fixture_test!(
+    ignores_numeric_prefixes_in_comments_and_strings,
+    "numeric_literal_prefix_comments_real_project_regression",
+    "/project/actionpack/test/dispatch/static_test.rb",
+    "Style/NumericLiteralPrefix",
+    false,
+    RubyVersion::default()
+);
+
+fixture_test!(
+    counts_multiline_body_source_for_next,
+    "next_multiline_body_real_project_regression",
+    "/project/activerecord/lib/schema_statements.rb",
+    "Style/Next",
+    false,
+    RubyVersion::default()
+);
+
+fixture_test!(
+    ignores_command_calls_on_assignment_rhs,
+    "nested_parenthesized_assignment_real_project_regression",
+    "/project/lib/count_dashboards_metric.rb",
+    "Style/NestedParenthesizedCalls",
+    false,
+    RubyVersion::default()
+);

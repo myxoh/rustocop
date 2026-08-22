@@ -28,9 +28,13 @@ fn one_class_per_file(context: &mut CopContext<'_, '_>) {
         }
         definitions += 1;
         if definitions > 1 {
+            let offense_end = start
+                + declaration
+                    .find(name)
+                    .map_or(declaration.len(), |name_start| name_start + name.len());
             context.report(
                 "Do not define multiple classes/modules at the top level in a single file.",
-                start..start + declaration.len(),
+                start..offense_end,
             );
         }
     }

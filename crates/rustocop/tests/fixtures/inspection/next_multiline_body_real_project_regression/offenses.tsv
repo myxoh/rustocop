@@ -1,0 +1,2 @@
+cop	line	column	last_line	last_column	correctable	corrected	message
+Style/Next	2	3	2	13	true	false	Use `next` to skip iteration.
