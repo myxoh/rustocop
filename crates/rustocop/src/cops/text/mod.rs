@@ -22,7 +22,6 @@ pub(crate) const LEGACY_COP_NAMES: &[&str] = &[
     "Lint/TrailingCommaInAttributeDeclaration",
     "Lint/UnusedMethodArgument",
     "Lint/UselessElseWithoutRescue",
-    "Naming/AccessorMethodName",
     "RSpec/EmptyExampleGroup",
     "RSpec/ExampleLength",
     "RSpec/Focus",

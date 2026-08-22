@@ -3,61 +3,8 @@ use super::{push_offense, CorrectionStatus, Offense, SourceLine};
 use crate::config::InspectionConfig;
 
 pub(super) fn check(lines: &[SourceLine], options: &InspectionConfig, offenses: &mut Vec<Offense>) {
-    check_accessor_method_name(lines, options, offenses);
     check_unused_method_argument(lines, options, offenses);
     check_debugger(lines, options, offenses);
-}
-
-fn check_accessor_method_name(
-    lines: &[SourceLine],
-    options: &InspectionConfig,
-    offenses: &mut Vec<Offense>,
-) {
-    let cop = "Naming/AccessorMethodName";
-    if !options.cop_enabled(cop) {
-        return;
-    }
-    for (index, line) in lines.iter().enumerate() {
-        let trimmed = line.body.trim_start();
-        let Some(signature) = trimmed.strip_prefix("def ") else {
-            continue;
-        };
-        let signature = signature.strip_prefix("self.").unwrap_or(signature);
-        let Some(name) = first_identifier(signature) else {
-            continue;
-        };
-        if name.ends_with(['!', '?']) || signature[name.len()..].starts_with('=') {
-            continue;
-        }
-        let arguments = method_arguments(trimmed);
-        let raw_arguments = trimmed
-            .split_once('(')
-            .and_then(|(_, tail)| tail.rsplit_once(')'))
-            .map_or("", |(arguments, _)| arguments.trim());
-        let single_required_argument = arguments.len() == 1
-            && ![',', '=', ':', '*', '&']
-                .iter()
-                .any(|character| raw_arguments.contains(*character))
-            && raw_arguments != "...";
-        let (message, offending) = if name.starts_with("get_") && arguments.is_empty() {
-            ("Do not prefix reader method names with `get_`.", true)
-        } else if name.starts_with("set_") && single_required_argument {
-            ("Do not prefix writer method names with `set_`.", true)
-        } else {
-            ("", false)
-        };
-        if offending {
-            push_offense(
-                offenses,
-                cop,
-                message,
-                index + 1,
-                line.body.find(name).unwrap_or(0) + 1,
-                name.len(),
-                CorrectionStatus::Unavailable,
-            );
-        }
-    }
 }
 
 fn check_unused_method_argument(

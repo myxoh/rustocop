@@ -122,6 +122,12 @@ RSpec.describe "real-project parity regressions" do
     Layout/SpaceAroundMethodCallOperator
     Layout/SpaceAroundKeyword
     Layout/SpaceAroundKeyword
+    Lint/UnusedBlockArgument
+    Naming/AccessorMethodName
+    Naming/BlockForwarding
+    Naming/HeredocDelimiterCase
+    Naming/MethodParameterName
+    Naming/RescuedExceptionsVariableName
   ]
   fixture_root = File.join(ROOT, "spec", "fixtures", "project_parity_regressions")
   config = File.join(fixture_root, "rubocop.yml")

@@ -14,18 +14,19 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
             "if value = 1",
             "Do not use a literal assignment in a condition.",
         ),
-        custom("Naming/HeredocDelimiterCase", heredoc_case),
-        custom("Naming/BlockForwarding", block_forwarding),
+        Box::new(HeredocDelimiterCase) as Box<dyn Cop>,
+        Box::new(BlockForwarding) as Box<dyn Cop>,
         custom("Lint/AmbiguousAssignment", ambiguous_assignment),
-        custom(
-            "Naming/RescuedExceptionsVariableName",
-            rescued_exception_name,
-        ),
+        Box::new(RescuedExceptionsVariableName) as Box<dyn Cop>,
         custom("Lint/ConstantReassignment", constant_reassignment),
     ];
     cops.extend(naming::cops());
     cops
 }
+
+define_any_node_cop!(HeredocDelimiterCase => "Naming/HeredocDelimiterCase" => heredoc_case);
+define_node_cop!(BlockForwarding => "Naming/BlockForwarding" => as_def_node => block_forwarding);
+define_node_cop!(RescuedExceptionsVariableName => "Naming/RescuedExceptionsVariableName" => as_rescue_node => rescued_exception_name);
 
 fn ambiguous_assignment(context: &mut CopContext<'_, '_>) {
     for (needle, operator) in [("=-", "-"), ("=+", "+"), ("=*", "*"), ("=!", "!")] {
@@ -143,115 +144,151 @@ fn shadowing_outer_local(context: &mut CopContext<'_, '_>) {
     }
 }
 
-fn heredoc_case(context: &mut CopContext<'_, '_>) {
+fn heredoc_case(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
     let uppercase = context.policy().enforced_style("uppercase") == "uppercase";
-    for (offset, line) in context.source_file().lines() {
-        let Some(at) = line.find("<<") else { continue };
-        let delimiter = line[at + 2..]
-            .trim_start_matches(['-', '~', '\'', '"', '`'])
-            .trim_end_matches(['\'', '"', '`'])
-            .trim();
-        let wrong_case = if uppercase {
-            delimiter.bytes().any(|byte| byte.is_ascii_lowercase())
-        } else {
-            delimiter.bytes().any(|byte| byte.is_ascii_uppercase())
-        };
-        if !delimiter.is_empty() && wrong_case {
-            let start = context.source()[offset..]
-                .find(&format!("\n{delimiter}"))
-                .map_or(offset + line.rfind(delimiter).unwrap_or(at + 2), |relative| {
-                    offset + relative + 1
-                });
-            context.replace(
-                if uppercase {
-                    "Use uppercase heredoc delimiters."
-                } else {
-                    "Use lowercase heredoc delimiters."
-                },
-                start..start + delimiter.len(),
-                start..start + delimiter.len(),
-                if uppercase {
-                    delimiter.to_ascii_uppercase()
-                } else {
-                    delimiter.to_ascii_lowercase()
-                },
-            );
-        }
+    let locations = if let Some(string) = node.as_string_node() {
+        string.opening_loc().zip(string.closing_loc())
+    } else if let Some(string) = node.as_interpolated_string_node() {
+        string.opening_loc().zip(string.closing_loc())
+    } else if let Some(string) = node.as_x_string_node() {
+        Some((string.opening_loc(), string.closing_loc()))
+    } else {
+        node.as_interpolated_x_string_node()
+            .map(|string| (string.opening_loc(), string.closing_loc()))
+    };
+    let Some((opening, closing)) = locations else {
+        return;
+    };
+    if !opening.as_slice().starts_with(b"<<") {
+        return;
     }
+    let closing_source = String::from_utf8_lossy(closing.as_slice());
+    let delimiter = closing_source.trim();
+    let wrong_case = if uppercase {
+        delimiter.bytes().any(|byte| byte.is_ascii_lowercase())
+    } else {
+        delimiter.bytes().any(|byte| byte.is_ascii_uppercase())
+    };
+    if delimiter.is_empty() || !wrong_case {
+        return;
+    }
+    let replacement = if uppercase {
+        delimiter.to_ascii_uppercase()
+    } else {
+        delimiter.to_ascii_lowercase()
+    };
+    let opening_source = String::from_utf8_lossy(opening.as_slice());
+    let Some(relative) = opening_source.rfind(delimiter) else {
+        return;
+    };
+    let opening_range = opening.start_offset() + relative..opening.start_offset() + relative + delimiter.len();
+    let closing_end = closing.end_offset()
+        - closing
+            .as_slice()
+            .iter()
+            .rev()
+            .take_while(|byte| matches!(byte, b'\n' | b'\r'))
+            .count();
+    let closing_range = closing.start_offset()..closing_end;
+    let closing_edit = closing_end.saturating_sub(delimiter.len())..closing_end;
+    context.replace_many(
+        if uppercase {
+            "Use uppercase heredoc delimiters."
+        } else {
+            "Use lowercase heredoc delimiters."
+        },
+        closing_range.clone(),
+        vec![
+            (opening_range, replacement.clone()),
+            (closing_edit, replacement),
+        ],
+    );
 }
 
-fn rescued_exception_name(context: &mut CopContext<'_, '_>) {
+fn rescued_exception_name(
+    node: &ruby_prism::RescueNode<'_>,
+    context: &mut CopContext<'_, '_>,
+) {
     let preferred = context
         .config_value("PreferredName")
         .unwrap_or("e")
         .to_string();
-    let mut rescue_indent = None;
-    for (offset, line) in context.source_file().lines() {
-        if !line.trim_start().starts_with("rescue") {
-            continue;
-        }
-        let indent = line.len() - line.trim_start().len();
-        if rescue_indent.is_some_and(|outer| indent > outer) {
-            continue;
-        }
-        rescue_indent.get_or_insert(indent);
-        let Some((_, actual)) = line.split_once("=>") else {
-            continue;
-        };
-        let actual = actual
-            .trim_start()
-            .split(|character: char| !character.is_ascii_alphanumeric() && character != '_')
-            .next()
-            .unwrap_or("");
-        if line
-            .find(actual)
-            .and_then(|start| line.as_bytes().get(start + actual.len()))
-            == Some(&b'.')
-        {
-            continue;
-        }
-        let expected = if actual.starts_with('_') && !preferred.starts_with('_') {
-            format!("_{preferred}")
-        } else {
-            preferred.clone()
-        };
-        if context.source()[..offset].contains(&format!("{preferred} =")) {
-            continue;
-        }
-        if !actual.is_empty() && actual != expected {
-            let start = offset + line.rfind(actual).unwrap_or(0);
-            context.replace(
-                format!("Use `{expected}` instead of `{actual}`."),
-                start..start + actual.len(),
-                start..start + actual.len(),
-                &expected,
-            );
-        }
+    let Some(reference) = node.reference() else {
+        return;
+    };
+    if context.ancestors().iter().any(|ancestor| {
+        ancestor.as_rescue_node().is_some_and(|rescue| {
+            rescue.statements().is_some_and(|statements| {
+                statements.location().start_offset() <= node.keyword_loc().start_offset()
+                    && node.keyword_loc().start_offset() < statements.location().end_offset()
+            })
+        })
+    }) {
+        return;
+    }
+    let range = reference.location().start_offset()..reference.location().end_offset();
+    let actual = context.source_file().slice(range.clone()).unwrap_or_default();
+    if actual.is_empty() || actual.contains('.') {
+        return;
+    }
+    let expected = if actual.starts_with('_') && !preferred.starts_with('_') {
+        format!("_{preferred}")
+    } else {
+        preferred
+    };
+    let rescue_start = node.keyword_loc().start_offset();
+    let assignment_scope_end = context
+        .ancestors()
+        .iter()
+        .rev()
+        .find_map(Node::as_begin_node)
+        .and_then(|begin| begin.begin_keyword_loc())
+        .map(|keyword| keyword.start_offset())
+        .or_else(|| {
+            context
+                .ancestors()
+                .iter()
+                .filter_map(Node::as_rescue_node)
+                .map(|rescue| rescue.keyword_loc().start_offset())
+                .min()
+        })
+        .unwrap_or(rescue_start);
+    if identifier_assigned(&context.source()[..assignment_scope_end], &expected) {
+        return;
+    }
+    if node.statements().is_some_and(|statements| {
+        identifier_assigned(context.source_file().node(&statements.as_node()), &expected)
+    }) {
+        return;
+    }
+    if actual != expected {
+        context.replace(
+            format!("Use `{expected}` instead of `{actual}`."),
+            range.clone(),
+            range,
+            expected,
+        );
     }
 }
 
-fn block_forwarding(context: &mut CopContext<'_, '_>) {
+fn identifier_assigned(source: &str, name: &str) -> bool {
+    source.match_indices(name).any(|(start, _)| {
+        let before = source[..start].bytes().next_back();
+        let after = source[start + name.len()..].trim_start();
+        !before.is_some_and(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
+            && after.starts_with('=')
+            && !after.starts_with("==")
+            && !after.starts_with("=>")
+    })
+}
+
+fn block_forwarding(
+    definition: &ruby_prism::DefNode<'_>,
+    context: &mut CopContext<'_, '_>,
+) {
     let style = context.policy().enforced_style("anonymous");
     if style == "explicit" {
-        let block_name_in_use = context.source().lines().any(|line| {
-            line.trim_start().starts_with("def ") && line.contains("block, &")
-        });
-        for start in context.source_file().code_offsets("&") {
-            let next = context.source().as_bytes().get(start + 1).copied();
-            if next.is_some_and(|byte| byte == b':' || byte == b'_' || byte.is_ascii_alphanumeric()) {
-                continue;
-            }
-            if block_name_in_use {
-                context.report("Use explicit block forwarding.", start..start + 1);
-            } else {
-                context.replace(
-                    "Use explicit block forwarding.",
-                    start..start + 1,
-                    start..start + 1,
-                    "&block",
-                );
-            }
-        }
+        explicit_block_forwarding(definition, context);
         return;
     }
     if style != "anonymous" {
@@ -260,32 +297,179 @@ fn block_forwarding(context: &mut CopContext<'_, '_>) {
     if !context.target_ruby_version().at_least(3, 1) {
         return;
     }
-    let source = context.source();
-    if source.contains(" if block")
-        || source.contains("block.call")
-        || source.lines().any(|line| {
-            let line = line.trim_start();
-            line == "block" || line.starts_with("block =") || line.starts_with("block ||=")
-        })
-        || source.lines().any(|line| {
-            line.trim_start().starts_with("def ")
-                && line
-                    .split_once("&block")
-                    .is_some_and(|(before, _)| before.contains(':'))
-        })
-        || (!context.target_ruby_version().at_least(3, 4)
-            && source.contains("block_method do"))
+    let Some(parameter) = definition.parameters().and_then(|parameters| parameters.block()) else {
+        return;
+    };
+    let Some(name) = parameter.name() else { return };
+    if definition
+        .parameters()
+        .is_some_and(|parameters| !parameters.keywords().is_empty())
     {
         return;
     }
-    for start in context.source_file().code_offsets("&block") {
+    let mut usage = BlockForwardingUsage {
+        name: name.as_slice(),
+        forwarded: Vec::new(),
+        other_use: false,
+        nested_block_depth: 0,
+        allow_nested: context.target_ruby_version().at_least(3, 4),
+    };
+    if let Some(body) = definition.body() {
+        ruby_prism::Visit::visit(&mut usage, &body);
+    }
+    if usage.other_use {
+        return;
+    }
+    let range = parameter.location().start_offset()..parameter.location().end_offset();
+    for forwarded in usage.forwarded {
         context.replace(
             "Use anonymous block forwarding.",
-            start..start + 6,
-            start..start + 6,
+            forwarded.clone(),
+            forwarded,
             "&",
         );
     }
+    context.replace(
+        "Use anonymous block forwarding.",
+        range.clone(),
+        range,
+        "&",
+    );
+}
+
+struct BlockForwardingUsage<'a> {
+    name: &'a [u8],
+    forwarded: Vec<std::ops::Range<usize>>,
+    other_use: bool,
+    nested_block_depth: usize,
+    allow_nested: bool,
+}
+
+impl<'pr> ruby_prism::Visit<'pr> for BlockForwardingUsage<'_> {
+    fn visit_block_argument_node(&mut self, node: &ruby_prism::BlockArgumentNode<'pr>) {
+        if node.expression().and_then(|value| value.as_local_variable_read_node())
+            .is_some_and(|read| read.name().as_slice() == self.name)
+        {
+            if self.nested_block_depth > 0 && !self.allow_nested {
+                self.other_use = true;
+            }
+            self.forwarded
+                .push(node.location().start_offset()..node.location().end_offset());
+            return;
+        }
+        ruby_prism::visit_block_argument_node(self, node);
+    }
+
+    fn visit_local_variable_read_node(&mut self, node: &ruby_prism::LocalVariableReadNode<'pr>) {
+        if node.name().as_slice() == self.name {
+            self.other_use = true;
+        }
+    }
+
+    fn visit_local_variable_write_node(&mut self, node: &ruby_prism::LocalVariableWriteNode<'pr>) {
+        if node.name().as_slice() == self.name {
+            self.other_use = true;
+        }
+        ruby_prism::visit_local_variable_write_node(self, node);
+    }
+
+    fn visit_local_variable_or_write_node(
+        &mut self,
+        node: &ruby_prism::LocalVariableOrWriteNode<'pr>,
+    ) {
+        if node.name().as_slice() == self.name {
+            self.other_use = true;
+        }
+        ruby_prism::visit_local_variable_or_write_node(self, node);
+    }
+
+    fn visit_local_variable_and_write_node(
+        &mut self,
+        node: &ruby_prism::LocalVariableAndWriteNode<'pr>,
+    ) {
+        if node.name().as_slice() == self.name {
+            self.other_use = true;
+        }
+        ruby_prism::visit_local_variable_and_write_node(self, node);
+    }
+
+    fn visit_local_variable_operator_write_node(
+        &mut self,
+        node: &ruby_prism::LocalVariableOperatorWriteNode<'pr>,
+    ) {
+        if node.name().as_slice() == self.name {
+            self.other_use = true;
+        }
+        ruby_prism::visit_local_variable_operator_write_node(self, node);
+    }
+
+    fn visit_def_node(&mut self, _node: &ruby_prism::DefNode<'pr>) {}
+
+    fn visit_block_node(&mut self, node: &ruby_prism::BlockNode<'pr>) {
+        self.nested_block_depth += 1;
+        ruby_prism::visit_block_node(self, node);
+        self.nested_block_depth -= 1;
+    }
+}
+
+fn explicit_block_forwarding(
+    definition: &ruby_prism::DefNode<'_>,
+    context: &mut CopContext<'_, '_>,
+) {
+    if !context.target_ruby_version().at_least(3, 1) {
+        return;
+    }
+    let Some(parameter) = definition.parameters().and_then(|parameters| parameters.block()) else {
+        return;
+    };
+    if parameter.name().is_some() {
+        return;
+    }
+    let name = context
+        .config_value("BlockForwardingName")
+        .unwrap_or("block")
+        .to_string();
+    let in_use = definition.body().is_some_and(|body| {
+        context.source_file().node(&body).split(|character: char| {
+            !character.is_ascii_alphanumeric() && character != '_'
+        }).any(|word| word == name)
+    });
+    let mut ranges = Vec::new();
+    if let Some(body) = definition.body() {
+        let mut finder = AnonymousBlockForwarding { ranges: Vec::new() };
+        ruby_prism::Visit::visit(&mut finder, &body);
+        ranges = finder.ranges;
+    }
+    ranges.push(parameter.location().start_offset()..parameter.location().end_offset());
+    for range in ranges {
+        if in_use {
+            context.report("Use explicit block forwarding.", range);
+        } else {
+            context.replace(
+                "Use explicit block forwarding.",
+                range.clone(),
+                range,
+                format!("&{name}"),
+            );
+        }
+    }
+}
+
+struct AnonymousBlockForwarding {
+    ranges: Vec<std::ops::Range<usize>>,
+}
+
+impl<'pr> ruby_prism::Visit<'pr> for AnonymousBlockForwarding {
+    fn visit_block_argument_node(&mut self, node: &ruby_prism::BlockArgumentNode<'pr>) {
+        if node.expression().is_none() {
+            self.ranges
+                .push(node.location().start_offset()..node.location().end_offset());
+            return;
+        }
+        ruby_prism::visit_block_argument_node(self, node);
+    }
+
+    fn visit_def_node(&mut self, _node: &ruby_prism::DefNode<'pr>) {}
 }
 
 fn constant_reassignment(context: &mut CopContext<'_, '_>) {
