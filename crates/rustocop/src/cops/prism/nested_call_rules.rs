@@ -71,6 +71,7 @@ fn safe_navigation_chain_length(node: &CallNode<'_>, context: &mut CopContext<'_
 
 fn nested_parenthesized_calls(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     if node.opening_loc().is_none()
+        || call_name(node) == b"[]"
         || call_name(node) == b"[]="
         || call_name(node).ends_with(b"=")
         || operator_method(call_name(node))

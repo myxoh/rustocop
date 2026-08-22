@@ -7,3 +7,19 @@ sources.each do
     MSG
   end
 end
+
+keys.each do |key|
+  unless valid_integer?(key) ||
+         infinite?(key) ||
+         valid_symbol?(key)
+    raise ArgumentError, "invalid"
+  end
+end
+
+groups.each do |group|
+  if active?(group)
+    result = condition? ? first : second
+    consume(result)
+    persist(result)
+  end
+end
