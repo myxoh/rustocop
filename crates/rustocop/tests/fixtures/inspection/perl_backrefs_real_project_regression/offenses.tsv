@@ -1,0 +1,2 @@
+cop	line	column	last_line	last_column	correctable	corrected	message
+Style/PerlBackrefs	3	8	3	9	true	false	Prefer `::Regexp.last_match(1)` over `$1`.

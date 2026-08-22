@@ -47,7 +47,13 @@ impl NextRule<'_, '_, '_> {
         let style = self.policy().enforced_style("skip_modifier_ifs");
         return_if!(modifier && style == "skip_modifier_ifs");
         let minimum = self.config_usize("MinBodyLength", 1);
-        return_if!(!modifier && condition.body.len() < minimum);
+        let conditional_lines = condition.end_keyword.as_ref().map_or(0, |end| {
+            self.source()[condition.location.start_offset()..end.start_offset()]
+                .bytes()
+                .filter(|byte| *byte == b'\n')
+                .count()
+        });
+        return_if!(!modifier && conditional_lines <= minimum);
         if self.config_bool("AllowConsecutiveConditionals", false) && statements.len() >= 2 {
             return_if!(next_condition(&statements[statements.len() - 2]).is_some());
         }
@@ -294,7 +300,7 @@ fn next_condition<'pr>(node: &Node<'pr>) -> Option<NextCondition<'pr>> {
             .statements()
             .map(|statements| statements.body().iter().collect())
             .unwrap_or_default();
-        let contains_if_else = body.iter().any(contains_if_with_else);
+        let contains_if_else = body.len() == 1 && body.iter().any(direct_if_with_else);
         return Some(NextCondition {
             location: condition.location(),
             predicate: condition.predicate(),
@@ -316,7 +322,7 @@ fn next_condition<'pr>(node: &Node<'pr>) -> Option<NextCondition<'pr>> {
         .statements()
         .map(|statements| statements.body().iter().collect())
         .unwrap_or_default();
-    let contains_if_else = body.iter().any(contains_if_with_else);
+    let contains_if_else = body.len() == 1 && body.iter().any(direct_if_with_else);
     Some(NextCondition {
         location: condition.location(),
         predicate: condition.predicate(),
@@ -330,26 +336,12 @@ fn next_condition<'pr>(node: &Node<'pr>) -> Option<NextCondition<'pr>> {
     })
 }
 
-fn contains_if_with_else(node: &Node<'_>) -> bool {
-    struct Finder(bool);
-    impl<'pr> Visit<'pr> for Finder {
-        fn visit_if_node(&mut self, node: &ruby_prism::IfNode<'pr>) {
-            if node.subsequent().is_some() {
-                self.0 = true;
-            }
-            ruby_prism::visit_if_node(self, node);
-        }
-
-        fn visit_unless_node(&mut self, node: &ruby_prism::UnlessNode<'pr>) {
-            if node.else_clause().is_some() {
-                self.0 = true;
-            }
-            ruby_prism::visit_unless_node(self, node);
-        }
-    }
-    let mut finder = Finder(false);
-    finder.visit(node);
-    finder.0
+fn direct_if_with_else(node: &Node<'_>) -> bool {
+    node.as_if_node()
+        .is_some_and(|condition| condition.subsequent().is_some())
+        || node
+            .as_unless_node()
+            .is_some_and(|condition| condition.else_clause().is_some())
 }
 
 fn exit_statement(node: &Node<'_>) -> bool {
@@ -363,11 +355,20 @@ fn enumerator_method(name: &[u8]) -> bool {
             | b"each"
             | b"each_with_object"
             | b"each_with_index"
+            | b"collect_concat"
+            | b"detect"
             | b"downto"
             | b"upto"
             | b"times"
             | b"map"
+            | b"map!"
             | b"collect"
+            | b"find"
+            | b"find_all"
+            | b"find_index"
+            | b"inject"
+            | b"reduce"
+            | b"reverse_each"
             | b"select"
             | b"select!"
             | b"reject"

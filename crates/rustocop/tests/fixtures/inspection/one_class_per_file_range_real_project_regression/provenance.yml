@@ -1,0 +1,5 @@
+repository: discourse/discourse
+revision: cec79e30ee026d89da1989808d834952750570bd
+path: lib/user_activator.rb
+source_lines: 3-80
+pathological_control: class-looking source inside a heredoc is not a definition

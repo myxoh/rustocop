@@ -16,8 +16,8 @@ define_cops! {
     RequireRelativeSelfPath => "Lint/RequireRelativeSelfPath" => source(require_relative_self_path),
     SharedMutableDefault => "Lint/SharedMutableDefault" => source(shared_mutable_default),
     TopLevelReturnWithArgument => "Lint/TopLevelReturnWithArgument" => source(top_level_return_with_argument),
-    OptionalArguments => "Style/OptionalArguments" => source(optional_arguments),
-    OptionalBooleanParameter => "Style/OptionalBooleanParameter" => source(optional_boolean_parameter),
+    OptionalArguments => "Style/OptionalArguments" => node(as_def_node, optional_arguments),
+    OptionalBooleanParameter => "Style/OptionalBooleanParameter" => node(as_def_node, optional_boolean_parameter),
     Send => "Style/Send" => call(send),
 }
 

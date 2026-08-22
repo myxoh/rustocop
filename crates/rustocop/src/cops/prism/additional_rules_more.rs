@@ -7,7 +7,6 @@ declare_source_cops! {
     LeadingEmptyLines => "Layout/LeadingEmptyLines" => leading_empty_lines,
     EmptyBlockParameter => "Style/EmptyBlockParameter" => empty_block_parameter,
     TripleQuotes => "Lint/TripleQuotes" => triple_quotes,
-    PreferredHashMethods => "Style/PreferredHashMethods" => preferred_hash_methods,
     UriEscapeUnescape => "Lint/UriEscapeUnescape" => uri_escape_unescape,
     OrAssignmentToConstant => "Lint/OrAssignmentToConstant" => or_assignment_to_constant,
     OrderedMagicComments => "Lint/OrderedMagicComments" => ordered_magic_comments,
@@ -97,44 +96,6 @@ fn triple_quotes(source: &str, reporter: &mut Reporter<'_>) {
             start = end;
         } else {
             start += run;
-        }
-    }
-}
-
-fn preferred_hash_methods(source: &str, reporter: &mut Reporter<'_>) {
-    let rules = if reporter.policy().enforced_style("short") == "verbose" {
-        [
-            (
-                "key?",
-                "has_key?",
-                "Use `Hash#has_key?` instead of `Hash#key?`.",
-            ),
-            (
-                "value?",
-                "has_value?",
-                "Use `Hash#has_value?` instead of `Hash#value?`.",
-            ),
-        ]
-    } else {
-        [
-            (
-                "has_key?",
-                "key?",
-                "Use `Hash#key?` instead of `Hash#has_key?`.",
-            ),
-            (
-                "has_value?",
-                "value?",
-                "Use `Hash#value?` instead of `Hash#has_value?`.",
-            ),
-        ]
-    };
-    for (old, new, message) in rules {
-        for start in all_offsets(source, old) {
-            let end = start + old.len();
-            if source.as_bytes().get(end) == Some(&b'(') {
-                reporter.replace(message, start..end, start..end, new);
-            }
         }
     }
 }

@@ -1,0 +1,2 @@
+cop	line	column	last_line	last_column	correctable	corrected	message
+Style/OptionHash	7	20	7	31	false	false	Prefer keyword arguments to options hashes.

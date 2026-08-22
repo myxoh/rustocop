@@ -1,0 +1,5 @@
+repository: mastodon/mastodon
+revision: 60593a567b1584b555db121021ad966a19738057
+path: app/lib/validation_error_formatter.rb
+source_line: 25
+additional_case: rails/rails actioncable/test/channel/rejection_test.rb:11

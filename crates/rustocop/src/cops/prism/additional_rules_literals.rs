@@ -3,7 +3,7 @@ use super::*;
 
 define_cops! {
     EmptyFile => "Lint/EmptyFile" => source(empty_file),
-    NumericLiteralPrefix => "Style/NumericLiteralPrefix" => source(numeric_literal_prefix),
+    NumericLiteralPrefix => "Style/NumericLiteralPrefix" => any_node(numeric_literal_prefix),
     NestedPercentLiteral => "Lint/NestedPercentLiteral" => node(as_array_node, nested_percent_literal),
     RescueException => "Lint/RescueException" => source(rescue_exception),
     OpenStructUse => "Style/OpenStructUse" => any_node(open_struct_use),
@@ -18,27 +18,15 @@ fn empty_file(reporter: &mut CopContext<'_, '_>) {
     }
 }
 
-fn numeric_literal_prefix(reporter: &mut CopContext<'_, '_>) {
-    let source = reporter.source();
-    let zero_only = reporter.config_value("EnforcedOctalStyle") == Some("zero_only");
-    let bytes = source.as_bytes();
-    let mut index = 0;
-    while index < bytes.len() {
-        if bytes[index] != b'0' || index > 0 && identifier_byte(bytes[index - 1]) {
-            index += 1;
-            continue;
-        }
-        let end = index
-            + bytes[index..]
-                .iter()
-                .take_while(|byte| {
-                    byte.is_ascii_hexdigit()
-                        || matches!(byte, b'x' | b'X' | b'b' | b'B' | b'o' | b'O' | b'd' | b'D')
-                })
-                .count();
-        let literal = &source[index..end];
-        let (message, replacement) =
-            if zero_only && (literal.starts_with("0o") || literal.starts_with("0O")) {
+fn numeric_literal_prefix(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
+    if node.as_integer_node().is_none() {
+        return;
+    }
+    let location = node.location();
+    let literal = context.source_file().at(&location);
+    let zero_only = context.config_value("EnforcedOctalStyle") == Some("zero_only");
+    let (message, replacement) =
+        if zero_only && (literal.starts_with("0o") || literal.starts_with("0O")) {
                 ("Use 0 for octal literals.", format!("0{}", &literal[2..]))
             } else if let Some(digits) = literal.strip_prefix("0X") {
                 ("Use 0x for hexadecimal literals.", format!("0x{digits}"))
@@ -53,16 +41,14 @@ fn numeric_literal_prefix(reporter: &mut CopContext<'_, '_>) {
                 )
             } else if !zero_only
                 && literal.len() > 1
+                && literal.starts_with('0')
                 && literal[1..].bytes().all(|byte| matches!(byte, b'0'..=b'7'))
             {
                 ("Use 0o for octal literals.", format!("0o{}", &literal[1..]))
             } else {
-                index = end.max(index + 1);
-                continue;
-            };
-        reporter.replace(message, index..end, index..end, replacement);
-        index = end;
-    }
+                return;
+        };
+    context.replace(message, &location, &location, replacement);
 }
 
 fn nested_percent_literal(node: &ruby_prism::ArrayNode<'_>, context: &mut CopContext<'_, '_>) {

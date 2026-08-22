@@ -26,6 +26,12 @@ fn predicate_style(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     if !matches!(operator, b"==" | b">" | b"<") {
         return;
     }
+    if node
+        .call_operator_loc()
+        .is_some_and(|operator| operator.as_slice() == b"&.")
+    {
+        return;
+    }
     let (Some(left), Some(right)) = (node.receiver(), only_argument(node)) else {
         return;
     };
@@ -103,12 +109,39 @@ fn value(node: &Node<'_>) -> Option<i32> {
 }
 
 fn simple_receiver(node: &Node<'_>) -> bool {
-    node.as_local_variable_read_node().is_some()
-        || node.as_instance_variable_read_node().is_some()
-        || node.as_class_variable_read_node().is_some()
-        || node.as_constant_read_node().is_some()
-        || node.as_constant_path_node().is_some()
-        || node.as_call_node().is_some_and(|call| {
-            call.receiver().is_none() && argument_count(&call) == 0 && call.block().is_none()
-        })
+    if node.as_parentheses_node().is_some() || node.as_self_node().is_some() {
+        return true;
+    }
+    node.as_call_node().is_none_or(|call| {
+        call_name(&call) != b"[]"
+            && !binary_operation(call_name(&call))
+            && (argument_count(&call) == 0
+                || call.call_operator_loc().is_some()
+                || call.opening_loc().is_some()
+                || call.block().is_some())
+    })
+}
+
+fn binary_operation(name: &[u8]) -> bool {
+    matches!(
+        name,
+        b"|" | b"^"
+            | b"&"
+            | b"<=>"
+            | b"=="
+            | b"==="
+            | b"=~"
+            | b">"
+            | b">="
+            | b"<"
+            | b"<="
+            | b"<<"
+            | b">>"
+            | b"+"
+            | b"-"
+            | b"*"
+            | b"/"
+            | b"%"
+            | b"**"
+    )
 }

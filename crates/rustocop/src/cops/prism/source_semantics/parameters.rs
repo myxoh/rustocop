@@ -62,57 +62,51 @@ pub(super) fn top_level_return_with_argument(context: &mut CopContext<'_, '_>) {
     }
 }
 
-pub(super) fn optional_arguments(context: &mut CopContext<'_, '_>) {
-    for definition in definitions(context.source()) {
-        let args = split_arguments(
-            context.source(),
-            definition.arguments.start,
-            definition.arguments.end,
+pub(super) fn optional_arguments(
+    node: &ruby_prism::DefNode<'_>,
+    context: &mut CopContext<'_, '_>,
+) {
+    let Some(parameters) = node.parameters() else {
+        return;
+    };
+    if parameters.posts().is_empty() {
+        return;
+    }
+    for optional in parameters.optionals().iter() {
+        context.report(
+            "Optional arguments should appear at the end of the argument list.",
+            optional.location(),
         );
-        let positional = args
-            .iter()
-            .take_while(|arg| !context.source()[(*arg).clone()].contains(':'))
-            .cloned()
-            .collect::<Vec<_>>();
-        let last_required = positional
-            .iter()
-            .rposition(|arg| !context.source()[arg.clone()].contains('='));
-        let Some(last_required) = last_required else {
-            continue;
-        };
-        for argument in positional.iter().take(last_required) {
-            if context.source()[argument.clone()].contains('=') {
-                let range = trim_range(context.source(), argument.clone());
-                context.report(
-                    "Optional arguments should appear at the end of the argument list.",
-                    range,
-                );
-            }
-        }
     }
 }
 
-pub(super) fn optional_boolean_parameter(context: &mut CopContext<'_, '_>) {
-    let source = context.source();
-    for definition in definitions(source) {
-        if context.policy().allows_method(definition.name.as_bytes()) {
+pub(super) fn optional_boolean_parameter(
+    node: &ruby_prism::DefNode<'_>,
+    context: &mut CopContext<'_, '_>,
+) {
+    if context.policy().allows_method(node.name().as_slice()) {
+        return;
+    }
+    let Some(parameters) = node.parameters() else {
+        return;
+    };
+    for optional in parameters.optionals().iter() {
+        let Some(optional) = optional.as_optional_parameter_node() else {
             continue;
-        }
-        for argument in
-            split_arguments(source, definition.arguments.start, definition.arguments.end)
-        {
-            let range = trim_range(source, argument);
-            let text = &source[range.clone()];
-            let Some((name, value)) = text.split_once('=') else {
-                continue;
-            };
-            let value = value.trim();
-            if matches!(value, "true" | "false") {
-                context.report(
-                    format!("Prefer keyword arguments for arguments with a boolean default value; use `{}: {value}` instead of `{text}`.", name.trim()),
-                    range,
-                );
-            }
-        }
+        };
+        let value = optional.value();
+        let value = if value.as_true_node().is_some() {
+            "true"
+        } else if value.as_false_node().is_some() {
+            "false"
+        } else {
+            continue;
+        };
+        let text = context.source_file().at(&optional.location());
+        let name = String::from_utf8_lossy(optional.name().as_slice());
+        context.report(
+            format!("Prefer keyword arguments for arguments with a boolean default value; use `{name}: {value}` instead of `{text}`."),
+            optional.location(),
+        );
     }
 }
