@@ -16,7 +16,6 @@ pub(super) fn after_prism(
     offenses: &mut Vec<Offense>,
 ) {
     check_empty_else(lines, options, offenses);
-    check_hash_like_case(lines, options, offenses);
     super::style_declarations::check(lines, options, offenses);
 }
 
@@ -169,44 +168,4 @@ fn enclosing_conditional_kind(lines: &[SourceLine], index: usize, column: usize)
         }
     }
     "if"
-}
-
-fn check_hash_like_case(
-    lines: &[SourceLine],
-    options: &InspectionConfig,
-    offenses: &mut Vec<Offense>,
-) {
-    let cop = "Style/HashLikeCase";
-    if !options.cop_enabled(cop) {
-        return;
-    }
-
-    for index in 0..lines.len().saturating_sub(4) {
-        if !lines[index].body.trim().starts_with("case ") {
-            continue;
-        }
-
-        let mut simple_when_count = 0;
-        for line in lines.iter().skip(index + 1) {
-            let trimmed = line.body.trim();
-            if trimmed == "end" {
-                break;
-            }
-            if trimmed.starts_with("when ") && !trimmed.contains(',') {
-                simple_when_count += 1;
-            }
-        }
-
-        if simple_when_count >= 3 {
-            push_offense(
-                offenses,
-                cop,
-                "Consider replacing `case` with a hash lookup.",
-                index + 1,
-                leading_spaces(&lines[index].body) + 1,
-                lines[index].body.trim().len(),
-                CorrectionStatus::Unavailable,
-            );
-        }
-    }
 }

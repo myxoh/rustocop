@@ -43,7 +43,7 @@ fn prism_offense(source: &str, index: &SourceIndex, finding: prism::Finding) -> 
     let (last_line, last_column) =
         if reversed_empty && finding.start_offset == source.len() && source.ends_with('\n') {
             (line, 0)
-        } else if empty_location && finding.start_offset == 0 {
+        } else if empty_location && finding.start_offset == 0 && source.is_empty() {
             (1, 0)
         } else if empty_location {
             index.position(source, finding.start_offset)

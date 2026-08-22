@@ -43,10 +43,8 @@ pub(crate) const LEGACY_COP_NAMES: &[&str] = &[
     "Style/EndlessMethod",
     "Style/FrozenStringLiteralComment",
     "Style/GuardClause",
-    "Style/HashLikeCase",
     "Style/HashSyntax",
     "Style/IfUnlessModifier",
-    "Style/NumberedParameters",
 ];
 
 pub(crate) fn before_prism(

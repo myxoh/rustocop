@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::path::{Component, Path, PathBuf};
 
 use super::source_helpers::*;
 use super::source_syntax::*;
@@ -42,6 +42,10 @@ fn gem_version(context: &mut CopContext<'_, '_>) {
         let leading = line.len() - line.trim_start().len();
         let call = line.trim();
         if !call.starts_with("gem ") {
+            continue;
+        }
+        let argument_source = call["gem".len()..].trim_start();
+        if !argument_source.starts_with(['\'', '"', '(']) {
             continue;
         }
         let Some(name) = first_quoted(call) else {
@@ -268,11 +272,7 @@ fn require_relative_self_path(context: &mut CopContext<'_, '_>) {
     if own_path.extension().and_then(|value| value.to_str()) != Some("rb") {
         return;
     }
-    let own_name = own_path
-        .file_stem()
-        .and_then(|value| value.to_str())
-        .unwrap_or_default()
-        .to_string();
+    let own_path = normalize_lexical_path(own_path);
     let source = context.source();
     for (start, line) in source_lines(source) {
         let call = line.trim();
@@ -282,15 +282,14 @@ fn require_relative_self_path(context: &mut CopContext<'_, '_>) {
         let Some(required) = first_quoted(call) else {
             continue;
         };
-        let required_path = Path::new(required);
-        let required_name = required_path
-            .file_stem()
-            .and_then(|value| value.to_str())
-            .unwrap_or_default();
-        let required_extension = required_path.extension().and_then(|value| value.to_str());
-        if required_name != own_name
-            || required_extension.is_some_and(|extension| extension != "rb")
-        {
+        let mut required_path = own_path
+            .parent()
+            .unwrap_or_else(|| Path::new(""))
+            .join(required);
+        if required_path.extension().is_none() {
+            required_path.set_extension("rb");
+        }
+        if normalize_lexical_path(&required_path) != own_path {
             continue;
         }
         let leading = line.len() - line.trim_start().len();
@@ -300,4 +299,18 @@ fn require_relative_self_path(context: &mut CopContext<'_, '_>) {
             start..line_end(source, start),
         );
     }
+}
+
+fn normalize_lexical_path(path: &Path) -> PathBuf {
+    let mut normalized = PathBuf::new();
+    for component in path.components() {
+        match component {
+            Component::ParentDir => {
+                normalized.pop();
+            }
+            Component::CurDir => {}
+            other => normalized.push(other.as_os_str()),
+        }
+    }
+    normalized
 }

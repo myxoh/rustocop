@@ -1,9 +1,9 @@
 {
   "version": 1,
   "kind": "project_compatibility",
-  "updated_at": "2026-08-22T00:56:18-04:00",
-  "rust_commit": "7f296411cbe9762b81306f8e45a0072d8b856b59",
-  "native_sha256": "fb13931fadb0e490cbeebdf070f7cf69648d36376109499c608dda2220801ed3",
+  "updated_at": "2026-08-22T14:36:12-04:00",
+  "rust_commit": "cdb4527ddb40dddd9ac779167e1f3bbf08acd557",
+  "native_sha256": "1691a808cc805a3957eb41c4596b2dd06f1f623d616ddf8126f5a32c569cfe0a",
   "rubocop_version": "1.87.0",
   "rubocop_reference": {
     "path": "spec/compatibility_evidence/project_rubocop_reference.json.gz",
@@ -412,10 +412,10 @@
       "classification": "mismatch"
     },
     "Layout/MultilineMethodDefinitionBraceLayout": {
-      "rustocop": 0,
+      "rustocop": 107,
       "rubocop": 107,
-      "exact": 0,
-      "classification": "mismatch"
+      "exact": 107,
+      "classification": "project_exact"
     },
     "Layout/MultilineMethodParameterLineBreaks": {
       "rustocop": 1221,
@@ -514,9 +514,9 @@
       "classification": "mismatch"
     },
     "Layout/SpaceInsideBlockBraces": {
-      "rustocop": 0,
+      "rustocop": 534,
       "rubocop": 549,
-      "exact": 0,
+      "exact": 534,
       "classification": "mismatch"
     },
     "Layout/SpaceInsideParens": {
@@ -586,9 +586,9 @@
       "classification": "mismatch"
     },
     "Lint/AmbiguousRange": {
-      "rustocop": 140,
+      "rustocop": 614,
       "rubocop": 80,
-      "exact": 5,
+      "exact": 29,
       "classification": "mismatch"
     },
     "Lint/BigDecimalNew": {
@@ -616,9 +616,9 @@
       "classification": "dormant"
     },
     "Lint/ConstantDefinitionInBlock": {
-      "rustocop": 17027,
+      "rustocop": 310,
       "rubocop": 284,
-      "exact": 0,
+      "exact": 284,
       "classification": "mismatch"
     },
     "Lint/ConstantOverwrittenInRescue": {
@@ -1192,9 +1192,9 @@
       "classification": "mismatch"
     },
     "Lint/ShadowedException": {
-      "rustocop": 15,
+      "rustocop": 12,
       "rubocop": 17,
-      "exact": 0,
+      "exact": 8,
       "classification": "mismatch"
     },
     "Lint/ShadowingOuterLocalVariable": {
@@ -1228,9 +1228,9 @@
       "classification": "project_exact"
     },
     "Lint/SymbolConversion": {
-      "rustocop": 44,
+      "rustocop": 7096,
       "rubocop": 1335,
-      "exact": 1,
+      "exact": 1265,
       "classification": "mismatch"
     },
     "Lint/Syntax": {
@@ -1798,10 +1798,10 @@
       "classification": "project_exact"
     },
     "Style/CombinableLoops": {
-      "rustocop": 5,
-      "rubocop": 55,
-      "exact": 4,
-      "classification": "mismatch"
+      "rustocop": null,
+      "rubocop": null,
+      "exact": null,
+      "classification": "crash"
     },
     "Style/CommandLiteral": {
       "rustocop": 2,

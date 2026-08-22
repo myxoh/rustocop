@@ -180,6 +180,9 @@ fn ordered_dependencies(context: &mut CopContext<'_, '_>) {
 }
 
 fn duplicated_assignment(context: &mut CopContext<'_, '_>) {
+    if !context.path().ends_with("(string)") && !context.path().ends_with(".gemspec") {
+        return;
+    }
     let mut seen: HashMap<String, usize> = HashMap::new();
     let specification = context
         .source()

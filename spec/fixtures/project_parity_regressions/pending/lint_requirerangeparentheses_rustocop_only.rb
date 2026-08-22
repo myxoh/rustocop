@@ -1,0 +1,3 @@
+      expect(described_class.count).to eq(1)
+      # The wait still counts from waiting_since, so the clock is unchanged...
+      expect(row.due_at).to be_within(1.second).of(original_due_at)

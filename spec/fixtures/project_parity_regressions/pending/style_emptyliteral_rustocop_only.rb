@@ -1,0 +1,1 @@
+    errors = Concurrent::Array.new

@@ -143,7 +143,9 @@ def capture(command)
 end
 
 def accepted?(result)
-  [0, 1].include?(result.fetch("exitstatus")) && !result.fetch("stdout").empty?
+  [0, 1].include?(result.fetch("exitstatus")) &&
+    !result.fetch("stdout").empty? &&
+    !result.fetch("stderr").include?("An error occurred while")
 end
 
 def native_command(native, jobs, common, corpus, cops)

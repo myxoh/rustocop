@@ -93,6 +93,14 @@ pub(super) fn space_after_method_name(source: &str, reporter: &mut Reporter<'_>)
         let trimmed = line.trim_start();
         if trimmed.starts_with("def ") {
             if let Some(paren) = line.find(" (") {
+                let def_start = line.len() - trimmed.len();
+                let identity = line[def_start + "def ".len()..paren].trim();
+                if identity.is_empty()
+                    || identity.chars().any(char::is_whitespace)
+                    || identity.contains(['(', ')', '='])
+                {
+                    continue;
+                }
                 let start = offset + paren;
                 reporter.remove(
                     "Do not put a space between a method name and the opening parenthesis.",
@@ -108,7 +116,11 @@ pub(super) fn redundant_constant_base(source: &str, reporter: &mut Reporter<'_>)
     if reporter.related_config_value("Lint/ConstantResolution", "Enabled") == Some("true") {
         return;
     }
-    let nested_class = source.starts_with("class ") || source.starts_with("module ");
+    let nested_class = source
+        .lines()
+        .map(str::trim_start)
+        .find(|line| !line.is_empty() && !line.starts_with('#'))
+        .is_some_and(|line| line.starts_with("class ") || line.starts_with("module "));
     for start in all_offsets(source, "::") {
         if start > 0
             && (identifier_byte(source.as_bytes()[start - 1])

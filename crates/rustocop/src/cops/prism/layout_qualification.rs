@@ -736,7 +736,12 @@ fn hash_pair_infos(node: &ruby_prism::HashNode<'_>, source: &str) -> Vec<HashPai
             let location = pair.location();
             let key = pair.key().location();
             let value = pair.value().location();
-            let between = &source[key.end_offset()..value.start_offset()];
+            // Prism represents shorthand pairs such as `{ data: }` with the value
+            // location aliased to the key, so the value may start before the key
+            // location ends. There is no source gap to slice in that form.
+            let between = source
+                .get(key.end_offset()..value.start_offset())
+                .unwrap_or_default();
             let operator = if between.contains("=>") { "=>" } else { ":" };
             Some(HashPairInfo {
                 start: location.start_offset(),

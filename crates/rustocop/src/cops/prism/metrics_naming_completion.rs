@@ -37,7 +37,7 @@ fn predicate_prefix(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
     } else {
         return;
     };
-    if name.ends_with(['=', '?'])
+    if name.ends_with('=')
         || context
             .config_values("AllowedMethods")
             .iter()

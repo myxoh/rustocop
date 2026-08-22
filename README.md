@@ -44,8 +44,8 @@ output on every pinned project is **project-exact** for that corpus and
 configuration. Neither offense-count similarity, a captured-case label, nor an
 old manual review record is accepted as compatibility evidence.
 
-The minimized real-project corpus currently contains 126 passing cases, 12
-pending isolated mismatches, and six configuration-mutation cases. These are
+The minimized real-project corpus currently contains 141 passing cases, 282
+pending isolated mismatch directions and crashes, and six configuration-mutation cases. These are
 regression coverage, not a substitute for the complete project comparison.
 
 After withdrawing the intentionally pending cops, the fixture review updated at
@@ -59,22 +59,20 @@ retained results.
 The real-project matrix asks whether each cop emits the same path, severity,
 message, and source range as RuboCop across 54,146 Ruby files in ten projects.
 
-Filtering the complete audit updated at `2026-08-22T00:56:18-04:00` to the 558
-active cops leaves 284 project-exact cops, 85 dormant cops, 187 mismatches, one
-Rust crash, and one RuboCop command-line error. This evidence predates the
-registry withdrawal, so the generated table marks affected source rows stale
-until the next committed full audit.
+The complete audit updated at `2026-08-22T14:36:12-04:00` covers all 558 active
+cops. It leaves 285 project-exact cops, 85 dormant cops, 185 mismatches, two
+Rust crashes, and one RuboCop command-line error.
 
 | Real-project classification | Complete checkpoint |
 | --- | ---: |
-| Project-exact | 284 / 558 (50.9%) |
+| Project-exact | 285 / 558 (51.1%) |
 | Exact but dormant | 85 / 558 |
-| Mismatching | 187 / 558 |
-| Rust crashes | 1 / 558 |
+| Mismatching | 185 / 558 |
+| Rust crashes | 2 / 558 |
 | RuboCop `--only` limitation | 1 / 558 |
 
-The checkpoint is bound to Rust source `7f29641` and native binary SHA-256
-`fb13931fadb0e490cbeebdf070f7cf69648d36376109499c608dda2220801ed3`.
+The checkpoint is bound to Rust source `cdb4527` and native binary SHA-256
+`1691a808cc805a3957eb41c4596b2dd06f1f623d616ddf8126f5a32c569cfe0a`.
 Its RuboCop reference SHA-256 is
 `7ab0a924ce7d2160b96a6092fa054ca3c8bc08097ca4cf3ed7de7a77ddba7771`.
 Project-exact status is the strongest current diagnostic evidence. Unexercised

@@ -127,15 +127,21 @@ fn parse_combinable_loop(offset: usize, line: &str) -> Option<CombinableLoop<'_>
         return None;
     }
     let mut content_start = body_start;
-    while source.as_bytes().get(content_start) == Some(&b' ') {
+    while content_start < closing_start && source.as_bytes().get(content_start) == Some(&b' ') {
         content_start += 1;
     }
     let (parameters, body_start) = if source.as_bytes().get(content_start) == Some(&b'|') {
         let parameter_end = source[content_start + 1..].find('|')? + content_start + 2;
+        if parameter_end > closing_start {
+            return None;
+        }
         (&source[content_start..parameter_end], parameter_end)
     } else {
         ("", body_start)
     };
+    if body_start > closing_start {
+        return None;
+    }
     let body = &source[body_start..closing_start];
     Some(CombinableLoop {
         identity: source[..identity_end].trim_end(),

@@ -7,7 +7,8 @@ require_relative "../lib/rustocop/compatibility_status"
 ROOT = File.expand_path("..", __dir__)
 SUPPORT_OUTPUT = File.join(ROOT, "docs", "cop-support.md")
 REMAINING_OUTPUT = File.join(ROOT, "docs", "remaining-cops.md")
-MANIFEST = File.join(ROOT, "spec", "fixtures", "project_parity_regressions", "manifest.tsv")
+PASSING_MANIFEST = File.join(ROOT, "spec", "fixtures", "project_parity_regressions", "manifest.tsv")
+PENDING_MANIFEST = File.join(ROOT, "spec", "fixtures", "project_parity_regressions", "mismatches.tsv")
 
 report_path = File.expand_path(
   ARGV.fetch(0) { abort "Usage: ruby script/generate_project_parity_docs.rb FULL_AUDIT.json" }
@@ -23,8 +24,21 @@ unless missing.empty?
 end
 results = all_results.slice(*registry)
 
-fixture_cops = File.readlines(MANIFEST, chomp: true).drop(1).to_h do |line|
+passing_fixture_cops = File.readlines(PASSING_MANIFEST, chomp: true).drop(1).to_h do |line|
   [line.split("\t", 2).first, true]
+end
+pending_rows = File.readlines(PENDING_MANIFEST, chomp: true).drop(1)
+pending_fixture_cops = pending_rows.to_h do |line|
+  [line.split("\t", 2).first, true]
+end
+fixture_evidence = lambda do |cop|
+  passing = passing_fixture_cops[cop]
+  pending = pending_fixture_cops[cop]
+  next "Passing + pending" if passing && pending
+  next "Passing" if passing
+  next "Pending" if pending
+
+  "No"
 end
 classification_labels = {
   "project_exact" => "Project-exact",
@@ -43,7 +57,7 @@ cop_rows = registry.map do |cop|
   result = results.fetch(cop)
   values = %w[rustocop rubocop exact].map { |key| result[key].nil? ? "—" : result.fetch(key) }
   "| `#{cop}` | #{classification_labels.fetch(result.fetch("classification"))} | " \
-    "#{values.join(" | ")} | #{fixture_cops[cop] ? "Yes" : "No"} |"
+    "#{values.join(" | ")} | #{fixture_evidence.call(cop)} |"
 end
 
 source = report_path.delete_prefix("#{ROOT}/")
@@ -66,7 +80,9 @@ support = <<~MARKDOWN
   - Active cops: #{registry.length}
   - Intentionally pending cops: #{Rustocop::CompatibilityStatus.load(root: ROOT).intentionally_pending_cops.length}
   - Pinned projects: #{report.fetch("projects").length}
-  - Minimized project regressions: #{fixture_cops.length}
+  - Minimized passing project regressions: #{passing_fixture_cops.length}
+  - Pending isolated mismatch directions and crashes: #{pending_rows.length}
+  - Cops with pending project regressions: #{pending_fixture_cops.length}
 
   | Classification | Cops |
   | --- | ---: |
@@ -74,7 +90,7 @@ support = <<~MARKDOWN
 
   ## Complete matrix
 
-  | Cop | Project status | Rustocop | RuboCop | Exact | Regression fixture |
+  | Cop | Project status | Rustocop | RuboCop | Exact | Project regression evidence |
   | --- | --- | ---: | ---: | ---: | --- |
   #{cop_rows.join("\n")}
 MARKDOWN
@@ -96,7 +112,7 @@ unresolved.sort_by! { |cop, _classification, _rust, _ruby, _exact, gap| [-(gap |
 remaining_rows = unresolved.map do |cop, classification, rust, ruby, exact, gap|
   values = [rust, ruby, exact, gap].map { |value| value.nil? ? "—" : value }
   "| `#{cop}` | #{classification_labels.fetch(classification)} | #{values.join(" | ")} | " \
-    "#{fixture_cops[cop] ? "Yes" : "No"} |"
+    "#{fixture_evidence.call(cop)} |"
 end
 
 remaining = <<~MARKDOWN
@@ -114,7 +130,7 @@ remaining = <<~MARKDOWN
   - Rust source: `#{report.fetch("rust_commit")}`
   - Unresolved cops: #{unresolved.length}
 
-  | Cop | Status | Rustocop | RuboCop | Exact | Signature gap | Regression fixture |
+  | Cop | Status | Rustocop | RuboCop | Exact | Signature gap | Project regression evidence |
   | --- | --- | ---: | ---: | ---: | ---: | --- |
   #{remaining_rows.join("\n")}
 MARKDOWN

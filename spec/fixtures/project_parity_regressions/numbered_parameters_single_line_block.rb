@@ -1,0 +1,1 @@
+values.map { _1 }

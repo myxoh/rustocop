@@ -9,6 +9,9 @@ define_cops! {
 }
 
 fn required_ruby_version(context: &mut CopContext<'_, '_>) {
+    if !context.path().ends_with("(string)") && !context.path().ends_with(".gemspec") {
+        return;
+    }
     let source = context.source();
     if !source.contains("required_ruby_version") {
         if context.path().ends_with(".gemspec") {

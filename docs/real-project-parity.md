@@ -13,9 +13,9 @@ cases, and configuration branches that the projects do not exercise.
 ## Latest realistic status
 
 The latest complete checkpoint was generated at
-`2026-08-22T00:56:18-04:00` from Rust source
-`7f296411cbe9762b81306f8e45a0072d8b856b59` and native binary SHA-256
-`fb13931fadb0e490cbeebdf070f7cf69648d36376109499c608dda2220801ed3`.
+`2026-08-22T14:36:12-04:00` from Rust source
+`cdb4527ddb40dddd9ac779167e1f3bbf08acd557` and native binary SHA-256
+`1691a808cc805a3957eb41c4596b2dd06f1f623d616ddf8126f5a32c569cfe0a`.
 The stored RuboCop reference was captured at `2026-08-22T00:20:57-04:00`
 and has SHA-256
 `7ab0a924ce7d2160b96a6092fa054ca3c8bc08097ca4cf3ed7de7a77ddba7771`.
@@ -23,21 +23,27 @@ After excluding the 48 intentionally pending cops, its active-cop slice reports:
 
 | Classification | Complete checkpoint |
 | --- | ---: |
-| Project-exact | 284 |
+| Project-exact | 285 |
 | Exact but dormant | 85 |
-| Mismatching | 187 |
-| Rust crash | 1 |
+| Mismatching | 185 |
+| Rust crash | 2 |
 | RuboCop gate error | 1 |
 
-This is retained evidence from before the registry withdrawal and must be
-refreshed after these changes are committed. The remaining RuboCop error is
-`Lint/RedundantCopDisableDirective`, which
+The remaining RuboCop error is `Lint/RedundantCopDisableDirective`, which
 RuboCop refuses to run with `--only`. `Layout/FirstHashElementIndentation`
-crashed Rustocop during the RubyGems.org gate. The 187 active mismatching cops and the
-crash are current failures, not estimates inherited from the older checkpoint.
+crashed Rustocop during the RubyGems.org gate, and `Style/CombinableLoops`
+crashed during the GitLab CE gate. The 185 active mismatching cops and both
+crashes are current failures.
 
-The minimized project-regression corpus contains 126 passing cases and 12
-pending isolated mismatches. The
+The cached RuboCop reference also contains a `Style/FileWrite` baseline hole:
+RuboCop 1.87 errors while inspecting the isolated `File.open(..., "w")` case
+under `parser_prism`, but the prior audit accepted its nonempty JSON as a valid
+exit-1 result. Consequently, the raw 185-mismatch count includes that baseline
+artifact. The audit now rejects this RuboCop error signature, so the next
+intentional reference refresh will classify it as a gate error instead.
+
+The minimized project-regression corpus contains 141 passing cases and 282
+pending isolated mismatch directions and crashes. The
 configuration-mutation corpus contains six. They preserve fixed pathological
 examples, while the complete matrix catches interactions and unrepresented
 syntax across the full 54,146-file corpus.

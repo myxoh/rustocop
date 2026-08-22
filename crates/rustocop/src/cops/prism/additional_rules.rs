@@ -23,6 +23,9 @@ declare_source_cops! {
 }
 
 fn ruby_version_globals(source: &str, reporter: &mut Reporter<'_>) {
+    if !reporter.path().ends_with("(string)") && !reporter.path().ends_with(".gemspec") {
+        return;
+    }
     for name in [
         "::Ruby::VERSION",
         "Ruby::VERSION",

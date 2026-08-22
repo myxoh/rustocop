@@ -5,7 +5,6 @@ use crate::config::InspectionConfig;
 pub(super) fn check(lines: &[SourceLine], options: &InspectionConfig, offenses: &mut Vec<Offense>) {
     check_endless_method(lines, options, offenses);
     check_documentation(lines, options, offenses);
-    check_numbered_parameters(lines, options, offenses);
 }
 
 fn check_endless_method(
@@ -115,6 +114,22 @@ fn endless_expression_end(lines: &[SourceLine], index: usize) -> usize {
             .position(|line| line.body.trim() == "end")
             .map_or(index, |at| index + 1 + at);
     }
+    let delimiter_delta = |source: &str| {
+        source.bytes().fold(0_isize, |depth, byte| match byte {
+            b'{' | b'[' | b'(' => depth + 1,
+            b'}' | b']' | b')' => depth - 1,
+            _ => depth,
+        })
+    };
+    let mut depth = delimiter_delta(&lines[index].body);
+    if depth > 0 {
+        for (offset, line) in lines[index + 1..].iter().enumerate() {
+            depth += delimiter_delta(&line.body);
+            if depth <= 0 {
+                return index + 1 + offset;
+            }
+        }
+    }
     let mut last = index;
     for (offset, line) in lines[index + 1..].iter().enumerate() {
         if !line.body.trim_start().starts_with('.') {
@@ -141,6 +156,17 @@ fn push_multiline_offense(
     last: usize,
     lines: &[SourceLine],
 ) {
+    let length = if first == last {
+        lines[first].body.len().saturating_sub(column)
+    } else {
+        lines[first].body.len().saturating_sub(column)
+            + lines[first].ending.len()
+            + lines[first + 1..last]
+                .iter()
+                .map(|line| line.body.len() + line.ending.len())
+                .sum::<usize>()
+            + lines[last].body.len()
+    };
     offenses.push(Offense {
         cop_name: cop.to_string(),
         message: message.to_string(),
@@ -150,11 +176,7 @@ fn push_multiline_offense(
         column: column + 1,
         last_line: last + 1,
         last_column: lines[last].body.len().max(1),
-        length: lines[first..=last]
-            .iter()
-            .map(|line| line.body.len() + line.ending.len())
-            .sum::<usize>()
-            .max(1),
+        length: length.max(1),
     });
 }
 
@@ -309,28 +331,4 @@ fn declaration_empty(lines: &[SourceLine], index: usize) -> bool {
         .iter()
         .find(|line| !line.body.trim().is_empty())
         .is_some_and(|line| line.body.trim().starts_with("end"))
-}
-
-fn check_numbered_parameters(
-    lines: &[SourceLine],
-    options: &InspectionConfig,
-    offenses: &mut Vec<Offense>,
-) {
-    let cop = "Style/NumberedParameters";
-    if !options.cop_enabled(cop) {
-        return;
-    }
-    for (index, line) in lines.iter().enumerate() {
-        if let Some(column) = find_numbered_parameter(&line.body) {
-            push_offense(
-                offenses,
-                cop,
-                "Avoid using numbered parameters.",
-                index + 1,
-                column,
-                2,
-                CorrectionStatus::Unavailable,
-            );
-        }
-    }
 }
