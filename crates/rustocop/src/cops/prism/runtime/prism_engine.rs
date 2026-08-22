@@ -38,9 +38,6 @@ impl Engine {
                 cop.on_parse_error(&error, source, &mut context);
             }
         }
-        if has_unrecoverable_parse_errors && self.registry.recovered_node_cops.is_empty() {
-            return context.finish(source);
-        }
         for cop in self
             .registry
             .source_cops
@@ -48,6 +45,9 @@ impl Engine {
             .map(|index| &self.registry.cops[*index])
         {
             cop.on_source(source, &mut context);
+        }
+        if has_unrecoverable_parse_errors && self.registry.recovered_node_cops.is_empty() {
+            return context.finish(source);
         }
         let mut investigation_states: Vec<Box<dyn Any>> = self
             .registry

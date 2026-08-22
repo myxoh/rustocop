@@ -111,11 +111,22 @@ workers = Array.new(options[:jobs]) do
       test_case = queue.pop(true)
       source = test_case.fetch("source")
       source = [source.fetch("$hex")].pack("H*") if source.is_a?(Hash) && source.key?("$hex")
-      command = [
+      base_command = [
         native, "--format", "json", "--only", test_case.fetch("cop"),
-        "--config", test_case.fetch("config_path"), "--stdin", test_case.fetch("path")
+        "--config", test_case.fetch("config_path")
       ]
-      stdout, stderr, status = Open3.capture3(*command, stdin_data: source)
+      if test_case.key?("file_mode")
+        stdout, stderr, status = Dir.mktmpdir("rustocop-upstream-input") do |directory|
+          source_path = File.join(directory, File.basename(test_case.fetch("path")))
+          File.binwrite(source_path, source)
+          File.chmod(test_case.fetch("file_mode"), source_path)
+          Open3.capture3(*base_command, source_path)
+        end
+      else
+        stdout, stderr, status = Open3.capture3(
+          *base_command, "--stdin", test_case.fetch("path"), stdin_data: source
+        )
+      end
 
       actual = if stdout.empty?
                  []

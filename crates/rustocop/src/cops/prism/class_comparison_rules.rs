@@ -17,6 +17,9 @@ fn class_equality_comparison(node: &CallNode<'_>, context: &mut CopContext<'_, '
     let Some(class_selector) = class_call.message_loc() else {
         return;
     };
+    if context.source_file().node(&right).contains("#{") {
+        return;
+    }
     let target = comparison_target(&right, representation, context);
     if target.is_none() && right.as_interpolated_string_node().is_some() {
         return;
@@ -91,9 +94,14 @@ fn comparison_target(
     }
     if let Some(call) = node.as_call_node() {
         if call_name(&call) == method && argument_count(&call) == 0 {
-            let class_call = call.receiver()?.as_call_node()?;
-            if call_name(&class_call) == b"class" && argument_count(&class_call) == 0 {
-                return Some(context.source_file().node(&class_call.as_node()).to_string());
+            let receiver = call.receiver()?;
+            if constant_path(&receiver).is_some() {
+                return Some(context.source_file().node(&receiver).to_string());
+            }
+            if let Some(class_call) = receiver.as_call_node() {
+                if call_name(&class_call) == b"class" && argument_count(&class_call) == 0 {
+                    return Some(context.source_file().node(&class_call.as_node()).to_string());
+                }
             }
         }
         return None;

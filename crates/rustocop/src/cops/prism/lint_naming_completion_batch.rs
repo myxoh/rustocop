@@ -247,6 +247,7 @@ fn deprecated_constants(context: &mut CopContext<'_, '_>) {
 
 fn redundant_enable(context: &mut CopContext<'_, '_>) {
     let mut disabled = HashSet::new();
+    let mut configured_disable_consumed = HashSet::new();
     for (offset, line) in context.source_file().lines() {
         if let Some(list) = line.split("rubocop:disable ").nth(1) {
             disabled.extend(list.split(',').map(|cop| cop.trim().to_string()));
@@ -255,12 +256,22 @@ fn redundant_enable(context: &mut CopContext<'_, '_>) {
             continue;
         };
         for cop in list.split(',').map(str::trim) {
+            if cop == "all" && !disabled.is_empty() {
+                disabled.clear();
+                continue;
+            }
             if disabled.remove(cop) {
                 continue;
             }
+            if context.related_config_value(cop, "Enabled") == Some("false")
+                && configured_disable_consumed.insert(cop.to_string())
+            {
+                continue;
+            }
             let start = offset + line.find(cop).unwrap_or(0);
+            let label = if cop == "all" { "all cops" } else { cop };
             context.remove(
-                format!("Unnecessary enabling of {cop}."),
+                format!("Unnecessary enabling of {label}."),
                 start..start + cop.len(),
                 start..start + cop.len(),
             );

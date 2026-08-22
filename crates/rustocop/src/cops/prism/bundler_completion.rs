@@ -6,8 +6,16 @@ define_cops! {
 }
 
 fn gem_filename(context: &mut CopContext<'_, '_>) {
-    let path = context.path();
-    let filename = path.rsplit('/').next().unwrap_or(path);
+    let path = std::env::current_dir()
+        .ok()
+        .and_then(|directory| {
+            std::path::Path::new(context.path())
+                .strip_prefix(directory)
+                .ok()
+                .map(|relative| relative.to_string_lossy().into_owned())
+        })
+        .unwrap_or_else(|| context.path().to_string());
+    let filename = path.rsplit('/').next().unwrap_or(&path);
     let style = context.policy().enforced_style("Gemfile");
     let message = match (style, filename) {
         ("Gemfile", "gems.rb") => Some(format!(

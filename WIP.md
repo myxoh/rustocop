@@ -1,6 +1,6 @@
 # Work in progress: documentation accuracy audit
 
-Last updated: 2026-08-21
+Last updated: 2026-08-21T22:18:32-04:00
 
 This file records the state of the documentation audit when work was paused. The
 changes in this commit are intentionally a checkpoint, not a claim that the
@@ -11,28 +11,30 @@ documentation review is complete.
 A fresh audit ran all 606 registered cops against the ten-project real-world
 corpus (54,146 Ruby files) using the current Rust source.
 
-- Rust source commit: `9e4b1d38c2ae7dacacc544b46fb2de8b4111ed8f`
-- Native extension SHA-256: `3ea33de397f56e8ce1afc50c96761eb207ef7a1af2705ede7f7eeaec324147a2`
-- Project-exact cops: 256
-- Dormant cops (not exercised by these projects): 90
-- Cops with mismatches: 259
-- Rust crashes: 0
+- Project evidence updated at: `2026-08-21T22:15:13-04:00`
+- Fixture evidence updated at: `2026-08-21T22:18:32-04:00`
+- Rust source commit: `95ca43471d3d905df411c070b3995594c4ed6baa`
+- Native extension SHA-256: `a3ad1372d52e2c73626163029c7a0f081e7a6a5592f9513e560ad23dde68ddb6`
+- Project-exact cops: 280
+- Dormant cops (not exercised by these projects): 87
+- Cops with mismatches: 237
+- Rust crashes: 1 (`Layout/FirstHashElementIndentation` on RubyGems.org)
 - RuboCop isolation errors: 1 (`Lint/RedundantCopDisableDirective` refuses
   isolated execution through `--only`)
 
 The ignored raw artifacts are:
 
-- `tmp/project-parity/all-cops-9e4b1d3.json`
-- `tmp/project-parity/all-cops-9e4b1d3.md`
+- `tmp/project-parity/all-cops-current.json`
+- `tmp/project-parity/all-cops-current.md`
 
 The important conclusion is that real-project output parity is **not yet at
 zero mismatches**. Previous documentation figures of 173 exact, 73 dormant, and
-359 mismatching cops are obsolete, but the newer result still leaves 259 cops
+359 mismatching cops are obsolete, but the newer result still leaves 237 cops
 to investigate.
 
 The checked-in corpus currently also includes:
 
-- 100 real-project regression cases in
+- 126 real-project regression cases in
   `spec/fixtures/project_parity_regressions/manifest.tsv`
 - 5 configuration-mutation cases
 
@@ -43,7 +45,7 @@ The checked-in corpus currently also includes:
 - Regenerated `docs/cop-support.md` with all 606 cops and their current
   project-exact, dormant, mismatch, or RuboCop-error state.
 - Regenerated `docs/remaining-cops.md` as the current unresolved parity queue.
-- Reworked the README and parity documentation to state explicitly that 259
+- Reworked the README and parity documentation to state explicitly that 237
   mismatches remain.
 - Reframed old performance tables as dated historical measurements instead of
   current correctness evidence.
@@ -99,4 +101,3 @@ full repository test pass. On resumption:
 5. Decide whether the dated large project, memory, and parallel benchmark
    baselines should be rerun; they are currently labelled historical because a
    current full rerun was not completed.
-

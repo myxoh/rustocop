@@ -75,6 +75,10 @@ module UpstreamCopCapture
   private
 
   def _investigate(cop_instance, processed_source)
+    path = capture_path(processed_source.buffer.name)
+    if File.file?(path)
+      rustocop_original_file_modes[path] ||= File.stat(path).mode & 0o777
+    end
     offenses = super
     unless @rustocop_capture_suppressed
       capture_upstream_case(
@@ -99,10 +103,11 @@ module UpstreamCopCapture
   end
 
   def capture_upstream_case(source, offenses, file: nil, correction: :unspecified)
+    path = capture_path(file)
     test_case = {
       "cop" => cop.class.cop_name,
       "source" => source,
-      "path" => capture_path(file),
+      "path" => path,
       "ruby_version" => ruby_version.to_s,
       "parser_engine" => parser_engine.to_s,
       "cop_options" => defined?(cop_options) ? cop_options : {},
@@ -113,6 +118,11 @@ module UpstreamCopCapture
       "config" => cop.config.to_h,
       "offenses" => offenses&.map { |offense| capture_offense(offense) }
     }
+    if cop.class.cop_name == "Lint/ScriptPermission" && File.file?(path)
+      test_case["file_mode"] = rustocop_original_file_modes.fetch(path) do
+        File.stat(path).mode & 0o777
+      end
+    end
     test_case["correction"] = correction unless correction == :unspecified
     rustocop_capture_cases << test_case
   end
@@ -135,6 +145,10 @@ module UpstreamCopCapture
   def capture_path(file)
     path = file.respond_to?(:path) ? file.path : file
     path ? path.to_s : "example.rb"
+  end
+
+  def rustocop_original_file_modes
+    @rustocop_original_file_modes ||= {}
   end
 
   def relative_upstream_path(path)

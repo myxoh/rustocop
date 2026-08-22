@@ -11,7 +11,7 @@ regression layer, not the prioritization scoreboard.
   registry.
 - The executable trust standard is differential: minimized fixtures plus
   complete diagnostic signatures across ten pinned projects.
-- The project-regression corpus currently contains 100 RuboCop-derived cases,
+- The project-regression corpus currently contains 126 RuboCop-derived cases,
   with five additional configuration-mutation cases.
 - Atomic multi-edit correction transactions and deterministic file-level
   parallelism are implemented.

@@ -173,11 +173,14 @@ fn check_line_length(
         return;
     }
 
-    let max = 120;
+    let max = options
+        .cop_config
+        .value(cop, "Max")
+        .and_then(|value| value.parse::<usize>().ok())
+        .unwrap_or(120);
     for (index, line) in lines.iter().enumerate() {
-        let trimmed = line.body.trim_start();
         let length = line.body.chars().count();
-        if length > max && !trimmed.starts_with('#') {
+        if length > max {
             push_offense(
                 offenses,
                 cop,

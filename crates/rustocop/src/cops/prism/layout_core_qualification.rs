@@ -141,7 +141,9 @@ fn empty_lines_around_access_modifier(node: &CallNode<'_>, context: &mut CopCont
     }
     if context
         .parent()
-        .is_none_or(|parent| parent.as_statements_node().is_none())
+        .is_none_or(|parent| {
+            parent.as_statements_node().is_none() && parent.as_program_node().is_none()
+        })
         || context
             .ancestors()
             .iter()
@@ -589,7 +591,16 @@ fn first_argument_indentation(node: &Node<'_>, context: &mut CopContext<'_, '_>)
         .iter()
         .rev()
         .find(|ancestor| ancestor.as_arguments_node().is_none());
-    let outer = semantic_parent.and_then(|parent| parent.as_call_node());
+    let inside_interpolation = context
+        .ancestors()
+        .iter()
+        .any(|ancestor| ancestor.as_interpolated_string_node().is_some())
+        || source[..call_start]
+            .rfind("#{")
+            .is_some_and(|opening| !source[opening + 2..call_start].contains('}'));
+    let outer = (!inside_interpolation)
+        .then(|| semantic_parent.and_then(|parent| parent.as_call_node()))
+        .flatten();
     let special_indentation = style == "consistent_relative_to_receiver"
         || special_eligible
             && style != "consistent"
@@ -614,7 +625,10 @@ fn first_argument_indentation(node: &Node<'_>, context: &mut CopContext<'_, '_>)
         })
         .map_or(call_start, |parent| parent.location().start_offset());
     let base_source = source[base_start..argument_start].trim();
-    let base = if special_indentation {
+    let base = if inside_interpolation {
+        let call_line = line_index(source, call_start);
+        line(source, call_line).len() - line(source, call_line).trim_start().len()
+    } else if special_indentation {
         if base_source.contains('\n') {
             previous_line
                 .map(|number| {

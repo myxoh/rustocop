@@ -73,16 +73,18 @@ if options[:refresh_fixtures]
 
   fixture_report = File.join(ROOT, "tmp", "compatibility", "fixtures-current.json")
   FileUtils.mkdir_p(File.dirname(fixture_report))
+  FileUtils.rm_f(fixture_report)
   command = [
     RbConfig.ruby, File.join(ROOT, "script", "compare_upstream_cop_specs.rb"),
     "--jobs", options[:jobs].to_s, "--report", fixture_report
   ]
-  success = system(
+  system(
     { "RUSTOCOP_NATIVE_PATH" => options[:native] },
     *command,
     chdir: ROOT
   )
-  abort "fixture differential failed" unless success
+  exitstatus = Process.last_status.exitstatus
+  abort "fixture differential failed" unless [0, 1].include?(exitstatus) && File.file?(fixture_report)
   options[:fixture_report] = fixture_report
 end
 
@@ -95,7 +97,25 @@ rescue JSON::ParserError => e
 end
 
 def evidence_time(report, path)
-  report.fetch("generated_at", File.mtime(path).iso8601)
+  value = report.fetch("generated_at", File.mtime(path).iso8601)
+  parsed = Time.iso8601(value)
+  abort "evidence timestamp must include a time and UTC offset: #{value.inspect}" unless
+    value.match?(/T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})\z/)
+
+  parsed.iso8601
+rescue ArgumentError
+  abort "evidence timestamp must be ISO 8601: #{value.inspect}"
+end
+
+def evidence_timestamp(snapshot, label)
+  value = snapshot.fetch("updated_at")
+  Time.iso8601(value)
+  abort "#{label} updated_at must include a time and UTC offset: #{value.inspect}" unless
+    value.match?(/T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})\z/)
+
+  value
+rescue ArgumentError
+  abort "#{label} updated_at must be ISO 8601: #{value.inspect}"
 end
 
 def fixture_snapshot(report, path)
@@ -176,6 +196,8 @@ end
 
 fixtures = read_json(options[:fixture_snapshot], "fixture snapshot")
 projects = read_json(options[:project_snapshot], "project snapshot")
+fixture_timestamp = evidence_timestamp(fixtures, "fixture snapshot")
+project_timestamp = evidence_timestamp(projects, "project snapshot")
 fixture_results = fixtures.fetch("results")
 project_results = projects.fetch("results")
 cops = (fixture_results.keys | project_results.keys).sort
@@ -319,9 +341,7 @@ end
 fixture_current = fixture_stale.count { |_cop, stale| !stale }
 project_current = project_stale.count { |_cop, stale| !stale }
 
-generated_at = [fixtures.fetch("updated_at"), projects.fetch("updated_at")].max
-fixture_date = fixtures.fetch("updated_at").split("T", 2).first
-project_date = projects.fetch("updated_at").split("T", 2).first
+generated_at = [fixture_timestamp, project_timestamp].max_by { |value| Time.iso8601(value) }
 summary_rows = [
   ["Cops with fixture coverage", fixture_cops_hit, cops.length],
   ["Cops with current fixture evidence", fixture_current, cops.length],
@@ -344,8 +364,8 @@ report = <<~MARKDOWN
   and project output must have no false positives, false negatives, or signature
   differences. Partial overlap is not classified as compatible.
 
-  Fixture evidence was updated at `#{fixtures.fetch('updated_at')}`. Project
-  evidence was updated at `#{projects.fetch('updated_at')}` from
+  Fixture evidence was updated at `#{fixture_timestamp}`. Project
+  evidence was updated at `#{project_timestamp}` from
   #{projects.fetch('project_count')} projects and #{projects.fetch('ruby_files')} Ruby files.
   Fixture source: `#{fixtures.fetch('rust_commit', 'unknown')}`. Project source:
   `#{projects.fetch('rust_commit', 'unknown')}`.
@@ -386,7 +406,7 @@ report = <<~MARKDOWN
 
   ## Per-cop evidence
 
-  | Cop | Implementation file | Implementation updated | Fixture tests<br>(as of #{fixture_date}) | Fixture matching<br>(as of #{fixture_date}) | Project hits<br>(as of #{project_date}) | Project matching<br>(as of #{project_date}) |
+  | Cop | Implementation file | Implementation updated | Fixture tests<br>(as of #{fixture_timestamp}) | Fixture matching<br>(as of #{fixture_timestamp}) | Project hits<br>(as of #{project_timestamp}) | Project matching<br>(as of #{project_timestamp}) |
   | --- | --- | --- | ---: | ---: | ---: | ---: |
   #{table_rows.join("\n")}
 MARKDOWN

@@ -129,23 +129,23 @@ fn empty_after_multiline_condition(node: &Node<'_>, context: &mut CopContext<'_,
         let modifier = condition
             .if_keyword_loc()
             .is_some_and(|keyword| keyword.start_offset() != condition.location().start_offset());
-        if !modifier || has_right_sibling(node, context.ancestors()) {
+        if !modifier || modifier_has_following_statement(node, context) {
             check_multiline_condition(&predicate, &predicate, true, context);
         }
     } else if let Some(condition) = node.as_unless_node() {
         let predicate = condition.predicate();
         let modifier = condition.keyword_loc().start_offset() != condition.location().start_offset();
-        if !modifier || has_right_sibling(node, context.ancestors()) {
+        if !modifier || modifier_has_following_statement(node, context) {
             check_multiline_condition(&predicate, &predicate, true, context);
         }
     } else if let Some(condition) = node.as_while_node() {
         let predicate = condition.predicate();
-        if !condition.is_begin_modifier() || has_right_sibling(node, context.ancestors()) {
+        if !condition.is_begin_modifier() || modifier_has_following_statement(node, context) {
             check_multiline_condition(&predicate, &predicate, true, context);
         }
     } else if let Some(condition) = node.as_until_node() {
         let predicate = condition.predicate();
-        if !condition.is_begin_modifier() || has_right_sibling(node, context.ancestors()) {
+        if !condition.is_begin_modifier() || modifier_has_following_statement(node, context) {
             check_multiline_condition(&predicate, &predicate, true, context);
         }
     } else if let Some(branch) = node.as_when_node() {
@@ -171,6 +171,17 @@ fn empty_after_multiline_condition(node: &Node<'_>, context: &mut CopContext<'_,
             }
         }
     }
+}
+
+fn modifier_has_following_statement(node: &Node<'_>, context: &CopContext<'_, '_>) -> bool {
+    if has_right_sibling(node, context.ancestors()) {
+        return true;
+    }
+    context.source()[node.location().end_offset()..]
+        .lines()
+        .map(str::trim)
+        .find(|line| !line.is_empty() && !line.starts_with('#'))
+        .is_some_and(|line| line != "end")
 }
 
 fn check_multiline_condition(
@@ -223,6 +234,7 @@ fn deprecated_openssl(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     if path.len() != 3
         || path[0] != b"OpenSSL"
         || !matches!(path[1], b"Cipher" | b"Digest")
+        || path[1] == b"Digest" && path[2] == b"Digest"
         || rejected_openssl_argument(node)
     {
         return;

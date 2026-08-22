@@ -15,12 +15,6 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
             "Layout/SpaceInsideReferenceBrackets",
             reference_bracket_spacing,
         ),
-        replace(
-            "Layout/SpaceAroundMethodCallOperator",
-            " &. ",
-            "&.",
-            "Space around method call operator detected.",
-        ),
         custom(
             "Layout/MultilineOperationIndentation",
             continuation_indentation,

@@ -44,30 +44,34 @@ output on every pinned project is **project-exact** for that corpus and
 configuration. Neither offense-count similarity, a captured-case label, nor an
 old manual review record is accepted as compatibility evidence.
 
-The minimized real-project corpus currently contains 100 passing cases, 12
+The minimized real-project corpus currently contains 126 passing cases, 12
 pending isolated mismatches, and five configuration-mutation cases. These are
 regression coverage, not a substitute for the complete project comparison.
+
+The fixture review updated at `2026-08-21T22:18:32-04:00` matched
+22,614/28,623 captured cases (79.0%); 496/606 cops matched every captured
+fixture. Of those, 269 cops also satisfy the current project-exact gate.
 
 ## Ten-project output parity
 
 The real-project matrix asks whether each cop emits the same path, severity,
 message, and source range as RuboCop across 54,146 Ruby files in ten projects.
 
-The complete audit of current Rust source found 256 project-exact cops, 90
-dormant cops, 259 mismatches, no Rust crashes, and one RuboCop command-line
-error. The mismatches are real; the recent repair work improved the matrix but
-did not reduce it to zero.
+The complete audit updated at `2026-08-21T22:15:13-04:00` found 280
+project-exact cops, 87 dormant cops, 237 mismatches, one Rust crash, and one
+RuboCop command-line error. The mismatches and crash are real; the recent
+repair work improved the matrix but did not reduce them to zero.
 
 | Real-project classification | Complete checkpoint |
 | --- | ---: |
-| Project-exact | 256 / 606 (42.2%) |
-| Exact but dormant | 90 / 606 |
-| Mismatching | 259 / 606 |
-| Rust crashes | 0 / 606 |
+| Project-exact | 280 / 606 (46.2%) |
+| Exact but dormant | 87 / 606 |
+| Mismatching | 237 / 606 |
+| Rust crashes | 1 / 606 |
 | RuboCop `--only` limitation | 1 / 606 |
 
-The checkpoint is bound to Rust source `9e4b1d3` and native binary SHA-256
-`3ea33de397f56e8ce1afc50c96761eb207ef7a1af2705ede7f7eeaec324147a2`.
+The checkpoint is bound to Rust source `95ca434` and native binary SHA-256
+`a3ad1372d52e2c73626163029c7a0f081e7a6a5592f9513e560ad23dde68ddb6`.
 Project-exact status is the strongest current diagnostic evidence. Unexercised
 configuration and autocorrection branches still require RuboCop-derived
 fixtures.

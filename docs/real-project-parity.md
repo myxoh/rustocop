@@ -12,25 +12,27 @@ cases, and configuration branches that the projects do not exercise.
 
 ## Latest realistic status
 
-The latest complete 606-cop checkpoint was generated on 2026-08-21 from Rust
-source `9e4b1d38c2ae7dacacc544b46fb2de8b4111ed8f` and native binary SHA-256
-`3ea33de397f56e8ce1afc50c96761eb207ef7a1af2705ede7f7eeaec324147a2`.
+The latest complete 606-cop checkpoint was generated at
+`2026-08-21T22:15:13-04:00` from Rust source
+`95ca43471d3d905df411c070b3995594c4ed6baa` and native binary SHA-256
+`a3ad1372d52e2c73626163029c7a0f081e7a6a5592f9513e560ad23dde68ddb6`.
 It reported:
 
 | Classification | Complete checkpoint |
 | --- | ---: |
-| Project-exact | 256 |
-| Exact but dormant | 90 |
-| Mismatching | 259 |
-| Rust crash | 0 |
+| Project-exact | 280 |
+| Exact but dormant | 87 |
+| Mismatching | 237 |
+| Rust crash | 1 |
 | RuboCop gate error | 1 |
 
 The remaining RuboCop error is `Lint/RedundantCopDisableDirective`, which
-RuboCop refuses to run with `--only`. Rustocop completed the matrix without a
-crash. The 259 mismatching cops are current failures, not estimates inherited
-from the older checkpoint.
+RuboCop refuses to run with `--only`. `Layout/FirstHashElementIndentation`
+crashed Rustocop during the RubyGems.org gate. The 237 mismatching cops and the
+crash are current failures, not estimates inherited from the older checkpoint.
 
-The minimized project-regression corpus contains 100 cases and the
+The minimized project-regression corpus contains 126 passing cases and 12
+pending isolated mismatches. The
 configuration-mutation corpus contains five. They preserve fixed pathological
 examples, while the complete matrix catches interactions and unrepresented
 syntax across the full 54,146-file corpus.
