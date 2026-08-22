@@ -26,6 +26,12 @@ fn predicate_style(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     if !matches!(operator, b"==" | b">" | b"<") {
         return;
     }
+    if node
+        .call_operator_loc()
+        .is_some_and(|operator| operator.as_slice() == b"&.")
+    {
+        return;
+    }
     let (Some(left), Some(right)) = (node.receiver(), only_argument(node)) else {
         return;
     };

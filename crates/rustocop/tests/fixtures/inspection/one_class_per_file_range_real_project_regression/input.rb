@@ -13,3 +13,6 @@ if condition?
   class ConditionalDefinition
   end
 end
+
+class ModifierDefinition
+end if condition?

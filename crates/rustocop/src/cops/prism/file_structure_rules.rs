@@ -29,7 +29,11 @@ fn one_class_per_file(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
         .statements()
         .body()
         .iter()
-        .any(|candidate| candidate.location().start_offset() == current_start));
+        .any(|candidate| {
+            definition_name(&candidate).is_some()
+                && candidate.location().start_offset() == current_start
+                && candidate.location().end_offset() == node.location().end_offset()
+        }));
     let definitions = program
         .statements()
         .body()
