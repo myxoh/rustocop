@@ -342,6 +342,44 @@ impl<'source> SourceFile<'source> {
         ranges.visit(&parsed.node());
         ranges.0
     }
+
+    pub(super) fn heredoc_ranges(self) -> Vec<Range<usize>> {
+        struct HeredocRanges(Vec<Range<usize>>);
+
+        impl HeredocRanges {
+            fn push(
+                &mut self,
+                opening: Option<Location<'_>>,
+                closing: Option<Location<'_>>,
+            ) {
+                let (Some(opening), Some(closing)) = (opening, closing) else {
+                    return;
+                };
+                if opening.as_slice().starts_with(b"<<") {
+                    self.0
+                        .push(opening.start_offset()..closing.end_offset());
+                }
+            }
+        }
+
+        impl<'pr> Visit<'pr> for HeredocRanges {
+            fn visit_string_node(&mut self, node: &ruby_prism::StringNode<'pr>) {
+                self.push(node.opening_loc(), node.closing_loc());
+            }
+
+            fn visit_interpolated_string_node(
+                &mut self,
+                node: &ruby_prism::InterpolatedStringNode<'pr>,
+            ) {
+                self.push(node.opening_loc(), node.closing_loc());
+            }
+        }
+
+        let parsed = parse(self.source.as_bytes());
+        let mut ranges = HeredocRanges(Vec::new());
+        ranges.visit(&parsed.node());
+        ranges.0
+    }
 }
 
 #[cfg(test)]

@@ -31,6 +31,12 @@ fn space_around_method_call_operator(context: &mut CopContext<'_, '_>) {
         {
             continue;
         }
+        if source[start..].starts_with('.')
+            && (source.as_bytes().get(start.wrapping_sub(1)) == Some(&b'.')
+                || source.as_bytes().get(start + 1) == Some(&b'.'))
+        {
+            continue;
+        }
         let width = if source[start..].starts_with("::") || source[start..].starts_with("&.") {
             2
         } else {
@@ -52,7 +58,8 @@ fn space_around_method_call_operator(context: &mut CopContext<'_, '_>) {
         let line_start = file.line_start(start);
         let left_start = source[line_start..start].trim_end_matches([' ', '\t']).len() + line_start;
         let receiver_prefix = source[line_start..left_start].trim_end();
-        if left_start < start
+        if !source[start..].starts_with("::")
+            && left_start < start
             && receiver_prefix
                 .as_bytes()
                 .last()

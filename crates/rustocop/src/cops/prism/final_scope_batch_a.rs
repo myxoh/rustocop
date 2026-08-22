@@ -37,6 +37,9 @@ fn ambiguous_assignment(context: &mut CopContext<'_, '_>) {
             {
                 continue;
             }
+            if needle == "=!" && context.source().as_bytes().get(start + 2) == Some(&b'!') {
+                continue;
+            }
             context.report(
                 format!("Suspicious assignment detected. Did you mean `{operator}=`?"),
                 start..start + needle.len(),

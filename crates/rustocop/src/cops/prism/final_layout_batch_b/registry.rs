@@ -39,8 +39,15 @@ fn space_around_keyword(context: &mut CopContext<'_, '_>) {
         "return", "super", "then", "unless", "until", "when", "while", "yield",
     ];
     let source = context.source();
+    let literal_ranges = context.source_file().literal_ranges();
     for keyword in KEYWORDS {
         for start in context.source_file().code_offsets(keyword) {
+            if literal_ranges
+                .iter()
+                .any(|range| range.start <= start && start < range.end)
+            {
+                continue;
+            }
             let end = start + keyword.len();
             let before = source.as_bytes().get(start.wrapping_sub(1)).copied();
             let after = source.as_bytes().get(end).copied();

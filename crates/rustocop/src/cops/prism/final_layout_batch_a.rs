@@ -46,7 +46,7 @@ fn leading_comment_space(context: &mut CopContext<'_, '_>) {
                 || comment[hashes..].starts_with(char::is_whitespace));
         let first_line = context.source_file().line_start(location.start_offset()) == 0;
         if content.is_empty()
-            || content.starts_with(char::is_whitespace)
+            || content.starts_with([' ', '\t'])
             || multiple_hash_comment
             || content.starts_with('=')
             || content.starts_with("++")
@@ -142,7 +142,7 @@ fn line_continuation_spacing(context: &mut CopContext<'_, '_>) {
         return;
     }
     let space_style = context.policy().enforced_style("space") == "space";
-    let literal_ranges = context.source_file().literal_ranges();
+    let heredoc_ranges = context.source_file().heredoc_ranges();
     for (offset, line) in context.source_file().lines() {
         if line.trim() == "__END__" {
             break;
@@ -151,7 +151,7 @@ fn line_continuation_spacing(context: &mut CopContext<'_, '_>) {
             continue;
         }
         let slash = line.rfind('\\').unwrap_or(0);
-        if literal_ranges
+        if heredoc_ranges
             .iter()
             .any(|range| range.start <= offset + slash && offset + slash < range.end)
         {
@@ -188,7 +188,22 @@ fn space_inside_parens(context: &mut CopContext<'_, '_>) {
     let compact = style == "compact";
     let source = context.source();
     let file = context.source_file();
+    let literal_ranges = file.literal_ranges();
+    let heredoc_ranges = file.heredoc_ranges();
+    let inside_literal = |offset| {
+        literal_ranges
+            .iter()
+            .any(|range| range.start <= offset && offset < range.end)
+            && !heredoc_ranges.iter().any(|range| {
+                range.start <= offset
+                    && offset < range.end
+                    && file.same_line(offset, range.start)
+            })
+    };
     for opening in file.code_offsets("(") {
+        if inside_literal(opening) {
+            continue;
+        }
         let whitespace_end = opening
             + 1
             + source[opening + 1..]
@@ -221,6 +236,9 @@ fn space_inside_parens(context: &mut CopContext<'_, '_>) {
         }
     }
     for closing in file.code_offsets(")") {
+        if inside_literal(closing) {
+            continue;
+        }
         let line_start = file.line_start(closing);
         let whitespace_start = source[line_start..closing].trim_end_matches([' ', '\t']).len() + line_start;
         let previous = source.as_bytes().get(whitespace_start.wrapping_sub(1)).copied();
