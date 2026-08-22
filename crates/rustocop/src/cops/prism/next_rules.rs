@@ -300,7 +300,7 @@ fn next_condition<'pr>(node: &Node<'pr>) -> Option<NextCondition<'pr>> {
             .statements()
             .map(|statements| statements.body().iter().collect())
             .unwrap_or_default();
-        let contains_if_else = body.iter().any(direct_if_with_else);
+        let contains_if_else = body.len() == 1 && body.iter().any(direct_if_with_else);
         return Some(NextCondition {
             location: condition.location(),
             predicate: condition.predicate(),
@@ -322,7 +322,7 @@ fn next_condition<'pr>(node: &Node<'pr>) -> Option<NextCondition<'pr>> {
         .statements()
         .map(|statements| statements.body().iter().collect())
         .unwrap_or_default();
-    let contains_if_else = body.iter().any(direct_if_with_else);
+    let contains_if_else = body.len() == 1 && body.iter().any(direct_if_with_else);
     Some(NextCondition {
         location: condition.location(),
         predicate: condition.predicate(),
@@ -355,11 +355,20 @@ fn enumerator_method(name: &[u8]) -> bool {
             | b"each"
             | b"each_with_object"
             | b"each_with_index"
+            | b"collect_concat"
+            | b"detect"
             | b"downto"
             | b"upto"
             | b"times"
             | b"map"
+            | b"map!"
             | b"collect"
+            | b"find"
+            | b"find_all"
+            | b"find_index"
+            | b"inject"
+            | b"reduce"
+            | b"reverse_each"
             | b"select"
             | b"select!"
             | b"reject"

@@ -8,3 +8,8 @@ end
 
 class Second < First
 end
+
+if condition?
+  class ConditionalDefinition
+  end
+end

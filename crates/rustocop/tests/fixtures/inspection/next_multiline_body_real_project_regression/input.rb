@@ -23,3 +23,11 @@ groups.each do |group|
     persist(result)
   end
 end
+
+items.find do |item|
+  if usable?(item)
+    prepare(item)
+    validate(item)
+    publish(item)
+  end
+end

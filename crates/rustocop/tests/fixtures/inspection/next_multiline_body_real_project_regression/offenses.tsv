@@ -2,3 +2,4 @@ cop	line	column	last_line	last_column	correctable	corrected	message
 Style/Next	2	3	2	13	true	false	Use `next` to skip iteration.
 Style/Next	12	3	14	27	true	false	Use `next` to skip iteration.
 Style/Next	20	3	20	19	true	false	Use `next` to skip iteration.
+Style/Next	28	3	28	18	true	false	Use `next` to skip iteration.

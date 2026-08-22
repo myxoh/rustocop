@@ -104,7 +104,10 @@ fn argument_matches_default(argument: &Node<'_>, default: &str, invalid_byte_def
 
 impl OptionHashRule<'_, '_, '_> {
     fn on_optarg(&mut self, node: &OptionalParameterNode<'_>) {
-        return_if!(node.value().as_hash_node().is_none());
+        return_unless!(node
+            .value()
+            .as_hash_node()
+            .is_some_and(|hash| hash.elements().is_empty()));
         let name = String::from_utf8_lossy(node.name().as_slice());
         let suspicious = if self.config_contains("SuspiciousParamNames") {
             self.config_values("SuspiciousParamNames").iter().any(|candidate| candidate == name.as_ref())

@@ -25,6 +25,11 @@ fn one_class_per_file(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
     };
     let current_start = node.location().start_offset();
     let allowed = context.config_values("AllowedClasses");
+    return_unless!(program
+        .statements()
+        .body()
+        .iter()
+        .any(|candidate| candidate.location().start_offset() == current_start));
     let definitions = program
         .statements()
         .body()
