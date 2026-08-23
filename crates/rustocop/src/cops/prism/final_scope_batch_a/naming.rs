@@ -584,7 +584,12 @@ fn inclusive_list(value: &str) -> Vec<String> {
 }
 
 fn inclusive_regex(value: &str) -> String {
-    value.trim().trim_matches('/').to_string()
+    let value = value.trim();
+    let value = value.strip_prefix("!ruby/regexp").unwrap_or(value).trim();
+    value
+        .trim_matches(['\'', '"'])
+        .trim_matches('/')
+        .to_string()
 }
 
 fn inclusive_message(found: &str, suggestions: &[String]) -> String {
