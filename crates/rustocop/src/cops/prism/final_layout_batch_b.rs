@@ -230,6 +230,12 @@ fn end_alignment(context: &mut CopContext<'_, '_>) {
         == Some("start_of_line")
         && context.related_config_explicit("Layout/BeginEndAlignment", "EnforcedStyleAlignWith")
         && context.related_config_value("Layout/BeginEndAlignment", "Enabled") != Some("false");
+    let excluded = context
+        .source_file()
+        .literal_ranges()
+        .into_iter()
+        .chain(context.source_file().comment_ranges())
+        .collect::<Vec<_>>();
     let mut stack: Vec<Opening> = Vec::new();
     for (line_index, (offset, line)) in context.source_file().lines().enumerate() {
         let trimmed = line.trim_start();
@@ -240,17 +246,27 @@ fn end_alignment(context: &mut CopContext<'_, '_>) {
         }
 
         for keyword in ["rescue", "ensure"] {
-            let Some(relative) = line.find(keyword) else {
+            let relative = line.match_indices(keyword).find_map(|(relative, _)| {
+                let before = &line[..relative];
+                let boundary_before = before.as_bytes().last();
+                let boundary_after = line.as_bytes().get(relative + keyword.len());
+                let token = boundary_before
+                    .is_none_or(|byte| !byte.is_ascii_alphanumeric() && *byte != b'_')
+                    && boundary_after
+                        .is_none_or(|byte| !byte.is_ascii_alphanumeric() && *byte != b'_');
+                let clause = before.trim().is_empty() || before.trim_end().ends_with(';');
+                let absolute = offset + relative;
+                (token
+                    && clause
+                    && !excluded
+                        .iter()
+                        .any(|range| range.start <= absolute && absolute < range.end))
+                    .then_some(relative)
+            });
+            let Some(relative) = relative else {
                 continue;
             };
             let before = &line[..relative];
-            if before
-                .chars()
-                .next_back()
-                .is_some_and(|character| character.is_ascii_alphanumeric() || character == '_')
-            {
-                continue;
-            }
             let Some(opening) = stack.iter().rev().find(|opening| opening.relevant) else {
                 continue;
             };
@@ -280,8 +296,10 @@ fn end_alignment(context: &mut CopContext<'_, '_>) {
         let code = line.split('#').next().unwrap_or(line).trim_end();
         let relevant = if let Some(begin_at) = code.find("begin") {
             let boundary = code.as_bytes().get(begin_at.wrapping_sub(1));
-            if begin_at == 0
-                || boundary.is_some_and(|byte| !byte.is_ascii_alphanumeric() && *byte != b'_')
+            let after = code.as_bytes().get(begin_at + "begin".len());
+            if (begin_at == 0
+                || boundary.is_some_and(|byte| !byte.is_ascii_alphanumeric() && *byte != b'_'))
+                && after.is_none_or(|byte| !byte.is_ascii_alphanumeric() && *byte != b'_')
             {
                 let column = if start_of_line { indentation } else { begin_at };
                 let source = if start_of_line {
