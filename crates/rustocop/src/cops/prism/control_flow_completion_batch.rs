@@ -156,9 +156,24 @@ fn parse_combinable_loop(offset: usize, line: &str) -> Option<CombinableLoop<'_>
 fn each_for_simple_loop(context: &mut CopContext<'_, '_>) {
     for (offset, line) in context.source_file().lines() {
         let Some(each) = line.find(".each") else { continue };
+        if line
+            .as_bytes()
+            .get(each + ".each".len())
+            .is_some_and(|byte| byte.is_ascii_alphanumeric() || *byte == b'_')
+        {
+            continue;
+        }
         let safe_navigation = line.as_bytes().get(each.saturating_sub(1)) == Some(&b'&');
         let receiver_end = each - usize::from(safe_navigation);
         let Some(open) = line[..receiver_end].rfind('(') else { continue };
+        if line[..open]
+            .trim_end()
+            .as_bytes()
+            .last()
+            .is_some_and(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'_' | b'.' | b')' | b']'))
+        {
+            continue;
+        }
         if line.as_bytes().get(receiver_end.saturating_sub(1)) != Some(&b')') { continue; }
         let range = &line[open + 1..receiver_end - 1];
         let (start, end, inclusive) = if let Some((start, end)) = range.split_once("...") {

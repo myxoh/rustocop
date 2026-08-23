@@ -899,11 +899,11 @@ impl Cop for ElseAlignment {
                 ancestors
                     .iter()
                     .rev()
-                    .find_map(|ancestor| ancestor.as_def_node().map(|def| def.def_keyword_loc()))
-                    .or_else(|| {
-                        ancestors.iter().rev().find_map(|ancestor| {
-                            ancestor.as_call_node().map(|call| call.location())
-                        })
+                    .find_map(|ancestor| {
+                        ancestor
+                            .as_call_node()
+                            .map(|call| call.location())
+                            .or_else(|| ancestor.as_def_node().map(|def| def.def_keyword_loc()))
                     })
                     .unwrap_or_else(|| rescue.keyword_loc())
             });

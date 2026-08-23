@@ -148,6 +148,17 @@ fn count_format_fields(source: &str) -> Option<usize> {
             index += 1;
             continue;
         }
+        let mut named_probe = index;
+        while bytes.get(named_probe).is_some_and(|byte| {
+            byte.is_ascii_digit()
+                || matches!(byte, b'0' | b'-' | b'+' | b' ' | b'.')
+                || *byte == b'#' && bytes.get(named_probe + 1) != Some(&b'{')
+        }) {
+            named_probe += 1;
+        }
+        if matches!(bytes.get(named_probe), Some(b'{') | Some(b'<')) {
+            index = named_probe;
+        }
         if matches!(bytes.get(index), Some(b'{') | Some(b'<')) {
             let closing = if bytes[index] == b'{' { b'}' } else { b'>' };
             index += 1;
@@ -1436,6 +1447,9 @@ fn redundant_splat_expansion(node: &ruby_prism::SplatNode<'_>, context: &mut Cop
     };
     let array = expression.as_array_node();
     let array_new = redundant_splat_array_new(&expression, context.source_file());
+    let array_new_block = expression
+        .as_call_node()
+        .is_some_and(|call| call.block().is_some());
     let literal = array.is_some()
         || array_new
         || expression.as_string_node().is_some()
@@ -1467,6 +1481,9 @@ fn redundant_splat_expansion(node: &ruby_prism::SplatNode<'_>, context: &mut Cop
         {
             break;
         }
+    }
+    if array_new_block && (bracketed_array || method_argument) {
+        return;
     }
     if array_new && bracketed_array {
         let parent = parent_array.unwrap();
