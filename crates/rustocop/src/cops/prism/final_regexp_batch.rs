@@ -15,11 +15,6 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
             "puts /",
             "Ambiguous regexp literal. Parenthesize the method arguments.",
         ),
-        report(
-            "Lint/ArrayLiteralInRegexp",
-            "Regexp.new([",
-            "Passing an array to `Regexp.new` is invalid.",
-        ),
         custom("Lint/OutOfRangeRegexpRef", out_of_range_ref),
         Box::new(SelectByRegexp),
     ]

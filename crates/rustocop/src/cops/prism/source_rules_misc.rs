@@ -1,34 +1,8 @@
-use std::collections::HashSet;
-
 use super::*;
 
 declare_source_cops! {
-    DuplicateRescueException => "Lint/DuplicateRescueException" => duplicate_rescue,
     EnvHome => "Style/EnvHome" => env_home,
     AsciiComments => "Style/AsciiComments" => ascii_comments,
-}
-
-fn duplicate_rescue(source: &str, context: &mut Reporter<'_>) {
-    let mut seen = HashSet::<String>::new();
-    for (offset, line) in source_lines(source) {
-        let trimmed = line.trim_start();
-        let Some(list) = trimmed.strip_prefix("rescue ") else {
-            continue;
-        };
-        let list_start = offset + line.len() - trimmed.len() + 7;
-        let mut cursor = 0;
-        for item in list.split(',') {
-            let name = item.trim();
-            let relative = list[cursor..].find(name).unwrap_or(0) + cursor;
-            if !seen.insert(name.to_string()) {
-                context.report(
-                    "Duplicate `rescue` exception detected.",
-                    list_start + relative..list_start + relative + name.len(),
-                );
-            }
-            cursor = relative + name.len();
-        }
-    }
 }
 
 fn env_home(source: &str, context: &mut Reporter<'_>) {

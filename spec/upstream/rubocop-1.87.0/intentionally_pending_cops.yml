@@ -1,7 +1,7 @@
 ---
 version: 1
 rubocop_version: 1.87.0
-updated_at: '2026-08-23T11:47:43-04:00'
+updated_at: '2026-08-23T12:52:51-04:00'
 reason: Existing implementations are intentionally withdrawn because source-pattern, placeholder, or incomplete structural behavior does not match the pinned real-project corpus.
 cops:
   - Layout/ArgumentAlignment
@@ -13,7 +13,6 @@ cops:
   - Layout/FirstArrayElementLineBreak
   - Layout/FirstHashElementLineBreak
   - Layout/FirstMethodArgumentLineBreak
-  - Layout/FirstMethodParameterLineBreak
   - Layout/HeredocIndentation
   - Layout/IndentationConsistency
   - Layout/IndentationWidth
@@ -47,18 +46,13 @@ cops:
   - Lint/AmbiguousOperatorPrecedence
   - Lint/AmbiguousRange
   - Lint/AmbiguousRegexpLiteral
-  - Lint/ArrayLiteralInRegexp
   - Lint/AssignmentInCondition
   - Lint/ConstantResolution
   - Lint/CopDirectiveSyntax
   - Lint/DuplicateRegexpCharacterClassElement
-  - Lint/DuplicateRescueException
-  - Lint/LiteralAssignmentInCondition
   - Lint/MissingCopEnableDirective
-  - Lint/NoReturnInBeginEndBlocks
   - Lint/RedundantCopDisableDirective
   - Lint/RedundantCopEnableDirective
-  - Lint/RescueType
   - Lint/SymbolConversion
   - Lint/UnusedMethodArgument
   - Lint/UselessAssignment

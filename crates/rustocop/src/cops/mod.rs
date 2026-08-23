@@ -11,7 +11,6 @@ pub(crate) const INTENTIONALLY_PENDING_COP_NAMES: &[&str] = &[
     "Layout/FirstArrayElementLineBreak",
     "Layout/FirstHashElementLineBreak",
     "Layout/FirstMethodArgumentLineBreak",
-    "Layout/FirstMethodParameterLineBreak",
     "Layout/HeredocIndentation",
     "Layout/IndentationConsistency",
     "Layout/IndentationWidth",
@@ -45,18 +44,13 @@ pub(crate) const INTENTIONALLY_PENDING_COP_NAMES: &[&str] = &[
     "Lint/AmbiguousOperatorPrecedence",
     "Lint/AmbiguousRange",
     "Lint/AmbiguousRegexpLiteral",
-    "Lint/ArrayLiteralInRegexp",
     "Lint/AssignmentInCondition",
     "Lint/ConstantResolution",
     "Lint/CopDirectiveSyntax",
     "Lint/DuplicateRegexpCharacterClassElement",
-    "Lint/DuplicateRescueException",
-    "Lint/LiteralAssignmentInCondition",
     "Lint/MissingCopEnableDirective",
-    "Lint/NoReturnInBeginEndBlocks",
     "Lint/RedundantCopDisableDirective",
     "Lint/RedundantCopEnableDirective",
-    "Lint/RescueType",
     "Lint/SymbolConversion",
     "Lint/UnusedMethodArgument",
     "Lint/UselessAssignment",
@@ -113,7 +107,7 @@ mod tests {
     #[test]
     fn public_inventory_is_sorted_unique_and_complete() {
         let names = cop_names();
-        assert_eq!(names.len(), 533);
+        assert_eq!(names.len(), 539);
         assert!(names.windows(2).all(|pair| pair[0] < pair[1]));
         assert!(INTENTIONALLY_PENDING_COP_NAMES
             .windows(2)

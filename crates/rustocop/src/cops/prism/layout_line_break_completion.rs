@@ -5,7 +5,6 @@ define_cops! {
     FirstArrayElementLineBreak => "Layout/FirstArrayElementLineBreak" => source(first_array_element_line_break),
     FirstHashElementLineBreak => "Layout/FirstHashElementLineBreak" => source(first_hash_element_line_break),
     FirstMethodArgumentLineBreak => "Layout/FirstMethodArgumentLineBreak" => source(first_method_argument_line_break),
-    FirstMethodParameterLineBreak => "Layout/FirstMethodParameterLineBreak" => source(first_method_parameter_line_break),
     MultilineHashKeyLineBreaks => "Layout/MultilineHashKeyLineBreaks" => source(multiline_hash_key_line_breaks),
     SingleLineBlockChain => "Layout/SingleLineBlockChain" => source(single_line_block_chain),
     ConditionPosition => "Layout/ConditionPosition" => any_node(condition_position),
@@ -138,10 +137,6 @@ fn implicit_array_assignment(context: &mut CopContext<'_, '_>) {
 
 fn first_method_argument_line_break(context: &mut CopContext<'_, '_>) {
     first_parenthesized_list(context, false);
-}
-
-fn first_method_parameter_line_break(context: &mut CopContext<'_, '_>) {
-    first_parenthesized_list(context, true);
 }
 
 fn first_parenthesized_list(context: &mut CopContext<'_, '_>, definition: bool) {
