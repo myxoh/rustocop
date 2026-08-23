@@ -172,7 +172,7 @@ fn literal_interpolation_expression(expression: &str) -> bool {
     {
         return true;
     }
-    if expression.starts_with(':') {
+    if expression.starts_with(':') && !expression.starts_with("::") {
         return expression.len() > 1;
     }
     if expression.starts_with('%') {
