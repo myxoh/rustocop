@@ -89,21 +89,13 @@ fn unescape_config(value: &str) -> String {
 }
 
 fn commented_keyword(context: &mut CopContext<'_, '_>) {
-    let mut heredoc_end: Option<String> = None;
-    for (offset, line) in context.source_file().lines() {
-        if let Some(marker) = &heredoc_end {
-            if line.trim() == marker {
-                heredoc_end = None;
-            }
-            continue;
-        }
-        if let Some(at) = line.find("<<-").or_else(|| line.find("<<~")) {
-            let marker = line[at + 3..].trim().trim_matches(['\'', '"']).to_string();
-            if !marker.is_empty() {
-                heredoc_end = Some(marker);
-                continue;
-            }
-        }
+    let source = context.source();
+    for comment_range in context.source_file().comment_ranges() {
+        let offset = context.source_file().line_start(comment_range.start);
+        let line_end = source[offset..]
+            .find('\n')
+            .map_or(source.len(), |relative| offset + relative);
+        let line = &source[offset..line_end];
         let trimmed = line.trim_start();
         let Some(keyword) =
             ["begin", "class", "def", "end", "module"]
@@ -118,10 +110,8 @@ fn commented_keyword(context: &mut CopContext<'_, '_>) {
         else {
             continue;
         };
-        let Some(comment_at) = ruby_comment_offset(line) else {
-            continue;
-        };
-        let comment = &line[comment_at..];
+        let comment_at = comment_range.start - offset;
+        let comment = &source[comment_range.clone()];
         let compact_comment = comment.replace([' ', '\t'], "");
         let steep_annotation = comment
             .strip_prefix("# ")
@@ -139,7 +129,7 @@ fn commented_keyword(context: &mut CopContext<'_, '_>) {
         {
             continue;
         }
-        let offense = offset + comment_at..offset + line.len();
+        let offense = comment_range;
         let (edit, replacement) = if keyword == "end" {
             (
                 offset + line[..comment_at].trim_end().len()..offset + line.len(),
