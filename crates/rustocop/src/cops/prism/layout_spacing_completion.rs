@@ -1,7 +1,7 @@
 use super::*;
 
 define_cops! {
-    AssignmentIndentation => "Layout/AssignmentIndentation" => source(assignment_indentation),
+    AssignmentIndentation => "Layout/AssignmentIndentation" => any_node(assignment_indentation),
     BeginEndAlignment => "Layout/BeginEndAlignment" => node(as_begin_node, begin_end_alignment),
     EndOfLine => "Layout/EndOfLine" => source(end_of_line),
     FirstParameterIndentation => "Layout/FirstParameterIndentation" => source(first_parameter_indentation),
@@ -10,38 +10,72 @@ define_cops! {
     SpaceInsideStringInterpolation => "Layout/SpaceInsideStringInterpolation" => node(as_embedded_statements_node, space_inside_string_interpolation),
 }
 
-fn assignment_indentation(context: &mut CopContext<'_, '_>) {
-    let lines = context.source_file().lines().collect::<Vec<_>>();
+fn assignment_indentation(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
+    let Some(value) = assignment_value(node) else {
+        return;
+    };
+    let source = context.source();
+    let node_start = node.location().start_offset();
+    let value_start = value.location().start_offset();
+    let node_line_start = source[..node_start].rfind('\n').map_or(0, |at| at + 1);
+    let value_line_start = source[..value_start].rfind('\n').map_or(0, |at| at + 1);
+    let node_line_end = source[node_line_start..]
+        .find('\n')
+        .map_or(source.len(), |at| node_line_start + at);
+    if node_line_start == value_line_start
+        || !source[node_start..value_start].trim_end().ends_with('=')
+        || !source[node_line_start..node_line_end].is_ascii()
+    {
+        return;
+    }
     let width = context.config_usize("IndentationWidth", 2);
-    for pair in lines.windows(2) {
-        let (_, left) = pair[0];
-        let (right_start, right) = pair[1];
-        let left_trimmed = left.trim_end();
-        if !left_trimmed.ends_with('=')
-            || left_trimmed.ends_with("==")
-            || !left_trimmed
-                .as_bytes()
-                .get(left_trimmed.len().saturating_sub(2))
-                .is_some_and(u8::is_ascii_whitespace)
-            || right.trim().is_empty()
-        {
-            continue;
-        }
-        if !left.is_ascii() {
-            continue;
-        }
-        let current = right.len() - right.trim_start().len();
-        let expected = left.len() - left.trim_start().len() + width;
-        if current == expected {
-            continue;
-        }
-        let expression_start = right_start + current;
-        context.replace(
-            "Indent the first line of the right-hand-side of a multi-line assignment.",
-            expression_start..right_start + right.len(),
-            right_start..expression_start,
-            " ".repeat(expected),
-        );
+    let chain_start = context
+        .ancestors()
+        .iter()
+        .filter(|ancestor| assignment_value(ancestor).is_some())
+        .map(Node::location)
+        .map(|location| location.start_offset())
+        .filter(|start| {
+            source[..*start].rfind('\n').map_or(0, |at| at + 1) == node_line_start
+        })
+        .chain(std::iter::once(node_start))
+        .min()
+        .unwrap_or(node_start);
+    let base = chain_start - node_line_start;
+    let current = value_start - value_line_start;
+    let expected = base + width;
+    if current == expected {
+        return;
+    }
+    context.replace(
+        "Indent the first line of the right-hand-side of a multi-line assignment.",
+        value.location(),
+        value_line_start..value_start,
+        " ".repeat(expected),
+    );
+}
+
+fn assignment_value<'pr>(node: &Node<'pr>) -> Option<Node<'pr>> {
+    if let Some(write) = node.as_local_variable_write_node() {
+        Some(write.value())
+    } else if let Some(write) = node.as_instance_variable_write_node() {
+        Some(write.value())
+    } else if let Some(write) = node.as_class_variable_write_node() {
+        Some(write.value())
+    } else if let Some(write) = node.as_global_variable_write_node() {
+        Some(write.value())
+    } else if let Some(write) = node.as_constant_write_node() {
+        Some(write.value())
+    } else if let Some(write) = node.as_constant_path_write_node() {
+        Some(write.value())
+    } else if let Some(write) = node.as_multi_write_node() {
+        Some(write.value())
+    } else if let Some(write) = node.as_call_operator_write_node() {
+        Some(write.value())
+    } else if let Some(write) = node.as_index_operator_write_node() {
+        Some(write.value())
+    } else {
+        None
     }
 }
 
