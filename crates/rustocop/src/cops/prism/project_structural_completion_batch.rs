@@ -490,6 +490,9 @@ fn module_length(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
 
 fn empty_after_multiline_condition(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
     if let Some(condition) = node.as_if_node() {
+        if condition.if_keyword_loc().is_none() {
+            return;
+        }
         let predicate = condition.predicate();
         let modifier = condition
             .if_keyword_loc()
@@ -554,6 +557,12 @@ fn modifier_has_following_statement(node: &Node<'_>, context: &CopContext<'_, '_
     if has_right_sibling(node, context.ancestors()) {
         return true;
     }
+    let file = context.source_file();
+    let end = node.location().end_offset();
+    let line_end = file.line_range(end.saturating_sub(1)).end;
+    if !context.source()[end..line_end].trim().is_empty() {
+        return false;
+    }
     context.source()[node.location().end_offset()..]
         .lines()
         .map(str::trim)
@@ -561,7 +570,7 @@ fn modifier_has_following_statement(node: &Node<'_>, context: &CopContext<'_, '_
         .is_some_and(|line| {
             !matches!(
                 line.split_whitespace().next(),
-                Some("end" | "else" | "elsif" | "rescue" | "ensure" | "when")
+                Some("end" | "elsif" | "rescue" | "ensure" | "when")
             )
         })
 }
@@ -580,6 +589,18 @@ fn check_multiline_condition(
     let location = condition_end.location();
     let file = context.source_file();
     if require_multiline_node && file.same_line(location.start_offset(), location.end_offset()) {
+        return;
+    }
+    let condition_source = file.node(condition_end);
+    let continuation_lines = condition_source.lines().skip(1).filter(|line| !line.trim().is_empty());
+    if continuation_lines
+        .clone()
+        .next()
+        .is_some_and(|_| continuation_lines.clone().all(|line| {
+            let line = line.trim_start();
+            line.starts_with('.') || line.starts_with("&.")
+        }))
+    {
         return;
     }
     let condition_line = file.line_range(location.end_offset().saturating_sub(1));
