@@ -125,5 +125,31 @@ RSpec.describe RuboCop::Cop::Lint::InterpolationCheck, :config do
         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Interpolation in single quoted string detected. Use double quoted strings if you need interpolation.
       RUBY
     end
+
+
+    it 'does not register when the interpolation marker is immediately escaped' do
+      expect_no_offenses(<<~'RUBY')
+        '"\\#{test}"'
+      RUBY
+    end
+
+    it 'does not register when changing multiline documentation to double quotes is not one string' do
+      expect_no_offenses(<<~'RUBY')
+        'command(
+          value: "#{example}",
+        )'
+      RUBY
+    end
+
+    it 'registers an interpolation containing `yield` in a block' do
+      expect_offense(<<~'RUBY')
+        layout { 'THIS. IS. #{yield.upcase}!' }
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Interpolation in single quoted string detected. Use double quoted strings if you need interpolation.
+      RUBY
+
+      expect_correction(<<~'RUBY')
+        layout { "THIS. IS. #{yield.upcase}!" }
+      RUBY
+    end
   end
 end

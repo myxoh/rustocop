@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use ruby_prism::{CallNode, ConstantPathNode, HashNode, Node, ReturnNode, StringNode};
+use ruby_prism::{CallNode, HashNode, Node, ReturnNode, StringNode};
 
 use super::*;
 
@@ -9,7 +9,7 @@ define_cops! {
     InterpolationCheck => "Lint/InterpolationCheck" => node(as_string_node, interpolation_check),
     TopLevelReturnWithArgument => "Lint/TopLevelReturnWithArgument" => node(as_return_node, top_level_return_with_argument),
     ImplicitRuntimeError => "Style/ImplicitRuntimeError" => call(implicit_runtime_error),
-    RedundantConstantBase => "Style/RedundantConstantBase" => node(as_constant_path_node, redundant_constant_base),
+    RedundantConstantBase => "Style/RedundantConstantBase" => any_node(redundant_constant_base),
 }
 
 fn duplicate_hash_key(node: &HashNode<'_>, context: &mut CopContext<'_, '_>) {
@@ -59,6 +59,19 @@ fn duplicate_hash_key_candidate(node: &Node<'_>) -> bool {
     if node.as_constant_read_node().is_some() || node.as_constant_path_node().is_some() {
         return true;
     }
+    if node.as_string_node().is_some()
+        || node.as_symbol_node().is_some()
+        || node.as_integer_node().is_some()
+        || node.as_float_node().is_some()
+        || node.as_rational_node().is_some()
+        || node.as_imaginary_node().is_some()
+        || node.as_regular_expression_node().is_some()
+        || node.as_true_node().is_some()
+        || node.as_false_node().is_some()
+        || node.as_nil_node().is_some()
+    {
+        return true;
+    }
     if let Some(call) = node.as_call_node() {
         let literal_operator = matches!(
             call.name().as_slice(),
@@ -72,6 +85,19 @@ fn duplicate_hash_key_candidate(node: &Node<'_>) -> bool {
                     duplicate_hash_key_candidate(&argument)
                 })
             });
+    }
+    if let Some(array) = node.as_array_node() {
+        return array.elements().iter().all(|element| {
+            duplicate_hash_key_candidate(&element)
+        });
+    }
+    if let Some(hash) = node.as_hash_node() {
+        return hash.elements().iter().all(|element| {
+            element.as_assoc_node().is_some_and(|pair| {
+                duplicate_hash_key_candidate(&pair.key())
+                    && duplicate_hash_key_candidate(&pair.value())
+            })
+        });
     }
     if let Some(parentheses) = node.as_parentheses_node() {
         return parentheses
@@ -111,10 +137,8 @@ fn duplicate_hash_key_candidate(node: &Node<'_>) -> bool {
         )+ };
     }
     has_static_literal_flag!(
-        as_array_node,
         as_false_node,
         as_float_node,
-        as_hash_node,
         as_imaginary_node,
         as_integer_node,
         as_interpolated_regular_expression_node,
@@ -156,6 +180,7 @@ fn interpolation_check(node: &StringNode<'_>, context: &mut CopContext<'_, '_>) 
     let source = context.source_file().at(&location);
     if !source.starts_with('\'')
         || !source.ends_with('\'')
+        || source.contains('\n')
         || !contains_unescaped_interpolation(source)
         || context.ancestors().iter().any(|ancestor| {
             ancestor.as_regular_expression_node().is_some()
@@ -170,8 +195,9 @@ fn interpolation_check(node: &StringNode<'_>, context: &mut CopContext<'_, '_>) 
     } else {
         format!("\"{}\"", &source[1..source.len() - 1])
     };
+    let probe = format!("def __rustocop_interpolation_probe__; {replacement}; end");
     let valid = {
-        let parsed = ruby_prism::parse(replacement.as_bytes());
+        let parsed = ruby_prism::parse(probe.as_bytes());
         parsed.errors().next().is_none() && contains_interpolated_string(&parsed.node())
     };
     if !valid {
@@ -181,20 +207,18 @@ fn interpolation_check(node: &StringNode<'_>, context: &mut CopContext<'_, '_>) 
 }
 
 fn contains_unescaped_interpolation(source: &str) -> bool {
-    source.match_indices("#{").any(|(at, _)| {
-        source.as_bytes()[..at]
-            .iter()
-            .rev()
-            .take_while(|byte| **byte == b'\\')
-            .count()
-            .is_multiple_of(2)
-    })
+    source
+        .match_indices("#{")
+        .any(|(at, _)| source.as_bytes().get(at.wrapping_sub(1)) != Some(&b'\\'))
 }
 
 fn contains_interpolated_string(root: &Node<'_>) -> bool {
     struct Finder(bool);
     impl<'pr> Visit<'pr> for Finder {
-        fn visit_interpolated_string_node(&mut self, _node: &ruby_prism::InterpolatedStringNode<'pr>) {
+        fn visit_interpolated_string_node(
+            &mut self,
+            _node: &ruby_prism::InterpolatedStringNode<'pr>,
+        ) {
             self.0 = true;
         }
     }
@@ -241,14 +265,27 @@ fn implicit_runtime_error(node: &CallNode<'_>, context: &mut CopContext<'_, '_>)
     );
 }
 
-fn redundant_constant_base(node: &ConstantPathNode<'_>, context: &mut CopContext<'_, '_>) {
-    if node.parent().is_some()
-        || node.delimiter_loc().as_slice() != b"::"
+fn redundant_constant_base(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
+    let path = if let Some(path) = node.as_constant_path_node() {
+        path
+    } else if let Some(write) = node.as_constant_path_write_node() {
+        write.target()
+    } else if let Some(write) = node.as_constant_path_and_write_node() {
+        write.target()
+    } else if let Some(write) = node.as_constant_path_or_write_node() {
+        write.target()
+    } else if let Some(write) = node.as_constant_path_operator_write_node() {
+        write.target()
+    } else {
+        return;
+    };
+    if path.parent().is_some()
+        || path.delimiter_loc().as_slice() != b"::"
         || context.related_config_value("Lint/ConstantResolution", "Enabled") == Some("true")
     {
         return;
     }
-    let location = node.location();
+    let location = path.location();
     for ancestor in context.ancestors().iter().rev() {
         if ancestor.as_module_node().is_some() {
             return;
@@ -264,6 +301,6 @@ fn redundant_constant_base(node: &ConstantPathNode<'_>, context: &mut CopContext
             }
         }
     }
-    let delimiter = node.delimiter_loc();
+    let delimiter = path.delimiter_loc();
     context.remove("Remove redundant `::`.", &delimiter, &delimiter);
 }

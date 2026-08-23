@@ -115,5 +115,13 @@ RSpec.describe RuboCop::Cop::Lint::DuplicateHashKey, :config do
         hash = { build_key(1) => :first, build_key(1) => :second }
       RUBY
     end
+
+    it 'recognizes duplicate recursively literal array keys' do
+      expect_offense(<<~RUBY)
+        hash = { ['Linux Kernel Module', 'AMPL'] => :first,
+                 ['Linux Kernel Module', 'AMPL'] => :second }
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Duplicated key in hash literal.
+      RUBY
+    end
   end
 end

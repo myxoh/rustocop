@@ -132,5 +132,17 @@ RSpec.describe RuboCop::Cop::Style::RedundantConstantBase, :config do
         end
       RUBY
     end
+
+
+    it 'registers a root constant assignment target' do
+      expect_offense(<<~RUBY)
+        ::AVAILABLE = enabled?
+        ^^ Remove redundant `::`.
+      RUBY
+
+      expect_correction(<<~RUBY)
+        AVAILABLE = enabled?
+      RUBY
+    end
   end
 end

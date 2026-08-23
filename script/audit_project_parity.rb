@@ -193,6 +193,8 @@ end
 
 common = ["--config", options[:config]]
 def encode_offenses(offenses, cops)
+  selected = cops.to_h { |cop| [cop, true] }
+  offenses = offenses.select { |offense| selected[offense.fetch("cop")] }
   paths = offenses.map { |offense| offense.fetch("path") }.uniq
   messages = offenses.map { |offense| offense.fetch("message") }.uniq
   path_indexes = paths.each_with_index.to_h
