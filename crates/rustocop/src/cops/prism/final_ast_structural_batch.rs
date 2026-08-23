@@ -727,7 +727,7 @@ impl Cop for Void {
             .is_some_and(|line| line.trim() == "ensure");
         let all_expressions = enclosing_definition.as_ref().is_some_and(|definition| {
             definition.name().as_slice() == b"initialize"
-                || definition.name().as_slice().ends_with(b"=")
+                || void_setter_name(definition.name().as_slice())
         }) || direct_parent.is_some_and(|parent| {
             parent.as_for_node().is_some() || parent.as_ensure_node().is_some()
         }) || ensure_body
@@ -739,7 +739,7 @@ impl Cop for Void {
                 });
         let correctable = !enclosing_definition
             .as_ref()
-            .is_some_and(|definition| definition.name().as_slice().ends_with(b"="));
+            .is_some_and(|definition| void_setter_name(definition.name().as_slice()));
         let count = if all_expressions {
             body.len()
         } else {
@@ -756,6 +756,10 @@ impl Cop for Void {
             );
         }
     }
+}
+
+fn void_setter_name(name: &[u8]) -> bool {
+    name.ends_with(b"=") && !matches!(name, b"==" | b"===" | b"!=" | b"<=" | b">=")
 }
 
 fn check_void_expression(
