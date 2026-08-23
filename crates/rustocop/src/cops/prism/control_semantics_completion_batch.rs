@@ -435,7 +435,7 @@ fn for_collection_needs_parentheses(node: &Node<'_>, source: &str) -> bool {
 
 fn class_module_children(context: &mut CopContext<'_, '_>) {
     let lines = context.source_file().lines().collect::<Vec<_>>();
-    let directly_nested = directly_nested_definition_offsets(context.source());
+    let definitions = definition_offsets(context.source());
     let mut compact_covered_until = 0usize;
     for (index, (offset, line)) in lines.iter().copied().enumerate() {
         let trimmed = line.trim_start();
@@ -457,11 +457,15 @@ fn class_module_children(context: &mut CopContext<'_, '_>) {
             continue;
         }
         let indent = line.len() - trimmed.len();
+        let declaration_start = offset + indent;
+        if !definitions.all.contains(&declaration_start) {
+            continue;
+        }
         let name_start = offset + indent + keyword.len();
         let name_range = name_start..name_start + name.len();
         if style == "nested" {
             let path = name.trim_start_matches("::");
-            if directly_nested.contains(&(offset + indent))
+            if definitions.directly_nested.contains(&declaration_start)
                 || !path.contains("::")
                 || path
                     .split("::")
@@ -621,10 +625,16 @@ fn class_module_children(context: &mut CopContext<'_, '_>) {
     }
 }
 
-fn directly_nested_definition_offsets(source: &str) -> HashSet<usize> {
+#[derive(Default)]
+struct DefinitionOffsets {
+    all: HashSet<usize>,
+    directly_nested: HashSet<usize>,
+}
+
+fn definition_offsets(source: &str) -> DefinitionOffsets {
     #[derive(Default)]
     struct Collector {
-        offsets: HashSet<usize>,
+        definitions: DefinitionOffsets,
     }
 
     impl Collector {
@@ -639,18 +649,22 @@ fn directly_nested_definition_offsets(source: &str) -> HashSet<usize> {
                 return;
             };
             if child.as_class_node().is_some() || child.as_module_node().is_some() {
-                self.offsets.insert(child.location().start_offset());
+                self.definitions
+                    .directly_nested
+                    .insert(child.location().start_offset());
             }
         }
     }
 
     impl<'pr> Visit<'pr> for Collector {
         fn visit_class_node(&mut self, node: &ruby_prism::ClassNode<'pr>) {
+            self.definitions.all.insert(node.location().start_offset());
             self.collect_body(node.body());
             ruby_prism::visit_class_node(self, node);
         }
 
         fn visit_module_node(&mut self, node: &ruby_prism::ModuleNode<'pr>) {
+            self.definitions.all.insert(node.location().start_offset());
             self.collect_body(node.body());
             ruby_prism::visit_module_node(self, node);
         }
@@ -659,7 +673,7 @@ fn directly_nested_definition_offsets(source: &str) -> HashSet<usize> {
     let parsed = parse(source.as_bytes());
     let mut collector = Collector::default();
     collector.visit(&parsed.node());
-    collector.offsets
+    collector.definitions
 }
 
 fn compact_namespace_replacement(lines: &[(usize, &str)], start: usize) -> Option<(usize, String)> {
