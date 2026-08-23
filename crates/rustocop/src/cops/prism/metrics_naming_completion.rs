@@ -111,6 +111,14 @@ fn parameter_lists_definition(
                 .iter()
                 .any(|prefix| source.starts_with(prefix))
         })
+        && context
+            .ancestors()
+            .iter()
+            .rev()
+            .find_map(Node::as_block_node)
+            .and_then(|block| block.body())
+            .and_then(|body| body.as_statements_node())
+            .is_some_and(|statements| statements.body().len() == 1)
     {
         return;
     }
