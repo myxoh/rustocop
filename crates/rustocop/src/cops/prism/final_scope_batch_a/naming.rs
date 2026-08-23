@@ -86,8 +86,10 @@ impl ShadowedArgumentScopes {
                         || (read.implicit
                             && (implicit_references || read.implicit_for_blocks)))
                         && (read.implicit
-                            || !events.reference_exclusions.iter().any(|range| {
-                                range.start <= read.position && read.position < range.end
+                            || !events.reference_exclusions.iter().any(|(name, range)| {
+                                *name == parameter.name
+                                    && range.start <= read.position
+                                    && read.position < range.end
                             }))
                 })
                 .collect::<Vec<_>>();
@@ -111,7 +113,18 @@ impl ShadowedArgumentScopes {
                     .iter()
                     .any(|reference| {
                         (reference.implicit && self.ignore_implicit)
-                            || reference.position <= assignment.range.start
+                            || events
+                                .reference_exclusions
+                                .iter()
+                                .find(|(name, range)| {
+                                    reference.implicit
+                                        && *name == parameter.name
+                                        && range.start < assignment.range.start
+                                        && range.start <= reference.position
+                                        && reference.position < range.end
+                                })
+                                .map_or(reference.position, |(_, range)| range.start)
+                                <= assignment.range.start
                     })
                 {
                     break;
@@ -201,7 +214,7 @@ fn push_argument(
 struct ArgumentEvents {
     assignments: Vec<ArgumentAssignment>,
     reads: Vec<ArgumentRead>,
-    reference_exclusions: Vec<std::ops::Range<usize>>,
+    reference_exclusions: Vec<(Vec<u8>, std::ops::Range<usize>)>,
     nested_scopes: u32,
     conditional_depth: u32,
 }
@@ -235,8 +248,10 @@ impl<'pr> ruby_prism::Visit<'pr> for ArgumentEvents {
 
     fn visit_local_variable_write_node(&mut self, node: &ruby_prism::LocalVariableWriteNode<'pr>) {
         if node.depth() == self.nested_scopes {
-            self.reference_exclusions
-                .push(node.location().start_offset()..node.location().end_offset());
+            self.reference_exclusions.push((
+                node.name().as_slice().to_vec(),
+                node.location().start_offset()..node.location().end_offset(),
+            ));
             let mut reads = LocalReadNames::default();
             ruby_prism::Visit::visit(&mut reads, &node.value());
             self.assignments.push(ArgumentAssignment {
@@ -254,13 +269,16 @@ impl<'pr> ruby_prism::Visit<'pr> for ArgumentEvents {
         let mut reads = LocalReadNames::default();
         ruby_prism::Visit::visit(&mut reads, &node.value());
         let assignment_start = self.assignments.len();
-        self.reference_exclusions
-            .push(node.location().start_offset()..node.location().end_offset());
         ruby_prism::visit_multi_write_node(self, node);
         let operator = node.operator_loc().start_offset();
+        let full_range = node.location().start_offset()..node.location().end_offset();
         for assignment in &mut self.assignments[assignment_start..] {
-            if assignment.range.start < operator && reads.names.contains(&assignment.name) {
-                assignment.uses_argument = true;
+            if assignment.range.start < operator {
+                self.reference_exclusions
+                    .push((assignment.name.clone(), full_range.clone()));
+                if reads.names.contains(&assignment.name) {
+                    assignment.uses_argument = true;
+                }
             }
         }
     }
