@@ -568,6 +568,22 @@ fn empty_literal(context: &mut CopContext<'_, '_>) {
                 continue;
             }
             let mut end = start + constructor.len();
+            let same_line_tail = source[end..]
+                .split_once('\n')
+                .map_or(&source[end..], |(line, _)| line)
+                .trim_start();
+            let unparenthesized_argument = same_line_tail
+                .as_bytes()
+                .first()
+                .is_some_and(|byte| {
+                    !matches!(
+                        byte,
+                        b',' | b')' | b']' | b'}' | b'.' | b'&' | b';' | b'#' | b'?'
+                    )
+                })
+                && !same_line_tail.starts_with("if ")
+                && !same_line_tail.starts_with("unless ")
+                && !same_line_tail.starts_with(": ");
             if source.get(end..end + 2) == Some("()") {
                 end += 2;
             } else if kind == "array"
@@ -579,15 +595,7 @@ fn empty_literal(context: &mut CopContext<'_, '_>) {
             } else if source.as_bytes().get(end) == Some(&b'(')
                 || source[end..].trim_start().starts_with(['{'])
                 || source[end..].trim_start().starts_with("do")
-                || source[end..]
-                    .split_once('\n')
-                    .map_or(&source[end..], |(line, _)| line)
-                    .trim_start()
-                    .as_bytes()
-                    .first()
-                    .is_some_and(|byte| {
-                        !matches!(byte, b',' | b')' | b']' | b'}' | b'.' | b'&' | b';' | b'#')
-                    })
+                || unparenthesized_argument
             {
                 search = end + 1;
                 continue;
