@@ -119,7 +119,14 @@ fn endless_method(context: &mut CopContext<'_, '_>) {
 }
 
 fn endless_method_equal(definition: &str) -> Option<usize> {
-    definition.match_indices(" = ").find_map(|(at, _)| {
+    definition.match_indices(" =").find_map(|(at, _)| {
+        if definition
+            .as_bytes()
+            .get(at + 2)
+            .is_some_and(|byte| !byte.is_ascii_whitespace())
+        {
+            return None;
+        }
         let signature = &definition[..at];
         let mut parentheses = 0_isize;
         for byte in signature.bytes() {
