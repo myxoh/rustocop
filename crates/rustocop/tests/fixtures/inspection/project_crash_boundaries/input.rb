@@ -21,6 +21,13 @@ values << +"text"
 options = { spread_interval: -10 }
 status = $?
 
+=begin
+generated-option=value-with-dashes
+=end
+
+class Generated<%= table_name.camelize %> < Base<%= version %>
+<%= generated_data -%>
+
 where(:first, :second) do
   1       | 2
   100_000 | 3

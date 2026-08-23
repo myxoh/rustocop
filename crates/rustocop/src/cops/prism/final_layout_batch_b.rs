@@ -1815,10 +1815,18 @@ fn operator_spacing(context: &mut CopContext<'_, '_>) {
             .iter()
             .any(|style| style == "table");
     let literal_ranges = context.source_file().literal_ranges();
+    let comment_ranges = context.source_file().comment_ranges();
+    let unary_operator_offsets = unary_operator_offsets(&source);
 
     for (line_offset, line) in context.source_file().lines().collect::<Vec<_>>() {
         if line.trim() == "__END__" {
             break;
+        }
+        // ERB-backed generator templates are not Ruby syntax at the template
+        // delimiters. RuboCop's Ruby parser does not expose those delimiters
+        // as operator nodes, so source-oriented scanning must ignore the line.
+        if line.contains("<%") || line.contains("%>") {
+            continue;
         }
         let code_end = ruby_comment_start(line).unwrap_or(line.len());
         let code = &line[..code_end];
@@ -1827,6 +1835,13 @@ fn operator_spacing(context: &mut CopContext<'_, '_>) {
         let mut ternary_depth = 0usize;
         while index < code.len() {
             let absolute = line_offset + index;
+            if let Some(range) = comment_ranges
+                .iter()
+                .find(|range| range.start <= absolute && absolute < range.end)
+            {
+                index = range.end.saturating_sub(line_offset).min(code.len());
+                continue;
+            }
             if let Some(range) = literal_ranges
                 .iter()
                 .find(|range| range.start <= absolute && absolute < range.end)
@@ -1881,6 +1896,10 @@ fn operator_spacing(context: &mut CopContext<'_, '_>) {
                 continue;
             };
             let end = index + operator.len();
+            if unary_operator_offsets.contains(&absolute) {
+                index = end;
+                continue;
+            }
             if operator == ":" && ternary_depth == 0 {
                 index = end;
                 continue;
@@ -1994,6 +2013,37 @@ fn operator_spacing(context: &mut CopContext<'_, '_>) {
             index = end;
         }
     }
+}
+
+fn unary_operator_offsets(source: &str) -> std::collections::HashSet<usize> {
+    #[derive(Default)]
+    struct UnaryOperators(std::collections::HashSet<usize>);
+
+    impl<'pr> ruby_prism::Visit<'pr> for UnaryOperators {
+        fn visit_splat_node(&mut self, node: &ruby_prism::SplatNode<'pr>) {
+            self.0.insert(node.operator_loc().start_offset());
+            ruby_prism::visit_splat_node(self, node);
+        }
+
+        fn visit_block_argument_node(&mut self, node: &ruby_prism::BlockArgumentNode<'pr>) {
+            self.0.insert(node.operator_loc().start_offset());
+            ruby_prism::visit_block_argument_node(self, node);
+        }
+
+        fn visit_call_node(&mut self, node: &ruby_prism::CallNode<'pr>) {
+            if matches!(node.name().as_slice(), b"+@" | b"-@" | b"!" | b"~") {
+                if let Some(operator) = node.message_loc() {
+                    self.0.insert(operator.start_offset());
+                }
+            }
+            ruby_prism::visit_call_node(self, node);
+        }
+    }
+
+    let parsed = ruby_prism::parse(source.as_bytes());
+    let mut operators = UnaryOperators::default();
+    operators.visit(&parsed.node());
+    operators.0
 }
 
 fn ruby_comment_start(line: &str) -> Option<usize> {
