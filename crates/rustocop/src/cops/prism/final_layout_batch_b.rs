@@ -2407,101 +2407,114 @@ fn operator_alignment_is_allowed(
     rhs_start: usize,
     operator: &str,
 ) -> bool {
-    let before = &source[..line_offset];
-    let previous = before
-        .lines()
-        .rev()
-        .find(|line| !line.trim().is_empty() && !line.trim_start().starts_with('#'));
-    let after_line = source[line_offset..]
-        .find('\n')
-        .map_or(source.len(), |at| line_offset + at + 1);
-    let next = source[after_line..]
-        .lines()
-        .find(|line| !line.trim().is_empty() && !line.trim_start().starts_with('#'));
     let current_line_end = source[line_offset..]
         .find('\n')
         .map_or(source.len(), |end| line_offset + end);
     let current_line_source = &source[line_offset..current_line_end];
-    let current_lhs = current_line_source[..whitespace_start].trim_end().chars().count();
     let operator_start_column = current_line_source[..operator_start].chars().count();
     let operator_end_column = current_line_source[..operator_end].chars().count();
     let rhs_start_column = current_line_source[..rhs_start].chars().count();
-    let mut leading_excess = operator_start.saturating_sub(whitespace_start) > 1;
+    let leading_excess = operator_start.saturating_sub(whitespace_start) > 1;
     let trailing_excess = rhs_start.saturating_sub(operator_end) > 1;
     let lhs = current_line_source[..whitespace_start].trim_end();
-    let first_equal = (operator == "=").then(|| {
-        operator_layouts(current_line_source)
-            .into_iter()
-            .find(|layout| current_line_source[layout.0..layout.1].ends_with('='))
-    }).flatten();
-    let first_assignment_operator = first_equal.is_some_and(|layout| layout.0 == operator_start);
-    let setter_assignment = operator == "="
-        && first_assignment_operator
-        && (lhs.contains('.') || lhs.contains(']'));
-    let mut assignment_leading_aligned = false;
-    let indented = source
-        .as_bytes()
-        .get(line_offset)
-        .is_some_and(u8::is_ascii_whitespace);
-    if operator == "=" && leading_excess && !setter_assignment {
-        if !assignment_leading_alignment_is_allowed(
-            source,
-            line_offset,
-            operator_end_column,
-            first_assignment_operator,
-        ) {
-            return false;
-        }
-        assignment_leading_aligned = true;
-        leading_excess = false;
+    let first_equal = (operator == "=")
+        .then(|| {
+            operator_layouts(current_line_source)
+                .into_iter()
+                .find(|layout| current_line_source[layout.0..layout.1].ends_with('='))
+        })
+        .flatten();
+    let plain_assignment = operator == "="
+        && !(first_equal.is_some_and(|layout| layout.0 == operator_start)
+            && (lhs.contains('.') || lhs.contains(']')));
+
+    let leading_aligned = !leading_excess
+        || if plain_assignment {
+            assignment_leading_alignment_is_allowed(source, line_offset, operator_end_column)
+        } else {
+            generic_operator_alignment_is_allowed(
+                source,
+                line_offset,
+                operator_start_column,
+                operator_end_column,
+                operator,
+            )
+        };
+    let trailing_aligned = !trailing_excess
+        || generic_rhs_alignment_is_allowed(source, line_offset, rhs_start_column, rhs_start);
+
+    leading_aligned && trailing_aligned
+}
+
+fn alignment_search(
+    source: &str,
+    line_offset: usize,
+    mut predicate: impl FnMut(&str) -> bool,
+) -> bool {
+    let lines = source.lines().collect::<Vec<_>>();
+    let current = source[..line_offset].bytes().filter(|byte| *byte == b'\n').count();
+    let current_indent = lines[current].len() - lines[current].trim_start().len();
+    let eligible = |line: &&str| !line.trim().is_empty() && !line.trim_start().starts_with('#');
+
+    let preceding = lines[..current].iter().rev().find(|line| eligible(line));
+    let subsequent = lines[current + 1..].iter().find(|line| eligible(line));
+    if preceding.is_some_and(|line| predicate(line))
+        || subsequent.is_some_and(|line| predicate(line))
+    {
+        return true;
     }
-    let adjacent = [previous, next].into_iter().flatten().any(|line| {
-        let trailing_word_aligned = aligned_word_at_column(
-            line,
-            current_line_source,
-            rhs_start_column,
-            rhs_start,
-        );
-        if !leading_excess && trailing_excess && trailing_word_aligned {
-            return true;
-        }
+
+    let same_indent = |line: &&str| {
+        eligible(line) && line.len() - line.trim_start().len() == current_indent
+    };
+    lines[..current]
+        .iter()
+        .rev()
+        .find(|line| same_indent(line))
+        .is_some_and(|line| predicate(line))
+        || lines[current + 1..]
+            .iter()
+            .find(|line| same_indent(line))
+            .is_some_and(|line| predicate(line))
+}
+
+fn generic_operator_alignment_is_allowed(
+    source: &str,
+    line_offset: usize,
+    operator_start_column: usize,
+    operator_end_column: usize,
+    operator: &str,
+) -> bool {
+    alignment_search(source, line_offset, |line| {
         operator_layouts(line).into_iter().any(|layout| {
             let candidate = &line[layout.0..layout.1];
-            let candidate_start_column = line[..layout.0].chars().count();
-            let candidate_end_column = line[..layout.1].chars().count();
-            let candidate_lhs = line[..layout.2].trim_end().chars().count();
-            let candidate_rhs_column = line[..layout.3].chars().count();
-            let leading_aligned = !leading_excess
-                || operator != "="
-                    && candidate == operator
-                    && candidate_start_column == operator_start_column
+            candidate == operator && line[..layout.0].chars().count() == operator_start_column
                 || operator.ends_with('=')
                     && candidate.ends_with('=')
-                    && indented
-                    && candidate_start_column == operator_start_column
-                || candidate_end_column == operator_end_column
-                    && ((operator.ends_with('=') && line[layout.0..layout.1].ends_with('='))
-                        || candidate_lhs != current_lhs);
-            let trailing_aligned = !trailing_excess
-                || assignment_leading_aligned && candidate_rhs_column == rhs_start_column
-                || trailing_word_aligned
-                || candidate_lhs != current_lhs
-                    && (candidate_rhs_column == rhs_start_column
-                        || candidate_end_column == operator_end_column);
-            leading_aligned && trailing_aligned
+                    && line[..layout.1].chars().count() == operator_end_column
+                || operator == "<<"
+                    && candidate.ends_with('=')
+                    && line[..layout.1].chars().count() == operator_end_column
+                || operator.ends_with('=')
+                    && candidate == "<<"
+                    && line[..layout.1].chars().count() == operator_end_column
         })
-    });
-    let table = alignment_table_is_allowed(
-        source,
-        line_offset,
-        operator_start,
-        operator_end,
-        leading_excess,
-        trailing_excess,
-        rhs_start,
-        operator,
-    );
-    adjacent || !setter_assignment && table
+    })
+}
+
+fn generic_rhs_alignment_is_allowed(
+    source: &str,
+    line_offset: usize,
+    rhs_start_column: usize,
+    rhs_start: usize,
+) -> bool {
+    let line_end = source[line_offset..]
+        .find('\n')
+        .map_or(source.len(), |end| line_offset + end);
+    let current = &source[line_offset..line_end];
+    alignment_search(source, line_offset, |line| {
+        aligned_word_at_column(line, current, rhs_start_column, rhs_start)
+    })
 }
 
 fn aligned_word_at_column(
@@ -2540,28 +2553,22 @@ fn assignment_leading_alignment_is_allowed(
     source: &str,
     line_offset: usize,
     operator_end_column: usize,
-    first_assignment_operator: bool,
 ) -> bool {
     let lines = source.lines().collect::<Vec<_>>();
     let current_line = source[..line_offset].bytes().filter(|byte| *byte == b'\n').count();
-    let current_indent = lines
-        .get(current_line)
-        .map_or(0, |line| line.len() - line.trim_start().len());
-    let candidate = |direction: isize| {
-        let mut position = current_line as isize + direction;
+    let current_indent = lines[current_line].len() - lines[current_line].trim_start().len();
+    let relevant = |direction: isize| {
+        let mut matches = Vec::new();
+        let mut position = current_line as isize;
+        let mut relevant_indent_at_level = true;
         while let Some(line) = usize::try_from(position)
             .ok()
             .and_then(|position| lines.get(position))
         {
             position += direction;
-            if line.trim().is_empty() {
-                break;
-            }
-            if line.trim_start().starts_with('#') {
-                continue;
-            }
             let indent = line.len() - line.trim_start().len();
-            if indent < current_indent {
+            let blank = line.trim().is_empty();
+            if indent < current_indent && !blank || relevant_indent_at_level && blank {
                 break;
             }
             if indent == current_indent {
@@ -2569,104 +2576,19 @@ fn assignment_leading_alignment_is_allowed(
                     .into_iter()
                     .find(|layout| line[layout.0..layout.1].ends_with('='))
                 {
-                    return Some(line[..layout.1].chars().count() == operator_end_column);
+                    matches.push(line[..layout.1].chars().count());
                 }
             }
+            if !blank {
+                relevant_indent_at_level = indent == current_indent;
+            }
         }
-        None
+        matches.get(1).copied()
     };
 
-    let preceding = candidate(-1);
-    let subsequent = candidate(1);
-    if preceding == Some(true) || subsequent == Some(true) {
-        return true;
-    }
-    if !first_assignment_operator && subsequent.is_none() {
-        return true;
-    }
-    (preceding.is_none() && subsequent.is_none()
-        || current_line > 0 && lines[current_line - 1].trim().is_empty())
-        && lines[..current_line].iter().any(|line| {
-            line.len() - line.trim_start().len() == current_indent
-                && operator_layouts(line)
-                    .into_iter()
-                    .find(|layout| line[layout.0..layout.1].ends_with('='))
-                    .is_some_and(|layout| {
-                        line[..layout.1].chars().count() == operator_end_column
-                    })
-        })
-}
-
-fn alignment_table_is_allowed(
-    source: &str,
-    line_offset: usize,
-    operator_start: usize,
-    operator_end: usize,
-    leading_excess: bool,
-    trailing_excess: bool,
-    rhs_start: usize,
-    operator: &str,
-) -> bool {
-    if !matches!(operator, "|" | "<<" | "=>") && !operator.ends_with('=') {
-        return false;
-    }
-    if !source
-        .as_bytes()
-        .get(line_offset)
-        .is_some_and(u8::is_ascii_whitespace)
-    {
-        return false;
-    }
-    let line_end = source[line_offset..]
-        .find('\n')
-        .map_or(source.len(), |end| line_offset + end);
-    let current_line = &source[line_offset..line_end];
-    let current_indent = current_line.len() - current_line.trim_start().len();
-    let operator_end_column = current_line[..operator_end].chars().count();
-    let rhs_start_column = current_line[..rhs_start].chars().count();
-    let first_aligned_operator = operator_layouts(current_line)
-        .into_iter()
-        .find(|layout| {
-            let candidate = &current_line[layout.0..layout.1];
-            candidate == operator
-                || candidate.ends_with('=')
-                || matches!(candidate, "<<" | "|")
-        })
-        .is_some_and(|layout| layout.0 == operator_start);
-    if operator.ends_with('=') && !first_aligned_operator {
-        return false;
-    }
-
-    source.lines().any(|line| {
-        if line == current_line || line.len() - line.trim_start().len() != current_indent {
-            return false;
-        }
-        operator_layouts(line).into_iter().any(|layout| {
-            let candidate = &line[layout.0..layout.1];
-            let candidate_lhs = line[..layout.2].trim_end().chars().count();
-            let current_lhs = current_line[..operator_start]
-                .trim_end_matches(char::is_whitespace)
-                .chars()
-                .count();
-            let different_width = candidate_lhs != current_lhs;
-            let compatible = candidate == operator
-                || operator.ends_with('=') && (candidate.ends_with('=') || candidate == "<<")
-                || operator == "<<" && candidate.ends_with('=');
-            let candidate_end_column = line[..layout.1].chars().count();
-            let candidate_start_column = line[..layout.0].chars().count();
-            let candidate_rhs_column = line[..layout.3].chars().count();
-            let current_start_column = current_line[..operator_start].chars().count();
-            let leading_aligned = !leading_excess
-                || compatible
-                    && (candidate_end_column == operator_end_column
-                        || operator.ends_with('=')
-                            && candidate.ends_with('=')
-                            && candidate_start_column == current_start_column);
-            let trailing_aligned =
-                !trailing_excess || different_width && candidate_rhs_column == rhs_start_column;
-            leading_aligned && trailing_aligned
-        })
-    })
+    let preceding = relevant(-1);
+    preceding == Some(operator_end_column)
+        || relevant(1).is_none_or(|column| column == operator_end_column)
 }
 
 fn operator_layouts(line: &str) -> Vec<(usize, usize, usize, usize)> {
