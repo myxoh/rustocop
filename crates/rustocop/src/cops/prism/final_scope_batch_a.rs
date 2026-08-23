@@ -1185,7 +1185,14 @@ fn constant_reassignment(context: &mut CopContext<'_, '_>) {
 
     let mut assigned = HashSet::new();
     let mut scopes = Vec::<Scope>::new();
+    let heredocs = context.source_file().heredoc_ranges();
     for (offset, line) in context.source_file().lines() {
+        if heredocs
+            .iter()
+            .any(|heredoc| heredoc.start <= offset && offset < heredoc.end)
+        {
+            continue;
+        }
         let trimmed = line.trim();
         if trimmed.starts_with('#') {
             continue;
