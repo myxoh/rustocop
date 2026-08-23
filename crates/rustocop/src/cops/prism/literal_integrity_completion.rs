@@ -570,13 +570,24 @@ fn empty_literal(context: &mut CopContext<'_, '_>) {
             let mut end = start + constructor.len();
             if source.get(end..end + 2) == Some("()") {
                 end += 2;
-            } else if source
+            } else if kind == "array"
+                && source
                 .get(end..end + literal.len() + 2)
                 .is_some_and(|arguments| arguments == format!("({literal})"))
             {
                 end += literal.len() + 2;
             } else if source.as_bytes().get(end) == Some(&b'(')
-                || source[end..].trim_start().starts_with(['{', 'd'])
+                || source[end..].trim_start().starts_with(['{'])
+                || source[end..].trim_start().starts_with("do")
+                || source[end..]
+                    .split_once('\n')
+                    .map_or(&source[end..], |(line, _)| line)
+                    .trim_start()
+                    .as_bytes()
+                    .first()
+                    .is_some_and(|byte| {
+                        !matches!(byte, b',' | b')' | b']' | b'}' | b'.' | b'&' | b';' | b'#')
+                    })
             {
                 search = end + 1;
                 continue;
@@ -629,6 +640,13 @@ fn empty_literal(context: &mut CopContext<'_, '_>) {
         ("Hash([])", "{}", "hash"),
     ] {
         for (start, _) in source.match_indices(constructor) {
+            if start > 0
+                && source.as_bytes().get(start - 1).is_some_and(|byte| {
+                    byte.is_ascii_alphanumeric() || matches!(byte, b'_' | b':' | b'.' | b'@')
+                })
+            {
+                continue;
+            }
             context.replace(
                 format!("Use {kind} literal `{literal}` instead of `{constructor}`."),
                 start..start + constructor.len(),
