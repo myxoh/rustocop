@@ -14,15 +14,27 @@ fn ineffective_access_modifier(node: &ruby_prism::DefNode<'_>, context: &mut Cop
             .ancestors()
             .iter()
             .any(|ancestor| ancestor.as_singleton_class_node().is_some())
+        || context.ancestors().iter().rev().any(|ancestor| {
+            ancestor
+                .as_call_node()
+                .is_some_and(|call| call.name().as_slice() == b"private_class_method")
+        })
     {
         return;
     }
-    let Some(statements) = context
-        .ancestors()
-        .iter()
-        .rev()
-        .find_map(Node::as_statements_node)
-    else {
+    let scope = context.ancestors().iter().rev().find(|ancestor| {
+        ancestor.as_block_node().is_some()
+            || ancestor.as_class_node().is_some()
+            || ancestor.as_module_node().is_some()
+    });
+    let Some(scope) = scope.filter(|scope| scope.as_block_node().is_none()) else {
+        return;
+    };
+    let body = scope
+        .as_class_node()
+        .and_then(|scope| scope.body())
+        .or_else(|| scope.as_module_node().and_then(|scope| scope.body()));
+    let Some(statements) = body.and_then(|body| body.as_statements_node()) else {
         return;
     };
     let mut visibility = None;
