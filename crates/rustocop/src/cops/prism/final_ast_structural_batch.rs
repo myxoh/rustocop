@@ -74,49 +74,27 @@ fn literal_in_interpolation(context: &mut CopContext<'_, '_>) {
 }
 
 fn interpolation_ranges(source: &str) -> Vec<(usize, usize)> {
-    let bytes = source.as_bytes();
-    let mut ranges = Vec::new();
-    let mut index = 0;
-    while index + 1 < bytes.len() {
-        if bytes[index] == b'#' && bytes[index + 1] == b'{' {
-            if let Some(closing) = interpolation_closing(bytes, index + 2) {
-                ranges.push((index, closing));
-            }
-        }
-        index += 1;
-    }
-    ranges
-}
+    #[derive(Default)]
+    struct Interpolations(Vec<(usize, usize)>);
 
-fn interpolation_closing(bytes: &[u8], mut index: usize) -> Option<usize> {
-    let mut depth = 1usize;
-    let mut quote = None;
-    while index < bytes.len() {
-        let byte = bytes[index];
-        if let Some(delimiter) = quote {
-            if byte == b'\\' {
-                index += 2;
-                continue;
+    impl<'pr> Visit<'pr> for Interpolations {
+        fn visit_embedded_statements_node(
+            &mut self,
+            node: &ruby_prism::EmbeddedStatementsNode<'pr>,
+        ) {
+            let location = node.location();
+            if location.as_slice().starts_with(b"#{") && location.as_slice().ends_with(b"}") {
+                self.0
+                    .push((location.start_offset(), location.end_offset() - 1));
             }
-            if byte == delimiter {
-                quote = None;
-            }
-        } else {
-            match byte {
-                b'\'' | b'"' | b'`' => quote = Some(byte),
-                b'{' => depth += 1,
-                b'}' => {
-                    depth -= 1;
-                    if depth == 0 {
-                        return Some(index);
-                    }
-                }
-                _ => {}
-            }
+            ruby_prism::visit_embedded_statements_node(self, node);
         }
-        index += 1;
     }
-    None
+
+    let parsed = ruby_prism::parse(source.as_bytes());
+    let mut interpolations = Interpolations::default();
+    interpolations.visit(&parsed.node());
+    interpolations.0
 }
 
 fn final_interpolation_expression(
@@ -182,8 +160,9 @@ fn literal_interpolation_expression(expression: &str) -> bool {
                 Some(b'q' | b'Q' | b'w' | b'i' | b'I')
             );
     }
-    if (expression.starts_with('[') && expression.ends_with(']'))
-        || (expression.starts_with('{') && expression.ends_with('}'))
+    if ((expression.starts_with('[') && expression.ends_with(']'))
+        || (expression.starts_with('{') && expression.ends_with('}')))
+        && interpolation_composite_is_literal(expression)
     {
         return true;
     }
@@ -191,6 +170,65 @@ fn literal_interpolation_expression(expression: &str) -> bool {
         .bytes()
         .all(|byte| byte.is_ascii_digit() || matches!(byte, b'_' | b'.' | b'+' | b'-' | b'e' | b'E' | b'x' | b'o' | b'b' | b'a'..=b'f' | b'A'..=b'F'));
     numeric && expression.bytes().any(|byte| byte.is_ascii_digit())
+}
+
+fn interpolation_composite_is_literal(expression: &str) -> bool {
+    #[derive(Default)]
+    struct Dynamic(bool);
+
+    impl<'pr> Visit<'pr> for Dynamic {
+        fn visit_call_node(&mut self, _node: &ruby_prism::CallNode<'pr>) {
+            self.0 = true;
+        }
+
+        fn visit_local_variable_read_node(
+            &mut self,
+            _node: &ruby_prism::LocalVariableReadNode<'pr>,
+        ) {
+            self.0 = true;
+        }
+
+        fn visit_instance_variable_read_node(
+            &mut self,
+            _node: &ruby_prism::InstanceVariableReadNode<'pr>,
+        ) {
+            self.0 = true;
+        }
+
+        fn visit_class_variable_read_node(
+            &mut self,
+            _node: &ruby_prism::ClassVariableReadNode<'pr>,
+        ) {
+            self.0 = true;
+        }
+
+        fn visit_global_variable_read_node(
+            &mut self,
+            _node: &ruby_prism::GlobalVariableReadNode<'pr>,
+        ) {
+            self.0 = true;
+        }
+
+        fn visit_constant_read_node(&mut self, _node: &ruby_prism::ConstantReadNode<'pr>) {
+            self.0 = true;
+        }
+
+        fn visit_constant_path_node(&mut self, _node: &ruby_prism::ConstantPathNode<'pr>) {
+            self.0 = true;
+        }
+
+        fn visit_self_node(&mut self, _node: &ruby_prism::SelfNode<'pr>) {
+            self.0 = true;
+        }
+    }
+
+    let parsed = ruby_prism::parse(expression.as_bytes());
+    if parsed.errors().count() != 0 {
+        return false;
+    }
+    let mut dynamic = Dynamic::default();
+    dynamic.visit(&parsed.node());
+    !dynamic.0
 }
 
 fn array_percent_interpolation(source: &str, opening: usize, expression: &str) -> bool {
