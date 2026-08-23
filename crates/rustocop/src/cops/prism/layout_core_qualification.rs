@@ -105,16 +105,46 @@ fn empty_lines_after_module_inclusion(node: &CallNode<'_>, context: &mut CopCont
     {
         return;
     }
+    let mut inside_block = false;
     for ancestor in context.ancestors().iter().rev() {
-        if ancestor.as_statements_node().is_some() {
+        if ancestor.as_class_node().is_some()
+            || ancestor.as_module_node().is_some()
+            || ancestor.as_singleton_class_node().is_some()
+            || ancestor.as_program_node().is_some()
+        {
             break;
         }
-        if ancestor.as_call_node().is_some()
-            || ancestor.as_block_node().is_some()
-            || ancestor.as_array_node().is_some()
-            || ancestor.as_if_node().is_some()
-            || ancestor.as_unless_node().is_some()
+        if ancestor
+            .as_call_node()
+            .is_some_and(|call| inside_block && call.name().as_slice() == b"new")
         {
+            break;
+        }
+        if ancestor.as_call_node().is_some() || ancestor.as_array_node().is_some() {
+            return;
+        }
+        if let Some(block) = ancestor.as_block_node() {
+            if block
+                .body()
+                .and_then(|body| body.as_statements_node())
+                .is_none_or(|statements| statements.body().len() == 1)
+            {
+                return;
+            }
+            inside_block = true;
+        }
+        let modifier_conditional = ancestor
+            .as_if_node()
+            .and_then(|conditional| conditional.if_keyword_loc())
+            .is_some_and(|keyword| {
+                line_index(context.source(), keyword.start_offset())
+                    == line_index(context.source(), node.location().start_offset())
+            })
+            || ancestor.as_unless_node().is_some_and(|conditional| {
+                line_index(context.source(), conditional.keyword_loc().start_offset())
+                    == line_index(context.source(), node.location().start_offset())
+            });
+        if modifier_conditional {
             return;
         }
     }
