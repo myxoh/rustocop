@@ -1220,12 +1220,18 @@ impl Cop for ConditionalAssignment {
             .related_config_value("Layout/LineLength", "Max")
             .and_then(|maximum| maximum.parse::<usize>().ok())
         {
-            let conditional_line = source[range_for_node(node)]
+            let longest = source[range_for_node(node)]
                 .lines()
-                .next()
-                .map(str::len)
+                .map(|line| {
+                    if line.contains(&first.lhs) {
+                        line.trim_start().replacen(&first.lhs, "", 1).len()
+                    } else {
+                        line.len()
+                    }
+                })
+                .max()
                 .unwrap_or(0);
-            if conditional_line + first.lhs.trim_end().len() + 1 > maximum {
+            if longest + first.lhs.len() > maximum {
                 return;
             }
         }
@@ -1441,8 +1447,16 @@ fn conditional_assignment_parts<'pr>(
         ("multi", write.value())
     } else if let Some(write) = node.as_index_operator_write_node() {
         ("index_operator", write.value())
+    } else if let Some(write) = node.as_index_or_write_node() {
+        ("index_or", write.value())
+    } else if let Some(write) = node.as_index_and_write_node() {
+        ("index_and", write.value())
     } else if let Some(write) = node.as_call_operator_write_node() {
         ("call_operator", write.value())
+    } else if let Some(write) = node.as_call_or_write_node() {
+        ("call_or", write.value())
+    } else if let Some(write) = node.as_call_and_write_node() {
+        ("call_and", write.value())
     } else if let Some(call) = node.as_call_node() {
         let name = call.name().as_slice();
         if !(name.ends_with(b"=")
