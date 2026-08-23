@@ -544,7 +544,21 @@ fn empty_literal(context: &mut CopContext<'_, '_>) {
         let mut search = 0;
         while let Some(relative) = source[search..].find(constructor) {
             let start = search + relative;
-            let offense_start = if source.get(start.saturating_sub(2)..start) == Some("::") {
+            let root_qualified = source.get(start.saturating_sub(2)..start) == Some("::")
+                && (start == 2
+                    || source.as_bytes().get(start - 3).is_none_or(|byte| {
+                        !byte.is_ascii_alphanumeric() && !matches!(byte, b'_' | b':' | b'@')
+                    }));
+            let bare_constant = start == 0
+                || source.as_bytes().get(start - 1).is_some_and(|byte| {
+                    !byte.is_ascii_alphanumeric()
+                        && !matches!(byte, b'_' | b':' | b'.' | b'@')
+                });
+            if !root_qualified && !bare_constant {
+                search = start + constructor.len();
+                continue;
+            }
+            let offense_start = if root_qualified {
                 start - 2
             } else {
                 start
