@@ -1,6 +1,15 @@
 use super::*;
 
 pub(super) fn if_inside_else(context: &mut CopContext<'_, '_>) {
+    let parsed = parse(context.source().as_bytes());
+    let mut collector = IfInsideElseCollector {
+        allow_modifier: context.config_bool("AllowIfModifier", false),
+        comments: context.source_file().comment_ranges(),
+        offsets: std::collections::HashSet::new(),
+    };
+    collector.visit(&parsed.node());
+    let valid = collector.offsets;
+    let mut reported_offsets = std::collections::HashSet::new();
     let lines = context.source_file().lines().collect::<Vec<_>>();
     let mut reported = false;
     for pair in lines.windows(2) {
@@ -10,6 +19,10 @@ pub(super) fn if_inside_else(context: &mut CopContext<'_, '_>) {
             continue;
         }
         let indent = if_line.len() - if_line.trim_start().len();
+        let keyword_offset = if_offset + indent;
+        if !valid.contains(&keyword_offset) {
+            continue;
+        }
         let condition = if_line.trim_start()[3..].trim_end();
         if condition.contains(" then ") && correct_then_form(context, &lines, else_offset, if_offset, if_line, condition) {
             return;
@@ -52,6 +65,7 @@ pub(super) fn if_inside_else(context: &mut CopContext<'_, '_>) {
             continue;
         }
         let offense = if_offset + indent..if_offset + indent + 2;
+        reported_offsets.insert(keyword_offset);
         let outer_indent = &else_line[..else_line.len() - else_line.trim_start().len()];
         let mut replacement = format!("{outer_indent}elsif {condition}");
         let nested_end = nested_end.expect("checked above");
@@ -91,10 +105,51 @@ pub(super) fn if_inside_else(context: &mut CopContext<'_, '_>) {
             reported = true;
         }
     }
-    correct_modifier_form(context, &lines);
+    correct_modifier_form(context, &lines, &valid, &mut reported_offsets);
+    for offset in valid.difference(&reported_offsets) {
+        context.report(
+            "Convert `if` nested inside `else` to `elsif`.",
+            *offset..*offset + 2,
+        );
+    }
 }
 
-fn correct_modifier_form(context: &mut CopContext<'_, '_>, lines: &[(usize, &str)]) {
+struct IfInsideElseCollector {
+    allow_modifier: bool,
+    comments: Vec<std::ops::Range<usize>>,
+    offsets: std::collections::HashSet<usize>,
+}
+
+impl<'pr> Visit<'pr> for IfInsideElseCollector {
+    fn visit_if_node(&mut self, node: &ruby_prism::IfNode<'pr>) {
+        if let Some(else_clause) = node.subsequent().and_then(|branch| branch.as_else_node()) {
+            if let Some(nested) = only_statement(else_clause.statements()).and_then(|body| body.as_if_node()) {
+                if let Some(keyword) = nested
+                    .if_keyword_loc()
+                    .filter(|keyword| keyword.as_slice() == b"if")
+                {
+                    let modifier = nested.end_keyword_loc().is_none();
+                    let else_end = else_clause.else_keyword_loc().end_offset();
+                    let commented = !modifier
+                        && self.comments.iter().any(|comment| {
+                            else_end < comment.start && comment.start < keyword.start_offset()
+                        });
+                    if !(modifier && self.allow_modifier) && !commented {
+                        self.offsets.insert(keyword.start_offset());
+                    }
+                }
+            }
+        }
+        ruby_prism::visit_if_node(self, node);
+    }
+}
+
+fn correct_modifier_form(
+    context: &mut CopContext<'_, '_>,
+    lines: &[(usize, &str)],
+    valid: &std::collections::HashSet<usize>,
+    reported: &mut std::collections::HashSet<usize>,
+) {
     if context.config_bool("AllowIfModifier", false) {
         return;
     }
@@ -128,6 +183,10 @@ fn correct_modifier_form(context: &mut CopContext<'_, '_>, lines: &[(usize, &str
         let Some(if_at) = body_line.find(" if ") else {
             continue;
         };
+        let keyword_offset = body_offset + if_at + 1;
+        if !valid.contains(&keyword_offset) {
+            continue;
+        }
         if body_line[..if_at].trim().is_empty() {
             continue;
         }
@@ -158,6 +217,7 @@ fn correct_modifier_form(context: &mut CopContext<'_, '_>, lines: &[(usize, &str
                 ),
             ],
         );
+        reported.insert(keyword_offset);
     }
 }
 
