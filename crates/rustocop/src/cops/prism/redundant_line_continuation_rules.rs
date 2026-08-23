@@ -47,7 +47,8 @@ impl RedundantLineContinuationRule<'_, '_, '_> {
         if line_has_comment(line)
             || string_concatenation(line)
             || inside_heredoc(source, slash)
-            || inside_literal(source, slash)
+            || (inside_literal(source, slash)
+                && !(interpolation_begins_next_line(source, slash) && line.contains('(')))
             || inside_regexp(source, slash)
         {
             return true;
@@ -57,6 +58,12 @@ impl RedundantLineContinuationRule<'_, '_, '_> {
             || before.ends_with("||")
         {
             return false;
+        }
+        if before.ends_with('=')
+            && next.contains('.')
+            && (next.contains('(') || next.contains('{'))
+        {
+            return true;
         }
         starts_with_arithmetic_operator(next)
             || starts_with_required_operator(next)
@@ -90,6 +97,10 @@ impl RedundantLineContinuationRule<'_, '_, '_> {
             corrector.remove(slash..slash + 1);
         });
     }
+}
+
+fn interpolation_begins_next_line(source: &str, slash: usize) -> bool {
+    source[slash + 2..].starts_with("#{")
 }
 
 fn line_has_comment(line: &str) -> bool {
