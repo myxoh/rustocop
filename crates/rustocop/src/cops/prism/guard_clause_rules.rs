@@ -59,7 +59,7 @@ impl GuardClauseRule<'_, '_, '_> {
         let end_keyword = node.end_keyword_loc().expect("normal conditional");
         let condition = node.predicate();
         let statements = node.statements();
-        return_if!(self.ending_accepted(&keyword, &end_keyword, &condition, statements.as_ref()));
+        return_if!(self.ending_accepted(&keyword, &end_keyword, &condition, statements.as_ref(), "unless"));
         self.register_ending(keyword, end_keyword, condition, statements, "unless");
         if let Some(body) = node.statements() { self.check_ending_body(body); }
     }
@@ -70,7 +70,7 @@ impl GuardClauseRule<'_, '_, '_> {
         let end_keyword = node.end_keyword_loc().expect("normal conditional");
         let condition = node.predicate();
         let statements = node.statements();
-        return_if!(self.ending_accepted(&keyword, &end_keyword, &condition, statements.as_ref()));
+        return_if!(self.ending_accepted(&keyword, &end_keyword, &condition, statements.as_ref(), "if"));
         self.register_ending(keyword, end_keyword, condition, statements, "if");
         if let Some(body) = node.statements() { self.check_ending_body(body); }
     }
@@ -81,11 +81,11 @@ impl GuardClauseRule<'_, '_, '_> {
         end_keyword: &ruby_prism::Location<'_>,
         condition: &Node<'_>,
         statements: Option<&StatementsNode<'_>>,
+        inverse_keyword: &str,
     ) -> bool {
         let condition_source = self.source_file().node(condition);
         if condition_source.contains('\n')
-            || nested_local_assignment(condition)
-                && assigned_value_used(condition_source, statements, self.source_file())
+            || assigned_local_used(condition, statements)
         {
             return true;
         }
@@ -106,7 +106,7 @@ impl GuardClauseRule<'_, '_, '_> {
         {
             return true;
         }
-        let example = format!("return unless {condition_source}");
+        let example = format!("return {inverse_keyword} {condition_source}");
         let max = (self.related_config_value("Layout/LineLength", "Enabled") != Some("false"))
             .then(|| {
                 self.related_config_value("Layout/LineLength", "Max")
@@ -128,12 +128,7 @@ impl GuardClauseRule<'_, '_, '_> {
     ) {
         let condition_source = self.source_file().node(&condition);
         return_if!(condition_source.contains('\n')
-            || nested_local_assignment(&condition)
-                && assigned_value_used(
-                    condition_source,
-                    statements.as_ref(),
-                    self.source_file(),
-                ));
+            || assigned_local_used(&condition, statements.as_ref()));
         let body_lines = branch_line_count(statements.as_ref(), keyword.end_offset(), end_keyword.start_offset(), self.source());
         let minimum = self.config_value("MinBodyLength").and_then(|value| value.parse::<isize>().ok()).unwrap_or(1);
         return_if!(minimum < 0 || body_lines < minimum as usize);
@@ -178,12 +173,7 @@ impl GuardClauseRule<'_, '_, '_> {
     ) {
         let condition_source = self.source_file().node(&condition);
         return_if!(condition_source.contains('\n') || assignment_parent(self.ancestors()));
-        return_if!(nested_local_assignment(&condition)
-            && assigned_value_used(
-                condition_source,
-                if_statements.as_ref(),
-                self.source_file(),
-            ));
+        return_if!(assigned_local_used(&condition, if_statements.as_ref()));
         let if_guard = guard_clause(if_statements.as_ref(), self.source_file())
             .filter(|guard| !guard.source.contains('\n'));
         let else_guard = guard_clause(else_statements.as_ref(), self.source_file())
@@ -323,31 +313,61 @@ fn heredoc_replacement(
     Some(if keep.is_empty() { format!("{header}{tail}") } else { format!("{header}{tail}\n{keep}") })
 }
 
-fn assigned_value_used(condition: &str, statements: Option<&StatementsNode<'_>>, file: SourceFile<'_>) -> bool {
-    let Some((left, _)) = condition.split_once('=') else { return false };
-    let name = left.trim().trim_start_matches('(').split_whitespace().last().unwrap_or_default();
-    !name.is_empty() && statements.is_some_and(|statements| {
-        file.at(&statements.location()).split(|character: char| !character.is_ascii_alphanumeric() && character != '_').any(|word| word == name)
-    })
-}
-
-fn nested_local_assignment(condition: &Node<'_>) -> bool {
+fn assigned_local_used(condition: &Node<'_>, statements: Option<&StatementsNode<'_>>) -> bool {
     if condition.as_local_variable_write_node().is_some() {
         return false;
     }
-    struct AssignmentFinder(bool);
-    impl<'pr> Visit<'pr> for AssignmentFinder {
+    #[derive(Default)]
+    struct LocalNames {
+        assigned: Vec<Vec<u8>>,
+        read: Vec<Vec<u8>>,
+    }
+    impl<'pr> Visit<'pr> for LocalNames {
         fn visit_local_variable_write_node(
             &mut self,
             node: &ruby_prism::LocalVariableWriteNode<'pr>,
         ) {
-            self.0 = true;
+            self.assigned.push(node.name().as_slice().to_vec());
             ruby_prism::visit_local_variable_write_node(self, node);
         }
+        fn visit_local_variable_or_write_node(
+            &mut self,
+            node: &ruby_prism::LocalVariableOrWriteNode<'pr>,
+        ) {
+            self.assigned.push(node.name().as_slice().to_vec());
+            ruby_prism::visit_local_variable_or_write_node(self, node);
+        }
+        fn visit_local_variable_and_write_node(
+            &mut self,
+            node: &ruby_prism::LocalVariableAndWriteNode<'pr>,
+        ) {
+            self.assigned.push(node.name().as_slice().to_vec());
+            ruby_prism::visit_local_variable_and_write_node(self, node);
+        }
+        fn visit_local_variable_operator_write_node(
+            &mut self,
+            node: &ruby_prism::LocalVariableOperatorWriteNode<'pr>,
+        ) {
+            self.assigned.push(node.name().as_slice().to_vec());
+            ruby_prism::visit_local_variable_operator_write_node(self, node);
+        }
+        fn visit_local_variable_read_node(
+            &mut self,
+            node: &ruby_prism::LocalVariableReadNode<'pr>,
+        ) {
+            self.read.push(node.name().as_slice().to_vec());
+            ruby_prism::visit_local_variable_read_node(self, node);
+        }
     }
-    let mut finder = AssignmentFinder(false);
-    finder.visit(condition);
-    finder.0
+    let mut names = LocalNames::default();
+    names.visit(condition);
+    let Some(statements) = statements else { return false };
+    let mut branch = LocalNames::default();
+    branch.visit(&statements.as_node());
+    names
+        .assigned
+        .iter()
+        .any(|assigned| branch.read.contains(assigned))
 }
 
 fn assignment_parent(ancestors: &[Node<'_>]) -> bool {
