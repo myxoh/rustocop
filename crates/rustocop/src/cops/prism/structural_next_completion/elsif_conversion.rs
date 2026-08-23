@@ -102,12 +102,29 @@ fn correct_modifier_form(context: &mut CopContext<'_, '_>, lines: &[(usize, &str
         if else_line.trim() != "else" {
             continue;
         }
-        let Some((body_offset, body_line)) = lines[else_index + 1..]
+        let Some((body_relative, (body_offset, body_line))) = lines[else_index + 1..]
             .iter()
-            .find(|(_, line)| !line.trim_start().starts_with('#'))
+            .enumerate()
+            .find(|(_, (_, line))| {
+                !line.trim().is_empty() && !line.trim_start().starts_with('#')
+            })
         else {
             continue;
         };
+        let body_index = else_index + 1 + body_relative;
+        let else_indent = else_line.len() - else_line.trim_start().len();
+        let sole_else_expression = lines[body_index + 1..]
+            .iter()
+            .find(|(_, line)| {
+                !line.trim().is_empty() && !line.trim_start().starts_with('#')
+            })
+            .is_some_and(|(_, line)| {
+                line.trim_start().starts_with("end")
+                    && line.len() - line.trim_start().len() == else_indent
+            });
+        if !sole_else_expression {
+            continue;
+        }
         let Some(if_at) = body_line.find(" if ") else {
             continue;
         };
