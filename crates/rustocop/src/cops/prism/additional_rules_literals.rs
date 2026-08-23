@@ -1,11 +1,10 @@
-use super::source_helpers::*;
 use super::*;
 
 define_cops! {
     EmptyFile => "Lint/EmptyFile" => source(empty_file),
     NumericLiteralPrefix => "Style/NumericLiteralPrefix" => any_node(numeric_literal_prefix),
     NestedPercentLiteral => "Lint/NestedPercentLiteral" => node(as_array_node, nested_percent_literal),
-    RescueException => "Lint/RescueException" => source(rescue_exception),
+    RescueException => "Lint/RescueException" => node(as_rescue_node, rescue_exception),
     OpenStructUse => "Style/OpenStructUse" => any_node(open_struct_use),
 }
 
@@ -85,20 +84,16 @@ fn nested_percent_literal(node: &ruby_prism::ArrayNode<'_>, context: &mut CopCon
     }
 }
 
-fn rescue_exception(reporter: &mut CopContext<'_, '_>) {
-    let source = reporter.source();
-    for (offset, line) in source_lines(source) {
-        let trimmed = line.trim_start();
-        let exceptions = trimmed
-            .strip_prefix("rescue ")
-            .map(|list| list.split("=>").next().unwrap_or(list));
-        if exceptions.is_some_and(|list| {
-            list.split(',')
-                .any(|name| matches!(name.trim(), "Exception" | "::Exception"))
-        }) {
-            let start = offset + line.len() - trimmed.len();
-            reporter.report("Avoid rescuing the `Exception` class. Perhaps you meant to rescue `StandardError`?", start..offset + line.len());
-        }
+fn rescue_exception(node: &ruby_prism::RescueNode<'_>, context: &mut CopContext<'_, '_>) {
+    if node
+        .exceptions()
+        .iter()
+        .any(|exception| node_is_root_constant(&exception, b"Exception"))
+    {
+        context.report(
+            "Avoid rescuing the `Exception` class. Perhaps you meant to rescue `StandardError`?",
+            node.location(),
+        );
     }
 }
 
