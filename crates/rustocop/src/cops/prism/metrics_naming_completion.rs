@@ -123,12 +123,16 @@ fn parameter_lists(node: &ruby_prism::DefNode<'_>, context: &mut CopContext<'_, 
         .count();
     let maximum = context.config_usize("Max", 5);
     if count > maximum {
-        let raw_start = parameters.location().start_offset();
-        let raw_end = parameters.location().end_offset();
-        let start = raw_start.saturating_sub(usize::from(
-            context.source().as_bytes().get(raw_start.saturating_sub(1)) == Some(&b'('),
-        ));
-        let end = raw_end + usize::from(context.source().as_bytes().get(raw_end) == Some(&b')'));
+        let start = node
+            .lparen_loc()
+            .map_or(parameters.location().start_offset(), |left| {
+                left.start_offset()
+            });
+        let end = node
+            .rparen_loc()
+            .map_or(parameters.location().end_offset(), |right| {
+                right.end_offset()
+            });
         context.report(
             format!("Avoid parameter lists longer than {maximum} parameters. [{count}/{maximum}]"),
             start..end,
