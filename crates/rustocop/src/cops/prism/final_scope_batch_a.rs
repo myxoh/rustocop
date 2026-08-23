@@ -372,9 +372,7 @@ fn outer_scope_has_local(
         if outer.declarations.iter().any(|(declared, range)| {
             declared.as_slice() == name
                 && range.end < cutoff
-                && (context.related_config_value("AllCops", "ParserEngine")
-                    == Some("parser_prism")
-                    || declaration_in_same_conditional_branch(range.start, cutoff, context))
+                && declaration_in_same_conditional_branch(range.start, cutoff, context)
         }) {
             return true;
         }
@@ -390,6 +388,13 @@ fn outer_scope_has_local(
         .rev()
         .find_map(Node::as_def_node)
     {
+        if definition.parameters().is_some_and(|parameters| {
+            shadowing_parameters(&parameters)
+                .iter()
+                .any(|(parameter, _)| parameter.as_bytes() == name)
+        }) {
+            return true;
+        }
         lexical_locals.extend(
             definition
                 .locals()
@@ -423,8 +428,7 @@ fn outer_scope_has_local(
     declarations_for_name.into_iter().any(|(_, range)| {
         range.start < cutoff
             && range.end < cutoff
-            && (context.related_config_value("AllCops", "ParserEngine") == Some("parser_prism")
-                || declaration_in_same_conditional_branch(range.start, cutoff, context))
+            && declaration_in_same_conditional_branch(range.start, cutoff, context)
     })
 }
 
@@ -629,6 +633,14 @@ struct ShadowingParameterTargets {
 }
 
 impl<'pr> ruby_prism::Visit<'pr> for ShadowingParameterTargets {
+    fn visit_required_parameter_node(&mut self, node: &ruby_prism::RequiredParameterNode<'pr>) {
+        let location = node.location();
+        self.parameters.push((
+            String::from_utf8_lossy(node.name().as_slice()).into_owned(),
+            location.start_offset()..location.end_offset(),
+        ));
+    }
+
     fn visit_local_variable_target_node(
         &mut self,
         node: &ruby_prism::LocalVariableTargetNode<'pr>,
