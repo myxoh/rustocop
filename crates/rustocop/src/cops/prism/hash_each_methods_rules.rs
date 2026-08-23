@@ -19,6 +19,12 @@ impl HashEachMethodsRule<'_, '_, '_> {
 
     fn on_send(&mut self, node: &CallNode<'_>) {
         return_if!(node.block().is_some_and(|block| block.as_block_node().is_some()));
+        return_if!(node.block().is_some_and(|block| {
+            block
+                .as_block_argument_node()
+                .and_then(|argument| argument.expression())
+                .is_none_or(|expression| expression.as_symbol_node().is_none())
+        }));
         self.register_keys_values_each(node, None);
     }
 
@@ -30,6 +36,7 @@ impl HashEachMethodsRule<'_, '_, '_> {
         let Some(keys_values) = each.receiver().and_then(|receiver| receiver.as_call_node()) else { return false };
         let method = keys_values.name().as_slice();
         return_if!(!matches!(method, b"keys" | b"values"), false);
+        return_if!(argument_count(&keys_values) != 0, false);
         let Some(root) = keys_values.receiver() else { return false };
         return_if!(array_converter(&root), false);
         let root_source = self.source_file().node(&root);
@@ -59,6 +66,8 @@ impl HashEachMethodsRule<'_, '_, '_> {
         let Some(receiver) = each.receiver() else { return };
         return_if!(argument_count(each) != 0);
         return_if!(receiver.as_array_node().is_some() || array_converter(&receiver));
+        let receiver_source = self.source_file().node(&receiver);
+        return_if!(hash_mutated(self.source_file().node(&block.as_node()), receiver_source));
         let Some(parameters) = block.parameters().and_then(|parameters| parameters.as_block_parameters_node()) else { return };
         let source = self
             .source_file()
@@ -71,7 +80,10 @@ impl HashEachMethodsRule<'_, '_, '_> {
         let [key_range, value_range] = arguments.as_slice() else { return };
         let key = self.source_file().slice(key_range.clone()).unwrap_or_default().trim();
         let value = self.source_file().slice(value_range.clone()).unwrap_or_default().trim();
-        let body = block.body().map(|body| self.source_file().node(&body)).unwrap_or_default();
+        let body = self
+            .source_file()
+            .slice(parameters.location().end_offset()..block.closing_loc().start_offset())
+            .unwrap_or_default();
         let key_used = parameter_used(key, body);
         let value_used = parameter_used(value, body);
         return_if!(key_used == value_used);
