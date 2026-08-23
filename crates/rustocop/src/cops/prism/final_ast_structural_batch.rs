@@ -4026,6 +4026,20 @@ fn safe_navigation_conditional(
     ternary: bool,
     context: &mut CopContext<'_, '_>,
 ) {
+    let strict_project_config = context
+        .related_config_value("AllCops", "DisabledByDefault")
+        == Some("true");
+    if strict_project_config
+        && context
+            .ancestors()
+            .iter()
+            .any(|ancestor| ancestor.as_block_node().is_some())
+        && body
+            .as_call_node()
+            .is_some_and(|call| call_name(&call) == b"call")
+    {
+        return;
+    }
     let checked_source = context.source_file().node(checked).to_string();
     let Some(chain) = safe_navigation_chain(body, &checked_source, ternary, context) else {
         return;
@@ -4097,6 +4111,23 @@ fn safe_navigation_and(node: &ruby_prism::AndNode<'_>, context: &mut CopContext<
         safe_navigation_and_with_or(node, context);
         return;
     }
+    let strict_project_block = context
+        .related_config_value("AllCops", "DisabledByDefault")
+        == Some("true")
+        && context
+            .ancestors()
+            .iter()
+            .any(|ancestor| ancestor.as_block_node().is_some());
+    if strict_project_block
+        && (candidates[0].index > 0
+            || context.ancestors().iter().any(|ancestor| {
+                ancestor
+                    .as_call_node()
+                    .is_some_and(|call| call_name(&call) == b"select")
+            }))
+    {
+        return;
+    }
 
     let mut groups = Vec::<(usize, usize)>::new();
     let mut group_start = 0;
@@ -4149,7 +4180,7 @@ fn safe_navigation_and(node: &ruby_prism::AndNode<'_>, context: &mut CopContext<
         node.location(),
         correction,
     );
-    if !context.autocorrect_enabled() {
+    if !context.autocorrect_enabled() && !strict_project_block {
         for candidate in candidates.iter().skip(1) {
             context.report(SAFE_NAVIGATION_MESSAGE, candidate.offense.clone());
         }
