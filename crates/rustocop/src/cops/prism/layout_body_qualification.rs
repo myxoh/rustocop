@@ -228,11 +228,20 @@ fn empty_exception_keywords(context: &mut CopContext<'_, '_>) {
         let Some(keyword) = keyword else { continue };
         if keyword == "else" {
             let indentation = line.len() - line.trim_start().len();
-            let rescue_in_same_body = lines[..index].iter().rev().any(|(_, previous)| {
+            let mut rescue_in_same_body = false;
+            for (_, previous) in lines[..index].iter().rev() {
                 let trimmed = previous.trim_start();
                 let previous_indentation = previous.len() - trimmed.len();
-                previous_indentation == indentation && trimmed.starts_with("rescue")
-            });
+                if previous_indentation == indentation && trimmed == "end" {
+                    break;
+                }
+                if previous_indentation == indentation
+                    && (trimmed == "rescue" || trimmed.starts_with("rescue "))
+                {
+                    rescue_in_same_body = true;
+                    break;
+                }
+            }
             if !rescue_in_same_body {
                 continue;
             }
@@ -244,7 +253,10 @@ fn empty_exception_keywords(context: &mut CopContext<'_, '_>) {
                 format!("Extra empty line detected before the `{keyword}`."),
             );
         }
-        if index + 1 < lines.len() && lines[index + 1].1.is_empty() {
+        if !line.contains("; end")
+            && index + 1 < lines.len()
+            && lines[index + 1].1.is_empty()
+        {
             remove_blank_line(
                 context,
                 index + 1,

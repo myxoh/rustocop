@@ -608,11 +608,12 @@ fn duplicate_character_class(context: &mut CopContext<'_, '_>) {
 }
 
 fn out_of_range_ref(context: &mut CopContext<'_, '_>) {
-    let regexp_literal = regex::Regex::new(r"/(?:\\.|[^/\n])+/[a-z]*").expect("regexp literal");
     let parsed = parse(context.source().as_bytes());
     let mut references = RegexpReferenceCollector::default();
     references.visit(&parsed.node());
     let reference_offsets = references.offsets;
+    let mut regexps = RegexpLiteralCollector::default();
+    regexps.visit(&parsed.node());
     let mut captures = 0usize;
     let mut captures_known = true;
     for (offset, line) in context.source_file().lines() {
@@ -627,10 +628,15 @@ fn out_of_range_ref(context: &mut CopContext<'_, '_>) {
                 &reference_offsets,
             );
         }
-        let literals = regexp_literal
-            .find_iter(line)
-            .filter(|matched| !matched.as_str().contains("#{"))
-            .map(|matched| regexp_capture_count(matched.as_str()))
+        let literals = regexps
+            .ranges
+            .iter()
+            .filter(|range| range.start >= offset && range.start < offset + line.len())
+            .filter(|range| !context.source()[range.start..range.end].contains("#{"))
+            .map(|range| {
+                let body = &context.source()[range.start..range.end];
+                regexp_capture_count(&format!("/{body}/"))
+            })
             .collect::<Vec<_>>();
         let matching_method = [
             ".match(",
@@ -690,6 +696,22 @@ fn out_of_range_ref(context: &mut CopContext<'_, '_>) {
                 &reference_offsets,
             );
         }
+    }
+}
+
+#[derive(Default)]
+struct RegexpLiteralCollector {
+    ranges: Vec<std::ops::Range<usize>>,
+}
+
+impl<'pr> Visit<'pr> for RegexpLiteralCollector {
+    fn visit_regular_expression_node(
+        &mut self,
+        node: &ruby_prism::RegularExpressionNode<'pr>,
+    ) {
+        self.ranges
+            .push(node.content_loc().start_offset()..node.content_loc().end_offset());
+        ruby_prism::visit_regular_expression_node(self, node);
     }
 }
 
