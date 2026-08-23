@@ -475,7 +475,9 @@ fn double_negation(context: &mut CopContext<'_, '_>) {
                 || (line[..at].trim().is_empty()
                     && (lines[index + 1..]
                         .iter()
-                        .find(|(_, next)| !next.trim().is_empty())
+                        .find(|(_, next)| {
+                            !next.trim().is_empty() && !next.trim_start().starts_with('#')
+                        })
                         .is_some_and(|(_, next)| {
                             let next = next.trim();
                             next == "end"
@@ -493,7 +495,9 @@ fn double_negation(context: &mut CopContext<'_, '_>) {
                 || (in_conditional_branch(&lines[..index], line.len() - line.trim_start().len())
                     && lines[index + 1..]
                         .iter()
-                        .find(|(_, next)| !next.trim().is_empty())
+                        .find(|(_, next)| {
+                            !next.trim().is_empty() && !next.trim_start().starts_with('#')
+                        })
                         .is_some_and(|(_, next)| {
                             let next = next.trim();
                             next == "end"
