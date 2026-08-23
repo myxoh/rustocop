@@ -81,7 +81,13 @@ fn invert_condition(
     let Some(call) = node.as_call_node() else {
         return false;
     };
-    if call.block().is_some() {
+    if call
+        .block()
+        .is_some_and(|block| block.as_block_node().is_some())
+        || call
+            .call_operator_loc()
+            .is_some_and(|operator| operator.as_slice() == b"&.")
+    {
         return false;
     }
     let method = String::from_utf8_lossy(call.name().as_slice()).to_string();
@@ -146,7 +152,13 @@ fn preferred_condition(
         ));
     }
     let call = node.as_call_node()?;
-    if call.block().is_some() {
+    if call
+        .block()
+        .is_some_and(|block| block.as_block_node().is_some())
+        || call
+            .call_operator_loc()
+            .is_some_and(|operator| operator.as_slice() == b"&.")
+    {
         return None;
     }
     let method = String::from_utf8_lossy(call.name().as_slice());
