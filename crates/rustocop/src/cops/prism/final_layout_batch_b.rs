@@ -2202,7 +2202,7 @@ fn ruby_comment_start(line: &str) -> Option<usize> {
             quote = Some(byte);
         } else if quote.is_none() && byte == b'/' && slash_starts_regexp(line, index) {
             quote = Some(byte);
-        } else if quote.is_none() && byte == b'#' {
+        } else if quote.is_none() && byte == b'#' && line.as_bytes().get(index + 1) != Some(&b'{') {
             return Some(index);
         }
     }
@@ -2267,7 +2267,15 @@ fn operator_is_non_binary(source: &str, start: usize, end: usize, operator: &str
     if operator == "<<" && source[end..].starts_with(['~', '-']) {
         return true;
     }
-    if operator == "=" && source.trim_start().starts_with("def ") && before.contains('(') {
+    if operator == "<<"
+        && source[end..]
+            .chars()
+            .next()
+            .is_some_and(|character| character.is_ascii_uppercase() || matches!(character, '\'' | '"' | '`'))
+    {
+        return true;
+    }
+    if operator == "=" && source[..start].contains("def ") {
         return true;
     }
     if operator == "=" && (before.ends_with(['!', '<', '>', '=']) || after.starts_with('>')) {
@@ -2420,7 +2428,14 @@ fn operator_alignment_is_allowed(
     let rhs_start_column = current_line_source[..rhs_start].chars().count();
     let mut leading_excess = operator_start.saturating_sub(whitespace_start) > 1;
     let trailing_excess = rhs_start.saturating_sub(operator_end) > 1;
-    if operator == "=" && leading_excess {
+    let lhs = current_line_source[..whitespace_start].trim_end();
+    let setter_assignment = operator == "=" && (lhs.contains('.') || lhs.contains(']'));
+    let mut assignment_leading_aligned = false;
+    let indented = source
+        .as_bytes()
+        .get(line_offset)
+        .is_some_and(u8::is_ascii_whitespace);
+    if operator == "=" && leading_excess && !setter_assignment {
         let first_equal = operator_layouts(current_line_source)
             .into_iter()
             .find(|layout| current_line_source[layout.0..layout.1].ends_with('='));
@@ -2434,9 +2449,19 @@ fn operator_alignment_is_allowed(
         ) {
             return false;
         }
+        assignment_leading_aligned = true;
         leading_excess = false;
     }
     let adjacent = [previous, next].into_iter().flatten().any(|line| {
+        let trailing_word_aligned = aligned_word_at_column(
+            line,
+            current_line_source,
+            rhs_start_column,
+            rhs_start,
+        );
+        if !leading_excess && trailing_excess && trailing_word_aligned {
+            return true;
+        }
         operator_layouts(line).into_iter().any(|layout| {
             let candidate = &line[layout.0..layout.1];
             let candidate_start_column = line[..layout.0].chars().count();
@@ -2447,10 +2472,16 @@ fn operator_alignment_is_allowed(
                 || operator != "="
                     && candidate == operator
                     && candidate_start_column == operator_start_column
+                || operator.ends_with('=')
+                    && candidate.ends_with('=')
+                    && indented
+                    && candidate_start_column == operator_start_column
                 || candidate_end_column == operator_end_column
                     && ((operator.ends_with('=') && line[layout.0..layout.1].ends_with('='))
                         || candidate_lhs != current_lhs);
             let trailing_aligned = !trailing_excess
+                || assignment_leading_aligned && candidate_rhs_column == rhs_start_column
+                || trailing_word_aligned
                 || candidate_lhs != current_lhs
                     && (candidate_rhs_column == rhs_start_column
                         || candidate_end_column == operator_end_column);
@@ -2468,6 +2499,38 @@ fn operator_alignment_is_allowed(
         operator,
     );
     adjacent || table
+}
+
+fn aligned_word_at_column(
+    candidate: &str,
+    current: &str,
+    column: usize,
+    current_rhs_start: usize,
+) -> bool {
+    let Some(candidate_at) = candidate
+        .char_indices()
+        .nth(column)
+        .map(|(index, _)| index)
+        .or_else(|| (candidate.chars().count() == column).then_some(candidate.len()))
+    else {
+        return false;
+    };
+    let Some(character) = candidate[candidate_at..].chars().next() else {
+        return false;
+    };
+    let boundary = candidate[..candidate_at]
+        .chars()
+        .next_back()
+        .is_some_and(char::is_whitespace)
+        && !character.is_whitespace();
+    if boundary {
+        return true;
+    }
+    let word = current[current_rhs_start..]
+        .chars()
+        .take_while(|character| character.is_alphanumeric() || *character == '_')
+        .collect::<String>();
+    !word.is_empty() && candidate[candidate_at..].starts_with(&word)
 }
 
 fn assignment_leading_alignment_is_allowed(
@@ -2568,9 +2631,15 @@ fn alignment_table_is_allowed(
                 || operator.ends_with('=') && (candidate.ends_with('=') || candidate == "<<")
                 || operator == "<<" && candidate.ends_with('=');
             let candidate_end_column = line[..layout.1].chars().count();
+            let candidate_start_column = line[..layout.0].chars().count();
             let candidate_rhs_column = line[..layout.3].chars().count();
-            let leading_aligned =
-                !leading_excess || compatible && candidate_end_column == operator_end_column;
+            let current_start_column = current_line[..operator_start].chars().count();
+            let leading_aligned = !leading_excess
+                || compatible
+                    && (candidate_end_column == operator_end_column
+                        || operator.ends_with('=')
+                            && candidate.ends_with('=')
+                            && candidate_start_column == current_start_column);
             let trailing_aligned =
                 !trailing_excess || different_width && candidate_rhs_column == rhs_start_column;
             leading_aligned && trailing_aligned
