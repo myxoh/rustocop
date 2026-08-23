@@ -3454,12 +3454,40 @@ fn anonymous_class_scope(ancestors: &[Node<'_>], source: &str) -> Option<(String
     }) {
         return None;
     }
+    let assigned_name = ancestors
+        .get(call_index.wrapping_sub(1))
+        .and_then(|parent| {
+            if let Some(write) = parent.as_constant_write_node() {
+                Some(location_text(&write.name_loc(), source).to_string())
+            } else {
+                parent.as_constant_path_write_node().map(|write| {
+                    location_text(&write.target().location(), source).to_string()
+                })
+            }
+        });
+    if let Some(name) = assigned_name {
+        let name = name.trim_start_matches("::").to_string();
+        return Some((name.clone(), Some(format!("constant: {name}"))));
+    }
+
     let enclosing = rubocop_parent_module_name(&ancestors[..call_index], source);
     let base = match enclosing.as_deref() {
         Some("Object") => "Object".to_string(),
         Some(enclosing) => format!("{enclosing}::Object"),
         None => "::Object".to_string(),
     };
+    // Parser's anonymous-block identity deliberately disappears when the
+    // `Class.new` expression is a statement below an `ensure`/`rescue` body.
+    // In that shape RuboCop compares the anonymous definitions globally.
+    if ancestors[..call_index]
+        .iter()
+        .rev()
+        .take_while(|ancestor| ancestor.as_block_node().is_none())
+        .any(|ancestor| ancestor.as_ensure_node().is_some() || ancestor.as_rescue_node().is_some())
+    {
+        return Some((base, None));
+    }
+
     let named_scope_id = ancestors[..call_index]
         .iter()
         .rev()
