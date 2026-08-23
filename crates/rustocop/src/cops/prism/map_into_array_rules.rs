@@ -12,8 +12,6 @@ impl MapIntoArrayRule<'_, '_, '_> {
         let Some(each) = self.parent().and_then(Node::as_call_node) else { return };
         return_unless!(each.name().as_slice() == b"each" && argument_count(&each) == 0);
         return_if!(each.receiver().is_none_or(|receiver| receiver.as_self_node().is_some()));
-        let line_start = self.source_file().line_start(each.location().start_offset());
-        return_if!(!self.source()[line_start..each.location().start_offset()].trim().is_empty());
         let Some(push) = block.body().and_then(single_expression).and_then(|body| body.as_call_node()) else { return };
         return_unless!(matches!(push.name().as_slice(), b"<<" | b"push" | b"append"));
         let Some(destination) = push.receiver() else { return };
@@ -40,6 +38,8 @@ impl MapIntoArrayRule<'_, '_, '_> {
                 || ancestor.as_case_node().is_some()
         }));
         if let Some(assignment) = assignment.as_ref() {
+            let line_start = self.source_file().line_start(each.location().start_offset());
+            return_if!(!self.source()[line_start..each.location().start_offset()].trim().is_empty());
             return_if!(self.source_file().indentation(assignment.range.start).len()
                 != self.source_file().indentation(each.location().start_offset()).len());
             return_if!(self.ancestors().iter().any(|ancestor| {
@@ -96,11 +96,15 @@ impl MapIntoArrayRule<'_, '_, '_> {
 }
 
 fn word_count(source: &str, word: &str) -> usize {
+    let comments = SourceFile::new(source).comment_ranges();
     Regex::new(&format!(r"\b{}\b", regex::escape(word)))
         .expect("escaped local name")
         .find_iter(source)
         .filter(|matched| {
-            !matches!(
+            !comments
+                .iter()
+                .any(|comment| comment.start <= matched.start() && matched.start() < comment.end)
+                && !matches!(
                 source.as_bytes().get(matched.start().saturating_sub(1)),
                 Some(b'@' | b'$' | b':' | b'.')
             )
