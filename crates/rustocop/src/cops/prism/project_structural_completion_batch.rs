@@ -568,10 +568,16 @@ fn modifier_has_following_statement(node: &Node<'_>, context: &CopContext<'_, '_
         .map(str::trim)
         .find(|line| !line.is_empty() && !line.starts_with('#'))
         .is_some_and(|line| {
-            !matches!(
-                line.split_whitespace().next(),
-                Some("end" | "elsif" | "rescue" | "ensure" | "when")
-            )
+            let keyword = line.split_whitespace().next();
+            if keyword == Some("else") {
+                return context
+                    .ancestors()
+                    .iter()
+                    .rev()
+                    .find_map(Node::as_statements_node)
+                    .is_some_and(|statements| statements.body().len() == 1);
+            }
+            !matches!(keyword, Some("end" | "elsif" | "rescue" | "ensure" | "when"))
         })
 }
 
@@ -591,15 +597,9 @@ fn check_multiline_condition(
     if require_multiline_node && file.same_line(location.start_offset(), location.end_offset()) {
         return;
     }
-    let condition_source = file.node(condition_end);
-    let continuation_lines = condition_source.lines().skip(1).filter(|line| !line.trim().is_empty());
-    if continuation_lines
-        .clone()
-        .next()
-        .is_some_and(|_| continuation_lines.clone().all(|line| {
-            let line = line.trim_start();
-            line.starts_with('.') || line.starts_with("&.")
-        }))
+    if condition_end
+        .as_call_node()
+        .is_some_and(|call| call.block().is_some())
     {
         return;
     }
