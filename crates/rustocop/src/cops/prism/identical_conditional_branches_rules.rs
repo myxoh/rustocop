@@ -11,7 +11,7 @@ define_cops! {
 
 impl IdenticalConditionalBranchesRule<'_, '_, '_> {
     fn on_if(&mut self, node: &IfNode<'_>) {
-        return_if!(node.if_keyword_loc().is_some_and(|keyword| keyword.as_slice() == b"elsif"));
+        return_if!(node.if_keyword_loc().is_some_and(|keyword| keyword.as_slice() == b"elsif") || self.elsif_like(node));
         let Some(subsequent) = node.subsequent() else { return };
         let mut branches = Vec::new();
         branches.push(statement_nodes(node.statements()));
@@ -80,6 +80,20 @@ impl IdenticalConditionalBranchesRule<'_, '_, '_> {
 
     fn last_child(&self, conditional: (usize, usize)) -> bool {
         self.parent().is_none_or(|parent| parent.location().end_offset() == conditional.1)
+    }
+
+    fn elsif_like(&self, node: &IfNode<'_>) -> bool {
+        let mut ancestors = self.ancestors().iter().rev();
+        let parent = ancestors
+            .find(|ancestor| ancestor.as_statements_node().is_none());
+        parent
+            .and_then(Node::as_else_node)
+            .is_some_and(|else_node| {
+                only_statement(else_node.statements()).is_some_and(|statement| {
+                    statement.location().start_offset() == node.location().start_offset()
+                        && statement.location().end_offset() == node.location().end_offset()
+                })
+            })
     }
 }
 
