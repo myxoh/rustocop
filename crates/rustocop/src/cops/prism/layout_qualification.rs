@@ -1,7 +1,7 @@
 use super::*;
 
 define_cops! {
-    ArrayAlignment => "Layout/ArrayAlignment" => node(as_array_node, array_alignment),
+    ArrayAlignment => "Layout/ArrayAlignment" => any_node(array_alignment),
     MultilineAssignmentLayout => "Layout/MultilineAssignmentLayout" => any_node(multiline_assignment_layout),
     EndAlignment => "Layout/EndAlignment" => any_node(end_alignment),
     ExtraSpacing => "Layout/ExtraSpacing" => source(extra_spacing),
@@ -99,26 +99,53 @@ fn multiline_assignment_layout(node: &Node<'_>, context: &mut CopContext<'_, '_>
     }
 }
 
-fn array_alignment(node: &ruby_prism::ArrayNode<'_>, context: &mut CopContext<'_, '_>) {
-    if context
-        .parent()
-        .is_some_and(|parent| parent.as_multi_write_node().is_some())
-        || node.elements().len() < 2
-    {
-        return;
+fn array_alignment(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
+    if let Some(array) = node.as_array_node() {
+        if context
+            .parent()
+            .is_some_and(|parent| parent.as_multi_write_node().is_some())
+            || array.elements().len() < 2
+        {
+            return;
+        }
+        let elements = array.elements().iter().collect::<Vec<_>>();
+        align_array_elements(
+            &elements,
+            array.opening_loc(),
+            array.location().start_offset(),
+            Some(&array),
+            context,
+        );
+    } else if let Some(rescue) = node.as_rescue_node() {
+        let elements = rescue.exceptions().iter().collect::<Vec<_>>();
+        if elements.len() >= 2 {
+            align_array_elements(
+                &elements,
+                None,
+                rescue.location().start_offset(),
+                None,
+                context,
+            );
+        }
     }
-    let elements = node.elements().iter().collect::<Vec<_>>();
+}
+
+fn align_array_elements(
+    elements: &[Node<'_>],
+    opening: Option<ruby_prism::Location<'_>>,
+    container_offset: usize,
+    array: Option<&ruby_prism::ArrayNode<'_>>,
+    context: &mut CopContext<'_, '_>,
+) {
     let first = &elements[0];
     let file = context.source_file();
     let style = context.policy().enforced_style("with_first_element");
     let base = if style == "with_fixed_indentation" {
-        let container_start = node.opening_loc().map_or_else(
+        let container_start = opening.as_ref().map_or_else(
             || {
                 context
                     .parent()
-                    .map_or(node.location().start_offset(), |parent| {
-                        parent.location().start_offset()
-                    })
+                    .map_or(container_offset, |parent| parent.location().start_offset())
             },
             |opening| opening.start_offset(),
         );
@@ -148,9 +175,9 @@ fn array_alignment(node: &ruby_prism::ArrayNode<'_>, context: &mut CopContext<'_
         .iter()
         .rev()
         .find_map(Node::as_array_node);
-    let nested_correction_conflict = ancestor_array.is_some_and(|ancestor| {
+    let nested_correction_conflict = array.is_some() && ancestor_array.is_some_and(|ancestor| {
         let Some(position) = ancestor.elements().iter().position(|element| {
-            element.location().start_offset() == node.location().start_offset()
+            element.location().start_offset() == container_offset
         }) else {
             return false;
         };
@@ -178,12 +205,12 @@ fn array_alignment(node: &ruby_prism::ArrayNode<'_>, context: &mut CopContext<'_
                 &context.source()[line_start..ancestor_first.location().start_offset()],
             )
         };
-        let start = node.location().start_offset();
+        let start = container_offset;
         let line_start = file.line_range(start).start;
         context.source()[line_start..start].chars().count() != expected
     });
 
-    let bracketed = node.opening_loc().is_some();
+    let bracketed = opening.is_some();
     let mut previous_line = if bracketed {
         file.line_start(first.location().end_offset().saturating_sub(1))
     } else {
