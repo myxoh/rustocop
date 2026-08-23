@@ -708,12 +708,17 @@ fn comment_indentation(context: &mut CopContext<'_, '_>) {
     let outdent_modifiers = context
         .related_config_value("Layout/AccessModifierIndentation", "EnforcedStyle")
         == Some("outdent");
+    let comment_ranges = context.source_file().comment_ranges();
 
     let comments = lines[..data_index]
         .iter()
         .enumerate()
         .filter_map(|(line_index, (offset, line))| {
-            let marker = line.find('#')?;
+            let marker = comment_ranges
+                .iter()
+                .find(|range| range.start >= *offset && range.start <= *offset + line.len())?
+                .start
+                - *offset;
             Some((
                 line_index,
                 *offset,
