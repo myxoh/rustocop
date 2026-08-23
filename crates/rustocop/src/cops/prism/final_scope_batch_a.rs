@@ -1187,6 +1187,9 @@ fn constant_reassignment(context: &mut CopContext<'_, '_>) {
     let mut scopes = Vec::<Scope>::new();
     for (offset, line) in context.source_file().lines() {
         let trimmed = line.trim();
+        if trimmed.starts_with('#') {
+            continue;
+        }
         let namespace = scopes
             .iter()
             .filter_map(|scope| match scope {
@@ -1252,11 +1255,6 @@ fn constant_reassignment(context: &mut CopContext<'_, '_>) {
         let multiple = before_equal.contains(',');
         for raw in before_equal.split(',') {
             let candidate = raw.trim();
-            let candidate = candidate
-                .rsplit_once(|character: char| {
-                    !(character.is_ascii_alphanumeric() || matches!(character, '_' | ':'))
-                })
-                .map_or(candidate, |(_, tail)| tail);
             if !constant_path(candidate) {
                 continue;
             }
