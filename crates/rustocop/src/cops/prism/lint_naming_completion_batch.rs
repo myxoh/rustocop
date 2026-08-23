@@ -4,7 +4,7 @@ use std::collections::{HashMap, HashSet};
 define_cops! {
     UnderscorePrefixedVariableName => "Lint/UnderscorePrefixedVariableName" => any_node(underscore_variable),
     HeredocDelimiterNaming => "Naming/HeredocDelimiterNaming" => source(heredoc_naming),
-    DeprecatedConstants => "Lint/DeprecatedConstants" => source(deprecated_constants),
+    DeprecatedConstants => "Lint/DeprecatedConstants" => any_node(deprecated_constants),
     RedundantCopEnableDirective => "Lint/RedundantCopEnableDirective" => source(redundant_enable),
     UnreachablePatternBranch => "Lint/UnreachablePatternBranch" => source(unreachable_pattern),
     MethodParameterName => "Naming/MethodParameterName" => node(as_def_node, method_parameter_name),
@@ -221,12 +221,24 @@ fn heredoc_naming(context: &mut CopContext<'_, '_>) {
     }
 }
 
-fn deprecated_constants(context: &mut CopContext<'_, '_>) {
+fn deprecated_constants(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
+    let location = if let Some(read) = node.as_constant_read_node() {
+        read.location()
+    } else if let Some(path) = node.as_constant_path_node() {
+        path.location()
+    } else {
+        return;
+    };
+    let used = context.source_file().at(&location);
+    let lookup = used.strip_prefix("::").unwrap_or(used);
+    let offense = location.start_offset()..location.end_offset();
     let configured = context
         .config_map("DeprecatedConstants")
         .cloned()
         .unwrap_or_default();
-    for (old, details) in configured {
+    let Some(details) = configured.get(lookup) else {
+        return;
+    };
         let mut alternative = None;
         let mut deprecated_version = None;
         for field in details.lines() {
@@ -248,46 +260,20 @@ fn deprecated_constants(context: &mut CopContext<'_, '_>) {
             };
             !context.target_ruby_version().at_least(major, minor)
         }) {
-            continue;
+            return;
         }
-        for start in context.source_file().code_offsets(&old) {
-            let root_start = start.checked_sub(2).filter(|root| {
-                &context.source()[*root..start] == "::"
-                    && (*root == 0
-                        || !context.source().as_bytes()[*root - 1].is_ascii_alphanumeric()
-                            && context.source().as_bytes()[*root - 1] != b'_')
-            });
-            if start > 0 && root_start.is_none() {
-                let previous = context.source().as_bytes()[start - 1];
-                if previous.is_ascii_alphanumeric() || matches!(previous, b'_' | b':') {
-                    continue;
-                }
-            }
-            let end = start + old.len();
-            if context
-                .source()
-                .as_bytes()
-                .get(end)
-                .is_some_and(|next| next.is_ascii_alphanumeric() || matches!(next, b'_' | b':'))
-            {
-                continue;
-            }
-            let offense = root_start.unwrap_or(start)..end;
-            let used = &context.source()[offense.clone()];
-            let suffix = deprecated_version
-                .map(|version| format!(", deprecated since Ruby {version}"))
-                .unwrap_or_default();
-            if let Some(alternative) = alternative {
-                context.replace(
-                    format!("Use `{alternative}` instead of `{used}`{suffix}."),
-                    offense.clone(),
-                    offense,
-                    alternative,
-                );
-            } else {
-                context.report(format!("Do not use `{used}`{suffix}."), offense);
-            }
-        }
+    let suffix = deprecated_version
+        .map(|version| format!(", deprecated since Ruby {version}"))
+        .unwrap_or_default();
+    if let Some(alternative) = alternative {
+        context.replace(
+            format!("Use `{alternative}` instead of `{used}`{suffix}."),
+            offense.clone(),
+            offense,
+            alternative,
+        );
+    } else {
+        context.report(format!("Do not use `{used}`{suffix}."), offense);
     }
 }
 
