@@ -239,12 +239,16 @@ fn disable_cops_within_source_code_directive(context: &mut CopContext<'_, '_>) {
 }
 
 fn directive(comment: &str) -> Option<(&str, &str)> {
-    let marker = comment.find("rubocop:")?;
-    let prefix = &comment[..marker];
-    if !prefix.starts_with('#') || !prefix[1..].chars().all(char::is_whitespace) {
+    let marker = comment.find("rubocop")?;
+    let before_marker = &comment[..marker];
+    let directive_hash = before_marker.trim_end().strip_suffix('#')?;
+    if directive_hash.starts_with('#')
+        && directive_hash[1..].chars().all(char::is_whitespace)
+    {
         return None;
     }
-    let body = &comment[marker + "rubocop:".len()..];
+    let after_marker = comment[marker + "rubocop".len()..].trim_start();
+    let body = after_marker.strip_prefix(':')?;
     let (command, cops) = body.trim().split_once(' ')?;
     let cops = cops.split_once(" -- ").map_or(cops, |(cops, _)| cops).trim();
     matches!(command, "disable" | "enable" | "todo").then_some((command, cops))
