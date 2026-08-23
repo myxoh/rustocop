@@ -2237,6 +2237,15 @@ fn operator_is_non_binary(source: &str, start: usize, end: usize, operator: &str
     if operator == ":" && (before.ends_with(':') || source[end..].starts_with(':')) {
         return true;
     }
+    if operator == ":"
+        && before.ends_with(['(', '[', '{', ','])
+        && source[end..]
+            .chars()
+            .next()
+            .is_some_and(|character| character.is_alphanumeric() || character == '_')
+    {
+        return true;
+    }
     let predicate_suffix = source[..start]
         .chars()
         .rev()

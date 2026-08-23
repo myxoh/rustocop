@@ -270,6 +270,7 @@ impl<'source> SourceFile<'source> {
                 node: &ruby_prism::InterpolatedStringNode<'pr>,
             ) {
                 self.push_delimited(node.location(), node.opening_loc(), node.closing_loc());
+                ruby_prism::visit_interpolated_string_node(self, node);
             }
 
             fn visit_regular_expression_node(
@@ -292,6 +293,7 @@ impl<'source> SourceFile<'source> {
                     Some(node.opening_loc()),
                     Some(node.closing_loc()),
                 );
+                ruby_prism::visit_interpolated_regular_expression_node(self, node);
             }
 
             fn visit_x_string_node(&mut self, node: &ruby_prism::XStringNode<'pr>) {
@@ -311,6 +313,7 @@ impl<'source> SourceFile<'source> {
                     Some(node.opening_loc()),
                     Some(node.closing_loc()),
                 );
+                ruby_prism::visit_interpolated_x_string_node(self, node);
             }
 
             fn visit_symbol_node(&mut self, node: &ruby_prism::SymbolNode<'pr>) {
@@ -322,6 +325,7 @@ impl<'source> SourceFile<'source> {
                 node: &ruby_prism::InterpolatedSymbolNode<'pr>,
             ) {
                 self.push(node.location());
+                ruby_prism::visit_interpolated_symbol_node(self, node);
             }
 
             fn visit_array_node(&mut self, node: &ruby_prism::ArrayNode<'pr>) {
