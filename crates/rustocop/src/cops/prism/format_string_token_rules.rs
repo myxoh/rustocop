@@ -75,19 +75,35 @@ fn parse_tokens(source: &str) -> Vec<Token> {
                 index = end + 1;
                 continue;
             }
-        } else if bytes[index + 1] == b'{' {
-            if let Some(close) = bytes[index + 2..].iter().position(|byte| *byte == b'}').map(|at| index + 2 + at) {
-                tokens.push(Token { style: TokenStyle::Template, start: index, end: close + 1, name: Some((index + 2, close)), kind: b's' });
-                index = close + 1;
-                continue;
-            }
         } else {
-            let mut end = index + 1;
-            while end < bytes.len() && !bytes[end].is_ascii_alphabetic() && bytes[end] != b'%' { end += 1; }
-            if end < bytes.len() && format_type(bytes[end]) {
-                tokens.push(Token { style: TokenStyle::Unannotated, start: index, end: end + 1, name: None, kind: bytes[end] });
-                index = end + 1;
-                continue;
+            let mut opening = index + 1;
+            while opening < bytes.len()
+                && matches!(bytes[opening], b'#' | b'0' | b'-' | b'+' | b' ' | b'1'..=b'9' | b'.')
+            {
+                opening += 1;
+            }
+            if bytes.get(opening) == Some(&b'{') {
+                if let Some(close) = bytes[opening + 1..].iter().position(|byte| *byte == b'}').map(|at| opening + 1 + at) {
+                    let name = &bytes[opening + 1..close];
+                    if !name.is_empty()
+                        && name
+                            .iter()
+                            .all(|byte| byte.is_ascii_alphanumeric() || *byte == b'_')
+                    {
+                        tokens.push(Token { style: TokenStyle::Template, start: index, end: close + 1, name: Some((opening + 1, close)), kind: b's' });
+                        index = close + 1;
+                        continue;
+                    }
+                }
+            }
+            {
+                let mut end = index + 1;
+                while end < bytes.len() && !bytes[end].is_ascii_alphabetic() && bytes[end] != b'%' { end += 1; }
+                if end < bytes.len() && format_type(bytes[end]) {
+                    tokens.push(Token { style: TokenStyle::Unannotated, start: index, end: end + 1, name: None, kind: bytes[end] });
+                    index = end + 1;
+                    continue;
+                }
             }
         }
         index += 1;
@@ -116,13 +132,24 @@ fn correction(source: &str, token: &Token, target: TokenStyle) -> Option<String>
 }
 
 fn typical_context(location: (usize, usize), ancestors: &[Node<'_>]) -> bool {
+    let subject = ancestors
+        .iter()
+        .rev()
+        .find(|ancestor| ancestor.as_interpolated_string_node().is_some())
+        .map_or(location, |ancestor| {
+            (ancestor.location().start_offset(), ancestor.location().end_offset())
+        });
     ancestors.iter().filter_map(Node::as_call_node).any(|call| {
         if matches!(call.name().as_slice(), b"format" | b"sprintf" | b"printf") {
-            call.arguments().and_then(|args| args.arguments().iter().next()).is_some_and(|argument| contains(argument.location(), location))
+            call.arguments().and_then(|args| args.arguments().iter().next()).is_some_and(|argument| same_location(argument.location(), subject))
         } else if call.name().as_slice() == b"%" {
-            call.receiver().is_some_and(|receiver| contains(receiver.location(), location))
+            call.receiver().is_some_and(|receiver| same_location(receiver.location(), subject))
         } else { false }
     })
+}
+
+fn same_location(location: ruby_prism::Location<'_>, expected: (usize, usize)) -> bool {
+    location.start_offset() == expected.0 && location.end_offset() == expected.1
 }
 
 fn allowed_context(context: &FormatStringTokenRule<'_, '_, '_>, location: (usize, usize)) -> bool {
