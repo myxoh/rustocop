@@ -3829,6 +3829,11 @@ impl Cop for SafeNavigation {
         if !cop_context.target_ruby_version().at_least(2, 3) {
             return;
         }
+        if cop_context.related_config_value("AllCops", "DisabledByDefault") == Some("true")
+            && safe_navigation_in_call_arguments(node, ancestors)
+        {
+            return;
+        }
         if let Some(conditional) = node.as_if_node() {
             safe_navigation_if(&conditional, &mut cop_context);
         } else if let Some(conditional) = node.as_unless_node() {
@@ -3837,11 +3842,25 @@ impl Cop for SafeNavigation {
             if !safe_navigation_nested_and(ancestors)
                 && !safe_navigation_and_in_call_arguments(node, ancestors)
                 && !safe_navigation_and_negated(ancestors)
+                && !safe_navigation_and_unsafe_outer_call(node, ancestors)
             {
                 safe_navigation_and(&and_node, &mut cop_context);
             }
         }
     }
+}
+
+fn safe_navigation_in_call_arguments(node: &Node<'_>, ancestors: &[Node<'_>]) -> bool {
+    let location = node.location();
+    ancestors.iter().rev().any(|ancestor| {
+        ancestor.as_call_node().is_some_and(|call| {
+            call.arguments().is_some_and(|arguments| {
+                let arguments = arguments.location();
+                arguments.start_offset() <= location.start_offset()
+                    && location.end_offset() <= arguments.end_offset()
+            })
+        })
+    })
 }
 
 fn safe_navigation_nested_and(ancestors: &[Node<'_>]) -> bool {
@@ -3894,6 +3913,20 @@ fn safe_navigation_and_negated(ancestors: &[Node<'_>]) -> bool {
         }
     }
     false
+}
+
+fn safe_navigation_and_unsafe_outer_call(node: &Node<'_>, ancestors: &[Node<'_>]) -> bool {
+    let location = node.location();
+    ancestors.iter().rev().any(|ancestor| {
+        ancestor.as_call_node().is_some_and(|call| {
+            call.receiver().is_some_and(|receiver| {
+                let receiver = receiver.location();
+                receiver.start_offset() <= location.start_offset()
+                    && location.end_offset() <= receiver.end_offset()
+                    && safe_navigation_nil_method(call_name(&call))
+            })
+        })
+    })
 }
 
 fn safe_navigation_if(node: &ruby_prism::IfNode<'_>, context: &mut CopContext<'_, '_>) {
@@ -4208,7 +4241,14 @@ fn safe_navigation_chain<'pr>(
     if calls.len() > context.config_usize("MaxChainLength", 2) {
         return None;
     }
-    if calls.len() > 1 {
+    let unsafe_chain_length = calls
+        .iter()
+        .filter(|call| {
+            call.call_operator_loc()
+                .is_some_and(|operator| operator.as_slice() == b".")
+        })
+        .count();
+    if unsafe_chain_length > 1 {
         let disabled_by_default = context
             .related_config_value("AllCops", "DisabledByDefault")
             == Some("true");
