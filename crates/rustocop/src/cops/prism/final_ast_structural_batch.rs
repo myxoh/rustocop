@@ -13,12 +13,76 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
         Box::new(ConditionalAssignment),
         Box::new(Debugger),
         custom("Lint/UselessAccessModifier", useless_access_modifier),
+        custom("Lint/DuplicateRequire", duplicate_require),
         Box::new(ArgumentsForwarding),
         Box::new(Void),
         custom("Lint/LiteralInInterpolation", literal_in_interpolation),
     ];
     cops.extend(registry::cops());
     cops
+}
+
+fn duplicate_require(context: &mut CopContext<'_, '_>) {
+    let parsed = parse(context.source().as_bytes());
+    let mut collector = DuplicateRequireCollector {
+        source: context.source(),
+        offenses: Vec::new(),
+    };
+    collector.visit(&parsed.node());
+    for (method, location) in collector.offenses {
+        let line = context.source_file().line_range(location.start);
+        context.remove(
+            format!("Duplicate `{method}` detected."),
+            location,
+            line,
+        );
+    }
+}
+
+struct DuplicateRequireCollector<'a> {
+    source: &'a str,
+    offenses: Vec<(String, std::ops::Range<usize>)>,
+}
+
+impl<'pr> Visit<'pr> for DuplicateRequireCollector<'_> {
+    fn visit_statements_node(&mut self, node: &ruby_prism::StatementsNode<'pr>) {
+        let mut seen = HashSet::new();
+        for child in node.body().iter() {
+            let Some(call) = child.as_call_node() else {
+                continue;
+            };
+            let method = call_name(&call);
+            if !matches!(method, b"require" | b"require_relative")
+                || call
+                    .receiver()
+                    .is_some_and(|receiver| !node_is_root_constant(&receiver, b"Kernel"))
+            {
+                continue;
+            }
+            let Some(argument) = call
+                .arguments()
+                .and_then(|arguments| arguments.arguments().iter().next())
+            else {
+                continue;
+            };
+            let argument_key = argument.as_string_node().map_or_else(
+                || {
+                    self.source
+                        [argument.location().start_offset()..argument.location().end_offset()]
+                        .to_string()
+                },
+                |string| String::from_utf8_lossy(string.unescaped()).into_owned(),
+            );
+            let key = (method.to_vec(), argument_key);
+            if !seen.insert(key) {
+                self.offenses.push((
+                    String::from_utf8_lossy(method).into_owned(),
+                    call.location().start_offset()..call.location().end_offset(),
+                ));
+            }
+        }
+        ruby_prism::visit_statements_node(self, node);
+    }
 }
 
 fn literal_in_interpolation(context: &mut CopContext<'_, '_>) {

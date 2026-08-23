@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use super::source_helpers::*;
 use super::*;
 
@@ -10,7 +8,6 @@ declare_source_cops! {
     UriEscapeUnescape => "Lint/UriEscapeUnescape" => uri_escape_unescape,
     OrAssignmentToConstant => "Lint/OrAssignmentToConstant" => or_assignment_to_constant,
     OrderedMagicComments => "Lint/OrderedMagicComments" => ordered_magic_comments,
-    DuplicateRequire => "Lint/DuplicateRequire" => duplicate_require,
 }
 
 fn leading_empty_lines(source: &str, reporter: &mut Reporter<'_>) {
@@ -217,28 +214,4 @@ fn ordered_magic_comments(source: &str, reporter: &mut Reporter<'_>) {
         frozen_offset..end,
         replacement,
     );
-}
-
-fn duplicate_require(source: &str, reporter: &mut Reporter<'_>) {
-    let mut seen = HashMap::<(&str, &str), usize>::new();
-    for (offset, line) in source_lines(source) {
-        let trimmed = line.trim_start();
-        let normalized = trimmed.strip_prefix("Kernel.").unwrap_or(trimmed);
-        let method = if normalized.starts_with("require_relative ") {
-            "require_relative"
-        } else if normalized.starts_with("require ") {
-            "require"
-        } else {
-            continue;
-        };
-        let argument = normalized[method.len()..].trim();
-        if seen.insert((method, argument), offset).is_some() {
-            let start = offset + line.len() - trimmed.len();
-            reporter.remove(
-                format!("Duplicate `{method}` detected."),
-                start..offset + line.len(),
-                offset..line_end(source, offset),
-            );
-        }
-    }
 }
