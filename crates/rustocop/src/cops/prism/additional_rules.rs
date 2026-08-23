@@ -124,21 +124,29 @@ fn disjunctive_assignment(source: &str, reporter: &mut Reporter<'_>) {
     let mut unsafe_call_seen = false;
     for (offset, line) in source_lines(source) {
         let trimmed = line.trim();
-        if trimmed.starts_with("def initialize") {
+        if trimmed.strip_prefix("def initialize").is_some_and(|rest| {
+            rest.is_empty() || rest.starts_with('(') || rest.starts_with(char::is_whitespace)
+        }) {
             in_initialize = true;
             unsafe_call_seen = false;
             continue;
         }
         if in_initialize && trimmed == "end" {
             in_initialize = false;
-        } else if in_initialize
-            && (trimmed == "super"
-                || (!trimmed.starts_with('@') && !trimmed.starts_with('#') && !trimmed.is_empty()))
-        {
-            unsafe_call_seen = true;
         }
-        if in_initialize && !unsafe_call_seen && trimmed.starts_with('@') {
-            if let Some(operator) = line.find("||=") {
+        if in_initialize && !unsafe_call_seen && !trimmed.is_empty() && !trimmed.starts_with('#') {
+            let operator = trimmed.find("||=");
+            let instance_variable = operator.is_some_and(|operator| {
+                let lhs = trimmed[..operator].trim();
+                lhs.strip_prefix('@').is_some_and(|name| {
+                    !name.is_empty()
+                        && name
+                            .bytes()
+                            .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
+                })
+            });
+            if instance_variable {
+                let operator = line.find("||=").expect("trimmed line contains operator");
                 let start = offset + operator;
                 reporter.replace(
                     "Unnecessary disjunctive assignment. Use plain assignment.",
@@ -146,6 +154,8 @@ fn disjunctive_assignment(source: &str, reporter: &mut Reporter<'_>) {
                     start..start + 3,
                     "=",
                 );
+            } else {
+                unsafe_call_seen = true;
             }
         }
     }
