@@ -1053,7 +1053,7 @@ impl Cop for MethodName {
                         && source
                             .as_bytes()
                             .get(end)
-                            .is_some_and(|byte| matches!(byte, b'\'' | b'\"'))
+                            .is_some_and(|byte| matches!(byte, b'\'' | b'\"' | b')'))
                     {
                         end += 1;
                     }
