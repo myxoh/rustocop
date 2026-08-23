@@ -466,11 +466,8 @@ fn double_negation(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
 
 fn double_negation_return_value(node: &CallNode<'_>, context: &CopContext<'_, '_>) -> bool {
     if context
-        .ancestors()
-        .iter()
-        .rev()
-        .take_while(|ancestor| ancestor.as_def_node().is_none())
-        .any(|ancestor| ancestor.as_return_node().is_some())
+        .parent()
+        .is_some_and(|parent| parent.as_return_node().is_some())
     {
         return true;
     }
@@ -484,18 +481,13 @@ fn double_negation_return_value(node: &CallNode<'_>, context: &CopContext<'_, '_
         .ancestors()
         .iter()
         .rev()
-        .find_map(Node::as_block_node)
-        .and_then(|block| {
-            context
-                .ancestors()
-                .iter()
-                .rev()
-                .find_map(Node::as_call_node)
-                .filter(|call| {
-                    matches!(call_name(call), b"define_method" | b"define_singleton_method")
-                })
-                .and_then(|_| block.body())
-        });
+        .find_map(Node::as_call_node)
+        .filter(|call| {
+            matches!(call_name(call), b"define_method" | b"define_singleton_method")
+        })
+        .and_then(|call| call.block())
+        .and_then(|block| block.as_block_node())
+        .and_then(|block| block.body());
     let Some(body) = definition_body.or(define_method_body) else {
         return false;
     };
@@ -511,6 +503,13 @@ fn double_negation_return_value(node: &CallNode<'_>, context: &CopContext<'_, '_
             && node.location().end_offset() <= ancestor.location().end_offset()
     });
     if let Some(conditional) = conditional {
+        let reference_end = if sequence_body {
+            last.location().end_offset()
+        } else {
+            let fallback_end = last.location().end_offset();
+            double_negation_last_child(last)
+                .map_or(fallback_end, |(child, _)| child.location().end_offset())
+        };
         let line_start = context.source()[..node.location().start_offset()]
             .rfind('\n')
             .map_or(0, |offset| offset + 1);
@@ -523,7 +522,7 @@ fn double_negation_return_value(node: &CallNode<'_>, context: &CopContext<'_, '_
                 node.location().end_offset(),
                 conditional.location().end_offset(),
             ))
-            && last.location().end_offset() <= conditional.location().end_offset()
+            && reference_end <= conditional.location().end_offset()
     } else {
         let child = if sequence_body {
             Some((last, false))
@@ -549,6 +548,13 @@ fn double_negation_last_child(node: Node<'_>) -> Option<(Node<'_>, bool)> {
             .arguments()
             .and_then(|arguments| arguments.arguments().iter().last())
         {
+            if let Some(hash) = argument.as_keyword_hash_node() {
+                return hash
+                    .elements()
+                    .iter()
+                    .last()
+                    .map(|element| (element, false));
+            }
             return Some((argument, false));
         }
         return call.receiver().map(|receiver| (receiver, false));
@@ -570,6 +576,9 @@ fn double_negation_last_child(node: Node<'_>) -> Option<(Node<'_>, bool)> {
     }
     if let Some(pair) = node.as_assoc_node() {
         return Some((pair.value(), false));
+    }
+    if let Some(write) = node.as_instance_variable_or_write_node() {
+        return Some((write.value(), false));
     }
     if let Some(parentheses) = node.as_parentheses_node() {
         return parentheses.body().and_then(return_body_last).map(|child| (child, false));
