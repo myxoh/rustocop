@@ -162,16 +162,24 @@ fn empty_lines_around_access_modifier(node: &CallNode<'_>, context: &mut CopCont
     }
     if context.parent().is_none_or(|parent| {
         parent.as_statements_node().is_none() && parent.as_program_node().is_none()
-    }) || context
-        .ancestors()
-        .iter()
-        .any(|ancestor| ancestor.as_def_node().is_some())
+    }) || context.ancestors().iter().rev().find(|ancestor| {
+        ancestor.as_def_node().is_some()
+            || ancestor.as_class_node().is_some()
+            || ancestor.as_module_node().is_some()
+            || ancestor.as_singleton_class_node().is_some()
+            || ancestor.as_block_node().is_some()
+    }).is_some_and(|ancestor| ancestor.as_def_node().is_some())
     {
         return;
     }
     let source = context.source();
     let location = node.location();
     let current_line = line_index(source, location.start_offset());
+    if previous_non_comment_line(source, current_line)
+        .is_some_and(|previous| line(source, previous).trim_end().ends_with(','))
+    {
+        return;
+    }
     if !source[location.end_offset()..line_end(source, current_line)]
         .split('#')
         .next()
