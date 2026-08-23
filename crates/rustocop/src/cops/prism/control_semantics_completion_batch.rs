@@ -1,5 +1,5 @@
-use ruby_prism::{BlockNode, ForNode, Node, Visit};
-use std::collections::HashMap;
+use ruby_prism::{parse, BlockNode, ForNode, Node, Visit};
+use std::collections::{HashMap, HashSet};
 
 use super::*;
 
@@ -435,6 +435,7 @@ fn for_collection_needs_parentheses(node: &Node<'_>, source: &str) -> bool {
 
 fn class_module_children(context: &mut CopContext<'_, '_>) {
     let lines = context.source_file().lines().collect::<Vec<_>>();
+    let directly_nested = directly_nested_definition_offsets(context.source());
     let mut compact_covered_until = 0usize;
     for (index, (offset, line)) in lines.iter().copied().enumerate() {
         let trimmed = line.trim_start();
@@ -460,7 +461,7 @@ fn class_module_children(context: &mut CopContext<'_, '_>) {
         let name_range = name_start..name_start + name.len();
         if style == "nested" {
             let path = name.trim_start_matches("::");
-            if indent > 0
+            if directly_nested.contains(&(offset + indent))
                 || !path.contains("::")
                 || path
                     .split("::")
@@ -618,6 +619,43 @@ fn class_module_children(context: &mut CopContext<'_, '_>) {
             compact_covered_until = end;
         }
     }
+}
+
+fn directly_nested_definition_offsets(source: &str) -> HashSet<usize> {
+    #[derive(Default)]
+    struct Collector {
+        offsets: HashSet<usize>,
+    }
+
+    impl Collector {
+        fn collect_body(&mut self, body: Option<Node<'_>>) {
+            let Some(statements) = body.and_then(|body| body.as_statements_node()) else {
+                return;
+            };
+            for child in statements.body().iter() {
+                if child.as_class_node().is_some() || child.as_module_node().is_some() {
+                    self.offsets.insert(child.location().start_offset());
+                }
+            }
+        }
+    }
+
+    impl<'pr> Visit<'pr> for Collector {
+        fn visit_class_node(&mut self, node: &ruby_prism::ClassNode<'pr>) {
+            self.collect_body(node.body());
+            ruby_prism::visit_class_node(self, node);
+        }
+
+        fn visit_module_node(&mut self, node: &ruby_prism::ModuleNode<'pr>) {
+            self.collect_body(node.body());
+            ruby_prism::visit_module_node(self, node);
+        }
+    }
+
+    let parsed = parse(source.as_bytes());
+    let mut collector = Collector::default();
+    collector.visit(&parsed.node());
+    collector.offsets
 }
 
 fn compact_namespace_replacement(lines: &[(usize, &str)], start: usize) -> Option<(usize, String)> {
