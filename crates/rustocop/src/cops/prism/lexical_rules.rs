@@ -156,8 +156,14 @@ fn ascii_identifiers(context: &mut CopContext<'_, '_>) {
     let ascii_constants = context.config_bool("AsciiConstants", true);
     let literal_ranges = context.source_file().literal_ranges();
     let comment_ranges = context.source_file().comment_ranges();
+    let data_section = source
+        .find("\n__END__\n")
+        .map_or(source.len(), |offset| offset + 1);
     let mut reported_through = 0;
     for (offset, character) in source.char_indices() {
+        if offset >= data_section {
+            break;
+        }
         if literal_ranges
             .iter()
             .chain(comment_ranges.iter())
