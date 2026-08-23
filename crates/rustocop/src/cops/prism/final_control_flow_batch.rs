@@ -851,11 +851,17 @@ fn duplicate_branches(
         headers.push((start, false));
     }
     let mut end = lines.len();
+    let mut case_branch_indent = None;
     for index in start + 1..lines.len() {
         let line = lines[index].1;
         let trimmed = line.trim_start();
         let line_indent = line.len() - trimmed.len();
-        if line_indent == indent
+        let end_indent = if matches!(kind, DuplicateConstruct::Case) {
+            case_branch_indent.unwrap_or(indent)
+        } else {
+            indent
+        };
+        if line_indent == end_indent
             && (trimmed == "end"
                 || trimmed
                     .strip_prefix("end")
@@ -870,9 +876,13 @@ fn duplicate_branches(
                     line_indent == indent && (trimmed.starts_with("elsif ") || trimmed == "else")
                 }
                 DuplicateConstruct::Case => {
-                    trimmed.starts_with("when ")
+                    let candidate = trimmed.starts_with("when ")
                         || trimmed.starts_with("in ")
-                        || trimmed.starts_with("else")
+                        || trimmed.starts_with("else");
+                    if candidate && case_branch_indent.is_none() {
+                        case_branch_indent = Some(line_indent);
+                    }
+                    candidate && case_branch_indent == Some(line_indent)
                 }
                 DuplicateConstruct::Rescue => {
                     line_indent == indent
