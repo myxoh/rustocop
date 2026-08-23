@@ -235,7 +235,9 @@ fn subtree_binds_name(
             &mut self,
             node: &ruby_prism::LocalVariableTargetNode<'pr>,
         ) {
-            self.check(node.name().as_slice());
+            if self.include_writes {
+                self.check(node.name().as_slice());
+            }
             ruby_prism::visit_local_variable_target_node(self, node);
         }
 
