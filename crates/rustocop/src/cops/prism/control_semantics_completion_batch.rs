@@ -963,7 +963,9 @@ fn block_delimiters(node: &BlockNode<'_>, context: &mut CopContext<'_, '_>) {
     {
         return;
     }
-    if block_nested_in_improper_block(context, style) {
+    if block_nested_in_improper_block(context, style)
+        || block_precedes_improper_chained_block(node, context, style)
+    {
         return;
     }
     let functional_method = context
@@ -1218,6 +1220,9 @@ fn block_is_ambiguous_argument(context: &CopContext<'_, '_>) -> bool {
         if ancestor.as_parentheses_node().is_some() {
             return false;
         }
+        if ancestor.as_hash_node().is_some() {
+            return false;
+        }
         if let Some(outer) = ancestor.as_call_node() {
             let single_argument_operator = matches!(
                 call_name(&outer),
@@ -1266,8 +1271,53 @@ fn block_is_ambiguous_argument(context: &CopContext<'_, '_>) -> bool {
 }
 
 fn block_nested_in_improper_block(context: &CopContext<'_, '_>, style: &str) -> bool {
-    context.ancestors().iter().rev().skip(1).any(|ancestor| {
+    context
+        .ancestors()
+        .iter()
+        .enumerate()
+        .rev()
+        .skip(1)
+        .any(|(index, ancestor)| {
         let Some(block) = ancestor.as_block_node() else {
+            return false;
+        };
+        let method = index
+            .checked_sub(1)
+            .and_then(|parent| context.ancestors()[parent].as_call_node())
+            .map(|call| call_name(&call));
+        if method.is_some_and(|method| context.policy().allows_method(method)) {
+            return false;
+        }
+        let braces = block.opening_loc().as_slice() == b"{";
+        let multiline = context.source_file().node(&block.as_node()).contains('\n');
+        match style {
+            "line_count_based" => braces == multiline,
+            "always_braces" => !braces,
+            _ => false,
+        }
+    })
+}
+
+fn block_precedes_improper_chained_block(
+    node: &BlockNode<'_>,
+    context: &CopContext<'_, '_>,
+    style: &str,
+) -> bool {
+    let current = node.location();
+    context.ancestors().iter().rev().skip(1).any(|ancestor| {
+        let Some(call) = ancestor.as_call_node() else {
+            return false;
+        };
+        let Some(receiver) = call.receiver() else {
+            return false;
+        };
+        if receiver.location().start_offset() > current.start_offset()
+            || receiver.location().end_offset() < current.end_offset()
+            || context.policy().allows_method(call_name(&call))
+        {
+            return false;
+        }
+        let Some(block) = call.block().and_then(|block| block.as_block_node()) else {
             return false;
         };
         let braces = block.opening_loc().as_slice() == b"{";
