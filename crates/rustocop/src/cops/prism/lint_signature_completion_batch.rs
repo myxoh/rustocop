@@ -12,30 +12,49 @@ define_cops! {
 }
 
 fn syntax(error: &Diagnostic<'_>, context: &mut CopContext<'_, '_>) {
-    if context.source().contains('\n')
-        && !error.message().contains("end-of-input")
-        && !context.source().trim_end().ends_with('(')
-    {
+    if context.related_config_value("AllCops", "ParserEngine") != Some("parser_prism") {
+        if context.source().contains('\n')
+            && !error.message().contains("end-of-input")
+            && !context.source().trim_end().ends_with('(')
+        {
+            return;
+        }
+        let start = context.source().len().saturating_sub(1);
+        let version = context.target_ruby_version();
+        context.report(
+            format!(
+                "unexpected token $end\n(Using Ruby {}.{} parser; configure using `TargetRubyVersion` parameter, under `AllCops`)",
+                version.major(),
+                version.minor()
+            ),
+            start..context.source().len(),
+        );
         return;
     }
-    let source = context.source();
-    let start = source.len().saturating_sub(1);
+    let mut message = error.message().to_string();
+    if message == "unexpected ',', ignoring it" {
+        message = "unexpected ',', expecting end-of-input".to_string();
+    } else if message.ends_with(", ignoring it") {
+        let token = std::str::from_utf8(error.location().as_slice()).unwrap_or_default();
+        message = format!("unexpected token {token}");
+    }
     let version = context.target_ruby_version();
     context.report(
         format!(
-            "unexpected token $end\n(Using Ruby {}.{} parser; configure using `TargetRubyVersion` parameter, under `AllCops`)",
+            "{message}\n(Using Ruby {}.{} parser; configure using `TargetRubyVersion` parameter, under `AllCops`)",
             version.major(),
             version.minor()
         ),
-        start..source.len(),
+        error.location(),
     );
 }
 
 fn invalid_byte_syntax(context: &mut CopContext<'_, '_>) {
-    if context
-        .source()
-        .bytes()
-        .any(|byte| byte < b' ' && !matches!(byte, b'\t' | b'\n' | b'\r'))
+    if context.related_config_value("AllCops", "ParserEngine") != Some("parser_prism")
+        && context
+            .source()
+            .bytes()
+            .any(|byte| byte < b' ' && !matches!(byte, b'\t' | b'\n' | b'\r'))
     {
         context.report("Invalid byte sequence in utf-8.", 0..0);
     }
