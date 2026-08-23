@@ -435,8 +435,16 @@ fn unquoted_hash_labels(source: &str) -> Vec<UnquotedHashLabel> {
 
 fn double_negation(context: &mut CopContext<'_, '_>) {
     let lines = context.source_file().lines().collect::<Vec<_>>();
+    let code_offsets = context
+        .source_file()
+        .code_offsets("!!")
+        .into_iter()
+        .collect::<std::collections::HashSet<_>>();
     for (index, (offset, line)) in lines.iter().copied().enumerate() {
-        let Some(at) = line.find("!!") else { continue };
+        for (at, _) in line.match_indices("!!") {
+            if !code_offsets.contains(&(offset + at)) {
+                continue;
+            }
         let tail = &line[at + 2..];
         let leading = tail.len() - tail.trim_start().len();
         let expression_start = at + 2 + leading;
@@ -456,7 +464,7 @@ fn double_negation(context: &mut CopContext<'_, '_>) {
             continue;
         }
         if context.policy().enforced_style("allowed_in_returns") == "allowed_in_returns"
-            && (line[..at].trim().starts_with("return")
+            && (line[..at].trim() == "return"
                 || (line[..at].trim().is_empty()
                     && (lines[index + 1..]
                         .iter()
@@ -465,6 +473,8 @@ fn double_negation(context: &mut CopContext<'_, '_>) {
                             let next = next.trim();
                             next == "end"
                                 || next == "else"
+                                || next.starts_with("rescue")
+                                || next.starts_with("ensure")
                                 || next.starts_with("elsif ")
                                 || next.starts_with("when ")
                                 || next.starts_with("in ")
@@ -481,6 +491,8 @@ fn double_negation(context: &mut CopContext<'_, '_>) {
                             let next = next.trim();
                             next == "end"
                                 || next == "else"
+                                || next.starts_with("rescue")
+                                || next.starts_with("ensure")
                                 || next.starts_with("elsif ")
                                 || next.starts_with("when ")
                                 || next.starts_with("in ")
@@ -494,6 +506,7 @@ fn double_negation(context: &mut CopContext<'_, '_>) {
             offset + at..offset + expression_start + expression_len,
             format!("!{expression}.nil?"),
         );
+        }
     }
 }
 
