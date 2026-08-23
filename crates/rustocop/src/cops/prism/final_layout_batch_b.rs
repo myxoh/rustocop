@@ -1817,6 +1817,7 @@ fn operator_spacing(context: &mut CopContext<'_, '_>) {
     let literal_ranges = context.source_file().literal_ranges();
     let comment_ranges = context.source_file().comment_ranges();
     let unary_operator_offsets = unary_operator_offsets(&source);
+    let embedded_code_ranges = embedded_code_ranges(&source);
 
     for (line_offset, line) in context.source_file().lines().collect::<Vec<_>>() {
         if line.trim() == "__END__" {
@@ -1844,9 +1845,27 @@ fn operator_spacing(context: &mut CopContext<'_, '_>) {
             }
             if let Some(range) = literal_ranges
                 .iter()
-                .find(|range| range.start <= absolute && absolute < range.end)
+                .find(|range| {
+                    range.start <= absolute
+                        && absolute < range.end
+                        && !embedded_code_ranges
+                            .iter()
+                            .any(|embedded| embedded.start <= absolute && absolute < embedded.end)
+                })
             {
-                index = range.end.saturating_sub(line_offset).min(code.len());
+                let next_embedded = embedded_code_ranges
+                    .iter()
+                    .filter(|embedded| {
+                        absolute < embedded.start
+                            && range.start <= embedded.start
+                            && embedded.start < range.end
+                    })
+                    .map(|embedded| embedded.start)
+                    .min();
+                index = next_embedded
+                    .unwrap_or(range.end)
+                    .saturating_sub(line_offset)
+                    .min(code.len());
                 continue;
             }
             if !code.is_char_boundary(index) {
@@ -2038,12 +2057,85 @@ fn unary_operator_offsets(source: &str) -> std::collections::HashSet<usize> {
             }
             ruby_prism::visit_call_node(self, node);
         }
+
+        fn visit_integer_node(&mut self, node: &ruby_prism::IntegerNode<'pr>) {
+            if node
+                .location()
+                .as_slice()
+                .first()
+                .is_some_and(|byte| matches!(byte, b'+' | b'-'))
+            {
+                self.0.insert(node.location().start_offset());
+            }
+        }
+
+        fn visit_float_node(&mut self, node: &ruby_prism::FloatNode<'pr>) {
+            if node
+                .location()
+                .as_slice()
+                .first()
+                .is_some_and(|byte| matches!(byte, b'+' | b'-'))
+            {
+                self.0.insert(node.location().start_offset());
+            }
+        }
+
+        fn visit_rational_node(&mut self, node: &ruby_prism::RationalNode<'pr>) {
+            if node
+                .location()
+                .as_slice()
+                .first()
+                .is_some_and(|byte| matches!(byte, b'+' | b'-'))
+            {
+                self.0.insert(node.location().start_offset());
+            }
+        }
+
+        fn visit_imaginary_node(&mut self, node: &ruby_prism::ImaginaryNode<'pr>) {
+            if node
+                .location()
+                .as_slice()
+                .first()
+                .is_some_and(|byte| matches!(byte, b'+' | b'-'))
+            {
+                self.0.insert(node.location().start_offset());
+            }
+        }
     }
 
     let parsed = ruby_prism::parse(source.as_bytes());
     let mut operators = UnaryOperators::default();
     operators.visit(&parsed.node());
     operators.0
+}
+
+fn embedded_code_ranges(source: &str) -> Vec<std::ops::Range<usize>> {
+    #[derive(Default)]
+    struct EmbeddedCode(Vec<std::ops::Range<usize>>);
+
+    impl<'pr> ruby_prism::Visit<'pr> for EmbeddedCode {
+        fn visit_embedded_statements_node(
+            &mut self,
+            node: &ruby_prism::EmbeddedStatementsNode<'pr>,
+        ) {
+            let location = node.location();
+            self.0
+                .push(location.start_offset()..location.end_offset());
+            ruby_prism::visit_embedded_statements_node(self, node);
+        }
+
+        fn visit_embedded_variable_node(&mut self, node: &ruby_prism::EmbeddedVariableNode<'pr>) {
+            let location = node.location();
+            self.0
+                .push(location.start_offset()..location.end_offset());
+            ruby_prism::visit_embedded_variable_node(self, node);
+        }
+    }
+
+    let parsed = ruby_prism::parse(source.as_bytes());
+    let mut embedded = EmbeddedCode::default();
+    embedded.visit(&parsed.node());
+    embedded.0
 }
 
 fn ruby_comment_start(line: &str) -> Option<usize> {
@@ -2134,7 +2226,7 @@ fn operator_is_non_binary(source: &str, start: usize, end: usize, operator: &str
     if operator == "&" && after.starts_with('.') {
         return true;
     }
-    if operator == "?" && source[..start].ends_with('$') {
+    if source[..start].ends_with('$') {
         return true;
     }
     if (operator == "-" && source[end..].starts_with('>'))

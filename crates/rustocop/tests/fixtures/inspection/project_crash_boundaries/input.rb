@@ -28,6 +28,10 @@ generated-option=value-with-dashes
 class Generated<%= table_name.camelize %> < Base<%= version %>
 <%= generated_data -%>
 
+ratio = "#{values[0]/values[1]}"
+backref = $&
+negative = -6
+
 where(:first, :second) do
   1       | 2
   100_000 | 3

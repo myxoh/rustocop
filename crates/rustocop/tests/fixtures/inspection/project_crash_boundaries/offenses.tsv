@@ -1,1 +1,2 @@
 cop	line	column	last_line	last_column	correctable	corrected	message
+Layout/SpaceAroundOperators	31	21	31	21	true	false	Surrounding space missing for operator `/`.
