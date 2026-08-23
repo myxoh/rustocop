@@ -383,21 +383,21 @@ impl Cop for SpaceInsideBlockBraces {
         source: &str,
         context: &mut Context,
     ) {
-        let Some(block) = node.as_block_node() else {
-            return;
-        };
         let mut context = context.cop_context(self.name(), source, ancestors);
-        check_space_inside_block_braces(&block, &mut context);
+        if let Some(block) = node.as_block_node() {
+            check_space_inside_braces(block.opening_loc(), block.closing_loc(), &mut context);
+        } else if let Some(lambda) = node.as_lambda_node() {
+            check_space_inside_braces(lambda.opening_loc(), lambda.closing_loc(), &mut context);
+        }
     }
 }
 
-fn check_space_inside_block_braces(
-    block: &ruby_prism::BlockNode<'_>,
+fn check_space_inside_braces(
+    opening: ruby_prism::Location<'_>,
+    closing: ruby_prism::Location<'_>,
     context: &mut CopContext<'_, '_>,
 ) {
     let file = context.source_file();
-    let opening = block.opening_loc();
-    let closing = block.closing_loc();
     if file.at(&opening) != "{" || file.at(&closing) != "}" {
         return;
     }
