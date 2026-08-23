@@ -17,7 +17,7 @@ fn multiline_block_chain(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) 
         }
         receiver = call.receiver();
     }
-    let (Some(block), Some(selector)) = (prior_block, node.message_loc()) else {
+    let (Some(block), Some(_)) = (prior_block, node.message_loc()) else {
         return;
     };
     let opening = block.opening_loc();
@@ -34,17 +34,29 @@ fn multiline_block_chain(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) 
         current_block.opening_loc().start_offset(),
         current_block.closing_loc().start_offset(),
     ) {
-        std::iter::once(current_end)
-            .chain(
-            context
-                .ancestors()
-                .iter()
-                .filter_map(Node::as_call_node)
-                .filter(|ancestor| ancestor.location().start_offset() == chain_start)
-                .map(|ancestor| call_send_end(&ancestor, context.source())),
-            )
-            .max()
-            .unwrap_or_else(|| selector.end_offset())
+        let mut outer_blocks = context
+            .ancestors()
+            .iter()
+            .filter_map(Node::as_call_node)
+            .filter(|ancestor| ancestor.location().start_offset() == chain_start)
+            .filter_map(|ancestor| {
+                let block = ancestor.block().and_then(|block| block.as_block_node())?;
+                Some((call_send_end(&ancestor, context.source()), block))
+            })
+            .filter(|(end, _)| *end > current_end)
+            .collect::<Vec<_>>();
+        outer_blocks.sort_by_key(|(end, _)| *end);
+        let mut end = current_end;
+        for (outer_end, block) in outer_blocks {
+            end = outer_end;
+            if !context.source_file().same_line(
+                block.opening_loc().start_offset(),
+                block.closing_loc().start_offset(),
+            ) {
+                break;
+            }
+        }
+        end
     } else {
         current_end
     };
