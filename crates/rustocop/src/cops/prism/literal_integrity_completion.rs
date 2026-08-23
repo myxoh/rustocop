@@ -500,10 +500,12 @@ fn double_negation_return_value(node: &CallNode<'_>, context: &CopContext<'_, '_
         return false;
     }
     let conditional = context.ancestors().iter().rev().find(|ancestor| {
-        ancestor.as_if_node().is_some()
+        (ancestor.as_if_node().is_some()
             || ancestor.as_unless_node().is_some()
             || ancestor.as_case_node().is_some()
-            || ancestor.as_case_match_node().is_some()
+            || ancestor.as_case_match_node().is_some())
+            && ancestor.location().start_offset() <= node.location().start_offset()
+            && node.location().end_offset() <= ancestor.location().end_offset()
     });
     if let Some(conditional) = conditional {
         let branch_tail = conditional_branch_tail(
@@ -522,7 +524,7 @@ fn conditional_branch_tail(source: &str, node_end: usize, conditional_end: usize
     let next_line = source[node_end..]
         .find('\n')
         .map_or(node_end, |offset| node_end + offset + 1);
-    for line in source[next_line..conditional_end].lines() {
+    for line in source[next_line.min(conditional_end)..conditional_end].lines() {
         let line = line.trim();
         if line.is_empty()
             || line.starts_with('#')
