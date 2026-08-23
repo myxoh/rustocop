@@ -356,7 +356,13 @@ impl Cop for UnescapedBracketInRegexp {
             } else if byte == b'[' {
                 character_class_depth += 1;
             } else if byte == b']' {
-                if character_class_depth > 0 {
+                let string_escaped_bracket = node.as_call_node().is_some()
+                    && relative >= 2
+                    && source.as_bytes().get(start + relative - 2..start + relative)
+                        == Some(&b"\\\\"[..]);
+                if string_escaped_bracket {
+                    continue;
+                } else if character_class_depth > 0 {
                     character_class_depth -= 1;
                 } else if node.as_call_node().is_some()
                     && relative > 0

@@ -14,8 +14,12 @@ fn block_alignment_node(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
     if let Some(block) = node.as_block_node() {
         block_alignment(&block, context);
     } else if let Some(lambda) = node.as_lambda_node() {
+        let lambda_start = lambda.location().start_offset();
+        if !context.source()[..lambda_start].trim_end().ends_with('(') {
+            return;
+        }
         let opening = lambda.opening_loc();
-        let block_start = lambda.location().start_offset();
+        let block_start = lambda_start;
         let block_column = context.source_file().column(block_start);
         block_alignment_locations(
             lambda.closing_loc(),
