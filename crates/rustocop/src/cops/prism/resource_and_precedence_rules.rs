@@ -184,7 +184,11 @@ fn flattened_keyword_merge(node: &CallNode<'_>, context: &CopContext<'_, '_>) ->
 }
 
 fn method_called_on_do_end_block(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
-    if node.block().is_some() {
+    if node
+        .block()
+        .and_then(|block| block.as_block_node())
+        .is_some()
+    {
         return;
     }
     let Some(block) = node
