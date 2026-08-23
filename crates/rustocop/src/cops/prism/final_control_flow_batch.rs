@@ -765,6 +765,15 @@ impl Cop for DuplicateBranchCop {
             if if_node
                 .if_keyword_loc()
                 .is_some_and(|keyword| keyword.as_slice() == b"elsif")
+                || ancestors.iter().any(|ancestor| {
+                    ancestor.as_else_node().is_some_and(|else_node| {
+                        else_node.statements().is_some_and(|statements| {
+                            statements.location().start_offset() == node.location().start_offset()
+                                && statements.location().end_offset()
+                                    == node.location().end_offset()
+                        })
+                    })
+                })
             {
                 return;
             }
