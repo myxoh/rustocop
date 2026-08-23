@@ -1,54 +1,98 @@
 ---
 version: 1
 rubocop_version: 1.87.0
-updated_at: '2026-08-22T11:50:53-04:00'
-reason: Existing implementations are intentionally withdrawn because source-pattern or placeholder behavior does not scale to real projects.
+updated_at: '2026-08-23T08:17:08-04:00'
+reason: Existing implementations are intentionally withdrawn because source-pattern, placeholder, or incomplete structural behavior does not match the pinned real-project corpus.
 cops:
   - Layout/ArgumentAlignment
+  - Layout/EmptyLineAfterGuardClause
   - Layout/EmptyLines
+  - Layout/EndAlignment
+  - Layout/ExtraSpacing
   - Layout/FirstArrayElementIndentation
   - Layout/FirstArrayElementLineBreak
   - Layout/FirstHashElementLineBreak
   - Layout/FirstMethodArgumentLineBreak
   - Layout/FirstMethodParameterLineBreak
+  - Layout/HeredocIndentation
   - Layout/IndentationConsistency
   - Layout/IndentationWidth
   - Layout/LineContinuationLeadingSpace
   - Layout/LineEndStringConcatenationIndentation
+  - Layout/LineLength
   - Layout/MultilineArrayBraceLayout
+  - Layout/MultilineArrayLineBreaks
+  - Layout/MultilineAssignmentLayout
   - Layout/MultilineBlockLayout
   - Layout/MultilineHashBraceLayout
   - Layout/MultilineHashKeyLineBreaks
   - Layout/MultilineMethodCallBraceLayout
+  - Layout/MultilineMethodCallIndentation
+  - Layout/MultilineOperationIndentation
   - Layout/RedundantLineBreak
+  - Layout/RescueEnsureAlignment
   - Layout/SingleLineBlockChain
   - Layout/SpaceAfterComma
   - Layout/SpaceAfterNot
   - Layout/SpaceAfterSemicolon
   - Layout/SpaceAroundBlockParameters
+  - Layout/SpaceBeforeBlockBraces
   - Layout/SpaceBeforeComma
   - Layout/SpaceBeforeComment
   - Layout/SpaceBeforeSemicolon
   - Layout/SpaceInsideHashLiteralBraces
+  - Layout/SpaceInsideRangeLiteral
+  - Lint/AmbiguousBlockAssociation
+  - Lint/AmbiguousOperator
+  - Lint/AmbiguousOperatorPrecedence
+  - Lint/AmbiguousRange
   - Lint/AmbiguousRegexpLiteral
   - Lint/ArrayLiteralInRegexp
   - Lint/AssignmentInCondition
   - Lint/ConstantResolution
+  - Lint/CopDirectiveSyntax
   - Lint/DuplicateHashKey
   - Lint/DuplicateRegexpCharacterClassElement
   - Lint/DuplicateRescueException
+  - Lint/InterpolationCheck
   - Lint/LiteralAssignmentInCondition
+  - Lint/MissingCopEnableDirective
   - Lint/NoReturnInBeginEndBlocks
+  - Lint/RedundantCopEnableDirective
   - Lint/RescueType
+  - Lint/SymbolConversion
   - Lint/TopLevelReturnWithArgument
   - Lint/UnusedMethodArgument
   - Lint/UselessAssignment
+  - Lint/UselessConstantScoping
   - Metrics/AbcSize
+  - Metrics/BlockLength
   - Metrics/BlockNesting
   - Metrics/ClassLength
   - Metrics/CyclomaticComplexity
+  - Metrics/MethodLength
   - Metrics/PerceivedComplexity
+  - Naming/BlockParameterName
+  - Naming/ConstantName
+  - Naming/HeredocDelimiterNaming
   - Naming/VariableName
   - Naming/VariableNumber
+  - Style/AccessorGrouping
+  - Style/AutoResourceCleanup
+  - Style/ConstantVisibility
   - Style/Copyright
+  - Style/Documentation
+  - Style/DocumentationMethod
+  - Style/EvalWithLocation
+  - Style/ExplicitBlockArgument
+  - Style/FetchEnvVar
+  - Style/IfUnlessModifier
+  - Style/ImplicitRuntimeError
   - Style/InlineComment
+  - Style/MethodCallWithArgsParentheses
+  - Style/MethodCallWithoutArgsParentheses
+  - Style/MissingElse
+  - Style/MultilineTernaryOperator
+  - Style/RedundantAssignment
+  - Style/RedundantConstantBase
+  - Style/RedundantParentheses

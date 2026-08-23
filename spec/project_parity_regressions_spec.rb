@@ -134,7 +134,6 @@ RSpec.describe "real-project parity regressions" do
     Layout/SpaceAfterMethodName
     Lint/RequireRelativeSelfPath
     Naming/PredicatePrefix
-    Style/RedundantConstantBase
     Gemspec/RubyVersionGlobalsUsage
     Bundler/GemVersion
     Gemspec/DuplicatedAssignment
@@ -145,15 +144,6 @@ RSpec.describe "real-project parity regressions" do
     Layout/ClassStructure
     Layout/HashAlignment
     Layout/HashAlignment
-    Layout/HeredocIndentation
-    Layout/HeredocIndentation
-    Layout/LineLength
-    Layout/MultilineAssignmentLayout
-    Layout/MultilineMethodCallIndentation
-    Layout/MultilineMethodCallIndentation
-    Layout/MultilineOperationIndentation
-    Layout/MultilineOperationIndentation
-    Layout/RescueEnsureAlignment
     Layout/SpaceAroundOperators
     Layout/SpaceAroundOperators
     Layout/SpaceInsideArrayLiteralBrackets
