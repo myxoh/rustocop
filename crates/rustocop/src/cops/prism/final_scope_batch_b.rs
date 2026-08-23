@@ -1043,7 +1043,22 @@ impl Cop for MethodName {
         };
         for argument in selected {
             if let Some(name) = method_name_literal(&argument) {
-                check_method_identifier(name.as_bytes(), argument.location(), &mut context);
+                if let Some(message) = method_identifier_message(&name, &context) {
+                    let location = argument.location();
+                    let start = location.start_offset();
+                    let mut end = location.end_offset();
+                    let quoted_symbol = source[start..end].starts_with(":'")
+                        || source[start..end].starts_with(":\"");
+                    if quoted_symbol
+                        && source
+                            .as_bytes()
+                            .get(end)
+                            .is_some_and(|byte| matches!(byte, b'\'' | b'\"'))
+                    {
+                        end += 1;
+                    }
+                    context.report(message, start..end);
+                }
             }
         }
     }
