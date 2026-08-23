@@ -40,6 +40,13 @@ impl MapIntoArrayRule<'_, '_, '_> {
                 || ancestor.as_case_node().is_some()
         }));
         if let Some(assignment) = assignment.as_ref() {
+            return_if!(self.ancestors().iter().any(|ancestor| {
+                ancestor.as_block_node().is_some_and(|ancestor_block| {
+                    ancestor_block.location().start_offset() != block.location().start_offset()
+                        && ancestor_block.location().start_offset() > assignment.range.end
+                        && ancestor_block.location().start_offset() < each.location().start_offset()
+                })
+            }));
             let span = assignment.range.start..each.location().end_offset();
             return_unless!(word_count(self.source_file().slice(span).unwrap_or_default(), &destination) == 2);
             return_if!(self.source()[assignment.range.end..each.location().start_offset()].lines().any(|line| line.trim() == "end"));
@@ -90,6 +97,12 @@ fn word_count(source: &str, word: &str) -> usize {
     Regex::new(&format!(r"\b{}\b", regex::escape(word)))
         .expect("escaped local name")
         .find_iter(source)
+        .filter(|matched| {
+            !matches!(
+                source.as_bytes().get(matched.start().saturating_sub(1)),
+                Some(b'@' | b'$' | b':')
+            )
+        })
         .count()
 }
 
