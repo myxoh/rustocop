@@ -2069,7 +2069,9 @@ fn operator_is_non_binary(source: &str, start: usize, end: usize, operator: &str
         .next_back()
         .is_some_and(|character| character.is_alphabetic() || character == '_')
         && (after.is_empty()
-            || after.starts_with(['(', '.', '&', '|', ')', ']', '}', ','])
+            || after.starts_with(['(', '.', '&', '|', '{', ')', ']', '}', ','])
+            || after == "do"
+            || after.starts_with("do ")
             || after.starts_with("::"));
     if operator == "?"
         && (predicate_suffix
@@ -2095,7 +2097,9 @@ fn operator_is_non_binary(source: &str, start: usize, end: usize, operator: &str
         return true;
     }
     if matches!(operator, "+" | "-" | "!" | "~")
-        && (before.is_empty() || before.ends_with(['(', '[', '{', ',', '=', ':', '|']))
+        && (before.is_empty()
+            || before.ends_with(['(', '[', '{', ',', '=', ':', '|', '>'])
+            || before.ends_with("<<"))
     {
         return true;
     }

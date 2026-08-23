@@ -16,6 +16,10 @@ values.each do |value|
   ->(item) { item || value }
 end
 
+values.any? { |value| value }
+values << +"text"
+options = { spread_interval: -10 }
+
 instance = Object.new
 def (instance.foo).kw(a:)
   a
