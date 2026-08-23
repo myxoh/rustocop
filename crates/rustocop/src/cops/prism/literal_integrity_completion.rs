@@ -10,7 +10,7 @@ define_cops! {
     DuplicateSetElement => "Lint/DuplicateSetElement" => source(duplicate_set_element),
     NumericOperationWithConstantResult => "Lint/NumericOperationWithConstantResult" => source(numeric_constant_result),
     SymbolConversion => "Lint/SymbolConversion" => source(symbol_conversion),
-    DoubleNegation => "Style/DoubleNegation" => source(double_negation),
+    DoubleNegation => "Style/DoubleNegation" => call(double_negation),
     EmptyLiteral => "Style/EmptyLiteral" => source(empty_literal),
 }
 
@@ -433,108 +433,126 @@ fn unquoted_hash_labels(source: &str) -> Vec<UnquotedHashLabel> {
     labels
 }
 
-fn double_negation(context: &mut CopContext<'_, '_>) {
-    let lines = context.source_file().lines().collect::<Vec<_>>();
-    let code_offsets = context
-        .source_file()
-        .code_offsets("!!")
-        .into_iter()
-        .collect::<std::collections::HashSet<_>>();
-    let literal_ranges = context.source_file().literal_ranges();
-    for (index, (offset, line)) in lines.iter().copied().enumerate() {
-        for (at, _) in line.match_indices("!!") {
-            if !code_offsets.contains(&(offset + at)) {
-                continue;
-            }
-            if literal_ranges
+fn double_negation(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
+    if call_name(node) != b"!" || argument_count(node) != 0 {
+        return;
+    }
+    let Some(inner) = node.receiver().and_then(|receiver| receiver.as_call_node()) else {
+        return;
+    };
+    if call_name(&inner) != b"!" || argument_count(&inner) != 0 {
+        return;
+    }
+    let Some(selector) = node.message_loc() else {
+        return;
+    };
+    if selector.as_slice() != b"!" || selector.start_offset() != node.location().start_offset() {
+        return;
+    }
+    let allowed_style = context.policy().enforced_style("allowed_in_returns") == "allowed_in_returns";
+    if allowed_style && double_negation_return_value(node, context) {
+        return;
+    }
+    let Some(value) = inner.receiver() else {
+        return;
+    };
+    context.replace(
+        "Avoid the use of double negation (`!!`).",
+        selector.start_offset()..selector.end_offset(),
+        node.location(),
+        format!("!{}.nil?", context.source_file().node(&value)),
+    );
+}
+
+fn double_negation_return_value(node: &CallNode<'_>, context: &CopContext<'_, '_>) -> bool {
+    if context.parent().is_some_and(|parent| parent.as_return_node().is_some()) {
+        return true;
+    }
+    let definition_body = context
+        .ancestors()
+        .iter()
+        .rev()
+        .find_map(Node::as_def_node)
+        .and_then(|definition| definition.body());
+    let define_method_body = context
+        .ancestors()
+        .iter()
+        .rev()
+        .find_map(Node::as_block_node)
+        .and_then(|block| {
+            context
+                .ancestors()
                 .iter()
-                .any(|range| range.start <= offset + at && offset + at < range.end)
-            {
-                continue;
-            }
-        let tail = &line[at + 2..];
-        let leading = tail.len() - tail.trim_start().len();
-        let expression_start = at + 2 + leading;
-        let expression_len = if line.as_bytes().get(expression_start) == Some(&b'(') {
-            matching_delimiter(&line[expression_start..], b'(', b')').unwrap_or(tail.len())
-        } else {
-            line[expression_start..]
-                .bytes()
-                .take_while(|byte| {
-                    byte.is_ascii_alphanumeric()
-                        || matches!(byte, b'_' | b'@' | b'$' | b'.' | b'?' | b'!')
+                .rev()
+                .find_map(Node::as_call_node)
+                .filter(|call| {
+                    matches!(call_name(call), b"define_method" | b"define_singleton_method")
                 })
-                .count()
-        };
-        let expression = &line[expression_start..expression_start + expression_len];
-        if expression.is_empty() {
-            continue;
-        }
-        if context.policy().enforced_style("allowed_in_returns") == "allowed_in_returns"
-            && (line[..at].trim() == "return"
-                || (line[..at].trim().is_empty()
-                    && (lines[index + 1..]
-                        .iter()
-                        .find(|(_, next)| {
-                            !next.trim().is_empty() && !next.trim_start().starts_with('#')
-                        })
-                        .is_some_and(|(_, next)| {
-                            let next = next.trim();
-                            next == "end"
-                                || next == "else"
-                                || next.starts_with("rescue")
-                                || next.starts_with("ensure")
-                                || next.starts_with("elsif ")
-                                || next.starts_with("when ")
-                                || next.starts_with("in ")
-                        })
-                        || returns_after_continuation(
-                            &lines[index + 1..],
-                            line.len() - line.trim_start().len(),
-                        )))
-                || (in_conditional_branch(&lines[..index], line.len() - line.trim_start().len())
-                    && lines[index + 1..]
-                        .iter()
-                        .find(|(_, next)| {
-                            !next.trim().is_empty() && !next.trim_start().starts_with('#')
-                        })
-                        .is_some_and(|(_, next)| {
-                            let next = next.trim();
-                            next == "end"
-                                || next == "else"
-                                || next.starts_with("rescue")
-                                || next.starts_with("ensure")
-                                || next.starts_with("elsif ")
-                                || next.starts_with("when ")
-                                || next.starts_with("in ")
-                        })))
-        {
-            continue;
-        }
-        context.replace(
-            "Avoid the use of double negation (`!!`).",
-            offset + at..offset + at + 1,
-            offset + at..offset + expression_start + expression_len,
-            format!("!{expression}.nil?"),
+                .and_then(|_| block.body())
+        });
+    let Some(body) = definition_body.or(define_method_body) else {
+        return false;
+    };
+    let Some(last) = return_body_last(body) else {
+        return false;
+    };
+    if last.as_hash_node().is_some() || last.as_array_node().is_some() {
+        return false;
+    }
+    let conditional = context.ancestors().iter().rev().find(|ancestor| {
+        ancestor.as_if_node().is_some()
+            || ancestor.as_unless_node().is_some()
+            || ancestor.as_case_node().is_some()
+            || ancestor.as_case_match_node().is_some()
+    });
+    if let Some(conditional) = conditional {
+        let branch_tail = conditional_branch_tail(
+            context.source(),
+            node.location().end_offset(),
+            conditional.location().end_offset(),
         );
-        }
+        branch_tail && last.location().end_offset() <= conditional.location().end_offset()
+    } else {
+        line_at(context.source(), last.location().start_offset())
+            <= line_at(context.source(), node.location().start_offset())
     }
 }
 
-fn in_conditional_branch(lines: &[(usize, &str)], indent: usize) -> bool {
-    lines
-        .iter()
-        .rev()
-        .find(|(_, line)| !line.trim().is_empty() && line.len() - line.trim_start().len() < indent)
-        .is_some_and(|(_, line)| {
-            let line = line.trim_start();
-            line.starts_with("if ")
-                || line.starts_with("elsif ")
-                || line == "else"
-                || line.starts_with("case ")
-                || line.starts_with("when ")
-                || line.starts_with("in ")
-        })
+fn conditional_branch_tail(source: &str, node_end: usize, conditional_end: usize) -> bool {
+    let next_line = source[node_end..]
+        .find('\n')
+        .map_or(node_end, |offset| node_end + offset + 1);
+    for line in source[next_line..conditional_end].lines() {
+        let line = line.trim();
+        if line.is_empty()
+            || line.starts_with('#')
+            || line.bytes().all(|byte| matches!(byte, b']' | b'}' | b')' | b','))
+        {
+            continue;
+        }
+        return line == "end"
+            || line.starts_with("else")
+            || line.starts_with("elsif ")
+            || line.starts_with("when ")
+            || line.starts_with("in ");
+    }
+    true
+}
+
+fn return_body_last(body: Node<'_>) -> Option<Node<'_>> {
+    if let Some(statements) = body.as_statements_node() {
+        return statements.body().iter().last();
+    }
+    if let Some(begin) = body.as_begin_node() {
+        return begin
+            .statements()
+            .and_then(|statements| statements.body().iter().last());
+    }
+    Some(body)
+}
+
+fn line_at(source: &str, offset: usize) -> usize {
+    source[..offset].bytes().filter(|byte| *byte == b'\n').count()
 }
 
 fn empty_literal(context: &mut CopContext<'_, '_>) {
