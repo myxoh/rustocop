@@ -76,7 +76,7 @@ impl GuardClauseRule<'_, '_, '_> {
     ) {
         let condition_source = self.source_file().node(&condition);
         return_if!(condition_source.contains('\n')
-            || condition.as_local_variable_write_node().is_none()
+            || nested_local_assignment(&condition)
                 && assigned_value_used(
                     condition_source,
                     statements.as_ref(),
@@ -126,7 +126,7 @@ impl GuardClauseRule<'_, '_, '_> {
     ) {
         let condition_source = self.source_file().node(&condition);
         return_if!(condition_source.contains('\n') || assignment_parent(self.ancestors()));
-        return_if!(condition.as_local_variable_write_node().is_none()
+        return_if!(nested_local_assignment(&condition)
             && assigned_value_used(
                 condition_source,
                 if_statements.as_ref(),
@@ -245,6 +245,25 @@ fn assigned_value_used(condition: &str, statements: Option<&StatementsNode<'_>>,
     !name.is_empty() && statements.is_some_and(|statements| {
         file.at(&statements.location()).split(|character: char| !character.is_ascii_alphanumeric() && character != '_').any(|word| word == name)
     })
+}
+
+fn nested_local_assignment(condition: &Node<'_>) -> bool {
+    if condition.as_local_variable_write_node().is_some() {
+        return false;
+    }
+    struct AssignmentFinder(bool);
+    impl<'pr> Visit<'pr> for AssignmentFinder {
+        fn visit_local_variable_write_node(
+            &mut self,
+            node: &ruby_prism::LocalVariableWriteNode<'pr>,
+        ) {
+            self.0 = true;
+            ruby_prism::visit_local_variable_write_node(self, node);
+        }
+    }
+    let mut finder = AssignmentFinder(false);
+    finder.visit(condition);
+    finder.0
 }
 
 fn assignment_parent(ancestors: &[Node<'_>]) -> bool {
