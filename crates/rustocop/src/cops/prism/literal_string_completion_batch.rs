@@ -426,7 +426,8 @@ fn env_keys(line: &str) -> Vec<String> {
 }
 
 fn string_concatenation(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
-    if !plus_call(node)
+    if node.is_safe_navigation()
+        || !plus_call(node)
         || context.parent().is_some_and(|parent| {
             parent
                 .as_call_node()
