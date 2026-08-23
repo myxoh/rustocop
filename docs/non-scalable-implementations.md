@@ -1,17 +1,18 @@
 # Non-scalable cop implementations
 
-`updated_at: 2026-08-23T11:28:28-04:00`
+`updated_at: 2026-08-23T12:33:29-04:00`
 
 This is the catalog for category C: cops whose current implementation appears
 too narrow to generalize from the fixture corpus to arbitrary Ruby projects.
 It is an implementation-risk register, not a list of every cop that currently
 mismatches RuboCop.
 
-All 48 category-C cops in this catalog are intentionally pending. A further 44
+All 46 category-C cops in this catalog are intentionally pending. A further 41
 project-inexact cops and two RuboCop-reference blockers are also pending, for a
-total of 94; they are absent from
+total of 89; they are absent from
 the active registry, qualification corpus, compatibility evidence, and fixture
-suite. The machine-readable source of truth is
+suite. Five cops have now returned through structural rewrites and both full
+compatibility gates. The machine-readable source of truth is
 [`intentionally_pending_cops.yml`](../spec/upstream/rubocop-1.87.0/intentionally_pending_cops.yml).
 Their old implementation source remains only as rewrite reference.
 
@@ -23,9 +24,9 @@ reference output. On that original ten-project corpus, the resulting 512-cop
 active set had 402 exercised project-exact cops, 110 dormant cops, and no
 mismatches or engine errors.
 
-The expanded 50-project audit at `2026-08-23T11:28:28-04:00` shows that this
+The expanded 50-project audit at `2026-08-23T12:29:33-04:00` shows that this
 withdrawal was not sufficient to make the retained implementations scalable:
-289 cops are project-exact, 49 are dormant, 172 mismatch, one crashes, and one
+293 cops are project-exact, 50 are dormant, 172 mismatch, one crashes, and one
 is blocked by a RuboCop error. Those newly exposed cops require review and
 minimized fixtures before this catalog can be treated as complete.
 
@@ -53,7 +54,7 @@ A cop is included when code review establishes at least one of these patterns:
 This deliberately excludes cops that have large project gaps but use a broad,
 structural implementation. For example, `Style/MethodCallWithArgsParentheses`
 is inaccurate, but it is not currently evidence of category C. A green fixture
-row also does not remove a cop from this catalog: 19 of the cops below pass all
+row also does not remove a cop from this catalog: 18 of the cops below pass all
 their fixtures while still mismatch real projects.
 
 ## Literal catalog reporters (11 cops)
@@ -86,7 +87,7 @@ Registrations are in
 [`final_scope_batch_b.rs`](../crates/rustocop/src/cops/prism/final_scope_batch_b.rs), and
 [`final_control_flow_batch/registry.rs`](../crates/rustocop/src/cops/prism/final_control_flow_batch/registry.rs).
 
-## Source scanners standing in for syntax or scope (19 cops)
+## Source scanners standing in for syntax or scope (17 cops)
 
 These implementations scan delimiters, lines, assignments, identifiers, or
 keywords without enough parser or scope context. The strongest examples are
@@ -98,7 +99,6 @@ on a non-empty line as a comment.
 | --- | --- | --- | ---: | ---: | ---: | ---: |
 | `Style/InlineComment` | compatible 3/3 | mismatch | 129,107 | 10,115 | 9,470 | 120,282 |
 | `Lint/ConstantResolution` | compatible 18/18 | mismatch | 111 | 544,649 | 29 | 544,702 |
-| `Lint/DuplicateHashKey` | mismatch 21/33 | mismatch | 48,709 | 0 | 0 | 48,709 |
 | `Lint/DuplicateRegexpCharacterClassElement` | mismatch 6/16 | mismatch | 329,911 | 99 | 0 | 330,010 |
 | `Layout/FirstArrayElementLineBreak` | compatible 14/14 | mismatch | 71,921 | 1,739 | 1,491 | 70,678 |
 | `Layout/FirstHashElementLineBreak` | compatible 11/11 | mismatch | 2,405 | 1,835 | 1,834 | 572 |
@@ -114,7 +114,6 @@ on a non-empty line as a comment.
 | `Lint/UselessAssignment` | mismatch 82/149 | mismatch | 31,904 | 543 | 183 | 32,081 |
 | `Style/Copyright` | compatible 21/21 | mismatch | 54,127 | 0 | 0 | 54,127 |
 | `Lint/DuplicateRescueException` | compatible 6/6 | mismatch | 1,359 | 0 | 0 | 1,359 |
-| `Lint/TopLevelReturnWithArgument` | compatible 10/10 | mismatch | 9,241 | 0 | 0 | 9,241 |
 
 The relevant implementations are in
 [`text/lint.rs`](../crates/rustocop/src/cops/text/lint.rs),

@@ -1,10 +1,10 @@
 {
   "version": 1,
   "kind": "fixture_compatibility",
-  "updated_at": "2026-08-23T09:16:26-04:00",
-  "rust_commit": "67b6005782c5129ccae2b445a14897777bc8649e",
-  "native_sha256": "2f200485daea030ae11336049256d46959e62e5f8f326961893c8849e53cf85a",
-  "fixture_corpus_sha256": "af9686975b4229ff087a4c067be11096db89ffdd5cf599646a4ca957fe8e2c8c",
+  "updated_at": "2026-08-23T12:32:23-04:00",
+  "rust_commit": "0ce7b2911c715dbea74b520079925be859b0a68a",
+  "native_sha256": "7f4cbb8d71bda576707ea4816cef5c3cdd7c740b56d25e179a5c96cbf056c91f",
+  "fixture_corpus_sha256": "b7d69c1db70da33fd6289094f4d156b3ed88ea7202ccb46e710d511897ee1725",
   "rubocop_version": "1.87.0",
   "results": {
     "Bundler/DuplicatedGem": {
@@ -487,6 +487,11 @@
       "total": 5,
       "status": "compatible"
     },
+    "Lint/DuplicateHashKey": {
+      "passed": 37,
+      "total": 37,
+      "status": "compatible"
+    },
     "Lint/DuplicateMagicComment": {
       "passed": 8,
       "total": 8,
@@ -635,6 +640,11 @@
     "Lint/InheritException": {
       "passed": 13,
       "total": 13,
+      "status": "compatible"
+    },
+    "Lint/InterpolationCheck": {
+      "passed": 20,
+      "total": 20,
       "status": "compatible"
     },
     "Lint/ItWithoutArgumentsInBlock": {
@@ -925,6 +935,11 @@
     "Lint/ToJSON": {
       "passed": 2,
       "total": 2,
+      "status": "compatible"
+    },
+    "Lint/TopLevelReturnWithArgument": {
+      "passed": 12,
+      "total": 12,
       "status": "compatible"
     },
     "Lint/TrailingCommaInAttributeDeclaration": {
@@ -1672,6 +1687,11 @@
       "total": 35,
       "status": "compatible"
     },
+    "Style/ImplicitRuntimeError": {
+      "passed": 10,
+      "total": 10,
+      "status": "compatible"
+    },
     "Style/InPatternThen": {
       "passed": 7,
       "total": 7,
@@ -2088,6 +2108,11 @@
       "status": "compatible"
     },
     "Style/RedundantConditional": {
+      "passed": 11,
+      "total": 11,
+      "status": "compatible"
+    },
+    "Style/RedundantConstantBase": {
       "passed": 11,
       "total": 11,
       "status": "compatible"

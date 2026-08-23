@@ -1,16 +1,16 @@
 {
   "version": 1,
   "kind": "project_compatibility",
-  "updated_at": "2026-08-23T11:28:28-04:00",
-  "rust_commit": "0cef87c348d274e1e41b7e49a619c87afc9bfd81",
-  "native_sha256": "694ab1d76097c5b541ffc7381ced058bea967365ad05f37bf68bdc3b9be9134c",
+  "updated_at": "2026-08-23T12:29:33-04:00",
+  "rust_commit": "0ce7b2911c715dbea74b520079925be859b0a68a",
+  "native_sha256": "7f4cbb8d71bda576707ea4816cef5c3cdd7c740b56d25e179a5c96cbf056c91f",
   "rubocop_version": "1.87.0",
   "rubocop_reference": {
     "path": "spec/compatibility_evidence/project_rubocop_reference.json.gz",
-    "sha256": "3c892aea6c455b6b11d9613589a38ea287d1cf6e74a1940342df0b0721d8951a",
-    "generated_at": "2026-08-23T11:21:47-04:00",
+    "sha256": "c819a375649e38bb64ed6795ec391a4229345b5937bc78395d087836ee32b7d4",
+    "generated_at": "2026-08-23T12:22:53-04:00",
     "config_sha256": "0e505e2432b2af2d479bd48d335ae5c4c18b39edf328e500157ba57bf6f6726a",
-    "source": "refreshed"
+    "source": "cached"
   },
   "project_count": 50,
   "ruby_files": 85471,
@@ -591,6 +591,12 @@
       "exact": 0,
       "classification": "mismatch"
     },
+    "Lint/DuplicateHashKey": {
+      "rustocop": 2,
+      "rubocop": 2,
+      "exact": 2,
+      "classification": "project_exact"
+    },
     "Lint/DuplicateMagicComment": {
       "rustocop": 4,
       "rubocop": 0,
@@ -769,6 +775,12 @@
       "rustocop": 31,
       "rubocop": 31,
       "exact": 31,
+      "classification": "project_exact"
+    },
+    "Lint/InterpolationCheck": {
+      "rustocop": 290,
+      "rubocop": 290,
+      "exact": 290,
       "classification": "project_exact"
     },
     "Lint/ItWithoutArgumentsInBlock": {
@@ -1118,6 +1130,12 @@
       "rubocop": 14,
       "exact": 14,
       "classification": "project_exact"
+    },
+    "Lint/TopLevelReturnWithArgument": {
+      "rustocop": 0,
+      "rubocop": 0,
+      "exact": 0,
+      "classification": "dormant"
     },
     "Lint/TrailingCommaInAttributeDeclaration": {
       "rustocop": 0,
@@ -2013,6 +2031,12 @@
       "exact": 1,
       "classification": "mismatch"
     },
+    "Style/ImplicitRuntimeError": {
+      "rustocop": 3265,
+      "rubocop": 3265,
+      "exact": 3265,
+      "classification": "project_exact"
+    },
     "Style/InPatternThen": {
       "rustocop": 5,
       "rubocop": 0,
@@ -2515,6 +2539,12 @@
       "rustocop": 4,
       "rubocop": 4,
       "exact": 4,
+      "classification": "project_exact"
+    },
+    "Style/RedundantConstantBase": {
+      "rustocop": 7922,
+      "rubocop": 7922,
+      "exact": 7922,
       "classification": "project_exact"
     },
     "Style/RedundantCurrentDirectoryInPath": {

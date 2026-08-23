@@ -13,23 +13,23 @@ cases, and configuration branches that the projects do not exercise.
 ## Latest realistic status
 
 The latest complete checkpoint was generated at
-`2026-08-23T11:28:28-04:00` from Rust source
-`0cef87c348d274e1e41b7e49a619c87afc9bfd81` and native binary SHA-256
-`694ab1d76097c5b541ffc7381ced058bea967365ad05f37bf68bdc3b9be9134c`.
-The stored RuboCop reference was captured at `2026-08-23T11:21:47-04:00`
+`2026-08-23T12:29:33-04:00` from Rust source
+`0ce7b2911c715dbea74b520079925be859b0a68a` and native binary SHA-256
+`7f4cbb8d71bda576707ea4816cef5c3cdd7c740b56d25e179a5c96cbf056c91f`.
+The stored RuboCop reference was merged at `2026-08-23T12:22:53-04:00`
 and has SHA-256
-`3c892aea6c455b6b11d9613589a38ea287d1cf6e74a1940342df0b0721d8951a`.
-After excluding the 94 intentionally pending cops, its active-cop slice reports:
+`c819a375649e38bb64ed6795ec391a4229345b5937bc78395d087836ee32b7d4`.
+After excluding the 89 intentionally pending cops, its active-cop slice reports:
 
 | Classification | Complete checkpoint |
 | --- | ---: |
-| Project-exact | 289 |
-| Exact but dormant | 49 |
+| Project-exact | 293 |
+| Exact but dormant | 50 |
 | Mismatching | 172 |
 | Rust crash | 1 |
 | RuboCop gate error | 1 |
 
-Among the 461 exercised cops, 289 are exact (62.7%). The expansion promoted 24
+Among the 465 exercised cops, 293 are exact (63.0%). The expansion promoted 24
 previously dormant cops directly to project-exact, exposed mismatches in 37
 previously dormant cops, and invalidated 135 of the 402 old project-exact
 classifications. `Layout/SpaceAroundOperators` crashes on Puppet;

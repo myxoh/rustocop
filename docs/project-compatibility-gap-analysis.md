@@ -12,10 +12,10 @@ The category-C implementation-risk register is maintained separately in
 > [!IMPORTANT]
 > This historical gap was closed only for the original ten-project corpus at
 > `2026-08-23T09:13:26-04:00`. The expanded 50-project audit at
-> `2026-08-23T11:28:28-04:00` reopened it: 289 cops are project-exact, 49 are
+> `2026-08-23T12:29:33-04:00` still shows the broader gap: 293 cops are project-exact, 50 are
 > dormant, 172 mismatch, one crashes, and one is blocked by a RuboCop error.
-> The separate fixture gate remains 23,999/23,999 cases and 512/512 cops at
-> `2026-08-23T09:16:26-04:00`.
+> The separate fixture gate is 24,089/24,089 comparable cases and 517/517 cops at
+> `2026-08-23T12:32:23-04:00`.
 
 The intermediate retained fixture corpus reached 26,717/26,717 cases and 558/558 cops
 at `2026-08-22T20:40:35-04:00`. That completes the fixture gate but does not
