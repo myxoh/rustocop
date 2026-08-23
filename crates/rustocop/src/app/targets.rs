@@ -17,7 +17,17 @@ pub(super) fn inspect(options: &RunOptions) -> io::Result<Vec<InspectionResult>>
     } else {
         expand_targets(&options.files)?
     };
-    engine::inspect_files(&files, options, &plan)
+    let mut results = engine::inspect_files(&files, options, &plan)?;
+    for result in &mut results {
+        if fs::metadata(&result.path).is_ok_and(|metadata| metadata.len() == 0) {
+            for offense in &mut result.offenses {
+                if offense.cop_name == "Lint/EmptyFile" && offense.length == 0 {
+                    offense.last_column = 1;
+                }
+            }
+        }
+    }
+    Ok(results)
 }
 
 fn inspect_stdin(

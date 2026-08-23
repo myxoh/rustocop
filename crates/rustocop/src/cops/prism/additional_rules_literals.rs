@@ -11,8 +11,11 @@ define_cops! {
 
 fn empty_file(reporter: &mut CopContext<'_, '_>) {
     let source = reporter.source();
-    let empty =
-        source.is_empty() || (!source.ends_with('\n') && source.trim_start().starts_with('#'));
+    let empty = source.is_empty()
+        || !reporter.config_bool("AllowComments", true)
+            && source
+                .lines()
+                .all(|line| line.trim().is_empty() || line.trim_start().starts_with('#'));
     if empty {
         reporter.report("Empty file detected.", 0..0);
     }
