@@ -115,6 +115,7 @@ impl RedundantRegexpArgumentRule<'_, '_, '_> {
             return;
         };
         let source = self.source_file().node(&argument);
+        return_unless!(source.starts_with('/'));
         let content = self.source_file().at(&regexp.content_loc());
         let closing = self.source_file().at(&regexp.closing_loc());
         return_if!(closing.chars().skip(1).any(|character| character.is_ascii_alphabetic()) || content == " ");
@@ -133,7 +134,7 @@ impl RedundantRegexpArgumentRule<'_, '_, '_> {
         let mut replacement = regexp_to_string_content(content);
         let quote;
         if replacement.contains('"') {
-            replacement = escape_single_quotes(&replacement).replace("\\\"", "\"");
+            replacement = replacement.replace('\'', "\\'").replace("\\\"", "\"");
             quote = '\'';
         } else if replacement.contains("\\'") || replacement.contains('\'') {
             replacement = escape_single_quotes(&replacement);
