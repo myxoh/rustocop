@@ -609,12 +609,24 @@ fn duplicate_character_class(context: &mut CopContext<'_, '_>) {
 
 fn out_of_range_ref(context: &mut CopContext<'_, '_>) {
     let regexp_literal = regex::Regex::new(r"/(?:\\.|[^/\n])+/[a-z]*").expect("regexp literal");
+    let reference_offsets = context
+        .source_file()
+        .code_offsets("$")
+        .into_iter()
+        .collect::<HashSet<_>>();
     let mut captures = 0usize;
     let mut captures_known = true;
     for (offset, line) in context.source_file().lines() {
         let references_first = line.trim_start().starts_with('$');
         if references_first {
-            report_out_of_range_references(context, offset, line, captures, captures_known);
+            report_out_of_range_references(
+                context,
+                offset,
+                line,
+                captures,
+                captures_known,
+                &reference_offsets,
+            );
         }
         let literals = regexp_literal
             .find_iter(line)
@@ -670,7 +682,14 @@ fn out_of_range_ref(context: &mut CopContext<'_, '_>) {
             }
         }
         if !references_first {
-            report_out_of_range_references(context, offset, line, captures, captures_known);
+            report_out_of_range_references(
+                context,
+                offset,
+                line,
+                captures,
+                captures_known,
+                &reference_offsets,
+            );
         }
     }
 }
@@ -681,11 +700,15 @@ fn report_out_of_range_references(
     line: &str,
     captures: usize,
     captures_known: bool,
+    reference_offsets: &HashSet<usize>,
 ) {
     if !captures_known {
         return;
     }
     for (at, _) in line.match_indices('$') {
+        if !reference_offsets.contains(&(offset + at)) {
+            continue;
+        }
         let digits = line[at + 1..]
             .bytes()
             .take_while(u8::is_ascii_digit)

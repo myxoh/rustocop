@@ -222,6 +222,17 @@ fn empty_exception_keywords(context: &mut CopContext<'_, '_>) {
             .into_iter()
             .find(|keyword| line.trim_start().starts_with(keyword));
         let Some(keyword) = keyword else { continue };
+        if keyword == "else" {
+            let indentation = line.len() - line.trim_start().len();
+            let rescue_in_same_body = lines[..index].iter().rev().any(|(_, previous)| {
+                let trimmed = previous.trim_start();
+                let previous_indentation = previous.len() - trimmed.len();
+                previous_indentation == indentation && trimmed.starts_with("rescue")
+            });
+            if !rescue_in_same_body {
+                continue;
+            }
+        }
         if index > 0 && lines[index - 1].1.is_empty() {
             remove_blank_line(
                 context,
