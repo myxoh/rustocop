@@ -115,9 +115,11 @@ fn exception_shadows(ancestor: &str, descendant: &str) -> bool {
     let descendant_base = descendant.rsplit("::").next().unwrap_or(descendant);
     match ancestor {
         "Exception" => true,
-        "StandardError" => matches!(
-            descendant_base,
-            "StandardError"
+        "StandardError" => {
+            descendant.starts_with("Errno::")
+                || matches!(
+                    descendant_base,
+                    "StandardError"
                 | "ArgumentError"
                 | "EncodingError"
                 | "FiberError"
@@ -136,8 +138,9 @@ fn exception_shadows(ancestor: &str, descendant: &str) -> bool {
                 | "SystemCallError"
                 | "ThreadError"
                 | "TypeError"
-                | "ZeroDivisionError"
-        ),
+                        | "ZeroDivisionError"
+                )
+        }
         "NameError" => descendant_base == "NoMethodError",
         "IndexError" => matches!(descendant_base, "KeyError" | "StopIteration"),
         "RangeError" => descendant_base == "FloatDomainError",
@@ -156,6 +159,7 @@ fn exception_shadows(ancestor: &str, descendant: &str) -> bool {
         "ArgumentError" => descendant == "IPAddr::InvalidAddressError",
         "RuntimeError" => descendant == "Timeout::Error",
         "OpenSSL::PKey::PKeyError" => descendant == "OpenSSL::PKey::RSAError",
+        "Psych::Exception" => descendant == "Psych::SyntaxError",
         _ => false,
     }
 }
