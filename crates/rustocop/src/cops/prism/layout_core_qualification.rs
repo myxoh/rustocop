@@ -218,8 +218,11 @@ fn empty_lines_around_access_modifier(node: &CallNode<'_>, context: &mut CopCont
         || line(source, current_line + 1).trim().is_empty();
     if after_ok
         && bounds.is_some_and(|(_, closing, _)| current_line + 1 == closing)
-        && next_code_line(source, current_line + 2)
-            .is_some_and(|next| line(source, next).trim_start().starts_with("# == Schema Information"))
+        && source
+            .lines()
+            .skip(current_line + 2)
+            .find(|line| !line.trim().is_empty())
+            .is_some_and(|line| line.trim_start().starts_with("# == Schema Information"))
     {
         after_ok = false;
     }
