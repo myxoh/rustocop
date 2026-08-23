@@ -30,6 +30,18 @@ fn ineffective_access_modifier(node: &ruby_prism::DefNode<'_>, context: &mut Cop
     let Some(scope) = scope.filter(|scope| scope.as_block_node().is_none()) else {
         return;
     };
+    if context.ancestors().iter().rev().take_while(|ancestor| {
+        ancestor.as_class_node().is_none() && ancestor.as_module_node().is_none()
+    }).any(|ancestor| {
+        ancestor.as_if_node().is_some()
+            || ancestor.as_unless_node().is_some()
+            || ancestor.as_case_node().is_some()
+            || ancestor.as_while_node().is_some()
+            || ancestor.as_until_node().is_some()
+            || ancestor.as_for_node().is_some()
+    }) {
+        return;
+    }
     let body = scope
         .as_class_node()
         .and_then(|scope| scope.body())
@@ -64,18 +76,16 @@ fn ineffective_access_modifier(node: &ruby_prism::DefNode<'_>, context: &mut Cop
         return;
     };
     let method = String::from_utf8_lossy(node.name().as_slice());
-    if modifier == "private" {
-        let scope = context.ancestors().iter().rev().find(|ancestor| {
-            ancestor.as_class_node().is_some() || ancestor.as_module_node().is_some()
-        });
-        if scope.is_some_and(|scope| {
-            context.source_file().at(&scope.location()).lines().any(|line| {
-                line.trim_start().starts_with("private_class_method ")
-                    && line.contains(&format!(":{method}"))
-            })
-        }) {
-            return;
-        }
+    let scope = context.ancestors().iter().rev().find(|ancestor| {
+        ancestor.as_class_node().is_some() || ancestor.as_module_node().is_some()
+    });
+    if scope.is_some_and(|scope| {
+        context.source_file().at(&scope.location()).lines().any(|line| {
+            line.trim_start().starts_with("private_class_method ")
+                && line.contains(&format!(":{method}"))
+        })
+    }) {
+        return;
     }
     let advice = if modifier == "private" {
         "Use `private_class_method` or `private` inside a `class << self` block instead."
