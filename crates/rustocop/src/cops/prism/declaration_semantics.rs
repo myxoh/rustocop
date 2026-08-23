@@ -22,7 +22,7 @@ fn ineffective_access_modifier(node: &ruby_prism::DefNode<'_>, context: &mut Cop
     {
         return;
     }
-    let scope = context.ancestors().iter().find(|ancestor| {
+    let scope = context.ancestors().iter().rev().find(|ancestor| {
         ancestor.as_block_node().is_some()
             || ancestor.as_class_node().is_some()
             || ancestor.as_module_node().is_some()
