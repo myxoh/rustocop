@@ -83,27 +83,32 @@ fn env_home(source: &str, context: &mut Reporter<'_>) {
 
 fn ascii_comments(source: &str, context: &mut Reporter<'_>) {
     let allowed = context.config_values("AllowedChars").to_vec();
-    for (offset, line) in source_lines(source) {
-        let Some(hash) = line.find('#') else { continue };
-        let comment = &line[hash + 1..];
-        let Some((relative, _)) = comment.char_indices().find(|(_, character)| {
+    let parsed = ruby_prism::parse(source.as_bytes());
+    for comment in parsed.comments() {
+        let location = comment.location();
+        let text = source
+            .get(location.start_offset()..location.end_offset())
+            .unwrap_or_default();
+        let disallowed = |character: char| {
             !character.is_ascii()
-                && *character != '©'
+                && character != '©'
                 && !allowed.iter().any(|item| item == &character.to_string())
-        }) else {
+        };
+        if !text.chars().any(disallowed) {
+            continue;
+        }
+        let Some((relative, _)) = text.char_indices().find(|(_, character)| !character.is_ascii())
+        else {
             continue;
         };
-        let start = offset + hash + 1 + relative;
-        let mut end = start;
-        for (relative, character) in source[start..offset + line.len()].char_indices() {
-            if character.is_ascii()
-                || character == '©'
-                || allowed.iter().any(|item| item == &character.to_string())
-            {
-                break;
-            }
-            end = start + relative + character.len_utf8();
-        }
+        let start = location.start_offset() + relative;
+        let end = source[start..location.end_offset()]
+            .char_indices()
+            .take_while(|(_, character)| !character.is_ascii())
+            .last()
+            .map_or(start, |(relative, character)| {
+                start + relative + character.len_utf8()
+            });
         context.report("Use only ascii symbols in comments.", start..end);
     }
 }
