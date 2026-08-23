@@ -44,20 +44,23 @@ impl RedundantLineContinuationRule<'_, '_, '_> {
             .map_or(source.len(), |at| next_start + at);
         let next = &source[next_start..next_end];
         let before = line.trim_end();
+        if line_has_comment(line)
+            || string_concatenation(line)
+            || inside_heredoc(source, slash)
+            || inside_literal(source, slash)
+            || inside_regexp(source, slash)
+        {
+            return true;
+        }
         if before.ends_with([',', '(', '[', '{', ':', '.'])
             || before.ends_with("&&")
             || before.ends_with("||")
         {
             return false;
         }
-        line_has_comment(line)
-            || string_concatenation(line)
-            || starts_with_arithmetic_operator(next)
+        starts_with_arithmetic_operator(next)
             || starts_with_required_operator(next)
             || method_with_argument(line, next)
-            || inside_heredoc(source, slash)
-            || inside_literal(source, slash)
-            || inside_regexp(source, slash)
             || leading_dot_method_chain_with_blank_line(line, next)
     }
 
@@ -275,4 +278,24 @@ fn inside_regexp(source: &str, offset: usize) -> bool {
         }
     }
     in_regexp
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn recognizes_line_continuations_in_heredoc_bodies() {
+        let source = "value = <<~MESSAGE\n  first \\\n  second \\\nMESSAGE\n";
+        for (offset, _) in source.match_indices("\\\n") {
+            assert!(inside_heredoc(source, offset));
+        }
+    }
+
+    #[test]
+    fn recognizes_multiple_heredocs_before_the_target() {
+        let source = "one = <<~MESSAGE\nfirst\nMESSAGE\ntwo = <<~MESSAGE\nsecond\nMESSAGE\nthree = <<~MESSAGE\n  target \\\n  tail\nMESSAGE\n";
+        let offset = source.find("\\\n").unwrap();
+        assert!(inside_heredoc(source, offset));
+    }
 }
