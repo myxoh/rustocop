@@ -55,6 +55,7 @@ impl RedundantLineContinuationRule<'_, '_, '_> {
             || starts_with_arithmetic_operator(next)
             || starts_with_required_operator(next)
             || method_with_argument(line, next)
+            || inside_heredoc(source, slash)
             || inside_literal(source, slash)
             || inside_regexp(source, slash)
             || leading_dot_method_chain_with_blank_line(line, next)
@@ -169,7 +170,14 @@ fn leading_dot_method_chain_with_blank_line(line: &str, next: &str) -> bool {
 fn inside_literal(source: &str, offset: usize) -> bool {
     let mut quote = None;
     let mut escaped = false;
+    let mut comment = false;
     for character in source[..offset].chars() {
+        if comment {
+            if character == '\n' {
+                comment = false;
+            }
+            continue;
+        }
         if escaped {
             escaped = false;
         } else if character == '\\' {
@@ -178,11 +186,58 @@ fn inside_literal(source: &str, offset: usize) -> bool {
             quote = None;
         } else if quote.is_none() && matches!(character, '\'' | '"' | '`') {
             quote = Some(character);
+        } else if quote.is_none() && character == '#' {
+            comment = true;
         } else if character == '\n' && quote == Some('\'') {
             quote = None;
         }
     }
     quote.is_some()
+}
+
+fn inside_heredoc(source: &str, offset: usize) -> bool {
+    let mut markers = std::collections::VecDeque::<String>::new();
+    let mut line_start = 0;
+    for line in source.split_inclusive('\n') {
+        let line_end = line_start + line.len();
+        if let Some(marker) = markers.front() {
+            if line.trim() == marker {
+                markers.pop_front();
+            } else if (line_start..line_end).contains(&offset) {
+                return true;
+            }
+        } else {
+            markers.extend(heredoc_markers(line));
+        }
+        if line_end > offset {
+            return false;
+        }
+        line_start = line_end;
+    }
+    false
+}
+
+fn heredoc_markers(line: &str) -> Vec<String> {
+    line.match_indices("<<")
+        .filter_map(|(start, _)| {
+            let mut tail = &line[start + 2..];
+            tail = tail.strip_prefix(['-', '~']).unwrap_or(tail);
+            let first = tail.as_bytes().first().copied()?;
+            if matches!(first, b'\'' | b'"' | b'`') {
+                let quote = char::from(first);
+                let rest = &tail[1..];
+                let end = rest.find(quote)?;
+                return (!rest[..end].is_empty()).then(|| rest[..end].to_string());
+            }
+            if !(first.is_ascii_alphabetic() || first == b'_') {
+                return None;
+            }
+            let end = tail
+                .find(|character: char| !character.is_ascii_alphanumeric() && character != '_')
+                .unwrap_or(tail.len());
+            Some(tail[..end].to_string())
+        })
+        .collect()
 }
 
 fn inside_regexp(source: &str, offset: usize) -> bool {
