@@ -75,7 +75,13 @@ impl GuardClauseRule<'_, '_, '_> {
         inverse_keyword: &str,
     ) {
         let condition_source = self.source_file().node(&condition);
-        return_if!(condition_source.contains('\n') || assigned_value_used(condition_source, statements.as_ref(), self.source_file()));
+        return_if!(condition_source.contains('\n')
+            || condition.as_local_variable_write_node().is_none()
+                && assigned_value_used(
+                    condition_source,
+                    statements.as_ref(),
+                    self.source_file(),
+                ));
         let body_lines = branch_line_count(statements.as_ref(), keyword.end_offset(), end_keyword.start_offset(), self.source());
         let minimum = self.config_value("MinBodyLength").and_then(|value| value.parse::<isize>().ok()).unwrap_or(1);
         return_if!(minimum < 0 || body_lines < minimum as usize);
@@ -120,7 +126,12 @@ impl GuardClauseRule<'_, '_, '_> {
     ) {
         let condition_source = self.source_file().node(&condition);
         return_if!(condition_source.contains('\n') || assignment_parent(self.ancestors()));
-        return_if!(assigned_value_used(condition_source, if_statements.as_ref(), self.source_file()));
+        return_if!(condition.as_local_variable_write_node().is_none()
+            && assigned_value_used(
+                condition_source,
+                if_statements.as_ref(),
+                self.source_file(),
+            ));
         let if_guard = guard_clause(if_statements.as_ref(), self.source_file());
         let else_guard = guard_clause(else_statements.as_ref(), self.source_file());
         let (guard, guard_keyword, branch_range, keep_statements) = if let Some(guard) = if_guard {
