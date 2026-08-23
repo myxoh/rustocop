@@ -1,0 +1,13 @@
+sources:
+  - repository: chatwoot/chatwoot
+    revision: 8d93d69e8e356216e85c28de7c4240e66b8e83fa
+    paths:
+      - app/builders/agent_builder.rb
+      - app/services/website_branding_service.rb
+  - repository: rails/rails
+    revision: ba4f7369aee71f9f38d67bdbf0e8571fb372b535
+    path: activesupport/test/deprecation_test.rb
+pathological_controls:
+  - a closing brace before a later opening brace on one line
+  - multibyte punctuation while scanning operator spacing
+  - a parenthesized receiver in a singleton method definition

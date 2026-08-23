@@ -94,7 +94,11 @@ pub(super) fn space_after_method_name(source: &str, reporter: &mut Reporter<'_>)
         if trimmed.starts_with("def ") {
             if let Some(paren) = line.find(" (") {
                 let def_start = line.len() - trimmed.len();
-                let identity = line[def_start + "def ".len()..paren].trim();
+                let identity_start = def_start + "def ".len();
+                if paren < identity_start {
+                    continue;
+                }
+                let identity = line[identity_start..paren].trim();
                 if identity.is_empty()
                     || identity.chars().any(char::is_whitespace)
                     || identity.contains(['(', ')'])

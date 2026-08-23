@@ -694,19 +694,24 @@ fn allowed_excess_token(
     tab_width: usize,
 ) -> bool {
     if matches!(kind, ExcessToken::Uri) {
-        if let (Some(open), Some(close)) = (line.find('{'), line.rfind('}')) {
-            let candidate = &line[open + 1..close];
-            if uri_schemes
-                .iter()
-                .any(|scheme| candidate.starts_with(&format!("{scheme}://")))
-                && line
-                    .chars()
-                    .count()
-                    .saturating_sub(candidate.chars().count())
-                    <= max
-                && line[close + 1..].trim().is_empty()
-            {
-                return true;
+        if let Some(open) = line.find('{') {
+            let close = line[open + 1..]
+                .rfind('}')
+                .map(|relative| open + 1 + relative);
+            if let Some(close) = close {
+                let candidate = &line[open + 1..close];
+                if uri_schemes
+                    .iter()
+                    .any(|scheme| candidate.starts_with(&format!("{scheme}://")))
+                    && line
+                        .chars()
+                        .count()
+                        .saturating_sub(candidate.chars().count())
+                        <= max
+                    && line[close + 1..].trim().is_empty()
+                {
+                    return true;
+                }
             }
         }
         for scheme in uri_schemes {

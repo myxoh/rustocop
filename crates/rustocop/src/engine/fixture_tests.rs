@@ -555,3 +555,12 @@ fixture_test!(
     false,
     RubyVersion::default()
 );
+
+fixture_test!(
+    handles_project_crash_boundaries,
+    "project_crash_boundaries",
+    "/project/project_crash_boundaries.rb",
+    "Layout/LineLength,Layout/SpaceAroundOperators,Layout/SpaceAfterMethodName",
+    false,
+    RubyVersion::default()
+);

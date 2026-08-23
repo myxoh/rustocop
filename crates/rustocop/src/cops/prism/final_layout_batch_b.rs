@@ -1822,15 +1822,25 @@ fn operator_spacing(context: &mut CopContext<'_, '_>) {
         let mut quote = None;
         while index < code.len() {
             let byte = code.as_bytes()[index];
+            let character_width = code[index..]
+                .chars()
+                .next()
+                .map_or(1, char::len_utf8);
             if let Some(delimiter) = quote {
                 if byte == b'\\' {
-                    index += 2;
+                    index += 1;
+                    if index < code.len() {
+                        index += code[index..]
+                            .chars()
+                            .next()
+                            .map_or(1, char::len_utf8);
+                    }
                     continue;
                 }
                 if byte == delimiter {
                     quote = None;
                 }
-                index += 1;
+                index += character_width;
                 continue;
             }
             if matches!(byte, b'\'' | b'"' | b'`') {
@@ -1838,9 +1848,14 @@ fn operator_spacing(context: &mut CopContext<'_, '_>) {
                 index += 1;
                 continue;
             }
-            if byte == b'/' && code[..index].trim_end().ends_with('~') {
+            if byte == b'/' && slash_starts_regexp(code, index) {
                 quote = Some(b'/');
                 index += 1;
+                continue;
+            }
+
+            if !byte.is_ascii() {
+                index += character_width;
                 continue;
             }
 
@@ -1971,6 +1986,21 @@ fn spacing_operator_at(source: &str, index: usize) -> Option<&str> {
         .copied()
 }
 
+fn slash_starts_regexp(source: &str, index: usize) -> bool {
+    let before = source[..index].trim_end();
+    before.is_empty()
+        || before.ends_with(['(', '[', '{', ',', '=', '~', '!', ':', ';'])
+        || before
+            .split_ascii_whitespace()
+            .next_back()
+            .is_some_and(|word| {
+                matches!(
+                    word,
+                    "if" | "unless" | "while" | "until" | "when" | "return" | "next" | "break"
+                )
+            })
+}
+
 fn operator_is_non_binary(source: &str, start: usize, end: usize, operator: &str) -> bool {
     let before = source[..start].trim_end();
     let after = source[end..].trim_start();
@@ -1987,6 +2017,9 @@ fn operator_is_non_binary(source: &str, start: usize, end: usize, operator: &str
         return true;
     }
     if operator == "=" && (before.ends_with(['!', '<', '>', '=']) || after.starts_with('>')) {
+        return true;
+    }
+    if operator == "&" && after.starts_with('.') {
         return true;
     }
     if operator == ":" && (!source[..start].contains('?') || before.ends_with(':')) {
