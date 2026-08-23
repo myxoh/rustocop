@@ -134,6 +134,7 @@ remaining = <<~MARKDOWN
   | --- | --- | ---: | ---: | ---: | ---: | --- |
   #{remaining_rows.join("\n")}
 MARKDOWN
+remaining.sub!(/\n+\z/, "\n")
 File.write(REMAINING_OUTPUT, remaining)
 
 puts "wrote docs/cop-support.md and docs/remaining-cops.md from #{source}"

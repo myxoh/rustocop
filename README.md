@@ -49,7 +49,7 @@ pending active-cop mismatches, and six configuration-mutation cases. These are
 regression coverage, not a substitute for the complete project comparison.
 
 After withdrawing the intentionally pending cops, the fixture review updated at
-`2026-08-23T08:48:49-04:00` contains 23,999 retained executable cases. All
+`2026-08-23T09:16:26-04:00` contains 23,999 retained executable cases. All
 23,999 cases match RuboCop 1.87.0 diagnostics, and all correction expectations
 also match; 512/512 active cops pass every retained fixture. One captured case
 with unsupported synthetic upstream state is explicitly excluded rather than
@@ -60,7 +60,7 @@ counted as passing.
 The real-project matrix asks whether each cop emits the same path, severity,
 message, and source range as RuboCop across 54,146 Ruby files in ten projects.
 
-The complete audit updated at `2026-08-23T08:45:38-04:00` covers all 512 active
+The complete audit updated at `2026-08-23T09:13:26-04:00` covers all 512 active
 cops. It leaves 402 project-exact cops and 110 dormant cops, with no mismatches,
 native crashes, or RuboCop command-line errors.
 
@@ -72,7 +72,7 @@ native crashes, or RuboCop command-line errors.
 | Rust crashes | 0 / 512 |
 | RuboCop `--only` limitation | 0 / 512 |
 
-The checkpoint is bound to Rust source `9e7049d` and native binary SHA-256
+The checkpoint is bound to Rust source `67b6005` and native binary SHA-256
 `2f200485daea030ae11336049256d46959e62e5f8f326961893c8849e53cf85a`.
 Its RuboCop reference SHA-256 is
 `34c374aaf167efc7ca3d92a60c15b2c6f4d45e86aeeb1e2cb2c6891eaae89688`.

@@ -1,8 +1,8 @@
 {
   "version": 1,
   "kind": "fixture_compatibility",
-  "updated_at": "2026-08-23T08:48:49-04:00",
-  "rust_commit": "9e7049de18d0caf78c0e0e519cf24f016e9f650a",
+  "updated_at": "2026-08-23T09:16:26-04:00",
+  "rust_commit": "67b6005782c5129ccae2b445a14897777bc8649e",
   "native_sha256": "2f200485daea030ae11336049256d46959e62e5f8f326961893c8849e53cf85a",
   "fixture_corpus_sha256": "af9686975b4229ff087a4c067be11096db89ffdd5cf599646a4ca957fe8e2c8c",
   "rubocop_version": "1.87.0",

@@ -13,8 +13,8 @@ cases, and configuration branches that the projects do not exercise.
 ## Latest realistic status
 
 The latest complete checkpoint was generated at
-`2026-08-23T08:45:38-04:00` from Rust source
-`9e7049de18d0caf78c0e0e519cf24f016e9f650a` and native binary SHA-256
+`2026-08-23T09:13:26-04:00` from Rust source
+`67b6005782c5129ccae2b445a14897777bc8649e` and native binary SHA-256
 `2f200485daea030ae11336049256d46959e62e5f8f326961893c8849e53cf85a`.
 The stored RuboCop reference was captured at `2026-08-23T08:43:27-04:00`
 and has SHA-256

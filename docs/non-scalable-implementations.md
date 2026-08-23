@@ -1,6 +1,6 @@
 # Non-scalable cop implementations
 
-`updated_at: 2026-08-23T08:48:49-04:00`
+`updated_at: 2026-08-23T09:16:26-04:00`
 
 This is the catalog for category C: cops whose current implementation appears
 too narrow to generalize from the fixture corpus to arbitrary Ruby projects.
@@ -16,7 +16,7 @@ suite. The machine-readable source of truth is
 Their old implementation source remains only as rewrite reference.
 
 The additional withdrawals were established by the complete audit generated at
-`2026-08-23T08:45:38-04:00`. They comprise every cop classified as mismatch in
+`2026-08-23T09:13:26-04:00`. They comprise every cop classified as mismatch in
 the preceding 558-cop audit, plus `Lint/RedundantCopDisableDirective` and
 `Style/FileWrite`, for which RuboCop 1.87 cannot produce stable isolated project
 reference output. The resulting 512-cop active corpus has 402 exercised
