@@ -244,6 +244,7 @@ RSpec.describe RuboCop::Cop::Lint::LiteralAssignmentInCondition, :config do
     RUBY
   end
 
+  # Regression: heartcombo/devise@372b295f:lib/devise/strategies/database_authenticatable.rb
   it 'registers a literal assignment inside a block in the condition' do
     expect_offense(<<~RUBY)
       if validate(resource) { hashed = true }

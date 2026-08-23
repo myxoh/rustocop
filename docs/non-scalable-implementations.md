@@ -1,17 +1,17 @@
 # Non-scalable cop implementations
 
-`updated_at: 2026-08-23T12:33:29-04:00`
+`updated_at: 2026-08-23T13:19:41-04:00`
 
 This is the catalog for category C: cops whose current implementation appears
 too narrow to generalize from the fixture corpus to arbitrary Ruby projects.
 It is an implementation-risk register, not a list of every cop that currently
 mismatches RuboCop.
 
-All 46 category-C cops in this catalog are intentionally pending. A further 41
+All 40 category-C cops in this catalog are intentionally pending. A further 41
 project-inexact cops and two RuboCop-reference blockers are also pending, for a
-total of 89; they are absent from
+total of 83; they are absent from
 the active registry, qualification corpus, compatibility evidence, and fixture
-suite. Five cops have now returned through structural rewrites and both full
+suite. Eleven cops have now returned through structural rewrites and both full
 compatibility gates. The machine-readable source of truth is
 [`intentionally_pending_cops.yml`](../spec/upstream/rubocop-1.87.0/intentionally_pending_cops.yml).
 Their old implementation source remains only as rewrite reference.
@@ -24,9 +24,9 @@ reference output. On that original ten-project corpus, the resulting 512-cop
 active set had 402 exercised project-exact cops, 110 dormant cops, and no
 mismatches or engine errors.
 
-The expanded 50-project audit at `2026-08-23T12:29:33-04:00` shows that this
+The expanded 50-project audit at `2026-08-23T13:19:41-04:00` shows that this
 withdrawal was not sufficient to make the retained implementations scalable:
-293 cops are project-exact, 50 are dormant, 172 mismatch, one crashes, and one
+296 cops are project-exact, 53 are dormant, 172 mismatch, one crashes, and one
 is blocked by a RuboCop error. Those newly exposed cops require review and
 minimized fixtures before this catalog can be treated as complete.
 
@@ -54,10 +54,10 @@ A cop is included when code review establishes at least one of these patterns:
 This deliberately excludes cops that have large project gaps but use a broad,
 structural implementation. For example, `Style/MethodCallWithArgsParentheses`
 is inaccurate, but it is not currently evidence of category C. A green fixture
-row also does not remove a cop from this catalog: 18 of the cops below pass all
+row also does not remove a cop from this catalog: 16 of the cops below pass all
 their fixtures while still mismatch real projects.
 
-## Literal catalog reporters (11 cops)
+## Literal catalog reporters (7 cops)
 
 These are mechanically confirmed. The shared implementation in
 [`framework/catalog_cop.rs`](../crates/rustocop/src/cops/prism/framework/catalog_cop.rs)
@@ -73,11 +73,7 @@ the text.
 | `Layout/SpaceAroundBlockParameters` | mismatch 19/45 | mismatch | 64 | 4 | 0 | 68 |
 | `Layout/SpaceInsideHashLiteralBraces` | mismatch 20/40 | mismatch | 130 | 1,420 | 0 | 1,550 |
 | `Lint/AmbiguousRegexpLiteral` | mismatch 6/30 | mismatch | 0 | 28 | 0 | 28 |
-| `Lint/ArrayLiteralInRegexp` | mismatch 4/32 | dormant | 0 | 0 | 0 | 0 |
 | `Lint/AssignmentInCondition` | mismatch 16/69 | mismatch | 4 | 1,276 | 0 | 1,280 |
-| `Lint/LiteralAssignmentInCondition` | mismatch 18/34 | mismatch | 0 | 13 | 0 | 13 |
-| `Lint/NoReturnInBeginEndBlocks` | mismatch 35/70 | mismatch | 0 | 31 | 0 | 31 |
-| `Lint/RescueType` | mismatch 4/52 | dormant | 0 | 0 | 0 | 0 |
 
 Registrations are in
 [`final_layout_batch_a/registry.rs`](../crates/rustocop/src/cops/prism/final_layout_batch_a/registry.rs),
@@ -87,7 +83,7 @@ Registrations are in
 [`final_scope_batch_b.rs`](../crates/rustocop/src/cops/prism/final_scope_batch_b.rs), and
 [`final_control_flow_batch/registry.rs`](../crates/rustocop/src/cops/prism/final_control_flow_batch/registry.rs).
 
-## Source scanners standing in for syntax or scope (17 cops)
+## Source scanners standing in for syntax or scope (15 cops)
 
 These implementations scan delimiters, lines, assignments, identifiers, or
 keywords without enough parser or scope context. The strongest examples are
@@ -103,7 +99,6 @@ on a non-empty line as a comment.
 | `Layout/FirstArrayElementLineBreak` | compatible 14/14 | mismatch | 71,921 | 1,739 | 1,491 | 70,678 |
 | `Layout/FirstHashElementLineBreak` | compatible 11/11 | mismatch | 2,405 | 1,835 | 1,834 | 572 |
 | `Layout/FirstMethodArgumentLineBreak` | compatible 14/14 | mismatch | 16,729 | 13,234 | 13,130 | 3,703 |
-| `Layout/FirstMethodParameterLineBreak` | compatible 11/11 | project-exact | 123 | 123 | 123 | 0 |
 | `Layout/MultilineHashKeyLineBreaks` | compatible 10/10 | mismatch | 3,097 | 1,835 | 1,786 | 1,360 |
 | `Layout/SingleLineBlockChain` | compatible 9/9 | mismatch | 40,204 | 25,643 | 25,335 | 15,177 |
 | `Layout/IndentationConsistency` | mismatch 32/53 | mismatch | 33,603 | 6,077 | 0 | 39,680 |
@@ -113,7 +108,6 @@ on a non-empty line as a comment.
 | `Naming/VariableNumber` | mismatch 62/115 | mismatch | 0 | 8,050 | 0 | 8,050 |
 | `Lint/UselessAssignment` | mismatch 82/149 | mismatch | 31,904 | 543 | 183 | 32,081 |
 | `Style/Copyright` | compatible 21/21 | mismatch | 54,127 | 0 | 0 | 54,127 |
-| `Lint/DuplicateRescueException` | compatible 6/6 | mismatch | 1,359 | 0 | 0 | 1,359 |
 
 The relevant implementations are in
 [`text/lint.rs`](../crates/rustocop/src/cops/text/lint.rs),

@@ -1,14 +1,14 @@
 {
   "version": 1,
   "kind": "project_compatibility",
-  "updated_at": "2026-08-23T12:29:33-04:00",
-  "rust_commit": "0ce7b2911c715dbea74b520079925be859b0a68a",
-  "native_sha256": "7f4cbb8d71bda576707ea4816cef5c3cdd7c740b56d25e179a5c96cbf056c91f",
+  "updated_at": "2026-08-23T13:19:41-04:00",
+  "rust_commit": "7dd38fcc4cf0fa518efb211275216b177737925e",
+  "native_sha256": "efb33b58b19285d581a49b84a16544f5309b50b083adf3db3ddd606410f4ab24",
   "rubocop_version": "1.87.0",
   "rubocop_reference": {
-    "path": "spec/compatibility_evidence/project_rubocop_reference.json.gz",
-    "sha256": "c819a375649e38bb64ed6795ec391a4229345b5937bc78395d087836ee32b7d4",
-    "generated_at": "2026-08-23T12:22:53-04:00",
+    "path": "tmp/project-parity/active-523-rubocop.json.gz",
+    "sha256": "49dee51b7573e6faf0af6a75f370b9039a814d62a6ccf869faa51dab84eac99d",
+    "generated_at": "2026-08-23T13:05:59-04:00",
     "config_sha256": "0e505e2432b2af2d479bd48d335ae5c4c18b39edf328e500157ba57bf6f6726a",
     "source": "cached"
   },
@@ -309,6 +309,12 @@
       "exact": 7366,
       "classification": "project_exact"
     },
+    "Layout/FirstMethodParameterLineBreak": {
+      "rustocop": 417,
+      "rubocop": 417,
+      "exact": 417,
+      "classification": "project_exact"
+    },
     "Layout/FirstParameterIndentation": {
       "rustocop": 24,
       "rubocop": 5,
@@ -495,6 +501,12 @@
       "exact": 0,
       "classification": "mismatch"
     },
+    "Lint/ArrayLiteralInRegexp": {
+      "rustocop": 0,
+      "rubocop": 0,
+      "exact": 0,
+      "classification": "dormant"
+    },
     "Lint/BigDecimalNew": {
       "rustocop": 10,
       "rubocop": 0,
@@ -620,6 +632,12 @@
       "rubocop": 5,
       "exact": 5,
       "classification": "project_exact"
+    },
+    "Lint/DuplicateRescueException": {
+      "rustocop": 0,
+      "rubocop": 0,
+      "exact": 0,
+      "classification": "dormant"
     },
     "Lint/DuplicateSetElement": {
       "rustocop": 9,
@@ -801,6 +819,12 @@
       "exact": 17,
       "classification": "mismatch"
     },
+    "Lint/LiteralAssignmentInCondition": {
+      "rustocop": 17,
+      "rubocop": 17,
+      "exact": 17,
+      "classification": "project_exact"
+    },
     "Lint/LiteralInInterpolation": {
       "rustocop": 48,
       "rubocop": 45,
@@ -854,6 +878,12 @@
       "rubocop": 0,
       "exact": 0,
       "classification": "dormant"
+    },
+    "Lint/NoReturnInBeginEndBlocks": {
+      "rustocop": 49,
+      "rubocop": 49,
+      "exact": 49,
+      "classification": "project_exact"
     },
     "Lint/NonAtomicFileOperation": {
       "rustocop": 258,
@@ -1028,6 +1058,12 @@
       "rubocop": 191,
       "exact": 191,
       "classification": "project_exact"
+    },
+    "Lint/RescueType": {
+      "rustocop": 0,
+      "rubocop": 0,
+      "exact": 0,
+      "classification": "dormant"
     },
     "Lint/ReturnInVoidContext": {
       "rustocop": 24,

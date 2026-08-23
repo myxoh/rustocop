@@ -7,12 +7,12 @@ regression layer, not the prioritization scoreboard.
 
 ## Current position
 
-- RuboCop 1.87.0 defines 606 built-in cops. The native registry advertises 517;
-  89 non-scalable, incomplete, or reference-blocked implementations are intentionally pending.
+- RuboCop 1.87.0 defines 606 built-in cops. The native registry advertises 523;
+  83 non-scalable, incomplete, or reference-blocked implementations are intentionally pending.
 - The executable trust standard is differential: minimized fixtures plus
   complete diagnostic signatures across 50 pinned projects.
-- The project-regression corpus currently contains 126 RuboCop-derived cases,
-  with five additional configuration-mutation cases.
+- The project-regression corpus currently contains 336 RuboCop-derived cases,
+  with six additional configuration-mutation cases.
 - Atomic multi-edit correction transactions and deterministic file-level
   parallelism are implemented.
 - A cop being registered, passing captured upstream examples, or producing a

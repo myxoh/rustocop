@@ -5,17 +5,17 @@ The category-C implementation-risk register is maintained separately in
 
 > [!NOTE]
 > This analysis records the 606-cop checkpoint that motivated withdrawing 48
-> non-scalable implementations. Those cops are now intentionally pending and
-> excluded from the 558-cop active corpus; the figures below remain the
+> non-scalable implementations. Forty of those category-C cops remain pending;
+> the current active corpus has 523 cops and 83 total intentional exclusions. The figures below remain the
 > pre-withdrawal diagnostic evidence.
 
 > [!IMPORTANT]
 > This historical gap was closed only for the original ten-project corpus at
 > `2026-08-23T09:13:26-04:00`. The expanded 50-project audit at
-> `2026-08-23T12:29:33-04:00` still shows the broader gap: 293 cops are project-exact, 50 are
+> `2026-08-23T13:19:41-04:00` still shows the broader gap: 296 cops are project-exact, 53 are
 > dormant, 172 mismatch, one crashes, and one is blocked by a RuboCop error.
-> The separate fixture gate is 24,089/24,089 comparable cases and 517/517 cops at
-> `2026-08-23T12:32:23-04:00`.
+> The separate fixture gate is 24,297/24,297 comparable cases and 523/523 cops at
+> `2026-08-23T13:05:46-04:00`.
 
 The intermediate retained fixture corpus reached 26,717/26,717 cases and 558/558 cops
 at `2026-08-22T20:40:35-04:00`. That completes the fixture gate but does not

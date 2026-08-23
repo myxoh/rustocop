@@ -1,7 +1,7 @@
 # Current project-parity gaps
 
 Generated from the same complete audit as [the evidence matrix](cop-support.md).
-Evidence updated at `2026-08-23T12:22:31-04:00`.
+Evidence updated at `2026-08-23T13:19:41-04:00`.
 This queue contains only failures from that 50-project audit; it does not use the old
 Verified/Heuristic qualification labels or captured-case pass counts.
 
@@ -9,7 +9,7 @@ The gap is unmatched complete diagnostic signatures, not the difference
 between aggregate offense counts. A cop can have equal counts and still have a
 nonzero gap because its message, severity, path, or source range differs.
 
-- Rust source: `0ce7b2911c715dbea74b520079925be859b0a68a`
+- Rust source: `7dd38fcc4cf0fa518efb211275216b177737925e`
 - Unresolved cops: 174
 
 | Cop | Status | Rustocop | RuboCop | Exact | Signature gap | Project regression evidence |

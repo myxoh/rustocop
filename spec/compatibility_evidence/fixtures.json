@@ -1,10 +1,10 @@
 {
   "version": 1,
   "kind": "fixture_compatibility",
-  "updated_at": "2026-08-23T12:32:23-04:00",
-  "rust_commit": "0ce7b2911c715dbea74b520079925be859b0a68a",
-  "native_sha256": "7f4cbb8d71bda576707ea4816cef5c3cdd7c740b56d25e179a5c96cbf056c91f",
-  "fixture_corpus_sha256": "b7d69c1db70da33fd6289094f4d156b3ed88ea7202ccb46e710d511897ee1725",
+  "updated_at": "2026-08-23T13:05:46-04:00",
+  "rust_commit": "7dd38fcc4cf0fa518efb211275216b177737925e",
+  "native_sha256": "efb33b58b19285d581a49b84a16544f5309b50b083adf3db3ddd606410f4ab24",
+  "fixture_corpus_sha256": "676af4695190fd05c7836f88f0707a1f14a82e0f6d2d733aea931c4e9282314d",
   "rubocop_version": "1.87.0",
   "results": {
     "Bundler/DuplicatedGem": {
@@ -252,6 +252,11 @@
       "total": 60,
       "status": "compatible"
     },
+    "Layout/FirstMethodParameterLineBreak": {
+      "passed": 12,
+      "total": 12,
+      "status": "compatible"
+    },
     "Layout/FirstParameterIndentation": {
       "passed": 20,
       "total": 20,
@@ -407,6 +412,11 @@
       "total": 40,
       "status": "compatible"
     },
+    "Lint/ArrayLiteralInRegexp": {
+      "passed": 32,
+      "total": 32,
+      "status": "compatible"
+    },
     "Lint/BigDecimalNew": {
       "passed": 3,
       "total": 3,
@@ -510,6 +520,11 @@
     "Lint/DuplicateRequire": {
       "passed": 10,
       "total": 10,
+      "status": "compatible"
+    },
+    "Lint/DuplicateRescueException": {
+      "passed": 7,
+      "total": 7,
       "status": "compatible"
     },
     "Lint/DuplicateSetElement": {
@@ -662,6 +677,11 @@
       "total": 229,
       "status": "compatible"
     },
+    "Lint/LiteralAssignmentInCondition": {
+      "passed": 35,
+      "total": 35,
+      "status": "compatible"
+    },
     "Lint/LiteralInInterpolation": {
       "passed": 378,
       "total": 378,
@@ -705,6 +725,11 @@
     "Lint/NextWithoutAccumulator": {
       "passed": 18,
       "total": 18,
+      "status": "compatible"
+    },
+    "Lint/NoReturnInBeginEndBlocks": {
+      "passed": 70,
+      "total": 70,
       "status": "compatible"
     },
     "Lint/NonAtomicFileOperation": {
@@ -850,6 +875,11 @@
     "Lint/RescueException": {
       "passed": 11,
       "total": 11,
+      "status": "compatible"
+    },
+    "Lint/RescueType": {
+      "passed": 52,
+      "total": 52,
       "status": "compatible"
     },
     "Lint/ReturnInVoidContext": {

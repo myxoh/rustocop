@@ -15,8 +15,8 @@ RSpec.describe "compatibility evidence report" do
 
     expect(fixtures.fetch("kind")).to eq("fixture_compatibility")
     expect(projects.fetch("kind")).to eq("project_compatibility")
-    expect(fixtures.fetch("results").length).to eq(517)
-    expect(projects.fetch("results").length).to eq(517)
+    expect(fixtures.fetch("results").length).to eq(523)
+    expect(projects.fetch("results").length).to eq(523)
     expect(fixtures.fetch("results").keys).to match_array(projects.fetch("results").keys)
 
     [fixtures, projects].each do |snapshot|
@@ -36,7 +36,7 @@ RSpec.describe "compatibility evidence report" do
     expect(stderr).to eq("")
     expect(status).to be_success
     rows = File.readlines(report).grep(/^\| `[A-Za-z]+\/[A-Za-z0-9]+` \|/)
-    expect(rows.length).to eq(517)
+    expect(rows.length).to eq(523)
   end
 
   it "rejects date-only updated_at evidence" do

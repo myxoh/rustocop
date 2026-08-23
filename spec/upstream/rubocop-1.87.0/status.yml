@@ -1,14 +1,14 @@
 ---
 rubocop_version: 1.87.0
 upstream_rspec:
-  examples: 23997
+  examples: 24205
   failures: 0
   pending: 3
-captured_cases: 24090
+captured_cases: 24298
 diagnostic_baseline:
-  passed_cases: 24089
-  passing_cops: 517
-  total_cops: 517
+  passed_cases: 24297
+  passing_cops: 523
+  total_cops: 523
 fully_compatible_cops:
 - Bundler/DuplicatedGem
 - Bundler/DuplicatedGroup
@@ -59,6 +59,7 @@ fully_compatible_cops:
 - Layout/EndOfLine
 - Layout/FirstArgumentIndentation
 - Layout/FirstHashElementIndentation
+- Layout/FirstMethodParameterLineBreak
 - Layout/FirstParameterIndentation
 - Layout/HashAlignment
 - Layout/HeredocArgumentClosingParenthesis
@@ -90,6 +91,7 @@ fully_compatible_cops:
 - Layout/TrailingEmptyLines
 - Layout/TrailingWhitespace
 - Lint/AmbiguousAssignment
+- Lint/ArrayLiteralInRegexp
 - Lint/BigDecimalNew
 - Lint/BinaryOperatorWithIdenticalOperands
 - Lint/BooleanSymbol
@@ -111,6 +113,7 @@ fully_compatible_cops:
 - Lint/DuplicateMatchPattern
 - Lint/DuplicateMethods
 - Lint/DuplicateRequire
+- Lint/DuplicateRescueException
 - Lint/DuplicateSetElement
 - Lint/EachWithObjectArgument
 - Lint/ElseLayout
@@ -141,6 +144,7 @@ fully_compatible_cops:
 - Lint/ItWithoutArgumentsInBlock
 - Lint/LambdaWithoutLiteralBlock
 - Lint/LiteralAsCondition
+- Lint/LiteralAssignmentInCondition
 - Lint/LiteralInInterpolation
 - Lint/Loop
 - Lint/MissingSuper
@@ -153,6 +157,7 @@ fully_compatible_cops:
 - Lint/NonAtomicFileOperation
 - Lint/NonDeterministicRequireOrder
 - Lint/NonLocalExitFromIterator
+- Lint/NoReturnInBeginEndBlocks
 - Lint/NumberConversion
 - Lint/NumberedParameterAssignment
 - Lint/NumericOperationWithConstantResult
@@ -179,6 +184,7 @@ fully_compatible_cops:
 - Lint/RequireRangeParentheses
 - Lint/RequireRelativeSelfPath
 - Lint/RescueException
+- Lint/RescueType
 - Lint/ReturnInVoidContext
 - Lint/SafeNavigationChain
 - Lint/SafeNavigationConsistency
