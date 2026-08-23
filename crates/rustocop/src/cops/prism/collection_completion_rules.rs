@@ -204,9 +204,7 @@ fn each_with_object(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     let accumulator = explicit.map(|(first, _)| first).unwrap_or("_1");
     if (!numbered && explicit.is_none())
         || last_source != accumulator
-        || file
-            .node(&block.as_node())
-            .contains(&format!("{accumulator} +="))
+        || accumulator_assigned_in_block(file.node(&block.as_node()), accumulator)
     {
         return;
     }
@@ -280,9 +278,29 @@ fn each_with_object_basic_literal(node: &Node<'_>) -> bool {
 
 fn two_parameters(source: &str) -> Option<(&str, &str)> {
     let source = source.strip_prefix('|')?.strip_suffix('|')?;
-    let mut parameters = source.split(',').map(str::trim);
-    let first = parameters.next()?;
-    let second = parameters.next()?;
-    (parameters.next().is_none() && !first.is_empty() && !second.is_empty())
-        .then_some((first, second))
+    let mut depth = 0_usize;
+    let mut separator = None;
+    for (index, byte) in source.bytes().enumerate() {
+        match byte {
+            b'(' | b'[' | b'{' => depth += 1,
+            b')' | b']' | b'}' => depth = depth.saturating_sub(1),
+            b',' if depth == 0 => {
+                if separator.is_some() {
+                    return None;
+                }
+                separator = Some(index);
+            }
+            _ => {}
+        }
+    }
+    let separator = separator?;
+    let first = source[..separator].trim();
+    let second = source[separator + 1..].trim();
+    (!first.is_empty() && !second.is_empty()).then_some((first, second))
+}
+
+fn accumulator_assigned_in_block(source: &str, accumulator: &str) -> bool {
+    [" =", " +=", " -=", " *=", " /=", " ||=", " &&="]
+        .iter()
+        .any(|operator| source.contains(&format!("{accumulator}{operator}")))
 }
