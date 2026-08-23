@@ -810,9 +810,11 @@ fn comment_indentation(context: &mut CopContext<'_, '_>) {
 fn expected_comment_indentation(line: &str, width: usize, outdent_modifiers: bool) -> usize {
     let indentation = line.len() - line.trim_start().len();
     let trimmed = line.trim_start();
-    let less_indented = trimmed == "end"
-        || trimmed.starts_with("end ")
-        || trimmed.starts_with("end.")
+    let less_indented = trimmed.strip_prefix("end").is_some_and(|rest| {
+        rest.chars()
+            .next()
+            .is_none_or(|character| !character.is_alphanumeric() && character != '_')
+    })
         || trimmed.starts_with([')', '}', ']'])
         || (outdent_modifiers
             && ["private", "protected", "public"].iter().any(|modifier| {
