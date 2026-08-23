@@ -197,6 +197,15 @@ fn constant_in_block(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
         return;
     };
     let block_start = block.location().start_offset();
+    let block_indent = context.source_file().indentation(block_start).len();
+    if context.source_file().lines().any(|(offset, line)| {
+        offset > node.location().end_offset()
+            && offset < block.location().end_offset()
+            && line.trim() == "ensure"
+            && context.source_file().indentation(offset).len() == block_indent
+    }) {
+        return;
+    }
     for ancestor in context.ancestors().iter().rev() {
         if ancestor
             .as_block_node()
