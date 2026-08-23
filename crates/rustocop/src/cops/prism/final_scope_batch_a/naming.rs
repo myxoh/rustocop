@@ -690,5 +690,5 @@ fn inclusive_filepath(terms: &[(String, InclusiveTermConfig)], context: &mut Cop
             .join(", ");
         format!("Consider replacing {names} in file path with other terms.")
     };
-    context.report(message, 0..usize::from(!context.source().is_empty()));
+    context.report(message, 0..0);
 }

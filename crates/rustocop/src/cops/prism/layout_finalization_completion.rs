@@ -247,7 +247,7 @@ fn trailing_empty_lines(context: &mut CopContext<'_, '_>) {
         format!("{blank_lines} trailing blank lines detected.")
     };
     let offense = if newline_count == 0 || (final_blank && newline_count == 1) {
-        source.len()..source.len().saturating_sub(1)
+        source.len()..source.len()
     } else {
         content_end + 1..source.len()
     };

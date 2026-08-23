@@ -45,10 +45,9 @@ fn prism_offense(source: &str, index: &SourceIndex, finding: prism::Finding) -> 
             (line, 0)
         } else if empty_location {
             // Parser represents an empty source range as ending immediately
-            // before its start. RuboCop's JSON formatter preserves that as a
-            // zero column at the beginning of a line (and, generally, as the
-            // column immediately preceding the start column).
-            (line, column.saturating_sub(1))
+            // before its start. RuboCop's public JSON formatter renders that
+            // point at the start column instead.
+            (line, column)
         } else if ends_at_newline {
             let (line, _) = index.position(source, finding.end_offset);
             // RuboCop's JSON formatter reports the beginning of the following
@@ -135,7 +134,7 @@ mod tests {
                 end_offset: 0,
             },
         );
-        assert_eq!((empty.last_line, empty.last_column), (1, 0));
+        assert_eq!((empty.last_line, empty.last_column), (1, 1));
         assert_eq!(empty.length, 0);
 
         let empty_at_start_of_nonempty_source = prism_offense(
@@ -155,7 +154,7 @@ mod tests {
                 empty_at_start_of_nonempty_source.last_line,
                 empty_at_start_of_nonempty_source.last_column
             ),
-            (1, 0)
+            (1, 1)
         );
 
         let inserted_blank_line = prism_offense(

@@ -180,9 +180,13 @@ workers = Array.new(options[:jobs]) do
         captured = offense.slice(
           "message", "severity", "correctable", "line", "column", "last_line", "last_column"
         )
-        # Captured Parser ranges use column zero when the range ends exactly
-        # at a newline; RuboCop's public JSON formatter serializes that point
-        # as column one.
+        # Captured Parser ranges use the preceding column for empty ranges and
+        # column zero when a range ends exactly at a newline. RuboCop's public
+        # JSON formatter serializes both as the reported point.
+        if captured["last_line"] == captured["line"] &&
+           captured["last_column"] + 1 == captured["column"]
+          captured["last_column"] = captured["column"]
+        end
         if captured["last_line"] > captured["line"] && captured["last_column"].zero?
           captured["last_column"] = 1
         end
