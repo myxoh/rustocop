@@ -267,14 +267,18 @@ fn nested_local_assignment(condition: &Node<'_>) -> bool {
 }
 
 fn assignment_parent(ancestors: &[Node<'_>]) -> bool {
-    ancestors.iter().rev().any(|node| {
+    ancestors
+        .iter()
+        .rev()
+        .find(|node| node.as_statements_node().is_none())
+        .is_some_and(|node| {
         node.as_local_variable_write_node().is_some()
             || node.as_instance_variable_write_node().is_some()
             || node.as_class_variable_write_node().is_some()
             || node.as_global_variable_write_node().is_some()
             || node.as_constant_write_node().is_some()
             || node.as_constant_path_write_node().is_some()
-    })
+        })
 }
 
 fn preceding_conditional(source: &str, offset: usize) -> bool {
