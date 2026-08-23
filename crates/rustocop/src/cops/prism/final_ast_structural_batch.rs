@@ -2159,6 +2159,9 @@ fn inspect_access_modifier_statements(
             }
         }
         if let Some(call) = child.as_call_node() {
+            if root {
+                continue;
+            }
             let method = String::from_utf8_lossy(call_name(&call));
             let active_included = method == "included"
                 && context.related_config_value("AllCops", "ActiveSupportExtensionsEnabled")
