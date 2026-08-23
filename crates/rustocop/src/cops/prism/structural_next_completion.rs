@@ -24,7 +24,7 @@ fn case_like_if(context: &mut CopContext<'_, '_>) {
             continue;
         };
         if let Some((left, right)) = condition.split_once(" =~ ") {
-            if !left.trim().starts_with('/') && !right.trim().starts_with('/') {
+            if !source_regexp(left.trim()) && !source_regexp(right.trim()) {
                 index += 1;
                 continue;
             }
@@ -62,14 +62,12 @@ fn case_like_if(context: &mut CopContext<'_, '_>) {
                     break;
                 }
                 branches.push((cursor, value));
-            } else if line.trim() == "else" {
+            } else if line == "else" || line.starts_with("else ") {
                 has_conditional_else = lines
                     .get(cursor + 1)
                     .map(|(_, body)| body.trim())
-                    .is_some_and(|body| {
-                        body.starts_with("if ") || body.contains(" ? ") && body.contains(" : ")
-                    });
-            } else if line.trim() == "end" {
+                    .is_some_and(|body| body.contains(" ? ") && body.contains(" : "));
+            } else if line == "end" || line.starts_with("end ") {
                 end_index = Some(cursor);
                 break;
             }
@@ -93,7 +91,8 @@ fn case_like_if(context: &mut CopContext<'_, '_>) {
             };
             edits.push((offset..offset + line.len(), replacement));
         }
-        let end = lines[end_index].0 + lines[end_index].1.len();
+        let end_line = lines[end_index].1;
+        let end = lines[end_index].0 + end_line.len() - end_line.trim_start().len() + 3;
         context.replace_many(
             "Convert `if-elsif` to `case-when`.",
             start_offset + indent.len()..end,
@@ -101,6 +100,10 @@ fn case_like_if(context: &mut CopContext<'_, '_>) {
         );
         index += 1;
     }
+}
+
+fn source_regexp(source: &str) -> bool {
+    source.starts_with('/') || source.starts_with("%r")
 }
 
 fn case_comparison(condition: &str) -> Option<(String, String)> {
