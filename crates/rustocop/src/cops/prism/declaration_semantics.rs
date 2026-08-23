@@ -22,7 +22,7 @@ fn ineffective_access_modifier(node: &ruby_prism::DefNode<'_>, context: &mut Cop
     {
         return;
     }
-    let scope = context.ancestors().iter().rev().find(|ancestor| {
+    let scope = context.ancestors().iter().find(|ancestor| {
         ancestor.as_block_node().is_some()
             || ancestor.as_class_node().is_some()
             || ancestor.as_module_node().is_some()
@@ -69,10 +69,10 @@ fn ineffective_access_modifier(node: &ruby_prism::DefNode<'_>, context: &mut Cop
             ancestor.as_class_node().is_some() || ancestor.as_module_node().is_some()
         });
         if scope.is_some_and(|scope| {
-            context
-                .source_file()
-                .at(&scope.location())
-                .contains(&format!("private_class_method :{method}"))
+            context.source_file().at(&scope.location()).lines().any(|line| {
+                line.trim_start().starts_with("private_class_method ")
+                    && line.contains(&format!(":{method}"))
+            })
         }) {
             return;
         }
