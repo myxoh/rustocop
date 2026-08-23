@@ -465,7 +465,13 @@ fn double_negation(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
 }
 
 fn double_negation_return_value(node: &CallNode<'_>, context: &CopContext<'_, '_>) -> bool {
-    if context.parent().is_some_and(|parent| parent.as_return_node().is_some()) {
+    if context
+        .ancestors()
+        .iter()
+        .rev()
+        .take_while(|ancestor| ancestor.as_def_node().is_none())
+        .any(|ancestor| ancestor.as_return_node().is_some())
+    {
         return true;
     }
     let definition_body = context
@@ -493,12 +499,9 @@ fn double_negation_return_value(node: &CallNode<'_>, context: &CopContext<'_, '_
     let Some(body) = definition_body.or(define_method_body) else {
         return false;
     };
-    let Some(last) = return_body_last(body) else {
+    let Some((last, sequence_body)) = return_body_last_with_sequence(body) else {
         return false;
     };
-    if last.as_hash_node().is_some() || last.as_array_node().is_some() {
-        return false;
-    }
     let conditional = context.ancestors().iter().rev().find(|ancestor| {
         (ancestor.as_if_node().is_some()
             || ancestor.as_unless_node().is_some()
@@ -515,9 +518,53 @@ fn double_negation_return_value(node: &CallNode<'_>, context: &CopContext<'_, '_
         );
         branch_tail && last.location().end_offset() <= conditional.location().end_offset()
     } else {
-        line_at(context.source(), last.location().start_offset())
+        let child = if sequence_body {
+            Some((last, false))
+        } else {
+            double_negation_last_child(last)
+        };
+        let Some((last_child, collection_child)) = child else {
+            return false;
+        };
+        !collection_child
+            && last_child.as_hash_node().is_none()
+            && line_at(context.source(), last_child.location().start_offset())
             <= line_at(context.source(), node.location().start_offset())
     }
+}
+
+fn double_negation_last_child(node: Node<'_>) -> Option<(Node<'_>, bool)> {
+    if let Some(call) = node.as_call_node() {
+        if let Some(argument) = call
+            .arguments()
+            .and_then(|arguments| arguments.arguments().iter().last())
+        {
+            return Some((argument, false));
+        }
+        return call.receiver().map(|receiver| (receiver, false));
+    }
+    if let Some(and) = node.as_and_node() {
+        return Some((and.right(), false));
+    }
+    if let Some(or) = node.as_or_node() {
+        return Some((or.right(), false));
+    }
+    if let Some(hash) = node.as_hash_node() {
+        return hash.elements().iter().last().map(|element| (element, true));
+    }
+    if let Some(hash) = node.as_keyword_hash_node() {
+        return hash.elements().iter().last().map(|element| (element, true));
+    }
+    if let Some(array) = node.as_array_node() {
+        return array.elements().iter().last().map(|element| (element, true));
+    }
+    if let Some(pair) = node.as_assoc_node() {
+        return Some((pair.value(), false));
+    }
+    if let Some(parentheses) = node.as_parentheses_node() {
+        return parentheses.body().and_then(return_body_last).map(|child| (child, false));
+    }
+    Some((node, false))
 }
 
 fn conditional_branch_tail(source: &str, node_end: usize, conditional_end: usize) -> bool {
@@ -551,6 +598,23 @@ fn return_body_last(body: Node<'_>) -> Option<Node<'_>> {
             .and_then(|statements| statements.body().iter().last());
     }
     Some(body)
+}
+
+fn return_body_last_with_sequence(body: Node<'_>) -> Option<(Node<'_>, bool)> {
+    if let Some(statements) = body.as_statements_node() {
+        let expressions = statements.body().iter().collect::<Vec<_>>();
+        let sequence = expressions.len() > 1;
+        return expressions.into_iter().last().map(|last| (last, sequence));
+    }
+    if let Some(begin) = body.as_begin_node() {
+        let expressions = begin
+            .statements()
+            .map(|statements| statements.body().iter().collect::<Vec<_>>())
+            .unwrap_or_default();
+        let sequence = expressions.len() > 1;
+        return expressions.into_iter().last().map(|last| (last, sequence));
+    }
+    Some((body, false))
 }
 
 fn line_at(source: &str, offset: usize) -> usize {
