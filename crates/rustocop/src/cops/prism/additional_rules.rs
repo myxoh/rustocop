@@ -281,6 +281,12 @@ fn each_with_object_argument(source: &str, reporter: &mut Reporter<'_>) {
 
 fn useless_defined(source: &str, reporter: &mut Reporter<'_>) {
     for start in all_offsets(source, "defined?(") {
+        if start > 0
+            && (source.as_bytes()[start - 1].is_ascii_alphanumeric()
+                || source.as_bytes()[start - 1] == b'_')
+        {
+            continue;
+        }
         let Some(close) = source[start..].find(')') else {
             continue;
         };
