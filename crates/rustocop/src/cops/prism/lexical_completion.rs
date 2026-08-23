@@ -193,11 +193,9 @@ fn encoding_comment_without_encoding(text: &str, lower: &str) -> String {
 
 fn disable_cops_within_source_code_directive(context: &mut CopContext<'_, '_>) {
     let allowed = context.config_values("AllowedCops").to_vec();
-    for (offset, line) in context.source_file().lines() {
-        let Some(comment_start) = comment_start(line) else {
-            continue;
-        };
-        let comment = &line[comment_start..];
+    let source = context.source();
+    for range in context.source_file().comment_ranges() {
+        let comment = source.get(range.clone()).unwrap_or_default();
         let Some((command, list)) = directive(comment) else {
             continue;
         };
@@ -228,7 +226,6 @@ fn disable_cops_within_source_code_directive(context: &mut CopContext<'_, '_>) {
         } else {
             format!("# rubocop:{command} {}", retained.join(", "))
         };
-        let range = offset + comment_start..offset + line.len();
         context.replace(message, range.clone(), range, replacement);
     }
 }
@@ -236,24 +233,6 @@ fn disable_cops_within_source_code_directive(context: &mut CopContext<'_, '_>) {
 fn directive(comment: &str) -> Option<(&str, &str)> {
     let body = comment.strip_prefix("# rubocop:")?;
     let (command, cops) = body.trim().split_once(' ')?;
-    matches!(command, "disable" | "enable").then_some((command, cops.trim()))
-}
-
-fn comment_start(line: &str) -> Option<usize> {
-    let mut quote = None;
-    let mut escaped = false;
-    for (index, byte) in line.bytes().enumerate() {
-        if escaped {
-            escaped = false;
-        } else if byte == b'\\' {
-            escaped = quote.is_some();
-        } else if Some(byte) == quote {
-            quote = None;
-        } else if quote.is_none() && matches!(byte, b'\'' | b'"') {
-            quote = Some(byte);
-        } else if quote.is_none() && byte == b'#' {
-            return Some(index);
-        }
-    }
-    None
+    let cops = cops.split_once(" -- ").map_or(cops, |(cops, _)| cops).trim();
+    matches!(command, "disable" | "enable" | "todo").then_some((command, cops))
 }
