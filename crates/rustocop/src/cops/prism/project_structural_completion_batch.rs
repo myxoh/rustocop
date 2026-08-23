@@ -152,6 +152,9 @@ fn class_structure(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
                         format!("{method}_methods")
                     });
                 } else {
+                    if arguments.len() != 1 {
+                        continue;
+                    }
                     for argument in arguments {
                         let Some(symbol) = argument.as_symbol_node() else {
                             continue;
@@ -163,7 +166,9 @@ fn class_structure(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
                                 .as_def_node()
                                 .is_some_and(|definition| definition.name().as_slice() == name)
                         }) {
-                            element.category = format!("{method}_methods");
+                            if name != b"initialize" {
+                                element.category = format!("{method}_methods");
+                            }
                         }
                     }
                     continue;
@@ -189,6 +194,8 @@ fn class_structure(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
                 });
             } else if matches!(method.as_str(), "validates" | "validate") {
                 category = Some("macros".to_string());
+            } else if method == "initializer" {
+                category = Some("initializer".to_string());
             }
         } else {
             let constant = if let Some(write) = statement.as_constant_write_node() {
