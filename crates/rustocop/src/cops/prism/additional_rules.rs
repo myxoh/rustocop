@@ -283,7 +283,7 @@ fn useless_defined(source: &str, reporter: &mut Reporter<'_>) {
     for start in all_offsets(source, "defined?(") {
         if start > 0
             && (source.as_bytes()[start - 1].is_ascii_alphanumeric()
-                || source.as_bytes()[start - 1] == b'_')
+                || matches!(source.as_bytes()[start - 1], b'_' | b'.'))
         {
             continue;
         }
