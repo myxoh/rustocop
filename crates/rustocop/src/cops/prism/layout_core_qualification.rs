@@ -603,6 +603,7 @@ fn first_argument_indentation(node: &Node<'_>, context: &mut CopContext<'_, '_>)
         };
         let name = call.name().as_slice();
         if name == b"[]"
+            || name == b"=~"
             || name.ends_with(b"=")
             || call.call_operator_loc().is_none() && is_operator_name(name)
         {
@@ -657,6 +658,13 @@ fn first_argument_indentation(node: &Node<'_>, context: &mut CopContext<'_, '_>)
         || source[..call_start]
             .rfind("#{")
             .is_some_and(|opening| !source[opening + 2..call_start].contains('}'));
+    let inside_heredoc_interpolation = context.ancestors().iter().any(|ancestor| {
+        ancestor.as_interpolated_string_node().is_some()
+            && context.source_file().node(ancestor).trim_start().starts_with("<<")
+    });
+    if inside_heredoc_interpolation {
+        return;
+    }
     let outer = (!inside_interpolation)
         .then(|| semantic_parent.and_then(|parent| parent.as_call_node()))
         .flatten();
