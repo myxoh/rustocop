@@ -177,7 +177,7 @@ fn receiver_uses_allowed_name(node: &Node<'_>, context: &CopContext<'_, '_>) -> 
 
 fn each_with_object(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     if !matches!(node.name().as_slice(), b"inject" | b"reduce")
-        || only_argument(node).is_none_or(|argument| argument.as_hash_node().is_none())
+        || only_argument(node).is_none_or(|argument| each_with_object_basic_literal(&argument))
     {
         return;
     }
@@ -264,6 +264,18 @@ fn each_with_object(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
         &selector,
         edits,
     );
+}
+
+fn each_with_object_basic_literal(node: &Node<'_>) -> bool {
+    node.as_string_node().is_some()
+        || node.as_symbol_node().is_some()
+        || node.as_integer_node().is_some()
+        || node.as_float_node().is_some()
+        || node.as_rational_node().is_some()
+        || node.as_imaginary_node().is_some()
+        || node.as_true_node().is_some()
+        || node.as_false_node().is_some()
+        || node.as_nil_node().is_some()
 }
 
 fn two_parameters(source: &str) -> Option<(&str, &str)> {
