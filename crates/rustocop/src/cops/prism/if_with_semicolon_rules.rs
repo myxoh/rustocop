@@ -63,9 +63,10 @@ impl IfWithSemicolonRule<'_, '_, '_> {
 }
 
 fn semicolon_between(start: usize, end: usize, source: &str) -> Option<std::ops::Range<usize>> {
-    let relative = source.get(start..end)?.find(';')?;
-    let at = start + relative;
-    Some(at..at + 1)
+    let between = source.get(start..end)?;
+    let whitespace = between.len() - between.trim_start().len();
+    (between.as_bytes().get(whitespace) == Some(&b';'))
+        .then_some(start + whitespace..start + whitespace + 1)
 }
 
 fn if_parts(node: &IfNode<'_>, file: SourceFile<'_>) -> (Option<String>, Option<String>, bool) {
