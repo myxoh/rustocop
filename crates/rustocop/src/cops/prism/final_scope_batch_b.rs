@@ -610,12 +610,10 @@ fn memoized_final_expression(body: &Node<'_>, candidate: &Node<'_>) -> bool {
                     .statements()
                     .is_some_and(|statements| memoized_only_statement(&statements.as_node(), candidate))
             } else {
-                memoized_final_expression(&subsequent, candidate)
+                false
             };
         }
-        return condition
-            .statements()
-            .is_some_and(|statements| memoized_only_statement(&statements.as_node(), candidate));
+        return false;
     }
     if let Some(condition) = body.as_unless_node() {
         if condition.keyword_loc().start_offset() != condition.location().start_offset() {
@@ -626,23 +624,22 @@ fn memoized_final_expression(body: &Node<'_>, candidate: &Node<'_>) -> bool {
                 .statements()
                 .is_some_and(|statements| memoized_only_statement(&statements.as_node(), candidate));
         }
-        return condition
-            .statements()
-            .is_some_and(|statements| memoized_only_statement(&statements.as_node(), candidate));
+        return false;
     }
     if let Some(case_node) = body.as_case_node() {
-        let statements = case_node.else_clause().and_then(|branch| branch.statements()).or_else(|| {
-            case_node
-                .conditions()
-                .iter()
-                .last()
-                .and_then(|branch| branch.as_when_node())
-                .and_then(|branch| branch.statements())
-        });
+        let statements = case_node
+            .else_clause()
+            .and_then(|branch| branch.statements());
         return statements
             .is_some_and(|statements| memoized_only_statement(&statements.as_node(), candidate));
     }
     if let Some(begin) = body.as_begin_node() {
+        if begin.rescue_clause().is_some()
+            || begin.else_clause().is_some()
+            || begin.ensure_clause().is_some()
+        {
+            return false;
+        }
         return begin
             .statements()
             .is_some_and(|statements| memoized_final_expression(&statements.as_node(), candidate));
