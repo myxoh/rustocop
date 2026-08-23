@@ -21,13 +21,16 @@ fn useless_method_definition(node: &ruby_prism::DefNode<'_>, context: &mut CopCo
             prefix,
             "public" | "private" | "protected" | "module_function"
         )
+        && !prefix.ends_with('{')
     {
         return;
     }
     let Some(body) = node.body().and_then(single_expression) else {
         return;
     };
-    let forwarding = body.as_forwarding_super_node().is_some();
+    let forwarding = body
+        .as_forwarding_super_node()
+        .is_some_and(|super_node| super_node.block().is_none());
     if forwarding
         && node.parameters().is_some_and(|parameters| {
             context
@@ -40,6 +43,9 @@ fn useless_method_definition(node: &ruby_prism::DefNode<'_>, context: &mut CopCo
         return;
     }
     let explicit = body.as_super_node().is_some_and(|super_node| {
+        if super_node.block().is_some() {
+            return false;
+        }
         let parameters = node.parameters().map(|parameters| {
             context
                 .source_file()
