@@ -900,9 +900,14 @@ impl Cop for ElseAlignment {
                     .iter()
                     .rev()
                     .find_map(|ancestor| {
-                        ancestor
-                            .as_call_node()
-                            .map(|call| call.location())
+                        let assignment = ancestor.as_local_variable_write_node().is_some()
+                            || ancestor.as_instance_variable_write_node().is_some()
+                            || ancestor.as_class_variable_write_node().is_some()
+                            || ancestor.as_global_variable_write_node().is_some()
+                            || ancestor.as_constant_write_node().is_some();
+                        assignment
+                            .then(|| ancestor.location())
+                            .or_else(|| ancestor.as_call_node().map(|call| call.location()))
                             .or_else(|| ancestor.as_def_node().map(|def| def.def_keyword_loc()))
                     })
                     .unwrap_or_else(|| rescue.keyword_loc())
