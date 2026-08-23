@@ -19,7 +19,12 @@ define_node_cop!(CharacterLiteral => "Style/CharacterLiteral" => as_string_node 
 fn character_literal(string: &ruby_prism::StringNode<'_>, context: &mut CopContext<'_, '_>) {
     let location = string.location();
     let text = context.source_file().at(&location);
-    if !text.starts_with('?') || !(2..=3).contains(&text.len()) {
+    if string
+        .opening_loc()
+        .is_none_or(|opening| context.source_file().at(&opening) != "?")
+        || !text.starts_with('?')
+        || !(2..=3).contains(&text.len())
+    {
         return;
     }
     let content = &text[1..];
