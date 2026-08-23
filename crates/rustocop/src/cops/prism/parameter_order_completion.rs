@@ -3,36 +3,109 @@ use super::*;
 
 define_cops! {
     KeywordParametersOrder => "Style/KeywordParametersOrder" => any_node(keyword_parameters_order),
-    ItAssignment => "Style/ItAssignment" => source(it_assignment),
+    ItAssignment => "Style/ItAssignment" => any_node(it_assignment),
 }
 
-fn it_assignment(context: &mut CopContext<'_, '_>) {
-    for (offset, line) in context.source_file().lines() {
-        let signature = line.trim_start().starts_with("def ");
-        for (at, _) in line.match_indices("it") {
-            let before = line[..at].bytes().next_back();
-            let after = line[at + 2..].bytes().next();
-            if before.is_some_and(|byte| {
-                byte.is_ascii_alphanumeric() || matches!(byte, b'_' | b'@' | b'$' | b'.')
-            }) || after.is_some_and(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
-            {
-                continue;
-            }
-            let tail = line[at + 2..].trim_start();
-            if signature && line[..at].trim() == "def" {
-                continue;
-            }
-            let assignment = tail.starts_with('=') && !tail.starts_with("==");
-            let parameter = signature
-                && (tail.is_empty()
-                    || tail.starts_with([')', ',', ':', '='])
-                    || tail.starts_with(" ="));
-            if assignment || parameter {
-                context.report(
-                    "`it` is the default block parameter; consider another name.",
-                    offset + at..offset + at + 2,
-                );
-            }
+fn it_assignment(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
+    let candidate = if let Some(write) = node.as_local_variable_write_node() {
+        Some((write.name(), write.name_loc()))
+    } else if let Some(target) = node.as_local_variable_target_node() {
+        Some((target.name(), target.location()))
+    } else if let Some(write) = node.as_local_variable_and_write_node() {
+        Some((write.name(), write.name_loc()))
+    } else if let Some(write) = node.as_local_variable_or_write_node() {
+        Some((write.name(), write.name_loc()))
+    } else if let Some(write) = node.as_local_variable_operator_write_node() {
+        Some((write.name(), write.name_loc()))
+    } else {
+        None
+    };
+    if let Some((name, location)) = candidate {
+        report_it_name(name.as_slice(), location, context);
+    }
+
+    let parameters = if let Some(definition) = node.as_def_node() {
+        definition.parameters()
+    } else if let Some(block) = node.as_block_node() {
+        block
+            .parameters()
+            .and_then(|parameters| parameters.as_block_parameters_node())
+            .and_then(|parameters| parameters.parameters())
+    } else if let Some(lambda) = node.as_lambda_node() {
+        lambda
+            .parameters()
+            .and_then(|parameters| parameters.as_block_parameters_node())
+            .and_then(|parameters| parameters.parameters())
+    } else {
+        None
+    };
+    if let Some(parameters) = parameters {
+        report_it_parameters(&parameters, context);
+    }
+}
+
+fn report_it_name(
+    name: &[u8],
+    location: ruby_prism::Location<'_>,
+    context: &mut CopContext<'_, '_>,
+) {
+    if name != b"it" {
+        return;
+    }
+    let mut end = location.end_offset();
+    if context.source().as_bytes().get(end.saturating_sub(1)) == Some(&b':') {
+        end -= 1;
+    }
+    context.report(
+        "`it` is the default block parameter; consider another name.",
+        location.start_offset()..end,
+    );
+}
+
+fn report_it_parameters(
+    parameters: &ruby_prism::ParametersNode<'_>,
+    context: &mut CopContext<'_, '_>,
+) {
+    for parameter in parameters
+        .requireds()
+        .iter()
+        .chain(parameters.posts().iter())
+    {
+        if let Some(parameter) = parameter.as_required_parameter_node() {
+            report_it_name(parameter.name().as_slice(), parameter.location(), context);
+        }
+    }
+    for parameter in parameters.optionals().iter() {
+        if let Some(parameter) = parameter.as_optional_parameter_node() {
+            report_it_name(parameter.name().as_slice(), parameter.name_loc(), context);
+        }
+    }
+    if let Some(parameter) = parameters
+        .rest()
+        .and_then(|parameter| parameter.as_rest_parameter_node())
+    {
+        if let (Some(name), Some(location)) = (parameter.name(), parameter.name_loc()) {
+            report_it_name(name.as_slice(), location, context);
+        }
+    }
+    for parameter in parameters.keywords().iter() {
+        if let Some(parameter) = parameter.as_required_keyword_parameter_node() {
+            report_it_name(parameter.name().as_slice(), parameter.name_loc(), context);
+        } else if let Some(parameter) = parameter.as_optional_keyword_parameter_node() {
+            report_it_name(parameter.name().as_slice(), parameter.name_loc(), context);
+        }
+    }
+    if let Some(parameter) = parameters
+        .keyword_rest()
+        .and_then(|parameter| parameter.as_keyword_rest_parameter_node())
+    {
+        if let (Some(name), Some(location)) = (parameter.name(), parameter.name_loc()) {
+            report_it_name(name.as_slice(), location, context);
+        }
+    }
+    if let Some(parameter) = parameters.block() {
+        if let (Some(name), Some(location)) = (parameter.name(), parameter.name_loc()) {
+            report_it_name(name.as_slice(), location, context);
         }
     }
 }
