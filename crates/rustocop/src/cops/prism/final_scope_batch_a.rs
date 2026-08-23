@@ -59,20 +59,12 @@ fn shadowed_exception(node: &ruby_prism::RescueNode<'_>, context: &mut CopContex
             .iter()
             .any(|other| exception_shadows(exception, other) || exception_shadows(other, exception))
     });
-    let mut shadows_later_group = false;
-    let mut subsequent = node.subsequent();
-    while let Some(later) = subsequent {
-        let later_names = rescued_exception_names(&later, context.source_file());
-        if current.iter().any(|exception| {
-            later_names
-                .iter()
-                .any(|later_exception| exception_shadows(exception, later_exception))
-        }) {
-            shadows_later_group = true;
-            break;
-        }
-        subsequent = later.subsequent();
-    }
+    let shadows_later_group = node.subsequent().is_some_and(|later| {
+        rescue_groups_unsorted(
+            &current,
+            &rescued_exception_names(&later, context.source_file()),
+        )
+    });
     if !shadows_within_group && !shadows_later_group {
         return;
     }
@@ -94,7 +86,8 @@ fn shadowed_exception(node: &ruby_prism::RescueNode<'_>, context: &mut CopContex
 }
 
 fn rescued_exception_names(node: &ruby_prism::RescueNode<'_>, file: SourceFile<'_>) -> Vec<String> {
-    node.exceptions()
+    let names = node
+        .exceptions()
         .iter()
         .filter_map(|exception| {
             if exception.as_splat_node().is_some() {
@@ -107,18 +100,23 @@ fn rescued_exception_names(node: &ruby_prism::RescueNode<'_>, file: SourceFile<'
             }
             Some(file.node(&exception).trim_start_matches("::").to_string())
         })
-        .collect()
+        .collect::<Vec<_>>();
+    if names.is_empty() {
+        vec!["StandardError".to_string()]
+    } else {
+        names
+    }
 }
 
 fn exception_shadows(ancestor: &str, descendant: &str) -> bool {
     if ancestor == descendant && ancestor != "*" {
         return true;
     }
-    let descendant = descendant.rsplit("::").next().unwrap_or(descendant);
-    match ancestor.rsplit("::").next().unwrap_or(ancestor) {
+    let descendant_base = descendant.rsplit("::").next().unwrap_or(descendant);
+    match ancestor {
         "Exception" => true,
         "StandardError" => matches!(
-            descendant,
+            descendant_base,
             "StandardError"
                 | "ArgumentError"
                 | "EncodingError"
@@ -140,16 +138,42 @@ fn exception_shadows(ancestor: &str, descendant: &str) -> bool {
                 | "TypeError"
                 | "ZeroDivisionError"
         ),
-        "NameError" => descendant == "NoMethodError",
-        "IndexError" => matches!(descendant, "KeyError" | "StopIteration"),
-        "RangeError" => descendant == "FloatDomainError",
+        "NameError" => descendant_base == "NoMethodError",
+        "IndexError" => matches!(descendant_base, "KeyError" | "StopIteration"),
+        "RangeError" => descendant_base == "FloatDomainError",
         "ScriptError" => matches!(
-            descendant,
+            descendant_base,
             "LoadError" | "NotImplementedError" | "SyntaxError"
         ),
-        "SignalException" => descendant == "Interrupt",
+        "SignalException" => descendant_base == "Interrupt",
+        "EncodingError" => matches!(
+            descendant,
+            "Encoding::CompatibilityError"
+                | "Encoding::ConverterNotFoundError"
+                | "Encoding::InvalidByteSequenceError"
+                | "Encoding::UndefinedConversionError"
+        ),
+        "ArgumentError" => descendant == "IPAddr::InvalidAddressError",
+        "RuntimeError" => descendant == "Timeout::Error",
+        "OpenSSL::PKey::PKeyError" => descendant == "OpenSSL::PKey::RSAError",
         _ => false,
     }
+}
+
+fn rescue_groups_unsorted(current: &[String], later: &[String]) -> bool {
+    if current.iter().any(|exception| exception == "Exception") {
+        return true;
+    }
+    if later.iter().any(|exception| exception == "Exception") {
+        return false;
+    }
+    for (current, later) in current.iter().zip(later) {
+        if current == later {
+            continue;
+        }
+        return exception_shadows(current, later);
+    }
+    false
 }
 
 fn constant_in_block(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
