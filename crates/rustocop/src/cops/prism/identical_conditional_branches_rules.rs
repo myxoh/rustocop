@@ -100,10 +100,21 @@ impl IdenticalConditionalBranchesRule<'_, '_, '_> {
 fn assignment_conflict(node: &Node<'_>, condition: Option<&str>, file: SourceFile<'_>, head: bool) -> bool {
     let Some(condition) = condition else { return false };
     let source = file.node(node);
-    let Some((operator, left)) = [" ||= ", " &&= ", " += ", " -= ", " = "].iter().find_map(|operator| source.split_once(operator).map(|(left, _)| (*operator, left))) else { return false };
-    if !head && operator == " = " { return false; }
+    let Some((operator, left, right)) = [" ||= ", " &&= ", " += ", " -= ", " = "].iter().find_map(|operator| source.split_once(operator).map(|(left, right)| (*operator, left, right))) else { return false };
+    let condition_mentions = |name: &str| {
+        condition.split(|character: char| !character.is_ascii_alphanumeric() && character != '_' && character != '@').any(|word| word == name)
+    };
+    if operator == " = " {
+        let first_child = right.trim();
+        if first_child.bytes().all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'_' | b'@'))
+            && condition_mentions(first_child)
+        {
+            return true;
+        }
+        if !head { return false; }
+    }
     let name = left.trim().split(['[', '.']).next().unwrap_or(left.trim());
-    condition.split(|character: char| !character.is_ascii_alphanumeric() && character != '_' && character != '@').any(|word| word == name)
+    condition_mentions(name)
 }
 
 fn statement_nodes(statements: Option<StatementsNode<'_>>) -> Vec<Node<'_>> {
