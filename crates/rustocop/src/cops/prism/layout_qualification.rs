@@ -929,6 +929,8 @@ fn first_hash_element_indentation(
                 let edits = hash_pair_indentation_edits(context.source(), pair, actual, expected);
                 context.replace_many(message, pair.start..pair.end, edits);
             }
+        } else {
+            return;
         }
     }
 
@@ -1043,6 +1045,9 @@ fn enclosing_call_parenthesis(
     }
     let file = context.source_file();
     for ancestor in context.ancestors().iter().rev() {
+        if ancestor.as_block_node().is_some() || ancestor.as_lambda_node().is_some() {
+            return None;
+        }
         if let Some(call) = ancestor.as_call_node() {
             let opening = call.opening_loc()?;
             return (opening.as_slice() == b"("
