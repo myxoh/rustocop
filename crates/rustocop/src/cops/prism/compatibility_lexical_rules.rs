@@ -6,7 +6,7 @@ define_cops!(
     DepartmentName => "Migration/DepartmentName" => source(department_name),
     BarePercentLiterals => "Style/BarePercentLiterals" => any_node(bare_percent_literals),
     DocumentDynamicEvalDefinition => "Style/DocumentDynamicEvalDefinition" => call(document_dynamic_eval_definition),
-    ModuleFunction => "Style/ModuleFunction" => source(module_function),
+    ModuleFunction => "Style/ModuleFunction" => node(as_module_node, module_function),
     SingleLineBlockParams => "Style/SingleLineBlockParams" => node(as_block_node, single_line_block_params),
 );
 
@@ -176,39 +176,54 @@ fn normalize_documentation(source: &str) -> String {
         .join(" ")
 }
 
-fn module_function(context: &mut CopContext<'_, '_>) {
-    let source = context.source();
-    if !source.trim_start().starts_with("module ") {
+fn module_function(
+    node: &ruby_prism::ModuleNode<'_>,
+    context: &mut CopContext<'_, '_>,
+) {
+    let Some(statements) = node.body().and_then(|body| body.as_statements_node()) else {
+        return;
+    };
+    let children = statements.body().iter().collect::<Vec<_>>();
+    if children.len() < 2 {
         return;
     }
+    let calls = children
+        .iter()
+        .filter_map(Node::as_call_node)
+        .filter(|call| call.receiver().is_none())
+        .collect::<Vec<_>>();
     let style = context
         .policy()
         .enforced_style("module_function")
         .to_string();
-    let has_private = source.lines().any(|line| {
-        let line = line.trim();
-        line == "private" || line.starts_with("private ")
-    });
-    for (line_start, line) in context.source_file().lines() {
-        let indentation = line.len() - line.trim_start().len();
-        let token = line.trim();
-        let range = line_start + indentation..line_start + indentation + token.len();
-        match (style.as_str(), token) {
-            ("module_function", "extend self") if !has_private => context.replace(
+    if style == "module_function"
+        && calls.iter().any(|call| call_name(call) == b"private")
+    {
+        return;
+    }
+    for call in calls {
+        let extend_self = call_name(&call) == b"extend"
+            && first_argument(&call).is_some_and(|argument| argument.as_self_node().is_some());
+        let module_function = call_name(&call) == b"module_function"
+            && argument_count(&call) == 0;
+        let location = call.location();
+        match (style.as_str(), extend_self, module_function) {
+            ("module_function", true, _) => context.replace(
                 "Use `module_function` instead of `extend self`.",
-                range.clone(),
-                range,
+                &location,
+                &location,
                 "module_function",
             ),
-            ("extend_self", "module_function") => context.replace(
+            ("extend_self", _, true) => context.replace(
                 "Use `extend self` instead of `module_function`.",
-                range.clone(),
-                range,
+                &location,
+                &location,
                 "extend self",
             ),
-            ("forbidden", "extend self" | "module_function") => {
-                context.report("Do not use `module_function` or `extend self`.", range)
-            }
+            ("forbidden", true, _) | ("forbidden", _, true) => context.report(
+                "Do not use `module_function` or `extend self`.",
+                location,
+            ),
             _ => {}
         }
     }
