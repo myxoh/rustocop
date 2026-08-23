@@ -443,17 +443,22 @@ fn string_concatenation(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     };
     let between =
         &context.source()[receiver.location().end_offset()..argument.location().start_offset()];
-    if string_part(&receiver) && string_part(&argument) && between.contains('\n') {
+    if receiver.as_string_node().is_some()
+        && argument.as_string_node().is_some()
+        && between.contains('\n')
+    {
         return;
     }
 
     let mut parts = Vec::new();
     collect_concatenation_parts(node.as_node(), &mut parts);
-    if !parts.iter().any(string_part) {
+    if !parts.iter().any(|part| part.as_string_node().is_some()) {
         return;
     }
     if context.config_value("Mode").unwrap_or("aggressive") == "conservative"
-        && !parts.first().is_some_and(|part| string_part(part))
+        && !parts
+            .first()
+            .is_some_and(|part| part.as_string_node().is_some())
     {
         return;
     }
