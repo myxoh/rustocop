@@ -1818,6 +1818,7 @@ fn operator_spacing(context: &mut CopContext<'_, '_>) {
     let comment_ranges = context.source_file().comment_ranges();
     let unary_operator_offsets = unary_operator_offsets(&source);
     let embedded_code_ranges = embedded_code_ranges(&source);
+    let hash_pair_starts = hash_pair_starts(&source);
 
     for (line_offset, line) in context.source_file().lines().collect::<Vec<_>>() {
         if line.trim() == "__END__" {
@@ -2027,6 +2028,7 @@ fn operator_spacing(context: &mut CopContext<'_, '_>) {
                         left_start,
                         right_end,
                         operator,
+                        hash_pair_starts.get(&(line_offset + index)).copied(),
                     )
                 {
                     index = end;
@@ -2186,6 +2188,26 @@ fn embedded_code_ranges(source: &str) -> Vec<std::ops::Range<usize>> {
     let mut embedded = EmbeddedCode::default();
     embedded.visit(&parsed.node());
     embedded.0
+}
+
+fn hash_pair_starts(source: &str) -> std::collections::HashMap<usize, usize> {
+    #[derive(Default)]
+    struct HashPairs(std::collections::HashMap<usize, usize>);
+
+    impl<'pr> ruby_prism::Visit<'pr> for HashPairs {
+        fn visit_assoc_node(&mut self, node: &ruby_prism::AssocNode<'pr>) {
+            if let Some(operator) = node.operator_loc() {
+                self.0
+                    .insert(operator.start_offset(), node.location().start_offset());
+            }
+            ruby_prism::visit_assoc_node(self, node);
+        }
+    }
+
+    let parsed = ruby_prism::parse(source.as_bytes());
+    let mut pairs = HashPairs::default();
+    pairs.visit(&parsed.node());
+    pairs.0
 }
 
 fn ruby_comment_start(line: &str) -> Option<usize> {
@@ -2357,8 +2379,7 @@ fn operator_is_non_binary(source: &str, start: usize, end: usize, operator: &str
                         .split_ascii_whitespace()
                         .next_back()
                         .is_some_and(|word| word == "do")
-            })
-            || !source.contains("in ") && source[..start].matches('|').count() % 2 == 1)
+            }))
     {
         return true;
     }
@@ -2406,6 +2427,7 @@ fn operator_alignment_is_allowed(
     whitespace_start: usize,
     rhs_start: usize,
     operator: &str,
+    operand_alignment_start: Option<usize>,
 ) -> bool {
     let current_line_end = source[line_offset..]
         .find('\n')
@@ -2424,9 +2446,10 @@ fn operator_alignment_is_allowed(
                 .find(|layout| current_line_source[layout.0..layout.1].ends_with('='))
         })
         .flatten();
-    let plain_assignment = operator == "="
-        && !(first_equal.is_some_and(|layout| layout.0 == operator_start)
-            && (lhs.contains('.') || lhs.contains(']')));
+    let plain_assignment = matches!(operator, "=" | "||=" | "&&=")
+        && (operator != "="
+            || !(first_equal.is_some_and(|layout| layout.0 == operator_start)
+                && (lhs.contains('.') || lhs.contains(']'))));
 
     let leading_aligned = !leading_excess
         || if plain_assignment {
@@ -2440,8 +2463,22 @@ fn operator_alignment_is_allowed(
                 operator,
             )
         };
+    let (alignment_column, alignment_start) = operand_alignment_start.map_or(
+        (rhs_start_column, rhs_start),
+        |absolute| {
+            (
+                current_line_source[..absolute - line_offset].chars().count(),
+                absolute - line_offset,
+            )
+        },
+    );
     let trailing_aligned = !trailing_excess
-        || generic_rhs_alignment_is_allowed(source, line_offset, rhs_start_column, rhs_start);
+        || generic_rhs_alignment_is_allowed(
+            source,
+            line_offset,
+            alignment_column,
+            alignment_start,
+        );
 
     leading_aligned && trailing_aligned
 }
@@ -2542,11 +2579,8 @@ fn aligned_word_at_column(
     if boundary {
         return true;
     }
-    let word = current[current_rhs_start..]
-        .chars()
-        .take_while(|character| character.is_alphanumeric() || *character == '_')
-        .collect::<String>();
-    !word.is_empty() && candidate[candidate_at..].starts_with(&word)
+    let operand = current[current_rhs_start..].trim_end();
+    !operand.is_empty() && candidate[candidate_at..].starts_with(operand)
 }
 
 fn assignment_leading_alignment_is_allowed(
