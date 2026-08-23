@@ -771,7 +771,8 @@ impl Cop for Void {
 }
 
 fn void_setter_name(name: &[u8]) -> bool {
-    name.ends_with(b"=") && !matches!(name, b"==" | b"===" | b"!=" | b"<=" | b">=")
+    name.ends_with(b"=")
+        && !matches!(name, b"==" | b"===" | b"!=" | b"<=" | b">=" | b"[]=")
 }
 
 fn check_void_expression(
@@ -792,25 +793,11 @@ fn check_void_expression(
         if let Some(statements) = conditional.statements() {
             check_void_branch_tail(&statements, ancestors, source, context, cop);
         }
-        if let Some(subsequent) = conditional.subsequent() {
-            if let Some(else_node) = subsequent.as_else_node() {
-                if let Some(statements) = else_node.statements() {
-                    check_void_branch_tail(&statements, ancestors, source, context, cop);
-                }
-            } else {
-                check_void_expression(&subsequent, ancestors, source, context, cop, false);
-            }
-        }
         return;
     }
     if let Some(conditional) = node.as_unless_node() {
         if let Some(statements) = conditional.statements() {
             check_void_branch_tail(&statements, ancestors, source, context, cop);
-        }
-        if let Some(else_node) = conditional.else_clause() {
-            if let Some(statements) = else_node.statements() {
-                check_void_branch_tail(&statements, ancestors, source, context, cop);
-            }
         }
         return;
     }
@@ -1047,8 +1034,9 @@ fn check_void_branch_tail(
     context: &mut Context,
     cop: &'static str,
 ) {
-    if let Some(last) = statements.body().last() {
-        check_void_expression(&last, ancestors, source, context, cop, false);
+    let body = statements.body().iter().collect::<Vec<_>>();
+    if body.len() == 1 {
+        check_void_expression(&body[0], ancestors, source, context, cop, false);
     }
 }
 
