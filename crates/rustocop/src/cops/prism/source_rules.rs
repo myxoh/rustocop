@@ -87,6 +87,7 @@ fn camel_case(source: &str, context: &mut Reporter<'_>) {
     let file = SourceFile::new(source);
     let class_offsets = file.code_offsets("class");
     let module_offsets = file.code_offsets("module");
+    let heredocs = file.heredoc_ranges();
     for (offset, line) in source_lines(source) {
         let trimmed = line.trim_start();
         let keyword = if trimmed.starts_with("class ") {
@@ -102,7 +103,12 @@ fn camel_case(source: &str, context: &mut Reporter<'_>) {
         } else {
             &module_offsets
         };
-        if lexical.binary_search(&(offset + leading)).is_err() {
+        let keyword_offset = offset + leading;
+        if lexical.binary_search(&keyword_offset).is_err()
+            || heredocs
+                .iter()
+                .any(|heredoc| heredoc.start <= keyword_offset && keyword_offset < heredoc.end)
+        {
             continue;
         }
         let name_start = leading + keyword.len();
