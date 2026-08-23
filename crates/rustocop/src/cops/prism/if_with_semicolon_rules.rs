@@ -8,7 +8,16 @@ define_cops! {
 
 impl IfWithSemicolonRule<'_, '_, '_> {
     fn on_if(&mut self, node: &IfNode<'_>) {
-        let Some(beginning) = semicolon_after(node.predicate().location().end_offset(), node.location().end_offset(), self.source()) else { return };
+        let boundary = node
+            .statements()
+            .map(|body| body.location().start_offset())
+            .or_else(|| node.subsequent().map(|branch| branch.location().start_offset()))
+            .unwrap_or_else(|| node.end_keyword_loc().map_or(node.location().end_offset(), |end| end.start_offset()));
+        let Some(beginning) = semicolon_between(
+            node.predicate().location().end_offset(),
+            boundary,
+            self.source(),
+        ) else { return };
         return_if!(self.ancestors().iter().any(|parent| parent.as_if_node().is_some() || parent.as_unless_node().is_some()));
         let condition = self.source_file().node(&node.predicate());
         let branches = if_parts(node, self.source_file());
@@ -17,7 +26,16 @@ impl IfWithSemicolonRule<'_, '_, '_> {
     }
 
     fn on_unless(&mut self, node: &UnlessNode<'_>) {
-        let Some(beginning) = semicolon_after(node.predicate().location().end_offset(), node.location().end_offset(), self.source()) else { return };
+        let boundary = node
+            .statements()
+            .map(|body| body.location().start_offset())
+            .or_else(|| node.else_clause().map(|branch| branch.location().start_offset()))
+            .unwrap_or_else(|| node.end_keyword_loc().map_or(node.location().end_offset(), |end| end.start_offset()));
+        let Some(beginning) = semicolon_between(
+            node.predicate().location().end_offset(),
+            boundary,
+            self.source(),
+        ) else { return };
         return_if!(self.ancestors().iter().any(|parent| parent.as_if_node().is_some() || parent.as_unless_node().is_some()));
         let condition = self.source_file().node(&node.predicate());
         let mut branches = unless_parts(node, self.source_file());
@@ -44,7 +62,7 @@ impl IfWithSemicolonRule<'_, '_, '_> {
     }
 }
 
-fn semicolon_after(start: usize, end: usize, source: &str) -> Option<std::ops::Range<usize>> {
+fn semicolon_between(start: usize, end: usize, source: &str) -> Option<std::ops::Range<usize>> {
     let relative = source.get(start..end)?.find(';')?;
     let at = start + relative;
     Some(at..at + 1)
