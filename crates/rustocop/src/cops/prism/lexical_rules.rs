@@ -154,29 +154,15 @@ fn require_range_parentheses(context: &mut CopContext<'_, '_>) {
 fn ascii_identifiers(context: &mut CopContext<'_, '_>) {
     let source = context.source();
     let ascii_constants = context.config_bool("AsciiConstants", true);
-    let mut in_quote = None;
-    let mut comment = false;
+    let literal_ranges = context.source_file().literal_ranges();
+    let comment_ranges = context.source_file().comment_ranges();
     let mut reported_through = 0;
     for (offset, character) in source.char_indices() {
-        if character == '\n' {
-            comment = false;
-            continue;
-        }
-        if comment {
-            continue;
-        }
-        if let Some(quote) = in_quote {
-            if character == quote {
-                in_quote = None;
-            }
-            continue;
-        }
-        if character == '#' {
-            comment = true;
-            continue;
-        }
-        if matches!(character, '\'' | '"' | '`') {
-            in_quote = Some(character);
+        if literal_ranges
+            .iter()
+            .chain(comment_ranges.iter())
+            .any(|range| range.start <= offset && offset < range.end)
+        {
             continue;
         }
         if offset < reported_through
