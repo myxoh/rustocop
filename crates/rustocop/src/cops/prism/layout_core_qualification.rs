@@ -160,9 +160,7 @@ fn empty_lines_around_access_modifier(node: &CallNode<'_>, context: &mut CopCont
     {
         return;
     }
-    if context.parent().is_none_or(|parent| {
-        parent.as_statements_node().is_none() && parent.as_program_node().is_none()
-    }) || context.ancestors().iter().rev().find(|ancestor| {
+    if context.ancestors().iter().rev().find(|ancestor| {
         ancestor.as_def_node().is_some()
             || ancestor.as_class_node().is_some()
             || ancestor.as_module_node().is_some()
@@ -171,6 +169,19 @@ fn empty_lines_around_access_modifier(node: &CallNode<'_>, context: &mut CopCont
     }).is_some_and(|ancestor| ancestor.as_def_node().is_some())
     {
         return;
+    }
+    for ancestor in context.ancestors().iter().rev() {
+        if ancestor.as_def_node().is_some()
+            || ancestor.as_class_node().is_some()
+            || ancestor.as_module_node().is_some()
+            || ancestor.as_singleton_class_node().is_some()
+            || ancestor.as_block_node().is_some()
+        {
+            break;
+        }
+        if ancestor.as_call_node().is_some() {
+            return;
+        }
     }
     let source = context.source();
     let location = node.location();
