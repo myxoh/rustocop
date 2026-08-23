@@ -1021,7 +1021,24 @@ impl Cop for AccessModifierIndentation {
         if file.same_line(container.location().start_offset(), location.start_offset()) {
             return;
         }
-        let base = file.indentation(container.location().start_offset()).len();
+        let closing_start = container
+            .as_class_node()
+            .map(|node| node.end_keyword_loc())
+            .or_else(|| {
+                container
+                    .as_module_node()
+                    .map(|node| node.end_keyword_loc())
+            })
+            .or_else(|| {
+                container
+                    .as_singleton_class_node()
+                    .map(|node| node.end_keyword_loc())
+            })
+            .or_else(|| container.as_block_node().map(|node| node.closing_loc()))
+            .map_or(container.location().start_offset(), |closing| {
+                closing.start_offset()
+            });
+        let base = file.indentation(closing_start).len();
         let mut reporter = context.cop_context(self.name(), source, ancestors);
         let style = reporter.policy().enforced_style("indent").to_string();
         let configured_width = reporter
