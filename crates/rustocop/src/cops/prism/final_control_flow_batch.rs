@@ -956,7 +956,12 @@ fn duplicate_if_branches(node: &ruby_prism::IfNode<'_>, source: &str) -> Vec<Ast
                     let mut nodes = statements.body().iter().collect::<Vec<_>>();
                     (nodes.len() == 1).then(|| nodes.pop().expect("one statement"))
                 });
-            if let Some(elsif) = only.as_ref().and_then(|child| child.as_if_node()) {
+            let elsif = only.as_ref().and_then(|child| child.as_if_node()).filter(|child| {
+                child
+                    .if_keyword_loc()
+                    .is_some_and(|keyword| keyword.as_slice() == b"elsif")
+            });
+            if let Some(elsif) = elsif {
                 let start = elsif
                     .if_keyword_loc()
                     .map_or_else(|| elsif.location().start_offset(), |keyword| keyword.start_offset());
@@ -1104,6 +1109,7 @@ fn duplicate_branch_line(line: &str) -> String {
         if byte == b'#'
             && quote.is_none()
             && (index == 0 || line.as_bytes()[index - 1].is_ascii_whitespace())
+            && line.as_bytes().get(index + 1) != Some(&b'{')
         {
             return line[..index].trim_end().to_string();
         }
