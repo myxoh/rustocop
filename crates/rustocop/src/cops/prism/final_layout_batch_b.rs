@@ -2096,12 +2096,7 @@ fn operator_is_non_binary(source: &str, start: usize, end: usize, operator: &str
     let predicate_suffix = source[..start]
         .chars()
         .next_back()
-        .is_some_and(|character| character.is_alphabetic() || character == '_')
-        && (after.is_empty()
-            || after.starts_with(['(', '.', '&', '|', '{', ')', ']', '}', ','])
-            || after == "do"
-            || after.starts_with("do ")
-            || after.starts_with("::"));
+        .is_some_and(|character| character.is_alphabetic() || character == '_');
     if operator == "?"
         && (predicate_suffix
             || after.starts_with([':', '?', '('])
@@ -2231,9 +2226,6 @@ fn operator_alignment_is_allowed(
 
 fn operator_layouts(line: &str) -> Vec<(usize, usize, usize, usize)> {
     let mut layouts = Vec::new();
-    if line.trim_start().starts_with(['\'', '"', '`']) {
-        return layouts;
-    }
     let code = &line[..ruby_comment_start(line).unwrap_or(line.len())];
     let mut index = 0;
     let mut quote = None;
