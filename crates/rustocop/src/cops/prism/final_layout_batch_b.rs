@@ -2043,6 +2043,11 @@ fn operator_is_non_binary(source: &str, start: usize, end: usize, operator: &str
     if operator == "&" && after.starts_with('.') {
         return true;
     }
+    if (operator == "-" && source[end..].starts_with('>'))
+        || (operator == ">" && source[..start].ends_with('-'))
+    {
+        return true;
+    }
     if operator == ":"
         && (!source[..start].contains('?')
             || before.ends_with(':')
@@ -2050,12 +2055,15 @@ fn operator_is_non_binary(source: &str, start: usize, end: usize, operator: &str
     {
         return true;
     }
+    let predicate_suffix = source[..start]
+        .chars()
+        .next_back()
+        .is_some_and(|character| character.is_alphabetic() || character == '_')
+        && (after.is_empty()
+            || after.starts_with(['(', '.', '&', '|', ')', ']', '}', ','])
+            || after.starts_with("::"));
     if operator == "?"
-        && (source[..start]
-            .chars()
-            .next_back()
-            .is_some_and(|character| character.is_alphanumeric() || character == '_')
-            || after.is_empty()
+        && (predicate_suffix
             || after.starts_with([':', '?', '('])
             || source
                 .as_bytes()
@@ -2082,6 +2090,10 @@ fn operator_is_non_binary(source: &str, start: usize, end: usize, operator: &str
     }
     if operator == "|"
         && (before.ends_with('{')
+            || before
+                .split_ascii_whitespace()
+                .next_back()
+                .is_some_and(|word| word == "do")
             || after.starts_with('}')
             || !source.contains("in ") && source[..start].matches('|').count() % 2 == 1)
     {

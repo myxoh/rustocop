@@ -12,6 +12,10 @@ MARKDOWN
 
 table = "key？"
 
+values.each do |value|
+  ->(item) { item || value }
+end
+
 instance = Object.new
 def (instance.foo).kw(a:)
   a
