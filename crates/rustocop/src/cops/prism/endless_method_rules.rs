@@ -17,6 +17,9 @@ fn endless_method(context: &mut CopContext<'_, '_>) {
         let Some(def_column) = line.find("def ") else {
             continue;
         };
+        if line[..def_column].trim_start().starts_with('#') {
+            continue;
+        }
         let definition = &line[def_column..];
         if let Some(equal) = endless_method_equal(definition) {
             if !matches!(
@@ -116,7 +119,24 @@ fn endless_method(context: &mut CopContext<'_, '_>) {
 }
 
 fn endless_method_equal(definition: &str) -> Option<usize> {
-    definition.find(" = ").map(|at| at + 1)
+    definition.match_indices(" = ").find_map(|(at, _)| {
+        let signature = &definition[..at];
+        let mut parentheses = 0_isize;
+        for byte in signature.bytes() {
+            match byte {
+                b'(' => parentheses += 1,
+                b')' => parentheses -= 1,
+                _ => {}
+            }
+        }
+        if parentheses != 0 || signature.trim_end().ends_with(',') {
+            return None;
+        }
+        if !signature.contains('(') && signature.split_whitespace().count() != 2 {
+            return None;
+        }
+        Some(at + 1)
+    })
 }
 
 fn endless_method_expression_end(lines: &[(usize, &str)], index: usize) -> usize {
