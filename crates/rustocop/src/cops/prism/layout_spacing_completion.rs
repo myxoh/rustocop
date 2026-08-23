@@ -2,7 +2,7 @@ use super::*;
 
 define_cops! {
     AssignmentIndentation => "Layout/AssignmentIndentation" => source(assignment_indentation),
-    BeginEndAlignment => "Layout/BeginEndAlignment" => source(begin_end_alignment),
+    BeginEndAlignment => "Layout/BeginEndAlignment" => node(as_begin_node, begin_end_alignment),
     EndOfLine => "Layout/EndOfLine" => source(end_of_line),
     FirstParameterIndentation => "Layout/FirstParameterIndentation" => source(first_parameter_indentation),
     SpaceBeforeBrackets => "Layout/SpaceBeforeBrackets" => call(space_before_brackets),
@@ -38,49 +38,62 @@ fn assignment_indentation(context: &mut CopContext<'_, '_>) {
     }
 }
 
-fn begin_end_alignment(context: &mut CopContext<'_, '_>) {
-    let lines = context.source_file().lines().collect::<Vec<_>>();
-    let mut stack = Vec::new();
-    for (line_number, (offset, line)) in lines.iter().enumerate() {
-        if let Some(begin_at) = line.find("begin") {
-            stack.push((line_number, *offset, begin_at, line.trim_end().to_string()));
-        }
-        if line.trim() != "end" {
-            continue;
-        }
-        let Some((begin_line, _, begin_column, begin_text)) = stack.pop() else {
-            continue;
-        };
-        let actual = line.len() - line.trim_start().len();
-        let style = context
-            .config_value("EnforcedStyleAlignWith")
-            .unwrap_or("begin");
-        let expected = if style == "start_of_line" {
-            0
-        } else {
-            begin_column
-        };
-        if actual == expected {
-            continue;
-        }
-        let start = offset + actual;
-        let reference = if style == "start_of_line" {
-            begin_text.trim().to_string()
-        } else {
-            "begin".to_string()
-        };
-        context.replace(
-            format!(
-                "`end` at {}, {} is not aligned with `{reference}` at {}, {expected}.",
-                line_number + 1,
-                actual,
-                begin_line + 1
-            ),
-            start..start + 3,
-            *offset..start,
-            " ".repeat(expected),
-        );
+fn begin_end_alignment(node: &ruby_prism::BeginNode<'_>, context: &mut CopContext<'_, '_>) {
+    let (Some(begin_keyword), Some(end_keyword)) =
+        (node.begin_keyword_loc(), node.end_keyword_loc())
+    else {
+        return;
+    };
+    let source = context.source();
+    let begin_line_start = source[..begin_keyword.start_offset()]
+        .rfind('\n')
+        .map_or(0, |offset| offset + 1);
+    let end_line_start = source[..end_keyword.start_offset()]
+        .rfind('\n')
+        .map_or(0, |offset| offset + 1);
+    if begin_line_start == end_line_start {
+        return;
     }
+    let begin_column = begin_keyword.start_offset() - begin_line_start;
+    let actual = end_keyword.start_offset() - end_line_start;
+    let style = context
+        .config_value("EnforcedStyleAlignWith")
+        .unwrap_or("begin");
+    let line = &source[begin_line_start
+        ..source[begin_line_start..]
+            .find('\n')
+            .map_or(source.len(), |offset| begin_line_start + offset)];
+    let expected = if style == "start_of_line" {
+        line.len() - line.trim_start().len()
+    } else {
+        begin_column
+    };
+    if actual == expected {
+        return;
+    }
+    let begin_line = source[..begin_keyword.start_offset()]
+        .bytes()
+        .filter(|byte| *byte == b'\n')
+        .count()
+        + 1;
+    let end_line = source[..end_keyword.start_offset()]
+        .bytes()
+        .filter(|byte| *byte == b'\n')
+        .count()
+        + 1;
+    let reference = if style == "start_of_line" {
+        line.trim().to_string()
+    } else {
+        "begin".to_string()
+    };
+    context.replace(
+        format!(
+            "`end` at {end_line}, {actual} is not aligned with `{reference}` at {begin_line}, {expected}."
+        ),
+        end_keyword.start_offset()..end_keyword.end_offset(),
+        end_line_start..end_keyword.start_offset(),
+        " ".repeat(expected),
+    );
 }
 
 fn end_of_line(context: &mut CopContext<'_, '_>) {
