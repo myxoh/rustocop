@@ -12,8 +12,21 @@ define_cops! {
 fn empty_comment(context: &mut CopContext<'_, '_>) {
     let lines = context.source_file().lines().collect::<Vec<_>>();
     let comments = context.source_file().comment_ranges();
+    let heredocs = context.source_file().heredoc_ranges();
     for (index, (offset, line)) in lines.iter().copied().enumerate() {
         let trimmed = line.trim_start();
+        let comment_at = comments
+            .iter()
+            .find(|comment| comment.start >= offset && comment.start <= offset + line.len())
+            .filter(|comment| {
+                !heredocs
+                    .iter()
+                    .any(|heredoc| heredoc.start <= comment.start && comment.start < heredoc.end)
+            })
+            .map(|comment| comment.start - offset);
+        let Some(comment_at) = comment_at else {
+            continue;
+        };
         if !context.config_bool("AllowBorderComment", true)
             && !trimmed.is_empty()
             && trimmed.bytes().all(|byte| byte == b'#')
@@ -31,10 +44,7 @@ fn empty_comment(context: &mut CopContext<'_, '_>) {
             );
             continue;
         }
-        let inline = comments
-            .iter()
-            .find(|comment| comment.start >= offset && comment.start <= offset + line.len())
-            .map(|comment| comment.start - offset)
+        let inline = Some(comment_at)
             .filter(|at| !line[..*at].trim().is_empty() && line[*at + 1..].trim().is_empty());
         if !matches!(trimmed.trim_end(), "#" | "# ") && inline.is_none() {
             continue;
