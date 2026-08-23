@@ -1814,13 +1814,24 @@ fn operator_spacing(context: &mut CopContext<'_, '_>) {
             .related_config_values("Layout/HashAlignment", "EnforcedHashRocketStyle")
             .iter()
             .any(|style| style == "table");
+    let heredoc_ranges = context.source_file().heredoc_ranges();
 
     for (line_offset, line) in context.source_file().lines().collect::<Vec<_>>() {
+        if heredoc_ranges
+            .iter()
+            .any(|range| range.start < line_offset && line_offset < range.end)
+        {
+            continue;
+        }
         let code_end = ruby_comment_start(line).unwrap_or(line.len());
         let code = &line[..code_end];
         let mut index = 0;
         let mut quote = None;
         while index < code.len() {
+            if !code.is_char_boundary(index) {
+                index += 1;
+                continue;
+            }
             let byte = code.as_bytes()[index];
             let character_width = code[index..]
                 .chars()
@@ -1871,7 +1882,12 @@ fn operator_spacing(context: &mut CopContext<'_, '_>) {
 
             let left_start = code[..index]
                 .rfind(|character: char| !character.is_ascii_whitespace())
-                .map_or(index, |at| at + 1);
+                .map_or(index, |at| {
+                    at + code[at..]
+                        .chars()
+                        .next()
+                        .map_or(1, char::len_utf8)
+                });
             let right_end = end
                 + code[end..]
                     .find(|character: char| !character.is_ascii_whitespace())
@@ -2011,6 +2027,9 @@ fn operator_is_non_binary(source: &str, start: usize, end: usize, operator: &str
         return true;
     }
     if before.ends_with("def") || before.ends_with("def self.") || before.ends_with('.') {
+        return true;
+    }
+    if operator == "<<" && source[end..].starts_with(['~', '-']) {
         return true;
     }
     if operator == "=" && source.trim_start().starts_with("def ") && before.contains('(') {
