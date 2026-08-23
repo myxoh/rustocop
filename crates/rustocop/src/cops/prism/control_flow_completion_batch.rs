@@ -102,17 +102,33 @@ struct MultilineCombinableLoop {
     closing_line_start: usize,
     end: usize,
     indent: usize,
+    multiline: bool,
 }
 
 fn report_multiline_combinable_loops(
     lines: &[(usize, &str)],
     context: &mut CopContext<'_, '_>,
 ) {
-    let loops = lines
+    let mut loops = lines
         .iter()
         .enumerate()
         .filter_map(|(index, _)| parse_multiline_combinable_loop(lines, index))
         .collect::<Vec<_>>();
+    loops.extend(lines.iter().filter_map(|(offset, line)| {
+        let parsed = parse_combinable_loop(*offset, line)?;
+        Some(MultilineCombinableLoop {
+            identity: parsed.identity.to_string(),
+            parameters: parsed.parameters.to_string(),
+            start: parsed.range.start,
+            body_start: parsed.range.start,
+            closing_line_start: parsed.range.end,
+            end: parsed.range.end,
+            indent: line.len() - line.trim_start().len(),
+            multiline: false,
+        })
+    }));
+    loops.sort_by_key(|candidate| (candidate.start, candidate.end));
+    loops.dedup_by_key(|candidate| (candidate.start, candidate.end));
     let source = context.source();
     let mut consumed = vec![false; loops.len()];
     for index in 0..loops.len() {
@@ -142,6 +158,9 @@ fn report_multiline_combinable_loops(
         if group.len() == 1 {
             continue;
         }
+        if !group.iter().any(|candidate| loops[*candidate].multiline) {
+            continue;
+        }
         for member in &group {
             consumed[*member] = true;
         }
@@ -149,7 +168,12 @@ fn report_multiline_combinable_loops(
         let same_parameters = group
             .iter()
             .all(|candidate| loops[*candidate].parameters == first.parameters);
-        let replacement = same_parameters.then(|| {
+        let replacement = same_parameters
+            .then(|| {
+                group
+                    .iter()
+                    .all(|candidate| loops[*candidate].multiline)
+                    .then(|| {
             let last = &loops[*group.last().expect("loop group")];
             let mut combined = source[first.start..first.closing_line_start].to_string();
             for candidate in group.iter().skip(1).map(|candidate| &loops[*candidate]) {
@@ -157,7 +181,9 @@ fn report_multiline_combinable_loops(
             }
             combined.push_str(&source[first.closing_line_start..first.end]);
             (first.start..last.end, combined)
-        });
+                    })
+            })
+            .flatten();
 
         for candidate in group.iter().skip(1).map(|candidate| &loops[*candidate]) {
             let offense = candidate.start..candidate.end;
@@ -167,6 +193,13 @@ fn report_multiline_combinable_loops(
                     offense,
                     edit.clone(),
                     combined.clone(),
+                );
+            } else if same_parameters {
+                context.replace(
+                    "Combine this loop with the previous loop.",
+                    offense.clone(),
+                    offense.clone(),
+                    source[offense].to_string(),
                 );
             } else {
                 context.report("Combine this loop with the previous loop.", offense);
@@ -181,6 +214,9 @@ fn parse_multiline_combinable_loop(
 ) -> Option<MultilineCombinableLoop> {
     let (offset, line) = lines[index];
     let source = line.trim_start();
+    if source.starts_with('#') {
+        return None;
+    }
     let indent = line.len() - source.len();
     let opening = source.rfind(" do")?;
     if source[opening + 3..].contains(" end") {
@@ -215,6 +251,7 @@ fn parse_multiline_combinable_loop(
         closing_line_start,
         end: closing_line_start + closing_line.len() - closing_line.trim_start().len() + 3,
         indent,
+        multiline: true,
     })
 }
 
@@ -237,6 +274,9 @@ struct CombinableLoop<'source> {
 fn parse_combinable_loop(offset: usize, line: &str) -> Option<CombinableLoop<'_>> {
     let indent = line.len() - line.trim_start().len();
     let source = line.trim_start();
+    if source.starts_with('#') {
+        return None;
+    }
     let (identity_end, body_start, closing_start, closing_suffix) = if source.starts_with("for ") {
         let opening = source.find(" do ")?;
         let closing = source.rfind(" end")?;
