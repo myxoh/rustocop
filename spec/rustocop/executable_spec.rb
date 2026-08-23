@@ -34,13 +34,10 @@ RSpec.describe "rustocop executable" do
       Rails/ReversibleMigration
       Metrics/BlockLength
       Metrics/MethodLength
-      Metrics/AbcSize
       Layout/LineLength
       Layout/ExtraSpacing
       Layout/EndAlignment
       Layout/FirstHashElementIndentation
-      Layout/IndentationConsistency
-      Layout/IndentationWidth
       Style/HashSyntax
       Style/KeywordParametersOrder
       Style/RedundantBegin
@@ -65,7 +62,6 @@ RSpec.describe "rustocop executable" do
       Naming/AccessorMethodName
       Lint/MissingSuper
       Lint/EmptyBlock
-      Lint/UnusedMethodArgument
       Lint/Debugger
       Security/Eval
       Security/JSONLoad

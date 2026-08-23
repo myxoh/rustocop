@@ -61,11 +61,19 @@ excluded_cases = Hash.new(0)
 pending = Rustocop::CompatibilityStatus.load(root: root).intentionally_pending_cops.to_h do |cop|
   [cop, true]
 end
+broken_cases_path = File.join(root, "spec/upstream/rubocop-1.87.0/broken_fixture_cases.yml")
+broken_cases = YAML.safe_load_file(broken_cases_path).fetch("cases").to_h do |entry|
+  [entry.fetch("id"), entry.fetch("reason")]
+end
 File.foreach(options[:corpus]) do |line|
   test_case = JSON.parse(line)
   cop = test_case.fetch("cop")
   if pending[cop]
     excluded_cases["intentionally_pending"] += 1
+    next
+  end
+  if broken_cases.key?(test_case.dig("example", "id"))
+    excluded_cases["broken_fixture"] += 1
     next
   end
   next if options[:only] && !options[:only].include?(cop)

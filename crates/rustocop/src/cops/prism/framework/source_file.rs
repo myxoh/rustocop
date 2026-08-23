@@ -245,8 +245,7 @@ impl<'source> SourceFile<'source> {
 
         impl LiteralRanges {
             fn push(&mut self, location: Location<'_>) {
-                self.0
-                    .push(location.start_offset()..location.end_offset());
+                self.0.push(location.start_offset()..location.end_offset());
             }
 
             fn push_delimited(
@@ -347,17 +346,12 @@ impl<'source> SourceFile<'source> {
         struct HeredocRanges(Vec<Range<usize>>);
 
         impl HeredocRanges {
-            fn push(
-                &mut self,
-                opening: Option<Location<'_>>,
-                closing: Option<Location<'_>>,
-            ) {
+            fn push(&mut self, opening: Option<Location<'_>>, closing: Option<Location<'_>>) {
                 let (Some(opening), Some(closing)) = (opening, closing) else {
                     return;
                 };
                 if opening.as_slice().starts_with(b"<<") {
-                    self.0
-                        .push(opening.start_offset()..closing.end_offset());
+                    self.0.push(opening.start_offset()..closing.end_offset());
                 }
             }
         }

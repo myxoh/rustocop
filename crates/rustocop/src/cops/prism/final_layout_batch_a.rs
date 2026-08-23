@@ -7,7 +7,6 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
     let mut cops = vec![
         custom("Layout/LineContinuationSpacing", line_continuation_spacing),
         Box::new(MultilineMethodDefinitionBraceLayout),
-        custom("Layout/ArrayAlignment", align_continuation),
         custom("Layout/SpaceInsideParens", space_inside_parens),
         Box::new(ClosingParenthesisIndentation),
         custom("Layout/IndentationStyle", indentation_style),
@@ -508,18 +507,6 @@ fn check_space_inside_block_braces(
             "Space inside } detected.",
             last_content..closing_start,
             last_content..closing_start,
-        );
-    }
-}
-
-fn multiline_assignment(context: &mut CopContext<'_, '_>) {
-    if context.policy().enforced_style("same_line") != "same_line" {
-        return;
-    }
-    for start in context.source_file().code_offsets(" =\n") {
-        context.report(
-            "Right hand side of a multi-line assignment must be on the same line.",
-            start..start + 2,
         );
     }
 }

@@ -1,6 +1,5 @@
 use ruby_prism::{Location, Node};
-use std::cmp::Reverse;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::ops::Range;
 use std::sync::Arc;
 
@@ -266,11 +265,59 @@ impl Context {
         let disabled = disabled_findings(source, &self.findings);
         self.corrections
             .retain(|correction| !disabled[correction.finding_index]);
+        let correction_findings = self
+            .corrections
+            .iter()
+            .map(|correction| correction.finding_index)
+            .collect::<HashSet<_>>();
+        let correction_intents = self
+            .corrections
+            .iter()
+            .map(|correction| {
+                (
+                    correction.finding_index,
+                    correction
+                        .edits
+                        .iter()
+                        .map(|edit| (edit.range.clone(), edit.replacement.clone()))
+                        .collect::<Vec<_>>(),
+                )
+            })
+            .collect::<HashMap<_, _>>();
         let (accepted, subsumed) = accepted_corrections(source, self.corrections);
         let mut edits = Vec::new();
         for correction in accepted {
             self.findings[correction.finding_index].corrected = true;
             edits.extend(correction.edits);
+        }
+        for (finding_index, finding) in self.findings.iter_mut().enumerate() {
+            if !correction_findings.contains(&finding_index)
+                && edits.iter().any(|edit| {
+                    if edit.range.start == edit.range.end {
+                        !edit.replacement.is_empty()
+                            && finding.start_offset <= edit.range.start
+                            && edit.range.start <= finding.end_offset
+                    } else {
+                        edit.range.start <= finding.start_offset
+                            && finding.end_offset <= edit.range.end
+                            || finding.start_offset <= edit.range.start
+                                && edit.range.end <= finding.end_offset
+                    }
+                })
+            {
+                finding.corrected = true;
+            }
+        }
+        for (finding_index, intents) in correction_intents {
+            if !intents.is_empty()
+                && intents.iter().all(|(range, replacement)| {
+                    edits
+                        .iter()
+                        .any(|edit| edit.range == *range && edit.replacement == *replacement)
+                })
+            {
+                self.findings[finding_index].corrected = true;
+            }
         }
         for finding_index in subsumed {
             self.findings[finding_index].corrected = true;
@@ -281,13 +328,6 @@ impl Context {
             .enumerate()
             .filter_map(|(index, finding)| (!disabled[index]).then_some(finding))
             .collect();
-        self.findings.sort_by_key(|finding| {
-            (
-                finding.start_offset,
-                Reverse(finding.end_offset),
-                finding.cop_name,
-            )
-        });
         Inspection {
             findings: self.findings,
             corrected_source: apply_edits(source, edits),

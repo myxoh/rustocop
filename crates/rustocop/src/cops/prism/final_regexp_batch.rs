@@ -49,53 +49,78 @@ impl Cop for RedundantRegexpQuantifiers {
         let extended = closing
             .get(1..)
             .is_some_and(|options| options.contains('x'));
-        let mut offenses = Vec::new();
-        let mut seen_groups = HashSet::new();
-        let mut search = 0;
-        while let Some(relative) = body[search..].find("(?:") {
-            let group_start = search + relative;
-            search = group_start + 3;
-            if seen_groups.contains(&group_start) {
-                continue;
-            }
-            let Some(close) = matching_regexp_group(body, group_start) else {
-                break;
-            };
-            let outer_start = skip_regexp_whitespace(body, close + 1, extended);
-            let Some(outer) = greedy_quantifier(body, outer_start) else {
-                continue;
-            };
-            for inner in quantifier_chain(
-                body,
-                group_start + 3,
-                close,
-                extended,
-                &mut seen_groups,
-            ) {
-                let replacement = if inner.normalized == outer.normalized {
-                    inner.normalized
-                } else {
-                    "*"
-                };
-                offenses.push((inner, outer, replacement));
-            }
-        }
+        let mut offenses = redundant_quantifier_offenses(body, extended);
+        let combined_correction =
+            (offenses.len() > 1).then(|| reduce_redundant_quantifiers(body.to_string(), extended));
         offenses.sort_by_key(|(inner, _, _)| std::cmp::Reverse(inner.start));
         for (inner, outer, replacement) in offenses {
             let absolute_inner = content.start_offset() + inner.start;
             let offense = absolute_inner..content.start_offset() + outer.end;
             let preserved = &body[inner.end..outer.start];
+            let (edit, corrected) = combined_correction.as_ref().map_or_else(
+                || (offense.clone(), format!("{replacement}{preserved}")),
+                |corrected| {
+                    (
+                        content.start_offset()..content.end_offset(),
+                        corrected.clone(),
+                    )
+                },
+            );
             context.replace(
                 self.name(),
                 format!(
                     "Replace redundant quantifiers `{}` and `{}` with a single `{replacement}`.",
                     inner.source, outer.source
                 ),
-                offense.clone(),
                 offense,
-                format!("{replacement}{preserved}"),
+                edit,
+                corrected,
             );
         }
+    }
+}
+
+fn redundant_quantifier_offenses<'a>(
+    body: &'a str,
+    extended: bool,
+) -> Vec<(GreedyQuantifier<'a>, GreedyQuantifier<'a>, &'static str)> {
+    let mut offenses = Vec::new();
+    let mut seen_groups = HashSet::new();
+    let mut search = 0;
+    while let Some(relative) = body[search..].find("(?:") {
+        let group_start = search + relative;
+        search = group_start + 3;
+        if seen_groups.contains(&group_start) {
+            continue;
+        }
+        let Some(close) = matching_regexp_group(body, group_start) else {
+            break;
+        };
+        let outer_start = skip_regexp_whitespace(body, close + 1, extended);
+        let Some(outer) = greedy_quantifier(body, outer_start) else {
+            continue;
+        };
+        for inner in quantifier_chain(body, group_start + 3, close, extended, &mut seen_groups) {
+            let replacement = if inner.normalized == outer.normalized {
+                inner.normalized
+            } else {
+                "*"
+            };
+            offenses.push((inner, outer, replacement));
+        }
+    }
+    offenses
+}
+
+fn reduce_redundant_quantifiers(mut body: String, extended: bool) -> String {
+    loop {
+        let mut offenses = redundant_quantifier_offenses(&body, extended);
+        offenses.sort_by_key(|(inner, _, _)| std::cmp::Reverse(inner.start));
+        let Some((inner, outer, replacement)) = offenses.first().copied() else {
+            return body;
+        };
+        let preserved = body[inner.end..outer.start].to_string();
+        body.replace_range(inner.start..outer.end, &format!("{replacement}{preserved}"));
     }
 }
 
@@ -491,7 +516,10 @@ fn unwrap_regexp_negation(mut node: Node<'_>) -> Option<(Node<'_>, bool)> {
     let mut negated = false;
     if let Some(call) = node.as_call_node() {
         if call.name().as_slice() == b"!" {
-            if call.arguments().is_some_and(|arguments| !arguments.arguments().is_empty()) {
+            if call
+                .arguments()
+                .is_some_and(|arguments| !arguments.arguments().is_empty())
+            {
                 return None;
             }
             node = call.receiver()?;
@@ -566,22 +594,149 @@ fn duplicate_character_class(context: &mut CopContext<'_, '_>) {
 }
 
 fn out_of_range_ref(context: &mut CopContext<'_, '_>) {
+    let regexp_literal = regex::Regex::new(r"/(?:\\.|[^/\n])+/[a-z]*").expect("regexp literal");
+    let mut captures = 0usize;
+    let mut captures_known = true;
     for (offset, line) in context.source_file().lines() {
-        for (at, _) in line.match_indices('$') {
-            let digits = line[at + 1..]
-                .bytes()
-                .take_while(u8::is_ascii_digit)
-                .count();
-            if digits > 0
-                && line[at + 1..at + 1 + digits]
-                    .parse::<usize>()
-                    .is_ok_and(|value| value > 9)
-            {
-                context.report(
-                    "Back reference is out of range.",
-                    offset + at..offset + at + digits + 1,
-                );
+        let references_first = line.trim_start().starts_with('$');
+        if references_first {
+            report_out_of_range_references(context, offset, line, captures, captures_known);
+        }
+        let literals = regexp_literal
+            .find_iter(line)
+            .filter(|matched| !matched.as_str().contains("#{"))
+            .map(|matched| regexp_capture_count(matched.as_str()))
+            .collect::<Vec<_>>();
+        let matching_method = [
+            ".match(",
+            ".grep(",
+            ".gsub(",
+            ".gsub!(",
+            ".sub(",
+            ".sub!(",
+            ".scan(",
+            ".slice(",
+            ".slice!(",
+            ".index(",
+            ".rindex(",
+            ".partition(",
+            ".rpartition(",
+            ".start_with?(",
+            ".end_with?(",
+            "&.match(",
+            "&.slice(",
+            "&.slice!(",
+            "&.index(",
+            "&.rindex(",
+            "&.partition(",
+            "&.rpartition(",
+            "&.start_with?(",
+            "&.end_with?(",
+        ]
+        .iter()
+        .any(|method| line.contains(method));
+        let pattern_clause =
+            line.trim_start().starts_with("when ") || line.trim_start().starts_with("in ");
+        let bracket_match = line.contains("[/") || line.contains("\"[") || line.contains("'[");
+        let matching_construct = line.contains("=~")
+            || line.contains(" === ")
+            || matching_method
+            || pattern_clause
+            || bracket_match;
+        if !line.contains(".match?(") && matching_construct {
+            if literals.is_empty() {
+                captures_known = false;
+            } else {
+                captures_known = true;
+                captures = if line.contains("=~") {
+                    *literals.last().unwrap_or(&0)
+                } else {
+                    literals.into_iter().max().unwrap_or(0)
+                };
             }
         }
+        if !references_first {
+            report_out_of_range_references(context, offset, line, captures, captures_known);
+        }
+    }
+}
+
+fn report_out_of_range_references(
+    context: &mut CopContext<'_, '_>,
+    offset: usize,
+    line: &str,
+    captures: usize,
+    captures_known: bool,
+) {
+    if !captures_known {
+        return;
+    }
+    for (at, _) in line.match_indices('$') {
+        let digits = line[at + 1..]
+            .bytes()
+            .take_while(u8::is_ascii_digit)
+            .count();
+        if digits == 0 {
+            continue;
+        }
+        let Ok(reference) = line[at + 1..at + 1 + digits].parse::<usize>() else {
+            continue;
+        };
+        if reference <= captures {
+            continue;
+        }
+        let groups = match captures {
+            0 => "no regexp capture groups detected".to_string(),
+            1 => "1 regexp capture group detected".to_string(),
+            count => format!("{count} regexp capture groups detected"),
+        };
+        context.report(
+            format!("${reference} is out of range ({groups})."),
+            offset + at..offset + at + digits + 1,
+        );
+    }
+}
+
+fn regexp_capture_count(literal: &str) -> usize {
+    let end = literal[1..].rfind('/').map_or(literal.len(), |at| at + 1);
+    let pattern = &literal[1..end];
+    let bytes = pattern.as_bytes();
+    let mut named = 0usize;
+    let mut numbered = 0usize;
+    let mut escaped = false;
+    let mut in_class = false;
+    for index in 0..bytes.len() {
+        let byte = bytes[index];
+        if escaped {
+            escaped = false;
+            continue;
+        }
+        if byte == b'\\' {
+            escaped = true;
+            continue;
+        }
+        if byte == b'[' {
+            in_class = true;
+            continue;
+        }
+        if byte == b']' {
+            in_class = false;
+            continue;
+        }
+        if byte != b'(' || in_class {
+            continue;
+        }
+        if bytes.get(index + 1) != Some(&b'?') {
+            numbered += 1;
+        } else if bytes.get(index + 2) == Some(&b'<')
+            && !matches!(bytes.get(index + 3), Some(b'=' | b'!'))
+        {
+            named += 1;
+        }
+    }
+    if named > 0 {
+        named
+    } else {
+        numbered
     }
 }

@@ -346,14 +346,14 @@ fn space_inside_string_interpolation(context: &mut CopContext<'_, '_>) {
                 if leading == 0 {
                     context.replace_indirectly(
                         "Use space inside string interpolation.",
-                        closing..closing,
+                        closing..(closing + 1).min(context.source().len()),
                         closing..closing,
                         "",
                     );
                 } else {
                     context.insert(
                         "Use space inside string interpolation.",
-                        closing..closing,
+                        closing..(closing + 1).min(context.source().len()),
                         closing,
                         " ",
                     );

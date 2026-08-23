@@ -466,7 +466,7 @@ fn insert_blank_line(
     message: impl Into<String>,
 ) {
     let start = line_start(context.source(), line_number);
-    context.insert(message, start..start, start, "\n");
+    context.insert(message, start..(start + 1).min(context.source().len()), start, "\n");
 }
 
 fn line_index(source: &str, offset: usize) -> usize {

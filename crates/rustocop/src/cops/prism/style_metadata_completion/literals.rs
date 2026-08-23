@@ -72,10 +72,22 @@ pub(super) fn numeric_literals(node: &Node<'_>, context: &mut CopContext<'_, '_>
             || location.start_offset()..location.end_offset(),
             |call| call.location().start_offset()..call.location().end_offset(),
         );
+    let literal_range = location.start_offset()..location.end_offset();
+    let unary = offense != literal_range;
+    let edit = if unary {
+        offense.clone()
+    } else {
+        literal_range
+    };
+    let replacement = if unary {
+        format!("-{formatted}")
+    } else {
+        replacement
+    };
     context.replace(
         "Use underscores(_) as thousands separator and separate every 3 digits with them.",
         offense,
-        &location,
+        edit,
         replacement,
     );
 }

@@ -8,7 +8,7 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
     let mut cops = vec![
         Box::new(ShadowedException) as Box<dyn Cop>,
         Box::new(ConstantDefinitionInBlock),
-        custom("Lint/ShadowingOuterLocalVariable", shadowing_outer_local),
+        Box::new(ShadowingOuterLocalVariable),
         report(
             "Lint/LiteralAssignmentInCondition",
             "if value = 1",
@@ -25,6 +25,7 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
 }
 
 define_any_node_cop!(HeredocDelimiterCase => "Naming/HeredocDelimiterCase" => heredoc_case);
+define_node_cop!(ShadowingOuterLocalVariable => "Lint/ShadowingOuterLocalVariable" => as_block_node => shadowing_outer_local);
 define_node_cop!(BlockForwarding => "Naming/BlockForwarding" => as_def_node => block_forwarding);
 define_node_cop!(RescuedExceptionsVariableName => "Naming/RescuedExceptionsVariableName" => as_rescue_node => rescued_exception_name);
 define_node_cop!(ShadowedException => "Lint/ShadowedException" => as_rescue_node => shadowed_exception);
@@ -158,7 +159,12 @@ fn constant_in_block(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
     {
         return;
     }
-    let Some(block) = context.ancestors().iter().rev().find_map(Node::as_block_node) else {
+    let Some(block) = context
+        .ancestors()
+        .iter()
+        .rev()
+        .find_map(Node::as_block_node)
+    else {
         return;
     };
     let block_start = block.location().start_offset();
@@ -185,53 +191,218 @@ fn constant_in_block(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
     context.report_node(node, "Do not define constants this way within a block.");
 }
 
-fn shadowing_outer_local(context: &mut CopContext<'_, '_>) {
-    let mut locals = HashSet::new();
-    for (offset, line) in context.source_file().lines() {
-        let trimmed = line.trim_start();
-        if ["def ", "class ", "module "]
-            .iter()
-            .any(|prefix| trimmed.starts_with(prefix))
-            || trimmed == "end"
+fn shadowing_outer_local(node: &ruby_prism::BlockNode<'_>, context: &mut CopContext<'_, '_>) {
+    if context
+        .parent()
+        .and_then(Node::as_call_node)
+        .is_some_and(|call| {
+            call_name(&call) == b"new"
+                && call
+                    .receiver()
+                    .and_then(|receiver| receiver.as_constant_read_node())
+                    .is_some_and(|constant| constant.name().as_slice() == b"Ractor")
+        })
+    {
+        return;
+    }
+    let Some(parameters) = node
+        .parameters()
+        .and_then(|parameters| parameters.as_block_parameters_node())
+    else {
+        return;
+    };
+    for (name, range) in shadowing_block_parameters(&parameters) {
+        if name.starts_with('_') || !outer_scope_has_local(name.as_bytes(), node, context) {
+            continue;
+        }
+        context.report(format!("Shadowing outer local variable - `{name}`."), range);
+    }
+}
+
+fn outer_scope_has_local(
+    name: &[u8],
+    block: &ruby_prism::BlockNode<'_>,
+    context: &CopContext<'_, '_>,
+) -> bool {
+    let cutoff = block.location().start_offset();
+    let mut collector = OuterLocalDeclarations {
+        cutoff,
+        declarations: Vec::new(),
+    };
+    let mut lexical_locals = Vec::new();
+    if let Some(definition) = context.ancestors().iter().find_map(Node::as_def_node) {
+        lexical_locals.extend(
+            definition
+                .locals()
+                .iter()
+                .map(|local| local.as_slice().to_vec()),
+        );
+        if let Some(body) = definition.body() {
+            ruby_prism::Visit::visit(&mut collector, &body);
+        }
+    } else if let Some(class) = context.ancestors().iter().find_map(Node::as_class_node) {
+        if let Some(body) = class.body() {
+            ruby_prism::Visit::visit(&mut collector, &body);
+        }
+    } else if let Some(module) = context.ancestors().iter().find_map(Node::as_module_node) {
+        if let Some(body) = module.body() {
+            ruby_prism::Visit::visit(&mut collector, &body);
+        }
+    } else if let Some(program) = context.ancestors().iter().find_map(Node::as_program_node) {
+        ruby_prism::Visit::visit(&mut collector, &program.statements().as_node());
+    }
+    let declarations_for_name = collector
+        .declarations
+        .iter()
+        .filter(|(declared, _)| declared.as_slice() == name)
+        .collect::<Vec<_>>();
+    if lexical_locals.iter().any(|local| local.as_slice() == name)
+        && declarations_for_name.is_empty()
+    {
+        return true; // A method parameter rather than a body assignment.
+    }
+    declarations_for_name.into_iter().any(|(_, range)| {
+        range.start < cutoff
+            && range.end < cutoff
+            && declaration_in_same_conditional_branch(range.start, cutoff, context)
+    })
+}
+
+struct OuterLocalDeclarations {
+    cutoff: usize,
+    declarations: Vec<(Vec<u8>, std::ops::Range<usize>)>,
+}
+
+impl<'pr> ruby_prism::Visit<'pr> for OuterLocalDeclarations {
+    fn visit_local_variable_write_node(&mut self, node: &ruby_prism::LocalVariableWriteNode<'pr>) {
+        if node.location().start_offset() < self.cutoff {
+            self.declarations.push((
+                node.name().as_slice().to_vec(),
+                node.location().start_offset()..node.location().end_offset(),
+            ));
+        }
+        ruby_prism::visit_local_variable_write_node(self, node);
+    }
+
+    fn visit_block_node(&mut self, _node: &ruby_prism::BlockNode<'pr>) {}
+    fn visit_def_node(&mut self, _node: &ruby_prism::DefNode<'pr>) {}
+    fn visit_class_node(&mut self, _node: &ruby_prism::ClassNode<'pr>) {}
+    fn visit_module_node(&mut self, _node: &ruby_prism::ModuleNode<'pr>) {}
+}
+
+fn declaration_in_same_conditional_branch(
+    declaration: usize,
+    target: usize,
+    context: &CopContext<'_, '_>,
+) -> bool {
+    for ancestor in context.ancestors() {
+        let selected = if let Some(conditional) = ancestor.as_if_node() {
+            conditional
+                .statements()
+                .and_then(|statements| {
+                    location_contains(statements.location(), target).then(|| statements.location())
+                })
+                .or_else(|| {
+                    conditional.subsequent().and_then(|branch| {
+                        location_contains(branch.location(), target).then(|| branch.location())
+                    })
+                })
+        } else if let Some(conditional) = ancestor.as_unless_node() {
+            conditional
+                .statements()
+                .and_then(|statements| {
+                    location_contains(statements.location(), target).then(|| statements.location())
+                })
+                .or_else(|| {
+                    conditional.else_clause().and_then(|branch| {
+                        location_contains(branch.location(), target).then(|| branch.location())
+                    })
+                })
+        } else if let Some(case) = ancestor.as_case_node() {
+            case.conditions()
+                .iter()
+                .find_map(|branch| {
+                    location_contains(branch.location(), target).then(|| branch.location())
+                })
+                .or_else(|| {
+                    case.else_clause().and_then(|branch| {
+                        location_contains(branch.location(), target).then(|| branch.location())
+                    })
+                })
+        } else {
+            None
+        };
+        let Some(selected) = selected else { continue };
+        if location_contains(ancestor.location(), declaration)
+            && !location_contains(selected, declaration)
         {
-            locals.clear();
-        }
-        if let Some((name, _)) = line.split_once(" = ") {
-            let name = name.trim();
-            if !name.is_empty()
-                && name
-                    .bytes()
-                    .all(|byte| byte.is_ascii_lowercase() || byte == b'_')
-                && !line.contains(&format!("|{name}|"))
-                && !line.contains(&format!("|{name},"))
-                && !line.contains(&format!(", {name}|"))
-            {
-                locals.clear();
-                locals.insert(name.to_string());
-            }
-        }
-        if let Some(first) = line.find('|') {
-            if let Some(close) = line[first + 1..].find('|').map(|at| first + 1 + at) {
-                for argument in line[first + 1..close].split(',').map(str::trim) {
-                    if locals.contains(argument) {
-                        let start =
-                            offset + first + 1 + line[first + 1..close].find(argument).unwrap_or(0);
-                        context.report(
-                            "Shadowing outer local variable.",
-                            start..start + argument.len(),
-                        );
-                    }
-                }
-            }
-        }
-        if !trimmed.is_empty()
-            && !line.contains(" = ")
-            && !line.contains('|')
-            && !trimmed.starts_with('#')
-        {
-            locals.clear();
+            return false;
         }
     }
+    true
+}
+
+fn location_contains(location: ruby_prism::Location<'_>, offset: usize) -> bool {
+    location.start_offset() <= offset && offset < location.end_offset()
+}
+
+fn shadowing_block_parameters(
+    block: &ruby_prism::BlockParametersNode<'_>,
+) -> Vec<(String, std::ops::Range<usize>)> {
+    let mut result = Vec::new();
+    if let Some(parameters) = block.parameters() {
+        for parameter in parameters
+            .requireds()
+            .iter()
+            .chain(parameters.posts().iter())
+        {
+            if let Some(parameter) = parameter.as_required_parameter_node() {
+                let location = parameter.location();
+                result.push((
+                    String::from_utf8_lossy(parameter.name().as_slice()).into_owned(),
+                    location.start_offset()..location.end_offset(),
+                ));
+            }
+        }
+        for parameter in [parameters.rest(), parameters.keyword_rest()] {
+            let Some(parameter) = parameter else { continue };
+            let extracted = if let Some(rest) = parameter.as_rest_parameter_node() {
+                rest.name().map(|name| (name.as_slice(), rest.location()))
+            } else if let Some(rest) = parameter.as_keyword_rest_parameter_node() {
+                rest.name().map(|name| (name.as_slice(), rest.location()))
+            } else {
+                None
+            };
+            let Some((name, location)) = extracted else {
+                continue;
+            };
+            result.push((
+                String::from_utf8_lossy(name).into_owned(),
+                location.start_offset()..location.end_offset(),
+            ));
+        }
+        if let Some(parameter) = parameters.block() {
+            if let Some(name) = parameter.name() {
+                let location = parameter.location();
+                result.push((
+                    String::from_utf8_lossy(name.as_slice()).into_owned(),
+                    location.start_offset()..location.end_offset(),
+                ));
+            }
+        }
+    }
+    for local in block
+        .locals()
+        .iter()
+        .filter_map(|local| local.as_block_local_variable_node())
+    {
+        let location = local.location();
+        result.push((
+            String::from_utf8_lossy(local.name().as_slice()).into_owned(),
+            location.start_offset()..location.end_offset(),
+        ));
+    }
+    result
 }
 
 fn heredoc_case(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
@@ -271,7 +442,8 @@ fn heredoc_case(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
     let Some(relative) = opening_source.rfind(delimiter) else {
         return;
     };
-    let opening_range = opening.start_offset() + relative..opening.start_offset() + relative + delimiter.len();
+    let opening_range =
+        opening.start_offset() + relative..opening.start_offset() + relative + delimiter.len();
     let closing_end = closing.end_offset()
         - closing
             .as_slice()
@@ -295,10 +467,7 @@ fn heredoc_case(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
     );
 }
 
-fn rescued_exception_name(
-    node: &ruby_prism::RescueNode<'_>,
-    context: &mut CopContext<'_, '_>,
-) {
+fn rescued_exception_name(node: &ruby_prism::RescueNode<'_>, context: &mut CopContext<'_, '_>) {
     let preferred = context
         .config_value("PreferredName")
         .unwrap_or("e")
@@ -317,7 +486,10 @@ fn rescued_exception_name(
         return;
     }
     let range = reference.location().start_offset()..reference.location().end_offset();
-    let actual = context.source_file().slice(range.clone()).unwrap_or_default();
+    let actual = context
+        .source_file()
+        .slice(range.clone())
+        .unwrap_or_default();
     if actual.is_empty() || actual.contains('.') {
         return;
     }
@@ -352,13 +524,105 @@ fn rescued_exception_name(
         return;
     }
     if actual != expected {
-        context.replace(
+        let mut edits = vec![(range.clone(), expected.clone())];
+        let scope_end = context
+            .ancestors()
+            .iter()
+            .rev()
+            .find_map(Node::as_def_node)
+            .map_or(context.source().len(), |definition| {
+                definition.location().end_offset()
+            });
+        let search_start = node
+            .statements()
+            .map_or(range.end, |statements| statements.location().start_offset());
+        let assignment =
+            first_identifier_assignment(context.source(), actual, search_start, scope_end);
+        let search_end = assignment
+            .and_then(|at| {
+                node.statements().and_then(|statements| {
+                    statements
+                        .body()
+                        .iter()
+                        .find(|statement| {
+                            statement.location().start_offset() <= at
+                                && at < statement.location().end_offset()
+                        })
+                        .map(|statement| statement.location().end_offset())
+                })
+            })
+            .unwrap_or_else(|| {
+                assignment.map_or(scope_end, |at| context.source_file().line_end(at))
+            });
+        let assignment_equal = assignment.and_then(|at| {
+            context.source()[at..search_end]
+                .find('=')
+                .map(|relative| at + relative)
+        });
+        {
+            let mut search = search_start;
+            while let Some(relative) = context.source()[search..search_end].find(actual) {
+                let start = search + relative;
+                let before = context.source().as_bytes().get(start.wrapping_sub(1));
+                let after = context.source().as_bytes().get(start + actual.len());
+                if assignment
+                    .zip(assignment_equal)
+                    .is_some_and(|(assignment, equal)| assignment <= start && start <= equal)
+                {
+                    search = start + actual.len();
+                    continue;
+                }
+                if after == Some(&b':') {
+                    let value = context.source()[start + actual.len() + 1..search_end].trim_start();
+                    if value.chars().next().is_some_and(|c| matches!(c, ',' | ')')) {
+                        edits.push((
+                            start + actual.len() + 1..start + actual.len() + 1,
+                            format!(" {expected}"),
+                        ));
+                    }
+                    search = start + actual.len();
+                    continue;
+                }
+                if !before.is_some_and(|byte| byte.is_ascii_alphanumeric() || *byte == b'_')
+                    && !after.is_some_and(|byte| byte.is_ascii_alphanumeric() || *byte == b'_')
+                {
+                    edits.push((start..start + actual.len(), expected.clone()));
+                }
+                search = start + actual.len();
+            }
+        }
+        context.replace_many(
             format!("Use `{expected}` instead of `{actual}`."),
-            range.clone(),
             range,
-            expected,
+            edits,
         );
     }
+}
+
+fn first_identifier_assignment(
+    source: &str,
+    name: &str,
+    start: usize,
+    end: usize,
+) -> Option<usize> {
+    source[start..end]
+        .match_indices(name)
+        .find_map(|(relative, _)| {
+            let at = start + relative;
+            let before = source.as_bytes().get(at.wrapping_sub(1));
+            let after = source.as_bytes().get(at + name.len());
+            if before.is_some_and(|byte| byte.is_ascii_alphanumeric() || *byte == b'_')
+                || after.is_some_and(|byte| byte.is_ascii_alphanumeric() || *byte == b'_')
+            {
+                return None;
+            }
+            let line_start = source[..at].rfind('\n').map_or(0, |line| line + 1);
+            let line_end = source[at..end].find('\n').map_or(end, |line| at + line);
+            assignment_equal(&source[line_start..line_end])
+                .map(|equal| line_start + equal)
+                .filter(|equal| at < *equal)
+                .map(|_| at)
+        })
 }
 
 fn identifier_assigned(source: &str, name: &str) -> bool {
@@ -372,10 +636,7 @@ fn identifier_assigned(source: &str, name: &str) -> bool {
     })
 }
 
-fn block_forwarding(
-    definition: &ruby_prism::DefNode<'_>,
-    context: &mut CopContext<'_, '_>,
-) {
+fn block_forwarding(definition: &ruby_prism::DefNode<'_>, context: &mut CopContext<'_, '_>) {
     let style = context.policy().enforced_style("anonymous");
     if style == "explicit" {
         explicit_block_forwarding(definition, context);
@@ -387,7 +648,10 @@ fn block_forwarding(
     if !context.target_ruby_version().at_least(3, 1) {
         return;
     }
-    let Some(parameter) = definition.parameters().and_then(|parameters| parameters.block()) else {
+    let Some(parameter) = definition
+        .parameters()
+        .and_then(|parameters| parameters.block())
+    else {
         return;
     };
     let Some(name) = parameter.name() else { return };
@@ -411,20 +675,66 @@ fn block_forwarding(
         return;
     }
     let range = parameter.location().start_offset()..parameter.location().end_offset();
-    for forwarded in usage.forwarded {
+    let mut edits = usage
+        .forwarded
+        .iter()
+        .cloned()
+        .map(|forwarded| (forwarded, "&".to_string()))
+        .collect::<Vec<_>>();
+    edits.push((range.clone(), "&".to_string()));
+    let mut parenthesize = Vec::new();
+    for target in edits
+        .iter()
+        .map(|(range, _)| range.clone())
+        .collect::<Vec<_>>()
+    {
+        let line_start = context.source_file().line_start(target.start);
+        let prefix = &context.source()[line_start..target.start];
+        if prefix.contains('(') {
+            continue;
+        }
+        if let Some(space) = unparenthesized_call_separator(prefix) {
+            let at = line_start + space;
+            parenthesize.push((at..at + 1, "(".to_string()));
+            parenthesize.push((target.end..target.end, ")".to_string()));
+        }
+    }
+    edits.extend(parenthesize);
+    for (index, forwarded) in usage.forwarded.iter().enumerate() {
+        if index == 0 {
+            context.replace_many(
+                "Use anonymous block forwarding.",
+                forwarded.clone(),
+                edits.clone(),
+            );
+        } else {
+            context.replace(
+                "Use anonymous block forwarding.",
+                forwarded.clone(),
+                forwarded.start..forwarded.start,
+                "",
+            );
+        }
+    }
+    if usage.forwarded.is_empty() {
+        context.replace("Use anonymous block forwarding.", range.clone(), range, "&");
+    } else {
         context.replace(
             "Use anonymous block forwarding.",
-            forwarded.clone(),
-            forwarded,
-            "&",
+            range.clone(),
+            range.start..range.start,
+            "",
         );
     }
-    context.replace(
-        "Use anonymous block forwarding.",
-        range.clone(),
-        range,
-        "&",
-    );
+}
+
+fn unparenthesized_call_separator(prefix: &str) -> Option<usize> {
+    let indentation = prefix.len() - prefix.trim_start().len();
+    let content = &prefix[indentation..];
+    let selector_start = if content.starts_with("def ") { 4 } else { 0 };
+    content[selector_start..]
+        .find(char::is_whitespace)
+        .map(|at| indentation + selector_start + at)
 }
 
 struct BlockForwardingUsage<'a> {
@@ -437,7 +747,9 @@ struct BlockForwardingUsage<'a> {
 
 impl<'pr> ruby_prism::Visit<'pr> for BlockForwardingUsage<'_> {
     fn visit_block_argument_node(&mut self, node: &ruby_prism::BlockArgumentNode<'pr>) {
-        if node.expression().and_then(|value| value.as_local_variable_read_node())
+        if node
+            .expression()
+            .and_then(|value| value.as_local_variable_read_node())
             .is_some_and(|read| read.name().as_slice() == self.name)
         {
             if self.nested_block_depth > 0 && !self.allow_nested {
@@ -509,7 +821,10 @@ fn explicit_block_forwarding(
     if !context.target_ruby_version().at_least(3, 1) {
         return;
     }
-    let Some(parameter) = definition.parameters().and_then(|parameters| parameters.block()) else {
+    let Some(parameter) = definition
+        .parameters()
+        .and_then(|parameters| parameters.block())
+    else {
         return;
     };
     if parameter.name().is_some() {
@@ -520,9 +835,11 @@ fn explicit_block_forwarding(
         .unwrap_or("block")
         .to_string();
     let in_use = definition.body().is_some_and(|body| {
-        context.source_file().node(&body).split(|character: char| {
-            !character.is_ascii_alphanumeric() && character != '_'
-        }).any(|word| word == name)
+        context
+            .source_file()
+            .node(&body)
+            .split(|character: char| !character.is_ascii_alphanumeric() && character != '_')
+            .any(|word| word == name)
     });
     let mut ranges = Vec::new();
     if let Some(body) = definition.body() {
@@ -563,55 +880,146 @@ impl<'pr> ruby_prism::Visit<'pr> for AnonymousBlockForwarding {
 }
 
 fn constant_reassignment(context: &mut CopContext<'_, '_>) {
-    if context.source().contains("remove_const")
-        || context.source().contains(" do\n")
-        || context.source().contains(" unless ")
-        || context
-            .source()
-            .lines()
-            .any(|line| line.trim_start().starts_with("if "))
-    {
-        return;
+    #[derive(Clone)]
+    enum Scope {
+        Namespace(String),
+        Opaque,
     }
-    if context
-        .source()
-        .lines()
-        .filter(|line| {
-            ["class ", "module "]
-                .iter()
-                .any(|keyword| line.trim_start().starts_with(keyword))
-        })
-        .count()
-        > 1
-    {
-        return;
-    }
-    let mut constants = HashSet::new();
+
+    let mut assigned = HashSet::new();
+    let mut scopes = Vec::<Scope>::new();
     for (offset, line) in context.source_file().lines() {
-        if [
-            "class ", "module ", "def ", "if ", "unless ", "case ", "begin",
-        ]
-        .iter()
-        .any(|keyword| line.trim_start().starts_with(keyword))
-            || matches!(line.trim(), "end" | "else" | "elsif" | "rescue" | "ensure")
+        let trimmed = line.trim();
+        let namespace = scopes
+            .iter()
+            .filter_map(|scope| match scope {
+                Scope::Namespace(name) => Some(name.as_str()),
+                Scope::Opaque => None,
+            })
+            .last()
+            .unwrap_or("")
+            .to_string();
+        let opaque = scopes.iter().any(|scope| matches!(scope, Scope::Opaque));
+
+        if let Some(rest) = trimmed
+            .strip_prefix("class ")
+            .or_else(|| trimmed.strip_prefix("module "))
         {
-            constants.clear();
-        }
-        if line.contains("||=") {
+            let raw_name = rest.split([' ', '<', ';']).next().unwrap_or("").trim();
+            if !opaque && constant_path(raw_name) {
+                let full_name = resolve_constant_path(raw_name, &namespace);
+                assigned.insert(full_name.clone());
+                if !trimmed.contains("; end") && !trimmed.ends_with(";end") {
+                    scopes.push(Scope::Namespace(full_name));
+                }
+            } else if !trimmed.contains("; end") && !trimmed.ends_with(";end") {
+                scopes.push(Scope::Opaque);
+            }
             continue;
         }
-        let Some((name, _)) = line.split_once('=') else {
+
+        if trimmed == "end" || trimmed.starts_with("end ") {
+            scopes.pop();
+            continue;
+        }
+
+        if ["if ", "unless ", "case ", "begin", "def "]
+            .iter()
+            .any(|keyword| trimmed.starts_with(keyword))
+            || trimmed.ends_with(" do")
+            || trimmed.contains(" do |")
+        {
+            scopes.push(Scope::Opaque);
+            continue;
+        }
+        if opaque || line.contains("||=") || line.contains("&&=") {
+            continue;
+        }
+
+        if let Some(argument) = trimmed
+            .strip_prefix("remove_const ")
+            .or_else(|| trimmed.strip_prefix("self.remove_const "))
+        {
+            let name = argument.trim_matches([':', '\'', '"']);
+            assigned.remove(&resolve_constant_path(name, &namespace));
+            continue;
+        }
+
+        let Some(equal) = assignment_equal(line) else {
             continue;
         };
-        let name = name.trim();
-        if !name.is_empty()
-            && name
-                .bytes()
-                .all(|byte| byte.is_ascii_uppercase() || byte == b'_')
-            && !constants.insert(name.to_string())
-        {
-            let start = offset + line.find(name).unwrap_or(0);
-            context.report("Constant is already assigned.", start..start + name.len());
+        if line[equal + 1..].contains(" unless ") || line[equal + 1..].contains(" if ") {
+            continue;
         }
+        let before_equal = &line[..equal];
+        let multiple = before_equal.contains(',');
+        for raw in before_equal.split(',') {
+            let candidate = raw.trim();
+            let candidate = candidate
+                .rsplit_once(|character: char| {
+                    !(character.is_ascii_alphanumeric() || matches!(character, '_' | ':'))
+                })
+                .map_or(candidate, |(_, tail)| tail);
+            if !constant_path(candidate) {
+                continue;
+            }
+            let full_name = resolve_constant_path(candidate, &namespace);
+            if assigned.insert(full_name) {
+                continue;
+            }
+            let display = candidate
+                .strip_prefix("self::")
+                .unwrap_or(candidate)
+                .trim_start_matches("::");
+            let start_in_line = line.find(candidate).unwrap_or(0);
+            let end_in_line = if multiple {
+                start_in_line + candidate.len()
+            } else {
+                line.trim_end().trim_end_matches(',').len()
+            };
+            context.report(
+                format!("Constant `{display}` is already assigned in this namespace."),
+                offset + start_in_line..offset + end_in_line,
+            );
+        }
+    }
+}
+
+fn assignment_equal(line: &str) -> Option<usize> {
+    line.char_indices().find_map(|(index, character)| {
+        if character != '=' {
+            return None;
+        }
+        let before = line.as_bytes().get(index.wrapping_sub(1)).copied();
+        let after = line.as_bytes().get(index + 1).copied();
+        (!matches!(before, Some(b'=' | b'!' | b'<' | b'>' | b'|' | b'&'))
+            && !matches!(after, Some(b'=' | b'>')))
+        .then_some(index)
+    })
+}
+
+fn constant_path(candidate: &str) -> bool {
+    let candidate = candidate
+        .strip_prefix("self::")
+        .unwrap_or(candidate)
+        .trim_start_matches("::");
+    !candidate.is_empty()
+        && candidate.split("::").all(|part| {
+            part.as_bytes().first().is_some_and(u8::is_ascii_uppercase)
+                && part
+                    .bytes()
+                    .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
+        })
+}
+
+fn resolve_constant_path(candidate: &str, namespace: &str) -> String {
+    if let Some(candidate) = candidate.strip_prefix("::") {
+        return candidate.to_string();
+    }
+    let candidate = candidate.strip_prefix("self::").unwrap_or(candidate);
+    if namespace.is_empty() {
+        candidate.to_string()
+    } else {
+        format!("{namespace}::{candidate}")
     }
 }

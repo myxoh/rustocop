@@ -31,11 +31,14 @@ fn separate_parenthesized_accessors(context: &mut CopContext<'_, '_>) {
             let end = start + close_relative + 1;
             let call = &context.source()[start..end];
             if call.contains('\n') && call.contains(',') {
+                let line_start = context.source_file().line_start(start);
+                let indent = &context.source()[line_start..start];
+                let replacement = separated_multiline_replacement(call, accessor, indent);
                 context.replace(
                     format!("Use one attribute per `{accessor}`."),
                     start..end,
                     start..end,
-                    call,
+                    replacement,
                 );
             }
             search = end;
@@ -61,12 +64,14 @@ fn separate_multiline_accessors(context: &mut CopContext<'_, '_>, lines: &[(usiz
         {
             continue;
         }
-        let mut end = offset + line.split('#').next().unwrap_or(line).trim_end().len();
+        let mut end = offset + line.len();
+        let mut offense_end = offset + line.split('#').next().unwrap_or(line).trim_end().len();
         for (next_offset, next) in lines.iter().skip(index + 1) {
             if !next.trim_start().starts_with(':') {
                 break;
             }
-            end = next_offset + next.split('#').next().unwrap_or(next).trim_end().len();
+            end = next_offset + next.len();
+            offense_end = next_offset + next.split('#').next().unwrap_or(next).trim_end().len();
             if !next
                 .split('#')
                 .next()
@@ -78,13 +83,66 @@ fn separate_multiline_accessors(context: &mut CopContext<'_, '_>, lines: &[(usiz
             }
         }
         let start = offset + line.len() - trimmed.len();
+        let indent = &line[..line.len() - trimmed.len()];
+        let replacement =
+            separated_multiline_replacement(&context.source()[start..end], accessor, indent);
         context.replace(
             format!("Use one attribute per `{accessor}`."),
+            start..offense_end,
             start..end,
-            start..end,
-            &context.source()[start..end],
+            replacement,
         );
     }
+}
+
+fn separated_multiline_replacement(source: &str, accessor: &str, indent: &str) -> String {
+    let mut pending_comments = Vec::<String>::new();
+    let mut output = Vec::<(String, bool)>::new();
+    let mut first_attribute = true;
+    for line in source.lines() {
+        let trimmed = line.trim();
+        if trimmed.starts_with('#') {
+            pending_comments.push(trimmed.to_string());
+            continue;
+        }
+        let values = trimmed
+            .strip_prefix(accessor)
+            .unwrap_or(trimmed)
+            .trim_start_matches('(')
+            .trim_end_matches(')')
+            .trim();
+        if values.is_empty() {
+            continue;
+        }
+        let (attribute, inline_comment) = values
+            .split_once('#')
+            .map_or((values, None), |(attribute, comment)| {
+                (attribute, Some(format!("#{}", comment.trim_end())))
+            });
+        let attribute = attribute.trim().trim_end_matches(',').trim();
+        if !attribute.starts_with(':') {
+            continue;
+        }
+        if let Some(comment) = inline_comment {
+            pending_comments.push(comment);
+        }
+        for comment in pending_comments.drain(..) {
+            output.push((comment, !output.is_empty()));
+        }
+        output.push((format!("{accessor} {attribute}"), !first_attribute));
+        first_attribute = false;
+    }
+    output
+        .into_iter()
+        .map(|(line, indented)| {
+            if indented {
+                format!("{indent}{line}")
+            } else {
+                line
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
 fn separate_inline_accessors(context: &mut CopContext<'_, '_>, lines: &[(usize, &str)]) {
@@ -190,7 +248,10 @@ fn flush_accessor_group(group: &mut Vec<AccessorLine>, context: &mut CopContext<
             }
         }
     }
-    let anchor = group.iter().position(|entry| entry.3.contains('*')).unwrap_or(0);
+    let anchor = group
+        .iter()
+        .position(|entry| entry.3.contains('*'))
+        .unwrap_or(0);
     let first_start = group[anchor].0;
     let first_end = group[anchor].1;
     let mut edits = vec![(
@@ -254,9 +315,7 @@ fn grouped_accessors(context: &mut CopContext<'_, '_>, lines: &[(usize, &str)]) 
                 });
             if typed_or_commented {
                 flush_accessor_group(&mut groups[group_index], context);
-                groups[group_index].push(accessor_line(
-                    *offset, line, trimmed, accessor, false,
-                ));
+                groups[group_index].push(accessor_line(*offset, line, trimmed, accessor, false));
                 flush_accessor_group(&mut groups[group_index], context);
                 continue;
             }
@@ -264,9 +323,7 @@ fn grouped_accessors(context: &mut CopContext<'_, '_>, lines: &[(usize, &str)]) 
                 .split_once('#')
                 .is_some_and(|(_, comment)| comment.trim_start().starts_with(':'))
             {
-                groups[group_index].push(accessor_line(
-                    *offset, line, trimmed, accessor, false,
-                ));
+                groups[group_index].push(accessor_line(*offset, line, trimmed, accessor, false));
                 flush_accessor_group(&mut groups[group_index], context);
                 continue;
             }

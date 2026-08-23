@@ -50,13 +50,28 @@ impl Cop for UselessOr {
         let operator = or_node.operator_loc();
         let offense = operator.start_offset()..rhs.location().end_offset();
         let replacement = source_at(source, &lhs.location()).to_string();
+        let edit_end = ancestors
+            .iter()
+            .filter_map(Node::as_or_node)
+            .filter(|outer| {
+                outer.location().start_offset() == node.location().start_offset()
+                    && node.location().end_offset() <= outer.left().location().end_offset()
+            })
+            .map(|outer| outer.location().end_offset())
+            .max()
+            .unwrap_or_else(|| node.location().end_offset());
         let message = format!(
             "`{}` will never evaluate because `{}` always returns a truthy value.",
             source_at(source, &rhs.location()),
             truthy
         );
         let mut cop_context = context.cop_context(self.name(), source, ancestors);
-        cop_context.replace(message, offense, node.location(), replacement);
+        cop_context.replace(
+            message,
+            offense,
+            node.location().start_offset()..edit_end,
+            replacement,
+        );
     }
 }
 
@@ -117,10 +132,88 @@ impl Cop for LiteralAsCondition {
                         .as_if_node()
                         .is_some_and(|outer| condition_literal(&outer.predicate()))
                 });
-                report_literal_condition(
+                if overlapping_elsif {
+                    report_literal_condition(
+                        self.name(),
+                        &predicate,
+                        false,
+                        ancestors,
+                        source,
+                        context,
+                    );
+                } else {
+                    let mut replacement = if falsey_condition_literal(&predicate) {
+                        conditional
+                            .subsequent()
+                            .map(|subsequent| conditional_subsequent_source(&subsequent, source))
+                            .unwrap_or_default()
+                    } else {
+                        let body = conditional
+                            .statements()
+                            .map(|statements| {
+                                conditional_branch_source(
+                                    &statements,
+                                    conditional.if_keyword_loc(),
+                                    source,
+                                )
+                            })
+                            .unwrap_or_default();
+                        body
+                    };
+                    if conditional
+                        .if_keyword_loc()
+                        .is_some_and(|keyword| keyword.as_slice() == b"elsif")
+                    {
+                        let indent = " ".repeat(
+                            source[..node.location().start_offset()]
+                                .rsplit('\n')
+                                .next()
+                                .map_or(0, str::len),
+                        );
+                        replacement = format!(
+                            "else\n{indent}  {}\n{indent}end",
+                            replacement.replace('\n', &format!("\n{indent}  "))
+                        );
+                    }
+                    report_literal_edit(
+                        self.name(),
+                        &predicate,
+                        node.location().start_offset()..node.location().end_offset(),
+                        replacement,
+                        ancestors,
+                        source,
+                        context,
+                    );
+                }
+            }
+            return;
+        }
+        if let Some(conditional) = node.as_unless_node() {
+            let predicate = conditional.predicate();
+            if condition_literal(&predicate) {
+                let replacement = if falsey_condition_literal(&predicate) {
+                    conditional
+                        .statements()
+                        .map(|statements| {
+                            conditional_branch_source(
+                                &statements,
+                                Some(conditional.keyword_loc()),
+                                source,
+                            )
+                        })
+                        .unwrap_or_default()
+                } else {
+                    conditional
+                        .else_clause()
+                        .and_then(|otherwise| otherwise.statements())
+                        .map(|statements| conditional_statements_source(&statements, source))
+                        .unwrap_or_default()
+                };
+                report_literal_edit(
                     self.name(),
                     &predicate,
-                    !overlapping_elsif,
+                    node.location().start_offset()..node.location().end_offset(),
+                    replacement,
                     ancestors,
                     source,
                     context,
@@ -128,17 +221,36 @@ impl Cop for LiteralAsCondition {
             }
             return;
         }
-        if let Some(conditional) = node.as_unless_node() {
-            let predicate = conditional.predicate();
-            if condition_literal(&predicate) {
-                report_literal_condition(self.name(), &predicate, true, ancestors, source, context);
-            }
-            return;
-        }
         if let Some(loop_node) = node.as_while_node() {
             let predicate = loop_node.predicate();
             if condition_literal(&predicate) && source_at(source, &predicate.location()) != "true" {
-                report_literal_condition(self.name(), &predicate, true, ancestors, source, context);
+                if falsey_condition_literal(&predicate) {
+                    let loop_source = source_at(source, &node.location());
+                    let replacement = if loop_source.trim_start().starts_with("begin") {
+                        unwrap_post_loop_body(loop_source)
+                    } else {
+                        String::new()
+                    };
+                    report_literal_edit(
+                        self.name(),
+                        &predicate,
+                        node.location().start_offset()..node.location().end_offset(),
+                        replacement,
+                        ancestors,
+                        source,
+                        context,
+                    );
+                } else {
+                    report_literal_edit(
+                        self.name(),
+                        &predicate,
+                        predicate.location().start_offset()..predicate.location().end_offset(),
+                        "true".to_string(),
+                        ancestors,
+                        source,
+                        context,
+                    );
+                }
             }
             return;
         }
@@ -146,7 +258,33 @@ impl Cop for LiteralAsCondition {
             let predicate = loop_node.predicate();
             if condition_literal(&predicate) && source_at(source, &predicate.location()) != "false"
             {
-                report_literal_condition(self.name(), &predicate, true, ancestors, source, context);
+                if falsey_condition_literal(&predicate) {
+                    report_literal_edit(
+                        self.name(),
+                        &predicate,
+                        predicate.location().start_offset()..predicate.location().end_offset(),
+                        "false".to_string(),
+                        ancestors,
+                        source,
+                        context,
+                    );
+                } else {
+                    let loop_source = source_at(source, &node.location());
+                    let replacement = if loop_source.trim_start().starts_with("begin") {
+                        unwrap_post_loop_body(loop_source)
+                    } else {
+                        String::new()
+                    };
+                    report_literal_edit(
+                        self.name(),
+                        &predicate,
+                        node.location().start_offset()..node.location().end_offset(),
+                        replacement,
+                        ancestors,
+                        source,
+                        context,
+                    );
+                }
             }
             return;
         }
@@ -216,14 +354,43 @@ impl Cop for LiteralAsCondition {
             if truthy_condition_literal(&left) {
                 let right = logical.right();
                 let correctable = !void_control_value(&right);
-                report_literal_condition(
-                    self.name(),
-                    &left,
-                    correctable,
-                    ancestors,
-                    source,
-                    context,
-                );
+                if correctable {
+                    let mut edit = node.location().start_offset()..node.location().end_offset();
+                    let mut replacement = source_at(source, &right.location()).to_string();
+                    if truthy_condition_literal(&right) {
+                        if let Some(parent) = ancestors.iter().rev().find_map(Node::as_if_node) {
+                            if parent.predicate().location().start_offset()
+                                == node.location().start_offset()
+                                && parent.predicate().location().end_offset()
+                                    == node.location().end_offset()
+                            {
+                                edit = parent.location().start_offset()
+                                    ..parent.location().end_offset();
+                                replacement = parent
+                                    .statements()
+                                    .map(|statements| {
+                                        conditional_branch_source(
+                                            &statements,
+                                            parent.if_keyword_loc(),
+                                            source,
+                                        )
+                                    })
+                                    .unwrap_or_default();
+                            }
+                        }
+                    }
+                    report_literal_edit(
+                        self.name(),
+                        &left,
+                        edit,
+                        replacement,
+                        ancestors,
+                        source,
+                        context,
+                    );
+                } else {
+                    report_literal_condition(self.name(), &left, false, ancestors, source, context);
+                }
             }
             return;
         }
@@ -232,14 +399,19 @@ impl Cop for LiteralAsCondition {
             if falsey_condition_literal(&left) {
                 let right = logical.right();
                 let correctable = !void_control_value(&right);
-                report_literal_condition(
-                    self.name(),
-                    &left,
-                    correctable,
-                    ancestors,
-                    source,
-                    context,
-                );
+                if correctable {
+                    report_literal_edit(
+                        self.name(),
+                        &left,
+                        node.location().start_offset()..node.location().end_offset(),
+                        source_at(source, &right.location()).to_string(),
+                        ancestors,
+                        source,
+                        context,
+                    );
+                } else {
+                    report_literal_condition(self.name(), &left, false, ancestors, source, context);
+                }
             }
             return;
         }
@@ -252,6 +424,84 @@ impl Cop for LiteralAsCondition {
             }
         }
     }
+}
+
+fn conditional_branch_source(
+    statements: &ruby_prism::StatementsNode<'_>,
+    keyword: Option<ruby_prism::Location<'_>>,
+    source: &str,
+) -> String {
+    if keyword.is_none_or(|keyword| keyword.start_offset() > statements.location().start_offset()) {
+        source[statements.location().start_offset()..statements.location().end_offset()].to_string()
+    } else {
+        conditional_statements_source(statements, source)
+    }
+}
+
+fn conditional_statements_source(
+    statements: &ruby_prism::StatementsNode<'_>,
+    source: &str,
+) -> String {
+    let location = statements.location();
+    let start_line = source[..location.start_offset()]
+        .rfind('\n')
+        .map_or(0, |at| at + 1);
+    let end_line = source[location.end_offset()..]
+        .find('\n')
+        .map_or(location.end_offset(), |at| location.end_offset() + at);
+    let indentation = location.start_offset() - start_line;
+    source[start_line..end_line]
+        .lines()
+        .map(|line| line.get(indentation..).unwrap_or(line))
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn conditional_subsequent_source(node: &Node<'_>, source: &str) -> String {
+    if let Some(otherwise) = node.as_else_node() {
+        return otherwise
+            .statements()
+            .map(|statements| conditional_statements_source(&statements, source))
+            .unwrap_or_default();
+    }
+    let mut replacement = source_at(source, &node.location()).to_string();
+    if replacement.starts_with("elsif") {
+        replacement.replace_range(..5, "if");
+    }
+    replacement
+}
+
+fn unwrap_post_loop_body(source: &str) -> String {
+    let Some(header_end) = source.find('\n') else {
+        return String::new();
+    };
+    let Some(footer) = source.rfind("\nend ") else {
+        return String::new();
+    };
+    source[header_end + 1..footer]
+        .lines()
+        .map(|line| line.strip_prefix("  ").unwrap_or(line))
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn report_literal_edit(
+    cop: &'static str,
+    literal: &Node<'_>,
+    edit: std::ops::Range<usize>,
+    replacement: String,
+    ancestors: &[Node<'_>],
+    source: &str,
+    context: &mut Context,
+) {
+    let range = literal.location().start_offset()..literal.location().end_offset();
+    let message = format!(
+        "Literal `{}` appeared as a condition.",
+        &source[range.clone()]
+    );
+    context
+        .cop_context(cop, source, ancestors)
+        .replace(message, range, edit, replacement);
 }
 
 fn report_literal_condition(
@@ -492,18 +742,237 @@ fn terminating_loop_statement(node: &Node<'_>) -> bool {
 
 fn identical_branches(context: &mut CopContext<'_, '_>) {
     let lines = context.source_file().lines().collect::<Vec<_>>();
-    for window in lines.windows(5) {
-        if window[0].1.trim_start().starts_with("if ")
-            && window[2].1.trim() == "else"
-            && window[4].1.trim() == "end"
-            && window[1].1.trim() == window[3].1.trim()
+    let ignore_literals = context.config_bool("IgnoreLiteralBranches", true);
+    let ignore_constants = context.config_bool("IgnoreConstantBranches", false);
+    let ignore_duplicate_else = context.config_bool("IgnoreDuplicateElseBranch", false);
+    for (start_index, (_, line)) in lines.iter().copied().enumerate() {
+        let trimmed = line.trim_start();
+        let indent = line.len() - trimmed.len();
+        let kind = if trimmed.starts_with("if ") || trimmed.starts_with("unless ") {
+            DuplicateConstruct::If
+        } else if trimmed.starts_with("case ") {
+            DuplicateConstruct::Case
+        } else if trimmed == "begin" {
+            DuplicateConstruct::Rescue
+        } else {
+            continue;
+        };
+        let branches = duplicate_branches(&lines, start_index, indent, kind);
+        if branches.len() < 2 {
+            continue;
+        }
+        let mut seen = Vec::<String>::new();
+        for (branch_index, branch) in branches.iter().enumerate() {
+            if branch.body.is_empty() {
+                continue;
+            }
+            let ignored_branch = ignore_literals && duplicate_literal(&branch.body, false)
+                || ignore_constants && duplicate_constant_branch(&branch.body);
+            let duplicate = seen.iter().any(|body| body == &branch.body);
+            if !duplicate {
+                seen.push(branch.body.clone());
+                continue;
+            }
+            if ignored_branch {
+                continue;
+            }
+            if ignore_duplicate_else
+                && branch.else_branch
+                && branches.len() > 2
+                && branch_index + 1 == branches.len()
+            {
+                continue;
+            }
+            context.report("Duplicate branch body detected.", branch.offense.clone());
+        }
+    }
+
+    for (offset, line) in context.source_file().lines() {
+        let Some(question) = line.find('?') else {
+            continue;
+        };
+        let Some(colon_relative) = line[question + 1..].find(':') else {
+            continue;
+        };
+        let colon = question + 1 + colon_relative;
+        let truthy = line[question + 1..colon].trim();
+        let falsy = line[colon + 1..].trim();
+        if !truthy.is_empty()
+            && truthy == falsy
+            && !(ignore_literals && duplicate_literal(truthy, ignore_constants))
         {
+            let at = line[colon + 1..].find(falsy).unwrap_or(0) + colon + 1;
             context.report(
                 "Duplicate branch body detected.",
-                window[1].0..window[3].0 + window[3].1.len(),
+                offset + at..offset + at + falsy.len(),
             );
         }
     }
+}
+
+#[derive(Clone, Copy)]
+enum DuplicateConstruct {
+    If,
+    Case,
+    Rescue,
+}
+
+struct DuplicateBranch {
+    body: String,
+    offense: std::ops::Range<usize>,
+    else_branch: bool,
+}
+
+fn duplicate_branches(
+    lines: &[(usize, &str)],
+    start: usize,
+    indent: usize,
+    kind: DuplicateConstruct,
+) -> Vec<DuplicateBranch> {
+    let mut headers = Vec::<(usize, bool)>::new();
+    if matches!(kind, DuplicateConstruct::If) {
+        headers.push((start, false));
+    }
+    let mut end = lines.len();
+    for index in start + 1..lines.len() {
+        let line = lines[index].1;
+        let trimmed = line.trim_start();
+        let line_indent = line.len() - trimmed.len();
+        if line_indent == indent && trimmed == "end" {
+            end = index;
+            break;
+        }
+        if line_indent == indent {
+            let header = match kind {
+                DuplicateConstruct::If => trimmed.starts_with("elsif ") || trimmed == "else",
+                DuplicateConstruct::Case => {
+                    trimmed.starts_with("when ")
+                        || trimmed.starts_with("in ")
+                        || trimmed.starts_with("else")
+                }
+                DuplicateConstruct::Rescue => {
+                    trimmed.starts_with("rescue") || trimmed.starts_with("else")
+                }
+            };
+            if header {
+                headers.push((index, trimmed.starts_with("else")));
+                continue;
+            }
+        }
+    }
+    let mut result = Vec::new();
+    for (position, (header_index, else_branch)) in headers.iter().copied().enumerate() {
+        let next = headers.get(position + 1).map_or(end, |(index, _)| *index);
+        let header_line = lines[header_index].1;
+        let header_trimmed = header_line.trim_start();
+        let inline = header_trimmed
+            .split_once(" then ")
+            .map(|(_, body)| body)
+            .or_else(|| {
+                else_branch
+                    .then(|| header_trimmed.strip_prefix("else "))
+                    .flatten()
+            });
+        let body = inline.map_or_else(
+            || {
+                lines[header_index + 1..next]
+                    .iter()
+                    .map(|(_, line)| line.trim())
+                    .filter(|line| !line.is_empty() && !line.starts_with('#'))
+                    .collect::<Vec<_>>()
+                    .join("\n")
+            },
+            |body| body.trim().to_string(),
+        );
+        let line_offset = lines[header_index].0;
+        let start = line_offset + header_line.len() - header_trimmed.len();
+        let offense_end = if else_branch {
+            start + 4
+        } else if inline.is_some() {
+            line_offset + header_line.trim_end().len()
+        } else if matches!(kind, DuplicateConstruct::If) && header_index != start {
+            lines[end.saturating_sub(1)].0 + lines[end.saturating_sub(1)].1.trim_end().len()
+        } else if next > header_index + 1 {
+            lines[next - 1].0 + lines[next - 1].1.trim_end().len()
+        } else {
+            line_offset + header_line.trim_end().len()
+        };
+        result.push(DuplicateBranch {
+            body,
+            offense: start..offense_end,
+            else_branch,
+        });
+    }
+    result
+}
+
+fn duplicate_literal(source: &str, ignore_constants: bool) -> bool {
+    let source = source.trim();
+    if source.is_empty() || source.contains("#{") || source.starts_with('`') {
+        return false;
+    }
+    if matches!(source, "true" | "false" | "nil" | "[]" | "{}") {
+        return true;
+    }
+    if source.starts_with('/') && source.rfind('/').is_some_and(|at| at > 0)
+        || source.starts_with(':') && !source.starts_with(":\"") && !source.starts_with(":'")
+        || (source.starts_with('"') && source.ends_with('"'))
+        || (source.starts_with('\'') && source.ends_with('\''))
+    {
+        return true;
+    }
+    let number = source.trim_end_matches(['r', 'i']);
+    if number.parse::<f64>().is_ok() {
+        return true;
+    }
+    if let Some((left, right)) = source.split_once("...").or_else(|| source.split_once("..")) {
+        return left.trim().parse::<f64>().is_ok() && right.trim().parse::<f64>().is_ok();
+    }
+    if source.starts_with('[') && source.ends_with(']') {
+        return source[1..source.len() - 1]
+            .split(',')
+            .all(|item| duplicate_literal_atom(item.trim(), ignore_constants));
+    }
+    if source.starts_with('{') && source.ends_with('}') {
+        return source[1..source.len() - 1].split(',').all(|pair| {
+            pair.split_once(':')
+                .is_some_and(|(_, value)| duplicate_literal_atom(value.trim(), ignore_constants))
+        });
+    }
+    ignore_constants && constant_literal(source)
+}
+
+fn duplicate_literal_atom(source: &str, ignore_constants: bool) -> bool {
+    duplicate_literal(source, ignore_constants) || ignore_constants && constant_literal(source)
+}
+
+fn constant_literal(source: &str) -> bool {
+    !source.is_empty()
+        && source.split("::").all(|part| {
+            part.as_bytes().first().is_some_and(u8::is_ascii_uppercase)
+                && part
+                    .bytes()
+                    .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
+        })
+}
+
+fn duplicate_constant_branch(source: &str) -> bool {
+    let source = source.trim();
+    if constant_literal(source) {
+        return true;
+    }
+    if source.starts_with('[') && source.ends_with(']') {
+        return source[1..source.len() - 1]
+            .split(',')
+            .all(|item| duplicate_constant_branch(item.trim()));
+    }
+    if source.starts_with('{') && source.ends_with('}') {
+        return source[1..source.len() - 1].split(',').all(|pair| {
+            pair.split_once(':')
+                .is_some_and(|(_, value)| duplicate_constant_branch(value.trim()))
+        });
+    }
+    false
 }
 
 struct EmptyConditionalBody;
@@ -660,16 +1129,29 @@ impl Cop for UnreachableCode {
     fn on_node<'pr>(
         &self,
         node: &Node<'pr>,
-        _ancestors: &[Node<'pr>],
-        source: &str,
+        ancestors: &[Node<'pr>],
+        _source: &str,
         context: &mut Context,
     ) {
         let Some(statements) = node.as_statements_node() else {
             return;
         };
-        let redefined = redefined_flow_methods(source);
-        let inside_instance_eval = source.contains("instance_eval");
         let body = statements.body().iter().collect::<Vec<_>>();
+        let mut redefined = redefined_flow_methods(&body);
+        if let Some(definition) = ancestors.iter().rev().find_map(Node::as_def_node) {
+            let name = definition.name().as_slice();
+            if matches!(
+                name,
+                b"raise" | b"fail" | b"throw" | b"exit" | b"exit!" | b"abort"
+            ) {
+                redefined.insert(name.to_vec());
+            }
+        }
+        let inside_instance_eval = ancestors.iter().any(|ancestor| {
+            ancestor
+                .as_call_node()
+                .is_some_and(|call| call_name(&call) == b"instance_eval")
+        });
         for pair in body.windows(2) {
             if flow_expression(&pair[0], &redefined, inside_instance_eval) {
                 context.report(
@@ -682,21 +1164,16 @@ impl Cop for UnreachableCode {
     }
 }
 
-fn redefined_flow_methods(source: &str) -> HashSet<Vec<u8>> {
-    source
-        .lines()
-        .filter_map(|line| {
-            let definition = line.trim_start().strip_prefix("def ")?;
-            let name = definition
-                .strip_prefix("self.")
-                .unwrap_or(definition)
-                .split(|character: char| !(character.is_alphanumeric() || character == '_'))
-                .next()?;
+fn redefined_flow_methods(body: &[Node<'_>]) -> HashSet<Vec<u8>> {
+    body.iter()
+        .filter_map(|node| {
+            let definition = node.as_def_node()?;
+            let name = definition.name().as_slice();
             matches!(
                 name,
-                "raise" | "fail" | "throw" | "exit" | "exit!" | "abort"
+                b"raise" | b"fail" | b"throw" | b"exit" | b"exit!" | b"abort"
             )
-            .then(|| name.as_bytes().to_vec())
+            .then(|| name.to_vec())
         })
         .collect()
 }
@@ -719,10 +1196,14 @@ fn flow_expression(
             call_name(&call),
             b"raise" | b"fail" | b"throw" | b"exit" | b"exit!" | b"abort"
         );
-        if !flow || call.receiver().is_some() && !root_constant(call.receiver(), b"Kernel") {
+        let receiver_is_kernel = root_constant(call.receiver(), b"Kernel");
+        let receiver_is_self = call
+            .receiver()
+            .is_some_and(|receiver| receiver.as_self_node().is_some());
+        if !flow || call.receiver().is_some() && !receiver_is_kernel && !receiver_is_self {
             return false;
         }
-        return call.receiver().is_some()
+        return receiver_is_kernel
             || !inside_instance_eval && !redefined.contains(call_name(&call));
     }
     if let Some(begin) = node.as_begin_node() {
@@ -740,15 +1221,11 @@ fn flow_expression(
         let Some(if_branch) = condition.statements() else {
             return false;
         };
-        let Some(else_branch) = condition
-            .subsequent()
-            .and_then(|branch| branch.as_else_node())
-            .and_then(|branch| branch.statements())
-        else {
+        let Some(subsequent) = condition.subsequent() else {
             return false;
         };
         return branch_flows(&if_branch, redefined, inside_instance_eval)
-            && branch_flows(&else_branch, redefined, inside_instance_eval);
+            && flow_expression(&subsequent, redefined, inside_instance_eval);
     }
     if let Some(condition) = node.as_unless_node() {
         let Some(if_branch) = condition.statements() else {
@@ -762,6 +1239,35 @@ fn flow_expression(
         };
         return branch_flows(&if_branch, redefined, inside_instance_eval)
             && branch_flows(&else_branch, redefined, inside_instance_eval);
+    }
+    if let Some(branch) = node.as_else_node() {
+        return branch
+            .statements()
+            .is_some_and(|statements| branch_flows(&statements, redefined, inside_instance_eval));
+    }
+    if let Some(case_node) = node.as_case_node() {
+        let Some(else_branch) = case_node.else_clause() else {
+            return false;
+        };
+        return case_node.conditions().iter().all(|condition| {
+            condition.as_when_node().is_some_and(|branch| {
+                branch.statements().is_some_and(|statements| {
+                    branch_flows(&statements, redefined, inside_instance_eval)
+                })
+            })
+        }) && flow_expression(&else_branch.as_node(), redefined, inside_instance_eval);
+    }
+    if let Some(case_node) = node.as_case_match_node() {
+        let Some(else_branch) = case_node.else_clause() else {
+            return false;
+        };
+        return case_node.conditions().iter().all(|condition| {
+            condition.as_in_node().is_some_and(|branch| {
+                branch.statements().is_some_and(|statements| {
+                    branch_flows(&statements, redefined, inside_instance_eval)
+                })
+            })
+        }) && flow_expression(&else_branch.as_node(), redefined, inside_instance_eval);
     }
     false
 }

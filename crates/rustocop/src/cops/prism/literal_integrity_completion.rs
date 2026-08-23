@@ -474,10 +474,17 @@ fn double_negation(context: &mut CopContext<'_, '_>) {
                             line.len() - line.trim_start().len(),
                         )))
                 || (in_conditional_branch(&lines[..index], line.len() - line.trim_start().len())
-                    && lines[index + 1..].iter().find(|(_, next)| !next.trim().is_empty()).is_some_and(|(_, next)| {
-                        let next = next.trim();
-                        next == "end" || next == "else" || next.starts_with("elsif ") || next.starts_with("when ") || next.starts_with("in ")
-                    })))
+                    && lines[index + 1..]
+                        .iter()
+                        .find(|(_, next)| !next.trim().is_empty())
+                        .is_some_and(|(_, next)| {
+                            let next = next.trim();
+                            next == "end"
+                                || next == "else"
+                                || next.starts_with("elsif ")
+                                || next.starts_with("when ")
+                                || next.starts_with("in ")
+                        })))
         {
             continue;
         }
@@ -491,18 +498,26 @@ fn double_negation(context: &mut CopContext<'_, '_>) {
 }
 
 fn in_conditional_branch(lines: &[(usize, &str)], indent: usize) -> bool {
-    lines.iter().rev().find(|(_, line)| {
-        !line.trim().is_empty() && line.len() - line.trim_start().len() < indent
-    }).is_some_and(|(_, line)| {
-        let line = line.trim_start();
-        line.starts_with("if ") || line.starts_with("elsif ") || line == "else"
-            || line.starts_with("case ") || line.starts_with("when ") || line.starts_with("in ")
-    })
+    lines
+        .iter()
+        .rev()
+        .find(|(_, line)| !line.trim().is_empty() && line.len() - line.trim_start().len() < indent)
+        .is_some_and(|(_, line)| {
+            let line = line.trim_start();
+            line.starts_with("if ")
+                || line.starts_with("elsif ")
+                || line == "else"
+                || line.starts_with("case ")
+                || line.starts_with("when ")
+                || line.starts_with("in ")
+        })
 }
 
 fn empty_literal(context: &mut CopContext<'_, '_>) {
     let source = context.source();
-    let string_literal = if context.related_config_value("Style/StringLiterals", "EnforcedStyle") == Some("double_quotes") {
+    let string_literal = if context.related_config_value("Style/StringLiterals", "EnforcedStyle")
+        == Some("double_quotes")
+    {
         "\"\""
     } else {
         "''"
@@ -515,7 +530,10 @@ fn empty_literal(context: &mut CopContext<'_, '_>) {
         match context.related_config_value("AllCops", "StringLiteralsFrozenByDefault") {
             Some("true") => true,
             Some("false") => false,
-            _ => context.related_config_value("Style/FrozenStringLiteralComment", "Enabled") == Some("true"),
+            _ => {
+                context.related_config_value("Style/FrozenStringLiteralComment", "Enabled")
+                    == Some("true")
+            }
         }
     });
     for (constructor, literal, kind) in [
@@ -549,35 +567,44 @@ fn empty_literal(context: &mut CopContext<'_, '_>) {
                 search = end + 1;
                 continue;
             }
-            context.replace(
-                format!(
-                    "Use {kind} literal `{literal}` instead of `{}`.",
-                    if kind == "string" { constructor } else { &source[offense_start..end] }
-                ),
-                offense_start..end,
-                if kind == "hash"
-                    && source.as_bytes().get(offense_start.wrapping_sub(1)) == Some(&b' ')
-                    && !source[..offense_start].trim_end().ends_with('=')
-                    && !source[..offense_start].trim_end().ends_with('{')
-                {
-                    offense_start - 1..end
+            let message = format!(
+                "Use {kind} literal `{literal}` instead of `{}`.",
+                if kind == "string" {
+                    constructor
                 } else {
-                    offense_start..end
-                },
-                if kind == "hash"
-                    && source.as_bytes().get(offense_start.wrapping_sub(1)) == Some(&b' ')
-                    && !source[..offense_start].trim_end().ends_with('=')
-                    && !source[..offense_start].trim_end().ends_with('{')
-                {
-                    if matches!(source.as_bytes().get(end), Some(b',' | b')')) {
-                        "({}"
-                    } else {
-                        "({})"
-                    }
-                } else {
-                    literal
-                },
+                    &source[offense_start..end]
+                }
             );
+            let wraps_unparenthesized_hash = kind == "hash"
+                && source.as_bytes().get(offense_start.wrapping_sub(1)) == Some(&b' ')
+                && !source[..offense_start].trim_end().ends_with('=')
+                && !source[..offense_start].trim_end().ends_with('{');
+            if wraps_unparenthesized_hash && source.as_bytes().get(end) == Some(&b',') {
+                let line_end = source[end..].find('\n').map_or(source.len(), |at| end + at);
+                context.replace_many(
+                    message,
+                    offense_start..end,
+                    vec![
+                        (offense_start - 1..end, "({}".to_string()),
+                        (line_end..line_end, ")".to_string()),
+                    ],
+                );
+            } else {
+                context.replace(
+                    message,
+                    offense_start..end,
+                    if wraps_unparenthesized_hash {
+                        offense_start - 1..end
+                    } else {
+                        offense_start..end
+                    },
+                    if wraps_unparenthesized_hash {
+                        "({})"
+                    } else {
+                        literal
+                    },
+                );
+            }
             search = end;
         }
     }

@@ -97,7 +97,7 @@ fn empty_line_after_magic_comment(context: &mut CopContext<'_, '_>) {
     }
     context.insert(
         "Add an empty line after magic comments.",
-        *offset..*offset,
+        *offset..(*offset + 1).min(context.source().len()),
         *offset,
         "\n",
     );

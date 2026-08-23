@@ -97,7 +97,7 @@ pub(super) fn space_after_method_name(source: &str, reporter: &mut Reporter<'_>)
                 let identity = line[def_start + "def ".len()..paren].trim();
                 if identity.is_empty()
                     || identity.chars().any(char::is_whitespace)
-                    || identity.contains(['(', ')', '='])
+                    || identity.contains(['(', ')'])
                 {
                     continue;
                 }

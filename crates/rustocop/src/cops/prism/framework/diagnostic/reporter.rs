@@ -71,6 +71,14 @@ impl Reporter<'_> {
         self.context.config_value(cop_name, key)
     }
 
+    pub(in super::super) fn related_config_values(&self, cop_name: &str, key: &str) -> &[String] {
+        self.context.cop_config.values(cop_name, key)
+    }
+
+    pub(in super::super) fn related_config_explicit(&self, cop_name: &str, key: &str) -> bool {
+        self.context.cop_config.explicitly_contains(cop_name, key)
+    }
+
     pub(in super::super) fn related_config_map(
         &self,
         cop_name: &str,

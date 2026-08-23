@@ -107,8 +107,97 @@ fn useless_times(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
         context.report(message, &location);
         return;
     }
-    let unchanged = context.source_file().at(&location).to_string();
-    context.replace(message, &location, &location, unchanged);
+    let source = context.source_file().at(&location);
+    let line_start = context.source_file().line_start(location.start_offset());
+    let line_end = context.source()[location.end_offset()..]
+        .find('\n')
+        .map_or(context.source().len(), |at| location.end_offset() + at + 1);
+    let indentation = &context.source()[line_start..location.start_offset()];
+    let replacement = if count <= 0 {
+        String::new()
+    } else if let Some(method) = source
+        .strip_prefix("1.times(&:")
+        .and_then(|rest| rest.strip_suffix(')'))
+    {
+        format!("{indentation}{method}\n")
+    } else if let (Some(open), Some(close)) = (source.find('{'), source.rfind('}')) {
+        let mut body = source[open + 1..close].trim().to_string();
+        if body.starts_with('|') {
+            if let Some(end) = body[1..].find('|').map(|at| at + 1) {
+                let parameter = body[1..end].trim().to_string();
+                body = body[end + 1..].trim().to_string();
+                if !parameter.is_empty() {
+                    body = replace_identifier(&body, &parameter, "0");
+                }
+            }
+        }
+        (!body.is_empty())
+            .then(|| format!("{indentation}{body}\n"))
+            .unwrap_or_default()
+    } else if let Some(header_end) = source.find('\n') {
+        let header = &source[..header_end];
+        let parameter = header
+            .find('|')
+            .and_then(|start| {
+                header[start + 1..]
+                    .find('|')
+                    .map(|end| &header[start + 1..start + 1 + end])
+            })
+            .map(str::trim)
+            .filter(|name| !name.is_empty());
+        let closing_start = source.rfind('\n').unwrap_or(source.len());
+        let body = if closing_start > header_end {
+            &source[header_end + 1..closing_start]
+        } else {
+            ""
+        };
+        let body_indentation = body
+            .lines()
+            .filter(|line| !line.trim().is_empty())
+            .map(|line| line.len() - line.trim_start().len())
+            .min()
+            .unwrap_or(0);
+        let mut body = body
+            .lines()
+            .map(|line| {
+                let line = &line[body_indentation.min(line.len())..];
+                if line.is_empty() {
+                    String::new()
+                } else {
+                    format!("{indentation}{line}")
+                }
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+        if let Some(parameter) = parameter {
+            body = replace_identifier(&body, parameter, "0");
+        }
+        (!body.trim().is_empty())
+            .then(|| format!("{body}\n"))
+            .unwrap_or_default()
+    } else {
+        String::new()
+    };
+    context.replace(message, &location, line_start..line_end, replacement);
+}
+
+fn replace_identifier(source: &str, name: &str, replacement: &str) -> String {
+    let mut result = String::new();
+    let mut search = 0usize;
+    for (at, _) in source.match_indices(name) {
+        let before = source.as_bytes().get(at.wrapping_sub(1));
+        let after = source.as_bytes().get(at + name.len());
+        if before.is_some_and(|byte| byte.is_ascii_alphanumeric() || *byte == b'_')
+            || after.is_some_and(|byte| byte.is_ascii_alphanumeric() || *byte == b'_')
+        {
+            continue;
+        }
+        result.push_str(&source[search..at]);
+        result.push_str(replacement);
+        search = at + name.len();
+    }
+    result.push_str(&source[search..]);
+    result
 }
 
 fn times_block_argument_is_written(node: &CallNode<'_>, file: SourceFile<'_>) -> bool {

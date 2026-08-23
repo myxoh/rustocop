@@ -78,6 +78,9 @@ fn predicate_prefix(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
         .config_values("ForbiddenPrefixes")
         .iter()
         .any(|forbidden| forbidden == prefix);
+    if !forbidden && name.ends_with('?') {
+        return;
+    }
     let replacement = if forbidden {
         format!("{base}?")
     } else {
@@ -146,14 +149,10 @@ fn parameter_lists(node: &ruby_prism::DefNode<'_>, context: &mut CopContext<'_, 
 
 fn collection_literal_length(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
     let threshold = context.config_usize("LengthThreshold", 250);
-    if context
-        .ancestors()
-        .iter()
-        .any(|ancestor| {
-            ancestor.location().start_offset() == node.location().start_offset()
-                && collection_element_count(ancestor).is_some_and(|count| count >= threshold)
-        })
-    {
+    if context.ancestors().iter().any(|ancestor| {
+        ancestor.location().start_offset() == node.location().start_offset()
+            && collection_element_count(ancestor).is_some_and(|count| count >= threshold)
+    }) {
         return;
     }
     let count = if let Some(array) = node.as_array_node() {

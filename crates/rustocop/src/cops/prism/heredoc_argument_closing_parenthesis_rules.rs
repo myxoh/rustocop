@@ -35,23 +35,65 @@ fn on_send(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
         return;
     }
 
+    let message = "Put the closing parenthesis for a method call with a HEREDOC parameter on the same line as the HEREDOC opening.";
     let last_argument = arguments.arguments().last().expect("nonempty arguments");
-    let removal = if file.line(closing.start_offset()).trim() == ")" {
-        file.full_line_range(closing.start_offset()..closing.end_offset())
+    let last_argument_end = last_argument.location().end_offset();
+    let closing_line = file.line(closing.start_offset());
+    let trimmed_closing_line = closing_line.trim();
+    let safe_to_remove_closing_line = trimmed_closing_line == ")"
+        || trimmed_closing_line
+            .strip_prefix(')')
+            .and_then(|suffix| suffix.strip_suffix(','))
+            .is_some_and(|spaces| spaces.len() <= 20 && spaces.bytes().all(|byte| byte == b' '));
+    let removal_end = closing.end_offset();
+    let removal = if safe_to_remove_closing_line {
+        file.line_start(closing.start_offset()).saturating_sub(1)..removal_end
     } else {
-        closing.start_offset()..closing.end_offset()
+        closing.start_offset()..removal_end
     };
-    context.replace_many(
-        "Put the closing parenthesis for a method call with a HEREDOC parameter on the same line as the HEREDOC opening.",
-        &closing,
-        vec![
-            (
-                last_argument.location().end_offset()..last_argument.location().end_offset(),
-                ")".to_string(),
-            ),
-            (removal, String::new()),
-        ],
-    );
+    let mut edits = vec![
+        (last_argument_end..last_argument_end, ")".to_string()),
+        (removal, String::new()),
+    ];
+
+    let between_argument_and_closing = &context.source()[last_argument_end..closing.start_offset()];
+    if let (Some(comma), Some(newline)) = (
+        between_argument_and_closing.find(','),
+        between_argument_and_closing.find('\n'),
+    ) {
+        if comma < newline {
+            edits.push((
+                last_argument_end..last_argument_end + comma + 1,
+                String::new(),
+            ));
+        }
+    }
+
+    let node_end = node.location().end_offset();
+    let mut external_comma_offset = 0;
+    while external_comma_offset < 20
+        && context
+            .source()
+            .as_bytes()
+            .get(node_end + external_comma_offset)
+            == Some(&b' ')
+    {
+        external_comma_offset += 1;
+    }
+    if context
+        .source()
+        .as_bytes()
+        .get(node_end + external_comma_offset)
+        == Some(&b',')
+    {
+        edits.push((
+            node_end..node_end + external_comma_offset + 1,
+            String::new(),
+        ));
+        edits.push((last_argument_end..last_argument_end, ",".to_string()));
+    }
+
+    context.replace_many(message, &closing, edits);
 }
 
 struct HeredocLocations<'pr> {

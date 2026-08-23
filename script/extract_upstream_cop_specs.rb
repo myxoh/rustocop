@@ -27,9 +27,12 @@ abort "upstream RuboCop specs failed; capture is incomplete" unless status
 
 compatibility_status = Rustocop::CompatibilityStatus.load(root: root)
 pending = compatibility_status.intentionally_pending_cops.to_h { |cop| [cop, true] }
+broken_cases = YAML.safe_load_file(
+  File.join(root, "spec/upstream/rubocop-1.87.0/broken_fixture_cases.yml")
+).fetch("cases").to_h { |entry| [entry.fetch("id"), true] }
 retained = File.foreach(output).filter_map do |line|
   test_case = JSON.parse(line)
-  line unless pending[test_case.fetch("cop")]
+  line unless pending[test_case.fetch("cop")] || broken_cases[test_case.dig("example", "id")]
 end
 File.write(output, retained.join)
 

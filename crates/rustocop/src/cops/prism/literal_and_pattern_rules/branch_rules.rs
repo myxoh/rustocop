@@ -24,10 +24,7 @@ pub(super) fn branch_trailing_source<'source>(
     &tail[..length]
 }
 
-pub(super) fn file_null(
-    node: &ruby_prism::StringNode<'_>,
-    context: &mut CopContext<'_, '_>,
-) {
+pub(super) fn file_null(node: &ruby_prism::StringNode<'_>, context: &mut CopContext<'_, '_>) {
     if context
         .parent()
         .is_some_and(|parent| parent.as_array_node().is_some() || parent.as_assoc_node().is_some())

@@ -242,9 +242,16 @@ fn redundant_struct_keyword_init(node: &CallNode<'_>, context: &mut CopContext<'
         return;
     };
     let pairs = if let Some(keyword_hash) = last_argument.as_keyword_hash_node() {
-        keyword_hash.elements().iter().filter_map(|element| element.as_assoc_node()).collect::<Vec<_>>()
+        keyword_hash
+            .elements()
+            .iter()
+            .filter_map(|element| element.as_assoc_node())
+            .collect::<Vec<_>>()
     } else if let Some(hash) = last_argument.as_hash_node() {
-        hash.elements().iter().filter_map(|element| element.as_assoc_node()).collect::<Vec<_>>()
+        hash.elements()
+            .iter()
+            .filter_map(|element| element.as_assoc_node())
+            .collect::<Vec<_>>()
     } else {
         return;
     };
@@ -253,7 +260,10 @@ fn redundant_struct_keyword_init(node: &CallNode<'_>, context: &mut CopContext<'
             .as_symbol_node()
             .is_some_and(|key| key.unescaped() == b"keyword_init")
     };
-    if pairs.iter().any(|pair| keyword_init(pair) && pair.value().as_false_node().is_some()) {
+    if pairs
+        .iter()
+        .any(|pair| keyword_init(pair) && pair.value().as_false_node().is_some())
+    {
         return;
     }
     for (index, pair) in pairs.iter().enumerate().filter(|(_, pair)| {
@@ -265,7 +275,21 @@ fn redundant_struct_keyword_init(node: &CallNode<'_>, context: &mut CopContext<'
         let edit_start = index
             .checked_sub(1)
             .and_then(|previous| pairs.get(previous))
-            .map_or(offense.start_offset(), |previous| previous.location().end_offset());
+            .map_or(offense.start_offset(), |previous| {
+                previous.location().end_offset()
+            });
+        let edit_start = if index == 0 {
+            context.source()[..offense.start_offset()]
+                .rfind(',')
+                .filter(|comma| {
+                    !context.source()[*comma + 1..offense.start_offset()]
+                        .chars()
+                        .any(|character| matches!(character, '(' | '{'))
+                })
+                .unwrap_or(edit_start)
+        } else {
+            edit_start
+        };
         context.remove(
             format!("Remove the redundant `keyword_init: {value}`."),
             &offense,

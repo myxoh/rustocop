@@ -43,10 +43,12 @@ fn prism_offense(source: &str, index: &SourceIndex, finding: prism::Finding) -> 
     let (last_line, last_column) =
         if reversed_empty && finding.start_offset == source.len() && source.ends_with('\n') {
             (line, 0)
-        } else if empty_location && finding.start_offset == 0 && source.is_empty() {
-            (1, 0)
         } else if empty_location {
-            index.position(source, finding.start_offset)
+            // Parser represents an empty source range as ending immediately
+            // before its start. RuboCop's JSON formatter preserves that as a
+            // zero column at the beginning of a line (and, generally, as the
+            // column immediately preceding the start column).
+            (line, column.saturating_sub(1))
         } else if ends_at_newline {
             let (line, _) = index.position(source, finding.end_offset);
             // RuboCop's JSON formatter reports the beginning of the following
@@ -135,6 +137,26 @@ mod tests {
         );
         assert_eq!((empty.last_line, empty.last_column), (1, 0));
         assert_eq!(empty.length, 0);
+
+        let empty_at_start_of_nonempty_source = prism_offense(
+            "source\n",
+            &SourceIndex::new("source\n"),
+            prism::Finding {
+                cop_name: "Bundler/GemFilename",
+                message: "Wrong filename.".to_string(),
+                correctable: false,
+                corrected: false,
+                start_offset: 0,
+                end_offset: 0,
+            },
+        );
+        assert_eq!(
+            (
+                empty_at_start_of_nonempty_source.last_line,
+                empty_at_start_of_nonempty_source.last_column
+            ),
+            (1, 0)
+        );
 
         let inserted_blank_line = prism_offense(
             "# frozen_string_literal: true\nvalue\n",

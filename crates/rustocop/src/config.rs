@@ -35,6 +35,7 @@ pub(crate) struct InspectionConfig {
 #[derive(Clone, Debug)]
 pub(crate) struct CopConfig {
     values: HashMap<String, HashMap<String, ConfigValue>>,
+    explicit_values: std::collections::HashSet<(String, String)>,
     // Precompiled once per run for the authoring policy API.
     #[allow(dead_code)]
     patterns: HashMap<String, HashMap<String, Vec<Regex>>>,
@@ -56,9 +57,18 @@ enum ConfigValue {
 impl CopConfig {
     pub(crate) fn from_source(source: &str) -> Self {
         let mut values = Self::parse_values(RUBOCOP_DEFAULT_CONFIG);
-        Self::merge_values(&mut values, Self::parse_values(source));
+        let overrides = Self::parse_values(source);
+        let explicit_values = overrides
+            .iter()
+            .flat_map(|(cop, entries)| entries.keys().map(|key| (cop.clone(), key.clone())))
+            .collect();
+        Self::merge_values(&mut values, overrides);
         let patterns = Self::compile_patterns(&values);
-        Self { values, patterns }
+        Self {
+            values,
+            explicit_values,
+            patterns,
+        }
     }
 
     fn merge_values(
@@ -273,7 +283,13 @@ impl CopConfig {
                             key.clone(),
                             patterns
                                 .iter()
-                                .filter_map(|pattern| Regex::new(pattern).ok())
+                                .filter_map(|pattern| {
+                                    let pattern = pattern
+                                        .replace("\\\\", "\\")
+                                        .replace("\\A", "^")
+                                        .replace("\\z", "$");
+                                    Regex::new(&pattern).ok()
+                                })
                                 .collect(),
                         ))
                     })
@@ -314,6 +330,11 @@ impl CopConfig {
         self.values
             .get(cop)
             .is_some_and(|values| values.contains_key(key))
+    }
+
+    pub(crate) fn explicitly_contains(&self, cop: &str, key: &str) -> bool {
+        self.explicit_values
+            .contains(&(cop.to_string(), key.to_string()))
     }
 
     #[allow(dead_code)]

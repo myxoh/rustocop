@@ -63,8 +63,49 @@ fn require_order(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
         "Sort `{}` in alphabetical order.",
         String::from_utf8_lossy(call_name(node))
     );
-    let source = context.source()[range.clone()].to_string();
-    context.replace(message, range.clone(), range, source);
+    let lines = context.source_file().lines().collect::<Vec<_>>();
+    let line_index = lines
+        .iter()
+        .position(|(offset, line)| *offset <= range.start && range.start <= *offset + line.len())
+        .unwrap_or(0);
+    let kind = String::from_utf8_lossy(call_name(node));
+    let eligible = |line: &str| {
+        let trimmed = line.trim_start();
+        trimmed.starts_with('#') || trimmed.starts_with(&format!("{kind} "))
+    };
+    let mut first = line_index;
+    while first > 0 && eligible(lines[first - 1].1) && !lines[first - 1].1.trim().is_empty() {
+        first -= 1;
+    }
+    let mut last = line_index + 1;
+    while last < lines.len() && eligible(lines[last].1) && !lines[last].1.trim().is_empty() {
+        last += 1;
+    }
+    let mut pending_comments = Vec::new();
+    let mut units = Vec::<(String, Vec<String>)>::new();
+    for (_, line) in &lines[first..last] {
+        if line.trim_start().starts_with('#') {
+            pending_comments.push((*line).to_string());
+            continue;
+        }
+        let key = line
+            .split(['\'', '"'])
+            .nth(1)
+            .unwrap_or_default()
+            .to_string();
+        pending_comments.push((*line).to_string());
+        units.push((key, std::mem::take(&mut pending_comments)));
+    }
+    units.sort_by(|left, right| left.0.cmp(&right.0));
+    let replacement = units
+        .into_iter()
+        .flat_map(|(_, lines)| lines)
+        .chain(pending_comments)
+        .collect::<Vec<_>>()
+        .join("\n");
+    let block_start = lines[first].0;
+    let block_end = lines[last - 1].0 + lines[last - 1].1.len();
+    context.replace(message, range, block_start..block_end, replacement);
 }
 
 fn search_node<'pr>(
@@ -103,17 +144,10 @@ fn search_node<'pr>(
         }
     }
     let location = node.location();
-    Some((
-        location.start_offset(),
-        location.end_offset(),
-        ancestors,
-    ))
+    Some((location.start_offset(), location.end_offset(), ancestors))
 }
 
-fn containing_statements<'pr>(
-    ancestors: &[Node<'pr>],
-    target: usize,
-) -> Option<Vec<Node<'pr>>> {
+fn containing_statements<'pr>(ancestors: &[Node<'pr>], target: usize) -> Option<Vec<Node<'pr>>> {
     ancestors.iter().rev().find_map(|ancestor| {
         let statements = if let Some(program) = ancestor.as_program_node() {
             Some(program.statements())

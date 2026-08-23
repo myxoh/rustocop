@@ -60,12 +60,52 @@ fn special_global_vars(
             "$LOAD_PATH" | "$LOADED_FEATURES" | "$PROGRAM_NAME" | "ARGV"
         );
     if needs_english {
-        let mut edits = english_require_edits(context.source(), node.location().start_offset());
+        let mut edits =
+            if has_prior_english_global(context.source(), node.location().start_offset()) {
+                Vec::new()
+            } else {
+                english_require_edits(context.source(), node.location().start_offset())
+            };
         edits.push((edit, replacement));
         context.replace_many(message, node.location(), edits);
     } else {
         context.replace(message, node.location(), edit, replacement);
     }
+}
+
+fn has_prior_english_global(source: &str, before: usize) -> bool {
+    struct Finder {
+        before: usize,
+        found: bool,
+    }
+
+    impl<'pr> Visit<'pr> for Finder {
+        fn visit_global_variable_read_node(
+            &mut self,
+            node: &ruby_prism::GlobalVariableReadNode<'pr>,
+        ) {
+            if node.location().start_offset() < self.before {
+                let name = String::from_utf8_lossy(node.name().as_slice());
+                self.found = variable_entry(&name).is_some_and(|(_, english)| {
+                    !matches!(
+                        english.first().copied(),
+                        Some("$LOAD_PATH" | "$LOADED_FEATURES" | "$PROGRAM_NAME" | "ARGV")
+                    )
+                });
+            }
+            if !self.found {
+                ruby_prism::visit_global_variable_read_node(self, node);
+            }
+        }
+    }
+
+    let parsed = ruby_prism::parse(source.as_bytes());
+    let mut finder = Finder {
+        before,
+        found: false,
+    };
+    finder.visit(&parsed.node());
+    finder.found
 }
 
 fn variable_entry(current: &str) -> Option<(&'static str, &'static [&'static str])> {

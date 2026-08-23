@@ -14,7 +14,7 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
         custom("Naming/VariableName", variable_name),
         custom("Lint/UselessAssignment", useless_assignment),
         Box::new(SelfAssignment),
-        custom("Naming/MethodName", method_name),
+        Box::new(MethodName),
         Box::new(PredicateMethod),
     ]
 }
@@ -466,13 +466,13 @@ fn same_assignment_variable(
 }
 
 fn memoized_variable(context: &mut CopContext<'_, '_>) {
-    if context.source().contains("define_method")
-        || context.source().contains("define_singleton_method")
-    {
-        return;
-    }
     let lines = context.source_file().lines().collect::<Vec<_>>();
     let mut method = None::<String>;
+    let mut method_body_start = None::<usize>;
+    let leading_underscore_required = context
+        .config_value("EnforcedStyleForLeadingUnderscores")
+        .unwrap_or("disallowed")
+        == "required";
     for (index, (offset, line)) in lines.iter().copied().enumerate() {
         if let Some(definition) = line.split_once("def ").map(|(_, definition)| definition) {
             method = Some(
@@ -486,6 +486,10 @@ fn memoized_variable(context: &mut CopContext<'_, '_>) {
                     .trim_start_matches('_')
                     .to_string(),
             );
+            method_body_start = Some(index + 1);
+        } else if let Some(dynamic) = dynamic_method_name(line) {
+            method = Some(dynamic.to_string());
+            method_body_start = Some(index + 1);
         }
         if let Some(at) = line.find("@") {
             let memo_is_last = index + 1 < lines.len()
@@ -504,19 +508,92 @@ fn memoized_variable(context: &mut CopContext<'_, '_>) {
                 let normalized = name.trim_start_matches('_');
                 if method.as_deref().is_some_and(|method| {
                     !method.starts_with("initialize")
-                        && method.trim_end_matches(['?', '!', '=']) != normalized
+                        && (method.trim_end_matches(['?', '!', '=']) != normalized
+                            || leading_underscore_required && !name.starts_with('_'))
                 }) {
                     let method = method.as_deref().unwrap_or("");
                     let actual = format!("@{name}");
-                    let expected = format!("@{}", method.trim_end_matches(['?', '!', '=']));
-                    context.replace(
+                    let expected_name = method.trim_end_matches(['?', '!', '=']);
+                    let expected = if leading_underscore_required {
+                        format!("@_{expected_name}")
+                    } else {
+                        format!("@{expected_name}")
+                    };
+                    let message = if leading_underscore_required && !name.starts_with('_') {
+                        format!(
+                            "Memoized variable `{actual}` does not start with `_`. Use `{expected}` instead."
+                        )
+                    } else {
                         format!(
                             "Memoized variable `{actual}` does not match method name `{method}`. Use `{expected}` instead."
-                        ),
+                        )
+                    };
+                    context.replace(
+                        message,
                         offset + at..offset + at + name.len() + 1,
                         offset + at..offset + at + name.len() + 1,
                         expected,
                     );
+                }
+            }
+
+            if let (Some(method), Some(body_start)) = (method.as_deref(), method_body_start) {
+                let variable = line[at + 1..]
+                    .split(|character: char| !character.is_ascii_alphanumeric() && character != '_')
+                    .next()
+                    .unwrap_or("");
+                let actual = format!("@{variable}");
+                let defined = format!("defined?({actual})");
+                let return_read = format!("return {actual} if {defined}");
+                if index == body_start
+                    && line.trim() == return_read
+                    && index + 2 < lines.len()
+                    && lines[index + 1]
+                        .1
+                        .trim_start()
+                        .starts_with(&format!("{actual} ="))
+                    && lines[index + 2].1.trim() == "end"
+                {
+                    let expected_name = method.trim_end_matches(['?', '!', '=']);
+                    let expected = if leading_underscore_required {
+                        format!("@_{expected_name}")
+                    } else {
+                        format!("@{expected_name}")
+                    };
+                    let normalized = variable.trim_start_matches('_');
+                    if !method.starts_with("initialize")
+                        && (normalized != expected_name
+                            || leading_underscore_required && !variable.starts_with('_'))
+                    {
+                        let message = if leading_underscore_required && !variable.starts_with('_') {
+                            format!(
+                                "Memoized variable `{actual}` does not start with `_`. Use `{expected}` instead."
+                            )
+                        } else {
+                            format!(
+                                "Memoized variable `{actual}` does not match method name `{method}`. Use `{expected}` instead."
+                            )
+                        };
+                        let occurrences = line.match_indices(&actual).collect::<Vec<_>>();
+                        for (position, _) in occurrences.into_iter().rev() {
+                            context.replace(
+                                message.clone(),
+                                offset + position..offset + position + actual.len(),
+                                offset + position..offset + position + actual.len(),
+                                expected.clone(),
+                            );
+                        }
+                        let assignment_offset = lines[index + 1].0;
+                        let assignment_at = lines[index + 1].1.find(&actual).unwrap_or(0);
+                        context.replace(
+                            message,
+                            assignment_offset + assignment_at
+                                ..assignment_offset + assignment_at + actual.len(),
+                            assignment_offset + assignment_at
+                                ..assignment_offset + assignment_at + actual.len(),
+                            expected,
+                        );
+                    }
                 }
             }
         }
@@ -526,22 +603,208 @@ fn memoized_variable(context: &mut CopContext<'_, '_>) {
     }
 }
 
+fn dynamic_method_name(line: &str) -> Option<&str> {
+    let marker = if line.contains("define_singleton_method(:") {
+        "define_singleton_method(:"
+    } else {
+        "define_method(:"
+    };
+    let (_, rest) = line.split_once(marker)?;
+    rest.split(|character: char| !character.is_ascii_alphanumeric() && character != '_')
+        .next()
+}
+
 fn file_name(context: &mut CopContext<'_, '_>) {
-    if context.source().starts_with("#!") {
+    if context.source().starts_with("#!") && context.config_bool("IgnoreExecutableScripts", true) {
         return;
     }
-    let Some(file) = std::path::Path::new(context.path())
-        .file_name()
-        .and_then(|name| name.to_str())
-    else {
+    let path = std::path::Path::new(context.path());
+    let Some(file) = path.file_name().and_then(|name| name.to_str()) else {
         return;
     };
-    if file
-        .bytes()
-        .any(|byte| byte.is_ascii_uppercase() || byte == b'-')
-    {
+    let stem = file
+        .trim_start_matches('.')
+        .split_once('.')
+        .map_or(file.trim_start_matches('.'), |(stem, _)| stem)
+        .replacen('+', "_", 1);
+    let regex_pattern = context
+        .config_map("Regex")
+        .and_then(|values| values.get("$regexp"));
+    let filename_good = if let Some(pattern) = regex_pattern {
+        let normalized = pattern.replace("\\\\", "\\");
+        if normalized == "\\A[aeiou]\\z" {
+            stem.len() == 1 && "aeiouAEIOU".contains(&stem)
+        } else {
+            regex::Regex::new(&normalized).is_ok_and(|regex| regex.is_match(&stem))
+        }
+    } else {
+        file.ends_with(".gemspec")
+            || matches!(file, "Gemfile" | "Rakefile")
+            || stem.chars().all(|character| {
+                character.is_lowercase()
+                    || character.is_ascii_digit()
+                    || matches!(character, '_' | '.' | '?' | '!')
+            })
+    };
+    if !filename_good {
+        let message = if let Some(pattern) = regex_pattern {
+            let normalized = pattern.replace("\\\\", "\\");
+            let rendered = if normalized == "\\A[aeiou]\\z" {
+                "(?i-mx:\\A[aeiou]\\z)"
+            } else {
+                &normalized
+            };
+            format!("`{file}` should match `{rendered}`.")
+        } else {
+            format!("The name of this source file (`{file}`) should use snake_case.")
+        };
+        context.report(message, 0..0);
+        return;
+    }
+    if !context.config_bool("ExpectMatchingDefinition", false) {
+        return;
+    }
+
+    #[derive(Default)]
+    struct Definitions<'source> {
+        source: &'source str,
+        stack: Vec<String>,
+        names: Vec<String>,
+    }
+
+    impl Definitions<'_> {
+        fn enter(&mut self, raw: &str) {
+            let raw = raw.trim_start_matches("::");
+            let name = if raw.contains("::") || self.stack.is_empty() {
+                raw.to_string()
+            } else {
+                format!("{}::{raw}", self.stack.last().expect("nonempty stack"))
+            };
+            self.names.push(name.clone());
+            self.stack.push(name);
+        }
+
+        fn source_name(&self, node: &Node<'_>) -> String {
+            let location = node.location();
+            self.source[location.start_offset()..location.end_offset()].to_string()
+        }
+    }
+
+    impl<'pr> Visit<'pr> for Definitions<'_> {
+        fn visit_module_node(&mut self, node: &ruby_prism::ModuleNode<'pr>) {
+            self.enter(&self.source_name(&node.constant_path()));
+            ruby_prism::visit_module_node(self, node);
+            self.stack.pop();
+        }
+
+        fn visit_class_node(&mut self, node: &ruby_prism::ClassNode<'pr>) {
+            self.enter(&self.source_name(&node.constant_path()));
+            ruby_prism::visit_class_node(self, node);
+            self.stack.pop();
+        }
+
+        fn visit_constant_write_node(&mut self, node: &ruby_prism::ConstantWriteNode<'pr>) {
+            if node.value().as_call_node().is_some_and(|call| {
+                call_name(&call) == b"new" && root_constant(call.receiver(), b"Struct")
+            }) {
+                let raw = String::from_utf8_lossy(node.name().as_slice()).into_owned();
+                let name = self
+                    .stack
+                    .last()
+                    .map_or_else(|| raw.clone(), |scope| format!("{scope}::{raw}"));
+                self.names.push(name);
+            }
+            ruby_prism::visit_constant_write_node(self, node);
+        }
+
+        fn visit_constant_path_write_node(
+            &mut self,
+            node: &ruby_prism::ConstantPathWriteNode<'pr>,
+        ) {
+            if node.value().as_call_node().is_some_and(|call| {
+                call_name(&call) == b"new" && root_constant(call.receiver(), b"Struct")
+            }) {
+                let location = node.target().location();
+                self.names
+                    .push(self.source[location.start_offset()..location.end_offset()].to_string());
+            }
+            ruby_prism::visit_constant_path_write_node(self, node);
+        }
+    }
+
+    let mut definitions = Definitions {
+        source: context.source(),
+        ..Definitions::default()
+    };
+    definitions.visit(&parse(context.source().as_bytes()).node());
+
+    let module_name = |component: &str| {
+        component
+            .split('.')
+            .next()
+            .unwrap_or(component)
+            .split('_')
+            .map(|word| {
+                let mut chars = word.chars();
+                chars.next().map_or_else(String::new, |first| {
+                    format!("{}{}", first.to_ascii_uppercase(), chars.as_str())
+                })
+            })
+            .collect::<String>()
+    };
+    let mut components = path
+        .components()
+        .filter_map(|component| component.as_os_str().to_str())
+        .collect::<Vec<_>>();
+    let check_hierarchy = context.config_bool("CheckDefinitionPathHierarchy", true);
+    let expected = if check_hierarchy {
+        let roots = context.config_values("CheckDefinitionPathHierarchyRoots");
+        let start = components
+            .iter()
+            .enumerate()
+            .rev()
+            .find_map(|(index, component)| {
+                roots.contains(&component.to_string()).then_some(index + 1)
+            });
+        if let Some(start) = start {
+            components.drain(..start);
+        } else {
+            components = vec![file];
+        }
+        components
+            .iter()
+            .map(|component| module_name(component))
+            .collect::<Vec<_>>()
+            .join("::")
+    } else {
+        module_name(file)
+    };
+    let acronyms = context.config_values("AllowedAcronyms");
+    let normalize_acronyms = |mut name: String| {
+        for acronym in acronyms {
+            let mut chars = acronym.chars();
+            let replacement = chars.next().map_or_else(String::new, |first| {
+                format!(
+                    "{}{}",
+                    first.to_ascii_uppercase(),
+                    chars.as_str().to_ascii_lowercase()
+                )
+            });
+            name = name.replace(acronym, &replacement);
+        }
+        name
+    };
+    let matching_definition = definitions.names.iter().any(|name| {
+        let name = normalize_acronyms(name.clone());
+        if expected.contains("::") {
+            name == expected
+        } else {
+            name.rsplit("::").next() == Some(expected.as_str())
+        }
+    });
+    if !matching_definition {
         context.report(
-            format!("The name of this source file (`{file}`) should use snake_case."),
+            format!("`{file}` should define a class or module called `{expected}`."),
             0..0,
         );
     }
@@ -690,37 +953,207 @@ fn useless_assignment(context: &mut CopContext<'_, '_>) {
     }
 }
 
-fn method_name(context: &mut CopContext<'_, '_>) {
-    if context.policy().enforced_style("snake_case") != "snake_case" {
-        return;
+struct MethodName;
+
+impl Cop for MethodName {
+    fn name(&self) -> &'static str {
+        "Naming/MethodName"
     }
-    for (offset, line) in context.source_file().lines() {
-        let Some(definition) = line.trim_start().strip_prefix("def ") else {
-            continue;
+
+    fn on_node<'pr>(
+        &self,
+        node: &Node<'pr>,
+        ancestors: &[Node<'pr>],
+        source: &str,
+        context: &mut Context,
+    ) {
+        let mut context = context.cop_context(self.name(), source, ancestors);
+        if let Some(definition) = node.as_def_node() {
+            let definition_name = String::from_utf8_lossy(definition.name().as_slice());
+            if definition.receiver().is_some()
+                && definition_name
+                    .bytes()
+                    .next()
+                    .is_some_and(|byte| byte.is_ascii_uppercase())
+                && source.lines().any(|line| {
+                    line.trim_start()
+                        .strip_prefix("class ")
+                        .is_some_and(|class_name| {
+                            class_name.split_whitespace().next() == Some(definition_name.as_ref())
+                        })
+                })
+            {
+                return;
+            }
+            check_method_identifier(
+                definition.name().as_slice(),
+                definition.name_loc(),
+                &mut context,
+            );
+            return;
+        }
+        if let Some(alias) = node.as_alias_method_node() {
+            let new_name = alias.new_name();
+            if let Some(name) = method_name_literal(&new_name) {
+                check_method_identifier(name.as_bytes(), new_name.location(), &mut context);
+            }
+            return;
+        }
+        let Some(call) = node.as_call_node() else {
+            return;
         };
-        let name = definition.split(['(', ' ']).next().unwrap_or("");
-        let bare = name.rsplit('.').next().unwrap_or(name);
-        if name.contains('.')
-            && bare
+        let arguments = call
+            .arguments()
+            .map(|arguments| arguments.arguments().iter().collect::<Vec<_>>())
+            .unwrap_or_default();
+        if matches!(
+            call_name(&call),
+            b"attr" | b"attr_reader" | b"attr_writer" | b"attr_accessor"
+        ) {
+            let issue = arguments.iter().find_map(|argument| {
+                method_name_literal(argument)
+                    .and_then(|name| method_identifier_message(&name, &context))
+            });
+            if let (Some(message), Some(first), Some(last)) =
+                (issue, arguments.first(), arguments.last())
+            {
+                context.report(
+                    message,
+                    first.location().start_offset()..last.location().end_offset(),
+                );
+            }
+            return;
+        }
+        let selected: Vec<Node<'_>> = match call_name(&call) {
+            b"define_method" | b"define_singleton_method" => {
+                arguments.into_iter().take(1).collect()
+            }
+            b"alias_method" if arguments.len() == 2 => arguments.into_iter().take(1).collect(),
+            b"new" if method_name_constant_receiver(&call, b"Struct") => {
+                let skip = arguments
+                    .first()
+                    .is_some_and(|argument| argument.as_string_node().is_some());
+                arguments.into_iter().skip(usize::from(skip)).collect()
+            }
+            b"define" if method_name_constant_receiver(&call, b"Data") => arguments,
+            _ => return,
+        };
+        for argument in selected {
+            if let Some(name) = method_name_literal(&argument) {
+                check_method_identifier(name.as_bytes(), argument.location(), &mut context);
+            }
+        }
+    }
+}
+
+fn method_name_literal(node: &Node<'_>) -> Option<String> {
+    if let Some(symbol) = node.as_symbol_node() {
+        Some(String::from_utf8_lossy(symbol.unescaped()).into_owned())
+    } else {
+        node.as_string_node()
+            .map(|string| String::from_utf8_lossy(string.unescaped()).into_owned())
+    }
+}
+
+fn method_name_constant_receiver(call: &CallNode<'_>, expected: &[u8]) -> bool {
+    call.receiver().is_some_and(|receiver| {
+        receiver
+            .as_constant_read_node()
+            .is_some_and(|constant| constant.name().as_slice() == expected)
+            || receiver
+                .as_constant_path_node()
+                .is_some_and(|path| path.name().is_some_and(|name| name.as_slice() == expected))
+    })
+}
+
+fn check_method_identifier(
+    name: &[u8],
+    location: ruby_prism::Location<'_>,
+    context: &mut CopContext<'_, '_>,
+) {
+    let Ok(name) = std::str::from_utf8(name) else {
+        return;
+    };
+    if let Some(message) = method_identifier_message(name, context) {
+        context.report(message, location);
+    }
+}
+
+fn method_identifier_message(name: &str, context: &CopContext<'_, '_>) -> Option<String> {
+    if matches!(
+        name,
+        "|" | "^"
+            | "&"
+            | "<=>"
+            | "=="
+            | "==="
+            | "=~"
+            | ">"
+            | ">="
+            | "<"
+            | "<="
+            | "<<"
+            | ">>"
+            | "+"
+            | "-"
+            | "*"
+            | "/"
+            | "%"
+            | "**"
+            | "~"
+            | "+@"
+            | "-@"
+            | "!@"
+            | "~@"
+            | "[]"
+            | "[]="
+            | "!"
+            | "!="
+            | "!~"
+            | "`"
+    ) {
+        return None;
+    }
+    if context.policy().allows_method(name.as_bytes()) {
+        return None;
+    }
+    if context
+        .config_values("AllowedPatterns")
+        .iter()
+        .any(|pattern| {
+            let pattern = pattern.replace("\\A", "^").replace("\\z", "$");
+            regex::Regex::new(&pattern).is_ok_and(|pattern| pattern.is_match(name))
+        })
+    {
+        return None;
+    }
+    let forbidden = context
+        .config_values("ForbiddenIdentifiers")
+        .iter()
+        .any(|identifier| identifier == name)
+        || context
+            .config_values("ForbiddenPatterns")
+            .iter()
+            .any(|pattern| regex::Regex::new(pattern).is_ok_and(|pattern| pattern.is_match(name)));
+    if forbidden {
+        return Some(format!(
+            "`{name}` is forbidden, use another method name instead."
+        ));
+    }
+    let style = context.policy().enforced_style("snake_case");
+    let core = name.trim_end_matches(['?', '!', '=']);
+    let invalid = if style == "camelCase" {
+        core.contains('_')
+            || core
                 .bytes()
                 .next()
                 .is_some_and(|byte| byte.is_ascii_uppercase())
-        {
-            continue;
-        }
-        if context
-            .config_values("AllowedPatterns")
-            .iter()
-            .any(|pattern| pattern.contains(bare))
-        {
-            continue;
-        }
-        if name.bytes().any(|byte| byte.is_ascii_uppercase()) {
-            let start = offset + line.find(name).unwrap_or(0);
-            context.report(
-                "Use snake_case for method names.",
-                start..start + name.len(),
-            );
-        }
+    } else {
+        core.bytes().any(|byte| byte.is_ascii_uppercase())
+    };
+    if invalid {
+        Some(format!("Use {style} for method names."))
+    } else {
+        None
     }
 }

@@ -63,7 +63,9 @@ fn json_file(result: &InspectionResult) -> String {
 }
 
 fn json_offense(offense: &Offense) -> String {
-    let severity = if warning_cop(&offense.cop_name) {
+    let severity = if offense.cop_name == "Lint/Syntax" {
+        "fatal"
+    } else if warning_cop(&offense.cop_name) {
         "warning"
     } else {
         "convention"

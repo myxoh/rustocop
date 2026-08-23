@@ -98,6 +98,8 @@ cop_modules!(
     double_splat_rules,
     empty_method_rules,
     empty_lambda_parameter_rules,
+    empty_else_rules,
+    endless_method_rules,
     enum_argument_rules,
     exception_argument_rules,
     exception_rewrite_rules,
@@ -281,13 +283,16 @@ use source_file::{SourceEdit, SourceFile};
 pub(super) enum CopPhase {
     Source,
     Node,
-    ParseError,
+    ParseErrorAndSource,
     SourceAndNode,
 }
 
 impl CopPhase {
     const fn visits_source(self) -> bool {
-        matches!(self, Self::Source | Self::SourceAndNode)
+        matches!(
+            self,
+            Self::Source | Self::ParseErrorAndSource | Self::SourceAndNode
+        )
     }
 
     const fn visits_nodes(self) -> bool {
@@ -295,7 +300,7 @@ impl CopPhase {
     }
 
     const fn visits_parse_errors(self) -> bool {
-        matches!(self, Self::ParseError)
+        matches!(self, Self::ParseErrorAndSource)
     }
 }
 

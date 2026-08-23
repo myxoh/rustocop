@@ -6,26 +6,6 @@ review_values:
 - temporary_text
 - unreviewed
 entries:
-- cop: Layout/EndAlignment
-  pipeline: legacy_text
-  source: crates/rustocop/src/cops/text/mod.rs
-  review: temporary_text
-- cop: Layout/ExtraSpacing
-  pipeline: legacy_text
-  source: crates/rustocop/src/cops/text/mod.rs
-  review: temporary_text
-- cop: Layout/FirstHashElementIndentation
-  pipeline: legacy_text
-  source: crates/rustocop/src/cops/text/mod.rs
-  review: temporary_text
-- cop: Layout/IndentationConsistency
-  pipeline: legacy_text
-  source: crates/rustocop/src/cops/text/mod.rs
-  review: temporary_text
-- cop: Layout/IndentationWidth
-  pipeline: legacy_text
-  source: crates/rustocop/src/cops/text/mod.rs
-  review: temporary_text
 - cop: Layout/LineLength
   pipeline: legacy_text
   source: crates/rustocop/src/cops/text/mod.rs
@@ -38,10 +18,6 @@ entries:
   pipeline: legacy_text
   source: crates/rustocop/src/cops/text/mod.rs
   review: temporary_text
-- cop: Lint/Debugger
-  pipeline: legacy_text
-  source: crates/rustocop/src/cops/text/mod.rs
-  review: temporary_text
 - cop: Lint/EmptyEnsure
   pipeline: legacy_text
   source: crates/rustocop/src/cops/text/mod.rs
@@ -50,15 +26,7 @@ entries:
   pipeline: legacy_text
   source: crates/rustocop/src/cops/text/mod.rs
   review: temporary_text
-- cop: Lint/UnusedMethodArgument
-  pipeline: legacy_text
-  source: crates/rustocop/src/cops/text/mod.rs
-  review: temporary_text
 - cop: Lint/UselessElseWithoutRescue
-  pipeline: legacy_text
-  source: crates/rustocop/src/cops/text/mod.rs
-  review: temporary_text
-- cop: Naming/AccessorMethodName
   pipeline: legacy_text
   source: crates/rustocop/src/cops/text/mod.rs
   review: temporary_text
@@ -142,19 +110,7 @@ entries:
   pipeline: legacy_text
   source: crates/rustocop/src/cops/text/mod.rs
   review: temporary_text
-- cop: Style/EmptyElse
-  pipeline: legacy_text
-  source: crates/rustocop/src/cops/text/mod.rs
-  review: temporary_text
-- cop: Style/EmptyLambdaParameter
-  pipeline: prism_source
-  source: crates/rustocop/src/cops/prism/empty_lambda_parameter_rules.rs
-  review: unreviewed
 - cop: Style/EndBlock
-  pipeline: legacy_text
-  source: crates/rustocop/src/cops/text/mod.rs
-  review: temporary_text
-- cop: Style/EndlessMethod
   pipeline: legacy_text
   source: crates/rustocop/src/cops/text/mod.rs
   review: temporary_text
@@ -166,23 +122,11 @@ entries:
   pipeline: legacy_text
   source: crates/rustocop/src/cops/text/mod.rs
   review: temporary_text
-- cop: Style/HashLikeCase
-  pipeline: legacy_text
-  source: crates/rustocop/src/cops/text/mod.rs
-  review: temporary_text
 - cop: Style/HashSyntax
   pipeline: legacy_text
   source: crates/rustocop/src/cops/text/mod.rs
   review: temporary_text
 - cop: Style/IfUnlessModifier
-  pipeline: legacy_text
-  source: crates/rustocop/src/cops/text/mod.rs
-  review: temporary_text
-- cop: Style/InlineComment
-  pipeline: legacy_text
-  source: crates/rustocop/src/cops/text/mod.rs
-  review: temporary_text
-- cop: Style/NumberedParameters
   pipeline: legacy_text
   source: crates/rustocop/src/cops/text/mod.rs
   review: temporary_text
@@ -254,17 +198,9 @@ entries:
   pipeline: prism_source
   source: crates/rustocop/src/cops/prism/layout_spacing_completion.rs
   review: unreviewed
-- cop: Layout/ClassStructure
-  pipeline: prism_source
-  source: crates/rustocop/src/cops/prism/project_structural_completion_batch.rs
-  review: unreviewed
 - cop: Layout/ClosingHeredocIndentation
   pipeline: prism_source
   source: crates/rustocop/src/cops/prism/lexical_completion.rs
-  review: unreviewed
-- cop: Layout/ConditionPosition
-  pipeline: prism_source
-  source: crates/rustocop/src/cops/prism/layout_line_break_completion.rs
   review: unreviewed
 - cop: Layout/EmptyComment
   pipeline: prism_source
@@ -273,10 +209,6 @@ entries:
 - cop: Layout/EmptyLineAfterMagicComment
   pipeline: prism_source
   source: crates/rustocop/src/cops/prism/layout_finalization_completion.rs
-  review: unreviewed
-- cop: Layout/EmptyLineAfterMultilineCondition
-  pipeline: prism_source
-  source: crates/rustocop/src/cops/prism/project_structural_completion_batch.rs
   review: unreviewed
 - cop: Layout/EmptyLines
   pipeline: prism_source
@@ -300,11 +232,11 @@ entries:
   review: unreviewed
 - cop: Layout/EmptyLinesAroundExceptionHandlingKeywords
   pipeline: prism_source
-  source: crates/rustocop/src/cops/prism/layout_body_qualification.rs
+  source: crates/rustocop/src/cops/prism/layout_body_completion.rs
   review: unreviewed
 - cop: Layout/EmptyLinesAroundExceptionHandlingKeywords
   pipeline: prism_source
-  source: crates/rustocop/src/cops/prism/layout_body_completion.rs
+  source: crates/rustocop/src/cops/prism/layout_body_qualification.rs
   review: unreviewed
 - cop: Layout/EmptyLinesAroundMethodBody
   pipeline: prism_source
@@ -313,6 +245,10 @@ entries:
 - cop: Layout/EndOfLine
   pipeline: prism_source
   source: crates/rustocop/src/cops/prism/layout_spacing_completion.rs
+  review: unreviewed
+- cop: Layout/ExtraSpacing
+  pipeline: prism_source
+  source: crates/rustocop/src/cops/prism/layout_qualification.rs
   review: unreviewed
 - cop: Layout/FirstArrayElementLineBreak
   pipeline: prism_source
@@ -374,6 +310,10 @@ entries:
   pipeline: prism_source
   source: crates/rustocop/src/cops/prism/layout_finalization_completion.rs
   review: unreviewed
+- cop: Layout/SpaceAroundMethodCallOperator
+  pipeline: prism_source
+  source: crates/rustocop/src/cops/prism/operator_method_call_rules.rs
+  review: unreviewed
 - cop: Layout/SpaceBeforeBlockBraces
   pipeline: prism_source
   source: crates/rustocop/src/cops/prism/layout_geometry_completion.rs
@@ -430,10 +370,6 @@ entries:
   pipeline: prism_source
   source: crates/rustocop/src/cops/prism/lint_naming_completion_batch.rs
   review: unreviewed
-- cop: Lint/DeprecatedOpenSSLConstant
-  pipeline: prism_source
-  source: crates/rustocop/src/cops/prism/project_structural_completion_batch.rs
-  review: unreviewed
 - cop: Lint/DisjunctiveAssignmentInConstructor
   pipeline: prism_source
   source: crates/rustocop/src/cops/prism/additional_rules.rs
@@ -482,10 +418,6 @@ entries:
   pipeline: prism_source
   source: crates/rustocop/src/cops/prism/source_semantics.rs
   review: unreviewed
-- cop: Lint/FormatParameterMismatch
-  pipeline: prism_source
-  source: crates/rustocop/src/cops/prism/lint_signature_completion_batch.rs
-  review: unreviewed
 - cop: Lint/HashNewWithKeywordArgumentsAsDefault
   pipeline: prism_source
   source: crates/rustocop/src/cops/prism/source_semantics.rs
@@ -505,10 +437,6 @@ entries:
 - cop: Lint/MissingCopEnableDirective
   pipeline: prism_source
   source: crates/rustocop/src/cops/prism/directive_completion.rs
-  review: unreviewed
-- cop: Lint/NestedPercentLiteral
-  pipeline: prism_source
-  source: crates/rustocop/src/cops/prism/additional_rules_literals.rs
   review: unreviewed
 - cop: Lint/NonAtomicFileOperation
   pipeline: prism_source
@@ -530,14 +458,6 @@ entries:
   pipeline: prism_source
   source: crates/rustocop/src/cops/prism/lint_naming_completion_batch.rs
   review: unreviewed
-- cop: Lint/RedundantSafeNavigation
-  pipeline: prism_source
-  source: crates/rustocop/src/cops/prism/control_semantics_completion_batch.rs
-  review: unreviewed
-- cop: Lint/RedundantSplatExpansion
-  pipeline: prism_source
-  source: crates/rustocop/src/cops/prism/lint_signature_completion_batch.rs
-  review: unreviewed
 - cop: Lint/RefinementImportMethods
   pipeline: prism_source
   source: crates/rustocop/src/cops/prism/additional_rules.rs
@@ -553,14 +473,6 @@ entries:
 - cop: Lint/RescueException
   pipeline: prism_source
   source: crates/rustocop/src/cops/prism/additional_rules_literals.rs
-  review: unreviewed
-- cop: Lint/SafeNavigationChain
-  pipeline: prism_source
-  source: crates/rustocop/src/cops/prism/control_semantics_completion_batch.rs
-  review: unreviewed
-- cop: Lint/SafeNavigationConsistency
-  pipeline: prism_source
-  source: crates/rustocop/src/cops/prism/control_semantics_completion_batch.rs
   review: unreviewed
 - cop: Lint/SharedMutableDefault
   pipeline: prism_source
@@ -582,25 +494,13 @@ entries:
   pipeline: prism_source
   source: crates/rustocop/src/cops/prism/additional_rules_more.rs
   review: unreviewed
-- cop: Lint/UnmodifiedReduceAccumulator
-  pipeline: prism_source
-  source: crates/rustocop/src/cops/prism/lint_signature_completion_batch.rs
-  review: unreviewed
 - cop: Lint/UnreachablePatternBranch
   pipeline: prism_source
   source: crates/rustocop/src/cops/prism/lint_naming_completion_batch.rs
   review: unreviewed
-- cop: Lint/UnusedBlockArgument
-  pipeline: prism_source
-  source: crates/rustocop/src/cops/prism/lint_signature_completion_batch.rs
-  review: unreviewed
 - cop: Lint/UriEscapeUnescape
   pipeline: prism_source
   source: crates/rustocop/src/cops/prism/additional_rules_more.rs
-  review: unreviewed
-- cop: Lint/UriRegexp
-  pipeline: prism_source
-  source: crates/rustocop/src/cops/prism/uri_regexp_rules.rs
   review: unreviewed
 - cop: Lint/UselessConstantScoping
   pipeline: prism_source
@@ -609,14 +509,6 @@ entries:
 - cop: Lint/UselessDefined
   pipeline: prism_source
   source: crates/rustocop/src/cops/prism/additional_rules.rs
-  review: unreviewed
-- cop: Lint/UselessOr
-  pipeline: prism_source
-  source: crates/rustocop/src/cops/prism/control_semantics_completion_batch.rs
-  review: unreviewed
-- cop: Metrics/ModuleLength
-  pipeline: prism_source
-  source: crates/rustocop/src/cops/prism/project_structural_completion_batch.rs
   review: unreviewed
 - cop: Migration/DepartmentName
   pipeline: prism_source
@@ -642,29 +534,13 @@ entries:
   pipeline: prism_source
   source: crates/rustocop/src/cops/prism/lint_naming_completion_batch.rs
   review: unreviewed
-- cop: Naming/MethodParameterName
-  pipeline: prism_source
-  source: crates/rustocop/src/cops/prism/lint_naming_completion_batch.rs
-  review: unreviewed
 - cop: Style/AccessorGrouping
   pipeline: prism_source
   source: crates/rustocop/src/cops/prism/accessor_grouping_completion.rs
   review: unreviewed
-- cop: Style/AmbiguousEndlessMethodDefinition
-  pipeline: prism_source
-  source: crates/rustocop/src/cops/prism/semantic_gap_completion.rs
-  review: unreviewed
-- cop: Style/AndOr
-  pipeline: prism_source
-  source: crates/rustocop/src/cops/prism/control_semantics_completion_batch.rs
-  review: unreviewed
 - cop: Style/ArrayCoercion
   pipeline: prism_source
   source: crates/rustocop/src/cops/prism/source_rules.rs
-  review: unreviewed
-- cop: Style/ArrayIntersect
-  pipeline: prism_source
-  source: crates/rustocop/src/cops/prism/modern_collection_completion.rs
   review: unreviewed
 - cop: Style/ArrayIntersectWithSingleElement
   pipeline: prism_source
@@ -678,17 +554,9 @@ entries:
   pipeline: prism_source
   source: crates/rustocop/src/cops/prism/additional_rules.rs
   review: unreviewed
-- cop: Style/BitwisePredicate
-  pipeline: prism_source
-  source: crates/rustocop/src/cops/prism/predicate_conversion_rules.rs
-  review: unreviewed
 - cop: Style/BlockComments
   pipeline: prism_source
   source: crates/rustocop/src/cops/prism/block_comments_rules.rs
-  review: unreviewed
-- cop: Style/BlockDelimiters
-  pipeline: prism_source
-  source: crates/rustocop/src/cops/prism/control_semantics_completion_batch.rs
   review: unreviewed
 - cop: Style/CaseLikeIf
   pipeline: prism_source
@@ -698,10 +566,6 @@ entries:
   pipeline: prism_source
   source: crates/rustocop/src/cops/prism/control_semantics_completion_batch.rs
   review: unreviewed
-- cop: Style/ClassCheck
-  pipeline: prism_source
-  source: crates/rustocop/src/cops/prism/class_check_rules.rs
-  review: unreviewed
 - cop: Style/ClassMethods
   pipeline: prism_source
   source: crates/rustocop/src/cops/prism/source_rules.rs
@@ -709,10 +573,6 @@ entries:
 - cop: Style/ClassVars
   pipeline: prism_source
   source: crates/rustocop/src/cops/prism/source_rules.rs
-  review: unreviewed
-- cop: Style/CollectionMethods
-  pipeline: prism_source
-  source: crates/rustocop/src/cops/prism/collection_transform_batch.rs
   review: unreviewed
 - cop: Style/CombinableDefined
   pipeline: prism_source
@@ -737,10 +597,6 @@ entries:
 - cop: Style/Copyright
   pipeline: prism_source
   source: crates/rustocop/src/cops/prism/style_metadata_completion.rs
-  review: unreviewed
-- cop: Style/Dir
-  pipeline: prism_source
-  source: crates/rustocop/src/cops/prism/source_rules_misc.rs
   review: unreviewed
 - cop: Style/DirEmpty
   pipeline: prism_source
@@ -778,6 +634,10 @@ entries:
   pipeline: prism_source
   source: crates/rustocop/src/cops/prism/lexical_completion.rs
   review: unreviewed
+- cop: Style/EndlessMethod
+  pipeline: prism_source
+  source: crates/rustocop/src/cops/prism/endless_method_rules.rs
+  review: unreviewed
 - cop: Style/EnvHome
   pipeline: prism_source
   source: crates/rustocop/src/cops/prism/source_rules_misc.rs
@@ -793,10 +653,6 @@ entries:
 - cop: Style/FetchEnvVar
   pipeline: prism_source
   source: crates/rustocop/src/cops/prism/literal_string_completion_batch.rs
-  review: unreviewed
-- cop: Style/FileRead
-  pipeline: prism_source
-  source: crates/rustocop/src/cops/prism/compact_syntax_completion.rs
   review: unreviewed
 - cop: Style/FrozenStringLiteralComment
   pipeline: prism_source
@@ -838,30 +694,6 @@ entries:
   pipeline: prism_source
   source: crates/rustocop/src/cops/prism/structural_forwarding_completion.rs
   review: unreviewed
-- cop: Style/NumericLiteralPrefix
-  pipeline: prism_source
-  source: crates/rustocop/src/cops/prism/additional_rules_literals.rs
-  review: unreviewed
-- cop: Style/OneClassPerFile
-  pipeline: prism_source
-  source: crates/rustocop/src/cops/prism/file_structure_rules.rs
-  review: unreviewed
-- cop: Style/OpenStructUse
-  pipeline: prism_source
-  source: crates/rustocop/src/cops/prism/additional_rules_literals.rs
-  review: unreviewed
-- cop: Style/OptionalArguments
-  pipeline: prism_source
-  source: crates/rustocop/src/cops/prism/source_semantics.rs
-  review: unreviewed
-- cop: Style/OptionalBooleanParameter
-  pipeline: prism_source
-  source: crates/rustocop/src/cops/prism/source_semantics.rs
-  review: unreviewed
-- cop: Style/PreferredHashMethods
-  pipeline: prism_source
-  source: crates/rustocop/src/cops/prism/additional_rules_more.rs
-  review: unreviewed
 - cop: Style/RedundantAssignment
   pipeline: prism_source
   source: crates/rustocop/src/cops/prism/semantic_gap_completion.rs
@@ -885,10 +717,6 @@ entries:
 - cop: Style/RedundantSelfAssignment
   pipeline: prism_source
   source: crates/rustocop/src/cops/prism/project_scope_completion.rs
-  review: unreviewed
-- cop: Style/RequireOrder
-  pipeline: prism_source
-  source: crates/rustocop/src/cops/prism/require_order_rules.rs
   review: unreviewed
 - cop: Style/ReturnNil
   pipeline: prism_source

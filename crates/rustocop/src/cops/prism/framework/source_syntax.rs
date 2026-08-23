@@ -1,40 +1,6 @@
 use std::ops::Range;
 
-use super::source_helpers::{all_offsets, source_lines};
-
-pub(super) struct Definition<'source> {
-    pub(super) name: &'source str,
-    pub(super) arguments: Range<usize>,
-}
-
-pub(super) fn definitions(source: &str) -> Vec<Definition<'_>> {
-    let mut definitions = Vec::new();
-    for (start, line) in source_lines(source) {
-        let trimmed = line.trim_start();
-        if !trimmed.starts_with("def ") {
-            continue;
-        }
-        let Some(open) = line.find('(') else {
-            continue;
-        };
-        let Some(close) = line.rfind(')') else {
-            continue;
-        };
-        let name_start = trimmed.find(' ').unwrap_or(0) + 1;
-        let name = trimmed[name_start..]
-            .split('(')
-            .next()
-            .unwrap_or_default()
-            .rsplit('.')
-            .next()
-            .unwrap_or_default();
-        definitions.push(Definition {
-            name,
-            arguments: start + open + 1..start + close,
-        });
-    }
-    definitions
-}
+use super::source_helpers::all_offsets;
 
 pub(super) fn call_ranges(source: &str, needle: &str) -> Vec<Range<usize>> {
     all_offsets(source, needle)

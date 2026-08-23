@@ -18,20 +18,6 @@ pub(super) fn strip_comment(line: &str) -> &str {
     line.split('#').next().unwrap_or(line)
 }
 
-pub(super) fn find_extra_spacing(line: &str) -> Option<usize> {
-    let bytes = line.as_bytes();
-    for index in 1..bytes.len().saturating_sub(1) {
-        if bytes[index] == b' ' && bytes[index + 1] == b' ' {
-            let previous = bytes[index - 1] as char;
-            let next = bytes.get(index + 2).copied().unwrap_or_default() as char;
-            if previous.is_ascii_alphanumeric() && (next.is_ascii_alphanumeric() || next == '=') {
-                return Some(index + 1);
-            }
-        }
-    }
-    None
-}
-
 pub(super) fn leading_spaces(line: &str) -> usize {
     line.chars()
         .take_while(|character| *character == ' ')
@@ -48,41 +34,6 @@ pub(super) fn starts_block(trimmed: &str) -> bool {
         || trimmed.starts_with("begin")
         || trimmed.ends_with(" do")
         || trimmed.contains(" do |")
-}
-
-pub(super) fn assignment_name(trimmed: &str) -> Option<String> {
-    if trimmed.contains("==")
-        || trimmed.contains("!=")
-        || trimmed.contains(">=")
-        || trimmed.contains("<=")
-    {
-        return None;
-    }
-
-    let position = trimmed.find('=')?;
-    let name = trimmed[..position].trim();
-    if name
-        .chars()
-        .all(|character| character == '_' || character.is_ascii_alphanumeric())
-    {
-        Some(name.to_string())
-    } else {
-        None
-    }
-}
-
-pub(super) fn find_numbered_parameter(line: &str) -> Option<usize> {
-    let bytes = line.as_bytes();
-    for index in 0..bytes.len().saturating_sub(1) {
-        if bytes[index] == b'_'
-            && bytes[index + 1].is_ascii_digit()
-            && (index == 0 || !bytes[index - 1].is_ascii_alphanumeric())
-        {
-            return Some(index + 1);
-        }
-    }
-
-    None
 }
 
 pub(super) fn method_arguments(signature: &str) -> Vec<String> {

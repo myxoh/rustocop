@@ -44,15 +44,16 @@ output on every pinned project is **project-exact** for that corpus and
 configuration. Neither offense-count similarity, a captured-case label, nor an
 old manual review record is accepted as compatibility evidence.
 
-The minimized real-project corpus currently contains 141 passing cases, 282
+The minimized real-project corpus currently contains 192 passing cases, 231
 pending isolated mismatch directions and crashes, and six configuration-mutation cases. These are
 regression coverage, not a substitute for the complete project comparison.
 
 After withdrawing the intentionally pending cops, the fixture review updated at
-`2026-08-22T12:39:56-04:00` contains 26,753 executable cases. The retained
-results match 24,730 cases (92.4%), and 514/558 active cops match every fixture.
-The generated compatibility table applies source-staleness checks to those
-retained results.
+`2026-08-22T20:40:35-04:00` contains 26,717 retained executable cases. All
+26,717 cases match RuboCop 1.87.0 diagnostics, and all correction expectations
+also match; 558/558 active cops pass every retained fixture. The runner excludes
+36 cases that require uncaptured synthetic upstream state and two LSP-only
+cases. Those exclusions are explicit rather than counted as passing results.
 
 ## Ten-project output parity
 

@@ -9,7 +9,6 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
             "Layout/LineEndStringConcatenationIndentation",
             align_continuation,
         ),
-        custom("Layout/MultilineAssignmentLayout", multiline_assignment),
         Box::new(SpaceInsideBlockBraces),
         replace(
             "Layout/SpaceInsideHashLiteralBraces",

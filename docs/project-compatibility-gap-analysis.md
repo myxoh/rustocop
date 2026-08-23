@@ -9,6 +9,11 @@ The category-C implementation-risk register is maintained separately in
 > excluded from the 558-cop active corpus; the figures below remain the
 > pre-withdrawal diagnostic evidence.
 
+The current retained fixture corpus reached 26,717/26,717 cases and 558/558 cops
+at `2026-08-22T20:40:35-04:00`. That completes the fixture gate but does not
+supersede this report's central distinction: complete upstream-spec parity and
+complete real-project output parity are separate compatibility claims.
+
 This report records the complete cached-reference audit generated at
 `2026-08-22T00:56:18-04:00` for RuboCop 1.87.0. It covers 606 cops across ten
 pinned projects containing 54,146 Ruby files. The Rust source is

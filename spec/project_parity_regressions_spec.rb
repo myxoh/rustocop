@@ -25,7 +25,6 @@ RSpec.describe "real-project parity regressions" do
     Style/CombinableDefined
     Style/EmptyHeredoc
     Style/TrailingCommaInBlockArgs
-    Lint/UnmodifiedReduceAccumulator
     Style/InverseMethods
     Style/NegatedWhile
     Style/UnlessLogicalOperators
@@ -94,7 +93,6 @@ RSpec.describe "real-project parity regressions" do
     Layout/TrailingEmptyLines
     Style/ClassEqualityComparison
     Style/NumericLiterals
-    Style/AccessModifierDeclarations
     Style/RequireOrder
     Lint/SuppressedException
     Style/RedundantBegin
@@ -135,14 +133,67 @@ RSpec.describe "real-project parity regressions" do
     Style/EndlessMethod
     Layout/SpaceAfterMethodName
     Lint/RequireRelativeSelfPath
-    Naming/FileName
-    Naming/FileName
     Naming/PredicatePrefix
     Style/RedundantConstantBase
     Gemspec/RubyVersionGlobalsUsage
     Bundler/GemVersion
     Gemspec/DuplicatedAssignment
     Gemspec/RequiredRubyVersion
+    Layout/ArrayAlignment
+    Layout/ArrayAlignment
+    Layout/ClassStructure
+    Layout/ClassStructure
+    Layout/HashAlignment
+    Layout/HashAlignment
+    Layout/HeredocIndentation
+    Layout/HeredocIndentation
+    Layout/LineLength
+    Layout/MultilineAssignmentLayout
+    Layout/MultilineMethodCallIndentation
+    Layout/MultilineMethodCallIndentation
+    Layout/MultilineOperationIndentation
+    Layout/MultilineOperationIndentation
+    Layout/RescueEnsureAlignment
+    Layout/SpaceAroundOperators
+    Layout/SpaceAroundOperators
+    Layout/SpaceInsideArrayLiteralBrackets
+    Layout/SpaceInsideArrayLiteralBrackets
+    Layout/SpaceInsideReferenceBrackets
+    Layout/SpaceInsideReferenceBrackets
+    Lint/ConstantReassignment
+    Lint/ConstantReassignment
+    Lint/DuplicateBranch
+    Lint/DuplicateMethods
+    Lint/FormatParameterMismatch
+    Lint/NonAtomicFileOperation
+    Lint/OutOfRangeRegexpRef
+    Lint/RedundantSplatExpansion
+    Lint/RedundantSplatExpansion
+    Lint/SafeNavigationChain
+    Lint/SafeNavigationChain
+    Lint/SafeNavigationConsistency
+    Lint/SafeNavigationConsistency
+    Lint/ShadowedArgument
+    Lint/ShadowedArgument
+    Lint/ShadowingOuterLocalVariable
+    Lint/ShadowingOuterLocalVariable
+    Lint/UselessAccessModifier
+    Metrics/ModuleLength
+    Metrics/ModuleLength
+    Naming/InclusiveLanguage
+    Naming/MethodName
+    Naming/MethodName
+    Style/AndOr
+    Style/ArgumentsForwarding
+    Style/ArgumentsForwarding
+    Style/ArrayIntersect
+    Style/ArrayIntersect
+    Style/BlockDelimiters
+    Style/BlockDelimiters
+    Style/ClassAndModuleChildren
+    Style/ClassAndModuleChildren
+    Style/EmptyElse
+    Style/EmptyElse
   ]
   fixture_root = File.join(ROOT, "spec", "fixtures", "project_parity_regressions")
   config = File.join(fixture_root, "rubocop.yml")

@@ -74,12 +74,11 @@ fn dot_position(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     );
 }
 
-fn empty_lines_after_module_inclusion(
-    node: &CallNode<'_>,
-    context: &mut CopContext<'_, '_>,
-) {
+fn empty_lines_after_module_inclusion(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     if node.receiver().is_some()
-        || node.arguments().is_none_or(|arguments| arguments.arguments().is_empty())
+        || node
+            .arguments()
+            .is_none_or(|arguments| arguments.arguments().is_empty())
         || !matches!(node.name().as_slice(), b"include" | b"extend" | b"prepend")
     {
         return;
@@ -139,15 +138,12 @@ fn empty_lines_around_access_modifier(node: &CallNode<'_>, context: &mut CopCont
     {
         return;
     }
-    if context
-        .parent()
-        .is_none_or(|parent| {
-            parent.as_statements_node().is_none() && parent.as_program_node().is_none()
-        })
-        || context
-            .ancestors()
-            .iter()
-            .any(|ancestor| ancestor.as_def_node().is_some())
+    if context.parent().is_none_or(|parent| {
+        parent.as_statements_node().is_none() && parent.as_program_node().is_none()
+    }) || context
+        .ancestors()
+        .iter()
+        .any(|ancestor| ancestor.as_def_node().is_some())
     {
         return;
     }
@@ -170,7 +166,8 @@ fn empty_lines_around_access_modifier(node: &CallNode<'_>, context: &mut CopCont
     let before_ok = bounds.is_some_and(|(opening, _, _)| current_line == opening + 1)
         || previous_non_comment_line(source, current_line)
             .is_none_or(|previous| line(source, previous).trim().is_empty());
-    let after_ok = bounds.is_some_and(|(_, closing, is_block)| !is_block && current_line + 1 == closing)
+    let after_ok = bounds
+        .is_some_and(|(_, closing, is_block)| !is_block && current_line + 1 == closing)
         || line(source, current_line + 1).trim().is_empty();
     let style = context.policy().enforced_style("around").to_string();
     if style == "around" && before_ok && after_ok {
@@ -207,10 +204,8 @@ fn empty_lines_around_access_modifier(node: &CallNode<'_>, context: &mut CopCont
     let denied_block_end = bounds.is_some_and(|(_, closing, is_block)| {
         is_block
             && current_line + 1 == closing
-            && context.related_config_value(
-                "Layout/EmptyLinesAroundBlockBody",
-                "EnforcedStyle",
-            ) == Some("no_empty_lines")
+            && context.related_config_value("Layout/EmptyLinesAroundBlockBody", "EnforcedStyle")
+                == Some("no_empty_lines")
     });
     if !before_ok {
         let start = line_start(source, current_line);
@@ -324,8 +319,8 @@ fn block_alignment(node: &ruby_prism::BlockNode<'_>, context: &mut CopContext<'_
         target_is_mass_assignment(context.source(), target),
     )
     .unwrap_or_else(|| {
-            source_line_column(context.source(), start_line, start_column, start_offset)
-        });
+        source_line_column(context.source(), start_line, start_column, start_offset)
+    });
     let block = source_line_column(
         context.source(),
         opening_line,
@@ -337,13 +332,12 @@ fn block_alignment(node: &ruby_prism::BlockNode<'_>, context: &mut CopContext<'_
     } else {
         &start
     };
-    let alternate = if style == "either"
-        && (start_line != opening_line || start_column != block_column)
-    {
-        format!(" or {block}")
-    } else {
-        String::new()
-    };
+    let alternate =
+        if style == "either" && (start_line != opening_line || start_column != block_column) {
+            format!(" or {block}")
+        } else {
+            String::new()
+        };
     let target = if style == "start_of_block" {
         block_column
     } else {
@@ -425,7 +419,8 @@ fn definition_candidate<'pr>(
         return Some(DefinitionCandidate {
             location: node.location(),
             kind: "method",
-            offense: definition.def_keyword_loc().start_offset()..definition.name_loc().end_offset(),
+            offense: definition.def_keyword_loc().start_offset()
+                ..definition.name_loc().end_offset(),
         });
     }
     if let Some(class) = node.as_class_node() {
@@ -461,7 +456,11 @@ fn definition_candidate<'pr>(
     }
     Some(DefinitionCandidate {
         location: node.location(),
-        kind: if call.block().is_some() { "block" } else { "send" },
+        kind: if call.block().is_some() {
+            "block"
+        } else {
+            "send"
+        },
         offense: node.location().start_offset()..node.location().end_offset(),
     })
 }
@@ -484,8 +483,14 @@ fn check_definition_pair(
         (value, value)
     } else {
         (
-            values.first().and_then(|value| value.parse().ok()).unwrap_or(1),
-            values.last().and_then(|value| value.parse().ok()).unwrap_or(1),
+            values
+                .first()
+                .and_then(|value| value.parse().ok())
+                .unwrap_or(1),
+            values
+                .last()
+                .and_then(|value| value.parse().ok())
+                .unwrap_or(1),
         )
     };
     if (minimum..=maximum).contains(&count) {
@@ -493,7 +498,10 @@ fn check_definition_pair(
     }
     let last_blank = between.iter().rposition(|line| line.trim().is_empty());
     let first_nonblank = between.iter().position(|line| !line.trim().is_empty());
-    if last_blank.zip(first_nonblank).is_some_and(|(blank, code)| blank > code) {
+    if last_blank
+        .zip(first_nonblank)
+        .is_some_and(|(blank, code)| blank > code)
+    {
         return;
     }
     if context.config_bool("AllowAdjacentOneLineDefs", true)
@@ -538,7 +546,7 @@ fn check_definition_pair(
 }
 
 fn first_argument_indentation(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
-    let (first, call_start, special_eligible) = if let Some(call) = node.as_call_node() {
+    let (first, call_start, special_eligible, call_node) = if let Some(call) = node.as_call_node() {
         let Some(first) = call
             .arguments()
             .and_then(|arguments| arguments.arguments().first())
@@ -549,7 +557,7 @@ fn first_argument_indentation(node: &Node<'_>, context: &mut CopContext<'_, '_>)
         if name.ends_with(b"=") || call.call_operator_loc().is_none() && is_operator_name(name) {
             return;
         }
-        (first, call.location().start_offset(), true)
+        (first, call.location().start_offset(), true, Some(call))
     } else if let Some(call) = node.as_super_node() {
         let Some(first) = call
             .arguments()
@@ -557,7 +565,7 @@ fn first_argument_indentation(node: &Node<'_>, context: &mut CopContext<'_, '_>)
         else {
             return;
         };
-        (first, call.keyword_loc().start_offset(), false)
+        (first, call.keyword_loc().start_offset(), false, None)
     } else {
         return;
     };
@@ -604,14 +612,16 @@ fn first_argument_indentation(node: &Node<'_>, context: &mut CopContext<'_, '_>)
     let special_indentation = style == "consistent_relative_to_receiver"
         || special_eligible
             && style != "consistent"
-            && outer.is_some_and(|parent| {
-            let permitted = style != "special_for_inner_method_call_in_parentheses"
-                || parent.opening_loc().is_some();
-            permitted
-                && parent.name().as_slice() != b"[]="
-                && call_start > parent.location().start_offset()
+            && outer.as_ref().is_some_and(|parent| {
+                let permitted = style != "special_for_inner_method_call_in_parentheses"
+                    || parent.opening_loc().is_some();
+                permitted
+                    && parent.name().as_slice() != b"[]="
+                    && call_start > parent.location().start_offset()
             });
-    let width = context.config_value("IndentationWidth").and_then(|value| value.parse().ok())
+    let width = context
+        .config_value("IndentationWidth")
+        .and_then(|value| value.parse().ok())
         .or_else(|| {
             context
                 .related_config_value("Layout/IndentationWidth", "Width")
@@ -620,9 +630,7 @@ fn first_argument_indentation(node: &Node<'_>, context: &mut CopContext<'_, '_>)
         .unwrap_or(2);
     let previous_line = previous_code_line(source, argument_line);
     let base_start = semantic_parent
-        .filter(|parent| {
-            parent.as_splat_node().is_some() || parent.as_assoc_splat_node().is_some()
-        })
+        .filter(|parent| parent.as_splat_node().is_some() || parent.as_assoc_splat_node().is_some())
         .map_or(call_start, |parent| parent.location().start_offset());
     let base_source = source[base_start..argument_start].trim();
     let base = if inside_interpolation {
@@ -631,9 +639,7 @@ fn first_argument_indentation(node: &Node<'_>, context: &mut CopContext<'_, '_>)
     } else if special_indentation {
         if base_source.contains('\n') {
             previous_line
-                .map(|number| {
-                    line(source, number).len() - line(source, number).trim_start().len()
-                })
+                .map(|number| line(source, number).len() - line(source, number).trim_start().len())
                 .unwrap_or(0)
         } else {
             display_column(source, base_start)
@@ -677,7 +683,9 @@ fn first_argument_indentation(node: &Node<'_>, context: &mut CopContext<'_, '_>)
                 return false;
             }
             let outer_base = if style == "consistent_relative_to_receiver" {
-                context.source_file().column(parent.location().start_offset())
+                context
+                    .source_file()
+                    .column(parent.location().start_offset())
             } else {
                 previous_code_line(source, outer_line)
                     .map(|number| {
@@ -709,7 +717,34 @@ fn first_argument_indentation(node: &Node<'_>, context: &mut CopContext<'_, '_>)
     let delta = expected as isize - actual as isize;
     let first_location = first.location();
     let first_line = line_index(source, first_location.start_offset());
-    let last_line = line_index(source, first_location.end_offset());
+    let mut correction_end = first_location.end_offset();
+    let inside_parenthesized_argument = call_node.as_ref().is_some_and(|call| {
+        context
+            .ancestors()
+            .iter()
+            .filter_map(Node::as_call_node)
+            .any(|parent| {
+                parent.opening_loc().is_some()
+                    && parent.arguments().is_some_and(|arguments| {
+                        arguments.location().start_offset() <= call.location().start_offset()
+                            && call.location().end_offset() <= arguments.location().end_offset()
+                    })
+            })
+    });
+    if style == "special_for_inner_method_call_in_parentheses" && inside_parenthesized_argument {
+        if let Some(call) = call_node.as_ref() {
+            correction_end = call.location().end_offset();
+            for ancestor in context.ancestors().iter().rev() {
+                if ancestor.as_call_node().is_some_and(|ancestor| {
+                    ancestor.location().start_offset() == call.location().start_offset()
+                }) {
+                    correction_end = ancestor.location().end_offset();
+                }
+            }
+        }
+    }
+    let last_line = line_index(source, correction_end);
+    let mut previous = None::<(usize, bool)>;
     let edits = (first_line..=last_line)
         .filter_map(|number| {
             let start = line_start(source, number);
@@ -718,7 +753,16 @@ fn first_argument_indentation(node: &Node<'_>, context: &mut CopContext<'_, '_>)
                 return None;
             }
             let indentation = content.len() - content.trim_start().len();
-            let adjusted = (indentation as isize + delta).max(0) as usize;
+            let preserve_nested = delta > 0
+                && previous.is_some_and(|(previous_indent, opened)| {
+                    opened && indentation == previous_indent + width * 2
+                });
+            let adjusted = if preserve_nested {
+                indentation
+            } else {
+                (indentation as isize + delta).max(0) as usize
+            };
+            previous = Some((indentation, content.trim_end().ends_with('(')));
             Some((start..start + indentation, " ".repeat(adjusted)))
         })
         .collect();
@@ -735,8 +779,23 @@ fn display_column(source: &str, offset: usize) -> usize {
 fn is_operator_name(name: &[u8]) -> bool {
     matches!(
         name,
-        b"+" | b"-" | b"*" | b"/" | b"%" | b"**" | b"==" | b"!=" | b"<" | b">"
-            | b"<=" | b">=" | b"<=>" | b"&" | b"|" | b"^" | b"<<" | b">>"
+        b"+" | b"-"
+            | b"*"
+            | b"/"
+            | b"%"
+            | b"**"
+            | b"=="
+            | b"!="
+            | b"<"
+            | b">"
+            | b"<="
+            | b">="
+            | b"<=>"
+            | b"&"
+            | b"|"
+            | b"^"
+            | b"<<"
+            | b">>"
     )
 }
 

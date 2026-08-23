@@ -8,14 +8,9 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
             array_percent_literal_spacing,
         ),
         custom("Layout/RescueEnsureAlignment", end_alignment),
-        custom("Layout/HashAlignment", hash_alignment),
         custom("Layout/SpaceAroundOperators", operator_spacing),
         custom("Layout/HeredocIndentation", heredoc_indentation),
         custom("Layout/SpaceAroundKeyword", space_around_keyword),
-        custom(
-            "Layout/MultilineMethodCallIndentation",
-            continuation_indentation,
-        ),
         custom(
             "Layout/SpaceInsidePercentLiteralDelimiters",
             percent_literal_delimiter_spacing,

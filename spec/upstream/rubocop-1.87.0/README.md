@@ -16,3 +16,10 @@ removed from the active fixture corpus. The remaining files under
 `spec/rubocop/cop` are preserved upstream source. Rustocop's extractor and
 compatibility runner live outside this directory so generated reports and
 local adaptations cannot be confused with upstream tests.
+
+The retained fixture contract was last verified at
+`2026-08-22T20:40:35-04:00`: all 26,717 executable cases and all 558 active cops
+match RuboCop 1.87.0, including correction expectations. Cases whose assertions
+depend on runtime state absent from the captured executable input are listed
+with reasons in `broken_fixture_cases.yml`; LSP-only cases remain separately
+excluded by the comparison runner.

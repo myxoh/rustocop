@@ -20,7 +20,11 @@ fn partitions_cops_by_the_work_they_perform() {
 
     assert_eq!(
         indices_for(&registry.source_cops),
-        ["Lint/DuplicateMagicComment", "Security/CompoundHash"]
+        [
+            "Lint/Syntax",
+            "Lint/DuplicateMagicComment",
+            "Security/CompoundHash"
+        ]
     );
     assert_eq!(
         indices_for(&registry.node_cops),

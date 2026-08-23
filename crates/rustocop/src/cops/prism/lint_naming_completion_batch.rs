@@ -298,29 +298,81 @@ fn redundant_enable(context: &mut CopContext<'_, '_>) {
         if let Some(list) = line.split("rubocop:disable ").nth(1) {
             disabled.extend(list.split(',').map(|cop| cop.trim().to_string()));
         }
-        let Some(list) = line.split("rubocop:enable ").nth(1) else {
+        let Some(marker) = line.find("rubocop:enable ") else {
             continue;
         };
+        let list_start = marker + "rubocop:enable ".len();
+        let list = &line[list_start..];
+        let mut redundant = Vec::new();
+        let mut necessary = Vec::new();
+        let mut preserve_department_line = false;
         for cop in list.split(',').map(str::trim) {
             if cop == "all" && !disabled.is_empty() {
                 disabled.clear();
+                necessary.push(cop);
                 continue;
             }
             if disabled.remove(cop) {
+                necessary.push(cop);
                 continue;
             }
             if context.related_config_value(cop, "Enabled") == Some("false")
                 && configured_disable_consumed.insert(cop.to_string())
             {
+                necessary.push(cop);
                 continue;
             }
-            let start = offset + line.find(cop).unwrap_or(0);
-            let label = if cop == "all" { "all cops" } else { cop };
-            context.remove(
-                format!("Unnecessary enabling of {label}."),
-                start..start + cop.len(),
-                start..start + cop.len(),
-            );
+            if !cop.contains('/')
+                && disabled
+                    .iter()
+                    .any(|disabled| disabled.starts_with(&format!("{cop}/")))
+            {
+                preserve_department_line = true;
+            }
+            redundant.push(cop);
+        }
+        if redundant.is_empty() {
+            continue;
+        }
+        let separator = list
+            .find(',')
+            .map(|comma| {
+                let mut end = comma + 1;
+                while list.as_bytes().get(end) == Some(&b' ') {
+                    end += 1;
+                }
+                &list[comma..end]
+            })
+            .unwrap_or(", ");
+        let replacement = necessary.join(separator);
+        for (index, cop) in redundant.iter().enumerate() {
+            let start = offset + line.find(cop).unwrap_or(list_start);
+            let label = if *cop == "all" { "all cops" } else { cop };
+            let message = format!("Unnecessary enabling of {label}.");
+            if index == 0 {
+                if necessary.is_empty() {
+                    let mut edit_end = offset + line.len();
+                    if context.source().as_bytes().get(edit_end) == Some(&b'\n') {
+                        edit_end += 1;
+                    }
+                    let replacement = if preserve_department_line { "\n" } else { "" };
+                    context.replace(
+                        message,
+                        start..start + cop.len(),
+                        offset..edit_end,
+                        replacement,
+                    );
+                } else {
+                    context.replace(
+                        message,
+                        start..start + cop.len(),
+                        offset + list_start..offset + line.len(),
+                        replacement.clone(),
+                    );
+                }
+            } else {
+                context.replace(message, start..start + cop.len(), start..start, "");
+            }
         }
     }
 }
