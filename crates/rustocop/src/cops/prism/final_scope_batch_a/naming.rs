@@ -499,21 +499,51 @@ fn inclusive_language(context: &mut CopContext<'_, '_>) {
             let in_comment = comments
                 .iter()
                 .any(|range| range.start <= start && end <= range.end);
-            let in_heredoc = heredocs
+            let containing_heredoc = heredocs
                 .iter()
-                .any(|range| range.start <= start && end <= range.end)
-                && !file.line(start).contains("<<");
-            let in_literal = literals
+                .find(|range| range.start <= start && end <= range.end);
+            let containing_literal = literals
                 .iter()
-                .any(|range| range.start <= start && end <= range.end);
-            let previous = context.source()[..start].chars().next_back();
-            let symbol = previous == Some(':')
-                && context.source().as_bytes().get(start.saturating_sub(2)) != Some(&b':');
-            let variable = matches!(previous, Some('@' | '$'));
+                .find(|range| range.start <= start && end <= range.end);
+            let interpolation_start = containing_literal
+                .map(|range| range.start)
+                .or_else(|| containing_heredoc.map(|range| range.start));
+            let in_interpolation = interpolation_start.is_some_and(|range_start| {
+                let prefix = &context.source()[range_start..start];
+                prefix.rfind("#{") > prefix.rfind('}')
+            });
+            let in_heredoc = containing_heredoc.is_some()
+                && !file.line(start).contains("<<")
+                && !in_interpolation;
+            let in_literal = containing_literal.is_some() && !in_interpolation;
             let token_start = context.source()[..start]
                 .rfind(|character: char| !character.is_alphanumeric() && character != '_')
-                .map_or(0, |offset| offset + 1);
-            let token = &context.source()[token_start..end];
+                .map_or(0, |offset| {
+                    offset
+                        + context.source()[offset..]
+                            .chars()
+                            .next()
+                            .map_or(1, char::len_utf8)
+                });
+            let token_end = context.source()[end..]
+                .find(|character: char| !character.is_alphanumeric() && character != '_')
+                .map_or(context.source().len(), |offset| end + offset);
+            let previous = context.source()[..token_start].chars().next_back();
+            let symbol = previous == Some(':')
+                && context.source().as_bytes().get(token_start.saturating_sub(2)) != Some(&b':');
+            let variable = matches!(previous, Some('@' | '$'));
+            let token = &context.source()[token_start..token_end];
+            let predicate_suffix = context.source()[token_end..].chars().next();
+            if !in_comment
+                && !in_heredoc
+                && !in_literal
+                && !symbol
+                && !variable
+                && matches!(predicate_suffix, Some('?' | '!'))
+                && !inclusive_method_definition(context.source(), token_start)
+            {
+                continue;
+            }
             let constant =
                 !variable && !symbol && token.chars().next().is_some_and(char::is_uppercase);
             let enabled = if in_comment {
@@ -541,6 +571,20 @@ fn inclusive_language(context: &mut CopContext<'_, '_>) {
             }
         }
     }
+}
+
+fn inclusive_method_definition(source: &str, token_start: usize) -> bool {
+    let line_start = source[..token_start]
+        .rfind('\n')
+        .map_or(0, |offset| offset + 1);
+    let before = source[line_start..token_start].trim_start();
+    let Some(after_def) = before
+        .strip_prefix("def ")
+        .or_else(|| before.split_once(" def ").map(|(_, suffix)| suffix))
+    else {
+        return false;
+    };
+    after_def.trim_start().trim_end_matches("self.").is_empty()
 }
 
 #[derive(Default)]
@@ -618,33 +662,33 @@ fn inclusive_filepath(terms: &[(String, InclusiveTermConfig)], context: &mut Cop
     let mut found = Vec::new();
     for (term, config) in terms {
         let matcher = config.regex.as_deref().unwrap_or(term);
-        if regex::RegexBuilder::new(matcher)
+        if let Ok(regex) = regex::RegexBuilder::new(matcher)
             .case_insensitive(true)
             .build()
-            .is_ok_and(|regex| regex.is_match(context.path()))
         {
-            found.push((term.as_str(), config));
+            found.extend(
+                regex
+                    .find_iter(context.path())
+                    .map(|matched| (matched.as_str().to_string(), config)),
+            );
         }
     }
     if found.is_empty() {
         return;
     }
-    let names = found
-        .iter()
-        .map(|(term, _)| format!("'{term}'"))
-        .collect::<Vec<_>>()
-        .join(", ");
-    let replacement = if found.len() == 1 {
-        match found[0].1.suggestions.as_slice() {
-            [] => "another term".to_string(),
-            [only] => format!("'{only}'"),
-            _ => "other terms".to_string(),
-        }
+    let message = if found.len() == 1 {
+        inclusive_message(&found[0].0, &found[0].1.suggestions).replacen(
+            " with ",
+            " in file path with ",
+            1,
+        )
     } else {
-        "other terms".to_string()
+        let names = found
+            .iter()
+            .map(|(term, _)| format!("'{term}'"))
+            .collect::<Vec<_>>()
+            .join(", ");
+        format!("Consider replacing {names} in file path with other terms.")
     };
-    context.report(
-        format!("Consider replacing {names} in file path with {replacement}."),
-        0..0,
-    );
+    context.report(message, 0..usize::from(!context.source().is_empty()));
 }
