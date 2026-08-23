@@ -246,13 +246,20 @@ fn constant_in_block(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
 
 fn shadowing_outer_local(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
     if let Some(lambda) = node.as_lambda_node() {
-        let Some(parameters) = lambda
+        let Some(block_parameters) = lambda
             .parameters()
-            .and_then(|parameters| parameters.as_parameters_node())
+            .and_then(|parameters| parameters.as_block_parameters_node())
         else {
             return;
         };
-        report_shadowing_parameters(&parameters, lambda.location().start_offset(), context);
+        if let Some(parameters) = block_parameters.parameters() {
+            report_shadowing_parameters(&parameters, lambda.location().start_offset(), context);
+        }
+        report_shadowing_block_locals(
+            &block_parameters,
+            lambda.location().start_offset(),
+            context,
+        );
         return;
     }
     let Some(node) = node.as_block_node() else {
@@ -280,6 +287,18 @@ fn shadowing_outer_local(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
     if let Some(parameters) = block_parameters.parameters() {
         report_shadowing_parameters(&parameters, node.location().start_offset(), context);
     }
+    report_shadowing_block_locals(
+        &block_parameters,
+        node.location().start_offset(),
+        context,
+    );
+}
+
+fn report_shadowing_block_locals(
+    block_parameters: &ruby_prism::BlockParametersNode<'_>,
+    cutoff: usize,
+    context: &mut CopContext<'_, '_>,
+) {
     for local in block_parameters
         .locals()
         .iter()
@@ -287,7 +306,7 @@ fn shadowing_outer_local(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
     {
         let name = String::from_utf8_lossy(local.name().as_slice()).into_owned();
         if !name.starts_with('_')
-            && outer_scope_has_local(name.as_bytes(), node.location().start_offset(), context)
+            && outer_scope_has_local(name.as_bytes(), cutoff, context)
         {
             context.report(
                 format!("Shadowing outer local variable - `{name}`."),
