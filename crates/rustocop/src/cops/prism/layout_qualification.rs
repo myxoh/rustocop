@@ -908,7 +908,7 @@ fn first_hash_element_indentation(
     let file = context.source_file();
     let pairs = hash_pair_infos(node, context.source());
     let first = pairs.first();
-    let left_parenthesis = enclosing_call_parenthesis(context, opening.start_offset());
+    let left_parenthesis = enclosing_call_parenthesis(context, node, opening.start_offset());
     let style = context
         .config_value("EnforcedStyle")
         .unwrap_or("special_inside_parentheses")
@@ -1031,19 +1031,26 @@ fn configured_hash_indentation_width(context: &CopContext<'_, '_>) -> usize {
         .unwrap_or(2)
 }
 
-fn enclosing_call_parenthesis(context: &CopContext<'_, '_>, opening_brace: usize) -> Option<usize> {
+fn enclosing_call_parenthesis(
+    context: &CopContext<'_, '_>,
+    _hash: &ruby_prism::HashNode<'_>,
+    opening_brace: usize,
+) -> Option<usize> {
     if context.related_config_value("Layout/ArgumentAlignment", "EnforcedStyle")
         == Some("with_fixed_indentation")
     {
         return None;
     }
     let file = context.source_file();
-    context.ancestors().iter().rev().find_map(|ancestor| {
-        let call = ancestor.as_call_node()?;
-        let opening = call.opening_loc()?;
-        file.same_line(opening.start_offset(), opening_brace)
-            .then_some(opening.start_offset())
-    })
+    for ancestor in context.ancestors().iter().rev() {
+        if let Some(call) = ancestor.as_call_node() {
+            let opening = call.opening_loc()?;
+            return (opening.as_slice() == b"("
+                && file.same_line(opening.start_offset(), opening_brace))
+            .then_some(opening.start_offset());
+        }
+    }
+    None
 }
 
 fn hash_indentation_base(
