@@ -730,10 +730,11 @@ impl Cop for Void {
             .rev()
             .find(|line| !line.trim().is_empty())
             .is_some_and(|line| line.trim() == "ensure");
-        let all_expressions = enclosing_definition.as_ref().is_some_and(|definition| {
-            definition.name().as_slice() == b"initialize"
-                || void_setter_name(definition.name().as_slice())
-        }) || direct_parent.is_some_and(|parent| {
+        let all_expressions = body.len() > 1
+            && enclosing_definition.as_ref().is_some_and(|definition| {
+                definition.name().as_slice() == b"initialize"
+                    || void_setter_name(definition.name().as_slice())
+            }) || direct_parent.is_some_and(|parent| {
             parent.as_for_node().is_some() || parent.as_ensure_node().is_some()
         }) || ensure_body
             || direct_parent.and_then(Node::as_block_node).is_some_and(|block| {
@@ -771,8 +772,7 @@ impl Cop for Void {
 }
 
 fn void_setter_name(name: &[u8]) -> bool {
-    name.ends_with(b"=")
-        && !matches!(name, b"==" | b"===" | b"!=" | b"<=" | b">=" | b"[]=")
+    name.ends_with(b"=") && !matches!(name, b"==" | b"===" | b"!=" | b"<=" | b">=")
 }
 
 fn check_void_expression(
@@ -791,13 +791,13 @@ fn check_void_expression(
     }
     if let Some(conditional) = node.as_if_node() {
         if let Some(statements) = conditional.statements() {
-            check_void_branch_tail(&statements, ancestors, source, context, cop);
+            check_void_if_body(&statements, ancestors, source, context, cop);
         }
         return;
     }
     if let Some(conditional) = node.as_unless_node() {
         if let Some(statements) = conditional.statements() {
-            check_void_branch_tail(&statements, ancestors, source, context, cop);
+            check_void_if_body(&statements, ancestors, source, context, cop);
         }
         return;
     }
@@ -1036,6 +1036,24 @@ fn check_void_branch_tail(
 ) {
     let body = statements.body().iter().collect::<Vec<_>>();
     if body.len() == 1 {
+        check_void_expression(&body[0], ancestors, source, context, cop, false);
+    }
+}
+
+fn check_void_if_body(
+    statements: &ruby_prism::StatementsNode<'_>,
+    ancestors: &[Node<'_>],
+    source: &str,
+    context: &mut Context,
+    cop: &'static str,
+) {
+    let body = statements.body().iter().collect::<Vec<_>>();
+    if body.len() == 1
+        && body[0].as_if_node().is_none()
+        && body[0].as_unless_node().is_none()
+        && body[0].as_case_node().is_none()
+        && body[0].as_case_match_node().is_none()
+    {
         check_void_expression(&body[0], ancestors, source, context, cop, false);
     }
 }
