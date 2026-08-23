@@ -174,12 +174,6 @@ fn navigation_receiver_key(call: &ruby_prism::CallNode<'_>, file: SourceFile<'_>
     let Some(receiver) = call.receiver() else {
         return String::new();
     };
-    if let Some(parent_call) = receiver.as_call_node() {
-        let nested = navigation_receiver_key(&parent_call, file);
-        if !nested.is_empty() {
-            return nested;
-        }
-    }
     file.node(&receiver).to_string()
 }
 
