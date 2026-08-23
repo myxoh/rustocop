@@ -1015,10 +1015,34 @@ fn ast_branch(
 }
 
 fn duplicate_branch_line(line: &str) -> String {
-    line.trim()
-        .split_once(" #")
-        .map_or_else(|| line.trim(), |(code, _)| code.trim_end())
-        .to_string()
+    let line = line.trim();
+    let mut quote = None;
+    let mut escaped = false;
+    for (index, byte) in line.bytes().enumerate() {
+        if escaped {
+            escaped = false;
+            continue;
+        }
+        if byte == b'\\' && quote.is_some() {
+            escaped = true;
+            continue;
+        }
+        if matches!(byte, b'\'' | b'"' | b'`') {
+            if quote == Some(byte) {
+                quote = None;
+            } else if quote.is_none() {
+                quote = Some(byte);
+            }
+            continue;
+        }
+        if byte == b'#'
+            && quote.is_none()
+            && (index == 0 || line.as_bytes()[index - 1].is_ascii_whitespace())
+        {
+            return line[..index].trim_end().to_string();
+        }
+    }
+    line.to_string()
 }
 
 fn duplicate_literal(source: &str, ignore_constants: bool) -> bool {
