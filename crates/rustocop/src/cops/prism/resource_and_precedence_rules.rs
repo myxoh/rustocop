@@ -191,15 +191,20 @@ fn method_called_on_do_end_block(node: &CallNode<'_>, context: &mut CopContext<'
     {
         return;
     }
-    let Some(block) = node
-        .receiver()
-        .and_then(|receiver| receiver.as_call_node())
-        .and_then(|receiver| receiver.block())
-        .and_then(|block| block.as_block_node())
-    else {
+    let Some(receiver) = node.receiver() else {
         return;
     };
-    let closing = block.closing_loc();
+    let closing = if let Some(block) = receiver
+        .as_call_node()
+        .and_then(|receiver| receiver.block())
+        .and_then(|block| block.as_block_node())
+    {
+        block.closing_loc()
+    } else if let Some(lambda) = receiver.as_lambda_node() {
+        lambda.closing_loc()
+    } else {
+        return;
+    };
     if closing.as_slice() != b"end" {
         return;
     }
