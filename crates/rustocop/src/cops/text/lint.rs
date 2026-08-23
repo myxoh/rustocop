@@ -105,7 +105,11 @@ fn check_small_line_cops(
         check_end_block(index, line, trimmed, indentation, options, offenses);
 
         if options.cop_enabled("Style/ColonMethodDefinition") && trimmed.starts_with("def ") {
-            if let Some(relative) = trimmed[4..].find("::") {
+            let signature = &trimmed[4..];
+            let method_end = signature
+                .find(|character: char| character.is_whitespace() || character == '(')
+                .unwrap_or(signature.len());
+            if let Some(relative) = signature[..method_end].find("::") {
                 let column = indentation + 4 + relative;
                 push_offense(
                     offenses,
