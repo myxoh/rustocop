@@ -129,10 +129,7 @@ fn file_expand_path(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) -> bo
     let Some(selector) = node.message_loc() else {
         return false;
     };
-    let current = context
-        .source_file()
-        .slice(selector.start_offset()..node.location().end_offset())
-        .unwrap_or_default();
+    let current = format!("expand_path('{path}', __FILE__)");
     context.replace(
         format!("Use `{preferred}` instead of `{current}`."),
         &selector,
