@@ -84,6 +84,9 @@ fn array_intersect(source: &str, context: &mut Reporter<'_>) {
 }
 
 fn camel_case(source: &str, context: &mut Reporter<'_>) {
+    let file = SourceFile::new(source);
+    let class_offsets = file.code_offsets("class");
+    let module_offsets = file.code_offsets("module");
     for (offset, line) in source_lines(source) {
         let trimmed = line.trim_start();
         let keyword = if trimmed.starts_with("class ") {
@@ -94,6 +97,14 @@ fn camel_case(source: &str, context: &mut Reporter<'_>) {
             continue;
         };
         let leading = line.len() - trimmed.len();
+        let lexical = if keyword == "class " {
+            &class_offsets
+        } else {
+            &module_offsets
+        };
+        if lexical.binary_search(&(offset + leading)).is_err() {
+            continue;
+        }
         let name_start = leading + keyword.len();
         let name = line[name_start..]
             .split_whitespace()
