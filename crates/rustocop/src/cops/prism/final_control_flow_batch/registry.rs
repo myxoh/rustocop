@@ -1,4 +1,4 @@
-use super::super::catalog_cop::{custom, report};
+use super::super::catalog_cop::report;
 use super::*;
 
 pub(super) fn cops() -> Vec<Box<dyn Cop>> {
@@ -13,7 +13,7 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
             "rescue '",
             "Rescue an exception class rather than a string literal.",
         ),
-        custom("Lint/DuplicateBranch", identical_branches),
+        Box::new(DuplicateBranchCop),
         Box::new(UnreachableCode),
     ]
 }

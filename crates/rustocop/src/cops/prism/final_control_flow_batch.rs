@@ -740,231 +740,278 @@ fn terminating_loop_statement(node: &Node<'_>) -> bool {
     false
 }
 
-fn identical_branches(context: &mut CopContext<'_, '_>) {
-    let lines = context.source_file().lines().collect::<Vec<_>>();
-    let ignore_literals = context.config_bool("IgnoreLiteralBranches", false);
-    let ignore_constants = context.config_bool("IgnoreConstantBranches", false);
-    let ignore_duplicate_else = context.config_bool("IgnoreDuplicateElseBranch", false);
-    let mut processed_rescue_headers = HashSet::new();
-    for (start_index, (_, line)) in lines.iter().copied().enumerate() {
-        let trimmed = line.trim_start();
-        let indent = line.len() - trimmed.len();
-        let kind = if trimmed.starts_with("if ") || trimmed.starts_with("unless ") {
-            DuplicateConstruct::If
-        } else if trimmed.starts_with("case ")
-            || trimmed == "case"
-            || trimmed.contains("= case ")
-        {
-            DuplicateConstruct::Case
-        } else if trimmed == "begin" || trimmed.starts_with("rescue") {
-            DuplicateConstruct::Rescue
-        } else {
-            continue;
-        };
-        if matches!(kind, DuplicateConstruct::Rescue)
-            && processed_rescue_headers.contains(&start_index)
-        {
-            continue;
-        }
-        let branches = duplicate_branches(&lines, start_index, indent, kind);
-        if matches!(kind, DuplicateConstruct::Rescue) {
-            processed_rescue_headers.extend(branches.iter().map(|branch| branch.header_index));
-        }
-        if branches.len() < 2 {
-            continue;
-        }
-        let mut seen = Vec::<String>::new();
-        for (branch_index, branch) in branches.iter().enumerate() {
-            if branch.body.is_empty() {
-                continue;
-            }
-            let ignored_branch = ignore_literals && duplicate_literal(&branch.body, false)
-                || ignore_constants && duplicate_constant_branch(&branch.body);
-            let duplicate = seen.iter().any(|body| body == &branch.body);
-            if !duplicate {
-                seen.push(branch.body.clone());
-                continue;
-            }
-            if ignored_branch {
-                continue;
-            }
-            if ignore_duplicate_else
-                && branch.else_branch
-                && branches.len() > 2
-                && branch_index + 1 == branches.len()
-            {
-                continue;
-            }
-            context.report("Duplicate branch body detected.", branch.offense.clone());
-        }
-    }
+struct DuplicateBranchCop;
 
-    for (offset, line) in context.source_file().lines() {
-        let Some(question_space) = line.find(" ? ") else {
-            continue;
-        };
-        let question = question_space + 1;
-        let Some(colon_relative) = line[question + 1..].find(" : ") else {
-            continue;
-        };
-        let colon = question + 1 + colon_relative + 1;
-        let truthy = line[question + 1..colon].trim();
-        let falsy = line[colon + 1..].trim();
-        if !truthy.is_empty()
-            && truthy == falsy
-            && !(ignore_literals && duplicate_literal(truthy, ignore_constants))
-        {
-            let at = line[colon + 1..].find(falsy).unwrap_or(0) + colon + 1;
-            context.report(
-                "Duplicate branch body detected.",
-                offset + at..offset + at + falsy.len(),
-            );
-        }
-    }
-}
-
-#[derive(Clone, Copy)]
-enum DuplicateConstruct {
-    If,
-    Case,
-    Rescue,
-}
-
-struct DuplicateBranch {
-    header_index: usize,
-    body: String,
+struct AstDuplicateBranch {
+    key: String,
+    literal: String,
     offense: std::ops::Range<usize>,
     else_branch: bool,
 }
 
-fn duplicate_branches(
-    lines: &[(usize, &str)],
-    start: usize,
-    indent: usize,
-    kind: DuplicateConstruct,
-) -> Vec<DuplicateBranch> {
-    let mut headers = Vec::<(usize, bool)>::new();
-    if matches!(kind, DuplicateConstruct::If)
-        || matches!(kind, DuplicateConstruct::Rescue)
-            && lines[start].1.trim_start().starts_with("rescue")
-    {
-        headers.push((start, false));
+impl Cop for DuplicateBranchCop {
+    fn name(&self) -> &'static str {
+        "Lint/DuplicateBranch"
     }
-    let mut end = lines.len();
-    let mut case_branch_indent = None;
-    for index in start + 1..lines.len() {
-        let line = lines[index].1;
-        let trimmed = line.trim_start();
-        let line_indent = line.len() - trimmed.len();
-        let end_indent = if matches!(kind, DuplicateConstruct::Case) {
-            case_branch_indent.unwrap_or(indent)
-        } else {
-            indent
-        };
-        if line_indent == end_indent
-            && (trimmed == "end"
-                || trimmed
-                    .strip_prefix("end")
-                    .is_some_and(|tail| tail.starts_with(['.', '&'])) )
-        {
-            end = index;
-            break;
-        }
-        if line_indent >= indent {
-            let header = match kind {
-                DuplicateConstruct::If => {
-                    line_indent == indent && (trimmed.starts_with("elsif ") || trimmed == "else")
-                }
-                DuplicateConstruct::Case => {
-                    let candidate = trimmed.starts_with("when ")
-                        || trimmed.starts_with("in ")
-                        || trimmed.starts_with("else");
-                    if candidate && case_branch_indent.is_none() {
-                        case_branch_indent = Some(line_indent);
-                    }
-                    candidate && case_branch_indent == Some(line_indent)
-                }
-                DuplicateConstruct::Rescue => {
-                    line_indent == indent
-                        && (trimmed.starts_with("rescue") || trimmed.starts_with("else"))
-                }
+
+    fn on_node<'pr>(
+        &self,
+        node: &Node<'pr>,
+        ancestors: &[Node<'pr>],
+        source: &str,
+        context: &mut Context,
+    ) {
+        let branches = if let Some(if_node) = node.as_if_node() {
+            if if_node
+                .if_keyword_loc()
+                .is_some_and(|keyword| keyword.as_slice() == b"elsif")
+            {
+                return;
+            }
+            duplicate_if_branches(&if_node, source)
+        } else if let Some(unless_node) = node.as_unless_node() {
+            let mut branches = Vec::new();
+            push_ast_branch(
+                &mut branches,
+                unless_node.statements(),
+                unless_node.location().start_offset()..unless_node.location().end_offset(),
+                false,
+                source,
+            );
+            if let Some(else_node) = unless_node.else_clause() {
+                push_ast_branch(
+                    &mut branches,
+                    else_node.statements(),
+                    else_node.else_keyword_loc().start_offset()
+                        ..else_node.else_keyword_loc().end_offset(),
+                    true,
+                    source,
+                );
+            }
+            branches
+        } else if let Some(case_node) = node.as_case_node() {
+            let mut branches = case_node
+                .conditions()
+                .iter()
+                .filter_map(|condition| condition.as_when_node())
+                .filter_map(|branch| {
+                    ast_branch(
+                        branch.statements(),
+                        branch.location().start_offset()..branch.location().end_offset(),
+                        false,
+                        source,
+                    )
+                })
+                .collect::<Vec<_>>();
+            if let Some(else_node) = case_node.else_clause() {
+                push_ast_branch(
+                    &mut branches,
+                    else_node.statements(),
+                    else_node.else_keyword_loc().start_offset()
+                        ..else_node.else_keyword_loc().end_offset(),
+                    true,
+                    source,
+                );
+            }
+            branches
+        } else if let Some(case_node) = node.as_case_match_node() {
+            let mut branches = case_node
+                .conditions()
+                .iter()
+                .filter_map(|condition| condition.as_in_node())
+                .filter_map(|branch| {
+                    ast_branch(
+                        branch.statements(),
+                        branch.location().start_offset()..branch.location().end_offset(),
+                        false,
+                        source,
+                    )
+                })
+                .collect::<Vec<_>>();
+            if let Some(else_node) = case_node.else_clause() {
+                push_ast_branch(
+                    &mut branches,
+                    else_node.statements(),
+                    else_node.else_keyword_loc().start_offset()
+                        ..else_node.else_keyword_loc().end_offset(),
+                    true,
+                    source,
+                );
+            }
+            branches
+        } else if let Some(begin_node) = node.as_begin_node() {
+            let Some(rescue_node) = begin_node.rescue_clause() else {
+                return;
             };
-            if header {
-                headers.push((index, trimmed.starts_with("else")));
+            let mut branches = Vec::new();
+            let mut current = Some(rescue_node);
+            while let Some(rescue) = current {
+                let end = rescue
+                    .statements()
+                    .map_or_else(|| rescue.location().end_offset(), |body| body.location().end_offset());
+                push_ast_branch(
+                    &mut branches,
+                    rescue.statements(),
+                    rescue.keyword_loc().start_offset()..end,
+                    false,
+                    source,
+                );
+                current = rescue.subsequent();
+            }
+            if let Some(else_node) = begin_node.else_clause() {
+                push_ast_branch(
+                    &mut branches,
+                    else_node.statements(),
+                    else_node.else_keyword_loc().start_offset()
+                        ..else_node.else_keyword_loc().end_offset(),
+                    true,
+                    source,
+                );
+            }
+            branches
+        } else {
+            return;
+        };
+
+        if branches.len() < 2 {
+            return;
+        }
+        let mut cop_context = context.cop_context(self.name(), source, ancestors);
+        let ignore_literals = cop_context.config_bool("IgnoreLiteralBranches", false);
+        let ignore_constants = cop_context.config_bool("IgnoreConstantBranches", false);
+        let ignore_duplicate_else = cop_context.config_bool("IgnoreDuplicateElseBranch", false);
+        let branch_count = branches.len();
+        let mut seen = HashSet::new();
+        for (index, branch) in branches.into_iter().enumerate() {
+            let duplicate = !seen.insert(branch.key);
+            if !duplicate
+                || ignore_literals && duplicate_literal(&branch.literal, ignore_constants)
+                || ignore_constants && duplicate_constant_branch(&branch.literal)
+                || ignore_duplicate_else
+                    && branch.else_branch
+                    && branch_count > 2
+                    && index + 1 == branch_count
+            {
                 continue;
             }
+            cop_context.report("Duplicate branch body detected.", branch.offense);
         }
     }
-    let mut result = Vec::new();
-    for (position, (header_index, else_branch)) in headers.iter().copied().enumerate() {
-        let next = headers.get(position + 1).map_or(end, |(index, _)| *index);
-        let header_line = lines[header_index].1;
-        let header_trimmed = header_line.trim_start();
-        let inline = header_trimmed
-            .split_once(" then ")
-            .map(|(_, body)| body)
-            .or_else(|| {
-                else_branch
-                    .then(|| header_trimmed.strip_prefix("else "))
-                    .flatten()
-            });
-        let trailing_body = || {
-            lines[header_index + 1..next]
-                .iter()
-                .map(|(_, line)| duplicate_branch_line(line))
-                .filter(|line| !line.is_empty() && !line.starts_with('#'))
-                .collect::<Vec<_>>()
-                .join("\n")
-        };
-        let body = inline.map_or_else(
-            || {
-                let mut body_lines = lines[header_index + 1..next]
-                    .iter()
-                    .filter(|(_, line)| !line.trim().is_empty() && !line.trim_start().starts_with('#'))
-                    .peekable();
-                if matches!(kind, DuplicateConstruct::Case) {
-                    while body_lines.peek().is_some_and(|(_, line)| {
-                        line.len() - line.trim_start().len() > indent + 2
-                    }) {
-                        body_lines.next();
-                    }
-                }
-                body_lines
-                    .map(|(_, line)| duplicate_branch_line(line))
-                    .collect::<Vec<_>>()
-                    .join("\n")
-            },
-            |body| {
-                let tail = trailing_body();
-                let body = duplicate_branch_line(body);
-                if tail.is_empty() {
-                    body
+}
+
+fn duplicate_if_branches(node: &ruby_prism::IfNode<'_>, source: &str) -> Vec<AstDuplicateBranch> {
+    let mut branches = Vec::new();
+    push_ast_branch(
+        &mut branches,
+        node.statements(),
+        node.location().start_offset()..node.location().end_offset(),
+        false,
+        source,
+    );
+    let mut subsequent = node.subsequent();
+    while let Some(branch) = subsequent {
+        if let Some(elsif) = branch.as_if_node() {
+            let start = elsif
+                .if_keyword_loc()
+                .map_or_else(|| elsif.location().start_offset(), |keyword| keyword.start_offset());
+            let end = conditional_branch_end(&elsif, source);
+            push_ast_branch(&mut branches, elsif.statements(), start..end, false, source);
+            subsequent = elsif.subsequent();
+        } else if let Some(else_node) = branch.as_else_node() {
+            let only = else_node
+                .statements()
+                .and_then(|statements| {
+                    let mut nodes = statements.body().iter().collect::<Vec<_>>();
+                    (nodes.len() == 1).then(|| nodes.pop().expect("one statement"))
+                });
+            if let Some(elsif) = only.as_ref().and_then(|child| child.as_if_node()) {
+                let start = elsif
+                    .if_keyword_loc()
+                    .map_or_else(|| elsif.location().start_offset(), |keyword| keyword.start_offset());
+                let end = conditional_branch_end(&elsif, source);
+                push_ast_branch(&mut branches, elsif.statements(), start..end, false, source);
+                subsequent = elsif.subsequent();
+            } else {
+                let offense = if node.if_keyword_loc().is_none() {
+                    only.map_or_else(
+                        || {
+                            else_node.else_keyword_loc().start_offset()
+                                ..else_node.else_keyword_loc().end_offset()
+                        },
+                        |body| body.location().start_offset()..body.location().end_offset(),
+                    )
                 } else {
-                    format!("{body}\n{tail}")
-                }
-            },
-        );
-        let line_offset = lines[header_index].0;
-        let start = line_offset + header_line.len() - header_trimmed.len();
-        let offense_end = if else_branch {
-            start + 4
-        } else if inline.is_some() {
-            line_offset + header_line.trim_end().len()
-        } else if matches!(kind, DuplicateConstruct::If) && header_index != start {
-            lines[end.saturating_sub(1)].0 + lines[end.saturating_sub(1)].1.trim_end().len()
-        } else if next > header_index + 1 {
-            lines[next - 1].0 + lines[next - 1].1.trim_end().len()
+                    else_node.else_keyword_loc().start_offset()
+                        ..else_node.else_keyword_loc().end_offset()
+                };
+                push_ast_branch(
+                    &mut branches,
+                    else_node.statements(),
+                    offense,
+                    true,
+                    source,
+                );
+                break;
+            }
         } else {
-            line_offset + header_line.trim_end().len()
-        };
-        result.push(DuplicateBranch {
-            header_index,
-            body,
-            offense: start..offense_end,
-            else_branch,
-        });
+            break;
+        }
     }
-    result
+    branches
+}
+
+fn conditional_branch_end(node: &ruby_prism::IfNode<'_>, source: &str) -> usize {
+    let mut end = node
+        .end_keyword_loc()
+        .map_or_else(|| node.location().end_offset(), |keyword| keyword.start_offset());
+    while end > node.location().start_offset()
+        && source.as_bytes().get(end - 1).is_some_and(u8::is_ascii_whitespace)
+    {
+        end -= 1;
+    }
+    end
+}
+
+fn push_ast_branch(
+    branches: &mut Vec<AstDuplicateBranch>,
+    statements: Option<ruby_prism::StatementsNode<'_>>,
+    offense: std::ops::Range<usize>,
+    else_branch: bool,
+    source: &str,
+) {
+    if let Some(branch) = ast_branch(statements, offense, else_branch, source) {
+        branches.push(branch);
+    }
+}
+
+fn ast_branch(
+    statements: Option<ruby_prism::StatementsNode<'_>>,
+    offense: std::ops::Range<usize>,
+    else_branch: bool,
+    source: &str,
+) -> Option<AstDuplicateBranch> {
+    let statements = statements?;
+    let nodes = statements.body().iter().collect::<Vec<_>>();
+    if nodes.is_empty() {
+        return None;
+    }
+    let literal = if nodes.len() == 1 {
+        source_at(source, &nodes[0].location()).to_string()
+    } else {
+        source_at(source, &statements.location()).to_string()
+    };
+    let key = literal
+        .lines()
+        .map(duplicate_branch_line)
+        .filter(|line| !line.is_empty() && !line.starts_with('#'))
+        .collect::<Vec<_>>()
+        .join("\n");
+    Some(AstDuplicateBranch {
+        key,
+        literal,
+        offense,
+        else_branch,
+    })
 }
 
 fn duplicate_branch_line(line: &str) -> String {
