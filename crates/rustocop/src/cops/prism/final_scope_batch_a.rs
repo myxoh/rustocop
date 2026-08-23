@@ -334,6 +334,50 @@ fn outer_scope_has_local(
     cutoff: usize,
     context: &CopContext<'_, '_>,
 ) -> bool {
+    for scope in context.ancestors().iter().rev() {
+        let (parameters, body) = if let Some(block) = scope.as_block_node() {
+            (
+                block
+                    .parameters()
+                    .and_then(|parameters| parameters.as_block_parameters_node())
+                    .and_then(|parameters| parameters.parameters()),
+                block.body(),
+            )
+        } else if let Some(lambda) = scope.as_lambda_node() {
+            (
+                lambda
+                    .parameters()
+                    .and_then(|parameters| parameters.as_block_parameters_node())
+                    .and_then(|parameters| parameters.parameters()),
+                lambda.body(),
+            )
+        } else {
+            if scope.as_def_node().is_some() {
+                break;
+            }
+            continue;
+        };
+        if parameters.is_some_and(|parameters| {
+            shadowing_parameters(&parameters)
+                .iter()
+                .any(|(parameter, _)| parameter.as_bytes() == name)
+        }) {
+            return true;
+        }
+        let Some(body) = body else { continue };
+        let mut outer = OuterLocalDeclarations {
+            declarations: Vec::new(),
+        };
+        ruby_prism::Visit::visit(&mut outer, &body);
+        if outer.declarations.iter().any(|(declared, range)| {
+            declared.as_slice() == name
+                && range.end < cutoff
+                && declaration_in_same_conditional_branch(range.start, cutoff, context)
+        }) {
+            return true;
+        }
+    }
+
     let mut collector = OuterLocalDeclarations {
         declarations: Vec::new(),
     };
@@ -420,6 +464,7 @@ impl<'pr> ruby_prism::Visit<'pr> for OuterLocalDeclarations {
     }
 
     fn visit_block_node(&mut self, _node: &ruby_prism::BlockNode<'pr>) {}
+    fn visit_lambda_node(&mut self, _node: &ruby_prism::LambdaNode<'pr>) {}
     fn visit_def_node(&mut self, _node: &ruby_prism::DefNode<'pr>) {}
     fn visit_class_node(&mut self, _node: &ruby_prism::ClassNode<'pr>) {}
     fn visit_module_node(&mut self, _node: &ruby_prism::ModuleNode<'pr>) {}
@@ -532,7 +577,7 @@ fn shadowing_parameters(
         if let Some((name, location)) = extracted {
             result.push((
                 String::from_utf8_lossy(name).into_owned(),
-                location.start_offset()..location.end_offset().saturating_sub(1),
+                location.start_offset()..location.end_offset(),
             ));
         }
     }
