@@ -243,5 +243,12 @@ RSpec.describe RuboCop::Cop::Lint::LiteralAssignmentInCondition, :config do
       end
     RUBY
   end
-end
 
+  it 'registers a literal assignment inside a block in the condition' do
+    expect_offense(<<~RUBY)
+      if validate(resource) { hashed = true }
+                                     ^^^^^^ Don't use literal assignment `= true` in conditional, should be `==` or non-literal operand.
+      end
+    RUBY
+  end
+end

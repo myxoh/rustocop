@@ -66,6 +66,15 @@ RSpec.describe RuboCop::Cop::Layout::FirstMethodParameterLineBreak, :config do
     RUBY
   end
 
+  it 'accepts a comment immediately after the opening parenthesis' do
+    expect_no_offenses(<<~RUBY)
+      def delete_resources( # the parameters are documented below
+        resources,
+        permanent = false)
+      end
+    RUBY
+  end
+
   it 'registers an offense and corrects params with default values' do
     expect_offense(<<~RUBY)
       def foo(bar = [],
@@ -146,4 +155,3 @@ RSpec.describe RuboCop::Cop::Layout::FirstMethodParameterLineBreak, :config do
     end
   end
 end
-

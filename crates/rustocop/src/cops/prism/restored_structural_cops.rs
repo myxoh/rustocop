@@ -119,6 +119,14 @@ fn duplicate_rescue_exception(node: &RescueNode<'_>, context: &mut CopContext<'_
         let Some(rescue) = ancestor.as_rescue_node() else {
             continue;
         };
+        let current = node.location();
+        if !rescue.subsequent().is_some_and(|subsequent| {
+            let subsequent = subsequent.location();
+            subsequent.start_offset() <= current.start_offset()
+                && current.end_offset() <= subsequent.end_offset()
+        }) {
+            continue;
+        }
         for exception in rescue.exceptions().iter() {
             seen.insert(context.source_file().node(&exception).to_string());
         }
@@ -169,9 +177,6 @@ fn simple_assignment<'pr>(node: &Node<'pr>) -> Option<(ruby_prism::Location<'pr>
 fn condition_contains_assignment(node: &Node<'_>, context: &CopContext<'_, '_>) -> bool {
     let location = node.location();
     for ancestor in context.ancestors().iter().rev() {
-        if ancestor.as_block_node().is_some() || ancestor.as_lambda_node().is_some() {
-            return false;
-        }
         let predicate = if let Some(condition) = ancestor.as_if_node() {
             Some(condition.predicate())
         } else if let Some(condition) = ancestor.as_unless_node() {
@@ -333,6 +338,15 @@ fn first_method_parameter_line_break(node: &DefNode<'_>, context: &mut CopContex
     if !source[opening.start_offset()..closing.end_offset()].contains('\n')
         || source[opening.end_offset()..].starts_with('\n')
     {
+        return;
+    }
+    let first_line = source[opening.end_offset()..closing.start_offset()]
+        .split_once('\n')
+        .map_or(
+            &source[opening.end_offset()..closing.start_offset()],
+            |(line, _)| line,
+        );
+    if first_line.trim_start().starts_with('#') {
         return;
     }
     let elements = top_level_elements(source, opening.end_offset(), closing.start_offset());

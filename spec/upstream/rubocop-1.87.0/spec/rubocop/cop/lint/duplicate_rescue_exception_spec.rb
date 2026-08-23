@@ -70,5 +70,18 @@ RSpec.describe RuboCop::Cop::Lint::DuplicateRescueException, :config do
       end
     RUBY
   end
-end
 
+  it 'keeps a nested rescue chain independent from its outer rescue branch' do
+    expect_no_offenses(<<~RUBY)
+      begin
+        outer
+      rescue Errno::ENOENT
+        begin
+          inner
+        rescue Errno::ENOENT
+          fallback
+        end
+      end
+    RUBY
+  end
+end
