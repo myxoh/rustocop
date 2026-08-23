@@ -488,7 +488,13 @@ fn class_module_children(context: &mut CopContext<'_, '_>) {
                     depth -= 1;
                 }
             }
-            let Some(end_index) = end_index else { continue };
+            let Some(end_index) = end_index else {
+                context.report(
+                    "Use nested module/class definitions instead of compact style.",
+                    name_range,
+                );
+                continue;
+            };
             let width = context
                 .config_value("IndentationWidth")
                 .and_then(|value| value.parse::<usize>().ok())
