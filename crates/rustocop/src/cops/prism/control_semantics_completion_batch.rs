@@ -847,7 +847,9 @@ fn safe_navigation_chain(node: &ruby_prism::CallNode<'_>, context: &mut CopConte
         b"nil?"
             | b"present?"
             | b"blank?"
+            | b"presence"
             | b"try"
+            | b"try!"
             | b"to_d"
             | b"in?"
             | b"=="
@@ -859,6 +861,13 @@ fn safe_navigation_chain(node: &ruby_prism::CallNode<'_>, context: &mut CopConte
             | b"+@"
             | b"-@"
     ) {
+        return;
+    }
+    if context
+        .config_values("AllowedMethods")
+        .iter()
+        .any(|allowed| allowed.as_bytes() == method)
+    {
         return;
     }
 
