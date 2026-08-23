@@ -132,14 +132,15 @@ impl GuardClauseRule<'_, '_, '_> {
                 if_statements.as_ref(),
                 self.source_file(),
             ));
-        let if_guard = guard_clause(if_statements.as_ref(), self.source_file());
-        let else_guard = guard_clause(else_statements.as_ref(), self.source_file());
+        let if_guard = guard_clause(if_statements.as_ref(), self.source_file())
+            .filter(|guard| !guard.source.contains('\n'));
+        let else_guard = guard_clause(else_statements.as_ref(), self.source_file())
+            .filter(|guard| !guard.source.contains('\n'));
         let (guard, guard_keyword, branch_range, keep_statements) = if let Some(guard) = if_guard {
             (guard, conditional_keyword, if_statements.as_ref().map(|statements| statements.location()), else_statements.as_ref())
         } else if let Some(guard) = else_guard {
             (guard, inverse_keyword, else_statements.as_ref().map(|statements| statements.location()), if_statements.as_ref())
         } else { return };
-        return_if!(guard.source.contains('\n'));
         let example = format!("{} {guard_keyword} {condition_source}", guard.source);
         let max = (self.related_config_value("Layout/LineLength", "Enabled") != Some("false"))
             .then(|| self.related_config_value("Layout/LineLength", "Max").and_then(|value| value.parse().ok())).flatten();
