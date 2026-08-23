@@ -372,8 +372,13 @@ fn structural_call_arguments<'pr>(call: &CallNode<'pr>) -> Vec<Node<'pr>> {
 }
 
 fn module_length(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
-    let (container, body, offense) = if let Some(module) = node.as_module_node() {
-        (module.location(), module.body(), module.location())
+    let (container, body, offense, classlike) = if let Some(module) = node.as_module_node() {
+        (
+            module.location(),
+            module.body(),
+            module.location(),
+            true,
+        )
     } else {
         let (value, name) = if let Some(write) = node.as_constant_write_node() {
             (write.value(), write.name_loc())
@@ -391,7 +396,7 @@ fn module_length(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
         let Some(block) = call.block().and_then(|block| block.as_block_node()) else {
             return;
         };
-        (node.location(), block.body(), name)
+        (node.location(), block.body(), name, false)
     };
 
     #[derive(Default)]
@@ -451,10 +456,46 @@ fn module_length(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
                 offset < range.end && offset + line.len().saturating_add(1) > range.start
             })
     };
-    let mut count = file
-        .lines()
-        .filter(|(offset, line)| relevant(*offset, line))
-        .count();
+    let lines = file.lines().collect::<Vec<_>>();
+    let mut count = if classlike && !ranges.fold_arrays {
+        let line_index = |offset: usize| {
+            lines
+                .partition_point(|(start, _)| *start <= offset)
+                .saturating_sub(1)
+        };
+        let first = line_index(container.start_offset());
+        let last = line_index(container.end_offset().saturating_sub(1));
+        let excluded_lines = ranges
+            .excluded
+            .iter()
+            .map(|range| {
+                (
+                    line_index(range.start) + 1,
+                    line_index(range.end.saturating_sub(1)) + 1,
+                )
+            })
+            .collect::<Vec<_>>();
+        // RuboCop's class-like calculator iterates one-based body line
+        // numbers and indexes ProcessedSource with those numbers. Preserve
+        // that public behavior, which evaluates the following physical line.
+        (first + 2..=last)
+            .filter(|source_index| {
+                !excluded_lines
+                    .iter()
+                    .any(|(start, end)| start <= source_index && source_index <= end)
+            })
+            .filter_map(|source_index| lines.get(source_index).map(|(_, line)| *line))
+            .filter(|line| {
+                !line.trim().is_empty()
+                    && (count_comments || !line.trim_start().starts_with('#'))
+            })
+            .count()
+    } else {
+        lines
+            .iter()
+            .filter(|(offset, line)| relevant(*offset, line))
+            .count()
+    };
     for fold in &ranges.folded {
         if ranges
             .excluded
@@ -463,8 +504,8 @@ fn module_length(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
         {
             continue;
         }
-        let folded_lines = file
-            .lines()
+        let folded_lines = lines
+            .iter()
             .filter(|(offset, line)| {
                 relevant(*offset, line)
                     && *offset < fold.end
