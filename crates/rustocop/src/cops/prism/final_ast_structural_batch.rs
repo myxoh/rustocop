@@ -3479,27 +3479,12 @@ fn anonymous_class_scope(ancestors: &[Node<'_>], source: &str) -> Option<(String
         Some(enclosing) => format!("{enclosing}::Object"),
         None => "::Object".to_string(),
     };
-    // Parser's anonymous-block identity deliberately disappears when the
-    // `Class.new` expression is a statement below an `ensure`/`rescue` body.
-    // In that shape RuboCop compares the anonymous definitions globally.
-    if ancestors[..call_index]
-        .iter()
-        .rev()
-        .take_while(|ancestor| ancestor.as_block_node().is_none())
-        .any(|ancestor| {
-            ancestor.as_ensure_node().is_some()
-                || ancestor.as_rescue_node().is_some()
-                || ancestor
-                    .as_begin_node()
-                    .is_some_and(|begin| begin.ensure_clause().is_some())
-        })
-    {
-        return Some((base, None));
-    }
-
     let named_scope_id = ancestors[..call_index]
         .iter()
         .rev()
+        .take_while(|ancestor| {
+            ancestor.as_block_node().is_none() && ancestor.as_begin_node().is_none()
+        })
         .find_map(Node::as_call_node)
         .and_then(|parent| {
             if let Some(receiver) = parent.receiver() {
@@ -3515,6 +3500,23 @@ fn anonymous_class_scope(ancestors: &[Node<'_>], source: &str) -> Option<(String
                 Some(format!("outer-call: {}", parent.location().start_offset()))
             }
         });
+    if named_scope_id.is_none()
+        && ancestors[..call_index]
+            .iter()
+            .rev()
+            .take_while(|ancestor| ancestor.as_block_node().is_none())
+            .any(|ancestor| {
+                ancestor.as_ensure_node().is_some()
+                    || ancestor.as_rescue_node().is_some()
+                    || ancestor
+                        .as_begin_node()
+                        .is_some_and(|begin| begin.ensure_clause().is_some())
+            })
+    {
+        // Parser's anonymous-block identity deliberately disappears when the
+        // expression itself is a statement below an `ensure`/`rescue` body.
+        return Some((base, None));
+    }
     let scope_id = named_scope_id.or_else(|| {
         ancestors[..call_index]
             .iter()
