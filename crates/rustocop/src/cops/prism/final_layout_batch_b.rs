@@ -1814,20 +1814,22 @@ fn operator_spacing(context: &mut CopContext<'_, '_>) {
             .related_config_values("Layout/HashAlignment", "EnforcedHashRocketStyle")
             .iter()
             .any(|style| style == "table");
-    let heredoc_ranges = context.source_file().heredoc_ranges();
+    let literal_ranges = context.source_file().literal_ranges();
 
     for (line_offset, line) in context.source_file().lines().collect::<Vec<_>>() {
-        if heredoc_ranges
-            .iter()
-            .any(|range| range.start < line_offset && line_offset < range.end)
-        {
-            continue;
-        }
         let code_end = ruby_comment_start(line).unwrap_or(line.len());
         let code = &line[..code_end];
         let mut index = 0;
         let mut quote = None;
         while index < code.len() {
+            let absolute = line_offset + index;
+            if let Some(range) = literal_ranges
+                .iter()
+                .find(|range| range.start <= absolute && absolute < range.end)
+            {
+                index = range.end.saturating_sub(line_offset).min(code.len());
+                continue;
+            }
             if !code.is_char_boundary(index) {
                 index += 1;
                 continue;
@@ -2041,11 +2043,19 @@ fn operator_is_non_binary(source: &str, start: usize, end: usize, operator: &str
     if operator == "&" && after.starts_with('.') {
         return true;
     }
-    if operator == ":" && (!source[..start].contains('?') || before.ends_with(':')) {
+    if operator == ":"
+        && (!source[..start].contains('?')
+            || before.ends_with(':')
+            || source[end..].starts_with(':'))
+    {
         return true;
     }
     if operator == "?"
-        && (after.is_empty()
+        && (source[..start]
+            .chars()
+            .next_back()
+            .is_some_and(|character| character.is_alphanumeric() || character == '_')
+            || after.is_empty()
             || after.starts_with([':', '?', '('])
             || source
                 .as_bytes()
