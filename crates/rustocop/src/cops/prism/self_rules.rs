@@ -172,6 +172,11 @@ fn local_name_conflicts(name: &[u8], offense_start: usize, context: &CopContext<
         if let Some(block) = scope.as_block_node() {
             block.locals().iter().any(|local| local.as_slice() == name)
                 || block
+                    .parameters()
+                    .is_some_and(|parameters| {
+                        subtree_binds_name(&parameters, name, true, None)
+                    })
+                || block
                     .body()
                     .is_some_and(|body| subtree_binds_name(&body, name, true, None))
         } else if let Some(definition) = scope.as_def_node() {
