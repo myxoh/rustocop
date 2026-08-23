@@ -36,6 +36,11 @@ fn send(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
 }
 
 fn gem_version(context: &mut CopContext<'_, '_>) {
+    if context.related_config_value("AllCops", "DisabledByDefault") == Some("true")
+        && !context.related_config_explicit("Bundler/GemVersion", "Enabled")
+    {
+        return;
+    }
     let forbidden = context.policy().enforced_style("required") == "forbidden";
     let allowed = context.config_values("AllowedGems").to_vec();
     for (start, line) in source_lines(context.source()) {
@@ -231,6 +236,14 @@ fn erb_new_arguments(context: &mut CopContext<'_, '_>) {
 }
 
 fn hash_new_with_keyword_arguments_as_default(context: &mut CopContext<'_, '_>) {
+    if context.related_config_value("AllCops", "DisabledByDefault") == Some("true")
+        && !context.related_config_explicit(
+            "Lint/HashNewWithKeywordArgumentsAsDefault",
+            "Enabled",
+        )
+    {
+        return;
+    }
     const MESSAGE: &str = "Use a hash literal instead of keyword arguments.";
     let source = context.source();
     for call in call_ranges(source, "Hash.new(") {
