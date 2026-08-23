@@ -379,10 +379,36 @@ fn redundant_enable(context: &mut CopContext<'_, '_>) {
 
 fn unreachable_pattern(context: &mut CopContext<'_, '_>) {
     let lines = context.source_file().lines().collect::<Vec<_>>();
-    let mut catch_all = false;
+    let literal_ranges = context.source_file().literal_ranges();
+    let mut cases = Vec::<(usize, Option<usize>)>::new();
     for (index, (offset, line)) in lines.iter().copied().enumerate() {
         let trimmed = line.trim_start();
-        if catch_all && trimmed == "else" {
+        let indentation = line.len() - trimmed.len();
+        let code_start = offset + indentation;
+        if literal_ranges
+            .iter()
+            .any(|range| range.start <= code_start && code_start < range.end)
+            || trimmed.starts_with('#')
+        {
+            continue;
+        }
+        if trimmed == "end" {
+            if cases.last().is_some_and(|(case_indent, _)| *case_indent == indentation) {
+                cases.pop();
+            }
+            continue;
+        }
+        if trimmed == "case" || trimmed.starts_with("case ") {
+            cases.push((indentation, None));
+            continue;
+        }
+        let Some((case_indent, catch_all_indent)) = cases.last_mut() else {
+            continue;
+        };
+        if *case_indent > indentation {
+            continue;
+        }
+        if *catch_all_indent == Some(indentation) && trimmed == "else" {
             context.report(
                 "Unreachable `else` branch detected.",
                 offset..offset + line.len(),
@@ -392,7 +418,7 @@ fn unreachable_pattern(context: &mut CopContext<'_, '_>) {
         let Some(pattern) = trimmed.strip_prefix("in ") else {
             continue;
         };
-        if catch_all {
+        if catch_all_indent.is_some() {
             let end = lines[index + 1..]
                 .iter()
                 .find(|(_, next)| {
@@ -413,8 +439,9 @@ fn unreachable_pattern(context: &mut CopContext<'_, '_>) {
                 character.is_ascii_whitespace() || "()|=>,".contains(character)
             })
             .any(|part| part == "_");
-        catch_all =
-            !guarded && (has_wildcard || first.is_some_and(|byte| byte.is_ascii_lowercase()));
+        if !guarded && (has_wildcard || first.is_some_and(|byte| byte.is_ascii_lowercase())) {
+            *catch_all_indent = Some(indentation);
+        }
     }
 }
 
