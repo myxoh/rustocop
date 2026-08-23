@@ -1,118 +1,116 @@
 use super::*;
 
 define_cops! {
-    MultipleComparison => "Style/MultipleComparison" => source(multiple_comparison),
+    MultipleComparison => "Style/MultipleComparison" => node(as_or_node, multiple_comparison),
     ExplicitBlockArgument => "Style/ExplicitBlockArgument" => source(explicit_block_argument),
 }
 
-fn multiple_comparison(context: &mut CopContext<'_, '_>) {
-    let threshold = context.config_usize("ComparisonsThreshold", 2);
-    for (offset, line) in context.source_file().lines() {
-        let code = line.split('#').next().unwrap_or(line);
-        for operator in [" || ", " or "] {
-            let comparisons = code.split(operator).collect::<Vec<_>>();
-            if comparisons.len() < threshold {
-                continue;
-            }
-            let mut pairs = Vec::new();
-            let mut first = None;
-            let mut last = None;
-            for comparison in &comparisons {
-                let trimmed = comparison.trim();
-                let Some((left, right)) = trimmed.split_once(" == ") else {
-                    pairs.clear();
-                    break;
-                };
-                let left = left.split_whitespace().next_back().unwrap_or(left);
-                pairs.push((left, right.trim().trim_end_matches([')', ';'])));
-                let at = line.find(trimmed).unwrap_or(0);
-                first.get_or_insert(at);
-                last = Some(at + trimmed.len());
-            }
-            if pairs.len() < threshold {
-                continue;
-            }
-            let identifier = |value: &str| {
-                value
-                    .bytes()
-                    .next()
-                    .is_some_and(|byte| byte.is_ascii_alphabetic() || byte == b'_')
-                    && value
-                        .bytes()
-                        .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
-            };
-            if pairs
-                .iter()
-                .all(|pair| identifier(pair.0) && identifier(pair.1))
-            {
-                continue;
-            }
-            let variable = [pairs[0].0, pairs[0].1].into_iter().find(|candidate| {
-                pairs
-                    .iter()
-                    .all(|pair| pair.0 == *candidate || pair.1 == *candidate)
-            });
-            let Some(variable) = variable else {
-                continue;
-            };
-            if variable.contains(['[', ']']) && !context.config_bool("AllowMethodComparison", true)
-            {
-                continue;
-            }
-            if variable.contains("&.") && !context.config_bool("AllowMethodComparison", true) {
-                continue;
-            }
-            if variable.starts_with(['\'', '"', ':'])
-                || variable
-                    .bytes()
-                    .next()
-                    .is_some_and(|byte| byte.is_ascii_digit())
-            {
-                continue;
-            }
-            let allow_methods = context.config_bool("AllowMethodComparison", true);
-            let literal = |value: &str| {
-                value.starts_with(['\'', '"', ':'])
-                    || value.as_bytes().first().is_some_and(u8::is_ascii_digit)
-            };
-            let effective_pairs = pairs
-                .iter()
-                .filter(|pair| {
-                    let other = if pair.0 == variable { pair.1 } else { pair.0 };
-                    !allow_methods || literal(other)
-                })
-                .collect::<Vec<_>>();
-            if effective_pairs.len() < threshold {
-                continue;
-            }
-            let values = effective_pairs
-                .iter()
-                .map(|pair| if pair.0 == variable { pair.1 } else { pair.0 })
-                .collect::<Vec<_>>();
-            if allow_methods
-                && values
-                    .iter()
-                    .any(|value| value.contains('.') || value.contains("&."))
-            {
-                continue;
-            }
-            let first_pair = effective_pairs[0];
-            let candidate = format!("{} == {}", first_pair.0, first_pair.1);
-            let first = line.find(&candidate).unwrap_or(first.unwrap_or(0));
-            let start = offset
-                + line[first..]
-                    .find(&candidate)
-                    .map_or(first, |at| first + at);
-            let end = offset + last.unwrap_or(0);
-            context.replace(
-                "Avoid comparing a variable with multiple items in a conditional, use `Array#include?` instead.",
-                start..end,
-                start..end,
-                format!("[{}].include?({variable})", values.join(", ")),
-            );
-            break;
-        }
+fn multiple_comparison(node: &ruby_prism::OrNode<'_>, context: &mut CopContext<'_, '_>) {
+    if context.parent().is_some_and(|parent| parent.as_or_node().is_some()) {
+        return;
     }
+    let threshold = context.config_usize("ComparisonsThreshold", 2);
+    let allow_methods = context.config_bool("AllowMethodComparison", true);
+    let mut comparisons = Vec::new();
+    if !collect_comparisons(
+        &node.as_node(),
+        allow_methods,
+        context.source(),
+        &mut comparisons,
+    ) {
+        return;
+    }
+    if comparisons.len() < threshold {
+        return;
+    }
+    let variable = &comparisons[0].0;
+    if comparisons
+        .iter()
+        .any(|(candidate, _, _, _)| candidate != variable)
+    {
+        return;
+    }
+    let start = comparisons[0].2;
+    let end = comparisons.last().unwrap().3;
+    let values = comparisons
+        .iter()
+        .map(|(_, value, _, _)| value.as_str())
+        .collect::<Vec<_>>()
+        .join(", ");
+    context.replace(
+        "Avoid comparing a variable with multiple items in a conditional, use `Array#include?` instead.",
+        start..end,
+        start..end,
+        format!("[{values}].include?({variable})"),
+    );
+}
+
+fn collect_comparisons(
+    node: &Node<'_>,
+    allow_methods: bool,
+    source: &str,
+    comparisons: &mut Vec<(String, String, usize, usize)>,
+) -> bool {
+    if let Some(or_node) = node.as_or_node() {
+        return collect_comparisons(&or_node.left(), allow_methods, source, comparisons)
+            && collect_comparisons(&or_node.right(), allow_methods, source, comparisons);
+    }
+    if !is_equality_comparison(node) {
+        return false;
+    }
+    if let Some((variable, value)) = comparison_parts(node, allow_methods) {
+        let variable_location = variable.location();
+        let value_location = value.location();
+        comparisons.push((
+            source[variable_location.start_offset()..variable_location.end_offset()].to_string(),
+            source[value_location.start_offset()..value_location.end_offset()].to_string(),
+            node.location().start_offset(),
+            node.location().end_offset(),
+        ));
+    }
+    true
+}
+
+fn is_equality_comparison(node: &Node<'_>) -> bool {
+    node.as_call_node().is_some_and(|call| {
+        call.name().as_slice() == b"=="
+            && call.receiver().is_some()
+            && call
+                .arguments()
+                .is_some_and(|arguments| arguments.arguments().len() == 1)
+    })
+}
+
+fn comparison_parts<'pr>(
+    node: &Node<'pr>,
+    allow_methods: bool,
+) -> Option<(Node<'pr>, Node<'pr>)> {
+    let call = node.as_call_node()?;
+    let receiver = call.receiver()?;
+    let value = call.arguments()?.arguments().iter().next()?;
+    if receiver.as_local_variable_read_node().is_some()
+        && value.as_local_variable_read_node().is_some()
+    {
+        return None;
+    }
+    if comparison_variable(&receiver, allow_methods) {
+        if allow_methods && value.as_call_node().is_some() {
+            return None;
+        }
+        Some((receiver, value))
+    } else if comparison_variable(&value, allow_methods) {
+        if allow_methods && receiver.as_call_node().is_some() {
+            return None;
+        }
+        Some((value, receiver))
+    } else {
+        None
+    }
+}
+
+fn comparison_variable(node: &Node<'_>, allow_methods: bool) -> bool {
+    node.as_local_variable_read_node().is_some()
+        || allow_methods && node.as_call_node().is_some()
 }
 
 fn explicit_block_argument(context: &mut CopContext<'_, '_>) {
