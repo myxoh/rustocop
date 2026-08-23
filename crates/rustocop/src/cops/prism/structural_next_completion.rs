@@ -43,6 +43,7 @@ fn case_like_if(context: &mut CopContext<'_, '_>) {
         };
         let mut branches = vec![(index, value)];
         let mut end_index = None;
+        let mut has_conditional_else = false;
         let mut cursor = index + 1;
         while cursor < lines.len() {
             let line = lines[cursor].1.trim_start();
@@ -54,6 +55,13 @@ fn case_like_if(context: &mut CopContext<'_, '_>) {
                     break;
                 }
                 branches.push((cursor, value));
+            } else if line.trim() == "else" {
+                has_conditional_else = lines
+                    .get(cursor + 1)
+                    .map(|(_, body)| body.trim())
+                    .is_some_and(|body| {
+                        body.starts_with("if ") || body.contains(" ? ") && body.contains(" : ")
+                    });
             } else if line.trim() == "end" {
                 end_index = Some(cursor);
                 break;
@@ -64,7 +72,7 @@ fn case_like_if(context: &mut CopContext<'_, '_>) {
             index += 1;
             continue;
         };
-        if branches.len() < minimum {
+        if branches.len() + usize::from(has_conditional_else) < minimum {
             index = end_index + 1;
             continue;
         }
@@ -82,7 +90,7 @@ fn case_like_if(context: &mut CopContext<'_, '_>) {
         let end = lines[end_index].0 + lines[end_index].1.len();
         context.replace_many(
             "Convert `if-elsif` to `case-when`.",
-            start_offset..end,
+            start_offset + indent.len()..end,
             edits,
         );
         index = end_index + 1;
