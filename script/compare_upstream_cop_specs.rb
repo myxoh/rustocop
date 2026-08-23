@@ -183,7 +183,13 @@ workers = Array.new(options[:jobs]) do
         # Captured Parser ranges use the preceding column for empty ranges and
         # column zero when a range ends exactly at a newline. RuboCop's public
         # JSON formatter serializes both as the reported point.
-        if captured["last_line"] == captured["line"] &&
+        eof_line = source.count("\n") + 1
+        eof_column = source.rpartition("\n").last.each_char.count + 1
+        insertion_at_nonterminated_eof = !source.empty? && !source.end_with?("\n") &&
+                                          captured["line"] == eof_line &&
+                                          captured["column"] == eof_column
+        if !insertion_at_nonterminated_eof &&
+           captured["last_line"] == captured["line"] &&
            captured["last_column"] + 1 == captured["column"]
           captured["last_column"] = captured["column"]
         end
