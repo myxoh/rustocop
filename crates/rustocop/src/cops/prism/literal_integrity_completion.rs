@@ -440,9 +440,16 @@ fn double_negation(context: &mut CopContext<'_, '_>) {
         .code_offsets("!!")
         .into_iter()
         .collect::<std::collections::HashSet<_>>();
+    let literal_ranges = context.source_file().literal_ranges();
     for (index, (offset, line)) in lines.iter().copied().enumerate() {
         for (at, _) in line.match_indices("!!") {
             if !code_offsets.contains(&(offset + at)) {
+                continue;
+            }
+            if literal_ranges
+                .iter()
+                .any(|range| range.start <= offset + at && offset + at < range.end)
+            {
                 continue;
             }
         let tail = &line[at + 2..];
