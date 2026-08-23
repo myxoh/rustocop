@@ -1821,6 +1821,7 @@ fn operator_spacing(context: &mut CopContext<'_, '_>) {
         let code = &line[..code_end];
         let mut index = 0;
         let mut quote = None;
+        let mut ternary_depth = 0usize;
         while index < code.len() {
             let absolute = line_offset + index;
             if let Some(range) = literal_ranges
@@ -1877,9 +1878,18 @@ fn operator_spacing(context: &mut CopContext<'_, '_>) {
                 continue;
             };
             let end = index + operator.len();
+            if operator == ":" && ternary_depth == 0 {
+                index = end;
+                continue;
+            }
             if operator_is_non_binary(code, index, end, operator) {
                 index = end;
                 continue;
+            }
+            if operator == "?" {
+                ternary_depth += 1;
+            } else if operator == ":" {
+                ternary_depth = ternary_depth.saturating_sub(1);
             }
 
             let left_start = code[..index]
@@ -2025,6 +2035,9 @@ fn operator_is_non_binary(source: &str, start: usize, end: usize, operator: &str
     if before.is_empty() {
         return true;
     }
+    if operator_is_method_name(source, start) {
+        return true;
+    }
     if source.trim_start().starts_with("def ") && matches!(operator, "*" | "**" | "&") {
         return true;
     }
@@ -2048,11 +2061,7 @@ fn operator_is_non_binary(source: &str, start: usize, end: usize, operator: &str
     {
         return true;
     }
-    if operator == ":"
-        && (!source[..start].contains('?')
-            || before.ends_with(':')
-            || source[end..].starts_with(':'))
-    {
+    if operator == ":" && (before.ends_with(':') || source[end..].starts_with(':')) {
         return true;
     }
     let predicate_suffix = source[..start]
@@ -2079,7 +2088,9 @@ fn operator_is_non_binary(source: &str, start: usize, end: usize, operator: &str
             || before
                 .split_whitespace()
                 .last()
-                .is_some_and(|word| matches!(word, "return" | "yield" | "when" | "in")))
+                .is_some_and(|word| {
+                    matches!(word, "return" | "yield" | "when" | "in" | "rescue")
+                }))
     {
         return true;
     }
@@ -2095,6 +2106,14 @@ fn operator_is_non_binary(source: &str, start: usize, end: usize, operator: &str
                 .next_back()
                 .is_some_and(|word| word == "do")
             || after.starts_with('}')
+            || source[..start].rfind('|').is_some_and(|previous| {
+                let before_previous = source[..previous].trim_end();
+                before_previous.ends_with('{')
+                    || before_previous
+                        .split_ascii_whitespace()
+                        .next_back()
+                        .is_some_and(|word| word == "do")
+            })
             || !source.contains("in ") && source[..start].matches('|').count() % 2 == 1)
     {
         return true;
@@ -2105,6 +2124,19 @@ fn operator_is_non_binary(source: &str, start: usize, end: usize, operator: &str
         return true;
     }
     false
+}
+
+fn operator_is_method_name(source: &str, operator_start: usize) -> bool {
+    let indentation = source.len() - source.trim_start().len();
+    let trimmed = &source[indentation..];
+    let Some(rest) = trimmed.strip_prefix("def ") else {
+        return false;
+    };
+    let name_start = indentation + "def ".len();
+    let name_len = rest
+        .find(|character: char| character.is_ascii_whitespace() || character == '(')
+        .unwrap_or(rest.len());
+    name_start <= operator_start && operator_start < name_start + name_len
 }
 
 fn rational_rhs(source: &str) -> bool {
