@@ -218,9 +218,13 @@ fn is_enable_directive(source: &str) -> bool {
 fn empty_exception_keywords(context: &mut CopContext<'_, '_>) {
     let lines = context.source_file().lines().collect::<Vec<_>>();
     for (index, (_, line)) in lines.iter().enumerate() {
-        let keyword = ["rescue", "ensure", "else"]
-            .into_iter()
-            .find(|keyword| line.trim_start().starts_with(keyword));
+        let trimmed = line.trim_start();
+        let keyword = ["rescue", "ensure", "else"].into_iter().find(|keyword| {
+            trimmed == *keyword
+                || trimmed
+                    .strip_prefix(keyword)
+                    .is_some_and(|rest| rest.starts_with(char::is_whitespace))
+        });
         let Some(keyword) = keyword else { continue };
         if keyword == "else" {
             let indentation = line.len() - line.trim_start().len();

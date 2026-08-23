@@ -609,11 +609,10 @@ fn duplicate_character_class(context: &mut CopContext<'_, '_>) {
 
 fn out_of_range_ref(context: &mut CopContext<'_, '_>) {
     let regexp_literal = regex::Regex::new(r"/(?:\\.|[^/\n])+/[a-z]*").expect("regexp literal");
-    let reference_offsets = context
-        .source_file()
-        .code_offsets("$")
-        .into_iter()
-        .collect::<HashSet<_>>();
+    let parsed = parse(context.source().as_bytes());
+    let mut references = RegexpReferenceCollector::default();
+    references.visit(&parsed.node());
+    let reference_offsets = references.offsets;
     let mut captures = 0usize;
     let mut captures_known = true;
     for (offset, line) in context.source_file().lines() {
@@ -691,6 +690,29 @@ fn out_of_range_ref(context: &mut CopContext<'_, '_>) {
                 &reference_offsets,
             );
         }
+    }
+}
+
+#[derive(Default)]
+struct RegexpReferenceCollector {
+    offsets: HashSet<usize>,
+}
+
+impl<'pr> Visit<'pr> for RegexpReferenceCollector {
+    fn visit_numbered_reference_read_node(
+        &mut self,
+        node: &ruby_prism::NumberedReferenceReadNode<'pr>,
+    ) {
+        self.offsets.insert(node.location().start_offset());
+        ruby_prism::visit_numbered_reference_read_node(self, node);
+    }
+
+    fn visit_global_variable_read_node(
+        &mut self,
+        node: &ruby_prism::GlobalVariableReadNode<'pr>,
+    ) {
+        self.offsets.insert(node.location().start_offset());
+        ruby_prism::visit_global_variable_read_node(self, node);
     }
 }
 
