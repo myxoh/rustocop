@@ -110,7 +110,6 @@ fn array_alignment(node: &ruby_prism::ArrayNode<'_>, context: &mut CopContext<'_
     let elements = node.elements().iter().collect::<Vec<_>>();
     let first = &elements[0];
     let file = context.source_file();
-    let first_line = file.line_range(first.location().start_offset()).start;
     let style = context.policy().enforced_style("with_first_element");
     let base = if style == "with_fixed_indentation" {
         let container_start = node.opening_loc().map_or_else(
@@ -185,14 +184,19 @@ fn array_alignment(node: &ruby_prism::ArrayNode<'_>, context: &mut CopContext<'_
     });
 
     let bracketed = node.opening_loc().is_some();
-    let mut previous_line = if bracketed { first_line } else { usize::MAX };
+    let mut previous_line = if bracketed {
+        file.line_start(first.location().end_offset().saturating_sub(1))
+    } else {
+        usize::MAX
+    };
     for element in elements.iter().skip(usize::from(bracketed)) {
         let location = element.location();
         let line = file.line_range(location.start_offset());
         if line.start == previous_line {
+            previous_line = file.line_start(location.end_offset().saturating_sub(1));
             continue;
         }
-        previous_line = line.start;
+        previous_line = file.line_start(location.end_offset().saturating_sub(1));
         let actual = context.source()[line.start..location.start_offset()]
             .chars()
             .count();
