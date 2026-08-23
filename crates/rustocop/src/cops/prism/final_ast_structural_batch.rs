@@ -146,7 +146,9 @@ fn literal_interpolation_expression(expression: &str) -> bool {
     if matches!(expression, "nil" | "true" | "false") {
         return true;
     }
-    if expression.starts_with(['\'', '"']) && expression.ends_with(expression.as_bytes()[0] as char)
+    if expression.starts_with(['\'', '"'])
+        && expression.ends_with(expression.as_bytes()[0] as char)
+        && interpolation_is_single_string(expression)
     {
         return true;
     }
@@ -158,7 +160,11 @@ fn literal_interpolation_expression(expression: &str) -> bool {
             || matches!(
                 expression.as_bytes().get(1),
                 Some(b'q' | b'Q' | b'w' | b'i' | b'I')
-            );
+            )
+            || expression
+                .as_bytes()
+                .get(1)
+                .is_some_and(|delimiter| !delimiter.is_ascii_alphanumeric());
     }
     if ((expression.starts_with('[') && expression.ends_with(']'))
         || (expression.starts_with('{') && expression.ends_with('}')))
@@ -170,6 +176,21 @@ fn literal_interpolation_expression(expression: &str) -> bool {
         .bytes()
         .all(|byte| byte.is_ascii_digit() || matches!(byte, b'_' | b'.' | b'+' | b'-' | b'e' | b'E' | b'x' | b'o' | b'b' | b'a'..=b'f' | b'A'..=b'F'));
     numeric && expression.bytes().any(|byte| byte.is_ascii_digit())
+}
+
+fn interpolation_is_single_string(expression: &str) -> bool {
+    let parsed = ruby_prism::parse(expression.as_bytes());
+    if parsed.errors().count() != 0 {
+        return false;
+    }
+    parsed
+        .node()
+        .as_program_node()
+        .and_then(|program| {
+            let body = program.statements().body();
+            (body.len() == 1).then(|| body.first()).flatten()
+        })
+        .is_some_and(|node| node.as_string_node().is_some())
 }
 
 fn interpolation_composite_is_literal(expression: &str) -> bool {
@@ -214,6 +235,27 @@ fn interpolation_composite_is_literal(expression: &str) -> bool {
         }
 
         fn visit_constant_path_node(&mut self, _node: &ruby_prism::ConstantPathNode<'pr>) {
+            self.0 = true;
+        }
+
+        fn visit_numbered_reference_read_node(
+            &mut self,
+            _node: &ruby_prism::NumberedReferenceReadNode<'pr>,
+        ) {
+            self.0 = true;
+        }
+
+        fn visit_regular_expression_node(
+            &mut self,
+            _node: &ruby_prism::RegularExpressionNode<'pr>,
+        ) {
+            self.0 = true;
+        }
+
+        fn visit_interpolated_regular_expression_node(
+            &mut self,
+            _node: &ruby_prism::InterpolatedRegularExpressionNode<'pr>,
+        ) {
             self.0 = true;
         }
 
