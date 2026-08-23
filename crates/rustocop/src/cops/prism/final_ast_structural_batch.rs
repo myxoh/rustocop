@@ -3191,6 +3191,26 @@ impl ForwardingUseCollector {
 }
 
 impl<'pr> Visit<'pr> for ForwardingUseCollector {
+    fn visit_splat_node(&mut self, node: &ruby_prism::SplatNode<'pr>) {
+        if let Some(read) = node
+            .expression()
+            .and_then(|value| value.as_local_variable_read_node())
+        {
+            self.forwarded_reads.insert(read.location().start_offset());
+        }
+        ruby_prism::visit_splat_node(self, node);
+    }
+
+    fn visit_assoc_splat_node(&mut self, node: &ruby_prism::AssocSplatNode<'pr>) {
+        if let Some(read) = node
+            .value()
+            .and_then(|value| value.as_local_variable_read_node())
+        {
+            self.forwarded_reads.insert(read.location().start_offset());
+        }
+        ruby_prism::visit_assoc_splat_node(self, node);
+    }
+
     fn visit_call_node(&mut self, node: &ruby_prism::CallNode<'pr>) {
         self.collect_arguments(node.arguments());
         self.collect_block(node.block());
