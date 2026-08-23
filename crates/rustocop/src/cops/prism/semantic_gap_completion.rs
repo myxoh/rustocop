@@ -212,7 +212,7 @@ fn return_in_void_context(node: &ruby_prism::ReturnNode<'_>, context: &mut CopCo
         return;
     }
     let name = String::from_utf8_lossy(definition.name().as_slice());
-    if name != "initialize" && !name.ends_with('=') {
+    if name != "initialize" && !return_void_setter_name(name.as_bytes()) {
         return;
     }
     let start = node.location().start_offset();
@@ -220,6 +220,10 @@ fn return_in_void_context(node: &ruby_prism::ReturnNode<'_>, context: &mut CopCo
         format!("Do not return a value in `{name}`."),
         start..start + 6,
     );
+}
+
+fn return_void_setter_name(name: &[u8]) -> bool {
+    name.ends_with(b"=") && !matches!(name, b"==" | b"===" | b"!=" | b"<=" | b">=")
 }
 
 fn ambiguous_endless_method_definition(
