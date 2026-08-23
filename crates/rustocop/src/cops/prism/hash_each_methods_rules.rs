@@ -42,7 +42,11 @@ impl HashEachMethodsRule<'_, '_, '_> {
         let root_source = self.source_file().node(&root);
         return_if!(allowed_receiver(self, &root, root_source), false);
         if let Some(block) = block {
-            let facts = hash_each_body_facts(block.body(), self.source_file(), root_source);
+            let facts = hash_each_body_facts(
+                block.body(),
+                self.source_file(),
+                root_receiver_source(&root, self.source_file()),
+            );
             return_if!(facts.mutated, false);
         }
         let Some(first_selector) = keys_values.message_loc() else { return false };
@@ -63,8 +67,11 @@ impl HashEachMethodsRule<'_, '_, '_> {
         let Some(receiver) = each.receiver() else { return };
         return_if!(argument_count(each) != 0);
         return_if!(receiver.as_array_node().is_some() || array_converter(&receiver));
-        let receiver_source = self.source_file().node(&receiver);
-        let facts = hash_each_body_facts(block.body(), self.source_file(), receiver_source);
+        let facts = hash_each_body_facts(
+            block.body(),
+            self.source_file(),
+            root_receiver_source(&receiver, self.source_file()),
+        );
         return_if!(facts.mutated);
         let Some(parameters) = block.parameters().and_then(|parameters| parameters.as_block_parameters_node()) else { return };
         let source = self
@@ -107,6 +114,12 @@ fn array_converter(node: &Node<'_>) -> bool {
             b"assoc" | b"chunk" | b"flatten" | b"rassoc" | b"sort" | b"sort_by" | b"to_a"
         )
     })
+}
+
+fn root_receiver_source<'a>(node: &Node<'_>, file: SourceFile<'a>) -> &'a str {
+    node.as_call_node()
+        .and_then(|call| call.receiver())
+        .map_or_else(|| file.node(node), |receiver| root_receiver_source(&receiver, file))
 }
 
 fn allowed_receiver(
