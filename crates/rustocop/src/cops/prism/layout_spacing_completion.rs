@@ -29,19 +29,8 @@ fn assignment_indentation(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
         return;
     }
     let width = context.config_usize("IndentationWidth", 2);
-    let chain_start = context
-        .ancestors()
-        .iter()
-        .filter(|ancestor| assignment_value(ancestor).is_some())
-        .map(Node::location)
-        .map(|location| location.start_offset())
-        .filter(|start| {
-            source[..*start].rfind('\n').map_or(0, |at| at + 1) == node_line_start
-        })
-        .chain(std::iter::once(node_start))
-        .min()
-        .unwrap_or(node_start);
-    let base = chain_start - node_line_start;
+    let base = source[node_line_start..node_line_end].len()
+        - source[node_line_start..node_line_end].trim_start().len();
     let current = value_start - value_line_start;
     let expected = base + width;
     if current == expected {
