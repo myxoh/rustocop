@@ -66,6 +66,9 @@ fn else_layout(node: &ElseNode<'_>, context: &mut CopContext<'_, '_>) {
         return;
     };
     let keyword = node.else_keyword_loc();
+    if &context.source()[keyword.start_offset()..keyword.end_offset()] != "else" {
+        return;
+    }
     let first_location = first.location();
     let file = context.source_file();
     if !file.same_line(keyword.start_offset(), first_location.start_offset()) {
