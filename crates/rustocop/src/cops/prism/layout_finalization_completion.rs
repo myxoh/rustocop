@@ -151,15 +151,21 @@ fn space_in_lambda_literal(
     else {
         return;
     };
-    let (Some(opening), Some(closing)) = (arguments.opening_loc(), arguments.closing_loc()) else {
+    if arguments.parameters().is_none() && arguments.locals().iter().next().is_none() {
         return;
-    };
+    }
+    let argument_start = arguments
+        .opening_loc()
+        .map_or_else(|| arguments.location().start_offset(), |opening| opening.start_offset());
+    let argument_end = arguments
+        .closing_loc()
+        .map_or_else(|| arguments.location().end_offset(), |closing| closing.end_offset());
     let arrow = node.operator_loc();
-    let between = arrow.end_offset()..opening.start_offset();
+    let between = arrow.end_offset()..argument_start;
     if require_space && between.is_empty() {
         context.insert(
             "Use a space between `->` and `(` in lambda literals.",
-            arrow.start_offset()..closing.end_offset(),
+            arrow.start_offset()..argument_end,
             arrow.end_offset(),
             " ",
         );
