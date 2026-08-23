@@ -719,6 +719,9 @@ fn comment_indentation(context: &mut CopContext<'_, '_>) {
                 .find(|range| range.start >= *offset && range.start <= *offset + line.len())?
                 .start
                 - *offset;
+            if line.as_bytes().get(marker) != Some(&b'#') {
+                return None;
+            }
             Some((
                 line_index,
                 *offset,
@@ -807,7 +810,9 @@ fn comment_indentation(context: &mut CopContext<'_, '_>) {
 fn expected_comment_indentation(line: &str, width: usize, outdent_modifiers: bool) -> usize {
     let indentation = line.len() - line.trim_start().len();
     let trimmed = line.trim_start();
-    let less_indented = trimmed.starts_with("end")
+    let less_indented = trimmed == "end"
+        || trimmed.starts_with("end ")
+        || trimmed.starts_with("end.")
         || trimmed.starts_with([')', '}', ']'])
         || (outdent_modifiers
             && ["private", "protected", "public"].iter().any(|modifier| {
