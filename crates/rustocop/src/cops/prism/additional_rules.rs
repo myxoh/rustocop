@@ -294,7 +294,10 @@ fn useless_defined(source: &str, reporter: &mut Reporter<'_>) {
         let argument = source[start + 9..end - 1].trim_start();
         let kind = if argument.starts_with(['\'', '"']) {
             "string"
-        } else if argument.starts_with(':') && !argument.contains(".to_proc") {
+        } else if argument.starts_with(':')
+            && !argument.starts_with("::")
+            && !argument.contains(".to_proc")
+        {
             "symbol"
         } else {
             continue;
