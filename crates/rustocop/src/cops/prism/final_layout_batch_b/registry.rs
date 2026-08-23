@@ -112,10 +112,39 @@ fn percent_literal_delimiter_spacing(context: &mut CopContext<'_, '_>) {
 
     let source = context.source();
     let bytes = source.as_bytes();
-    let literal_starts = ["%i", "%I", "%w", "%W", "%x"]
-        .into_iter()
-        .flat_map(|prefix| context.source_file().code_offsets(prefix))
-        .collect::<std::collections::HashSet<_>>();
+    #[derive(Default)]
+    struct PercentLiteralStarts(std::collections::HashSet<usize>);
+    impl<'pr> Visit<'pr> for PercentLiteralStarts {
+        fn visit_array_node(&mut self, node: &ruby_prism::ArrayNode<'pr>) {
+            if node.opening_loc().is_some_and(|opening| {
+                matches!(opening.as_slice(), bytes if bytes.starts_with(b"%i") || bytes.starts_with(b"%I") || bytes.starts_with(b"%w") || bytes.starts_with(b"%W"))
+            }) {
+                self.0.insert(node.location().start_offset());
+            }
+            ruby_prism::visit_array_node(self, node);
+        }
+
+        fn visit_x_string_node(&mut self, node: &ruby_prism::XStringNode<'pr>) {
+            if node.opening_loc().as_slice().starts_with(b"%x") {
+                self.0.insert(node.location().start_offset());
+            }
+            ruby_prism::visit_x_string_node(self, node);
+        }
+
+        fn visit_interpolated_x_string_node(
+            &mut self,
+            node: &ruby_prism::InterpolatedXStringNode<'pr>,
+        ) {
+            if node.opening_loc().as_slice().starts_with(b"%x") {
+                self.0.insert(node.location().start_offset());
+            }
+            ruby_prism::visit_interpolated_x_string_node(self, node);
+        }
+    }
+    let parsed = ruby_prism::parse(source.as_bytes());
+    let mut starts = PercentLiteralStarts::default();
+    starts.visit(&parsed.node());
+    let literal_starts = starts.0;
     let mut start = 0;
     while start + 2 < bytes.len() {
         if !literal_starts.contains(&start) {
