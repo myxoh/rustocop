@@ -12,17 +12,10 @@ define_cops! {
 impl IdenticalConditionalBranchesRule<'_, '_, '_> {
     fn on_if(&mut self, node: &IfNode<'_>) {
         return_if!(node.if_keyword_loc().is_some_and(|keyword| keyword.as_slice() == b"elsif"));
-        let Some(else_node) = node.subsequent().and_then(|branch| branch.as_else_node()) else { return };
+        let Some(subsequent) = node.subsequent() else { return };
         let mut branches = Vec::new();
         branches.push(statement_nodes(node.statements()));
-        let mut current = only_statement(else_node.statements());
-        while let Some(elsif) = current.as_ref().and_then(Node::as_if_node) {
-            branches.push(statement_nodes(elsif.statements()));
-            let Some(next) = elsif.subsequent().and_then(|branch| branch.as_else_node()) else { branches.push(Vec::new()); break };
-            current = only_statement(next.statements());
-        }
-        if branches.len() == 1 { branches.push(statement_nodes(else_node.statements())); }
-        else if current.as_ref().is_none_or(|node| node.as_if_node().is_none()) { branches.push(current.into_iter().collect()); }
+        expand_subsequent(Some(subsequent), &mut branches);
         self.check(node.location(), branches, node.then_keyword_loc().is_some(), Some(self.source_file().node(&node.predicate()).to_string()));
     }
 
@@ -101,6 +94,40 @@ fn assignment_conflict(node: &Node<'_>, condition: Option<&str>, file: SourceFil
 
 fn statement_nodes(statements: Option<StatementsNode<'_>>) -> Vec<Node<'_>> {
     statements.map(|statements| statements.body().iter().collect()).unwrap_or_default()
+}
+
+fn expand_subsequent<'pr>(subsequent: Option<Node<'pr>>, branches: &mut Vec<Vec<Node<'pr>>>) {
+    let Some(subsequent) = subsequent else {
+        branches.push(Vec::new());
+        return;
+    };
+    if let Some(elsif) = subsequent.as_if_node() {
+        branches.push(statement_nodes(elsif.statements()));
+        expand_subsequent(elsif.subsequent(), branches);
+        return;
+    }
+    let Some(else_node) = subsequent.as_else_node() else {
+        branches.push(Vec::new());
+        return;
+    };
+    let nodes = statement_nodes(else_node.statements());
+    if nodes.len() != 1 {
+        branches.push(nodes);
+        return;
+    }
+    if let Some(nested) = nodes[0].as_if_node() {
+        branches.push(statement_nodes(nested.statements()));
+        expand_subsequent(nested.subsequent(), branches);
+    } else if let Some(nested) = nodes[0].as_unless_node() {
+        branches.push(
+            nested
+                .else_clause()
+                .map_or_else(Vec::new, |clause| statement_nodes(clause.statements())),
+        );
+        branches.push(statement_nodes(nested.statements()));
+    } else {
+        branches.push(nodes);
+    }
 }
 
 fn same_sources(nodes: &[&Node<'_>], file: SourceFile<'_>) -> bool {
