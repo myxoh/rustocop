@@ -2429,23 +2429,26 @@ fn operator_alignment_is_allowed(
     let mut leading_excess = operator_start.saturating_sub(whitespace_start) > 1;
     let trailing_excess = rhs_start.saturating_sub(operator_end) > 1;
     let lhs = current_line_source[..whitespace_start].trim_end();
-    let setter_assignment = operator == "=" && (lhs.contains('.') || lhs.contains(']'));
+    let first_equal = (operator == "=").then(|| {
+        operator_layouts(current_line_source)
+            .into_iter()
+            .find(|layout| current_line_source[layout.0..layout.1].ends_with('='))
+    }).flatten();
+    let first_assignment_operator = first_equal.is_some_and(|layout| layout.0 == operator_start);
+    let setter_assignment = operator == "="
+        && first_assignment_operator
+        && (lhs.contains('.') || lhs.contains(']'));
     let mut assignment_leading_aligned = false;
     let indented = source
         .as_bytes()
         .get(line_offset)
         .is_some_and(u8::is_ascii_whitespace);
     if operator == "=" && leading_excess && !setter_assignment {
-        let first_equal = operator_layouts(current_line_source)
-            .into_iter()
-            .find(|layout| current_line_source[layout.0..layout.1].ends_with('='));
-        if first_equal.is_some_and(|layout| layout.0 != operator_start) {
-            return false;
-        }
         if !assignment_leading_alignment_is_allowed(
             source,
             line_offset,
             operator_end_column,
+            first_assignment_operator,
         ) {
             return false;
         }
@@ -2498,7 +2501,7 @@ fn operator_alignment_is_allowed(
         rhs_start,
         operator,
     );
-    adjacent || table
+    adjacent || !setter_assignment && table
 }
 
 fn aligned_word_at_column(
@@ -2537,6 +2540,7 @@ fn assignment_leading_alignment_is_allowed(
     source: &str,
     line_offset: usize,
     operator_end_column: usize,
+    first_assignment_operator: bool,
 ) -> bool {
     let lines = source.lines().collect::<Vec<_>>();
     let current_line = source[..line_offset].bytes().filter(|byte| *byte == b'\n').count();
@@ -2572,7 +2576,25 @@ fn assignment_leading_alignment_is_allowed(
         None
     };
 
-    candidate(-1) == Some(true) || candidate(1).is_none_or(|aligned| aligned)
+    let preceding = candidate(-1);
+    let subsequent = candidate(1);
+    if preceding == Some(true) || subsequent == Some(true) {
+        return true;
+    }
+    if !first_assignment_operator && subsequent.is_none() {
+        return true;
+    }
+    (preceding.is_none() && subsequent.is_none()
+        || current_line > 0 && lines[current_line - 1].trim().is_empty())
+        && lines[..current_line].iter().any(|line| {
+            line.len() - line.trim_start().len() == current_indent
+                && operator_layouts(line)
+                    .into_iter()
+                    .find(|layout| line[layout.0..layout.1].ends_with('='))
+                    .is_some_and(|layout| {
+                        line[..layout.1].chars().count() == operator_end_column
+                    })
+        })
 }
 
 fn alignment_table_is_allowed(
@@ -2585,7 +2607,7 @@ fn alignment_table_is_allowed(
     rhs_start: usize,
     operator: &str,
 ) -> bool {
-    if !matches!(operator, "|" | "<<") && !operator.ends_with('=') {
+    if !matches!(operator, "|" | "<<" | "=>") && !operator.ends_with('=') {
         return false;
     }
     if !source
