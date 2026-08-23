@@ -177,11 +177,9 @@ fn local_name_conflicts(name: &[u8], offense_start: usize, context: &CopContext<
                 || block
                     .body()
                     .is_some_and(|body| subtree_binds_name(&body, name, true, None))
-        } else if let Some(call) = scope.as_call_node() {
-            call.block()
-                .and_then(|block| block.as_block_node())
-                .and_then(|block| block.parameters())
-                .is_some_and(|parameters| {
+        } else if let Some(lambda) = scope.as_lambda_node() {
+            lambda.locals().iter().any(|local| local.as_slice() == name)
+                || lambda.parameters().is_some_and(|parameters| {
                     explicit_block_parameters_include(&parameters, name, context)
                 })
         } else if let Some(definition) = scope.as_def_node() {
