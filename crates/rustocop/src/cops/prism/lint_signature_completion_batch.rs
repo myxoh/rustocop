@@ -905,13 +905,15 @@ fn non_atomic_file_operation(context: &mut CopContext<'_, '_>) {
                 .unwrap_or(condition_source)
                 .trim();
         }
+        let negated = condition_source.starts_with('!');
+        condition_source = condition_source.trim_start_matches('!');
         let Some(check) = non_atomic_existence_check(condition_source) else {
             continue;
         };
         if check.argument != operation.argument
             || operation.force_false
             || operation.kind == NonAtomicKind::Excluded
-            || operation.kind.is_create() != (keyword == "unless")
+            || operation.kind.is_create() != (keyword == "unless" || negated)
         {
             continue;
         }
@@ -1001,7 +1003,38 @@ fn non_atomic_operation(source: &str) -> Option<NonAtomicOperation<'_>> {
     let source = source.trim();
     let mut operation_start = ["FileUtils.", "File.", "Dir."]
         .iter()
-        .filter_map(|receiver| source.rfind(receiver))
+        .flat_map(|receiver| source.match_indices(receiver).map(|(start, _)| start))
+        .filter(|start| {
+            let tail = &source[*start..];
+            let method = tail
+                .split_once('.')
+                .map(|(_, method)| method)
+                .unwrap_or_default()
+                .split(|character: char| !character.is_ascii_alphanumeric() && character != '_')
+                .next()
+                .unwrap_or_default();
+            matches!(
+                method,
+                "mkdir"
+                    | "makedirs"
+                    | "mkdir_p"
+                    | "mkpath"
+                    | "remove"
+                    | "delete"
+                    | "unlink"
+                    | "remove_file"
+                    | "rm"
+                    | "rmdir"
+                    | "safe_unlink"
+                    | "remove_dir"
+                    | "remove_entry"
+                    | "remove_entry_secure"
+                    | "rm_f"
+                    | "rm_rf"
+                    | "rm_r"
+                    | "rmtree"
+            )
+        })
         .max()?;
     if source.get(operation_start.saturating_sub(2)..operation_start) == Some("::") {
         operation_start -= 2;
