@@ -162,6 +162,9 @@ fn empty_around_accessor(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) 
 
     let next = line(source, next_code_line).trim_start();
     if next == "end"
+        || next.starts_with("end.")
+        || next == "}"
+        || next.starts_with("}.")
         || is_accessor(next)
         || allowed_accessor_follower(context, next)
         || allow_alias_syntax(context, next)
