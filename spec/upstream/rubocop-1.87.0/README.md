@@ -11,15 +11,15 @@ compatibility contract.
   `spec/core_ext/string.rb`, `spec/spec_helper.rb`, and `config`
 - License: MIT; see `LICENSE.txt` in this directory
 
-The 83 cops in `intentionally_pending_cops.yml` have had their cop spec files
+The 73 cops in `intentionally_pending_cops.yml` have had their cop spec files
 removed from the active fixture corpus. The remaining files under
 `spec/rubocop/cop` are preserved upstream source. Rustocop's extractor and
 compatibility runner live outside this directory so generated reports and
 local adaptations cannot be confused with upstream tests.
 
 The retained fixture contract was last verified at
-`2026-08-23T13:05:46-04:00`: all 24,297 comparable executable cases and all 523 active cops
-match RuboCop 1.87.0, including correction expectations. The eleven restored spec
+`2026-08-23T15:46:58-04:00`: all 24,426 comparable executable cases and all 533 active cops
+match RuboCop 1.87.0, including correction expectations. The latest ten restored spec
 files also contain adversarial cases derived from the 50-project audit. Cases whose assertions
 depend on runtime state absent from the captured executable input are listed
 with reasons in `broken_fixture_cases.yml`; LSP-only cases remain separately

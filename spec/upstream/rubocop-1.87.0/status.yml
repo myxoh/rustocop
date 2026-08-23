@@ -1,14 +1,14 @@
 ---
 rubocop_version: 1.87.0
 upstream_rspec:
-  examples: 24205
+  examples: 24334
   failures: 0
   pending: 3
-captured_cases: 24298
+captured_cases: 24427
 diagnostic_baseline:
-  passed_cases: 24297
-  passing_cops: 523
-  total_cops: 523
+  passed_cases: 24426
+  passing_cops: 533
+  total_cops: 533
 fully_compatible_cops:
 - Bundler/DuplicatedGem
 - Bundler/DuplicatedGroup
@@ -73,19 +73,25 @@ fully_compatible_cops:
 - Layout/MultilineMethodParameterLineBreaks
 - Layout/ParameterAlignment
 - Layout/SpaceAfterColon
+- Layout/SpaceAfterComma
+- Layout/SpaceAfterNot
+- Layout/SpaceAfterSemicolon
 - Layout/SpaceAfterMethodName
 - Layout/SpaceAroundEqualsInParameterDefault
 - Layout/SpaceAroundKeyword
 - Layout/SpaceAroundMethodCallOperator
 - Layout/SpaceAroundOperators
 - Layout/SpaceBeforeBrackets
+- Layout/SpaceBeforeComma
 - Layout/SpaceBeforeFirstArg
+- Layout/SpaceBeforeSemicolon
 - Layout/SpaceInLambdaLiteral
 - Layout/SpaceInsideArrayLiteralBrackets
 - Layout/SpaceInsideArrayPercentLiteral
 - Layout/SpaceInsideBlockBraces
 - Layout/SpaceInsideParens
 - Layout/SpaceInsidePercentLiteralDelimiters
+- Layout/SpaceInsideRangeLiteral
 - Layout/SpaceInsideReferenceBrackets
 - Layout/SpaceInsideStringInterpolation
 - Layout/TrailingEmptyLines
@@ -199,6 +205,7 @@ fully_compatible_cops:
 - Lint/StructNewOverride
 - Lint/SuppressedException
 - Lint/SuppressedExceptionInNumberConversion
+- Lint/SymbolConversion
 - Lint/Syntax
 - Lint/ToEnumArguments
 - Lint/ToJSON
@@ -237,6 +244,7 @@ fully_compatible_cops:
 - Naming/BinaryOperatorParameterName
 - Naming/BlockForwarding
 - Naming/ClassAndModuleCamelCase
+- Naming/ConstantName
 - Naming/FileName
 - Naming/HeredocDelimiterCase
 - Naming/InclusiveLanguage
@@ -353,6 +361,7 @@ fully_compatible_cops:
 - Style/IfWithBooleanLiteralBranches
 - Style/IfWithSemicolon
 - Style/ImplicitRuntimeError
+- Style/InlineComment
 - Style/InPatternThen
 - Style/InfiniteLoop
 - Style/InverseMethods
@@ -386,6 +395,7 @@ fully_compatible_cops:
 - Style/MultilineInPatternThen
 - Style/MultilineMemoization
 - Style/MultilineMethodSignature
+- Style/MultilineTernaryOperator
 - Style/MultilineWhenThen
 - Style/MultipleComparison
 - Style/MutableConstant

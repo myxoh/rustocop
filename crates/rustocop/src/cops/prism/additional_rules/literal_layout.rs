@@ -48,46 +48,6 @@ pub(super) fn empty_heredoc(source: &str, reporter: &mut Reporter<'_>) {
     }
 }
 
-pub(super) fn space_inside_range(source: &str, reporter: &mut Reporter<'_>) {
-    if let Some(dots) = source.find(" ..\n") {
-        let physical_line = source[..dots].rfind('\n').map_or(0, |offset| offset + 1);
-        let line_start = source[physical_line..dots]
-            .trim_end()
-            .rfind(char::is_whitespace)
-            .map_or(physical_line, |offset| physical_line + offset + 1);
-        let end = source[dots + 4..]
-            .find('\n')
-            .map_or(source.len(), |offset| dots + 4 + offset);
-        let replacement = source[line_start..end]
-            .replace(" ..\n", "..")
-            .replace("    ", "");
-        reporter.replace(
-            "Space inside range literal.",
-            line_start..end,
-            line_start..end,
-            replacement,
-        );
-        return;
-    }
-    for (offset, line) in source_lines(source) {
-        let Some(dots) = line.find("..") else {
-            continue;
-        };
-        let left = line[..dots].trim_end();
-        let dot_count = if line[dots..].starts_with("...") { 3 } else { 2 };
-        let right = line[dots + dot_count..].trim_start();
-        if left.len() != dots || right.len() != line.len() - dots - dot_count {
-            let start = offset + line.len() - line.trim_start().len();
-            reporter.replace(
-                "Space inside range literal.",
-                start..offset + line.len(),
-                start..offset + line.len(),
-                format!("{left}{}{right}", ".".repeat(dot_count)),
-            );
-        }
-    }
-}
-
 pub(super) fn space_after_method_name(source: &str, reporter: &mut Reporter<'_>) {
     for (offset, line) in source_lines(source) {
         let trimmed = line.trim_start();

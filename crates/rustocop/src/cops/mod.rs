@@ -29,16 +29,10 @@ pub(crate) const INTENTIONALLY_PENDING_COP_NAMES: &[&str] = &[
     "Layout/RedundantLineBreak",
     "Layout/RescueEnsureAlignment",
     "Layout/SingleLineBlockChain",
-    "Layout/SpaceAfterComma",
-    "Layout/SpaceAfterNot",
-    "Layout/SpaceAfterSemicolon",
     "Layout/SpaceAroundBlockParameters",
     "Layout/SpaceBeforeBlockBraces",
-    "Layout/SpaceBeforeComma",
     "Layout/SpaceBeforeComment",
-    "Layout/SpaceBeforeSemicolon",
     "Layout/SpaceInsideHashLiteralBraces",
-    "Layout/SpaceInsideRangeLiteral",
     "Lint/AmbiguousBlockAssociation",
     "Lint/AmbiguousOperator",
     "Lint/AmbiguousOperatorPrecedence",
@@ -51,7 +45,6 @@ pub(crate) const INTENTIONALLY_PENDING_COP_NAMES: &[&str] = &[
     "Lint/MissingCopEnableDirective",
     "Lint/RedundantCopDisableDirective",
     "Lint/RedundantCopEnableDirective",
-    "Lint/SymbolConversion",
     "Lint/UnusedMethodArgument",
     "Lint/UselessAssignment",
     "Lint/UselessConstantScoping",
@@ -63,7 +56,6 @@ pub(crate) const INTENTIONALLY_PENDING_COP_NAMES: &[&str] = &[
     "Metrics/MethodLength",
     "Metrics/PerceivedComplexity",
     "Naming/BlockParameterName",
-    "Naming/ConstantName",
     "Naming/HeredocDelimiterNaming",
     "Naming/VariableName",
     "Naming/VariableNumber",
@@ -78,11 +70,9 @@ pub(crate) const INTENTIONALLY_PENDING_COP_NAMES: &[&str] = &[
     "Style/FetchEnvVar",
     "Style/FileWrite",
     "Style/IfUnlessModifier",
-    "Style/InlineComment",
     "Style/MethodCallWithArgsParentheses",
     "Style/MethodCallWithoutArgsParentheses",
     "Style/MissingElse",
-    "Style/MultilineTernaryOperator",
     "Style/RedundantAssignment",
     "Style/RedundantParentheses",
 ];
@@ -107,7 +97,7 @@ mod tests {
     #[test]
     fn public_inventory_is_sorted_unique_and_complete() {
         let names = cop_names();
-        assert_eq!(names.len(), 539);
+        assert_eq!(names.len(), 549);
         assert!(names.windows(2).all(|pair| pair[0] < pair[1]));
         assert!(INTENTIONALLY_PENDING_COP_NAMES
             .windows(2)

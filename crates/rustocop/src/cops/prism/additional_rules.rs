@@ -17,7 +17,6 @@ declare_source_cops! {
     AutoResourceCleanup => "Style/AutoResourceCleanup" => auto_resource_cleanup,
     InPatternThen => "Style/InPatternThen" => in_pattern_then,
     EmptyHeredoc => "Style/EmptyHeredoc" => empty_heredoc,
-    SpaceInsideRangeLiteral => "Layout/SpaceInsideRangeLiteral" => space_inside_range,
     SpaceAfterMethodName => "Layout/SpaceAfterMethodName" => space_after_method_name,
 }
 

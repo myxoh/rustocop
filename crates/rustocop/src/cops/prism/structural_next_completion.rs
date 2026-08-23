@@ -201,21 +201,30 @@ fn case_literal(value: &str) -> bool {
 
 impl MultilineTernaryOperatorRule<'_, '_, '_> {
     fn on_if(&mut self, node: &ruby_prism::IfNode<'_>) {
+        if node.if_keyword_loc().is_some()
+            || node
+                .then_keyword_loc()
+                .is_none_or(|keyword| keyword.as_slice() != b"?")
+        {
+            return;
+        }
         let location = node.location();
         let source = self.source_file().at(&location);
         if !source.contains('\n') || !source.contains('?') {
             return;
         }
-        let Some(question) = source
-            .find(" ?")
-            .map(|at| at + 1)
-            .or_else(|| source.find('?'))
+        let Some(question_location) = node.then_keyword_loc() else {
+            return;
+        };
+        let Some(colon_location) = node
+            .subsequent()
+            .and_then(|branch| branch.as_else_node())
+            .map(|branch| branch.else_keyword_loc())
         else {
             return;
         };
-        let Some(colon) = ternary_colon(source, question) else {
-            return;
-        };
+        let question = question_location.start_offset() - location.start_offset();
+        let colon = colon_location.start_offset() - location.start_offset();
         if !(source[question..].contains('\n')
             || source[..question].contains('\n') && source[..question].contains("=="))
         {

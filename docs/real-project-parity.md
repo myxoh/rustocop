@@ -13,29 +13,28 @@ cases, and configuration branches that the projects do not exercise.
 ## Latest realistic status
 
 The latest complete checkpoint was generated at
-`2026-08-23T13:19:41-04:00` from Rust source
+`2026-08-23T16:19:26-04:00` from Rust source
 `7dd38fcc4cf0fa518efb211275216b177737925e` and native binary SHA-256
-`efb33b58b19285d581a49b84a16544f5309b50b083adf3db3ddd606410f4ab24`.
-The stored RuboCop reference was merged at `2026-08-23T13:05:59-04:00`
+`71f2d19752e8cf7b7c0f77b3477c1654102ebc57aa86bce6cbd9f816ec04fbda`.
+The stored RuboCop reference was refreshed at `2026-08-23T16:14:00-04:00`
 and has SHA-256
-`49dee51b7573e6faf0af6a75f370b9039a814d62a6ccf869faa51dab84eac99d`.
-After excluding the 83 intentionally pending cops, its active-cop slice reports:
+`e71621d84dc26c49234a2e12020d40ed931752dc35be9dccce6b0dbe23737dd0`.
+After excluding the 73 intentionally pending cops, its active-cop slice reports:
 
 | Classification | Complete checkpoint |
 | --- | ---: |
-| Project-exact | 296 |
+| Project-exact | 306 |
 | Exact but dormant | 53 |
 | Mismatching | 172 |
 | Rust crash | 1 |
 | RuboCop gate error | 1 |
 
-Among the 468 exercised cops, 296 are exact (63.2%). The expansion promoted 24
-previously dormant cops directly to project-exact, exposed mismatches in 37
-previously dormant cops, and invalidated 135 of the 402 old project-exact
-classifications. `Layout/SpaceAroundOperators` crashes on Puppet;
+Among the 478 exercised cops, 306 are exact (64.0%). The ten cops restored in
+this iteration are project-exact across the complete pinned corpus.
+`Layout/SpaceAroundOperators` crashes on Puppet;
 `Style/ClassAndModuleChildren` triggers a RuboCop 1.87 error on Puppet.
 
-The minimized project-regression corpus contains 336 passing cases and no
+The minimized project-regression corpus contains 389 passing cases and no
 pending active-cop mismatch directions. The
 configuration-mutation corpus contains six. They preserve fixed pathological
 examples, while the complete matrix catches interactions and unrepresented

@@ -3,10 +3,172 @@ use super::*;
 define_cops! {
     EmptyComment => "Layout/EmptyComment" => source(empty_comment),
     EmptyLineAfterMagicComment => "Layout/EmptyLineAfterMagicComment" => source(empty_line_after_magic_comment),
+    SpaceAfterNot => "Layout/SpaceAfterNot" => call(space_after_not),
+    SpaceInsideRangeLiteral => "Layout/SpaceInsideRangeLiteral" => node(as_range_node, space_inside_range_literal),
     SpaceAroundEqualsInParameterDefault => "Layout/SpaceAroundEqualsInParameterDefault" => node(as_optional_parameter_node, space_around_parameter_equals),
     SpaceInLambdaLiteral => "Layout/SpaceInLambdaLiteral" => node(as_lambda_node, space_in_lambda_literal),
     TrailingEmptyLines => "Layout/TrailingEmptyLines" => source(trailing_empty_lines),
     TrailingBodyOnMethodDefinition => "Style/TrailingBodyOnMethodDefinition" => node(as_def_node, trailing_method_body),
+    InlineComment => "Style/InlineComment" => source(inline_comment),
+}
+
+fn space_after_not(node: &ruby_prism::CallNode<'_>, context: &mut CopContext<'_, '_>) {
+    if node.name().as_slice() != b"!" {
+        return;
+    }
+    let Some(receiver) = node.receiver() else {
+        return;
+    };
+    let operator = node.message_loc().unwrap_or_else(|| node.location());
+    if operator.as_slice() != b"!" {
+        return;
+    }
+    if operator.end_offset() == receiver.location().start_offset() {
+        return;
+    }
+    context.replace(
+        "Do not leave space between `!` and its argument.",
+        node.location(),
+        operator.end_offset()..receiver.location().start_offset(),
+        "",
+    );
+}
+
+fn space_inside_range_literal(
+    node: &ruby_prism::RangeNode<'_>,
+    context: &mut CopContext<'_, '_>,
+) {
+    let (Some(left), Some(right)) = (node.left(), node.right()) else {
+        return;
+    };
+    let operator = node.operator_loc();
+    let whitespace_after = &context.source()[operator.end_offset()..right.location().start_offset()];
+    if left.location().end_offset() == operator.start_offset()
+        && (operator.end_offset() == right.location().start_offset()
+            || whitespace_after.starts_with('\n')) {
+        return;
+    }
+    let source = context.source_file();
+    let replacement = format!(
+        "{}{}{}",
+        source.at(&left.location()),
+        source.at(&operator),
+        source.at(&right.location())
+    );
+    context.replace(
+        "Space inside range literal.",
+        node.location(),
+        node.location(),
+        replacement,
+    );
+}
+
+fn inline_comment(context: &mut CopContext<'_, '_>) {
+    #[derive(Default)]
+    struct EmbeddedRuby(Vec<std::ops::Range<usize>>);
+    impl<'pr> Visit<'pr> for EmbeddedRuby {
+        fn visit_embedded_statements_node(&mut self, node: &ruby_prism::EmbeddedStatementsNode<'pr>) {
+            self.0.push(node.location().start_offset()..node.location().end_offset());
+            ruby_prism::visit_embedded_statements_node(self, node);
+        }
+        fn visit_embedded_variable_node(&mut self, node: &ruby_prism::EmbeddedVariableNode<'pr>) {
+            self.0.push(node.location().start_offset()..node.location().end_offset());
+            ruby_prism::visit_embedded_variable_node(self, node);
+        }
+    }
+
+    let source = context.source_file();
+    let parsed = ruby_prism::parse(context.source().as_bytes());
+    let mut embedded = EmbeddedRuby::default();
+    embedded.visit(&parsed.node());
+    let mut literals = source.literal_ranges();
+    let heredoc_literals = source.heredoc_ranges();
+    for literal in &mut literals {
+        if heredoc_literals.contains(literal) {
+            literal.start = source.line_end(literal.start).saturating_add(1).min(literal.end);
+        }
+    }
+    let mut comments = parsed
+        .comments()
+        .map(|comment| comment.location().start_offset()..comment.location().end_offset())
+        .collect::<Vec<_>>();
+    let heredocs = super::source_rules_layout::lexical_heredoc_body_ranges(context.source());
+    for (offset, line) in source.lines() {
+            let Some(hash) = line
+                .match_indices('#')
+                .map(|(hash, _)| hash)
+                .find(|hash| outside_simple_quotes(line, *hash))
+            else {
+                continue;
+            };
+            if hash == 0
+                || !line.as_bytes()[hash - 1].is_ascii_whitespace()
+                || line.as_bytes().get(hash + 1) == Some(&b'{')
+            {
+                continue;
+            }
+            let start = offset + hash;
+            if !comments
+                .iter()
+                .any(|range| range.start <= start && start < range.end)
+                && !heredocs.iter().any(|range| range.start <= start && start < range.end)
+            {
+                comments.push(start..offset + line.len());
+            }
+    }
+    comments.sort_by_key(|range| range.start);
+    for location in comments {
+        let comment = &context.source().as_bytes()[location.clone()];
+        if comment.starts_with(b"=begin") {
+            context.report("Avoid trailing inline comments.", location);
+            continue;
+        }
+        if literals
+            .iter()
+            .any(|literal| literal.start <= location.start && location.start < literal.end)
+            && !embedded
+                .0
+                .iter()
+                .any(|ruby| ruby.start <= location.start && location.start < ruby.end)
+        {
+            continue;
+        }
+        let line_start = source.line_start(location.start);
+        let prefix = &context.source()[line_start..location.start];
+        if prefix.trim().is_empty()
+            || comment.starts_with(b"# rubocop:disable")
+            || comment.starts_with(b"# rubocop:enable")
+        {
+            continue;
+        }
+        context.report("Avoid trailing inline comments.", location);
+    }
+}
+
+fn outside_simple_quotes(line: &str, end: usize) -> bool {
+    let mut quote = None;
+    let mut escaped = false;
+    let mut previous_significant = None;
+    for byte in line.as_bytes()[..end].iter().copied() {
+        if escaped {
+            escaped = false;
+        } else if byte == b'\\' {
+            escaped = true;
+        } else if quote == Some(byte) {
+            quote = None;
+        } else if quote.is_none() && matches!(byte, b'\'' | b'"' | b'`') {
+            quote = Some(byte);
+        } else if quote.is_none()
+            && byte == b'/'
+            && previous_significant.is_none_or(|previous| matches!(previous, b'(' | b'[' | b'{' | b',' | b'=' | b'!' | b'~' | b'?' | b':' | b';'))
+        {
+            quote = Some(byte);
+        }
+        if !byte.is_ascii_whitespace() {
+            previous_significant = Some(byte);
+        }
+    }
+    quote.is_none()
 }
 
 fn empty_comment(context: &mut CopContext<'_, '_>) {

@@ -364,6 +364,10 @@ impl DisabledState {
 }
 
 fn disabled_findings(source: &str, findings: &[Finding]) -> Vec<bool> {
+    let directive_comments = ruby_prism::parse(source.as_bytes())
+        .comments()
+        .map(|comment| comment.location().start_offset())
+        .collect::<HashSet<_>>();
     let mut state = DisabledState::default();
     let mut line_starts = Vec::new();
     let mut states = Vec::new();
@@ -372,7 +376,9 @@ fn disabled_findings(source: &str, findings: &[Finding]) -> Vec<bool> {
         line_starts.push(offset);
         let line = physical_line.strip_suffix('\n').unwrap_or(physical_line);
         let mut line_state = state.clone();
-        if let Some((comment_at, disabled, names)) = cop_directive(line) {
+        if let Some((comment_at, disabled, names)) = cop_directive(line)
+            .filter(|(comment_at, _, _)| directive_comments.contains(&(offset + comment_at)))
+        {
             if line[..comment_at].trim().is_empty() {
                 state.update(&names, disabled);
                 line_state = state.clone();

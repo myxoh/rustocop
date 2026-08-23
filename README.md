@@ -23,7 +23,7 @@ Maybe enough interest, use, and scrutiny will eventually turn this into a real
 linter. Until then, expect incomplete cop and configuration compatibility,
 false positives, false negatives, and breaking changes.
 
-The active native registry contains 523 RuboCop built-in cops. Another 83 are
+The active native registry contains 533 RuboCop built-in cops. Another 73 are
 intentionally pending and unregistered because their implementations are not
 project-exact or RuboCop 1.87 cannot produce stable comparison output. Public
 support evidence comes from RuboCop-derived fixtures and complete project
@@ -45,15 +45,14 @@ output on every pinned project is **project-exact** for that corpus and
 configuration. Neither offense-count similarity, a captured-case label, nor an
 old manual review record is accepted as compatibility evidence.
 
-The minimized real-project corpus currently contains 336 previously passing
-cases and six configuration-mutation cases. The new 50-project mismatches have
-not yet been minimized; these fixtures remain regression coverage, not a
-substitute for the complete project comparison.
+The minimized real-project corpus currently contains 389 provenance-backed
+mismatch cases, with no pending active-cop mismatch directions. These fixtures
+remain regression coverage, not a substitute for the complete project comparison.
 
-After restoring eleven cops with structural implementations, the fixture review
-updated at `2026-08-23T13:05:46-04:00` contains 24,298 retained executable cases.
-All 24,297 comparable cases match RuboCop 1.87.0 diagnostics, and all correction
-expectations also match; 523/523 active cops pass every retained fixture. One captured case
+After restoring ten additional cops with structural implementations, the fixture review
+updated at `2026-08-23T15:46:58-04:00` contains 24,427 retained executable cases.
+All 24,426 comparable cases match RuboCop 1.87.0 diagnostics, and all correction
+expectations also match; 533/533 active cops pass every retained fixture. One captured case
 with unsupported synthetic upstream state is explicitly excluded rather than
 counted as passing.
 
@@ -62,22 +61,22 @@ counted as passing.
 The real-project matrix asks whether each cop emits the same path, severity,
 message, and source range as RuboCop across 85,471 Ruby files in 50 projects.
 
-The complete audit updated at `2026-08-23T13:19:41-04:00` covers all 523 active
-cops. It leaves 296 project-exact cops, 53 dormant cops, 172 mismatches, one
+The complete audit updated at `2026-08-23T16:19:26-04:00` covers all 533 active
+cops. It leaves 306 project-exact cops, 53 dormant cops, 172 mismatches, one
 native crash, and one RuboCop command-line error.
 
 | Real-project classification | Complete checkpoint |
 | --- | ---: |
-| Project-exact | 296 / 523 (56.6%) |
-| Exact but dormant | 53 / 523 |
-| Mismatching | 172 / 523 |
-| Rust crashes | 1 / 523 |
-| RuboCop `--only` limitation | 1 / 523 |
+| Project-exact | 306 / 533 (57.4%) |
+| Exact but dormant | 53 / 533 |
+| Mismatching | 172 / 533 |
+| Rust crashes | 1 / 533 |
+| RuboCop `--only` limitation | 1 / 533 |
 
 The checkpoint is bound to Rust source `7dd38fc` and native binary SHA-256
-`efb33b58b19285d581a49b84a16544f5309b50b083adf3db3ddd606410f4ab24`.
+`71f2d19752e8cf7b7c0f77b3477c1654102ebc57aa86bce6cbd9f816ec04fbda`.
 Its RuboCop reference SHA-256 is
-`49dee51b7573e6faf0af6a75f370b9039a814d62a6ccf869faa51dab84eac99d`.
+`e71621d84dc26c49234a2e12020d40ed931752dc35be9dccce6b0dbe23737dd0`.
 Project-exact status is the strongest current diagnostic evidence. Unexercised
 configuration and autocorrection branches still require RuboCop-derived
 fixtures.
@@ -232,7 +231,7 @@ Check the [compatibility evidence table](docs/compatibility.md) and the
 - Native binary contract: `libexec/rustocop-native`
 - Development fallback: `libexec/rustocop-ruby`
 - Rust source: `crates/rustocop`
-- 523 active native RuboCop 1.87 built-ins and 83 explicitly unregistered,
+- 533 active native RuboCop 1.87 built-ins and 73 explicitly unregistered,
   intentionally pending cops. RuboCop extension departments and project-specific
   cops are not native.
 - A shared Prism parse and AST visitor powers the native cop registry.
@@ -252,7 +251,7 @@ and applied as one batch. The differential compatibility suite runs 20 cops
 against 500 generated and committed Ruby fixture files, both cop-by-cop and as a
 single corpus, and compares their JSON reports directly with RuboCop.
 
-The native registry intentionally excludes 83 withdrawn implementations. A cop
+The native registry intentionally excludes 73 withdrawn implementations. A cop
 returns only after a scalable implementation passes fixtures and project
 parity; registration by itself is never compatibility evidence.
 
@@ -260,13 +259,13 @@ parity; registration by itself is never compatibility evidence.
 
 The official RuboCop 1.87.0 cop specs are vendored under
 `spec/upstream/rubocop-1.87.0` at tag `v1.87.0`, commit
-`e5b788dba181ad94de30cfbad661c5d6aa08a4e5`. Specs for the 83 intentionally
+`e5b788dba181ad94de30cfbad661c5d6aa08a4e5`. Specs for the 73 intentionally
 pending cops are excluded from the active fixture corpus.
 
 The capture harness executes RuboCop's test DSL and records the resulting
 source, configuration, path, Ruby version, offenses, and correction. It does
 not infer expectations by scraping spec source. The active corpus contains
-executable captured cases for all 523 active cops and excludes every cop in the
+executable captured cases for all 533 active cops and excludes every cop in the
 intentionally-pending manifest. These cases become compatibility evidence only
 when Rustocop matches the captured diagnostics and corrections. Project-exact
 output is the broader guard against cases absent from upstream specs.

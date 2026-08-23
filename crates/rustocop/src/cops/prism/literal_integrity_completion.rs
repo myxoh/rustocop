@@ -192,98 +192,180 @@ fn numeric_constant_result(context: &mut CopContext<'_, '_>) {
 }
 
 fn symbol_conversion(context: &mut CopContext<'_, '_>) {
+    #[derive(Default)]
+    struct Symbols {
+        calls: Vec<(std::ops::Range<usize>, std::ops::Range<usize>, bool)>,
+        symbols: Vec<(std::ops::Range<usize>, Vec<u8>)>,
+    }
+    impl<'pr> Visit<'pr> for Symbols {
+        fn visit_call_node(&mut self, node: &ruby_prism::CallNode<'pr>) {
+            if matches!(node.name().as_slice(), b"to_sym" | b"intern") {
+                if let Some(receiver) = node.receiver().filter(|receiver| {
+                    receiver.as_string_node().is_some()
+                        || receiver.as_interpolated_string_node().is_some()
+                        || receiver.as_symbol_node().is_some()
+                }) {
+                    self.calls.push((
+                        node.location().start_offset()..node.location().end_offset(),
+                        receiver.location().start_offset()..receiver.location().end_offset(),
+                        receiver.as_interpolated_string_node().is_some(),
+                    ));
+                }
+            }
+            ruby_prism::visit_call_node(self, node);
+        }
+
+        fn visit_symbol_node(&mut self, node: &ruby_prism::SymbolNode<'pr>) {
+            self.symbols.push((
+                node.location().start_offset()..node.location().end_offset(),
+                node.unescaped().to_vec(),
+            ));
+            ruby_prism::visit_symbol_node(self, node);
+        }
+    }
+
     let source = context.source();
-    for (start, _) in source.match_indices(':') {
-        if source.as_bytes().get(start.wrapping_sub(1)) == Some(&b':')
-            || source.as_bytes().get(start + 1) == Some(&b':')
-        {
+    let mut nodes = Symbols::default();
+    nodes.visit(&parse(source.as_bytes()).node());
+    let call_receivers = nodes
+        .calls
+        .iter()
+        .map(|(_, receiver, _)| receiver.clone())
+        .collect::<Vec<_>>();
+    for (call, receiver, interpolated) in nodes.calls {
+        let receiver_source = &source[receiver.clone()];
+        let replacement = if interpolated {
+            format!(":{}", joined_interpolated_string(receiver_source))
+        } else {
+            let value = nodes
+                .symbols
+                .iter()
+                .find(|(range, _)| *range == receiver)
+                .map(|(_, value)| String::from_utf8_lossy(value).into_owned())
+                .or_else(|| {
+                    let parsed = parse(receiver_source.as_bytes());
+                    parsed
+                        .node()
+                        .as_program_node()
+                        .and_then(|program| program.statements().body().iter().next())
+                        .and_then(|node| node.as_string_node())
+                        .map(|string| String::from_utf8_lossy(string.unescaped()).into_owned())
+                })
+                .unwrap_or_default();
+            symbol_inspect(&value)
+        };
+        context.replace(
+            format!("Unnecessary symbol conversion; use `{replacement}` instead."),
+            call.clone(),
+            call,
+            replacement,
+        );
+    }
+
+    for (range, value) in nodes.symbols {
+        if call_receivers.contains(&range) {
             continue;
         }
-        let tail = &source[start + 1..];
-        let name_len = tail
-            .bytes()
-            .take_while(|byte| byte.is_ascii_alphanumeric() || *byte == b'_')
-            .count();
-        let conversion = source
-            .get(start + 1 + name_len..)
-            .and_then(symbol_conversion_method);
-        if name_len > 0 && conversion.is_some() {
-            let end = start + 1 + name_len + conversion.unwrap_or_default().len();
-            let symbol = &source[start..start + 1 + name_len];
-            context.replace(
-                format!("Unnecessary symbol conversion; use `{symbol}` instead."),
-                start..end,
-                start..end,
-                symbol,
-            );
+        let raw = &source[range.clone()];
+        let hash_label = (raw.starts_with('\'') || raw.starts_with('"')) && raw.ends_with(':');
+        if hash_label && context.policy().enforced_style("strict") == "consistent" {
+            continue;
         }
-    }
-    for quote in ['\'', '"'] {
-        for method in [".to_sym", ".intern"] {
-            let needle = format!("{quote}{method}");
-            let mut search = 0;
-            while let Some(relative) = source[search..].find(&needle) {
-                let closing = search + relative;
-                let end = closing + needle.len();
-                let Some(start) = source[..closing].rfind(quote) else {
-                    break;
-                };
-                let value = &source[start + 1..closing];
-                if value.contains(' ') || value.is_empty() {
-                    search = end;
-                    continue;
-                }
-                let replacement = symbol_literal(value, quote);
-                context.replace(
-                    format!("Unnecessary symbol conversion; use `{replacement}` instead."),
-                    start..end,
-                    start..end,
-                    replacement,
-                );
-                search = end;
+        let value = String::from_utf8_lossy(&value);
+        if value.ends_with('=') {
+            continue;
+        }
+        let replacement = if hash_label {
+            if value.ends_with('=') {
+                continue;
             }
+            if !value.chars().next().is_some_and(|character| character.is_alphanumeric() || character == '_') {
+                continue;
+            }
+            symbol_inspect(&value).trim_start_matches(':').to_string()
+        } else {
+            symbol_inspect(&value)
+        };
+        if replacement.contains('"') {
+            continue;
         }
+        let displayed = if hash_label { format!("{replacement}:") } else { replacement.clone() };
+        let correction = if hash_label { replacement } else { displayed.clone() };
+        let correction_range = if hash_label {
+            range.start..range.end - 1
+        } else {
+            range.clone()
+        };
+        if &source[correction_range.clone()] == correction
+            || (!hash_label && !raw.starts_with(":\'") && !raw.starts_with(":\"")) {
+            continue;
+        }
+        context.replace(
+            format!("Unnecessary symbol conversion; use `{displayed}` instead."),
+            correction_range.clone(),
+            correction_range,
+            correction,
+        );
     }
 
-    for quote in ['\'', '"'] {
-        let needle = format!(":{quote}");
-        let mut search = 0;
-        while let Some(relative) = source[search..].find(&needle) {
-            let start = search + relative;
-            let content_start = start + 2;
-            let Some(relative_close) = source[content_start..].find(quote) else {
-                break;
-            };
-            let close = content_start + relative_close;
-            let value = &source[content_start..close];
-            if bare_symbol_name(value, true) {
-                let replacement = format!(":{value}");
-                context.replace(
-                    format!("Unnecessary symbol conversion; use `{replacement}` instead."),
-                    start..close + 1,
-                    start..close + 1,
-                    replacement,
-                );
-            }
-            search = close + 1;
-        }
+    if context.policy().enforced_style("strict") == "consistent" {
+        check_symbol_hash_labels(context);
     }
-
-    check_symbol_hash_labels(context);
 }
 
-fn symbol_conversion_method(source: &str) -> Option<&'static str> {
-    [".to_sym", ".intern"]
-        .into_iter()
-        .find(|method| source.starts_with(method))
-}
-
-fn symbol_literal(value: &str, quote: char) -> String {
-    if bare_symbol_name(value, true) && !value.contains("#{") {
+fn symbol_inspect(value: &str) -> String {
+    if bare_symbol_syntax(value) {
         format!(":{value}")
     } else {
-        format!(":{quote}{value}{quote}")
+        format!(":\"{}\"", value.replace('\\', "\\\\").replace('"', "\\\""))
     }
+}
+
+fn joined_interpolated_string(source: &str) -> String {
+    let lines = source.lines().map(str::trim).collect::<Vec<_>>();
+    if lines.len() <= 1 {
+        return source.to_string();
+    }
+    let quote = lines.first().and_then(|line| line.chars().next()).unwrap_or('"');
+    let mut body = String::new();
+    for (index, line) in lines.iter().enumerate() {
+        let mut part = line.trim_end_matches('\\');
+        if index > 0 {
+            part = part.strip_prefix(quote).unwrap_or(part);
+        }
+        if index + 1 < lines.len() {
+            part = part.strip_suffix(quote).unwrap_or(part);
+        }
+        body.push_str(part);
+    }
+    body
+}
+
+fn bare_symbol_syntax(value: &str) -> bool {
+    const OPERATORS: &[&str] = &[
+        "==", "===", "!=", "=~", "!~", "<=>", "<", "<=", ">", ">=", "+", "-", "*",
+        "/", "%", "**", "<<", ">>", "&", "|", "^", "~", "!", "[]", "[]=", "+@", "-@",
+        "`",
+    ];
+    if OPERATORS.contains(&value) {
+        return true;
+    }
+    let mut characters = value.chars();
+    let Some(first) = characters.next() else { return false };
+    if !(first.is_alphabetic() || matches!(first, '_' | '@' | '$')) {
+        return false;
+    }
+    let mut rest = characters.collect::<String>();
+    if matches!(first, '@' | '$') {
+        let Some(variable_start) = rest.chars().next() else { return false };
+        if !(variable_start.is_alphabetic() || variable_start == '_') {
+            return false;
+        }
+    }
+    if rest.ends_with(['!', '?', '=']) {
+        rest.pop();
+    }
+    rest.chars().all(|character| character.is_alphanumeric() || character == '_')
 }
 
 fn bare_symbol_name(value: &str, allow_suffix: bool) -> bool {

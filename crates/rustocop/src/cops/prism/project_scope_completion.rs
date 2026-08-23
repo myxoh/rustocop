@@ -11,7 +11,7 @@ define_cops! {
     DevelopmentDependencies => "Gemspec/DevelopmentDependencies" => source(development_dependencies),
     DeprecatedAttributeAssignment => "Gemspec/DeprecatedAttributeAssignment" => source(deprecated_gemspec_attribute),
     DuplicateMatchPattern => "Lint/DuplicateMatchPattern" => rubocop_callbacks(DuplicateMatchPatternRule, [on_case_match]),
-    ConstantName => "Naming/ConstantName" => source(constant_name),
+    ConstantName => "Naming/ConstantName" => any_node(constant_name),
     ConstantVisibility => "Style/ConstantVisibility" => source(constant_visibility),
     RedundantSelfAssignment => "Style/RedundantSelfAssignment" => any_node(scope_rules::redundant_self_assignment),
     TopLevelMethodDefinition => "Style/TopLevelMethodDefinition" => any_node(top_level_method_definition),
@@ -265,41 +265,94 @@ fn canonical_pattern(pattern: &str) -> String {
     }
 }
 
-fn constant_name(context: &mut CopContext<'_, '_>) {
-    for (offset, line) in context.source_file().lines() {
-        let trimmed = line.trim_start();
-        if trimmed.contains("||=") {
-            continue;
-        }
-        let Some((left, _)) = trimmed.rsplit_once('=') else {
-            continue;
+fn constant_name(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
+    let (location, value) = if let Some(write) = node.as_constant_write_node() {
+        (write.name_loc(), write.value())
+    } else if let Some(write) = node.as_constant_path_write_node() {
+        let target = write.target();
+        (target.name_loc(), write.value())
+    } else if let Some(target) = node.as_constant_target_node() {
+        let Some(value) = context.parent().and_then(Node::as_multi_write_node).map(|write| write.value()) else {
+            return;
         };
-        let rhs = trimmed.rsplit_once('=').map_or("", |(_, rhs)| rhs.trim());
-        let static_rhs = rhs.chars().next().is_some_and(|first| {
-            first.is_ascii_digit() || matches!(first, '\'' | '"' | '[' | '{' | '%')
-        }) || rhs.contains(".freeze")
-            || (rhs.starts_with("if ") && rhs.matches(['\'', '"']).count() >= 4);
-        if !static_rhs {
-            continue;
-        }
-        let assigned = left.rsplit('=').next().unwrap_or(left);
-        for qualified_name in assigned.split(',').map(str::trim) {
-            let name = qualified_name.rsplit("::").next().unwrap_or(qualified_name);
-            if name.is_empty()
-                || !name.chars().next().is_some_and(char::is_uppercase)
-                || name.chars().all(|character| {
-                    character.is_uppercase() || character.is_numeric() || character == '_'
-                })
-            {
-                continue;
-            }
-            let start = offset + line.find(name).unwrap_or(0);
-            context.report(
-                "Use SCREAMING_SNAKE_CASE for constants.",
-                start..start + name.len(),
-            );
-        }
+        (target.location(), value)
+    } else {
+        return;
+    };
+    if constant_name_allowed_assignment(&value) {
+        return;
     }
+    let name = context.source_file().at(&location);
+    if name.chars().all(|character| {
+        character.is_uppercase() || character.is_numeric() || character == '_'
+    }) {
+        return;
+    }
+    context.report("Use SCREAMING_SNAKE_CASE for constants.", location);
+}
+
+fn constant_name_allowed_assignment(value: &Node<'_>) -> bool {
+    if value.as_constant_read_node().is_some()
+        || value.as_constant_path_node().is_some()
+        || value.as_constant_write_node().is_some()
+        || value.as_constant_path_write_node().is_some()
+        || value.as_block_node().is_some()
+        || value.as_lambda_node().is_some()
+    {
+        return true;
+    }
+    if let Some(call) = value.as_call_node() {
+        if call.block().is_some() {
+            return true;
+        }
+        if call_name(&call) == b"new"
+            && (root_constant(call.receiver(), b"Class") || root_constant(call.receiver(), b"Struct"))
+        {
+            return true;
+        }
+        return call.receiver().is_none_or(|receiver| !literal_node(&receiver));
+    }
+    value.as_if_node().is_some_and(|conditional| {
+        let branch_has_constant = |statements: Option<ruby_prism::StatementsNode<'_>>| {
+            statements.is_some_and(|statements| {
+                statements.body().iter().any(|branch| {
+                    branch.as_constant_read_node().is_some()
+                        || branch.as_constant_path_node().is_some()
+                })
+            })
+        };
+        branch_has_constant(conditional.statements())
+            || conditional.subsequent().is_some_and(|subsequent| {
+                subsequent
+                    .as_else_node()
+                    .is_some_and(|branch| branch_has_constant(branch.statements()))
+            })
+    })
+}
+
+fn literal_node(node: &Node<'_>) -> bool {
+    if let Some(parentheses) = node.as_parentheses_node() {
+        return parentheses.body().is_some_and(|body| {
+            body.as_statements_node()
+                .is_some_and(|statements| only_statement(Some(statements)).is_some_and(|inner| literal_node(&inner)))
+        });
+    }
+    node.as_integer_node().is_some()
+        || node.as_float_node().is_some()
+        || node.as_rational_node().is_some()
+        || node.as_imaginary_node().is_some()
+        || node.as_string_node().is_some()
+        || node.as_interpolated_string_node().is_some()
+        || node.as_symbol_node().is_some()
+        || node.as_interpolated_symbol_node().is_some()
+        || node.as_array_node().is_some()
+        || node.as_hash_node().is_some()
+        || node.as_range_node().is_some()
+        || node.as_regular_expression_node().is_some()
+        || node.as_interpolated_regular_expression_node().is_some()
+        || node.as_true_node().is_some()
+        || node.as_false_node().is_some()
+        || node.as_nil_node().is_some()
 }
 
 fn constant_visibility(context: &mut CopContext<'_, '_>) {

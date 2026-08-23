@@ -7,7 +7,6 @@ declare_source_cops! {
     SpaceAfterSemicolon => "Layout/SpaceAfterSemicolon" => space_after_semicolon,
     SpaceAfterComma => "Layout/SpaceAfterComma" => space_after_comma,
     SpaceBeforeSemicolon => "Layout/SpaceBeforeSemicolon" => space_before_semicolon,
-    SpaceAfterNot => "Layout/SpaceAfterNot" => space_after_not,
     SpaceBeforeComma => "Layout/SpaceBeforeComma" => space_before_comma,
 }
 
@@ -51,6 +50,8 @@ fn space_after_comma(source: &str, context: &mut Reporter<'_>) {
 
 fn spacing_after(source: &str, context: &mut Reporter<'_>, token: u8, message: &'static str) {
     let bytes = source.as_bytes();
+    let ignored = ignored_syntax_ranges(source);
+    let interpolation_closings = interpolation_closing_offsets(source);
     for index in 0..bytes.len() {
         if bytes[index] != token {
             continue;
@@ -63,19 +64,44 @@ fn spacing_after(source: &str, context: &mut Reporter<'_>, token: u8, message: &
             && context.related_config_value("Layout/SpaceInsideBlockBraces", "EnforcedStyle")
                 == Some("no_space");
         let closing_brace_requires_space = next == b'}'
-            && ((token == b',' && source[..index].trim_start().starts_with("{ "))
-                || (token == b';' && bytes.get(index.wrapping_sub(1)) == Some(&b' ')));
+            && ((token == b','
+                && context.related_config_value(
+                    "Layout/SpaceInsideHashLiteralBraces",
+                    "EnforcedStyle",
+                ) == Some("space"))
+                || (token == b';'
+                    && (bytes.get(index.wrapping_sub(1)) == Some(&b' ')
+                        || context.related_config_value(
+                            "Layout/SpaceInsideBlockBraces",
+                            "EnforcedStyle",
+                        ) == Some("space"))));
         if next == b'\n'
             || next == b' '
             || next == token
+            || (token == b';' && next == b'}' && interpolation_closings.contains(&(index + 1)))
             || no_space_inside_braces
             || (matches!(next, b')' | b']' | b'}' | b'|') && !closing_brace_requires_space)
-            || inside_quoted_text(source, index)
+            || ignored.iter().any(|range| range.start <= index && index < range.end)
         {
             continue;
         }
         context.insert(message, index..index + 1, index + 1, " ");
     }
+}
+
+fn interpolation_closing_offsets(source: &str) -> Vec<usize> {
+    #[derive(Default)]
+    struct Closings(Vec<usize>);
+    impl<'pr> Visit<'pr> for Closings {
+        fn visit_embedded_statements_node(&mut self, node: &ruby_prism::EmbeddedStatementsNode<'pr>) {
+            self.0.push(node.closing_loc().start_offset());
+            ruby_prism::visit_embedded_statements_node(self, node);
+        }
+    }
+    let parsed = ruby_prism::parse(source.as_bytes());
+    let mut closings = Closings::default();
+    closings.visit(&parsed.node());
+    closings.0
 }
 
 fn space_before_semicolon(source: &str, context: &mut Reporter<'_>) {
@@ -88,8 +114,16 @@ fn space_before_comma(source: &str, context: &mut Reporter<'_>) {
 
 fn spacing_before(source: &str, context: &mut Reporter<'_>, token: u8, message: &'static str) {
     let bytes = source.as_bytes();
+    let ignored = ignored_syntax_ranges(source);
     for index in 1..bytes.len() {
-        if bytes[index] != token || bytes[index - 1] != b' ' || inside_quoted_text(source, index) {
+        if bytes[index] != token
+            || bytes[index - 1] != b' '
+            || ignored.iter().any(|range| range.start <= index && index < range.end)
+        {
+            continue;
+        }
+        let line_start = source[..index].rfind('\n').map_or(0, |offset| offset + 1);
+        if source[line_start..index].trim().is_empty() {
             continue;
         }
         let start = source[..index].trim_end_matches(' ').len();
@@ -104,31 +138,151 @@ fn spacing_before(source: &str, context: &mut Reporter<'_>, token: u8, message: 
     }
 }
 
-fn space_after_not(source: &str, context: &mut Reporter<'_>) {
-    for (start, _) in source.match_indices('!') {
-        if source
-            .as_bytes()
-            .get(start + 1)
-            .is_none_or(|byte| !byte.is_ascii_whitespace())
-        {
-            continue;
-        }
-        let end = source[start + 1..]
-            .find(|c: char| !c.is_whitespace())
-            .map_or(source.len(), |offset| start + 1 + offset);
-        let expression_end = source[end..]
-            .find('\n')
-            .map_or(source.len(), |offset| end + offset);
-        context.replace(
-            "Do not leave space between `!` and its argument.",
-            start..expression_end,
-            start..expression_end,
-            format!("!{}", &source[end..expression_end]),
-        );
-    }
-}
-
 fn inside_quoted_text(source: &str, offset: usize) -> bool {
     let before = &source[..offset];
     before.bytes().filter(|byte| *byte == b'"').count() % 2 == 1 || before.contains("<<-")
+}
+
+fn ignored_syntax_ranges(source: &str) -> Vec<std::ops::Range<usize>> {
+    #[derive(Default)]
+    struct EmbeddedRuby {
+        ranges: Vec<std::ops::Range<usize>>,
+        opaque_interpolated_strings: Vec<std::ops::Range<usize>>,
+    }
+    impl<'pr> Visit<'pr> for EmbeddedRuby {
+        fn visit_interpolated_string_node(&mut self, node: &ruby_prism::InterpolatedStringNode<'pr>) {
+            if node.opening_loc().is_none() {
+                self.opaque_interpolated_strings
+                    .push(node.location().start_offset()..node.location().end_offset());
+            }
+            ruby_prism::visit_interpolated_string_node(self, node);
+        }
+
+        fn visit_embedded_statements_node(&mut self, node: &ruby_prism::EmbeddedStatementsNode<'pr>) {
+            self.ranges.push(node.location().start_offset()..node.location().end_offset());
+            ruby_prism::visit_embedded_statements_node(self, node);
+        }
+
+        fn visit_embedded_variable_node(&mut self, node: &ruby_prism::EmbeddedVariableNode<'pr>) {
+            self.ranges.push(node.location().start_offset()..node.location().end_offset());
+            ruby_prism::visit_embedded_variable_node(self, node);
+        }
+    }
+
+    let file = SourceFile::new(source);
+    let parsed = ruby_prism::parse(source.as_bytes());
+    let mut embedded = EmbeddedRuby::default();
+    embedded.visit(&parsed.node());
+    let mut ranges = file.literal_ranges();
+    let heredocs = file.heredoc_ranges();
+    for range in &mut ranges {
+        if heredocs.contains(range) {
+            range.start = file.line_end(range.start).saturating_add(1).min(range.end);
+        }
+    }
+    ranges.extend(lexical_heredoc_body_ranges(source));
+    for ruby in embedded.ranges {
+        if embedded
+            .opaque_interpolated_strings
+            .iter()
+            .any(|literal| {
+                literal.start <= ruby.start
+                    && ruby.end <= literal.end
+                    && !matches!(source.as_bytes().get(literal.start), Some(b'\'' | b'"' | b'`'))
+            })
+        {
+            continue;
+        }
+        ranges = ranges
+            .into_iter()
+            .flat_map(|range| {
+                if !(range.start <= ruby.start && ruby.end < range.end) {
+                    vec![range]
+                } else {
+                    let mut pieces = Vec::new();
+                    if range.start < ruby.start {
+                        pieces.push(range.start..ruby.start);
+                    }
+                    if ruby.end < range.end {
+                        pieces.push(ruby.end..range.end);
+                    }
+                    pieces
+                }
+            })
+            .collect();
+    }
+    ranges.extend(file.comment_ranges());
+    if let Some(start) = file.data_section_start() {
+        ranges.push(start..source.len());
+    }
+    ranges
+}
+
+pub(super) fn lexical_heredoc_body_ranges(source: &str) -> Vec<std::ops::Range<usize>> {
+    let lines = SourceFile::new(source).lines().collect::<Vec<_>>();
+    let mut ranges = Vec::new();
+    for (index, (offset, line)) in lines.iter().copied().enumerate() {
+        let mut cursor = 0;
+        while let Some(relative_marker) = line[cursor..].find("<<") {
+            let marker = cursor + relative_marker;
+            if !outside_line_quotes(line, marker) {
+                cursor = marker + 2;
+                continue;
+            }
+            let marker_tail = &line[marker + 2..];
+            let indentation = marker_tail.len() - marker_tail.trim_start_matches(['-', '~']).len();
+            let marker_tail = &marker_tail[indentation..];
+            let whitespace = marker_tail.len() - marker_tail.trim_start().len();
+            if whitespace > 0 {
+                cursor = marker + 2 + indentation + whitespace;
+                continue;
+            }
+            let mut tail = &marker_tail[whitespace..];
+            let label_start = offset + marker + 2 + indentation + whitespace;
+            let (label, consumed) = if tail.starts_with(['\'', '"', '`']) {
+                let quote = tail.as_bytes()[0] as char;
+                tail = &tail[1..];
+                let Some(end) = tail.find(quote) else { break };
+                ranges.push(label_start..label_start + end + 2);
+                (&tail[..end], end + 2)
+            } else {
+                let end = tail
+                    .find(|character: char| !(character.is_alphanumeric() || character == '_'))
+                    .unwrap_or(tail.len());
+                (&tail[..end], end)
+            };
+            cursor = marker + 2 + indentation + whitespace + consumed;
+            if label.is_empty() {
+                continue;
+            }
+            let Some((closing_offset, closing_line)) = lines[index + 1..]
+                .iter()
+                .copied()
+                .find(|(_, candidate)| candidate.trim() == label)
+            else {
+                continue;
+            };
+            let body_start = offset + line.len()
+                + usize::from(source.as_bytes().get(offset + line.len()) == Some(&b'\n'));
+            ranges.push(body_start..closing_offset + closing_line.len());
+        }
+    }
+    ranges
+}
+
+fn outside_line_quotes(line: &str, end: usize) -> bool {
+    let mut quote = None;
+    let mut escaped = false;
+    for byte in line.as_bytes()[..end].iter().copied() {
+        if escaped {
+            escaped = false;
+        } else if byte == b'\\' {
+            escaped = true;
+        } else if quote == Some(byte) {
+            quote = None;
+        } else if quote.is_none() && matches!(byte, b'\'' | b'"' | b'`') {
+            quote = Some(byte);
+        }
+    }
+    quote.is_none()
 }

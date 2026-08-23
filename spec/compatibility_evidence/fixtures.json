@@ -1,10 +1,10 @@
 {
   "version": 1,
   "kind": "fixture_compatibility",
-  "updated_at": "2026-08-23T13:05:46-04:00",
-  "rust_commit": "7dd38fcc4cf0fa518efb211275216b177737925e",
-  "native_sha256": "efb33b58b19285d581a49b84a16544f5309b50b083adf3db3ddd606410f4ab24",
-  "fixture_corpus_sha256": "676af4695190fd05c7836f88f0707a1f14a82e0f6d2d733aea931c4e9282314d",
+  "updated_at": "2026-08-23T15:46:58-04:00",
+  "rust_commit": null,
+  "native_sha256": "71f2d19752e8cf7b7c0f77b3477c1654102ebc57aa86bce6cbd9f816ec04fbda",
+  "fixture_corpus_sha256": "63f5d392a9d33ac19414e000dfc6f8fa2f678362411db89ef9abcbb1e7004c68",
   "rubocop_version": "1.87.0",
   "results": {
     "Bundler/DuplicatedGem": {
@@ -322,9 +322,24 @@
       "total": 12,
       "status": "compatible"
     },
+    "Layout/SpaceAfterComma": {
+      "passed": 9,
+      "total": 9,
+      "status": "compatible"
+    },
     "Layout/SpaceAfterMethodName": {
       "passed": 8,
       "total": 8,
+      "status": "compatible"
+    },
+    "Layout/SpaceAfterNot": {
+      "passed": 6,
+      "total": 6,
+      "status": "compatible"
+    },
+    "Layout/SpaceAfterSemicolon": {
+      "passed": 9,
+      "total": 9,
       "status": "compatible"
     },
     "Layout/SpaceAroundEqualsInParameterDefault": {
@@ -352,9 +367,19 @@
       "total": 28,
       "status": "compatible"
     },
+    "Layout/SpaceBeforeComma": {
+      "passed": 6,
+      "total": 6,
+      "status": "compatible"
+    },
     "Layout/SpaceBeforeFirstArg": {
       "passed": 12,
       "total": 12,
+      "status": "compatible"
+    },
+    "Layout/SpaceBeforeSemicolon": {
+      "passed": 9,
+      "total": 9,
       "status": "compatible"
     },
     "Layout/SpaceInLambdaLiteral": {
@@ -385,6 +410,11 @@
     "Layout/SpaceInsidePercentLiteralDelimiters": {
       "passed": 262,
       "total": 262,
+      "status": "compatible"
+    },
+    "Layout/SpaceInsideRangeLiteral": {
+      "passed": 7,
+      "total": 7,
       "status": "compatible"
     },
     "Layout/SpaceInsideReferenceBrackets": {
@@ -952,6 +982,11 @@
       "total": 26,
       "status": "compatible"
     },
+    "Lint/SymbolConversion": {
+      "passed": 39,
+      "total": 39,
+      "status": "compatible"
+    },
     "Lint/Syntax": {
       "passed": 4,
       "total": 4,
@@ -1140,6 +1175,11 @@
     "Naming/ClassAndModuleCamelCase": {
       "passed": 5,
       "total": 5,
+      "status": "compatible"
+    },
+    "Naming/ConstantName": {
+      "passed": 24,
+      "total": 24,
       "status": "compatible"
     },
     "Naming/FileName": {
@@ -1732,6 +1772,11 @@
       "total": 28,
       "status": "compatible"
     },
+    "Style/InlineComment": {
+      "passed": 3,
+      "total": 3,
+      "status": "compatible"
+    },
     "Style/InverseMethods": {
       "passed": 110,
       "total": 110,
@@ -1885,6 +1930,11 @@
     "Style/MultilineMethodSignature": {
       "passed": 19,
       "total": 19,
+      "status": "compatible"
+    },
+    "Style/MultilineTernaryOperator": {
+      "passed": 17,
+      "total": 17,
       "status": "compatible"
     },
     "Style/MultilineWhenThen": {

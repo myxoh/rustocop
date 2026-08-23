@@ -1,7 +1,7 @@
 # Current project-parity gaps
 
 Generated from the same complete audit as [the evidence matrix](cop-support.md).
-Evidence updated at `2026-08-23T13:19:41-04:00`.
+Evidence updated at `2026-08-23T16:19:26-04:00`.
 This queue contains only failures from that 50-project audit; it does not use the old
 Verified/Heuristic qualification labels or captured-case pass counts.
 
@@ -14,20 +14,20 @@ nonzero gap because its message, severity, path, or source range differs.
 
 | Cop | Status | Rustocop | RuboCop | Exact | Signature gap | Project regression evidence |
 | --- | --- | ---: | ---: | ---: | ---: | --- |
+| `Style/InlineComment` | Mismatch | 229984 | 18651 | 18651 | 211333 | Passing |
 | `Lint/UnderscorePrefixedVariableName` | Mismatch | 2109 | 2109 | 897 | 2424 | No |
-| `Style/StringLiterals` | Mismatch | 927682 | 928483 | 927682 | 801 | No |
-| `Style/EmptyLiteral` | Mismatch | 229 | 118 | 116 | 115 | Passing |
+| `Style/EmptyLiteral` | Mismatch | 240 | 118 | 116 | 126 | Passing |
 | `Style/StringConcatenation` | Mismatch | 3175 | 3080 | 3080 | 95 | Passing |
 | `Lint/OrAssignmentToConstant` | Mismatch | 159 | 172 | 136 | 59 | No |
 | `Layout/SpaceInsideParens` | Mismatch | 959 | 1012 | 958 | 55 | Passing |
 | `Gemspec/DependencyVersion` | Mismatch | 45 | 0 | 0 | 45 | No |
 | `Style/FormatStringToken` | Mismatch | 7662 | 7619 | 7618 | 45 | Passing |
-| `Style/StringHashKeys` | Mismatch | 131603 | 131591 | 131575 | 44 | Passing |
 | `Lint/ErbNewArguments` | Mismatch | 46 | 8 | 8 | 38 | No |
 | `Gemspec/AttributeAssignment` | Mismatch | 37 | 0 | 0 | 37 | No |
 | `Style/Semicolon` | Mismatch | 2726 | 2692 | 2692 | 34 | No |
 | `Layout/ClosingParenthesisIndentation` | Mismatch | 341 | 372 | 340 | 33 | No |
 | `Style/ItBlockParameter` | Mismatch | 209 | 240 | 208 | 33 | No |
+| `Style/StringHashKeys` | Mismatch | 131615 | 131591 | 131587 | 32 | Passing |
 | `Style/ClassMethods` | Mismatch | 36 | 45 | 25 | 31 | Passing |
 | `Lint/SelfAssignment` | Mismatch | 48 | 18 | 18 | 30 | Passing |
 | `Lint/SuppressedExceptionInNumberConversion` | Mismatch | 34 | 4 | 4 | 30 | Passing |
@@ -41,12 +41,12 @@ nonzero gap because its message, severity, path, or source range differs.
 | `Style/CommentAnnotation` | Mismatch | 564 | 544 | 543 | 22 | No |
 | `Style/RedundantCapitalW` | Mismatch | 55 | 35 | 34 | 22 | Passing |
 | `Style/CaseLikeIf` | Mismatch | 60 | 52 | 46 | 20 | Passing |
+| `Style/SpecialGlobalVars` | Mismatch | 539 | 519 | 519 | 20 | No |
+| `Layout/EmptyLinesAroundExceptionHandlingKeywords` | Mismatch | 207 | 188 | 188 | 19 | Passing |
 | `Lint/NonAtomicFileOperation` | Mismatch | 258 | 259 | 249 | 19 | Passing |
+| `Migration/DepartmentName` | Mismatch | 18 | 1 | 0 | 19 | No |
 | `Naming/RescuedExceptionsVariableName` | Mismatch | 1178 | 1195 | 1177 | 19 | Passing |
-| `Layout/EmptyLinesAroundExceptionHandlingKeywords` | Mismatch | 206 | 188 | 188 | 18 | Passing |
 | `Lint/SharedMutableDefault` | Mismatch | 23 | 11 | 8 | 18 | No |
-| `Migration/DepartmentName` | Mismatch | 17 | 1 | 0 | 18 | No |
-| `Style/SpecialGlobalVars` | Mismatch | 537 | 519 | 519 | 18 | No |
 | `Lint/ShadowedException` | Mismatch | 22 | 39 | 22 | 17 | Passing |
 | `Layout/IndentationStyle` | Mismatch | 7 | 22 | 7 | 15 | Passing |
 | `Layout/SpaceAfterMethodName` | Mismatch | 15 | 1 | 1 | 14 | Passing |
@@ -65,22 +65,22 @@ nonzero gap because its message, severity, path, or source range differs.
 | `Style/DirEmpty` | Mismatch | 12 | 1 | 1 | 11 | Passing |
 | `Style/RedundantStringEscape` | Mismatch | 1864 | 1875 | 1864 | 11 | No |
 | `Lint/BigDecimalNew` | Mismatch | 10 | 0 | 0 | 10 | No |
+| `Lint/ConstantOverwrittenInRescue` | Mismatch | 10 | 0 | 0 | 10 | Passing |
 | `Style/ColonMethodDefinition` | Mismatch | 11 | 1 | 1 | 10 | Passing |
 | `Style/SlicingWithRange` | Mismatch | 309 | 309 | 304 | 10 | No |
 | `Layout/SpaceAroundKeyword` | Mismatch | 237 | 232 | 230 | 9 | Passing |
-| `Lint/ConstantOverwrittenInRescue` | Mismatch | 9 | 0 | 0 | 9 | Passing |
 | `Layout/EmptyComment` | Mismatch | 105 | 99 | 98 | 8 | Passing |
 | `Layout/EmptyLinesAfterModuleInclusion` | Mismatch | 1032 | 1024 | 1024 | 8 | Passing |
 | `Layout/SpaceBeforeFirstArg` | Mismatch | 61 | 61 | 57 | 8 | No |
 | `Lint/EmptyBlock` | Mismatch | 1633 | 1639 | 1632 | 8 | Passing |
 | `Lint/EnsureReturn` | Mismatch | 7 | 1 | 0 | 8 | No |
+| `Naming/InclusiveLanguage` | Mismatch | 476 | 480 | 474 | 8 | Passing |
 | `Style/CombinableDefined` | Mismatch | 11 | 3 | 3 | 8 | Passing |
 | `Style/PercentQLiterals` | Mismatch | 74 | 82 | 74 | 8 | Passing |
 | `Layout/BlockAlignment` | Mismatch | 218 | 215 | 213 | 7 | Passing |
 | `Lint/DuplicateSetElement` | Mismatch | 9 | 2 | 2 | 7 | Passing |
 | `Lint/LambdaWithoutLiteralBlock` | Mismatch | 7 | 0 | 0 | 7 | No |
 | `Metrics/ParameterLists` | Mismatch | 1551 | 1558 | 1551 | 7 | Passing |
-| `Naming/InclusiveLanguage` | Mismatch | 475 | 480 | 474 | 7 | Passing |
 | `Style/OptionalArguments` | Mismatch | 23 | 16 | 16 | 7 | No |
 | `Style/SafeNavigation` | Mismatch | 1174 | 1167 | 1167 | 7 | Passing |
 | `Style/TrivialAccessors` | Mismatch | 151 | 152 | 148 | 7 | No |

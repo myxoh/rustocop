@@ -78,12 +78,23 @@ def source_windows(source, target_line)
   end.uniq << source
 end
 
-def slug(cop, kind)
-  "pending/#{cop.downcase.tr('/', '_').gsub(/[^a-z0-9_]+/, '_')}_#{kind}.rb"
+def slug(cop, kind, occupied)
+  stem = "#{cop.downcase.tr('/', '_').gsub(/[^a-z0-9_]+/, '_')}_#{kind}"
+  sequence = 1
+  loop do
+    suffix = sequence == 1 ? "" : "_#{sequence}"
+    candidate = "pending/#{stem}#{suffix}.rb"
+    return candidate unless occupied.include?(candidate)
+
+    sequence += 1
+  end
 end
 
 project_metadata = Rustocop::ProjectCorpus::PROJECTS.to_h { |project| [project.fetch("name"), project] }
 existing_rows = File.readlines(MANIFEST, chomp: true).drop(1).map { |line| line.split("\t", 7) }
+promoted_files = File.readlines(FIXTURE_ROOT.join("manifest.tsv"), chomp: true)
+  .drop(1)
+  .map { |line| line.split("\t", 5).fetch(1) }
 if options[:refresh_invalid]
   existing_rows.reject! do |row|
     cop, file = row.values_at(0, 1)
@@ -156,11 +167,13 @@ workers.each(&:join)
 
 new_rows = []
 FileUtils.mkdir_p(FIXTURE_ROOT.join("pending"))
+occupied = (promoted_files + existing_rows.map { |row| row.fetch(1) }).to_h { |file| [file, true] }
 results.sort.each do |(cop, kind), isolated|
   next unless isolated
 
   candidate, project, source_path, source = isolated
-  file = slug(cop, kind)
+  file = slug(cop, kind, occupied)
+  occupied[file] = true
   FIXTURE_ROOT.join(file).write(source)
   new_rows << [
     cop, file, project.fetch("repository"), project.fetch("revision"), source_path, kind
