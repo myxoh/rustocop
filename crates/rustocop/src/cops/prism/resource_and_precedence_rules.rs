@@ -111,6 +111,12 @@ fn keyword_arguments_merging(node: &CallNode<'_>, context: &mut CopContext<'_, '
         || context
             .parent()
             .is_none_or(|parent| parent.as_assoc_splat_node().is_none())
+        || context
+            .ancestors()
+            .iter()
+            .rev()
+            .nth(2)
+            .is_none_or(|ancestor| ancestor.as_call_node().is_none())
     {
         return;
     }
