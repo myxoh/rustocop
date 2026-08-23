@@ -3,7 +3,7 @@ use super::*;
 define_cops! {
     EmptyComment => "Layout/EmptyComment" => source(empty_comment),
     EmptyLineAfterMagicComment => "Layout/EmptyLineAfterMagicComment" => source(empty_line_after_magic_comment),
-    SpaceAroundEqualsInParameterDefault => "Layout/SpaceAroundEqualsInParameterDefault" => source(space_around_parameter_equals),
+    SpaceAroundEqualsInParameterDefault => "Layout/SpaceAroundEqualsInParameterDefault" => node(as_optional_parameter_node, space_around_parameter_equals),
     SpaceInLambdaLiteral => "Layout/SpaceInLambdaLiteral" => node(as_lambda_node, space_in_lambda_literal),
     TrailingEmptyLines => "Layout/TrailingEmptyLines" => source(trailing_empty_lines),
     TrailingBodyOnMethodDefinition => "Style/TrailingBodyOnMethodDefinition" => node(as_def_node, trailing_method_body),
@@ -178,41 +178,34 @@ fn space_in_lambda_literal(
     }
 }
 
-fn space_around_parameter_equals(context: &mut CopContext<'_, '_>) {
+fn space_around_parameter_equals(
+    node: &ruby_prism::OptionalParameterNode<'_>,
+    context: &mut CopContext<'_, '_>,
+) {
     let use_space = context.policy().enforced_style("space") == "space";
-    for (offset, line) in context.source_file().lines() {
-        let trimmed = line.trim_start();
-        if !trimmed.starts_with("def ") || !line.contains('=') {
-            continue;
-        }
-        for (at, _) in line.match_indices('=') {
-            if line.as_bytes().get(at.wrapping_sub(1)) == Some(&b'=')
-                || line.as_bytes().get(at + 1) == Some(&b'=')
-            {
-                continue;
-            }
-            let left_space = at > 0 && line.as_bytes()[at - 1] == b' ';
-            let right_space = line.as_bytes().get(at + 1) == Some(&b' ');
-            if use_space && (!left_space || !right_space) {
-                let start = at - usize::from(left_space);
-                let end = at + 1 + usize::from(right_space);
-                context.replace(
-                    "Surrounding space missing in default value assignment.",
-                    offset + start..offset + end,
-                    offset + start..offset + end,
-                    " = ",
-                );
-            } else if !use_space && (left_space || right_space) {
-                let start = at - usize::from(left_space);
-                let end = at + 1 + usize::from(right_space);
-                context.replace(
-                    "Surrounding space detected in default value assignment.",
-                    offset + start..offset + end,
-                    offset + start..offset + end,
-                    "=",
-                );
-            }
-        }
+    let operator = node.operator_loc();
+    let at = operator.start_offset();
+    let source = context.source().as_bytes();
+    let left_space = at > 0 && source[at - 1] == b' ';
+    let right_space = source.get(operator.end_offset()) == Some(&b' ');
+    if use_space && (!left_space || !right_space) {
+        let range = at - usize::from(left_space)
+            ..operator.end_offset() + usize::from(right_space);
+        context.replace(
+            "Surrounding space missing in default value assignment.",
+            range.clone(),
+            range,
+            " = ",
+        );
+    } else if !use_space && (left_space || right_space) {
+        let range = at - usize::from(left_space)
+            ..operator.end_offset() + usize::from(right_space);
+        context.replace(
+            "Surrounding space detected in default value assignment.",
+            range.clone(),
+            range,
+            "=",
+        );
     }
 }
 
