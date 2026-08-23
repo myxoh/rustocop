@@ -264,6 +264,12 @@ fn predicate_return_kind(node: &Node<'_>, wayward: &[String]) -> PredicateReturn
         return PredicateReturn::Super;
     }
     if let Some(call) = node.as_call_node() {
+        if call
+            .block()
+            .is_some_and(|block| block.as_block_node().is_some())
+        {
+            return PredicateReturn::Unknown;
+        }
         let name = call.name().as_slice();
         let boolean = matches!(
             name,
