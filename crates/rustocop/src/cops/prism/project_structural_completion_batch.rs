@@ -495,24 +495,24 @@ fn empty_after_multiline_condition(node: &Node<'_>, context: &mut CopContext<'_,
             .if_keyword_loc()
             .is_some_and(|keyword| keyword.start_offset() != condition.location().start_offset());
         if !modifier || modifier_has_following_statement(node, context) {
-            check_multiline_condition(&predicate, &predicate, true, context);
+            check_multiline_condition(&predicate, predicate_range(&predicate), true, context);
         }
     } else if let Some(condition) = node.as_unless_node() {
         let predicate = condition.predicate();
         let modifier =
             condition.keyword_loc().start_offset() != condition.location().start_offset();
         if !modifier || modifier_has_following_statement(node, context) {
-            check_multiline_condition(&predicate, &predicate, true, context);
+            check_multiline_condition(&predicate, predicate_range(&predicate), true, context);
         }
     } else if let Some(condition) = node.as_while_node() {
         let predicate = condition.predicate();
         if !condition.is_begin_modifier() || modifier_has_following_statement(node, context) {
-            check_multiline_condition(&predicate, &predicate, true, context);
+            check_multiline_condition(&predicate, predicate_range(&predicate), true, context);
         }
     } else if let Some(condition) = node.as_until_node() {
         let predicate = condition.predicate();
         if !condition.is_begin_modifier() || modifier_has_following_statement(node, context) {
-            check_multiline_condition(&predicate, &predicate, true, context);
+            check_multiline_condition(&predicate, predicate_range(&predicate), true, context);
         }
     } else if let Some(branch) = node.as_when_node() {
         let conditions = branch.conditions().iter().collect::<Vec<_>>();
@@ -521,7 +521,13 @@ fn empty_after_multiline_condition(node: &Node<'_>, context: &mut CopContext<'_,
                 first.location().start_offset(),
                 last.location().end_offset(),
             ) {
-                check_multiline_condition(last, &branch.as_node(), false, context);
+                let location = branch.location();
+                check_multiline_condition(
+                    last,
+                    location.start_offset()..location.end_offset(),
+                    false,
+                    context,
+                );
             }
         }
     } else if let Some(rescue) = node.as_rescue_node() {
@@ -533,7 +539,12 @@ fn empty_after_multiline_condition(node: &Node<'_>, context: &mut CopContext<'_,
                 first.location().start_offset(),
                 last.location().end_offset(),
             ) {
-                check_multiline_condition(last, &rescue.as_node(), false, context);
+                let start = rescue.keyword_loc().start_offset();
+                let end = rescue.statements().map_or_else(
+                    || rescue.location().end_offset(),
+                    |statements| statements.location().end_offset(),
+                );
+                check_multiline_condition(last, start..end, false, context);
             }
         }
     }
@@ -547,12 +558,22 @@ fn modifier_has_following_statement(node: &Node<'_>, context: &CopContext<'_, '_
         .lines()
         .map(str::trim)
         .find(|line| !line.is_empty() && !line.starts_with('#'))
-        .is_some_and(|line| line != "end")
+        .is_some_and(|line| {
+            !matches!(
+                line.split_whitespace().next(),
+                Some("end" | "else" | "elsif" | "rescue" | "ensure" | "when")
+            )
+        })
+}
+
+fn predicate_range(node: &Node<'_>) -> std::ops::Range<usize> {
+    let location = node.location();
+    location.start_offset()..location.end_offset()
 }
 
 fn check_multiline_condition(
     condition_end: &Node<'_>,
-    offense: &Node<'_>,
+    offense: std::ops::Range<usize>,
     require_multiline_node: bool,
     context: &mut CopContext<'_, '_>,
 ) {
@@ -569,7 +590,7 @@ fn check_multiline_condition(
     }
     context.insert(
         "Use empty line after multiline condition.",
-        offense.location().start_offset()..offense.location().end_offset(),
+        offense,
         condition_line.end,
         "\n",
     );
