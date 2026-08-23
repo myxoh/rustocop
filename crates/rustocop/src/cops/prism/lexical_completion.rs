@@ -51,7 +51,7 @@ fn redundant_heredoc_delimiter_quotes(context: &mut CopContext<'_, '_>) {
         if body.contains("#{")
             || body.contains("#@")
             || body.contains("#$")
-            || body.lines().any(|line| line.ends_with('\\'))
+            || body.contains('\\')
         {
             search_from = close + 1;
             continue;
