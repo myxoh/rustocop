@@ -248,19 +248,7 @@ fn class_structure(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
                 element.category, expected[previous_index]
             );
             let location = element.node.location();
-            let offense = if element.node.as_constant_write_node().is_some()
-                || element.node.as_constant_path_write_node().is_some()
-            {
-                let line = context.source_file().line_range(location.start_offset());
-                let indentation = context.source()[line.clone()].len()
-                    - context.source()[line.clone()].trim_start().len();
-                let end = line.end.saturating_sub(usize::from(
-                    context.source().as_bytes().get(line.end.saturating_sub(1)) == Some(&b'\n'),
-                ));
-                line.start + indentation..end
-            } else {
-                location.start_offset()..location.end_offset()
-            };
+            let offense = location.start_offset()..location.end_offset();
             if element.correctable {
                 let inline_modifier_group = elements.len() >= 4
                     && elements.iter().all(|element| {
