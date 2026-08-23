@@ -9,7 +9,6 @@ declare_source_cops! {
     AddRuntimeDependency => "Gemspec/AddRuntimeDependency" => add_runtime_dependency,
     ArrayIntersect => "Style/ArrayIntersectWithSingleElement" => array_intersect,
     ClassAndModuleCamelCase => "Naming/ClassAndModuleCamelCase" => camel_case,
-    ArrayCoercion => "Style/ArrayCoercion" => array_coercion,
     ClassMethods => "Style/ClassMethods" => class_methods,
     RedundantCapitalW => "Style/RedundantCapitalW" => redundant_capital_w,
     DuplicateElsifCondition => "Lint/DuplicateElsifCondition" => duplicate_elsif,
@@ -122,39 +121,6 @@ fn camel_case(source: &str, context: &mut Reporter<'_>) {
             context.report(
                 "Use CamelCase for classes and modules.",
                 offset + name_start..offset + name_start + name.len(),
-            );
-        }
-    }
-}
-
-fn array_coercion(source: &str, context: &mut Reporter<'_>) {
-    for start in find_all(source, "[*") {
-        let Some(end_rel) = source[start + 2..].find(']') else {
-            continue;
-        };
-        let end = start + 2 + end_rel + 1;
-        let value = &source[start + 2..end - 1];
-        if !value.contains(',') {
-            context.replace(
-                format!("Use `Array({value})` instead of `[*{value}]`."),
-                start..end,
-                start..end,
-                format!("Array({value})"),
-            );
-        }
-    }
-    for (offset, line) in source_lines(source) {
-        let Some((left, rest)) = line.split_once(" = [") else {
-            continue;
-        };
-        let value = left.trim();
-        let pattern = format!("] unless {value}.is_a?(Array)");
-        if rest == format!("{value}{pattern}") {
-            context.replace(
-                format!("Use `Array({value})` instead of explicit `Array` check."),
-                offset..offset + line.len(),
-                offset..offset + line.len(),
-                format!("{value} = Array({value})"),
             );
         }
     }

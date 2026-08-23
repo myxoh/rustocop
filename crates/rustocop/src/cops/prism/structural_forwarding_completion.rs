@@ -1,8 +1,69 @@
 use super::*;
 
 define_cops! {
+    ArrayCoercion => "Style/ArrayCoercion" => any_node(array_coercion),
     MultipleComparison => "Style/MultipleComparison" => node(as_or_node, multiple_comparison),
     ExplicitBlockArgument => "Style/ExplicitBlockArgument" => source(explicit_block_argument),
+}
+
+fn array_coercion(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
+    if let Some(array) = node.as_array_node() {
+        if array.opening_loc().is_none_or(|opening| opening.as_slice() != b"[")
+            || array.elements().len() != 1
+        {
+            return;
+        }
+        let Some(argument) = array
+            .elements()
+            .iter()
+            .next()
+            .and_then(|element| element.as_splat_node())
+            .and_then(|splat| splat.expression())
+        else {
+            return;
+        };
+        let argument_source = context.source_file().node(&argument);
+        context.replace(
+            format!("Use `Array({argument_source})` instead of `[*{argument_source}]`."),
+            array.location(),
+            array.location(),
+            format!("Array({argument_source})"),
+        );
+        return;
+    }
+
+    let Some(unless_node) = node.as_unless_node() else { return };
+    return_if!(unless_node.end_keyword_loc().is_some() || unless_node.else_clause().is_some());
+    let Some(predicate) = unless_node.predicate().as_call_node() else { return };
+    return_unless!(predicate.name().as_slice() == b"is_a?");
+    let Some(checked) = predicate.receiver().and_then(|receiver| receiver.as_local_variable_read_node()) else { return };
+    let Some(arguments) = predicate.arguments() else { return };
+    let mut arguments = arguments.arguments().iter();
+    let Some(array_constant) = arguments.next() else { return };
+    return_unless!(arguments.next().is_none() && node_is_root_constant(&array_constant, b"Array"));
+    let Some(assignment) = unless_node
+        .statements()
+        .filter(|statements| statements.body().len() == 1)
+        .and_then(|statements| statements.body().first())
+        .and_then(|body| body.as_local_variable_write_node())
+    else { return };
+    let Some(wrapped) = assignment.value().as_array_node() else { return };
+    return_unless!(wrapped.opening_loc().is_some() && wrapped.elements().len() == 1);
+    let Some(wrapped_variable) = wrapped
+        .elements()
+        .iter()
+        .next()
+        .and_then(|element| element.as_local_variable_read_node())
+    else { return };
+    let name = checked.name().as_slice();
+    return_unless!(assignment.name().as_slice() == name && wrapped_variable.name().as_slice() == name);
+    let name = String::from_utf8_lossy(name);
+    context.replace(
+        format!("Use `Array({name})` instead of explicit `Array` check."),
+        unless_node.location(),
+        unless_node.location(),
+        format!("{name} = Array({name})"),
+    );
 }
 
 fn multiple_comparison(node: &ruby_prism::OrNode<'_>, context: &mut CopContext<'_, '_>) {
