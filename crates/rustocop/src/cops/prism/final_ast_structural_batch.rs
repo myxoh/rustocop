@@ -3130,6 +3130,11 @@ struct ForwardingUseCollector {
 }
 
 impl ForwardingUseCollector {
+    fn record_reference(&mut self, name: &[u8], offset: usize) {
+        let name = String::from_utf8_lossy(name).into_owned();
+        self.reads.entry(name).or_default().push(offset);
+    }
+
     fn collect_arguments(&mut self, arguments: Option<ruby_prism::ArgumentsNode<'_>>) {
         let Some(arguments) = arguments else { return };
         for argument in arguments.arguments().iter() {
@@ -3213,12 +3218,40 @@ impl<'pr> Visit<'pr> for ForwardingUseCollector {
     }
 
     fn visit_local_variable_write_node(&mut self, node: &ruby_prism::LocalVariableWriteNode<'pr>) {
-        let name = String::from_utf8_lossy(node.name().as_slice()).into_owned();
-        self.reads
-            .entry(name)
-            .or_default()
-            .push(node.name_loc().start_offset());
+        self.record_reference(node.name().as_slice(), node.name_loc().start_offset());
         ruby_prism::visit_local_variable_write_node(self, node);
+    }
+
+    fn visit_local_variable_target_node(
+        &mut self,
+        node: &ruby_prism::LocalVariableTargetNode<'pr>,
+    ) {
+        self.record_reference(node.name().as_slice(), node.location().start_offset());
+        ruby_prism::visit_local_variable_target_node(self, node);
+    }
+
+    fn visit_local_variable_or_write_node(
+        &mut self,
+        node: &ruby_prism::LocalVariableOrWriteNode<'pr>,
+    ) {
+        self.record_reference(node.name().as_slice(), node.name_loc().start_offset());
+        ruby_prism::visit_local_variable_or_write_node(self, node);
+    }
+
+    fn visit_local_variable_and_write_node(
+        &mut self,
+        node: &ruby_prism::LocalVariableAndWriteNode<'pr>,
+    ) {
+        self.record_reference(node.name().as_slice(), node.name_loc().start_offset());
+        ruby_prism::visit_local_variable_and_write_node(self, node);
+    }
+
+    fn visit_local_variable_operator_write_node(
+        &mut self,
+        node: &ruby_prism::LocalVariableOperatorWriteNode<'pr>,
+    ) {
+        self.record_reference(node.name().as_slice(), node.name_loc().start_offset());
+        ruby_prism::visit_local_variable_operator_write_node(self, node);
     }
 }
 
