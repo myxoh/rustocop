@@ -17,20 +17,27 @@ fn assignment_indentation(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
     let source = context.source();
     let node_start = node.location().start_offset();
     let value_start = value.location().start_offset();
-    let node_line_start = source[..node_start].rfind('\n').map_or(0, |at| at + 1);
+    let Some(operator) = source[node_start..value_start].rfind('=') else {
+        return;
+    };
+    let operator = node_start + operator;
+    let assignment_line_start = source[..operator].rfind('\n').map_or(0, |at| at + 1);
     let value_line_start = source[..value_start].rfind('\n').map_or(0, |at| at + 1);
-    let node_line_end = source[node_line_start..]
+    let assignment_line_end = source[assignment_line_start..]
         .find('\n')
-        .map_or(source.len(), |at| node_line_start + at);
-    if node_line_start == value_line_start
+        .map_or(source.len(), |at| assignment_line_start + at);
+    if assignment_line_start == value_line_start
         || !source[node_start..value_start].trim_end().ends_with('=')
-        || !source[node_line_start..node_line_end].is_ascii()
+        || !source[assignment_line_start..assignment_line_end].is_ascii()
+        || assignment_is_condition(node, context.ancestors())
     {
         return;
     }
     let width = context.config_usize("IndentationWidth", 2);
-    let base = source[node_line_start..node_line_end].len()
-        - source[node_line_start..node_line_end].trim_start().len();
+    let base = source[assignment_line_start..assignment_line_end].len()
+        - source[assignment_line_start..assignment_line_end]
+            .trim_start()
+            .len();
     let current = value_start - value_line_start;
     let expected = base + width;
     if current == expected {
@@ -42,6 +49,27 @@ fn assignment_indentation(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
         value_line_start..value_start,
         " ".repeat(expected),
     );
+}
+
+fn assignment_is_condition(node: &Node<'_>, ancestors: &[Node<'_>]) -> bool {
+    let location = node.location();
+    ancestors.iter().any(|ancestor| {
+        let predicate = if let Some(conditional) = ancestor.as_if_node() {
+            Some(conditional.predicate())
+        } else if let Some(conditional) = ancestor.as_unless_node() {
+            Some(conditional.predicate())
+        } else if let Some(loop_node) = ancestor.as_while_node() {
+            Some(loop_node.predicate())
+        } else if let Some(loop_node) = ancestor.as_until_node() {
+            Some(loop_node.predicate())
+        } else {
+            None
+        };
+        predicate.is_some_and(|predicate| {
+            predicate.location().start_offset() <= location.start_offset()
+                && location.end_offset() <= predicate.location().end_offset()
+        })
+    })
 }
 
 fn assignment_value<'pr>(node: &Node<'pr>) -> Option<Node<'pr>> {
