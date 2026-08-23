@@ -7,7 +7,7 @@ define_cops! {
     FirstParameterIndentation => "Layout/FirstParameterIndentation" => source(first_parameter_indentation),
     SpaceBeforeBrackets => "Layout/SpaceBeforeBrackets" => source(space_before_brackets),
     SpaceBeforeFirstArg => "Layout/SpaceBeforeFirstArg" => call(space_before_first_arg),
-    SpaceInsideStringInterpolation => "Layout/SpaceInsideStringInterpolation" => source(space_inside_string_interpolation),
+    SpaceInsideStringInterpolation => "Layout/SpaceInsideStringInterpolation" => node(as_embedded_statements_node, space_inside_string_interpolation),
 }
 
 fn assignment_indentation(context: &mut CopContext<'_, '_>) {
@@ -309,81 +309,75 @@ fn aligned_first_argument(context: &CopContext<'_, '_>, argument: &Node<'_>) -> 
             .is_some_and(aligns)
 }
 
-fn space_inside_string_interpolation(context: &mut CopContext<'_, '_>) {
+fn space_inside_string_interpolation(
+    node: &ruby_prism::EmbeddedStatementsNode<'_>,
+    context: &mut CopContext<'_, '_>,
+) {
     let source = context.source();
     let spaced = context.policy().enforced_style("no_space") == "space";
-    let mut search = 0;
-    while let Some(relative) = source[search..].find("#{") {
-        let opening = search + relative;
-        let Some(relative_close) = source[opening + 2..].find('}') else {
-            break;
-        };
-        let closing = opening + 2 + relative_close;
-        let inner = &source[opening + 2..closing];
-        if inner.is_empty() {
-            search = closing + 1;
-            continue;
-        }
-        if inner.contains('\n') {
-            search = closing + 1;
-            continue;
-        }
-        let leading = inner.len() - inner.trim_start_matches([' ', '\t']).len();
-        let trailing = inner.len() - inner.trim_end_matches([' ', '\t']).len();
-        if spaced {
-            if leading == 0 {
-                let mut edits = vec![(opening + 2..opening + 2, " ".to_string())];
-                if trailing == 0 {
-                    edits.push((closing..closing, " ".to_string()));
-                }
-                context.replace_many(
-                    "Use space inside string interpolation.",
-                    opening..opening + 2,
-                    edits,
-                );
-            }
+    let location = node.location();
+    let opening = location.start_offset();
+    let closing = location.end_offset().saturating_sub(1);
+    let Some(inner) = source.get(opening + 2..closing) else {
+        return;
+    };
+    if inner.trim().is_empty() || inner.contains('\n') {
+        return;
+    }
+    let leading = inner.len() - inner.trim_start_matches([' ', '\t']).len();
+    let trailing = inner.len() - inner.trim_end_matches([' ', '\t']).len();
+    if spaced {
+        if leading == 0 {
+            let mut edits = vec![(opening + 2..opening + 2, " ".to_string())];
             if trailing == 0 {
-                if leading == 0 {
-                    context.replace_indirectly(
-                        "Use space inside string interpolation.",
-                        closing..(closing + 1).min(context.source().len()),
-                        closing..closing,
-                        "",
-                    );
-                } else {
-                    context.insert(
-                        "Use space inside string interpolation.",
-                        closing..(closing + 1).min(context.source().len()),
-                        closing,
-                        " ",
-                    );
-                }
+                edits.push((closing..closing, " ".to_string()));
             }
-        } else if leading > 0 || trailing > 0 {
-            let message = "Do not use space inside string interpolation.";
-            if leading > 0 {
-                context.replace(
-                    message,
-                    opening + 2..opening + 2 + leading,
-                    opening + 2..closing,
-                    inner.trim(),
+            context.replace_many(
+                "Use space inside string interpolation.",
+                opening..opening + 2,
+                edits,
+            );
+        }
+        if trailing == 0 {
+            if leading == 0 {
+                context.replace_indirectly(
+                    "Use space inside string interpolation.",
+                    closing..(closing + 1).min(context.source().len()),
+                    closing..closing,
+                    "",
                 );
-                if trailing > 0 {
-                    context.replace_indirectly(
-                        message,
-                        closing - trailing..closing,
-                        closing - trailing..closing,
-                        "",
-                    );
-                }
             } else {
-                context.remove(
-                    message,
-                    closing - trailing..closing,
-                    closing - trailing..closing,
+                context.insert(
+                    "Use space inside string interpolation.",
+                    closing..(closing + 1).min(context.source().len()),
+                    closing,
+                    " ",
                 );
             }
         }
-        search = closing + 1;
+    } else if leading > 0 || trailing > 0 {
+        let message = "Do not use space inside string interpolation.";
+        if leading > 0 {
+            context.replace(
+                message,
+                opening + 2..opening + 2 + leading,
+                opening + 2..closing,
+                inner.trim(),
+            );
+            if trailing > 0 {
+                context.replace_indirectly(
+                    message,
+                    closing - trailing..closing,
+                    closing - trailing..closing,
+                    "",
+                );
+            }
+        } else {
+            context.remove(
+                message,
+                closing - trailing..closing,
+                closing - trailing..closing,
+            );
+        }
     }
 }
