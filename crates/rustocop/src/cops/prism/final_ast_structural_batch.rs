@@ -2133,13 +2133,17 @@ fn inspect_access_modifier_statements(
                 && call.block().is_none()
                 && matches!(method.as_str(), "private" | "protected" | "public");
             let private_class = call.receiver().is_none()
-                && argument_count(&call) == 0
                 && call.block().is_none()
                 && method == "private_class_method";
             if bare || private_class {
                 let location = call.location().start_offset()..call.location().end_offset();
-                if root || private_class {
+                if root || private_class && argument_count(&call) == 0 {
                     report_useless_modifier(&method, location, context);
+                    continue;
+                }
+                if private_class {
+                    *visibility = "public".to_string();
+                    *unused = None;
                     continue;
                 }
                 if method == *visibility {
@@ -2201,8 +2205,7 @@ fn inspect_access_modifier_statements(
 
 fn access_node_defines_instance_method(node: &Node<'_>, context: &CopContext<'_, '_>) -> bool {
     if let Some(definition) = node.as_def_node() {
-        return definition.receiver().is_none()
-            || context.related_config_value("AllCops", "ParserEngine") == Some("parser_prism");
+        return definition.receiver().is_none();
     }
     if node.as_class_node().is_some()
         || node.as_module_node().is_some()
