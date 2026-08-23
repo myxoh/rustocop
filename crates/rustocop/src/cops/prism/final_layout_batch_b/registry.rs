@@ -112,9 +112,13 @@ fn percent_literal_delimiter_spacing(context: &mut CopContext<'_, '_>) {
 
     let source = context.source();
     let bytes = source.as_bytes();
+    let literal_starts = ["%i", "%I", "%w", "%W", "%x"]
+        .into_iter()
+        .flat_map(|prefix| context.source_file().code_offsets(prefix))
+        .collect::<std::collections::HashSet<_>>();
     let mut start = 0;
     while start + 2 < bytes.len() {
-        if bytes[start] != b'%' || !matches!(bytes[start + 1], b'i' | b'I' | b'w' | b'W' | b'x') {
+        if !literal_starts.contains(&start) {
             start += 1;
             continue;
         }
