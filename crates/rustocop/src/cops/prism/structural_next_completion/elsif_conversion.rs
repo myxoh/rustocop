@@ -122,6 +122,10 @@ struct IfInsideElseCollector {
 
 impl<'pr> Visit<'pr> for IfInsideElseCollector {
     fn visit_if_node(&mut self, node: &ruby_prism::IfNode<'pr>) {
+        if node.if_keyword_loc().is_none() {
+            ruby_prism::visit_if_node(self, node);
+            return;
+        }
         if let Some(else_clause) = node.subsequent().and_then(|branch| branch.as_else_node()) {
             if let Some(nested) = only_statement(else_clause.statements()).and_then(|body| body.as_if_node()) {
                 if let Some(keyword) = nested
