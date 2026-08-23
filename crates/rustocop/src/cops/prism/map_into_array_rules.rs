@@ -35,11 +35,11 @@ impl MapIntoArrayRule<'_, '_, '_> {
         return_if!(assignment.is_none() && tap.is_none());
         return_if!(self.ancestors().iter().any(|ancestor| {
             ancestor.as_array_node().is_some()
-                || ancestor.as_if_node().is_some()
-                || ancestor.as_unless_node().is_some()
                 || ancestor.as_case_node().is_some()
         }));
         if let Some(assignment) = assignment.as_ref() {
+            return_if!(self.source_file().indentation(assignment.range.start).len()
+                != self.source_file().indentation(each.location().start_offset()).len());
             return_if!(self.ancestors().iter().any(|ancestor| {
                 ancestor.as_block_node().is_some_and(|ancestor_block| {
                     ancestor_block.location().start_offset() != block.location().start_offset()
