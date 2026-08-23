@@ -954,19 +954,33 @@ struct NonAtomicCheck<'a> {
 
 fn non_atomic_existence_check(source: &str) -> Option<NonAtomicCheck<'_>> {
     let source = source.trim().trim_end_matches(')');
-    for (needle, label) in [
-        ("FileTest.exist?(", "FileTest.exist?"),
-        ("::FileTest.exist?(", "FileTest.exist?"),
-        ("FileTest.exists?(", "FileTest.exists?"),
-        ("::FileTest.exists?(", "FileTest.exists?"),
-        ("Dir.exist?(", "Dir.exist?"),
-        ("::Dir.exist?(", "Dir.exist?"),
+    for (receiver, method, label) in [
+        ("FileTest", "exist?", "FileTest.exist?"),
+        ("FileTest", "exists?", "FileTest.exists?"),
+        ("File", "exist?", "File.exist?"),
+        ("File", "exists?", "File.exists?"),
+        ("Dir", "exist?", "Dir.exist?"),
+        ("Dir", "exists?", "Dir.exists?"),
+        ("Shell", "exist?", "Shell.exist?"),
+        ("Shell", "exists?", "Shell.exists?"),
     ] {
-        if let Some(argument) = source.strip_prefix(needle) {
-            return Some(NonAtomicCheck {
-                label,
-                argument: argument.trim_end_matches(')').trim(),
-            });
+        let receiver_method = format!("{receiver}.{method}");
+        let Some(argument) = source
+            .trim_start_matches("::")
+            .strip_prefix(&receiver_method)
+        else {
+            continue;
+        };
+        let argument = argument.trim_start();
+        let argument = if let Some(argument) = argument.strip_prefix('(') {
+            argument.trim_end_matches(')').trim()
+        } else if !argument.is_empty() {
+            argument.trim()
+        } else {
+            continue;
+        };
+        if !argument.is_empty() {
+            return Some(NonAtomicCheck { label, argument });
         }
     }
     None
@@ -984,7 +998,7 @@ fn non_atomic_operation(source: &str) -> Option<NonAtomicOperation<'_>> {
     };
     let receiver_method = receiver_method.trim_start_matches("::");
     let (receiver, method) = receiver_method.split_once('.')?;
-    if !matches!(receiver, "FileUtils" | "Dir") {
+    if !matches!(receiver, "FileUtils" | "File" | "Dir") {
         return None;
     }
     let argument = arguments.split(',').next()?.trim();
@@ -993,7 +1007,7 @@ fn non_atomic_operation(source: &str) -> Option<NonAtomicOperation<'_>> {
         ("FileUtils", "mkdir") | ("Dir", "mkdir") => (NonAtomicKind::Create, Some("mkdir_p")),
         ("FileUtils", "makedirs" | "mkdir_p" | "mkpath") => (NonAtomicKind::AtomicCreate, None),
         (
-            "FileUtils",
+            "FileUtils" | "File",
             "remove" | "delete" | "unlink" | "remove_file" | "rm" | "rmdir" | "safe_unlink",
         ) => (NonAtomicKind::Remove, Some("rm_f")),
         ("FileUtils", "remove_dir" | "remove_entry" | "remove_entry_secure") => {
