@@ -106,11 +106,28 @@ fn file_open(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
 }
 
 fn keyword_arguments_merging(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
+    let keyword_hash = context
+        .ancestors()
+        .iter()
+        .rev()
+        .nth(1)
+        .and_then(Node::as_keyword_hash_node);
+    let splat_is_first = keyword_hash.is_some_and(|hash| {
+        hash.elements().iter().next().is_some_and(|element| {
+            element.as_assoc_splat_node().is_some_and(|splat| {
+                context.parent().is_some_and(|parent| {
+                    splat.location().start_offset() == parent.location().start_offset()
+                })
+            })
+        })
+    });
+
     if call_name(node) != b"merge"
         || node.arguments().is_none()
         || context
             .parent()
             .is_none_or(|parent| parent.as_assoc_splat_node().is_none())
+        || !splat_is_first
         || context
             .ancestors()
             .iter()
