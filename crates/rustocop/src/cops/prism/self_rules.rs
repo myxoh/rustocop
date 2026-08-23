@@ -174,7 +174,16 @@ fn local_name_conflicts(name: &[u8], offense_start: usize, context: &CopContext<
                 || block
                     .parameters()
                     .is_some_and(|parameters| {
-                        subtree_binds_name(&parameters, name, true, None)
+                        if parameters.as_block_parameters_node().is_none() {
+                            return false;
+                        }
+                        context
+                            .source_file()
+                            .node(&parameters)
+                            .split(|character: char| {
+                                !character.is_ascii_alphanumeric() && character != '_'
+                            })
+                            .any(|parameter| parameter.as_bytes() == name)
                     })
                 || block
                     .body()
