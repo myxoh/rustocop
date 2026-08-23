@@ -372,7 +372,9 @@ fn outer_scope_has_local(
         if outer.declarations.iter().any(|(declared, range)| {
             declared.as_slice() == name
                 && range.end < cutoff
-                && declaration_in_same_conditional_branch(range.start, cutoff, context)
+                && (context.related_config_value("AllCops", "ParserEngine")
+                    == Some("parser_prism")
+                    || declaration_in_same_conditional_branch(range.start, cutoff, context))
         }) {
             return true;
         }
@@ -382,7 +384,12 @@ fn outer_scope_has_local(
         declarations: Vec::new(),
     };
     let mut lexical_locals = Vec::new();
-    if let Some(definition) = context.ancestors().iter().find_map(Node::as_def_node) {
+    if let Some(definition) = context
+        .ancestors()
+        .iter()
+        .rev()
+        .find_map(Node::as_def_node)
+    {
         lexical_locals.extend(
             definition
                 .locals()
@@ -416,7 +423,8 @@ fn outer_scope_has_local(
     declarations_for_name.into_iter().any(|(_, range)| {
         range.start < cutoff
             && range.end < cutoff
-            && declaration_in_same_conditional_branch(range.start, cutoff, context)
+            && (context.related_config_value("AllCops", "ParserEngine") == Some("parser_prism")
+                || declaration_in_same_conditional_branch(range.start, cutoff, context))
     })
 }
 
@@ -555,6 +563,10 @@ fn shadowing_parameters(
                 String::from_utf8_lossy(parameter.name().as_slice()).into_owned(),
                 location.start_offset()..location.end_offset(),
             ));
+        } else if parameter.as_multi_target_node().is_some() {
+            let mut targets = ShadowingParameterTargets::default();
+            ruby_prism::Visit::visit(&mut targets, &parameter);
+            result.extend(targets.parameters);
         }
     }
     for parameter in parameters.optionals().iter() {
@@ -609,6 +621,24 @@ fn shadowing_parameters(
         }
     }
     result
+}
+
+#[derive(Default)]
+struct ShadowingParameterTargets {
+    parameters: Vec<(String, std::ops::Range<usize>)>,
+}
+
+impl<'pr> ruby_prism::Visit<'pr> for ShadowingParameterTargets {
+    fn visit_local_variable_target_node(
+        &mut self,
+        node: &ruby_prism::LocalVariableTargetNode<'pr>,
+    ) {
+        let location = node.location();
+        self.parameters.push((
+            String::from_utf8_lossy(node.name().as_slice()).into_owned(),
+            location.start_offset()..location.end_offset(),
+        ));
+    }
 }
 
 fn heredoc_case(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
