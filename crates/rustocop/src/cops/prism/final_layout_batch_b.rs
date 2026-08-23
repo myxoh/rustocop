@@ -1845,14 +1845,18 @@ fn operator_spacing(context: &mut CopContext<'_, '_>) {
             }
             if let Some(range) = literal_ranges
                 .iter()
-                .find(|range| {
-                    range.start <= absolute
-                        && absolute < range.end
-                        && !embedded_code_ranges
-                            .iter()
-                            .any(|embedded| embedded.start <= absolute && absolute < embedded.end)
-                })
+                .filter(|range| range.start <= absolute && absolute < range.end)
+                .min_by_key(|range| range.end - range.start)
             {
+                let containing_embedded = embedded_code_ranges
+                    .iter()
+                    .find(|embedded| embedded.start <= absolute && absolute < embedded.end);
+                if containing_embedded.is_some_and(|embedded| {
+                    range.start < embedded.start || embedded.end < range.end
+                }) {
+                    // The selected range is the enclosing interpolated literal,
+                    // while this offset is executable Ruby inside `#{...}`.
+                } else {
                 let next_embedded = embedded_code_ranges
                     .iter()
                     .filter(|embedded| {
@@ -1867,6 +1871,7 @@ fn operator_spacing(context: &mut CopContext<'_, '_>) {
                     .saturating_sub(line_offset)
                     .min(code.len());
                 continue;
+                }
             }
             if !code.is_char_boundary(index) {
                 index += 1;
@@ -2047,6 +2052,16 @@ fn unary_operator_offsets(source: &str) -> std::collections::HashSet<usize> {
         fn visit_block_argument_node(&mut self, node: &ruby_prism::BlockArgumentNode<'pr>) {
             self.0.insert(node.operator_loc().start_offset());
             ruby_prism::visit_block_argument_node(self, node);
+        }
+
+        fn visit_block_parameters_node(&mut self, node: &ruby_prism::BlockParametersNode<'pr>) {
+            if let Some(opening) = node.opening_loc() {
+                self.0.insert(opening.start_offset());
+            }
+            if let Some(closing) = node.closing_loc() {
+                self.0.insert(closing.start_offset());
+            }
+            ruby_prism::visit_block_parameters_node(self, node);
         }
 
         fn visit_call_node(&mut self, node: &ruby_prism::CallNode<'pr>) {
@@ -2369,22 +2384,73 @@ fn operator_alignment_is_allowed(
                 || layout.2 != current_lhs && (layout.3 == rhs_start || layout.1 == operator_end);
             leading_aligned && trailing_aligned
         })
-    }) || (matches!(operator, "|") || operator.ends_with('='))
-        && source
-            .as_bytes()
-            .get(line_offset)
-            .is_some_and(u8::is_ascii_whitespace)
-        && source.lines().any(|line| {
-            operator_layouts(line).into_iter().any(|layout| {
-                let different_width = layout.2 != current_lhs;
-                let leading_aligned = !leading_excess
-                    || layout.1 == operator_end
-                        && (operator.ends_with('=') || different_width);
-                let trailing_aligned = !trailing_excess
-                    || layout.3 == rhs_start && different_width;
-                leading_aligned && trailing_aligned
-            })
+    }) || alignment_table_is_allowed(
+        source,
+        line_offset,
+        operator_start,
+        operator_end,
+        leading_excess,
+        trailing_excess,
+        rhs_start,
+        operator,
+    )
+}
+
+fn alignment_table_is_allowed(
+    source: &str,
+    line_offset: usize,
+    operator_start: usize,
+    operator_end: usize,
+    leading_excess: bool,
+    trailing_excess: bool,
+    rhs_start: usize,
+    operator: &str,
+) -> bool {
+    if !matches!(operator, "|" | "<<") && !operator.ends_with('=') {
+        return false;
+    }
+    if !source
+        .as_bytes()
+        .get(line_offset)
+        .is_some_and(u8::is_ascii_whitespace)
+    {
+        return false;
+    }
+    let line_end = source[line_offset..]
+        .find('\n')
+        .map_or(source.len(), |end| line_offset + end);
+    let current_line = &source[line_offset..line_end];
+    let current_indent = current_line.len() - current_line.trim_start().len();
+    let first_aligned_operator = operator_layouts(current_line)
+        .into_iter()
+        .find(|layout| {
+            let candidate = &current_line[layout.0..layout.1];
+            candidate.ends_with('=') || matches!(candidate, "<<" | "|")
         })
+        .is_some_and(|layout| layout.0 == operator_start);
+    if operator.ends_with('=') && !first_aligned_operator {
+        return false;
+    }
+
+    source.lines().any(|line| {
+        if line == current_line || line.len() - line.trim_start().len() != current_indent {
+            return false;
+        }
+        operator_layouts(line).into_iter().any(|layout| {
+            let candidate = &line[layout.0..layout.1];
+            let candidate_lhs = line[..layout.2].trim_end().len();
+            let current_lhs = current_line[..operator_start]
+                .trim_end_matches(char::is_whitespace)
+                .len();
+            let different_width = candidate_lhs != current_lhs;
+            let compatible = candidate == operator
+                || operator.ends_with('=') && (candidate.ends_with('=') || candidate == "<<")
+                || operator == "<<" && candidate.ends_with('=');
+            let leading_aligned = !leading_excess || compatible && layout.1 == operator_end;
+            let trailing_aligned = !trailing_excess || different_width && layout.3 == rhs_start;
+            leading_aligned && trailing_aligned
+        })
+    })
 }
 
 fn operator_layouts(line: &str) -> Vec<(usize, usize, usize, usize)> {
