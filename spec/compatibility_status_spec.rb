@@ -52,7 +52,7 @@ RSpec.describe Rustocop::CompatibilityStatus do
   it "keeps intentionally-pending cops out of every active corpus" do
     actual = described_class.load(root: ROOT)
     pending = actual.intentionally_pending_cops
-    expect(pending.length).to eq(92)
+    expect(pending.length).to eq(94)
     expect(pending & actual.built_in_cops).to be_empty
 
     rust_source = File.read(File.join(ROOT, "crates/rustocop/src/cops/mod.rs"))

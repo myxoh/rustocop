@@ -162,7 +162,6 @@ fully_compatible_cops:
 - Lint/PercentSymbolArray
 - Lint/RaiseException
 - Lint/RandOne
-- Lint/RedundantCopDisableDirective
 - Lint/RedundantDirGlobSort
 - Lint/RedundantRegexpQuantifiers
 - Lint/RedundantRequireStatement
@@ -320,7 +319,6 @@ fully_compatible_cops:
 - Style/FileOpen
 - Style/FileRead
 - Style/FileTouch
-- Style/FileWrite
 - Style/FloatDivision
 - Style/For
 - Style/FormatString
