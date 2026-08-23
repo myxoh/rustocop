@@ -205,7 +205,11 @@ fn check_end_block(
     options: &InspectionConfig,
     offenses: &mut Vec<Offense>,
 ) {
-    if !options.cop_enabled("Style/EndBlock") || !trimmed.starts_with("END ") {
+    if !options.cop_enabled("Style/EndBlock")
+        || !trimmed
+            .strip_prefix("END")
+            .is_some_and(|tail| tail.trim_start().starts_with('{'))
+    {
         return;
     }
     push_offense(
