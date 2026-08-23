@@ -56,14 +56,66 @@ impl GuardClauseRule<'_, '_, '_> {
     fn check_ending_if(&mut self, node: &IfNode<'_>) {
         let Some(keyword) = node.if_keyword_loc() else { return };
         return_if!(keyword.as_slice() == b"elsif" || node.end_keyword_loc().is_none() || node.subsequent().is_some());
-        self.register_ending(keyword, node.end_keyword_loc().expect("normal conditional"), node.predicate(), node.statements(), "unless");
+        let end_keyword = node.end_keyword_loc().expect("normal conditional");
+        let condition = node.predicate();
+        let statements = node.statements();
+        return_if!(self.ending_accepted(&keyword, &end_keyword, &condition, statements.as_ref()));
+        self.register_ending(keyword, end_keyword, condition, statements, "unless");
         if let Some(body) = node.statements() { self.check_ending_body(body); }
     }
 
     fn check_ending_unless(&mut self, node: &UnlessNode<'_>) {
         return_if!(node.end_keyword_loc().is_none() || node.else_clause().is_some());
-        self.register_ending(node.keyword_loc(), node.end_keyword_loc().expect("normal conditional"), node.predicate(), node.statements(), "if");
+        let keyword = node.keyword_loc();
+        let end_keyword = node.end_keyword_loc().expect("normal conditional");
+        let condition = node.predicate();
+        let statements = node.statements();
+        return_if!(self.ending_accepted(&keyword, &end_keyword, &condition, statements.as_ref()));
+        self.register_ending(keyword, end_keyword, condition, statements, "if");
         if let Some(body) = node.statements() { self.check_ending_body(body); }
+    }
+
+    fn ending_accepted(
+        &self,
+        keyword: &ruby_prism::Location<'_>,
+        end_keyword: &ruby_prism::Location<'_>,
+        condition: &Node<'_>,
+        statements: Option<&StatementsNode<'_>>,
+    ) -> bool {
+        let condition_source = self.source_file().node(condition);
+        if condition_source.contains('\n')
+            || nested_local_assignment(condition)
+                && assigned_value_used(condition_source, statements, self.source_file())
+        {
+            return true;
+        }
+        let body_lines = branch_line_count(
+            statements,
+            keyword.end_offset(),
+            end_keyword.start_offset(),
+            self.source(),
+        );
+        let minimum = self
+            .config_value("MinBodyLength")
+            .and_then(|value| value.parse::<isize>().ok())
+            .unwrap_or(1);
+        if minimum < 0
+            || body_lines < minimum as usize
+            || self.config_bool("AllowConsecutiveConditionals", false)
+                && preceding_conditional(self.source(), keyword.start_offset())
+        {
+            return true;
+        }
+        let example = format!("return unless {condition_source}");
+        let max = (self.related_config_value("Layout/LineLength", "Enabled") != Some("false"))
+            .then(|| {
+                self.related_config_value("Layout/LineLength", "Max")
+                    .and_then(|value| value.parse().ok())
+            })
+            .flatten();
+        max.is_some_and(|max: usize| {
+            self.source_file().column(keyword.start_offset()) + example.chars().count() > max
+        }) && branch_trivial(statements)
     }
 
     fn register_ending(
@@ -185,7 +237,7 @@ fn guard_clause(statements: Option<&StatementsNode<'_>>, file: SourceFile<'_>) -
     }
     if node.as_and_node().is_some() || node.as_or_node().is_some() {
         let source = file.node(&node);
-        if ["return", "raise", "fail", "break", "next"].iter().any(|word| source.contains(word)) {
+        if contains_scope_exit(&node) {
             return Some(GuardClauseMatch { source: source.to_owned(), logical: true });
         }
     }
@@ -196,7 +248,38 @@ fn scope_exit(node: &Node<'_>) -> bool {
     node.as_return_node().is_some()
         || node.as_break_node().is_some()
         || node.as_next_node().is_some()
-        || node.as_call_node().is_some_and(|call| matches!(call.name().as_slice(), b"raise" | b"fail"))
+        || node.as_call_node().is_some_and(|call| {
+            call.receiver().is_none() && matches!(call.name().as_slice(), b"raise" | b"fail")
+        })
+}
+
+fn contains_scope_exit(node: &Node<'_>) -> bool {
+    struct ScopeExitFinder(bool);
+    impl<'pr> Visit<'pr> for ScopeExitFinder {
+        fn visit_return_node(&mut self, node: &ruby_prism::ReturnNode<'pr>) {
+            self.0 = true;
+            ruby_prism::visit_return_node(self, node);
+        }
+        fn visit_break_node(&mut self, node: &ruby_prism::BreakNode<'pr>) {
+            self.0 = true;
+            ruby_prism::visit_break_node(self, node);
+        }
+        fn visit_next_node(&mut self, node: &ruby_prism::NextNode<'pr>) {
+            self.0 = true;
+            ruby_prism::visit_next_node(self, node);
+        }
+        fn visit_call_node(&mut self, node: &ruby_prism::CallNode<'pr>) {
+            if node.receiver().is_none()
+                && matches!(node.name().as_slice(), b"raise" | b"fail")
+            {
+                self.0 = true;
+            }
+            ruby_prism::visit_call_node(self, node);
+        }
+    }
+    let mut finder = ScopeExitFinder(false);
+    finder.visit(node);
+    finder.0
 }
 
 fn branch_line_count(statements: Option<&StatementsNode<'_>>, start: usize, end: usize, source: &str) -> usize {
