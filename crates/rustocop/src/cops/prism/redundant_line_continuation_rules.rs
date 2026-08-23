@@ -44,11 +44,13 @@ impl RedundantLineContinuationRule<'_, '_, '_> {
             .map_or(source.len(), |at| next_start + at);
         let next = &source[next_start..next_end];
         let before = line.trim_end();
+        let interpolation_boundary = inside_literal(source, slash)
+            && interpolation_begins_next_line(source, slash)
+            && line.contains('(');
         if line_has_comment(line)
             || string_concatenation(line)
             || inside_heredoc(source, slash)
-            || (inside_literal(source, slash)
-                && !(interpolation_begins_next_line(source, slash) && line.contains('(')))
+            || (inside_literal(source, slash) && !interpolation_boundary)
             || inside_regexp(source, slash)
         {
             return true;
@@ -59,15 +61,12 @@ impl RedundantLineContinuationRule<'_, '_, '_> {
         {
             return false;
         }
-        if before.ends_with('=')
-            && next.contains('.')
-            && (next.contains('(') || next.contains('{'))
-        {
+        if before.ends_with('=') && next.contains('.') && next.contains('{') {
             return true;
         }
         starts_with_arithmetic_operator(next)
             || starts_with_required_operator(next)
-            || method_with_argument(line, next)
+            || (!interpolation_boundary && method_with_argument(line, next))
             || leading_dot_method_chain_with_blank_line(line, next)
     }
 
