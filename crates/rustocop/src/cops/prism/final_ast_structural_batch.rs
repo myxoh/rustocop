@@ -1,6 +1,6 @@
 use super::catalog_cop::custom;
 use super::*;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 mod registry;
 
@@ -2938,14 +2938,18 @@ fn check_arguments_forwarding(
     let definition_end = definition.location().end_offset();
     let parameter_end = parameters.location().end_offset();
     let body = &context.source()[parameter_end..definition_end];
+    let mut use_collector = ForwardingUseCollector::default();
+    if let Some(definition_body) = definition.body() {
+        use_collector.visit(&definition_body);
+    }
     let occurrences = tokens
         .iter()
         .map(|token| {
-            let needle = format!("{}{}", token.prefix, token.name);
-            body.match_indices(&needle)
-                .filter(|(at, _)| forwarding_token_boundary(body, *at, needle.len()))
-                .map(|(at, _)| parameter_end + at..parameter_end + at + needle.len())
-                .collect::<Vec<_>>()
+            use_collector
+                .uses
+                .get(&format!("{}{}", token.prefix, token.name))
+                .cloned()
+                .unwrap_or_default()
         })
         .collect::<Vec<_>>();
     if occurrences.iter().all(Vec::is_empty) {
@@ -2960,8 +2964,16 @@ fn check_arguments_forwarding(
     }
     let referenced = tokens
         .iter()
-        .zip(&occurrences)
-        .map(|(token, uses)| forwarding_name_referenced(body, &token.name, uses.len()))
+        .map(|token| {
+            use_collector
+                .reads
+                .get(&token.name)
+                .is_some_and(|reads| {
+                    reads
+                        .iter()
+                        .any(|offset| !use_collector.forwarded_reads.contains(offset))
+                })
+        })
         .collect::<Vec<_>>();
 
     let rest = tokens.iter().position(|token| token.prefix == "*");
@@ -3076,8 +3088,10 @@ fn report_anonymous_full_forwarding(
             return false;
         };
         let sequence = raw[star..=ampersand].trim();
-        if context.target_ruby_version().at_least(3, 2) && !sequence.contains("**") {
-            return false;
+        if context.target_ruby_version().at_least(3, 2) {
+            if sequence.starts_with("**") || !sequence.contains("**") {
+                return false;
+            }
         }
         let signature_start = range.start_offset() + star;
         let signature_end = signature_start + sequence.len();
@@ -3106,6 +3120,106 @@ fn report_anonymous_full_forwarding(
         return true;
     }
     false
+}
+
+#[derive(Default)]
+struct ForwardingUseCollector {
+    uses: HashMap<String, Vec<std::ops::Range<usize>>>,
+    reads: HashMap<String, Vec<usize>>,
+    forwarded_reads: HashSet<usize>,
+}
+
+impl ForwardingUseCollector {
+    fn collect_arguments(&mut self, arguments: Option<ruby_prism::ArgumentsNode<'_>>) {
+        let Some(arguments) = arguments else { return };
+        for argument in arguments.arguments().iter() {
+            if let Some(splat) = argument.as_splat_node() {
+                if let Some(read) = splat
+                    .expression()
+                    .and_then(|value| value.as_local_variable_read_node())
+                {
+                    self.record("*", read.name().as_slice(), splat.location(), read.location());
+                }
+            } else if let Some(hash) = argument.as_keyword_hash_node() {
+                for element in hash.elements().iter() {
+                    let Some(splat) = element.as_assoc_splat_node() else {
+                        continue;
+                    };
+                    let Some(read) = splat
+                        .value()
+                        .and_then(|value| value.as_local_variable_read_node())
+                    else {
+                        continue;
+                    };
+                    self.record("**", read.name().as_slice(), splat.location(), read.location());
+                }
+            }
+        }
+    }
+
+    fn collect_block(&mut self, block: Option<Node<'_>>) {
+        let Some(argument) = block.and_then(|block| block.as_block_argument_node()) else {
+            return;
+        };
+        let Some(read) = argument
+            .expression()
+            .and_then(|value| value.as_local_variable_read_node())
+        else {
+            return;
+        };
+        self.record("&", read.name().as_slice(), argument.location(), read.location());
+    }
+
+    fn record(
+        &mut self,
+        prefix: &str,
+        name: &[u8],
+        use_location: ruby_prism::Location<'_>,
+        read_location: ruby_prism::Location<'_>,
+    ) {
+        let name = String::from_utf8_lossy(name).into_owned();
+        self.uses.entry(format!("{prefix}{name}")).or_default().push(
+            use_location.start_offset()..use_location.end_offset(),
+        );
+        self.forwarded_reads.insert(read_location.start_offset());
+    }
+}
+
+impl<'pr> Visit<'pr> for ForwardingUseCollector {
+    fn visit_call_node(&mut self, node: &ruby_prism::CallNode<'pr>) {
+        self.collect_arguments(node.arguments());
+        self.collect_block(node.block());
+        ruby_prism::visit_call_node(self, node);
+    }
+
+    fn visit_super_node(&mut self, node: &ruby_prism::SuperNode<'pr>) {
+        self.collect_arguments(node.arguments());
+        self.collect_block(node.block());
+        ruby_prism::visit_super_node(self, node);
+    }
+
+    fn visit_yield_node(&mut self, node: &ruby_prism::YieldNode<'pr>) {
+        self.collect_arguments(node.arguments());
+        ruby_prism::visit_yield_node(self, node);
+    }
+
+    fn visit_local_variable_read_node(&mut self, node: &ruby_prism::LocalVariableReadNode<'pr>) {
+        let name = String::from_utf8_lossy(node.name().as_slice()).into_owned();
+        self.reads
+            .entry(name)
+            .or_default()
+            .push(node.location().start_offset());
+        ruby_prism::visit_local_variable_read_node(self, node);
+    }
+
+    fn visit_local_variable_write_node(&mut self, node: &ruby_prism::LocalVariableWriteNode<'pr>) {
+        let name = String::from_utf8_lossy(node.name().as_slice()).into_owned();
+        self.reads
+            .entry(name)
+            .or_default()
+            .push(node.name_loc().start_offset());
+        ruby_prism::visit_local_variable_write_node(self, node);
+    }
 }
 
 fn forwarding_replacement_edits(
@@ -3156,26 +3270,6 @@ fn forwarding_has_leading_call_argument(body: &str, forwarding_start: usize) -> 
 
 fn normalize_forwarding_sequence(source: &str) -> String {
     source.split_whitespace().collect::<Vec<_>>().join(" ")
-}
-
-fn forwarding_token_boundary(source: &str, start: usize, length: usize) -> bool {
-    let before = source.as_bytes().get(start.wrapping_sub(1)).copied();
-    let after = source.as_bytes().get(start + length).copied();
-    !before.is_some_and(|byte| byte == b'*' || byte.is_ascii_alphanumeric() || byte == b'_')
-        && !after.is_some_and(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
-}
-
-fn forwarding_name_referenced(body: &str, name: &str, forwarding_uses: usize) -> bool {
-    let references = body
-        .match_indices(name)
-        .filter(|(at, _)| {
-            let before = body.as_bytes().get(at.wrapping_sub(1)).copied();
-            let after = body.as_bytes().get(at + name.len()).copied();
-            !before.is_some_and(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
-                && !after.is_some_and(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
-        })
-        .count();
-    references > forwarding_uses
 }
 
 fn redundant_forwarding_name(token: &ForwardingToken, context: &CopContext<'_, '_>) -> bool {
