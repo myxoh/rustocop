@@ -31,14 +31,13 @@ fn useless_method_definition(node: &ruby_prism::DefNode<'_>, context: &mut CopCo
     let forwarding = body
         .as_forwarding_super_node()
         .is_some_and(|super_node| super_node.block().is_none());
-    if forwarding
-        && node.parameters().is_some_and(|parameters| {
-            context
-                .source_file()
-                .at(&parameters.location())
-                .bytes()
-                .any(|byte| matches!(byte, b'*' | b'=' | b':'))
-        })
+    if node.parameters().is_some_and(|parameters| {
+        context
+            .source_file()
+            .at(&parameters.location())
+            .bytes()
+            .any(|byte| matches!(byte, b'*' | b'=' | b':'))
+    })
     {
         return;
     }
