@@ -156,10 +156,6 @@ fn collect_navigation_operands<'pr>(
     } else if let Some(or) = node.as_or_node() {
         collect_navigation_operands(&or.left(), Some(LogicalKind::Or), operands);
         collect_navigation_operands(&or.right(), Some(LogicalKind::Or), operands);
-    } else if let Some(parentheses) = node.as_parentheses_node() {
-        if let Some(inner) = parentheses.body().and_then(single_expression) {
-            collect_navigation_operands(&inner, logical, operands);
-        }
     } else if let (Some(call), Some(logical)) = (node.as_call_node(), logical) {
         operands.push(NavigationOperand { call, logical });
     }
