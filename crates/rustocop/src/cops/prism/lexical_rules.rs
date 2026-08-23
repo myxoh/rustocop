@@ -273,9 +273,14 @@ fn multiline_if_then(context: &mut CopContext<'_, '_>) {
 fn return_nil(context: &mut CopContext<'_, '_>) {
     let source = context.source();
     let return_nil = context.policy().enforced_style("return") == "return_nil";
+    let lexical_returns = context.source_file().code_offsets("return");
     for (start, line) in source_lines(source) {
         let leading = line.len() - line.trim_start().len();
         let code = line.trim_start();
+        let absolute = start + leading;
+        if lexical_returns.binary_search(&absolute).is_err() {
+            continue;
+        }
         if return_nil {
             if code == "return" {
                 let range = start + leading..start + leading + 6;
