@@ -30,7 +30,8 @@ fn check_empty_ensure(
     }
 
     for index in 0..lines.len() {
-        if !lines[index].body.trim_start().starts_with("ensure") {
+        let ensure_line = lines[index].body.trim_start();
+        if ensure_line != "ensure" && !ensure_line.starts_with("ensure #") {
             continue;
         }
 
