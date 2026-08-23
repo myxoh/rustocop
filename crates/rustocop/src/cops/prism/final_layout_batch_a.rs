@@ -1002,6 +1002,20 @@ impl Cop for AccessModifierIndentation {
         }) else {
             return;
         };
+        let container_start = container.location().start_offset();
+        for ancestor in ancestors.iter().rev() {
+            if ancestor.location().start_offset() == container_start
+                && (ancestor.as_class_node().is_some()
+                    || ancestor.as_module_node().is_some()
+                    || ancestor.as_singleton_class_node().is_some()
+                    || ancestor.as_block_node().is_some())
+            {
+                break;
+            }
+            if ancestor.as_statements_node().is_none() && ancestor.as_begin_node().is_none() {
+                return;
+            }
+        }
         let location = call.location();
         let file = SourceFile::new(source);
         if file.same_line(container.location().start_offset(), location.start_offset()) {
