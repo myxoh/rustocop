@@ -1703,6 +1703,9 @@ fn statically_non_nil(source: &str) -> bool {
     }
     let name = source.rsplit("::").next().unwrap_or(source);
     name.as_bytes().first().is_some_and(u8::is_ascii_uppercase)
+        && name
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
         && name.bytes().any(|byte| byte.is_ascii_lowercase())
 }
 
