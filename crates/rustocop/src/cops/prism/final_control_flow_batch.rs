@@ -742,22 +742,34 @@ fn terminating_loop_statement(node: &Node<'_>) -> bool {
 
 fn identical_branches(context: &mut CopContext<'_, '_>) {
     let lines = context.source_file().lines().collect::<Vec<_>>();
-    let ignore_literals = context.config_bool("IgnoreLiteralBranches", true);
+    let ignore_literals = context.config_bool("IgnoreLiteralBranches", false);
     let ignore_constants = context.config_bool("IgnoreConstantBranches", false);
     let ignore_duplicate_else = context.config_bool("IgnoreDuplicateElseBranch", false);
+    let mut processed_rescue_headers = HashSet::new();
     for (start_index, (_, line)) in lines.iter().copied().enumerate() {
         let trimmed = line.trim_start();
         let indent = line.len() - trimmed.len();
         let kind = if trimmed.starts_with("if ") || trimmed.starts_with("unless ") {
             DuplicateConstruct::If
-        } else if trimmed.starts_with("case ") {
+        } else if trimmed.starts_with("case ")
+            || trimmed == "case"
+            || trimmed.contains("= case ")
+        {
             DuplicateConstruct::Case
-        } else if trimmed == "begin" {
+        } else if trimmed == "begin" || trimmed.starts_with("rescue") {
             DuplicateConstruct::Rescue
         } else {
             continue;
         };
+        if matches!(kind, DuplicateConstruct::Rescue)
+            && processed_rescue_headers.contains(&start_index)
+        {
+            continue;
+        }
         let branches = duplicate_branches(&lines, start_index, indent, kind);
+        if matches!(kind, DuplicateConstruct::Rescue) {
+            processed_rescue_headers.extend(branches.iter().map(|branch| branch.header_index));
+        }
         if branches.len() < 2 {
             continue;
         }
@@ -788,13 +800,14 @@ fn identical_branches(context: &mut CopContext<'_, '_>) {
     }
 
     for (offset, line) in context.source_file().lines() {
-        let Some(question) = line.find('?') else {
+        let Some(question_space) = line.find(" ? ") else {
             continue;
         };
-        let Some(colon_relative) = line[question + 1..].find(':') else {
+        let question = question_space + 1;
+        let Some(colon_relative) = line[question + 1..].find(" : ") else {
             continue;
         };
-        let colon = question + 1 + colon_relative;
+        let colon = question + 1 + colon_relative + 1;
         let truthy = line[question + 1..colon].trim();
         let falsy = line[colon + 1..].trim();
         if !truthy.is_empty()
@@ -818,6 +831,7 @@ enum DuplicateConstruct {
 }
 
 struct DuplicateBranch {
+    header_index: usize,
     body: String,
     offense: std::ops::Range<usize>,
     else_branch: bool,
@@ -830,7 +844,10 @@ fn duplicate_branches(
     kind: DuplicateConstruct,
 ) -> Vec<DuplicateBranch> {
     let mut headers = Vec::<(usize, bool)>::new();
-    if matches!(kind, DuplicateConstruct::If) {
+    if matches!(kind, DuplicateConstruct::If)
+        || matches!(kind, DuplicateConstruct::Rescue)
+            && lines[start].1.trim_start().starts_with("rescue")
+    {
         headers.push((start, false));
     }
     let mut end = lines.len();
@@ -838,20 +855,28 @@ fn duplicate_branches(
         let line = lines[index].1;
         let trimmed = line.trim_start();
         let line_indent = line.len() - trimmed.len();
-        if line_indent == indent && trimmed == "end" {
+        if line_indent == indent
+            && (trimmed == "end"
+                || trimmed
+                    .strip_prefix("end")
+                    .is_some_and(|tail| tail.starts_with(['.', '&'])) )
+        {
             end = index;
             break;
         }
-        if line_indent == indent {
+        if line_indent >= indent {
             let header = match kind {
-                DuplicateConstruct::If => trimmed.starts_with("elsif ") || trimmed == "else",
+                DuplicateConstruct::If => {
+                    line_indent == indent && (trimmed.starts_with("elsif ") || trimmed == "else")
+                }
                 DuplicateConstruct::Case => {
                     trimmed.starts_with("when ")
                         || trimmed.starts_with("in ")
                         || trimmed.starts_with("else")
                 }
                 DuplicateConstruct::Rescue => {
-                    trimmed.starts_with("rescue") || trimmed.starts_with("else")
+                    line_indent == indent
+                        && (trimmed.starts_with("rescue") || trimmed.starts_with("else"))
                 }
             };
             if header {
@@ -873,16 +898,41 @@ fn duplicate_branches(
                     .then(|| header_trimmed.strip_prefix("else "))
                     .flatten()
             });
+        let trailing_body = || {
+            lines[header_index + 1..next]
+                .iter()
+                .map(|(_, line)| duplicate_branch_line(line))
+                .filter(|line| !line.is_empty() && !line.starts_with('#'))
+                .collect::<Vec<_>>()
+                .join("\n")
+        };
         let body = inline.map_or_else(
             || {
-                lines[header_index + 1..next]
+                let mut body_lines = lines[header_index + 1..next]
                     .iter()
-                    .map(|(_, line)| line.trim())
-                    .filter(|line| !line.is_empty() && !line.starts_with('#'))
+                    .filter(|(_, line)| !line.trim().is_empty() && !line.trim_start().starts_with('#'))
+                    .peekable();
+                if matches!(kind, DuplicateConstruct::Case) {
+                    while body_lines.peek().is_some_and(|(_, line)| {
+                        line.len() - line.trim_start().len() > indent + 2
+                    }) {
+                        body_lines.next();
+                    }
+                }
+                body_lines
+                    .map(|(_, line)| duplicate_branch_line(line))
                     .collect::<Vec<_>>()
                     .join("\n")
             },
-            |body| body.trim().to_string(),
+            |body| {
+                let tail = trailing_body();
+                let body = duplicate_branch_line(body);
+                if tail.is_empty() {
+                    body
+                } else {
+                    format!("{body}\n{tail}")
+                }
+            },
         );
         let line_offset = lines[header_index].0;
         let start = line_offset + header_line.len() - header_trimmed.len();
@@ -898,12 +948,20 @@ fn duplicate_branches(
             line_offset + header_line.trim_end().len()
         };
         result.push(DuplicateBranch {
+            header_index,
             body,
             offense: start..offense_end,
             else_branch,
         });
     }
     result
+}
+
+fn duplicate_branch_line(line: &str) -> String {
+    line.trim()
+        .split_once(" #")
+        .map_or_else(|| line.trim(), |(code, _)| code.trim_end())
+        .to_string()
 }
 
 fn duplicate_literal(source: &str, ignore_constants: bool) -> bool {
