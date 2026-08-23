@@ -1,6 +1,6 @@
 use super::*;
 
-pub(super) fn redundant_self_assignment(context: &mut CopContext<'_, '_>) {
+pub(super) fn redundant_self_assignment(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
     let mutating = [
         "append",
         "clear",
@@ -29,49 +29,65 @@ pub(super) fn redundant_self_assignment(context: &mut CopContext<'_, '_>) {
         "update",
     ];
     let source = context.source();
-    for spacing_start in context.source_file().code_offsets(" = ") {
-        let equals = spacing_start + 1;
-        let line_start = source[..spacing_start].rfind('\n').map_or(0, |at| at + 1);
-        let left_start = line_start
-            + source[line_start..spacing_start]
-                .bytes()
-                .take_while(|byte| matches!(byte, b' ' | b'\t'))
-                .count();
-        let left = &source[left_start..spacing_start];
-        if left.is_empty()
-            || !left.bytes().enumerate().all(|(index, byte)| {
-                byte.is_ascii_alphanumeric()
-                    || byte == b'_'
-                    || byte == b'@'
-                    || byte == b'.'
-                    || byte == b'&'
-                    || byte == b'$' && index == 0
-            })
-        {
-            continue;
+    let variable = if let Some(write) = node.as_local_variable_write_node() {
+        Some((write.name_loc(), write.value(), write.location()))
+    } else if let Some(write) = node.as_instance_variable_write_node() {
+        Some((write.name_loc(), write.value(), write.location()))
+    } else if let Some(write) = node.as_class_variable_write_node() {
+        Some((write.name_loc(), write.value(), write.location()))
+    } else if let Some(write) = node.as_global_variable_write_node() {
+        Some((write.name_loc(), write.value(), write.location()))
+    } else {
+        None
+    };
+    let (lhs, rhs, assignment, equals) = if let Some((name, value, assignment)) = variable {
+        let between = &source[name.end_offset()..value.location().start_offset()];
+        let Some(relative_equals) = between.find('=') else {
+            return;
+        };
+        (
+            &source[name.start_offset()..name.end_offset()],
+            value,
+            assignment,
+            name.end_offset() + relative_equals,
+        )
+    } else if let Some(setter) = node.as_call_node() {
+        let Some(equal) = setter.equal_loc() else {
+            return;
+        };
+        let Some(arguments) = setter.arguments() else {
+            return;
+        };
+        let arguments = arguments.arguments();
+        if arguments.len() != 1 {
+            return;
         }
-        let right_start = equals
-            + 1
-            + source[equals + 1..]
-                .bytes()
-                .take_while(|byte| byte.is_ascii_whitespace())
-                .count();
-        let right = &source[right_start..];
-        if !right.starts_with(&format!("{left}.")) && !right.starts_with(&format!("{left}&.")) {
-            continue;
-        }
-        let separator = usize::from(right[left.len()..].starts_with("&.")) + 1;
-        let method = right[left.len() + separator..]
-            .split(['(', ' ', '{'])
-            .next()
-            .unwrap_or_default();
-        if !mutating.contains(&method) {
-            continue;
-        }
-        context.remove(
-            format!("Redundant self assignment detected. Method `{method}` modifies its receiver in place."),
-            equals..equals + 1,
-            left_start..right_start,
-        );
+        (
+            source[setter.location().start_offset()..equal.start_offset()].trim_end(),
+            arguments.first().expect("one setter argument"),
+            setter.location(),
+            equal.start_offset(),
+        )
+    } else {
+        return;
+    };
+    let Some(call) = rhs.as_call_node() else {
+        return;
+    };
+    let method = String::from_utf8_lossy(call.name().as_slice());
+    if !mutating.contains(&method.as_ref()) {
+        return;
     }
+    let Some(receiver) = call.receiver() else {
+        return;
+    };
+    if context.source_file().node(&receiver) != lhs {
+        return;
+    }
+    context.replace(
+        format!("Redundant self assignment detected. Method `{method}` modifies its receiver in place."),
+        equals..equals + 1,
+        assignment,
+        context.source_file().node(&rhs),
+    );
 }

@@ -13,7 +13,7 @@ define_cops! {
     DuplicateMatchPattern => "Lint/DuplicateMatchPattern" => rubocop_callbacks(DuplicateMatchPatternRule, [on_case_match]),
     ConstantName => "Naming/ConstantName" => source(constant_name),
     ConstantVisibility => "Style/ConstantVisibility" => source(constant_visibility),
-    RedundantSelfAssignment => "Style/RedundantSelfAssignment" => source(scope_rules::redundant_self_assignment),
+    RedundantSelfAssignment => "Style/RedundantSelfAssignment" => any_node(scope_rules::redundant_self_assignment),
     TopLevelMethodDefinition => "Style/TopLevelMethodDefinition" => any_node(top_level_method_definition),
 }
 
