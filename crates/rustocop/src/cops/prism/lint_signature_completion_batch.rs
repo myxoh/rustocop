@@ -12,49 +12,82 @@ define_cops! {
 }
 
 fn syntax(error: &Diagnostic<'_>, context: &mut CopContext<'_, '_>) {
-    if context.related_config_value("AllCops", "ParserEngine") != Some("parser_prism") {
-        if context.source().contains('\n')
-            && !error.message().contains("end-of-input")
-            && !context.source().trim_end().ends_with('(')
-        {
-            return;
-        }
-        let start = context.source().len().saturating_sub(1);
-        let version = context.target_ruby_version();
-        context.report(
-            format!(
-                "unexpected token $end\n(Using Ruby {}.{} parser; configure using `TargetRubyVersion` parameter, under `AllCops`)",
-                version.major(),
-                version.minor()
-            ),
-            start..context.source().len(),
-        );
+    if context.related_config_value("AllCops", "ParserEngine") == Some("parser_prism") {
         return;
     }
+    if context.source().contains('\n')
+        && !error.message().contains("end-of-input")
+        && !context.source().trim_end().ends_with('(')
+    {
+        return;
+    }
+    let start = context.source().len().saturating_sub(1);
+    let version = context.target_ruby_version();
+    context.report(
+        format!(
+            "unexpected token $end\n(Using Ruby {}.{} parser; configure using `TargetRubyVersion` parameter, under `AllCops`)",
+            version.major(),
+            version.minor()
+        ),
+        start..context.source().len(),
+    );
+}
+
+fn prism_syntax_message(error: &Diagnostic<'_>) -> String {
     let mut message = error.message().to_string();
     if message == "unexpected ',', ignoring it" {
         message = "unexpected ',', expecting end-of-input".to_string();
+    } else if message
+        == "unexpected constant path after `class`; class/module name must be CONSTANT"
+    {
+        message = "class or module name must be a constant literal".to_string();
     } else if message.ends_with(", ignoring it") {
         let token = std::str::from_utf8(error.location().as_slice()).unwrap_or_default();
         message = format!("unexpected token {token}");
     }
-    let version = context.target_ruby_version();
-    context.report(
-        format!(
-            "{message}\n(Using Ruby {}.{} parser; configure using `TargetRubyVersion` parameter, under `AllCops`)",
-            version.major(),
-            version.minor()
-        ),
-        error.location(),
-    );
+    message
 }
 
 fn invalid_byte_syntax(context: &mut CopContext<'_, '_>) {
-    if context.related_config_value("AllCops", "ParserEngine") != Some("parser_prism")
-        && context
-            .source()
-            .bytes()
-            .any(|byte| byte < b' ' && !matches!(byte, b'\t' | b'\n' | b'\r'))
+    if context.related_config_value("AllCops", "ParserEngine") == Some("parser_prism") {
+        let parsed = ruby_prism::parse(context.source().as_bytes());
+        let errors = parsed.errors().collect::<Vec<_>>();
+        let unterminated = errors
+            .iter()
+            .find(|error| error.message() == "unterminated string meets end of file")
+            .map(|error| error.location().start_offset());
+        let mut seen = std::collections::HashSet::new();
+        let version = context.target_ruby_version();
+        for error in errors {
+            let location = error.location();
+            let start = location.start_offset();
+            let end = location.end_offset();
+            if unterminated.is_some_and(|at| start > at) || !seen.insert((start, end)) {
+                continue;
+            }
+            let range = if start == end {
+                if end < context.source().len() {
+                    start..end + 1
+                } else {
+                    start.saturating_sub(1)..end
+                }
+            } else {
+                start..end
+            };
+            context.report(
+                format!(
+                    "{}\n(Using Ruby {}.{} parser; configure using `TargetRubyVersion` parameter, under `AllCops`)",
+                    prism_syntax_message(&error),
+                    version.major(),
+                    version.minor()
+                ),
+                range,
+            );
+        }
+    } else if context
+        .source()
+        .bytes()
+        .any(|byte| byte < b' ' && !matches!(byte, b'\t' | b'\n' | b'\r'))
     {
         context.report("Invalid byte sequence in utf-8.", 0..0);
     }
