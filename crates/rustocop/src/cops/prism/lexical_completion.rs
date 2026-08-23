@@ -240,6 +240,10 @@ fn disable_cops_within_source_code_directive(context: &mut CopContext<'_, '_>) {
 
 fn directive(comment: &str) -> Option<(&str, &str)> {
     let marker = comment.find("rubocop:")?;
+    let prefix = &comment[..marker];
+    if !prefix.starts_with('#') || !prefix[1..].chars().all(char::is_whitespace) {
+        return None;
+    }
     let body = &comment[marker + "rubocop:".len()..];
     let (command, cops) = body.trim().split_once(' ')?;
     let cops = cops.split_once(" -- ").map_or(cops, |(cops, _)| cops).trim();
