@@ -161,16 +161,7 @@ fn collect_implicit_predicate_returns<'pr>(
         return;
     }
     if let Some(conditional) = node.as_if_node() {
-        if let Some(statements) = conditional.statements() {
-            collect_implicit_predicate_returns(&statements.as_node(), wayward, values);
-        } else {
-            values.push(PredicateReturn::NonBoolean);
-        }
-        if let Some(subsequent) = conditional.subsequent() {
-            collect_implicit_predicate_returns(&subsequent, wayward, values);
-        } else {
-            values.push(PredicateReturn::NonBoolean);
-        }
+        collect_if_predicate_returns(&conditional, wayward, values, true);
         return;
     }
     if let Some(conditional) = node.as_unless_node() {
@@ -257,6 +248,28 @@ fn collect_implicit_predicate_returns<'pr>(
     values.push(predicate_return_kind(node, wayward));
 }
 
+fn collect_if_predicate_returns<'pr>(
+    conditional: &ruby_prism::IfNode<'pr>,
+    wayward: &[String],
+    values: &mut Vec<PredicateReturn>,
+    add_missing_else: bool,
+) {
+    if let Some(statements) = conditional.statements() {
+        collect_implicit_predicate_returns(&statements.as_node(), wayward, values);
+    } else {
+        values.push(PredicateReturn::NonBoolean);
+    }
+    if let Some(subsequent) = conditional.subsequent() {
+        if let Some(elsif) = subsequent.as_if_node() {
+            collect_if_predicate_returns(&elsif, wayward, values, false);
+        } else {
+            collect_implicit_predicate_returns(&subsequent, wayward, values);
+        }
+    } else if add_missing_else {
+        values.push(PredicateReturn::NonBoolean);
+    }
+}
+
 fn collect_logical_predicate_return<'pr>(
     node: &Node<'pr>,
     wayward: &[String],
@@ -286,7 +299,7 @@ fn predicate_return_kind(node: &Node<'_>, wayward: &[String]) -> PredicateReturn
         let name = call.name().as_slice();
         let boolean = matches!(
             name,
-            b"==" | b"===" | b"!=" | b"=~" | b"!~" | b"<" | b"<=" | b">" | b">=" | b"<=>" | b"!"
+            b"==" | b"===" | b"!=" | b"<" | b"<=" | b">" | b">=" | b"!"
         ) || name.ends_with(b"?")
             && !wayward
                 .iter()
