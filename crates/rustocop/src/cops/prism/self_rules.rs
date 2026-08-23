@@ -173,7 +173,7 @@ fn local_name_conflicts(name: &[u8], context: &CopContext<'_, '_>) -> bool {
             block.locals().iter().any(|local| local.as_slice() == name)
                 || block
                     .body()
-                    .is_some_and(|body| subtree_binds_name(&body, name))
+                    .is_some_and(|body| subtree_binds_name(&body, name, true))
         } else if let Some(definition) = scope.as_def_node() {
             definition
                 .locals()
@@ -181,23 +181,24 @@ fn local_name_conflicts(name: &[u8], context: &CopContext<'_, '_>) -> bool {
                 .any(|local| local.as_slice() == name)
                 || definition
                     .body()
-                    .is_some_and(|body| subtree_binds_name(&body, name))
+                    .is_some_and(|body| subtree_binds_name(&body, name, false))
         } else if let Some(program) = scope.as_program_node() {
             program
                 .locals()
                 .iter()
                 .any(|local| local.as_slice() == name)
-                || subtree_binds_name(&program.statements().as_node(), name)
+                || subtree_binds_name(&program.statements().as_node(), name, true)
         } else {
             false
         }
     })
 }
 
-fn subtree_binds_name(node: &Node<'_>, name: &[u8]) -> bool {
+fn subtree_binds_name(node: &Node<'_>, name: &[u8], include_writes: bool) -> bool {
     struct BindingFinder<'a> {
         name: &'a [u8],
         found: bool,
+        include_writes: bool,
     }
 
     impl BindingFinder<'_> {
@@ -229,7 +230,9 @@ fn subtree_binds_name(node: &Node<'_>, name: &[u8]) -> bool {
             &mut self,
             node: &ruby_prism::LocalVariableWriteNode<'pr>,
         ) {
-            self.check(node.name().as_slice());
+            if self.include_writes {
+                self.check(node.name().as_slice());
+            }
             ruby_prism::visit_local_variable_write_node(self, node);
         }
 
@@ -237,7 +240,9 @@ fn subtree_binds_name(node: &Node<'_>, name: &[u8]) -> bool {
             &mut self,
             node: &ruby_prism::LocalVariableOrWriteNode<'pr>,
         ) {
-            self.check(node.name().as_slice());
+            if self.include_writes {
+                self.check(node.name().as_slice());
+            }
             ruby_prism::visit_local_variable_or_write_node(self, node);
         }
 
@@ -245,7 +250,9 @@ fn subtree_binds_name(node: &Node<'_>, name: &[u8]) -> bool {
             &mut self,
             node: &ruby_prism::LocalVariableAndWriteNode<'pr>,
         ) {
-            self.check(node.name().as_slice());
+            if self.include_writes {
+                self.check(node.name().as_slice());
+            }
             ruby_prism::visit_local_variable_and_write_node(self, node);
         }
 
@@ -253,12 +260,18 @@ fn subtree_binds_name(node: &Node<'_>, name: &[u8]) -> bool {
             &mut self,
             node: &ruby_prism::LocalVariableOperatorWriteNode<'pr>,
         ) {
-            self.check(node.name().as_slice());
+            if self.include_writes {
+                self.check(node.name().as_slice());
+            }
             ruby_prism::visit_local_variable_operator_write_node(self, node);
         }
     }
 
-    let mut finder = BindingFinder { name, found: false };
+    let mut finder = BindingFinder {
+        name,
+        found: false,
+        include_writes,
+    };
     finder.visit(node);
     finder.found
 }
