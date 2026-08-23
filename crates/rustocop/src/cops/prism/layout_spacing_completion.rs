@@ -29,15 +29,40 @@ fn assignment_indentation(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
     if assignment_line_start == value_line_start
         || !source[node_start..value_start].trim_end().ends_with('=')
         || !source[assignment_line_start..assignment_line_end].is_ascii()
-        || assignment_is_condition(node, context.ancestors())
     {
         return;
     }
     let width = context.config_usize("IndentationWidth", 2);
-    let base = source[assignment_line_start..assignment_line_end].len()
+    let line_indentation = source[assignment_line_start..assignment_line_end].len()
         - source[assignment_line_start..assignment_line_end]
             .trim_start()
             .len();
+    let prefix = &source[assignment_line_start..operator];
+    let chained = prefix.contains(" = ") || prefix.matches('=').count() > 0;
+    let current_start = if source[..node_start].rfind('\n').map_or(0, |at| at + 1)
+        == assignment_line_start
+    {
+        node_start
+    } else {
+        assignment_line_start + line_indentation
+    };
+    let chain_start = context
+        .ancestors()
+        .iter()
+        .filter(|ancestor| assignment_value(ancestor).is_some())
+        .map(Node::location)
+        .map(|location| location.start_offset())
+        .filter(|start| {
+            source[..*start].rfind('\n').map_or(0, |at| at + 1) == assignment_line_start
+        })
+        .chain(std::iter::once(current_start))
+        .min()
+        .unwrap_or(current_start);
+    let base = if chained {
+        line_indentation
+    } else {
+        chain_start - assignment_line_start
+    };
     let current = value_start - value_line_start;
     let expected = base + width;
     if current == expected {
@@ -49,27 +74,6 @@ fn assignment_indentation(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
         value_line_start..value_start,
         " ".repeat(expected),
     );
-}
-
-fn assignment_is_condition(node: &Node<'_>, ancestors: &[Node<'_>]) -> bool {
-    let location = node.location();
-    ancestors.iter().any(|ancestor| {
-        let predicate = if let Some(conditional) = ancestor.as_if_node() {
-            Some(conditional.predicate())
-        } else if let Some(conditional) = ancestor.as_unless_node() {
-            Some(conditional.predicate())
-        } else if let Some(loop_node) = ancestor.as_while_node() {
-            Some(loop_node.predicate())
-        } else if let Some(loop_node) = ancestor.as_until_node() {
-            Some(loop_node.predicate())
-        } else {
-            None
-        };
-        predicate.is_some_and(|predicate| {
-            predicate.location().start_offset() <= location.start_offset()
-                && location.end_offset() <= predicate.location().end_offset()
-        })
-    })
 }
 
 fn assignment_value<'pr>(node: &Node<'pr>) -> Option<Node<'pr>> {
@@ -84,6 +88,30 @@ fn assignment_value<'pr>(node: &Node<'pr>) -> Option<Node<'pr>> {
     } else if let Some(write) = node.as_constant_write_node() {
         Some(write.value())
     } else if let Some(write) = node.as_constant_path_write_node() {
+        Some(write.value())
+    } else if let Some(write) = node.as_local_variable_or_write_node() {
+        Some(write.value())
+    } else if let Some(write) = node.as_instance_variable_or_write_node() {
+        Some(write.value())
+    } else if let Some(write) = node.as_class_variable_or_write_node() {
+        Some(write.value())
+    } else if let Some(write) = node.as_global_variable_or_write_node() {
+        Some(write.value())
+    } else if let Some(write) = node.as_constant_or_write_node() {
+        Some(write.value())
+    } else if let Some(write) = node.as_constant_path_or_write_node() {
+        Some(write.value())
+    } else if let Some(write) = node.as_local_variable_and_write_node() {
+        Some(write.value())
+    } else if let Some(write) = node.as_instance_variable_and_write_node() {
+        Some(write.value())
+    } else if let Some(write) = node.as_class_variable_and_write_node() {
+        Some(write.value())
+    } else if let Some(write) = node.as_global_variable_and_write_node() {
+        Some(write.value())
+    } else if let Some(write) = node.as_constant_and_write_node() {
+        Some(write.value())
+    } else if let Some(write) = node.as_constant_path_and_write_node() {
         Some(write.value())
     } else if let Some(write) = node.as_multi_write_node() {
         Some(write.value())
