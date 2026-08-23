@@ -105,18 +105,11 @@ fn empty_lines_after_module_inclusion(node: &CallNode<'_>, context: &mut CopCont
     {
         return;
     }
-    let mut inside_block = false;
     for ancestor in context.ancestors().iter().rev() {
         if ancestor.as_class_node().is_some()
             || ancestor.as_module_node().is_some()
             || ancestor.as_singleton_class_node().is_some()
             || ancestor.as_program_node().is_some()
-        {
-            break;
-        }
-        if ancestor
-            .as_call_node()
-            .is_some_and(|call| inside_block && call.name().as_slice() == b"new")
         {
             break;
         }
@@ -131,7 +124,7 @@ fn empty_lines_after_module_inclusion(node: &CallNode<'_>, context: &mut CopCont
             {
                 return;
             }
-            inside_block = true;
+            break;
         }
         let modifier_conditional = ancestor
             .as_if_node()
