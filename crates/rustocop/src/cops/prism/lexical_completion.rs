@@ -1,7 +1,7 @@
 use super::*;
 
 define_cops! {
-    ClosingHeredocIndentation => "Layout/ClosingHeredocIndentation" => source(closing_heredoc_indentation),
+    ClosingHeredocIndentation => "Layout/ClosingHeredocIndentation" => any_node(closing_heredoc_indentation),
     Encoding => "Style/Encoding" => source(encoding),
     DisableCopsWithinSourceCodeDirective => "Style/DisableCopsWithinSourceCodeDirective" => source(disable_cops_within_source_code_directive),
     RedundantHeredocDelimiterQuotes => "Style/RedundantHeredocDelimiterQuotes" => source(redundant_heredoc_delimiter_quotes),
@@ -78,50 +78,72 @@ fn redundant_heredoc_delimiter_quotes(context: &mut CopContext<'_, '_>) {
     }
 }
 
-fn closing_heredoc_indentation(context: &mut CopContext<'_, '_>) {
-    let lines = context.source_file().lines().collect::<Vec<_>>();
-    for (index, (_, line)) in lines.iter().enumerate() {
-        let Some(marker) = line.find("<<-").or_else(|| line.find("<<~")) else {
-            continue;
-        };
-        let marker_tail = line[marker + 3..].trim_start();
-        let identifier_tail = marker_tail
-            .strip_prefix(['\'', '"', '`'])
-            .unwrap_or(marker_tail);
-        let identifier = identifier_tail
-            .chars()
-            .take_while(|character| character.is_ascii_alphanumeric() || *character == '_')
-            .collect::<String>();
-        if identifier.is_empty() {
-            continue;
-        }
-        let opening_indent = line.len() - line.trim_start().len();
-        let expression_indent = if index > 0 && lines[index - 1].1.trim_end().ends_with(',') {
-            lines[index - 1].1.len() - lines[index - 1].1.trim_start().len()
-        } else {
-            opening_indent
-        };
-        let Some((closing_offset, closing_line)) = lines[index + 1..]
-            .iter()
-            .find(|(_, candidate)| candidate.trim() == identifier)
-        else {
-            continue;
-        };
-        let closing_indent = closing_line.len() - closing_line.trim_start().len();
-        if closing_indent == opening_indent || closing_indent == expression_indent {
-            continue;
-        }
-        let offense = *closing_offset..closing_offset + closing_indent + identifier.len();
-        context.replace(
-            format!(
-                "`{identifier}` is not aligned with `{}`.",
-                line.trim()
-            ),
-            offense,
-            *closing_offset..closing_offset + closing_indent,
-            " ".repeat(opening_indent),
-        );
+fn closing_heredoc_indentation(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
+    let (opening, closing) = if let Some(string) = node.as_string_node() {
+        (string.opening_loc(), string.closing_loc())
+    } else if let Some(string) = node.as_interpolated_string_node() {
+        (string.opening_loc(), string.closing_loc())
+    } else {
+        return;
+    };
+    let (Some(opening), Some(closing)) = (opening, closing) else {
+        return;
+    };
+    if !matches!(opening.as_slice(), [b'<', b'<', b'-' | b'~', ..]) {
+        return;
     }
+
+    let file = context.source_file();
+    let opening_line = file.line(opening.start_offset());
+    let closing_line = file.line(closing.start_offset());
+    let opening_indent = opening_line.len() - opening_line.trim_start().len();
+    let closing_indent = closing_line.len() - closing_line.trim_start().len();
+    if opening_indent == closing_indent {
+        return;
+    }
+
+    let heredoc_start = opening.start_offset();
+    let mut argument = false;
+    let mut chained = false;
+    let mut outer_call = None;
+    for ancestor in context.ancestors().iter().rev() {
+        let Some(call) = ancestor.as_call_node() else {
+            continue;
+        };
+        let contains = |location: ruby_prism::Location<'_>| {
+            location.start_offset() <= heredoc_start && heredoc_start < location.end_offset()
+        };
+        if call.arguments().is_some_and(|arguments| contains(arguments.location())) {
+            argument = true;
+            outer_call = Some(call);
+        } else if call.receiver().is_some_and(|receiver| contains(receiver.location())) {
+            chained = true;
+            outer_call = Some(call);
+        } else if outer_call.is_some() && contains(call.location()) {
+            outer_call = Some(call);
+        }
+    }
+    if let Some(call) = outer_call {
+        let call_indent = file.indentation(call.location().start_offset()).len();
+        if (argument || chained) && closing_indent == call_indent {
+            return;
+        }
+    }
+
+    let identifier = closing_line.trim();
+    let opening_text = opening_line.trim();
+    let suffix = if argument {
+        " or beginning of method definition"
+    } else {
+        ""
+    };
+    let closing_start = file.line_start(closing.start_offset());
+    context.replace(
+        format!("`{identifier}` is not aligned with `{opening_text}`{suffix}."),
+        closing_start..closing_start + closing_indent + identifier.len(),
+        closing_start..closing_start + closing_indent,
+        " ".repeat(opening_indent),
+    );
 }
 
 fn encoding(context: &mut CopContext<'_, '_>) {
