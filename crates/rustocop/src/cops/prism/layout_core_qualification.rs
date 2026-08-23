@@ -155,7 +155,13 @@ fn empty_lines_after_module_inclusion(node: &CallNode<'_>, context: &mut CopCont
     };
     let follower = line(source, next).trim_start();
     let follower_call = call_name(follower);
-    if matches!(follower, "end" | "else" | "ensure" | "rescue")
+    let closes_scope = follower.strip_prefix("end").is_some_and(|rest| {
+        rest.chars()
+            .next()
+            .is_none_or(|character| !character.is_alphanumeric() && character != '_')
+    }) || follower.starts_with('}');
+    if closes_scope
+        || matches!(follower, "else" | "ensure" | "rescue")
         || ["include", "extend", "prepend"].iter().any(|method| {
             follower_call == *method
                 || follower_call.ends_with(&format!(".{method}"))
