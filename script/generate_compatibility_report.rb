@@ -401,7 +401,8 @@ report = <<~MARKDOWN
   and project output must have no false positives, false negatives, or signature
   differences. Partial overlap is not classified as compatible.
 
-  This table covers #{ACTIVE_COPS.length} active built-in cops. The 48 cops in
+  This table covers #{ACTIVE_COPS.length} active built-in cops. The
+  #{Rustocop::CompatibilityStatus.load(root: ROOT).intentionally_pending_cops.length} cops in
   [`intentionally_pending_cops.yml`](../spec/upstream/rubocop-#{fixtures.fetch('rubocop_version')}/intentionally_pending_cops.yml)
   are deliberately unregistered and excluded from both evidence corpora.
 

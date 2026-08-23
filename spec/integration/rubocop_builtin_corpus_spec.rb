@@ -10,9 +10,9 @@ RSpec.describe "RuboCop built-in compatibility corpus" do
   end
   status = Rustocop::CompatibilityStatus.load(root: ROOT)
 
-  raise "expected 20 verified built-in cops, got #{manifest.length}" unless manifest.length == 20
+  raise "expected 19 verified built-in cops, got #{manifest.length}" unless manifest.length == 19
   status.validate_verified!(manifest.keys, label: "compatibility corpus")
-  raise "expected 500 Ruby examples, got #{manifest.values.flatten.length}" unless manifest.values.flatten.length == 500
+  raise "expected 475 Ruby examples, got #{manifest.values.flatten.length}" unless manifest.values.flatten.length == 475
   raise "expected 25 examples per cop" unless manifest.values.all? { |paths| paths.length == 25 }
 
   manifest.each do |cop, paths|
@@ -28,7 +28,7 @@ RSpec.describe "RuboCop built-in compatibility corpus" do
     end
   end
 
-  it "matches RuboCop across all 500 examples in one run" do
+  it "matches RuboCop across all 475 examples in one run" do
     cops = manifest.keys.join(",")
     paths = manifest.values.flatten.sort
     rubocop = run_rubocop("--cache", "false", "--format", "json", "--only", cops, *paths)
@@ -46,7 +46,6 @@ RSpec.describe "RuboCop built-in compatibility corpus" do
       Lint/BooleanSymbol
       Style/CharacterLiteral
       Style/DefWithParentheses
-      Style/MethodCallWithoutArgsParentheses
       Style/NilComparison
       Style/Not
       Style/RedundantArrayConstructor
@@ -61,7 +60,6 @@ RSpec.describe "RuboCop built-in compatibility corpus" do
       def value()
         1
       end
-      action()
       item == nil
       not ready
       Array([1])

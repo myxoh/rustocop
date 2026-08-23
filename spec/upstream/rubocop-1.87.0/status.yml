@@ -1,14 +1,14 @@
 ---
 rubocop_version: 1.87.0
 upstream_rspec:
-  examples: 26613
+  examples: 23907
   failures: 0
   pending: 3
-captured_cases: 26717
+captured_cases: 23999
 diagnostic_baseline:
-  passed_cases: 26717
-  passing_cops: 558
-  total_cops: 558
+  passed_cases: 23999
+  passing_cops: 512
+  total_cops: 512
 fully_compatible_cops:
 - Bundler/DuplicatedGem
 - Bundler/DuplicatedGroup

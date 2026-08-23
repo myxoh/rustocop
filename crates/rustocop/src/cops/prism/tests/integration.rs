@@ -60,13 +60,6 @@ fn ordinary_cops_do_not_investigate_recovered_syntax_trees() {
 
 #[test]
 fn ordinary_cops_investigate_trees_with_context_only_parse_errors() {
-    let redundant = inspect("(redo)\n", true, RubyVersion::default(), &|cop| {
-        cop == "Style/RedundantParentheses"
-    });
-
-    assert_eq!(redundant.findings.len(), 1);
-    assert_eq!(redundant.corrected_source, "redo\n");
-
     let ternary = inspect(
         "foo = (yield) ? a : b\n",
         true,
@@ -292,12 +285,10 @@ fn registers_the_active_parity_batch() {
     for cop in [
         "Bundler/GemVersion",
         "Layout/InitialIndentation",
-        "Layout/MultilineArrayLineBreaks",
         "Lint/DuplicateMagicComment",
         "Lint/EmptyInterpolation",
         "Lint/ErbNewArguments",
         "Lint/HashNewWithKeywordArgumentsAsDefault",
-        "Lint/InterpolationCheck",
         "Lint/LambdaWithoutLiteralBlock",
         "Lint/RequireRangeParentheses",
         "Lint/RequireRelativeSelfPath",

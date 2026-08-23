@@ -11,7 +11,6 @@ security_open	Security/Open
 security_io_methods	Security/IoMethods
 style_character_literal	Style/CharacterLiteral
 style_def_with_parentheses	Style/DefWithParentheses
-style_method_call_without_args_parentheses	Style/MethodCallWithoutArgsParentheses
 style_nil_comparison	Style/NilComparison
 style_not	Style/Not
 style_redundant_array_constructor	Style/RedundantArrayConstructor

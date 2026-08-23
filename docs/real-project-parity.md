@@ -13,37 +13,30 @@ cases, and configuration branches that the projects do not exercise.
 ## Latest realistic status
 
 The latest complete checkpoint was generated at
-`2026-08-22T14:36:12-04:00` from Rust source
-`cdb4527ddb40dddd9ac779167e1f3bbf08acd557` and native binary SHA-256
-`1691a808cc805a3957eb41c4596b2dd06f1f623d616ddf8126f5a32c569cfe0a`.
-The stored RuboCop reference was captured at `2026-08-22T00:20:57-04:00`
+`2026-08-23T08:45:38-04:00` from Rust source
+`9e7049de18d0caf78c0e0e519cf24f016e9f650a` and native binary SHA-256
+`2f200485daea030ae11336049256d46959e62e5f8f326961893c8849e53cf85a`.
+The stored RuboCop reference was captured at `2026-08-23T08:43:27-04:00`
 and has SHA-256
-`7ab0a924ce7d2160b96a6092fa054ca3c8bc08097ca4cf3ed7de7a77ddba7771`.
-After excluding the 48 intentionally pending cops, its active-cop slice reports:
+`34c374aaf167efc7ca3d92a60c15b2c6f4d45e86aeeb1e2cb2c6891eaae89688`.
+After excluding the 94 intentionally pending cops, its active-cop slice reports:
 
 | Classification | Complete checkpoint |
 | --- | ---: |
-| Project-exact | 285 |
-| Exact but dormant | 85 |
-| Mismatching | 185 |
-| Rust crash | 2 |
-| RuboCop gate error | 1 |
+| Project-exact | 402 |
+| Exact but dormant | 110 |
+| Mismatching | 0 |
+| Rust crash | 0 |
+| RuboCop gate error | 0 |
 
-The remaining RuboCop error is `Lint/RedundantCopDisableDirective`, which
-RuboCop refuses to run with `--only`. `Layout/FirstHashElementIndentation`
-crashed Rustocop during the RubyGems.org gate, and `Style/CombinableLoops`
-crashed during the GitLab CE gate. The 185 active mismatching cops and both
-crashes are current failures.
+Every exercised active cop matches RuboCop's complete diagnostic signatures.
+Dormant cops emitted no diagnostics in either engine and remain subject to the
+separate 100%-passing fixture gate. `Lint/RedundantCopDisableDirective` and
+`Style/FileWrite` are intentionally pending because RuboCop 1.87 cannot produce
+stable isolated project-reference output for them.
 
-The cached RuboCop reference also contains a `Style/FileWrite` baseline hole:
-RuboCop 1.87 errors while inspecting the isolated `File.open(..., "w")` case
-under `parser_prism`, but the prior audit accepted its nonempty JSON as a valid
-exit-1 result. Consequently, the raw 185-mismatch count includes that baseline
-artifact. The audit now rejects this RuboCop error signature, so the next
-intentional reference refresh will classify it as a gate error instead.
-
-The minimized project-regression corpus contains 141 passing cases and 282
-pending isolated mismatch directions and crashes. The
+The minimized project-regression corpus contains 336 passing cases and no
+pending active-cop mismatch directions. The
 configuration-mutation corpus contains six. They preserve fixed pathological
 examples, while the complete matrix catches interactions and unrepresented
 syntax across the full 54,146-file corpus.

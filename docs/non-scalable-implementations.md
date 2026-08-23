@@ -1,17 +1,26 @@
 # Non-scalable cop implementations
 
-`updated_at: 2026-08-22T11:50:53-04:00`
+`updated_at: 2026-08-23T08:48:49-04:00`
 
 This is the catalog for category C: cops whose current implementation appears
 too narrow to generalize from the fixture corpus to arbitrary Ruby projects.
 It is an implementation-risk register, not a list of every cop that currently
 mismatches RuboCop.
 
-All 48 cops in this catalog are now intentionally pending: they are absent from
+All 48 category-C cops in this catalog are intentionally pending. A further 44
+project-inexact cops and two RuboCop-reference blockers are also pending, for a
+total of 94; they are absent from
 the active registry, qualification corpus, compatibility evidence, and fixture
 suite. The machine-readable source of truth is
 [`intentionally_pending_cops.yml`](../spec/upstream/rubocop-1.87.0/intentionally_pending_cops.yml).
 Their old implementation source remains only as rewrite reference.
+
+The additional withdrawals were established by the complete audit generated at
+`2026-08-23T08:45:38-04:00`. They comprise every cop classified as mismatch in
+the preceding 558-cop audit, plus `Lint/RedundantCopDisableDirective` and
+`Style/FileWrite`, for which RuboCop 1.87 cannot produce stable isolated project
+reference output. The resulting 512-cop active corpus has 402 exercised
+project-exact cops, 110 dormant cops, and no mismatches or engine errors.
 
 The evidence snapshot is the complete ten-project audit generated at
 `2026-08-22T00:56:18-04:00` in

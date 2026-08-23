@@ -32,22 +32,15 @@ RSpec.describe "rustocop executable" do
       Rails/FilePath
       Rails/ApplicationJob
       Rails/ReversibleMigration
-      Metrics/BlockLength
-      Metrics/MethodLength
-      Layout/LineLength
-      Layout/ExtraSpacing
-      Layout/EndAlignment
       Layout/FirstHashElementIndentation
       Style/HashSyntax
       Style/KeywordParametersOrder
       Style/RedundantBegin
-      Style/IfUnlessModifier
       Style/CaseLikeIf
       Style/ConditionalAssignment
       Style/EmptyCaseCondition
       Style/EmptyElse
       Style/GuardClause
-      Style/Documentation
       Style/HashLikeCase
       Style/ClassMethodsDefinitions
       Style/EndlessMethod

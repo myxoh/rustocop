@@ -74,28 +74,10 @@ macro_rules! fixture_test {
 // New-cop generator registrations are inserted directly below this line.
 
 fixture_test!(
-    parenthesizes_only_complex_range_boundaries,
-    "ambiguous_range",
-    "/project/ambiguous_range.rb",
-    "Lint/AmbiguousRange",
-    true,
-    RubyVersion::default()
-);
-
-fixture_test!(
     removes_only_stable_duplicate_set_elements,
     "duplicate_set_element",
     "/project/duplicate_set_element.rb",
     "Lint/DuplicateSetElement",
-    true,
-    RubyVersion::default()
-);
-
-fixture_test!(
-    removes_unnecessary_symbol_conversions,
-    "symbol_conversion",
-    "/project/symbol_conversion.rb",
-    "Lint/SymbolConversion",
     true,
     RubyVersion::default()
 );
