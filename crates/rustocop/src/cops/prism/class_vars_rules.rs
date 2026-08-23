@@ -19,6 +19,10 @@ fn class_vars(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
         .or_else(|| {
             node.as_class_variable_operator_write_node()
                 .map(|write| write.name_loc())
+        })
+        .or_else(|| {
+            node.as_class_variable_target_node()
+                .map(|target| target.location())
         });
     if let Some(location) = write_location {
         let name = context.source_file().at(&location);
