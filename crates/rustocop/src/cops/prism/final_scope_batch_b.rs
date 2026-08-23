@@ -3,7 +3,7 @@ use super::*;
 
 pub(super) fn cops() -> Vec<Box<dyn Cop>> {
     vec![
-        custom("Naming/MemoizedInstanceVariableName", memoized_variable),
+        Box::new(MemoizedVariable),
         custom("Naming/FileName", file_name),
         report(
             "Lint/AssignmentInCondition",
@@ -497,153 +497,206 @@ fn same_assignment_variable(
     }
 }
 
-fn memoized_variable(context: &mut CopContext<'_, '_>) {
-    let lines = context.source_file().lines().collect::<Vec<_>>();
-    let mut method = None::<String>;
-    let mut method_body_start = None::<usize>;
-    let leading_underscore_required = context
-        .config_value("EnforcedStyleForLeadingUnderscores")
-        .unwrap_or("disallowed")
-        == "required";
-    for (index, (offset, line)) in lines.iter().copied().enumerate() {
-        if let Some(definition) = line.split_once("def ").map(|(_, definition)| definition) {
-            method = Some(
-                definition
-                    .split(['(', ' '])
-                    .next()
-                    .unwrap_or("")
-                    .rsplit('.')
-                    .next()
-                    .unwrap_or("")
-                    .trim_start_matches('_')
-                    .to_string(),
-            );
-            method_body_start = Some(index + 1);
-        } else if let Some(dynamic) = dynamic_method_name(line) {
-            method = Some(dynamic.to_string());
-            method_body_start = Some(index + 1);
-        }
-        if let Some(at) = line.find("@") {
-            let memo_is_last = index + 1 < lines.len()
-                && (lines[index + 1].1.trim() == "end"
-                    || (line[at..].contains("begin")
-                        && lines[index + 1..]
-                            .iter()
-                            .rev()
-                            .take(2)
-                            .all(|(_, line)| line.trim() == "end")));
-            if line[at..].contains("||=") && memo_is_last {
-                let name = line[at + 1..]
-                    .split(|character: char| !character.is_ascii_alphanumeric() && character != '_')
-                    .next()
-                    .unwrap_or("");
-                let normalized = name.trim_start_matches('_');
-                if method.as_deref().is_some_and(|method| {
-                    !method.starts_with("initialize")
-                        && (method.trim_end_matches(['?', '!', '=']) != normalized
-                            || leading_underscore_required && !name.starts_with('_'))
-                }) {
-                    let method = method.as_deref().unwrap_or("");
-                    let actual = format!("@{name}");
-                    let expected_name = method.trim_end_matches(['?', '!', '=']);
-                    let expected = if leading_underscore_required {
-                        format!("@_{expected_name}")
-                    } else {
-                        format!("@{expected_name}")
-                    };
-                    let message = if leading_underscore_required && !name.starts_with('_') {
-                        format!(
-                            "Memoized variable `{actual}` does not start with `_`. Use `{expected}` instead."
-                        )
-                    } else {
-                        format!(
-                            "Memoized variable `{actual}` does not match method name `{method}`. Use `{expected}` instead."
-                        )
-                    };
-                    context.replace(
-                        message,
-                        offset + at..offset + at + name.len() + 1,
-                        offset + at..offset + at + name.len() + 1,
-                        expected,
-                    );
-                }
-            }
+struct MemoizedVariable;
 
-            if let (Some(method), Some(body_start)) = (method.as_deref(), method_body_start) {
-                let variable = line[at + 1..]
-                    .split(|character: char| !character.is_ascii_alphanumeric() && character != '_')
-                    .next()
-                    .unwrap_or("");
-                let actual = format!("@{variable}");
-                let defined = format!("defined?({actual})");
-                let return_read = format!("return {actual} if {defined}");
-                if index == body_start
-                    && line.trim() == return_read
-                    && index + 2 < lines.len()
-                    && lines[index + 1]
-                        .1
-                        .trim_start()
-                        .starts_with(&format!("{actual} ="))
-                    && lines[index + 2].1.trim() == "end"
-                {
-                    let expected_name = method.trim_end_matches(['?', '!', '=']);
-                    let expected = if leading_underscore_required {
-                        format!("@_{expected_name}")
-                    } else {
-                        format!("@{expected_name}")
-                    };
-                    let normalized = variable.trim_start_matches('_');
-                    if !method.starts_with("initialize")
-                        && (normalized != expected_name
-                            || leading_underscore_required && !variable.starts_with('_'))
-                    {
-                        let message = if leading_underscore_required && !variable.starts_with('_') {
-                            format!(
-                                "Memoized variable `{actual}` does not start with `_`. Use `{expected}` instead."
-                            )
-                        } else {
-                            format!(
-                                "Memoized variable `{actual}` does not match method name `{method}`. Use `{expected}` instead."
-                            )
-                        };
-                        let occurrences = line.match_indices(&actual).collect::<Vec<_>>();
-                        for (position, _) in occurrences.into_iter().rev() {
-                            context.replace(
-                                message.clone(),
-                                offset + position..offset + position + actual.len(),
-                                offset + position..offset + position + actual.len(),
-                                expected.clone(),
-                            );
-                        }
-                        let assignment_offset = lines[index + 1].0;
-                        let assignment_at = lines[index + 1].1.find(&actual).unwrap_or(0);
-                        context.replace(
-                            message,
-                            assignment_offset + assignment_at
-                                ..assignment_offset + assignment_at + actual.len(),
-                            assignment_offset + assignment_at
-                                ..assignment_offset + assignment_at + actual.len(),
-                            expected,
-                        );
-                    }
-                }
+impl Cop for MemoizedVariable {
+    fn name(&self) -> &'static str {
+        "Naming/MemoizedInstanceVariableName"
+    }
+
+    fn on_node<'pr>(
+        &self,
+        node: &Node<'pr>,
+        ancestors: &[Node<'pr>],
+        source: &str,
+        context: &mut Context,
+    ) {
+        let mut cop_context = context.cop_context(self.name(), source, ancestors);
+        if let Some(write) = node.as_instance_variable_or_write_node() {
+            let Some((method, body)) = memoized_definition(ancestors, source) else {
+                return;
+            };
+            if !memoized_final_expression(&body, node) {
+                return;
             }
-        }
-        if line.trim() == "end" {
-            method = None;
+            let name = String::from_utf8_lossy(write.name().as_slice()).into_owned();
+            report_memoized_name(
+                &method,
+                &name,
+                write.location().start_offset()..write.location().start_offset() + name.len(),
+                &mut cop_context,
+            );
+        } else if let Some(defined) = node.as_defined_node() {
+            check_defined_memoization(&defined, ancestors, source, &mut cop_context);
         }
     }
 }
 
-fn dynamic_method_name(line: &str) -> Option<&str> {
-    let marker = if line.contains("define_singleton_method(:") {
-        "define_singleton_method(:"
-    } else {
-        "define_method(:"
+fn memoized_definition<'pr>(
+    ancestors: &[Node<'pr>],
+    source: &'pr str,
+) -> Option<(String, Node<'pr>)> {
+    for (index, ancestor) in ancestors.iter().enumerate().rev() {
+        if let Some(definition) = ancestor.as_def_node() {
+            let body = definition.body()?;
+            return Some((
+                String::from_utf8_lossy(definition.name().as_slice()).into_owned(),
+                body,
+            ));
+        }
+        let Some(block) = ancestor.as_block_node() else {
+            continue;
+        };
+        let Some(call) = ancestors[..index].iter().rev().find_map(|candidate| {
+            let call = candidate.as_call_node()?;
+            let owned = call.block().is_some_and(|owned| {
+                owned.location().start_offset() == block.location().start_offset()
+                    && owned.location().end_offset() == block.location().end_offset()
+            });
+            owned.then_some(call)
+        }) else {
+            continue;
+        };
+        if !matches!(call_name(&call), b"define_method" | b"define_singleton_method") {
+            continue;
+        }
+        let argument = first_argument(&call)?;
+        let name = if let Some(symbol) = argument.as_symbol_node() {
+            String::from_utf8_lossy(symbol.unescaped()).into_owned()
+        } else if let Some(string) = argument.as_string_node() {
+            String::from_utf8_lossy(string.unescaped()).into_owned()
+        } else {
+            continue;
+        };
+        return Some((name, block.body()?));
+    }
+    let _ = source;
+    None
+}
+
+fn memoized_final_expression(body: &Node<'_>, candidate: &Node<'_>) -> bool {
+    if body.location().start_offset() == candidate.location().start_offset()
+        && body.location().end_offset() == candidate.location().end_offset()
+    {
+        return true;
+    }
+    body.as_statements_node()
+        .and_then(|statements| statements.body().iter().last())
+        .is_some_and(|last| {
+            last.location().start_offset() == candidate.location().start_offset()
+                && last.location().end_offset() == candidate.location().end_offset()
+        })
+}
+
+fn report_memoized_name(
+    method: &str,
+    variable: &str,
+    range: std::ops::Range<usize>,
+    context: &mut CopContext<'_, '_>,
+) {
+    if matches!(
+        method,
+        "initialize" | "initialize_clone" | "initialize_copy" | "initialize_dup"
+    ) {
+        return;
+    }
+    let method_name = method.replace(['!', '?', '='], "");
+    let variable_name = variable.trim_start_matches('@');
+    let style = context
+        .config_value("EnforcedStyleForLeadingUnderscores")
+        .unwrap_or("disallowed");
+    let no_underscore = method_name.strip_prefix('_').unwrap_or(&method_name);
+    let with_underscore = format!("_{method_name}");
+    let matches = match style {
+        "required" => variable_name == with_underscore
+            || method_name.starts_with('_') && variable_name == method_name,
+        "optional" => {
+            variable_name == method_name
+                || variable_name == with_underscore
+                || variable_name == no_underscore
+        }
+        _ => variable_name == method_name || variable_name == no_underscore,
     };
-    let (_, rest) = line.split_once(marker)?;
-    rest.split(|character: char| !character.is_ascii_alphanumeric() && character != '_')
-        .next()
+    if matches {
+        return;
+    }
+    let suggestion = if style == "required" {
+        with_underscore
+    } else {
+        method_name
+    };
+    let expected = format!("@{suggestion}");
+    let message = if style == "required" && !variable_name.starts_with('_') {
+        format!(
+            "Memoized variable `{variable}` does not start with `_`. Use `{expected}` instead."
+        )
+    } else {
+        format!(
+            "Memoized variable `{variable}` does not match method name `{method}`. Use `{expected}` instead."
+        )
+    };
+    context.replace(message, range.clone(), range, expected);
+}
+
+fn check_defined_memoization(
+    defined: &ruby_prism::DefinedNode<'_>,
+    ancestors: &[Node<'_>],
+    source: &str,
+    context: &mut CopContext<'_, '_>,
+) {
+    let Some(defined_read) = defined.value().as_instance_variable_read_node() else {
+        return;
+    };
+    let name = defined_read.name().as_slice();
+    let Some((method, body)) = memoized_definition(ancestors, source) else {
+        return;
+    };
+    let Some(statements) = body.as_statements_node() else {
+        return;
+    };
+    let body_nodes = statements.body().iter().collect::<Vec<_>>();
+    let (Some(first), Some(last)) = (body_nodes.first(), body_nodes.last()) else {
+        return;
+    };
+    let Some(condition) = first.as_if_node() else {
+        return;
+    };
+    if condition.predicate().location().start_offset() != defined.location().start_offset()
+        || condition.predicate().location().end_offset() != defined.location().end_offset()
+        || condition.subsequent().is_some()
+    {
+        return;
+    }
+    let Some(return_read) = condition
+        .statements()
+        .and_then(|statements| statements.body().first())
+        .and_then(|statement| statement.as_return_node())
+        .and_then(|returned| returned.arguments())
+        .and_then(|arguments| arguments.arguments().first())
+        .and_then(|argument| argument.as_instance_variable_read_node())
+    else {
+        return;
+    };
+    let Some(assignment) = last.as_instance_variable_write_node() else {
+        return;
+    };
+    if return_read.name().as_slice() != name || assignment.name().as_slice() != name {
+        return;
+    }
+    let variable = String::from_utf8_lossy(name).into_owned();
+    let ranges = [
+        defined_read.location(),
+        return_read.location(),
+        assignment.location(),
+    ];
+    for location in ranges {
+        report_memoized_name(
+            &method,
+            &variable,
+            location.start_offset()..location.start_offset() + variable.len(),
+            context,
+        );
+    }
 }
 
 fn file_name(context: &mut CopContext<'_, '_>) {
