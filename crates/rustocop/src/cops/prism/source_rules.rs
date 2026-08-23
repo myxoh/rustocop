@@ -14,7 +14,6 @@ declare_source_cops! {
     RedundantCapitalW => "Style/RedundantCapitalW" => redundant_capital_w,
     DuplicateElsifCondition => "Lint/DuplicateElsifCondition" => duplicate_elsif,
     EnsureReturn => "Lint/EnsureReturn" => ensure_return,
-    ClassVars => "Style/ClassVars" => class_vars,
     DuplicatedGem => "Bundler/DuplicatedGem" => duplicated_gem,
 }
 
@@ -292,27 +291,6 @@ fn ensure_return(source: &str, context: &mut Reporter<'_>) {
             context.report(
                 "Do not return from an `ensure` block.",
                 start..offset + line.len(),
-            );
-        }
-    }
-}
-
-fn class_vars(source: &str, context: &mut Reporter<'_>) {
-    for start in find_all(source, "@@") {
-        let end = start
-            + source[start..]
-                .bytes()
-                .take_while(|byte| byte.is_ascii_alphanumeric() || *byte == b'@' || *byte == b'_')
-                .count();
-        let prefix = &source[..start];
-        let assignment = source[end..].trim_start().starts_with('=');
-        let setter = prefix.ends_with(':') && prefix.rsplit_once("class_variable_set(").is_some();
-        if assignment || setter {
-            let offense_start = if setter { start - 1 } else { start };
-            let name = &source[offense_start..end];
-            context.report(
-                format!("Replace class var {name} with a class instance var."),
-                offense_start..end,
             );
         }
     }

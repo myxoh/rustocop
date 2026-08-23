@@ -77,6 +77,7 @@ cop_modules!(
     class_check_rules,
     class_definition_rules,
     class_methods_completion,
+    class_vars_rules,
     compact_syntax_completion,
     compatibility_lexical_rules,
     comparable_clamp_rules,
