@@ -271,6 +271,34 @@ fn multiline_if_then(context: &mut CopContext<'_, '_>) {
 }
 
 fn return_nil(node: &ruby_prism::ReturnNode<'_>, context: &mut CopContext<'_, '_>) {
+    for ancestor in context.ancestors().iter().rev() {
+        if ancestor.as_def_node().is_some() || ancestor.as_lambda_node().is_some() {
+            break;
+        }
+        let Some(block) = ancestor.as_block_node() else {
+            continue;
+        };
+        let owner = context.ancestors().iter().rev().find_map(|candidate| {
+            let call = candidate.as_call_node()?;
+            call.block()
+                .and_then(|candidate| candidate.as_block_node())
+                .filter(|candidate| {
+                    candidate.location().start_offset() == block.location().start_offset()
+                })?;
+            Some(call)
+        });
+        if owner.as_ref().is_some_and(|owner| {
+            matches!(
+                owner.name().as_slice(),
+                b"define_method" | b"define_singleton_method"
+            )
+        }) {
+            break;
+        }
+        if block.parameters().is_some() && owner.is_some_and(|owner| owner.receiver().is_some()) {
+            return;
+        }
+    }
     let return_nil = context.policy().enforced_style("return") == "return_nil";
     let arguments = node.arguments();
     if return_nil
