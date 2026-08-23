@@ -596,20 +596,51 @@ fn memoized_final_expression(body: &Node<'_>, candidate: &Node<'_>) -> bool {
             .block()
             .and_then(|block| block.as_block_node())
             .and_then(|block| block.body())
-            .is_some_and(|body| memoized_final_expression(&body, candidate));
+            .is_some_and(|body| memoized_only_statement(&body, candidate));
     }
     if let Some(condition) = body.as_if_node() {
+        if condition.if_keyword_loc().is_some_and(|keyword| {
+            keyword.start_offset() != condition.location().start_offset()
+        }) {
+            return false;
+        }
         if let Some(subsequent) = condition.subsequent() {
-            return memoized_final_expression(&subsequent, candidate);
+            return if let Some(otherwise) = subsequent.as_else_node() {
+                otherwise
+                    .statements()
+                    .is_some_and(|statements| memoized_only_statement(&statements.as_node(), candidate))
+            } else {
+                memoized_final_expression(&subsequent, candidate)
+            };
         }
         return condition
             .statements()
-            .is_some_and(|statements| memoized_final_expression(&statements.as_node(), candidate));
+            .is_some_and(|statements| memoized_only_statement(&statements.as_node(), candidate));
     }
-    if let Some(otherwise) = body.as_else_node() {
-        return otherwise
+    if let Some(condition) = body.as_unless_node() {
+        if condition.keyword_loc().start_offset() != condition.location().start_offset() {
+            return false;
+        }
+        if let Some(otherwise) = condition.else_clause() {
+            return otherwise
+                .statements()
+                .is_some_and(|statements| memoized_only_statement(&statements.as_node(), candidate));
+        }
+        return condition
             .statements()
-            .is_some_and(|statements| memoized_final_expression(&statements.as_node(), candidate));
+            .is_some_and(|statements| memoized_only_statement(&statements.as_node(), candidate));
+    }
+    if let Some(case_node) = body.as_case_node() {
+        let statements = case_node.else_clause().and_then(|branch| branch.statements()).or_else(|| {
+            case_node
+                .conditions()
+                .iter()
+                .last()
+                .and_then(|branch| branch.as_when_node())
+                .and_then(|branch| branch.statements())
+        });
+        return statements
+            .is_some_and(|statements| memoized_only_statement(&statements.as_node(), candidate));
     }
     if let Some(begin) = body.as_begin_node() {
         return begin
@@ -617,6 +648,17 @@ fn memoized_final_expression(body: &Node<'_>, candidate: &Node<'_>) -> bool {
             .is_some_and(|statements| memoized_final_expression(&statements.as_node(), candidate));
     }
     false
+}
+
+fn memoized_only_statement(body: &Node<'_>, candidate: &Node<'_>) -> bool {
+    if let Some(statements) = body.as_statements_node() {
+        return statements.body().len() == 1
+            && statements
+                .body()
+                .first()
+                .is_some_and(|statement| memoized_final_expression(&statement, candidate));
+    }
+    memoized_final_expression(body, candidate)
 }
 
 fn report_memoized_name(
