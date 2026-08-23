@@ -364,6 +364,13 @@ fn fetch_env_var(context: &mut CopContext<'_, '_>) {
     let default_to_nil = context.config_bool("DefaultToNil", true);
     let allowed = context.config_values("AllowedVars").to_vec();
     let mut guarded = Vec::<Vec<String>>::new();
+    let code_offsets = context
+        .source_file()
+        .code_offsets("ENV[")
+        .into_iter()
+        .collect::<std::collections::HashSet<_>>();
+    let literal_ranges = context.source_file().literal_ranges();
+    let comment_ranges = context.source_file().comment_ranges();
     for (offset, line) in context.source_file().lines() {
         let trimmed = line.trim_start();
         if trimmed == "end" { guarded.pop(); }
@@ -374,11 +381,43 @@ fn fetch_env_var(context: &mut CopContext<'_, '_>) {
             if let Some(argument) = line.split("ENV.key?(").nth(1).and_then(|tail| tail.split(')').next()) {
                 condition_keys.push(argument.to_string());
             }
-            guarded.push(condition_keys.clone());
         }
+        let modifier_keys = [" if ", " unless "]
+            .into_iter()
+            .filter_map(|keyword| {
+                line.rfind(keyword).and_then(|at| {
+                    (!line[..at].trim().is_empty()).then_some(&line[at + keyword.len()..])
+                })
+            })
+            .flat_map(env_keys)
+            .collect::<Vec<_>>();
         let mut search = 0;
         while let Some(relative) = line[search..].find("ENV[") {
             let start = search + relative;
+            if start > 0
+                && (line.as_bytes()[start - 1].is_ascii_alphanumeric()
+                    || line.as_bytes()[start - 1] == b'_')
+            {
+                search = start + "ENV[".len();
+                continue;
+            }
+            let prefix = &line[..start];
+            let in_interpolation = prefix.rfind("#{").is_some_and(|opening| {
+                prefix.rfind('}').is_none_or(|closing| closing < opening)
+            });
+            let absolute_start = offset + start;
+            let in_literal = literal_ranges
+                .iter()
+                .any(|range| range.start <= absolute_start && absolute_start < range.end);
+            let in_comment = comment_ranges
+                .iter()
+                .any(|range| range.start <= absolute_start && absolute_start < range.end);
+            if in_comment
+                || (!code_offsets.contains(&absolute_start) && in_literal && !in_interpolation)
+            {
+                search = start + "ENV[".len();
+                continue;
+            }
             let value_start = start + "ENV[".len();
             let Some(close) = line[value_start..].find(']').map(|at| value_start + at) else { break };
             let key = &line[value_start..close];
@@ -386,11 +425,37 @@ fn fetch_env_var(context: &mut CopContext<'_, '_>) {
             let before = line[..start].trim_end().as_bytes().last().copied();
             let after = line[close + 1..].trim_start();
             let guarded_here = guarded.iter().any(|keys| keys.iter().any(|guarded| guarded == key));
+            let condition_prefix = if trimmed.starts_with("if ") {
+                line[..start]
+                    .trim_start()
+                    .strip_prefix("if ")
+                    .unwrap_or_default()
+            } else if trimmed.starts_with("unless ") {
+                line[..start]
+                    .trim_start()
+                    .strip_prefix("unless ")
+                    .unwrap_or_default()
+            } else {
+                ""
+            };
+            let directly_conditional = conditional
+                && (condition_prefix.trim().is_empty()
+                    || condition_prefix.trim_end().ends_with("||")
+                    || condition_prefix.trim_end().ends_with("&&")
+                    || condition_prefix
+                        .trim_end_matches('(')
+                        .trim_end()
+                        .ends_with('?'));
             if allowed.iter().any(|allowed| allowed == bare_key)
-                || conditional
+                || directly_conditional
                 || guarded_here
+                || modifier_keys.iter().any(|guarded| guarded == key)
                 || before == Some(b'!')
                 || after.starts_with(['.', '&'])
+                || after.starts_with('=')
+                    && !after.starts_with("=>")
+                    && !after.starts_with("==")
+                    && !after.starts_with("=~")
                 || after.starts_with("==")
                 || after.starts_with("!=")
                 || after.starts_with("||")
@@ -410,6 +475,9 @@ fn fetch_env_var(context: &mut CopContext<'_, '_>) {
             );
             search = close + 1;
         }
+        if conditional {
+            guarded.push(condition_keys);
+        }
     }
 }
 
@@ -419,7 +487,20 @@ fn env_keys(line: &str) -> Vec<String> {
     while let Some(relative) = line[search..].find("ENV[") {
         let start = search + relative + "ENV[".len();
         let Some(close) = line[start..].find(']').map(|at| start + at) else { break };
-        keys.push(line[start..close].to_string());
+        let after = line[close + 1..].trim_start();
+        let predicate_receiver = after
+            .strip_prefix("&.")
+            .or_else(|| after.strip_prefix('.'))
+            .is_some_and(|method| {
+                method
+                    .bytes()
+                    .take_while(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'_' | b'?' | b'!'))
+                    .last()
+                    == Some(b'?')
+            });
+        if !after.starts_with(['.', '&']) || predicate_receiver {
+            keys.push(line[start..close].to_string());
+        }
         search = close + 1;
     }
     keys

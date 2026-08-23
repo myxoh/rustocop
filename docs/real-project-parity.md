@@ -13,33 +13,31 @@ cases, and configuration branches that the projects do not exercise.
 ## Latest realistic status
 
 The latest complete checkpoint was generated at
-`2026-08-23T16:19:26-04:00` from Rust source
-`7dd38fcc4cf0fa518efb211275216b177737925e` and native binary SHA-256
-`71f2d19752e8cf7b7c0f77b3477c1654102ebc57aa86bce6cbd9f816ec04fbda`.
-The stored RuboCop reference was refreshed at `2026-08-23T16:14:00-04:00`
-and has SHA-256
-`e71621d84dc26c49234a2e12020d40ed931752dc35be9dccce6b0dbe23737dd0`.
-After excluding the 73 intentionally pending cops, its active-cop slice reports:
+`2026-08-23T19:53:23-04:00` from Rust source
+`2a436cabdb399a1d64fc48d3a4e1a18dcf65a048` and native binary SHA-256
+`b844a8687b0d06076947daa0540ce030f77c97d947e7994c01b73f29e5d6b6ee`.
+The stored RuboCop reference has SHA-256
+`a85d689ef7a38d212227f109c4cdc649751c6a12b3cfc7d7ed3b6d76300446e5`.
+After excluding the 53 intentionally pending cops, its active-cop slice reports:
 
 | Classification | Complete checkpoint |
 | --- | ---: |
-| Project-exact | 306 |
+| Project-exact | 307 |
 | Exact but dormant | 53 |
-| Mismatching | 172 |
-| Rust crash | 1 |
+| Mismatching | 192 |
+| Rust crash | 0 |
 | RuboCop gate error | 1 |
 
-Among the 478 exercised cops, 306 are exact (64.0%). The ten cops restored in
-this iteration are project-exact across the complete pinned corpus.
-`Layout/SpaceAroundOperators` crashes on Puppet;
-`Style/ClassAndModuleChildren` triggers a RuboCop 1.87 error on Puppet.
+Among the 499 exercised cops, 307 are exact (61.5%). The ten cops restored in
+this iteration pass every captured fixture but remain project-inexact; three
+rounds of new minimized regressions materially narrowed their gaps.
+`Style/ClassAndModuleChildren` still triggers a RuboCop 1.87 error on Puppet.
 
-The minimized project-regression corpus contains 389 passing cases and no
+The minimized project-regression corpus contains 528 passing cases and no
 pending active-cop mismatch directions. The
 configuration-mutation corpus contains six. They preserve fixed pathological
 examples, while the complete matrix catches interactions and unrepresented
-syntax across the full 85,471-file corpus. The newly discovered failures still
-need provenance-backed minimized fixtures.
+syntax across the full 85,471-file corpus.
 
 Fixture parity does not imply project parity: upstream examples establish the
 captured contract, while this complete project matrix exercises negative cases,

@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 
 use super::source_helpers::*;
+use super::source_syntax::matching_delimiter;
 use super::*;
 
 mod literal_layout;
@@ -308,21 +309,52 @@ fn useless_defined(source: &str, reporter: &mut Reporter<'_>) {
 }
 
 fn auto_resource_cleanup(source: &str, reporter: &mut Reporter<'_>) {
+    let file = SourceFile::new(source);
+    let comment_ranges = file.comment_ranges();
     for receiver in ["::Tempfile", "Tempfile", "::File", "File"] {
-        let needle = format!("{receiver}.open(");
-        for start in all_offsets(source, &needle) {
+        for separator in ["(", " "] {
+            let needle = format!("{receiver}.open{separator}");
+            for start in all_offsets(source, &needle) {
+            if comment_ranges
+                .iter()
+                .any(|range| range.start <= start && start < range.end)
+            {
+                continue;
+            }
             if !receiver.starts_with("::") && start >= 2 && &source[start - 2..start] == "::" {
                 continue;
             }
-            let end =
+            let line_start = source[..start].rfind('\n').map_or(0, |newline| newline + 1);
+            let prefix = source[line_start..start].trim_end();
+            if prefix.ends_with(':') || prefix.ends_with("=>") {
+                continue;
+            }
+            let line_end_offset =
                 line_end(source, start).saturating_sub(usize::from(source[start..].contains('\n')));
+            let end = if separator == "(" {
+                let opening = start + needle.len() - 1;
+                matching_delimiter(source, opening, b'(', b')')
+                    .map_or(line_end_offset, |closing| closing + 1)
+            } else {
+                line_end_offset
+            };
             let line = &source[start..end];
-            if !line.contains('{') && !line.contains("&:") && !line.ends_with(".close") {
+            let full_line = &source[start..line_end_offset];
+            let block_brace = full_line
+                .rfind(')')
+                .is_some_and(|closing| full_line[closing + 1..].contains('{'));
+            if !block_brace
+                && !line.contains("&:")
+                && !line.contains(", &")
+                && !full_line.contains(" do")
+                && !full_line.ends_with(".close")
+            {
                 reporter.report(
                     format!("Use the block version of `{receiver}.open`."),
                     start..end,
                 );
             }
+        }
         }
     }
 }

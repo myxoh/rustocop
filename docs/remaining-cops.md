@@ -1,7 +1,7 @@
 # Current project-parity gaps
 
 Generated from the same complete audit as [the evidence matrix](cop-support.md).
-Evidence updated at `2026-08-23T18:07:30-04:00`.
+Evidence updated at `2026-08-23T19:53:23-04:00`.
 This queue contains only failures from that 50-project audit; it does not use the old
 Verified/Heuristic qualification labels or captured-case pass counts.
 
@@ -9,16 +9,23 @@ The gap is unmatched complete diagnostic signatures, not the difference
 between aggregate offense counts. A cop can have equal counts and still have a
 nonzero gap because its message, severity, path, or source range differs.
 
-- Rust source: `64d776587d04268b8a05146277d85990bf0cf0a6`
-- Unresolved cops: 183
+- Rust source: `2a436cabdb399a1d64fc48d3a4e1a18dcf65a048`
+- Unresolved cops: 193
 
 | Cop | Status | Rustocop | RuboCop | Exact | Signature gap | Project regression evidence |
 | --- | --- | ---: | ---: | ---: | ---: | --- |
 | `Style/InlineComment` | Mismatch | 229984 | 18651 | 18651 | 211333 | Passing |
+| `Layout/MultilineArrayLineBreaks` | Mismatch | 13345 | 22550 | 13010 | 9875 | Passing |
 | `Lint/UnderscorePrefixedVariableName` | Mismatch | 2109 | 2109 | 897 | 2424 | No |
 | `Layout/ExtraSpacing` | Mismatch | 1329 | 1905 | 471 | 2292 | Passing |
+| `Lint/MissingCopEnableDirective` | Mismatch | 2024 | 75 | 75 | 1949 | Passing |
 | `Style/IfUnlessModifier` | Mismatch | 11199 | 11656 | 11179 | 497 | Passing |
+| `Style/AutoResourceCleanup` | Mismatch | 548 | 86 | 86 | 462 | Passing |
+| `Lint/AmbiguousRange` | Mismatch | 456 | 164 | 98 | 424 | Passing |
 | `Style/RedundantParentheses` | Mismatch | 712 | 522 | 480 | 274 | Passing |
+| `Style/FetchEnvVar` | Mismatch | 1497 | 1386 | 1340 | 203 | Passing |
+| `Naming/HeredocDelimiterNaming` | Mismatch | 2369 | 2184 | 2184 | 185 | Passing |
+| `Lint/RedundantCopEnableDirective` | Mismatch | 176 | 20 | 20 | 156 | Passing |
 | `Style/ExplicitBlockArgument` | Mismatch | 282 | 357 | 248 | 143 | Passing |
 | `Style/EmptyLiteral` | Mismatch | 240 | 118 | 116 | 126 | Passing |
 | `Style/RedundantAssignment` | Mismatch | 249 | 201 | 176 | 98 | Passing |
@@ -28,8 +35,10 @@ nonzero gap because its message, severity, path, or source range differs.
 | `Style/AccessorGrouping` | Mismatch | 2024 | 1978 | 1968 | 66 | Passing |
 | `Lint/OrAssignmentToConstant` | Mismatch | 159 | 172 | 136 | 59 | No |
 | `Layout/SpaceInsideParens` | Mismatch | 959 | 1012 | 958 | 55 | Passing |
+| `Lint/AmbiguousOperatorPrecedence` | Mismatch | 964 | 1007 | 962 | 47 | Passing |
 | `Gemspec/DependencyVersion` | Mismatch | 45 | 0 | 0 | 45 | No |
 | `Style/FormatStringToken` | Mismatch | 7662 | 7619 | 7618 | 45 | Passing |
+| `Layout/SpaceAroundOperators` | Mismatch | 7109 | 7084 | 7076 | 41 | Passing |
 | `Lint/ErbNewArguments` | Mismatch | 46 | 8 | 8 | 38 | No |
 | `Gemspec/AttributeAssignment` | Mismatch | 37 | 0 | 0 | 37 | No |
 | `Style/Semicolon` | Mismatch | 2726 | 2692 | 2692 | 34 | No |
@@ -72,11 +81,11 @@ nonzero gap because its message, severity, path, or source range differs.
 | `Lint/UselessDefined` | Mismatch | 14 | 3 | 3 | 11 | Passing |
 | `Style/DirEmpty` | Mismatch | 12 | 1 | 1 | 11 | Passing |
 | `Style/RedundantStringEscape` | Mismatch | 1864 | 1875 | 1864 | 11 | No |
-| `Layout/EmptyLineAfterGuardClause` | Mismatch | 4958 | 4964 | 4956 | 10 | Passing |
 | `Lint/BigDecimalNew` | Mismatch | 10 | 0 | 0 | 10 | No |
 | `Lint/ConstantOverwrittenInRescue` | Mismatch | 10 | 0 | 0 | 10 | Passing |
 | `Style/ColonMethodDefinition` | Mismatch | 11 | 1 | 1 | 10 | Passing |
 | `Style/SlicingWithRange` | Mismatch | 309 | 309 | 304 | 10 | No |
+| `Layout/EmptyLineAfterGuardClause` | Mismatch | 4959 | 4964 | 4957 | 9 | Passing |
 | `Layout/SpaceAroundKeyword` | Mismatch | 237 | 232 | 230 | 9 | Passing |
 | `Layout/EmptyComment` | Mismatch | 105 | 99 | 98 | 8 | Passing |
 | `Layout/EmptyLinesAfterModuleInclusion` | Mismatch | 1032 | 1024 | 1024 | 8 | Passing |
@@ -99,6 +108,7 @@ nonzero gap because its message, severity, path, or source range differs.
 | `Style/FrozenStringLiteralComment` | Mismatch | 14123 | 14117 | 14117 | 6 | No |
 | `Style/RedundantLineContinuation` | Mismatch | 84 | 88 | 83 | 6 | Passing |
 | `Layout/FirstArgumentIndentation` | Mismatch | 878 | 883 | 878 | 5 | Passing |
+| `Lint/AmbiguousOperator` | Mismatch | 337 | 332 | 332 | 5 | Passing |
 | `Lint/EachWithObjectArgument` | Mismatch | 5 | 0 | 0 | 5 | No |
 | `Lint/RequireRangeParentheses` | Mismatch | 5 | 0 | 0 | 5 | Passing |
 | `Lint/ShadowingOuterLocalVariable` | Mismatch | 385 | 386 | 383 | 5 | Passing |
@@ -164,6 +174,7 @@ nonzero gap because its message, severity, path, or source range differs.
 | `Layout/LineContinuationSpacing` | Mismatch | 350 | 349 | 349 | 1 | Passing |
 | `Lint/AmbiguousAssignment` | Mismatch | 1 | 0 | 0 | 1 | Passing |
 | `Lint/ConstantReassignment` | Mismatch | 2 | 1 | 1 | 1 | Passing |
+| `Lint/CopDirectiveSyntax` | Mismatch | 224 | 225 | 224 | 1 | Passing |
 | `Lint/EmptyExpression` | Mismatch | 0 | 1 | 0 | 1 | No |
 | `Lint/EmptyInterpolation` | Mismatch | 2 | 3 | 2 | 1 | No |
 | `Lint/FormatParameterMismatch` | Mismatch | 1 | 0 | 0 | 1 | Passing |
@@ -195,5 +206,4 @@ nonzero gap because its message, severity, path, or source range differs.
 | `Style/RedundantSortBy` | Mismatch | 1 | 2 | 1 | 1 | No |
 | `Style/SoleNestedConditional` | Mismatch | 574 | 573 | 573 | 1 | No |
 | `Style/UnlessLogicalOperators` | Mismatch | 93 | 94 | 93 | 1 | Passing |
-| `Layout/SpaceAroundOperators` | Rust crash | — | — | — | — | Passing |
 | `Style/ClassAndModuleChildren` | RuboCop gate error | — | — | — | — | Passing |

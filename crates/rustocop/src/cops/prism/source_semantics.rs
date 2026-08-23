@@ -92,19 +92,29 @@ fn gem_version(context: &mut CopContext<'_, '_>) {
 
 fn multiline_array_line_breaks(context: &mut CopContext<'_, '_>) {
     const MESSAGE: &str = "Each item in a multi-line array must start on a separate line.";
+    report_percent_array_line_breaks(context, MESSAGE);
     let source = context.source();
     let bytes = source.as_bytes();
     let mut stack = Vec::new();
     let mut arrays = Vec::new();
     let mut quote = None;
+    let mut comment = false;
     for (index, byte) in bytes.iter().copied().enumerate() {
+        if comment {
+            if byte == b'\n' {
+                comment = false;
+            }
+            continue;
+        }
         if let Some(delimiter) = quote {
             if byte == delimiter && bytes.get(index.wrapping_sub(1)) != Some(&b'\\') {
                 quote = None;
             }
             continue;
         }
-        if matches!(byte, b'\'' | b'"') {
+        if byte == b'#' {
+            comment = true;
+        } else if matches!(byte, b'\'' | b'"') {
             quote = Some(byte);
         } else if byte == b'[' {
             stack.push(index);
@@ -135,6 +145,11 @@ fn multiline_array_line_breaks(context: &mut CopContext<'_, '_>) {
         for (index, pair) in elements.windows(2).enumerate() {
             let previous = &pair[0];
             let element = &pair[1];
+            if !context.config_bool("AllowMultilineFinalElement", false)
+                && source[previous.clone()].contains('\n')
+            {
+                continue;
+            }
             if context.config_bool("AllowMultilineFinalElement", false)
                 && index + 2 == elements.len()
             {
@@ -160,6 +175,47 @@ fn multiline_array_line_breaks(context: &mut CopContext<'_, '_>) {
                 " \n".to_string()
             };
             context.replace(MESSAGE, element.clone(), edit, replacement);
+        }
+    }
+}
+
+fn report_percent_array_line_breaks(context: &mut CopContext<'_, '_>, message: &str) {
+    let source = context.source();
+    for marker in ["%w[", "%W[", "%i[", "%I["] {
+        for (start, _) in source.match_indices(marker) {
+            let opening = start + marker.len() - 1;
+            let Some(closing) = matching_delimiter(source, opening, b'[', b']') else {
+                continue;
+            };
+            if !source[opening..=closing].contains('\n') {
+                continue;
+            }
+            let content_lines = source[opening + 1..closing]
+                .lines()
+                .filter(|line| !line.trim().is_empty())
+                .count();
+            if content_lines <= 1 {
+                continue;
+            }
+            for (line_offset, line) in context.source_file().lines() {
+                let segment_start = (opening + 1).max(line_offset);
+                let segment_end = closing.min(line_offset + line.len());
+                if segment_start >= segment_end {
+                    continue;
+                }
+                let segment = &source[segment_start..segment_end];
+                let words = segment
+                    .split_whitespace()
+                    .scan(0usize, |search, word| {
+                        let relative = segment[*search..].find(word)? + *search;
+                        *search = relative + word.len();
+                        Some(segment_start + relative..segment_start + relative + word.len())
+                    })
+                    .collect::<Vec<_>>();
+                for word in words.into_iter().skip(1) {
+                    context.insert(message, word.clone(), word.start, "\n");
+                }
+            }
         }
     }
 }

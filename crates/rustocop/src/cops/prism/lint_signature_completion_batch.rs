@@ -713,14 +713,34 @@ fn ambiguous_range(context: &mut CopContext<'_, '_>) {
             continue;
         };
         let operator_end = at + operator.len();
-        let unmatched_open = line[..at].rfind('(').filter(|open| {
-            line[*open + 1..at].matches('(').count() >= line[*open + 1..at].matches(')').count()
-        });
-        let left_start = unmatched_open.map_or(0, |open| open + 1);
+        if line.as_bytes().get(at.wrapping_sub(1)) == Some(&b')')
+            && line.as_bytes().get(operator_end) == Some(&b'(')
+        {
+            continue;
+        }
+        let unmatched_open = line[..at]
+            .rfind('(')
+            .filter(|open| {
+                line[*open + 1..at].matches('(').count()
+                    >= line[*open + 1..at].matches(')').count()
+            })
+            .or_else(|| {
+                line[..at].rfind('[').filter(|open| {
+                    line[*open + 1..at].matches('[').count()
+                        >= line[*open + 1..at].matches(']').count()
+                })
+            });
+        let mut left_start = unmatched_open.map_or(0, |open| open + 1);
+        if let Some(colon) = line[left_start..at].rfind(':') {
+            let after_colon = left_start + colon + 1;
+            if line[after_colon..at].starts_with(char::is_whitespace) {
+                left_start = after_colon;
+            }
+        }
         let right_end = unmatched_open
             .and_then(|_| {
                 line[operator_end..]
-                    .find(')')
+                    .rfind([')', ']'])
                     .map(|close| operator_end + close)
             })
             .unwrap_or(line.len());
@@ -767,8 +787,16 @@ fn ambiguous_range_boundary(boundary: &str, require_method_chains: bool) -> bool
     if !boundary.contains('.') {
         return false;
     }
+    if boundary
+        .bytes()
+        .all(|byte| byte.is_ascii_digit() || byte == b'.')
+    {
+        return false;
+    }
     let receiver = boundary.split('.').next().unwrap_or_default();
-    require_method_chains || receiver.bytes().all(|byte| byte.is_ascii_digit())
+    require_method_chains
+        || receiver.bytes().all(|byte| byte.is_ascii_digit())
+            && boundary.matches('.').count() == 1
 }
 
 fn has_top_level_range_operator(source: &str) -> bool {

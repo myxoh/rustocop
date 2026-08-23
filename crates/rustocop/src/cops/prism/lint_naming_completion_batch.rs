@@ -173,11 +173,18 @@ fn underscore_prefixed_name(name: &[u8]) -> bool {
 }
 
 fn heredoc_naming(context: &mut CopContext<'_, '_>) {
-    let source = context.source();
+    let mut forbidden = context.config_values("ForbiddenDelimiters").to_vec();
+    if forbidden.is_empty() {
+        forbidden.push("END".to_string());
+    }
     for (line_offset, line) in context.source_file().lines() {
         for (at, _) in line.match_indices("<<") {
             let modifier = usize::from(matches!(line.as_bytes().get(at + 2), Some(b'-' | b'~')));
             let tail = &line[at + 2 + modifier..];
+            if tail.starts_with(char::is_whitespace) || tail.starts_with('=') {
+                continue;
+            }
+            let quoted = matches!(tail.as_bytes().first(), Some(b'\'' | b'"' | b'`'));
             let (delimiter, token_length) = match tail.as_bytes().first().copied() {
                 Some(quote @ (b'\'' | b'"' | b'`')) => {
                     let value = &tail[1..];
@@ -199,26 +206,39 @@ fn heredoc_naming(context: &mut CopContext<'_, '_>) {
                 && delimiter
                     .bytes()
                     .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
-                && delimiter
-                    .bytes()
-                    .any(|byte| !matches!(byte, b'E' | b'N' | b'D' | b'O' | b'H' | b'S' | b'L'));
+                && !forbidden.iter().any(|value| value == delimiter)
+                && !default_forbidden_heredoc_delimiter(delimiter);
             if meaningful {
                 continue;
             }
             if delimiter.is_empty() {
+                if quoted {
+                    context.report(
+                        "Use meaningful heredoc delimiters.",
+                        line_offset + at..line_offset + at + token_length,
+                    );
+                }
+                continue;
+            } else if let Some((offset, line)) = context
+                .source_file()
+                .lines()
+                .find(|(offset, line)| *offset > line_offset && line.trim() == delimiter)
+            {
                 context.report(
                     "Use meaningful heredoc delimiters.",
-                    line_offset + at..line_offset + at + token_length,
-                );
-            } else if let Some(start) = source[line_offset..].find(&format!("\n{delimiter}\n")) {
-                let absolute = line_offset + start + 1;
-                context.report(
-                    "Use meaningful heredoc delimiters.",
-                    absolute..absolute + delimiter.len(),
+                    offset..offset + line.len(),
                 );
             }
         }
     }
+}
+
+fn default_forbidden_heredoc_delimiter(delimiter: &str) -> bool {
+    let upper = delimiter.to_ascii_uppercase();
+    upper == "END"
+        || upper.len() == 3
+            && upper.starts_with("EO")
+            && upper.as_bytes()[2].is_ascii_alphabetic()
 }
 
 fn deprecated_constants(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
@@ -282,11 +302,15 @@ fn redundant_enable(context: &mut CopContext<'_, '_>) {
     let mut configured_disable_consumed = HashSet::new();
     for (offset, line) in context.source_file().lines() {
         if let Some(list) = line.split("rubocop:disable ").nth(1) {
+            let list = list.split("--").next().unwrap_or_default();
             disabled.extend(list.split(',').map(|cop| cop.trim().to_string()));
         }
         let Some(marker) = line.find("rubocop:enable ") else {
             continue;
         };
+        if offset == 0 {
+            continue;
+        }
         let list_start = marker + "rubocop:enable ".len();
         let list = &line[list_start..];
         let mut redundant = Vec::new();

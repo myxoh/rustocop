@@ -1,10 +1,10 @@
 {
   "version": 1,
   "kind": "fixture_compatibility",
-  "updated_at": "2026-08-23T18:09:17-04:00",
+  "updated_at": "2026-08-23T19:48:45-04:00",
   "rust_commit": null,
-  "native_sha256": "0d9339b7fe674c0ca51bd1a7e4e4eb74cbccebbc6af2c4e7ab7da000358decb0",
-  "fixture_corpus_sha256": "14061bc284f82d775197543ea3473467ba6042fe7ac774153c2e039189008ee8",
+  "native_sha256": "b844a8687b0d06076947daa0540ce030f77c97d947e7994c01b73f29e5d6b6ee",
+  "fixture_corpus_sha256": "99fab9abbf89088706fc00aa2cf57d3670f096aca05675831c7760fc28e97d87",
   "rubocop_version": "1.87.0",
   "results": {
     "Bundler/DuplicatedGem": {
@@ -307,6 +307,11 @@
       "total": 31,
       "status": "compatible"
     },
+    "Layout/MultilineArrayLineBreaks": {
+      "passed": 6,
+      "total": 6,
+      "status": "compatible"
+    },
     "Layout/MultilineMethodArgumentLineBreaks": {
       "passed": 18,
       "total": 18,
@@ -462,6 +467,21 @@
       "total": 36,
       "status": "compatible"
     },
+    "Lint/AmbiguousOperator": {
+      "passed": 17,
+      "total": 17,
+      "status": "compatible"
+    },
+    "Lint/AmbiguousOperatorPrecedence": {
+      "passed": 13,
+      "total": 13,
+      "status": "compatible"
+    },
+    "Lint/AmbiguousRange": {
+      "passed": 54,
+      "total": 54,
+      "status": "compatible"
+    },
     "Lint/ArrayLiteralInRegexp": {
       "passed": 32,
       "total": 32,
@@ -500,6 +520,11 @@
     "Lint/ConstantReassignment": {
       "passed": 57,
       "total": 57,
+      "status": "compatible"
+    },
+    "Lint/CopDirectiveSyntax": {
+      "passed": 16,
+      "total": 16,
       "status": "compatible"
     },
     "Lint/DataDefineOverride": {
@@ -742,6 +767,11 @@
       "total": 4,
       "status": "compatible"
     },
+    "Lint/MissingCopEnableDirective": {
+      "passed": 14,
+      "total": 14,
+      "status": "compatible"
+    },
     "Lint/MissingSuper": {
       "passed": 22,
       "total": 22,
@@ -850,6 +880,11 @@
     "Lint/RandOne": {
       "passed": 16,
       "total": 16,
+      "status": "compatible"
+    },
+    "Lint/RedundantCopEnableDirective": {
+      "passed": 23,
+      "total": 23,
       "status": "compatible"
     },
     "Lint/RedundantDirGlobSort": {
@@ -1212,6 +1247,11 @@
       "total": 26,
       "status": "compatible"
     },
+    "Naming/HeredocDelimiterNaming": {
+      "passed": 19,
+      "total": 19,
+      "status": "compatible"
+    },
     "Naming/InclusiveLanguage": {
       "passed": 35,
       "total": 35,
@@ -1345,6 +1385,11 @@
     "Style/Attr": {
       "passed": 11,
       "total": 11,
+      "status": "compatible"
+    },
+    "Style/AutoResourceCleanup": {
+      "passed": 7,
+      "total": 7,
       "status": "compatible"
     },
     "Style/BarePercentLiterals": {
@@ -1645,6 +1690,11 @@
     "Style/ExponentialNotation": {
       "passed": 27,
       "total": 27,
+      "status": "compatible"
+    },
+    "Style/FetchEnvVar": {
+      "passed": 43,
+      "total": 43,
       "status": "compatible"
     },
     "Style/FileEmpty": {

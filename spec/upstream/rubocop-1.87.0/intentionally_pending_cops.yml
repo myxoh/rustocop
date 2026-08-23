@@ -1,7 +1,7 @@
 ---
 version: 1
 rubocop_version: 1.87.0
-updated_at: '2026-08-23T17:59:22-04:00'
+updated_at: '2026-08-23T18:28:17-04:00'
 reason: Existing implementations are intentionally withdrawn because source-pattern, placeholder, or incomplete structural behavior does not match the pinned real-project corpus.
 cops:
   - Layout/ArgumentAlignment
@@ -18,7 +18,6 @@ cops:
   - Layout/LineEndStringConcatenationIndentation
   - Layout/LineLength
   - Layout/MultilineArrayBraceLayout
-  - Layout/MultilineArrayLineBreaks
   - Layout/MultilineAssignmentLayout
   - Layout/MultilineBlockLayout
   - Layout/MultilineHashBraceLayout
@@ -32,17 +31,11 @@ cops:
   - Layout/SpaceBeforeBlockBraces
   - Layout/SpaceBeforeComment
   - Layout/SpaceInsideHashLiteralBraces
-  - Lint/AmbiguousOperator
-  - Lint/AmbiguousOperatorPrecedence
-  - Lint/AmbiguousRange
   - Lint/AmbiguousRegexpLiteral
   - Lint/AssignmentInCondition
   - Lint/ConstantResolution
-  - Lint/CopDirectiveSyntax
   - Lint/DuplicateRegexpCharacterClassElement
-  - Lint/MissingCopEnableDirective
   - Lint/RedundantCopDisableDirective
-  - Lint/RedundantCopEnableDirective
   - Lint/UnusedMethodArgument
   - Lint/UselessAssignment
   - Lint/UselessConstantScoping
@@ -54,15 +47,12 @@ cops:
   - Metrics/MethodLength
   - Metrics/PerceivedComplexity
   - Naming/BlockParameterName
-  - Naming/HeredocDelimiterNaming
   - Naming/VariableName
   - Naming/VariableNumber
-  - Style/AutoResourceCleanup
   - Style/ConstantVisibility
   - Style/Copyright
   - Style/Documentation
   - Style/DocumentationMethod
-  - Style/FetchEnvVar
   - Style/FileWrite
   - Style/MethodCallWithArgsParentheses
   - Style/MethodCallWithoutArgsParentheses

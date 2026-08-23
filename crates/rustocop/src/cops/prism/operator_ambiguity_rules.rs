@@ -1,7 +1,7 @@
 use super::*;
 
 define_cops! {
-    AmbiguousOperator => "Lint/AmbiguousOperator" => call(ambiguous_operator),
+    AmbiguousOperator => "Lint/AmbiguousOperator" => any_node(ambiguous_operator),
     AmbiguousOperatorPrecedence => "Lint/AmbiguousOperatorPrecedence" => any_node(ambiguous_operator_precedence),
     ParenthesesAsGroupedExpression => "Lint/ParenthesesAsGroupedExpression" => call(parentheses_as_grouped_expression),
 }
@@ -102,18 +102,29 @@ fn ambiguous_operator_precedence(node: &Node<'_>, context: &mut CopContext<'_, '
     let Some(current) = precedence(node) else {
         return;
     };
-    let mut parent = None;
-    for ancestor in context.ancestors().iter().rev() {
-        if ancestor.as_parentheses_node().is_some() {
-            return;
-        }
-        if let Some(precedence) = precedence(ancestor) {
-            parent = Some(precedence);
-            break;
-        }
+    let Some(parent_node) = context.parent() else {
+        return;
+    };
+    if current == 1 && !context.source_file().node(node).contains(" ** ") {
+        return;
     }
+    if parent_node.as_parentheses_node().is_some() {
+        return;
+    }
+    let parent = precedence(&parent_node).or_else(|| {
+        if current != 7 {
+            return None;
+        }
+        if parent_node.as_and_node().is_some_and(|node| node.operator_loc().as_slice() == b"and") {
+            Some(9)
+        } else if parent_node.as_or_node().is_some_and(|node| node.operator_loc().as_slice() == b"or") {
+            Some(10)
+        } else {
+            None
+        }
+    });
     let Some(parent) = parent else { return };
-    if current == parent {
+    if current >= parent {
         return;
     }
     let location = node.location();
@@ -155,8 +166,40 @@ fn precedence(node: &Node<'_>) -> Option<u8> {
     }
 }
 
-fn ambiguous_operator(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
-    if node.opening_loc().is_some() || matches!(call_name(node), b"+" | b"-" | b"*" | b"**" | b"&")
+fn ambiguous_operator(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
+    if let Some(call) = node.as_call_node() {
+        ambiguous_call_operator(&call, context);
+        return;
+    }
+    let Some(super_node) = node.as_super_node() else {
+        return;
+    };
+    if super_node.lparen_loc().is_some() {
+        return;
+    }
+    let Some(argument) = super_node
+        .arguments()
+        .and_then(|arguments| arguments.arguments().first())
+    else {
+        return;
+    };
+    let Some(splat) = argument.as_splat_node() else {
+        return;
+    };
+    let operator = splat.operator_loc();
+    let end = super_node.location().end_offset();
+    context.replace_many(
+        "Ambiguous splat operator. Parenthesize the method arguments if it's surely a splat operator, or add a whitespace to the right of the `*` if it should be a multiplication.",
+        &operator,
+        vec![
+            (super_node.keyword_loc().end_offset()..operator.start_offset(), "(".to_string()),
+            (end..end, ")".to_string()),
+        ],
+    );
+}
+
+fn ambiguous_call_operator(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
+    if node.opening_loc().is_some() || grouped_expression_operator_or_setter(call_name(node))
     {
         return;
     }
@@ -166,6 +209,9 @@ fn ambiguous_operator(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     }) else {
         return;
     };
+    if argument.as_lambda_node().is_some() {
+        return;
+    }
     let argument_location = argument.location();
     let argument_source = context.source_file().node(&argument);
     let (operator, message) = if argument_source.starts_with("**")
@@ -177,6 +223,7 @@ fn ambiguous_operator(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     {
         ("+", "Ambiguous positive number operator. Parenthesize the method arguments if it's surely a positive number operator, or add a whitespace to the right of the `+` if it should be an addition.")
     } else if argument_source.starts_with('-')
+        && !argument_source.starts_with("->")
         && !argument_source[1..].starts_with(char::is_whitespace)
     {
         ("-", "Ambiguous negative number operator. Parenthesize the method arguments if it's surely a negative number operator, or add a whitespace to the right of the `-` if it should be a subtraction.")

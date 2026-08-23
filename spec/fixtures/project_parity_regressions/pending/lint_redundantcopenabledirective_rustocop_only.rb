@@ -1,0 +1,1 @@
+# rubocop:enable Gitlab/NoCodeCoverageComment

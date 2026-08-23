@@ -84,7 +84,7 @@ pub(super) fn top_level_elements(source: &str, start: usize, end: usize) -> Vec<
 pub(super) fn trim_range(source: &str, range: Range<usize>) -> Range<usize> {
     let value = &source[range.clone()];
     let leading = value.len() - value.trim_start().len();
-    let trailing = value.len() - value.trim_end().len();
+    let trailing = value[leading..].len() - value[leading..].trim_end().len();
     range.start + leading..range.end - trailing
 }
 
@@ -118,5 +118,11 @@ mod tests {
         let source = "before Hash.new(call(one, two)) after";
         let ranges = call_ranges(source, "Hash.new(");
         assert_eq!(&source[ranges[0].clone()], "Hash.new(call(one, two))");
+    }
+
+    #[test]
+    fn trims_an_all_whitespace_range_to_its_end() {
+        let source = "before   after";
+        assert_eq!(trim_range(source, 6..9), 9..9);
     }
 }

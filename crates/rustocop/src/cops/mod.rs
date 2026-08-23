@@ -16,7 +16,6 @@ pub(crate) const INTENTIONALLY_PENDING_COP_NAMES: &[&str] = &[
     "Layout/LineEndStringConcatenationIndentation",
     "Layout/LineLength",
     "Layout/MultilineArrayBraceLayout",
-    "Layout/MultilineArrayLineBreaks",
     "Layout/MultilineAssignmentLayout",
     "Layout/MultilineBlockLayout",
     "Layout/MultilineHashBraceLayout",
@@ -30,17 +29,11 @@ pub(crate) const INTENTIONALLY_PENDING_COP_NAMES: &[&str] = &[
     "Layout/SpaceBeforeBlockBraces",
     "Layout/SpaceBeforeComment",
     "Layout/SpaceInsideHashLiteralBraces",
-    "Lint/AmbiguousOperator",
-    "Lint/AmbiguousOperatorPrecedence",
-    "Lint/AmbiguousRange",
     "Lint/AmbiguousRegexpLiteral",
     "Lint/AssignmentInCondition",
     "Lint/ConstantResolution",
-    "Lint/CopDirectiveSyntax",
     "Lint/DuplicateRegexpCharacterClassElement",
-    "Lint/MissingCopEnableDirective",
     "Lint/RedundantCopDisableDirective",
-    "Lint/RedundantCopEnableDirective",
     "Lint/UnusedMethodArgument",
     "Lint/UselessAssignment",
     "Lint/UselessConstantScoping",
@@ -52,15 +45,12 @@ pub(crate) const INTENTIONALLY_PENDING_COP_NAMES: &[&str] = &[
     "Metrics/MethodLength",
     "Metrics/PerceivedComplexity",
     "Naming/BlockParameterName",
-    "Naming/HeredocDelimiterNaming",
     "Naming/VariableName",
     "Naming/VariableNumber",
-    "Style/AutoResourceCleanup",
     "Style/ConstantVisibility",
     "Style/Copyright",
     "Style/Documentation",
     "Style/DocumentationMethod",
-    "Style/FetchEnvVar",
     "Style/FileWrite",
     "Style/MethodCallWithArgsParentheses",
     "Style/MethodCallWithoutArgsParentheses",
@@ -87,7 +77,7 @@ mod tests {
     #[test]
     fn public_inventory_is_sorted_unique_and_complete() {
         let names = cop_names();
-        assert_eq!(names.len(), 559);
+        assert_eq!(names.len(), 569);
         assert!(names.windows(2).all(|pair| pair[0] < pair[1]));
         assert!(INTENTIONALLY_PENDING_COP_NAMES
             .windows(2)

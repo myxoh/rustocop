@@ -1,14 +1,14 @@
 ---
 rubocop_version: 1.87.0
 upstream_rspec:
-  examples: 25180
+  examples: 25388
   failures: 0
   pending: 3
-captured_cases: 25277
+captured_cases: 25489
 diagnostic_baseline:
-  passed_cases: 25276
-  passing_cops: 543
-  total_cops: 543
+  passed_cases: 25488
+  passing_cops: 553
+  total_cops: 553
 fully_compatible_cops:
 - Bundler/DuplicatedGem
 - Bundler/DuplicatedGroup
@@ -70,6 +70,7 @@ fully_compatible_cops:
 - Layout/LeadingCommentSpace
 - Layout/LeadingEmptyLines
 - Layout/LineContinuationSpacing
+- Layout/MultilineArrayLineBreaks
 - Layout/MultilineMethodArgumentLineBreaks
 - Layout/MultilineMethodDefinitionBraceLayout
 - Layout/MultilineMethodParameterLineBreaks
@@ -101,6 +102,9 @@ fully_compatible_cops:
 - Layout/TrailingWhitespace
 - Lint/AmbiguousAssignment
 - Lint/AmbiguousBlockAssociation
+- Lint/AmbiguousOperator
+- Lint/AmbiguousOperatorPrecedence
+- Lint/AmbiguousRange
 - Lint/ArrayLiteralInRegexp
 - Lint/BigDecimalNew
 - Lint/BinaryOperatorWithIdenticalOperands
@@ -109,6 +113,7 @@ fully_compatible_cops:
 - Lint/ConstantDefinitionInBlock
 - Lint/ConstantOverwrittenInRescue
 - Lint/ConstantReassignment
+- Lint/CopDirectiveSyntax
 - Lint/DataDefineOverride
 - Lint/Debugger
 - Lint/DeprecatedClassMethods
@@ -157,6 +162,7 @@ fully_compatible_cops:
 - Lint/LiteralAssignmentInCondition
 - Lint/LiteralInInterpolation
 - Lint/Loop
+- Lint/MissingCopEnableDirective
 - Lint/MissingSuper
 - Lint/MixedCaseRange
 - Lint/MixedRegexpCaptureTypes
@@ -179,6 +185,7 @@ fully_compatible_cops:
 - Lint/PercentSymbolArray
 - Lint/RaiseException
 - Lint/RandOne
+- Lint/RedundantCopEnableDirective
 - Lint/RedundantDirGlobSort
 - Lint/RedundantRegexpQuantifiers
 - Lint/RedundantRequireStatement
@@ -251,6 +258,7 @@ fully_compatible_cops:
 - Naming/ConstantName
 - Naming/FileName
 - Naming/HeredocDelimiterCase
+- Naming/HeredocDelimiterNaming
 - Naming/InclusiveLanguage
 - Naming/MemoizedInstanceVariableName
 - Naming/MethodName
@@ -278,6 +286,7 @@ fully_compatible_cops:
 - Style/ArrayJoin
 - Style/AsciiComments
 - Style/Attr
+- Style/AutoResourceCleanup
 - Style/BarePercentLiterals
 - Style/BeginBlock
 - Style/BisectedAttrAccessor
@@ -338,6 +347,7 @@ fully_compatible_cops:
 - Style/ExpandPathArguments
 - Style/ExplicitBlockArgument
 - Style/ExponentialNotation
+- Style/FetchEnvVar
 - Style/FileEmpty
 - Style/FileNull
 - Style/FileOpen

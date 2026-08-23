@@ -2507,7 +2507,11 @@ fn operator_alignment_is_allowed(
                 operator,
             )
         };
-    let (alignment_column, alignment_start) = operand_alignment_start.map_or(
+    let (alignment_column, alignment_start) = operand_alignment_start
+        .filter(|absolute| {
+            (line_offset..=line_offset + current_line_source.len()).contains(absolute)
+        })
+        .map_or(
         (rhs_start_column, rhs_start),
         |absolute| {
             (
