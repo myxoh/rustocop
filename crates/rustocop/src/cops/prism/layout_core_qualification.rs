@@ -187,7 +187,13 @@ fn empty_lines_around_access_modifier(node: &CallNode<'_>, context: &mut CopCont
     let location = node.location();
     let current_line = line_index(source, location.start_offset());
     if previous_non_comment_line(source, current_line)
-        .is_some_and(|previous| line(source, previous).trim_end().ends_with(','))
+        .is_some_and(|previous| {
+            line(source, previous).trim_end().ends_with(',')
+                || line(source, previous).len()
+                    - line(source, previous).trim_start().len()
+                    > line(source, current_line).len()
+                        - line(source, current_line).trim_start().len()
+        })
     {
         return;
     }
@@ -207,9 +213,16 @@ fn empty_lines_around_access_modifier(node: &CallNode<'_>, context: &mut CopCont
     let before_ok = bounds.is_some_and(|(opening, _, _)| current_line == opening + 1)
         || previous_non_comment_line(source, current_line)
             .is_none_or(|previous| line(source, previous).trim().is_empty());
-    let after_ok = bounds
+    let mut after_ok = bounds
         .is_some_and(|(_, closing, is_block)| !is_block && current_line + 1 == closing)
         || line(source, current_line + 1).trim().is_empty();
+    if after_ok
+        && bounds.is_some_and(|(_, closing, _)| current_line + 1 == closing)
+        && next_code_line(source, current_line + 2)
+            .is_some_and(|next| line(source, next).trim_start().starts_with("# == Schema Information"))
+    {
+        after_ok = false;
+    }
     let style = context.policy().enforced_style("around").to_string();
     if style == "around" && before_ok && after_ok {
         return;
