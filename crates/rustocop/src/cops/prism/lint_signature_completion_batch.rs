@@ -887,8 +887,12 @@ fn non_atomic_file_operation(context: &mut CopContext<'_, '_>) {
         let Some(operation) = non_atomic_operation(operation_source) else {
             continue;
         };
-        let mut condition_source = condition_line[modifier_at + 1..].trim();
-        let mut condition_end = condition_offset + condition_line.trim_end().len();
+        let raw_condition = condition_line[modifier_at + 1..].trim_end();
+        let raw_condition = raw_condition
+            .strip_suffix('}')
+            .map_or(raw_condition, str::trim_end);
+        let mut condition_source = raw_condition.trim_start();
+        let mut condition_end = condition_offset + modifier_at + 1 + raw_condition.len();
         if condition_source == keyword || condition_source == format!("{keyword} (") {
             let Some((next_offset, next_line)) = lines.get(index + 1).copied() else {
                 continue;
@@ -911,8 +915,10 @@ fn non_atomic_file_operation(context: &mut CopContext<'_, '_>) {
         {
             continue;
         }
-        let operation_start = condition_offset + condition_line.find(operation_source).unwrap_or(0);
-        report_non_atomic_operation_at(context, operation_start, operation_source, &operation);
+        let operation_start = condition_offset
+            + condition_line.find(operation_source).unwrap_or(0)
+            + operation_source.find(operation.source).unwrap_or(0);
+        report_non_atomic_operation_at(context, operation_start, operation.source, &operation);
         let condition_start = condition_offset + modifier_at + 1;
         context.replace_many(
             format!("Remove unnecessary existence check `{}`.", check.label),
@@ -940,6 +946,7 @@ impl NonAtomicKind {
 
 struct NonAtomicOperation<'a> {
     source: &'a str,
+    receiver: &'a str,
     argument: &'a str,
     method: &'a str,
     replacement: Option<&'static str>,
@@ -953,7 +960,11 @@ struct NonAtomicCheck<'a> {
 }
 
 fn non_atomic_existence_check(source: &str) -> Option<NonAtomicCheck<'_>> {
-    let source = source.trim().trim_end_matches(')');
+    let source = source.trim();
+    let source = source
+        .strip_suffix('}')
+        .map_or(source, str::trim_end)
+        .trim_end_matches(')');
     for (receiver, method, label) in [
         ("FileTest", "exist?", "FileTest.exist?"),
         ("FileTest", "exists?", "FileTest.exists?"),
@@ -988,6 +999,14 @@ fn non_atomic_existence_check(source: &str) -> Option<NonAtomicCheck<'_>> {
 
 fn non_atomic_operation(source: &str) -> Option<NonAtomicOperation<'_>> {
     let source = source.trim();
+    let mut operation_start = ["FileUtils.", "File.", "Dir."]
+        .iter()
+        .filter_map(|receiver| source.rfind(receiver))
+        .max()?;
+    if source.get(operation_start.saturating_sub(2)..operation_start) == Some("::") {
+        operation_start -= 2;
+    }
+    let source = &source[operation_start..];
     let (receiver_method, arguments) = if let Some(open) = source.find('(') {
         (
             &source[..open],
@@ -1010,6 +1029,7 @@ fn non_atomic_operation(source: &str) -> Option<NonAtomicOperation<'_>> {
             "FileUtils" | "File",
             "remove" | "delete" | "unlink" | "remove_file" | "rm" | "rmdir" | "safe_unlink",
         ) => (NonAtomicKind::Remove, Some("rm_f")),
+        ("Dir", "rmdir") => (NonAtomicKind::Remove, Some("rm_f")),
         ("FileUtils", "remove_dir" | "remove_entry" | "remove_entry_secure") => {
             (NonAtomicKind::RecursiveRemove, Some("rm_rf"))
         }
@@ -1019,6 +1039,7 @@ fn non_atomic_operation(source: &str) -> Option<NonAtomicOperation<'_>> {
     };
     Some(NonAtomicOperation {
         source,
+        receiver,
         argument,
         method,
         replacement,
@@ -1046,12 +1067,12 @@ fn report_non_atomic_operation_at(
     let Some(atomic_method) = operation.replacement else {
         return;
     };
-    let dir_selector = format!("Dir.{}", operation.method);
-    let (method_start, method_end, replacement) = if let Some(relative) = source.find(&dir_selector)
-    {
+    let receiver_selector = format!("{}.{}", operation.receiver, operation.method);
+    let (method_start, method_end, replacement) = if operation.receiver != "FileUtils" {
+        let relative = source.find(&receiver_selector).unwrap_or(0);
         (
             start + relative,
-            start + relative + dir_selector.len(),
+            start + relative + receiver_selector.len(),
             format!("FileUtils.{atomic_method}"),
         )
     } else {
