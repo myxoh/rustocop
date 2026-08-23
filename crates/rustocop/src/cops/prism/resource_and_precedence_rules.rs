@@ -121,6 +121,12 @@ fn keyword_arguments_merging(node: &CallNode<'_>, context: &mut CopContext<'_, '
             })
         })
     });
+    let outer_call = context
+        .ancestors()
+        .iter()
+        .rev()
+        .nth(2)
+        .and_then(Node::as_call_node);
 
     if call_name(node) != b"merge"
         || node.arguments().is_none()
@@ -128,12 +134,11 @@ fn keyword_arguments_merging(node: &CallNode<'_>, context: &mut CopContext<'_, '
             .parent()
             .is_none_or(|parent| parent.as_assoc_splat_node().is_none())
         || !splat_is_first
-        || context
-            .ancestors()
-            .iter()
-            .rev()
-            .nth(2)
-            .is_none_or(|ancestor| ancestor.as_call_node().is_none())
+        || outer_call.is_none()
+        || outer_call.is_some_and(|call| {
+            call.block()
+                .is_some_and(|block| block.as_block_argument_node().is_some())
+        })
     {
         return;
     }
