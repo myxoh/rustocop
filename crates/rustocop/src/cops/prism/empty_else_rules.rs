@@ -17,6 +17,9 @@ fn empty_else(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
     let Some(else_clause) = else_clause else {
         return;
     };
+    if else_clause.else_keyword_loc().as_slice() != b"else" {
+        return;
+    }
     let statements = else_clause.statements();
     let empty = statements.is_none();
     let nil_only = statements.as_ref().is_some_and(|statements| {
