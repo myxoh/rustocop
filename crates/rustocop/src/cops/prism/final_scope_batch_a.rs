@@ -188,6 +188,15 @@ fn constant_in_block(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
     {
         return;
     }
+    if node
+        .as_class_node()
+        .is_some_and(|class| class.constant_path().as_constant_path_node().is_some())
+        || node
+            .as_module_node()
+            .is_some_and(|module| module.constant_path().as_constant_path_node().is_some())
+    {
+        return;
+    }
     let Some(block) = context
         .ancestors()
         .iter()
@@ -204,7 +213,11 @@ fn constant_in_block(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
         {
             break;
         }
-        if ancestor.as_statements_node().is_none() && ancestor.as_begin_node().is_none() {
+        if ancestor
+            .as_begin_node()
+            .is_some_and(|begin| begin.begin_keyword_loc().is_some())
+            || ancestor.as_statements_node().is_none() && ancestor.as_begin_node().is_none()
+        {
             return;
         }
     }
