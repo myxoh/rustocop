@@ -481,12 +481,15 @@ fn double_negation_return_value(node: &CallNode<'_>, context: &CopContext<'_, '_
         .ancestors()
         .iter()
         .rev()
-        .find_map(Node::as_call_node)
-        .filter(|call| {
-            matches!(call_name(call), b"define_method" | b"define_singleton_method")
+        .find_map(Node::as_block_node)
+        .filter(|block| {
+            let start = block.location().start_offset();
+            let line_start = context.source()[..start]
+                .rfind('\n')
+                .map_or(0, |offset| offset + 1);
+            let prefix = &context.source()[line_start..start];
+            prefix.contains("define_method") || prefix.contains("define_singleton_method")
         })
-        .and_then(|call| call.block())
-        .and_then(|block| block.as_block_node())
         .and_then(|block| block.body());
     let Some(body) = definition_body.or(define_method_body) else {
         return false;
@@ -514,8 +517,20 @@ fn double_negation_return_value(node: &CallNode<'_>, context: &CopContext<'_, '_
             .rfind('\n')
             .map_or(0, |offset| offset + 1);
         let prefix = context.source()[line_start..node.location().start_offset()].trim();
-        let standalone_or_collection =
-            prefix.is_empty() || prefix.starts_with('[') || prefix.starts_with('{');
+        let nested_in_call = context
+            .ancestors()
+            .iter()
+            .rev()
+            .take_while(|ancestor| {
+                ancestor.location().start_offset() >= conditional.location().start_offset()
+            })
+            .any(|ancestor| {
+                ancestor.as_arguments_node().is_some() || ancestor.as_call_node().is_some()
+            });
+        let standalone_or_collection = (prefix.is_empty()
+            || prefix.starts_with('[')
+            || prefix.starts_with('{'))
+            && !nested_in_call;
         (!standalone_or_collection
             || conditional_branch_tail(
                 context.source(),
@@ -553,7 +568,7 @@ fn double_negation_last_child(node: Node<'_>) -> Option<(Node<'_>, bool)> {
                     .elements()
                     .iter()
                     .last()
-                    .map(|element| (element, false));
+                    .map(|element| (element, true));
             }
             return Some((argument, false));
         }
