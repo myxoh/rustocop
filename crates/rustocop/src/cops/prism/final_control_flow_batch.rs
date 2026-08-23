@@ -771,7 +771,30 @@ impl Cop for DuplicateBranchCop {
                             statements.location().start_offset() == node.location().start_offset()
                                 && statements.location().end_offset()
                                     == node.location().end_offset()
-                        })
+                            })
+                    })
+                    || ancestor.as_if_node().is_some_and(|parent| {
+                        parent
+                            .subsequent()
+                            .and_then(|branch| branch.as_else_node())
+                            .and_then(|else_node| else_node.statements())
+                            .is_some_and(|statements| {
+                                statements.location().start_offset()
+                                    == node.location().start_offset()
+                                    && statements.location().end_offset()
+                                        == node.location().end_offset()
+                            })
+                    })
+                    || ancestor.as_unless_node().is_some_and(|parent| {
+                        parent
+                            .else_clause()
+                            .and_then(|else_node| else_node.statements())
+                            .is_some_and(|statements| {
+                                statements.location().start_offset()
+                                    == node.location().start_offset()
+                                    && statements.location().end_offset()
+                                        == node.location().end_offset()
+                            })
                     })
                 })
             {
@@ -1009,10 +1032,9 @@ fn ast_branch(
     } else {
         source_at(source, &statements.location()).to_string()
     };
-    let key = literal
-        .lines()
-        .map(duplicate_branch_line)
-        .filter(|line| !line.is_empty() && !line.starts_with('#'))
+    let key = nodes
+        .iter()
+        .map(|node| duplicate_branch_node_source(node, source))
         .collect::<Vec<_>>()
         .join("\n");
     Some(AstDuplicateBranch {
@@ -1021,6 +1043,41 @@ fn ast_branch(
         offense,
         else_branch,
     })
+}
+
+fn duplicate_branch_node_source(node: &Node<'_>, source: &str) -> String {
+    let raw = source_at(source, &node.location());
+    let mut normalized = raw
+        .lines()
+        .map(duplicate_branch_line)
+        .filter(|line| !line.is_empty() && !line.starts_with('#'))
+        .collect::<Vec<_>>()
+        .join("\n");
+    let mut search_from = node.location().end_offset();
+    for marker in raw.split("<<").skip(1).filter_map(|tail| {
+        let tail = tail.trim_start_matches(['-', '~']);
+        let marker = tail
+            .trim_start()
+            .split(|character: char| !character.is_ascii_alphanumeric() && character != '_')
+            .next()?;
+        (!marker.is_empty()).then_some(marker)
+    }) {
+        let Some(relative_end) = source[search_from..]
+            .lines()
+            .scan(search_from, |offset, line| {
+                let start = *offset;
+                *offset += line.len() + 1;
+                Some((start, line))
+            })
+            .find_map(|(offset, line)| (line.trim() == marker).then_some(offset + line.len()))
+        else {
+            continue;
+        };
+        normalized.push('\n');
+        normalized.push_str(&source[search_from..relative_end]);
+        search_from = relative_end;
+    }
+    normalized
 }
 
 fn duplicate_branch_line(line: &str) -> String {
