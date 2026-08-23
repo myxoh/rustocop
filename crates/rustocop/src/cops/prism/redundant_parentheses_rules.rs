@@ -87,7 +87,7 @@ impl RedundantParenthesesRule<'_, '_, '_> {
                     .arguments()
                     .is_some_and(|arguments| !arguments.arguments().is_empty())
                 && (call.receiver().is_none() || call.call_operator_loc().is_some())
-        }) && parent.is_some()
+        }) && parent.is_some_and(|ancestor| ancestor.as_block_node().is_none())
         {
             return true;
         }
@@ -116,7 +116,8 @@ impl RedundantParenthesesRule<'_, '_, '_> {
             return true;
         }
         if parent.is_some_and(|ancestor| {
-            ancestor.as_splat_node().is_some() || ancestor.as_assoc_splat_node().is_some()
+            (ancestor.as_splat_node().is_some() || ancestor.as_assoc_splat_node().is_some())
+                && !first.as_call_node().is_some_and(|call| call.block().is_some())
         }) {
             return true;
         }
@@ -141,17 +142,19 @@ impl RedundantParenthesesRule<'_, '_, '_> {
         {
             return true;
         }
-        if first.as_call_node().is_some()
-            && self.source()[..opening_offset]
-                .chars()
-                .last()
-                .is_some_and(|character| matches!(character, '+' | '-'))
-        {
-            return true;
-        }
         if first.as_call_node().is_some_and(|call| {
             matches!(call.name().as_slice(), b"&" | b"|" | b"^")
         }) && suffix.trim_start().starts_with('.')
+        {
+            return true;
+        }
+        if first
+            .as_call_node()
+            .is_some_and(|call| call_chain_starts_with_integer(&call))
+            && self.source()[..opening_offset]
+            .chars()
+            .last()
+            .is_some_and(|character| matches!(character, '+' | '-'))
         {
             return true;
         }
@@ -192,6 +195,13 @@ impl RedundantParenthesesRule<'_, '_, '_> {
                     || ancestor.as_unless_node().is_some()
                     || ancestor.as_while_node().is_some()
                     || ancestor.as_until_node().is_some()
+            })
+        {
+            return true;
+        }
+        if assignment_node(first)
+            && parent.is_some_and(|ancestor| {
+                ancestor.as_and_node().is_some() || ancestor.as_or_node().is_some()
             })
         {
             return true;
@@ -355,8 +365,14 @@ impl RedundantParenthesesRule<'_, '_, '_> {
             return false;
         }
         let after = self.source().get(closing..).unwrap_or_default();
-        semantic_parent(self.ancestors()).is_some_and(|parent| parent.as_call_node().is_some())
-            && (after.starts_with([',', '{']) || after.trim_start().starts_with('{') || after.is_empty())
+        semantic_parent(self.ancestors()).is_some_and(|parent| {
+            parent.as_call_node().is_some_and(|call| {
+                call.arguments()
+                    .is_some_and(|arguments| arguments.arguments().len() == 1)
+            })
+        }) && (after.starts_with([',', '{'])
+            || after.trim_start().starts_with('{')
+            || after.is_empty())
     }
 
     fn first_arg_begins_with_hash_literal(&self, node: &ParenthesesNode<'_>, first: &Node<'_>) -> bool {
@@ -450,7 +466,7 @@ impl RedundantParenthesesRule<'_, '_, '_> {
             }
             return Some("an expression");
         }
-        if self.ancestors().iter().rev().any(interpolation_parent) {
+        if parent.is_some_and(interpolation_parent) {
             return Some("an interpolated expression");
         }
         if argument_of_parenthesized_method_call(node, first, parent) {
@@ -468,13 +484,29 @@ impl RedundantParenthesesRule<'_, '_, '_> {
         if let Some(call) = first.as_call_node() {
             let name = call.name().as_slice();
             if matches!(name, b"!" | b"~" | b"+@" | b"-@") {
-                return parent.is_none().then_some("a unary operation");
+                return Some("a unary operation");
             }
             if comparison_method(name) {
                 return parent.is_none().then_some("a comparison expression");
             }
             if self.do_end_block_in_method_chain(inner_source, parent) {
                 return None;
+            }
+            if operator_method(name) {
+                if name == b"/" {
+                    return None;
+                }
+                return parent
+                    .is_some_and(|ancestor| {
+                        ancestor
+                            .as_array_node()
+                            .is_some_and(|array| array.elements().len() == 1)
+                            || ancestor.as_return_node().is_some()
+                            || ancestor.as_next_node().is_some()
+                            || ancestor.as_break_node().is_some()
+                            || ancestor.as_yield_node().is_some()
+                    })
+                    .then_some("a method call");
             }
             return Some("a method call");
         }
@@ -673,6 +705,13 @@ fn assignment_node(node: &Node<'_>) -> bool {
         || node.as_instance_variable_and_write_node().is_some()
         || node.as_class_variable_and_write_node().is_some()
         || node.as_global_variable_and_write_node().is_some()
+        || node
+            .as_call_node()
+            .is_some_and(|call| {
+                let name = call.name().as_slice();
+                name.ends_with(b"=")
+                    && !matches!(name, b"==" | b"===" | b"!=" | b"<=" | b">=" | b"=~" | b"!~")
+            })
 }
 
 fn keyword_node(node: &Node<'_>, source: &str) -> bool {
@@ -709,6 +748,16 @@ fn interpolation_parent(node: &Node<'_>) -> bool {
     node.as_embedded_statements_node().is_some()
         || node.as_interpolated_string_node().is_some()
         || node.as_interpolated_symbol_node().is_some()
+}
+
+fn call_chain_starts_with_integer(call: &ruby_prism::CallNode<'_>) -> bool {
+    let Some(receiver) = call.receiver() else {
+        return false;
+    };
+    receiver.as_integer_node().is_some()
+        || receiver
+            .as_call_node()
+            .is_some_and(|receiver| call_chain_starts_with_integer(&receiver))
 }
 
 fn argument_of_parenthesized_method_call(

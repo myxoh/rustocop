@@ -3,10 +3,8 @@ pub(crate) mod text;
 
 pub(crate) const INTENTIONALLY_PENDING_COP_NAMES: &[&str] = &[
     "Layout/ArgumentAlignment",
-    "Layout/EmptyLineAfterGuardClause",
     "Layout/EmptyLines",
     "Layout/EndAlignment",
-    "Layout/ExtraSpacing",
     "Layout/FirstArrayElementIndentation",
     "Layout/FirstArrayElementLineBreak",
     "Layout/FirstHashElementLineBreak",
@@ -27,13 +25,11 @@ pub(crate) const INTENTIONALLY_PENDING_COP_NAMES: &[&str] = &[
     "Layout/MultilineMethodCallIndentation",
     "Layout/MultilineOperationIndentation",
     "Layout/RedundantLineBreak",
-    "Layout/RescueEnsureAlignment",
     "Layout/SingleLineBlockChain",
     "Layout/SpaceAroundBlockParameters",
     "Layout/SpaceBeforeBlockBraces",
     "Layout/SpaceBeforeComment",
     "Layout/SpaceInsideHashLiteralBraces",
-    "Lint/AmbiguousBlockAssociation",
     "Lint/AmbiguousOperator",
     "Lint/AmbiguousOperatorPrecedence",
     "Lint/AmbiguousRange",
@@ -59,22 +55,16 @@ pub(crate) const INTENTIONALLY_PENDING_COP_NAMES: &[&str] = &[
     "Naming/HeredocDelimiterNaming",
     "Naming/VariableName",
     "Naming/VariableNumber",
-    "Style/AccessorGrouping",
     "Style/AutoResourceCleanup",
     "Style/ConstantVisibility",
     "Style/Copyright",
     "Style/Documentation",
     "Style/DocumentationMethod",
-    "Style/EvalWithLocation",
-    "Style/ExplicitBlockArgument",
     "Style/FetchEnvVar",
     "Style/FileWrite",
-    "Style/IfUnlessModifier",
     "Style/MethodCallWithArgsParentheses",
     "Style/MethodCallWithoutArgsParentheses",
     "Style/MissingElse",
-    "Style/RedundantAssignment",
-    "Style/RedundantParentheses",
 ];
 
 pub(crate) fn intentionally_pending(cop: &str) -> bool {
@@ -97,7 +87,7 @@ mod tests {
     #[test]
     fn public_inventory_is_sorted_unique_and_complete() {
         let names = cop_names();
-        assert_eq!(names.len(), 549);
+        assert_eq!(names.len(), 559);
         assert!(names.windows(2).all(|pair| pair[0] < pair[1]));
         assert!(INTENTIONALLY_PENDING_COP_NAMES
             .windows(2)

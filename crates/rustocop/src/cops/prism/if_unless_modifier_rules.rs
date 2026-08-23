@@ -40,11 +40,22 @@ impl IfUnlessModifierRule<'_, '_, '_> {
         let ast_body_source = self.source_file().node(&body).trim();
         let condition_source = self.source_file().node(&condition).trim();
         return_if!(ast_body_source.contains('\n') || body_excluded(&body, ast_body_source));
+        return_if!(normal
+            && ast_body_source.contains(" = ")
+            && ast_body_source.contains(" ? ")
+            && ast_body_source.contains(" : "));
+        return_if!(!normal
+            && condition_source.contains("defined?")
+            && !condition_source.contains("defined?(yield)")
+            && !condition_source.contains("defined?(super)"));
         let max = self.related_config_value("Layout/LineLength", "Max").and_then(|max| max.parse().ok()).unwrap_or(120);
         let indent = " ".repeat(self.source_file().column(location.start_offset()));
         if normal {
+            return_if!(heredoc_source(ast_body_source));
             return_if!(source.lines().skip(1).any(|line| line.contains('#')));
-            return_if!(condition_source.contains(" = "));
+            return_if!([" = ", " += ", " -= ", " *= ", " /= ", " ||= ", " &&= "]
+                .iter()
+                .any(|operator| condition_source.contains(operator)));
             return_if!(self.parent().and_then(Node::as_call_node).is_some_and(|parent| parent.receiver().is_some_and(|receiver| receiver.location().start_offset() <= location.start_offset() && location.end_offset() <= receiver.location().end_offset())));
             let mut body_source = if source.contains('\n') { source.lines().nth(1).map(str::trim).filter(|body| !body.is_empty()).unwrap_or(ast_body_source).to_owned() } else { ast_body_source.to_owned() };
             if body_source.ends_with(':') && !body_source.contains('(') {
@@ -72,12 +83,19 @@ impl IfUnlessModifierRule<'_, '_, '_> {
             let offense = keyword.start_offset()..keyword.end_offset();
             add_offense!(self, offense, message: message, |corrector| { corrector.replace(location, replacement); });
         } else {
+            return_if!(!self.source_file().same_line(location.start_offset(), location.end_offset()));
             return_if!(self.related_config_value("Layout/LineLength", "Enabled") == Some("false"));
             let line_start = self.source_file().line_start(location.start_offset());
             let line_end = self.source_file().line_end(location.end_offset());
             let line = self.source_file().slice(line_start..line_end).unwrap_or_default();
             return_if!(line_length_disabled_at(self.source(), location.start_offset()));
-            return_if!(line.chars().count() <= max || (line.contains("rubocop:") && self.related_config_value("Layout/LineLength", "AllowCopDirectives") != Some("false")) || (line.contains("http") && self.related_config_value("Layout/LineLength", "AllowURI") != Some("false")));
+            return_if!(line.contains("# rubocop:disable Layout/LineLength"));
+            return_if!(line.chars().count() <= max
+                || (line.contains("rubocop:")
+                    && self.related_config_value("Layout/LineLength", "AllowCopDirectives") != Some("false")
+                    && line.split('#').next().unwrap_or(line).trim_end().chars().count() <= max)
+                || ((line.contains("://") || max >= 120 && line.contains("http"))
+                    && self.related_config_value("Layout/LineLength", "AllowURI") != Some("false")));
             if let Some(comment_at) = line.find('#') {
                 let absolute_comment = line_start + comment_at;
                 let comment = line[comment_at..].trim_end();
@@ -104,7 +122,7 @@ impl IfUnlessModifierRule<'_, '_, '_> {
                 );
                 return;
             }
-            if ast_body_source.contains("<<") {
+            if heredoc_source(ast_body_source) {
                 if let Some((edit_end, replacement)) = modifier_heredoc_replacement(self.source(), &location, kind, condition_source, ast_body_source, &indent) {
                     let message = format!("Modifier form of `{kind}` makes the line too long.");
                     let offense = keyword.start_offset()..keyword.end_offset();
@@ -120,6 +138,14 @@ impl IfUnlessModifierRule<'_, '_, '_> {
     }
 }
 
+fn heredoc_source(source: &str) -> bool {
+    source.contains("<<~")
+        || source.contains("<<-")
+        || source.contains("<<'")
+        || source.contains("<<\"")
+        || source.contains("<<`")
+}
+
 fn condition_excluded(source: &str) -> bool {
     source.contains(" in ") || source.contains(" => ") || source.contains("(?<") || source.contains('\n')
 }
@@ -127,6 +153,9 @@ fn condition_excluded(source: &str) -> bool {
 fn defined_argument_unsafe(condition: &str, before: &str) -> bool {
     if condition.contains("defined?(yield)") || condition.contains("defined?(super)") { return false; }
     let Some(argument) = condition.split("defined?(").nth(1).and_then(|tail| tail.split(')').next()) else { return true };
+    if argument.contains("::") || argument.as_bytes().first().is_some_and(u8::is_ascii_uppercase) {
+        return false;
+    }
     !before.lines().any(|line| line.trim_start().starts_with(&format!("{argument} =")))
 }
 

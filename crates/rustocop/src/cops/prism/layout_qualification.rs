@@ -425,6 +425,12 @@ fn extra_spacing(_context: &mut CopContext<'_, '_>) {
         .map(|(_, line)| line)
         .collect::<Vec<_>>();
     let delimiters = delimiter_ranges(source, &tokens);
+    let literal_ranges = context
+        .source_file()
+        .literal_ranges()
+        .into_iter()
+        .filter(|range| source[range.clone()].contains('\n'))
+        .collect::<Vec<_>>();
     let allow_alignment = context.config_bool("AllowForAlignment", true);
     let allow_trailing_comments = context.config_bool("AllowBeforeTrailingComments", false);
     let force_equals = context.config_bool("ForceEqualSignAlignment", false);
@@ -435,14 +441,20 @@ fn extra_spacing(_context: &mut CopContext<'_, '_>) {
         .collect::<std::collections::HashSet<_>>();
 
     let mut aligned_comment_lines = std::collections::HashSet::new();
-    let comments = tokens
-        .iter()
-        .filter(|token| token.kind == SpacingTokenKind::Comment)
+    let comments = context
+        .source_file()
+        .comment_ranges()
+        .into_iter()
+        .map(|range| {
+            let line = source[..range.start].bytes().filter(|byte| *byte == b'\n').count();
+            let line_start = source[..range.start].rfind('\n').map_or(0, |at| at + 1);
+            (line, range.start - line_start)
+        })
         .collect::<Vec<_>>();
     for pair in comments.windows(2) {
-        if pair[0].column == pair[1].column {
-            aligned_comment_lines.insert(pair[0].line);
-            aligned_comment_lines.insert(pair[1].line);
+        if pair[0].1 == pair[1].1 {
+            aligned_comment_lines.insert(pair[0].0);
+            aligned_comment_lines.insert(pair[1].0);
         }
     }
 
@@ -450,7 +462,16 @@ fn extra_spacing(_context: &mut CopContext<'_, '_>) {
     let mut hidden_hash_cleanup = Vec::new();
     for pair in tokens.windows(2) {
         let (left, right) = (&pair[0], &pair[1]);
+        if literal_ranges.iter().any(|range| {
+            range.start <= left.start && left.start < range.end
+                || range.start <= right.start && right.start < range.end
+        }) {
+            continue;
+        }
         if left.line != right.line || right.start.saturating_sub(left.end) <= 1 {
+            continue;
+        }
+        if right.kind == SpacingTokenKind::Comment {
             continue;
         }
         if force_equals && assignment_starts.contains(&right.start) {
@@ -465,13 +486,66 @@ fn extra_spacing(_context: &mut CopContext<'_, '_>) {
             }
             continue;
         }
+        let definition_line = lines
+            .get(right.line)
+            .is_some_and(|line| line.trim_start().starts_with("def "));
+        let multiline_call_argument = left.text == ","
+            && lines
+                .get(right.line)
+                .is_some_and(|line| line.trim_end().ends_with(','));
+        if allow_alignment && multiline_call_argument {
+            continue;
+        }
+        let call_name = lines
+            .get(right.line)
+            .and_then(|line| line.trim_start().split_whitespace().next());
+        let aligned_call_group = call_name.is_some_and(|call_name| {
+            [right.line.checked_sub(1), Some(right.line + 1)]
+                .into_iter()
+                .flatten()
+                .filter_map(|line| lines.get(line))
+                .any(|line| line.trim_start().starts_with(call_name))
+        });
         if allow_alignment
+            && left.text == ","
+            && source.as_bytes().get(right.end) == Some(&b':')
+            && aligned_call_group
+        {
+            continue;
+        }
+        let keyword_argument = left.text == ","
+            && source.as_bytes().get(right.end) == Some(&b':');
+        if allow_alignment
+            && !definition_line
+            && !keyword_argument
             && aligned_spacing_token(source, &lines, &tokens, right, &aligned_comment_lines)
         {
             continue;
         }
 
         ordinary_offenses.push(left.end..right.start - 1);
+    }
+    if !allow_trailing_comments {
+        for range in context.source_file().comment_ranges() {
+            let line_number = source[..range.start]
+                .bytes()
+                .filter(|byte| *byte == b'\n')
+                .count();
+            if allow_alignment && aligned_comment_lines.contains(&line_number) {
+                continue;
+            }
+            let line_start = source[..range.start].rfind('\n').map_or(0, |at| at + 1);
+            let whitespace_start = source[line_start..range.start]
+                .trim_end_matches([' ', '\t'])
+                .len()
+                + line_start;
+            if source[line_start..whitespace_start].trim().is_empty()
+                || range.start.saturating_sub(whitespace_start) <= 1
+            {
+                continue;
+            }
+            ordinary_offenses.push(whitespace_start..range.start - 1);
+        }
     }
     let mut ordinary_edits = ordinary_offenses
         .iter()
@@ -702,22 +776,41 @@ fn aligned_spacing_token(
     aligned_comment_lines: &std::collections::HashSet<usize>,
 ) -> bool {
     if token.kind == SpacingTokenKind::Comment {
-        return aligned_comment_lines.contains(&token.line);
+        let actual_line = source[..token.start]
+            .bytes()
+            .filter(|byte| *byte == b'\n')
+            .count();
+        return aligned_comment_lines.contains(&actual_line);
     }
     let equality_like = equality_or_comparison(&token.text);
+    if equality_like
+        && tokens.iter().any(|candidate| {
+            candidate.line != token.line
+                && equality_or_comparison(&candidate.text)
+                && aligned_operators(token, candidate)
+        })
+    {
+        return true;
+    }
     for (line_number, line) in lines.iter().enumerate() {
         if line_number == token.line || line.trim_start().starts_with('#') {
             continue;
         }
-        let same_start = token.column > 0
-            && line
-                .as_bytes()
-                .get(token.column - 1)
-                .is_some_and(u8::is_ascii_whitespace)
-            && line
-                .as_bytes()
-                .get(token.column)
-                .is_some_and(|byte| !byte.is_ascii_whitespace());
+        let aligned_candidate = tokens.iter().find(|candidate| {
+            candidate.line == line_number && candidate.column == token.column
+        });
+        let same_start = aligned_candidate.is_some_and(|candidate| {
+            (token.kind != SpacingTokenKind::Operator || candidate.text == token.text)
+                && lines[candidate.line]
+                .get(candidate.column.saturating_sub(1)..candidate.column + 1)
+                .is_some_and(|pair| {
+                    candidate.column > 0
+                        && pair.as_bytes()[0].is_ascii_whitespace()
+                        && !pair.as_bytes()[1].is_ascii_whitespace()
+                }) || candidate.kind == SpacingTokenKind::Word
+                && token.kind == SpacingTokenKind::Word
+                && lines_have_aligned_operator(tokens, token.line, candidate.line)
+        });
         let identical = line
             .get(token.column..token.column + token.text.len())
             .is_some_and(|value| value == token.text);
@@ -735,6 +828,18 @@ fn aligned_spacing_token(
     }
     let _ = source;
     false
+}
+
+fn lines_have_aligned_operator(tokens: &[SpacingToken], left_line: usize, right_line: usize) -> bool {
+    tokens
+        .iter()
+        .filter(|token| token.line == left_line && equality_or_comparison(&token.text))
+        .any(|left| {
+            tokens
+                .iter()
+                .filter(|token| token.line == right_line && equality_or_comparison(&token.text))
+                .any(|right| aligned_operators(left, right))
+        })
 }
 
 fn equality_or_comparison(value: &str) -> bool {

@@ -1,10 +1,10 @@
 {
   "version": 1,
   "kind": "fixture_compatibility",
-  "updated_at": "2026-08-23T15:46:58-04:00",
+  "updated_at": "2026-08-23T18:09:17-04:00",
   "rust_commit": null,
-  "native_sha256": "71f2d19752e8cf7b7c0f77b3477c1654102ebc57aa86bce6cbd9f816ec04fbda",
-  "fixture_corpus_sha256": "63f5d392a9d33ac19414e000dfc6f8fa2f678362411db89ef9abcbb1e7004c68",
+  "native_sha256": "0d9339b7fe674c0ca51bd1a7e4e4eb74cbccebbc6af2c4e7ab7da000358decb0",
+  "fixture_corpus_sha256": "14061bc284f82d775197543ea3473467ba6042fe7ac774153c2e039189008ee8",
   "rubocop_version": "1.87.0",
   "results": {
     "Bundler/DuplicatedGem": {
@@ -172,6 +172,11 @@
       "total": 14,
       "status": "compatible"
     },
+    "Layout/EmptyLineAfterGuardClause": {
+      "passed": 60,
+      "total": 60,
+      "status": "compatible"
+    },
     "Layout/EmptyLineAfterMagicComment": {
       "passed": 21,
       "total": 21,
@@ -240,6 +245,11 @@
     "Layout/EndOfLine": {
       "passed": 13,
       "total": 13,
+      "status": "compatible"
+    },
+    "Layout/ExtraSpacing": {
+      "passed": 82,
+      "total": 82,
       "status": "compatible"
     },
     "Layout/FirstArgumentIndentation": {
@@ -315,6 +325,11 @@
     "Layout/ParameterAlignment": {
       "passed": 19,
       "total": 19,
+      "status": "compatible"
+    },
+    "Layout/RescueEnsureAlignment": {
+      "passed": 99,
+      "total": 99,
       "status": "compatible"
     },
     "Layout/SpaceAfterColon": {
@@ -440,6 +455,11 @@
     "Lint/AmbiguousAssignment": {
       "passed": 40,
       "total": 40,
+      "status": "compatible"
+    },
+    "Lint/AmbiguousBlockAssociation": {
+      "passed": 36,
+      "total": 36,
       "status": "compatible"
     },
     "Lint/ArrayLiteralInRegexp": {
@@ -1267,6 +1287,11 @@
       "total": 393,
       "status": "compatible"
     },
+    "Style/AccessorGrouping": {
+      "passed": 26,
+      "total": 26,
+      "status": "compatible"
+    },
     "Style/Alias": {
       "passed": 31,
       "total": 31,
@@ -1592,6 +1617,11 @@
       "total": 7,
       "status": "compatible"
     },
+    "Style/EvalWithLocation": {
+      "passed": 27,
+      "total": 27,
+      "status": "compatible"
+    },
     "Style/EvenOdd": {
       "passed": 18,
       "total": 18,
@@ -1605,6 +1635,11 @@
     "Style/ExpandPathArguments": {
       "passed": 16,
       "total": 16,
+      "status": "compatible"
+    },
+    "Style/ExplicitBlockArgument": {
+      "passed": 21,
+      "total": 21,
       "status": "compatible"
     },
     "Style/ExponentialNotation": {
@@ -1740,6 +1775,11 @@
     "Style/IfInsideElse": {
       "passed": 23,
       "total": 23,
+      "status": "compatible"
+    },
+    "Style/IfUnlessModifier": {
+      "passed": 139,
+      "total": 139,
       "status": "compatible"
     },
     "Style/IfUnlessModifierOfIfUnless": {
@@ -2172,6 +2212,11 @@
       "total": 10,
       "status": "compatible"
     },
+    "Style/RedundantAssignment": {
+      "passed": 11,
+      "total": 11,
+      "status": "compatible"
+    },
     "Style/RedundantBegin": {
       "passed": 63,
       "total": 63,
@@ -2270,6 +2315,11 @@
     "Style/RedundantMinMaxBy": {
       "passed": 33,
       "total": 33,
+      "status": "compatible"
+    },
+    "Style/RedundantParentheses": {
+      "passed": 349,
+      "total": 349,
       "status": "compatible"
     },
     "Style/RedundantPercentQ": {

@@ -3,7 +3,7 @@ use super::*;
 define_cops! {
     UselessMethodDefinition => "Lint/UselessMethodDefinition" => node(as_def_node, useless_method_definition),
     ConstantOverwrittenInRescue => "Lint/ConstantOverwrittenInRescue" => source(constant_overwritten_in_rescue),
-    RedundantAssignment => "Style/RedundantAssignment" => source(redundant_assignment),
+    RedundantAssignment => "Style/RedundantAssignment" => node(as_def_node, redundant_assignment),
     ConstantResolution => "Lint/ConstantResolution" => source(constant_resolution),
     ReturnInVoidContext => "Lint/ReturnInVoidContext" => node(as_return_node, return_in_void_context),
     AmbiguousEndlessMethodDefinition => "Style/AmbiguousEndlessMethodDefinition" => node(as_def_node, ambiguous_endless_method_definition),
@@ -110,22 +110,54 @@ fn constant_overwritten_in_rescue(context: &mut CopContext<'_, '_>) {
     }
 }
 
-fn redundant_assignment(context: &mut CopContext<'_, '_>) {
-    if context
-        .source()
+fn redundant_assignment(node: &ruby_prism::DefNode<'_>, context: &mut CopContext<'_, '_>) {
+    let location = node.location();
+    let ensure_start = context
+        .source_file()
         .lines()
-        .any(|line| line.trim_start().starts_with("ensure"))
-    {
-        return;
-    }
-    let lines = context.source_file().lines().collect::<Vec<_>>();
-    for pair in lines.windows(2) {
+        .find(|(offset, line)| {
+            location.start_offset() <= *offset
+                && *offset < location.end_offset()
+                && line.trim_start().starts_with("ensure")
+        })
+        .map(|(offset, _)| offset);
+    let lines = context
+        .source_file()
+        .lines()
+        .filter(|(offset, _)| location.start_offset() <= *offset && *offset < location.end_offset())
+        .filter(|(offset, _)| ensure_start.is_none_or(|ensure| *offset > ensure))
+        .filter(|(_, line)| !line.trim().is_empty() && !line.trim_start().starts_with('#'))
+        .collect::<Vec<_>>();
+    for (pair_index, pair) in lines.windows(2).enumerate() {
         let (assignment_start, assignment) = pair[0];
         let (return_start, returned) = pair[1];
         let Some((left, right)) = assignment.trim().split_once(" = ") else {
             continue;
         };
-        if returned.trim() != left || !identifier_name(left) {
+        if assignment.contains(" if ") || assignment.contains(" unless ") {
+            continue;
+        }
+        let assignment_indent = assignment.len() - assignment.trim_start().len();
+        let enclosing = lines[..=pair_index].iter().rev().find(|(_, previous)| {
+            previous.len() - previous.trim_start().len() < assignment_indent
+        });
+        if enclosing.is_some_and(|(_, previous)| {
+            previous.trim_end().ends_with(" do") || previous.contains(" do |")
+        }) {
+            continue;
+        }
+        if returned.trim() != left
+            || left.is_empty()
+            || !left
+                .bytes()
+                .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
+        {
+            continue;
+        }
+        if lines
+            .get(pair_index + 2)
+            .is_some_and(|(_, following)| following.trim_start().starts_with('.'))
+        {
             continue;
         }
         let indent = assignment.len() - assignment.trim_start().len();
@@ -140,13 +172,125 @@ fn redundant_assignment(context: &mut CopContext<'_, '_>) {
             ],
         );
     }
-}
-
-fn identifier_name(value: &str) -> bool {
-    !value.is_empty()
-        && value
+    for (index, (assignment_start, assignment)) in lines.iter().enumerate() {
+        let trimmed = assignment.trim();
+        let Some((left, right)) = trimmed.split_once(" = ") else {
+            continue;
+        };
+        if !left
             .bytes()
             .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
+        {
+            continue;
+        }
+        let mut balance = delimiter_balance(right);
+        if balance <= 0 {
+            continue;
+        }
+        let mut end_index = None;
+        for (candidate_index, (_, candidate)) in lines.iter().enumerate().skip(index + 1) {
+            balance += delimiter_balance(candidate);
+            if balance == 0 {
+                end_index = Some(candidate_index);
+                break;
+            }
+        }
+        let Some(end_index) = end_index else { continue };
+        let Some((return_start, returned)) = lines.get(end_index + 1).copied() else {
+            continue;
+        };
+        if returned.trim() != left {
+            continue;
+        }
+        let indentation = assignment.len() - assignment.trim_start().len();
+        let expression_start = *assignment_start + assignment.find(" = ").unwrap_or(0) + 3;
+        let expression_end = lines[end_index].0 + lines[end_index].1.len();
+        let offense = *assignment_start + indentation..expression_end;
+        let returned_start = return_start + returned.len() - returned.trim_start().len();
+        context.replace_many(
+            "Redundant assignment before returning detected.",
+            offense.clone(),
+            vec![
+                (offense, context.source()[expression_start..expression_end].to_string()),
+                (returned_start..returned_start + left.len(), String::new()),
+            ],
+        );
+    }
+    for (index, (assignment_start, assignment)) in lines.iter().enumerate() {
+        let trimmed = assignment.trim();
+        let Some((left, right)) = trimmed.split_once(" = ") else { continue };
+        if !left.bytes().all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
+            || !matches!(right, "if" | "unless" | "case" | "begin")
+                && !right.starts_with("if ")
+                && !right.starts_with("unless ")
+                && !right.starts_with("case ")
+        {
+            continue;
+        }
+        let indentation = assignment.len() - assignment.trim_start().len();
+        let Some(end_index) = lines.iter().enumerate().skip(index + 1).find_map(|(candidate_index, (_, candidate))| {
+            (candidate.trim() == "end" && candidate.len() - candidate.trim_start().len() == indentation).then_some(candidate_index)
+        }) else { continue };
+        let Some((return_start, returned)) = lines.get(end_index + 1) else { continue };
+        if returned.trim() != left { continue; }
+        let expression_end = lines[end_index].0 + lines[end_index].1.len();
+        let offense = *assignment_start + indentation..expression_end;
+        let expression_start = *assignment_start + assignment.find(" = ").unwrap_or(0) + 3;
+        let returned_start = *return_start + returned.len() - returned.trim_start().len();
+        context.replace_many(
+            "Redundant assignment before returning detected.",
+            offense.clone(),
+            vec![
+                (offense, context.source()[expression_start..expression_end].to_string()),
+                (returned_start..returned_start + left.len(), String::new()),
+            ],
+        );
+    }
+    for (index, (assignment_start, assignment)) in lines.iter().enumerate() {
+        let trimmed = assignment.trim();
+        let Some((left, _)) = trimmed.split_once(" = ") else {
+            continue;
+        };
+        if !trimmed.ends_with(" do") && !trimmed.contains(" do |") {
+            continue;
+        }
+        let indentation = assignment.len() - assignment.trim_start().len();
+        let Some(end_index) = lines.iter().enumerate().skip(index + 1).find_map(
+            |(candidate_index, (_, candidate))| {
+                (candidate.trim() == "end"
+                    && candidate.len() - candidate.trim_start().len() == indentation)
+                    .then_some(candidate_index)
+            },
+        ) else {
+            continue;
+        };
+        let Some((return_start, returned)) = lines.get(end_index + 1).copied() else {
+            continue;
+        };
+        if returned.trim() != left {
+            continue;
+        }
+        let end = lines[end_index].0 + lines[end_index].1.len();
+        let offense = *assignment_start + indentation..end;
+        let expression_start = *assignment_start + assignment.find(" = ").unwrap_or(0) + 3;
+        let returned_start = return_start + returned.len() - returned.trim_start().len();
+        context.replace_many(
+            "Redundant assignment before returning detected.",
+            offense.clone(),
+            vec![
+                (offense, context.source()[expression_start..end].to_string()),
+                (returned_start..returned_start + left.len(), String::new()),
+            ],
+        );
+    }
+}
+
+fn delimiter_balance(source: &str) -> isize {
+    source.bytes().fold(0, |balance, byte| match byte {
+        b'(' | b'[' | b'{' => balance + 1,
+        b')' | b']' | b'}' => balance - 1,
+        _ => balance,
+    })
 }
 
 fn constant_resolution(context: &mut CopContext<'_, '_>) {

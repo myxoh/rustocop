@@ -1,16 +1,16 @@
 {
   "version": 1,
   "kind": "project_compatibility",
-  "updated_at": "2026-08-23T16:19:26-04:00",
-  "rust_commit": "7dd38fcc4cf0fa518efb211275216b177737925e",
-  "native_sha256": "71f2d19752e8cf7b7c0f77b3477c1654102ebc57aa86bce6cbd9f816ec04fbda",
+  "updated_at": "2026-08-23T18:07:30-04:00",
+  "rust_commit": "64d776587d04268b8a05146277d85990bf0cf0a6",
+  "native_sha256": "0d9339b7fe674c0ca51bd1a7e4e4eb74cbccebbc6af2c4e7ab7da000358decb0",
   "rubocop_version": "1.87.0",
   "rubocop_reference": {
     "path": "spec/compatibility_evidence/project_rubocop_reference.json.gz",
-    "sha256": "e71621d84dc26c49234a2e12020d40ed931752dc35be9dccce6b0dbe23737dd0",
-    "generated_at": "2026-08-23T16:14:00-04:00",
+    "sha256": "ff811f3a1f9cf2d9f94884cfbb4aac3951e69d411fef0d8e23164b8012a0d3ad",
+    "generated_at": "2026-08-23T17:56:33-04:00",
     "config_sha256": "0e505e2432b2af2d479bd48d335ae5c4c18b39edf328e500157ba57bf6f6726a",
-    "source": "refreshed"
+    "source": "cached"
   },
   "project_count": 50,
   "ruby_files": 85471,
@@ -213,6 +213,12 @@
       "exact": 98,
       "classification": "mismatch"
     },
+    "Layout/EmptyLineAfterGuardClause": {
+      "rustocop": 4958,
+      "rubocop": 4964,
+      "exact": 4956,
+      "classification": "mismatch"
+    },
     "Layout/EmptyLineAfterMagicComment": {
       "rustocop": 1192,
       "rubocop": 1194,
@@ -296,6 +302,12 @@
       "rubocop": 0,
       "exact": 0,
       "classification": "dormant"
+    },
+    "Layout/ExtraSpacing": {
+      "rustocop": 1329,
+      "rubocop": 1905,
+      "exact": 471,
+      "classification": "mismatch"
     },
     "Layout/FirstArgumentIndentation": {
       "rustocop": 878,
@@ -386,6 +398,12 @@
       "rubocop": 20,
       "exact": 20,
       "classification": "project_exact"
+    },
+    "Layout/RescueEnsureAlignment": {
+      "rustocop": 455,
+      "rubocop": 372,
+      "exact": 372,
+      "classification": "mismatch"
     },
     "Layout/SpaceAfterColon": {
       "rustocop": 39,
@@ -536,6 +554,12 @@
       "rubocop": 0,
       "exact": 0,
       "classification": "mismatch"
+    },
+    "Lint/AmbiguousBlockAssociation": {
+      "rustocop": 5623,
+      "rubocop": 5623,
+      "exact": 5623,
+      "classification": "project_exact"
     },
     "Lint/ArrayLiteralInRegexp": {
       "rustocop": 0,
@@ -1527,6 +1551,12 @@
       "exact": 41,
       "classification": "mismatch"
     },
+    "Style/AccessorGrouping": {
+      "rustocop": 2024,
+      "rubocop": 1978,
+      "exact": 1968,
+      "classification": "mismatch"
+    },
     "Style/Alias": {
       "rustocop": 1715,
       "rubocop": 1719,
@@ -1917,6 +1947,12 @@
       "exact": 12,
       "classification": "mismatch"
     },
+    "Style/EvalWithLocation": {
+      "rustocop": 529,
+      "rubocop": 504,
+      "exact": 483,
+      "classification": "mismatch"
+    },
     "Style/EvenOdd": {
       "rustocop": 8,
       "rubocop": 8,
@@ -1933,6 +1969,12 @@
       "rustocop": 258,
       "rubocop": 260,
       "exact": 258,
+      "classification": "mismatch"
+    },
+    "Style/ExplicitBlockArgument": {
+      "rustocop": 282,
+      "rubocop": 357,
+      "exact": 248,
       "classification": "mismatch"
     },
     "Style/ExponentialNotation": {
@@ -2096,6 +2138,12 @@
       "rubocop": 191,
       "exact": 191,
       "classification": "project_exact"
+    },
+    "Style/IfUnlessModifier": {
+      "rustocop": 11199,
+      "rubocop": 11656,
+      "exact": 11179,
+      "classification": "mismatch"
     },
     "Style/IfUnlessModifierOfIfUnless": {
       "rustocop": 14,
@@ -2613,6 +2661,12 @@
       "exact": 9,
       "classification": "project_exact"
     },
+    "Style/RedundantAssignment": {
+      "rustocop": 249,
+      "rubocop": 201,
+      "exact": 176,
+      "classification": "mismatch"
+    },
     "Style/RedundantBegin": {
       "rustocop": 459,
       "rubocop": 458,
@@ -2732,6 +2786,12 @@
       "rubocop": 0,
       "exact": 0,
       "classification": "dormant"
+    },
+    "Style/RedundantParentheses": {
+      "rustocop": 712,
+      "rubocop": 522,
+      "exact": 480,
+      "classification": "mismatch"
     },
     "Style/RedundantPercentQ": {
       "rustocop": 687,

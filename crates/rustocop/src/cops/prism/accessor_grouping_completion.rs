@@ -281,11 +281,37 @@ fn flush_accessor_group(group: &mut Vec<AccessorLine>, context: &mut CopContext<
 }
 
 fn grouped_accessors(context: &mut CopContext<'_, '_>, lines: &[(usize, &str)]) {
-    let mut groups: [Vec<AccessorLine>; 18] = Default::default();
+    let mut groups = std::collections::BTreeMap::<
+        (usize, usize, usize, &'static str),
+        Vec<AccessorLine>,
+    >::new();
     let mut visibility = 0usize;
     let mut eigenclass = 0usize;
+    let mut scope_sequence = 0usize;
+    let mut scopes = Vec::<(usize, usize)>::new();
     for (index, (offset, line)) in lines.iter().enumerate() {
         let trimmed = line.trim_start();
+        let indentation = line.len() - trimmed.len();
+        if (trimmed.starts_with("class ") || trimmed.starts_with("module "))
+            && !trimmed.contains("; end")
+        {
+            while scopes.last().is_some_and(|(scope_indent, _)| *scope_indent >= indentation) {
+                scopes.pop();
+            }
+            scope_sequence += 1;
+            scopes.push((indentation, scope_sequence));
+            visibility = 0;
+            eigenclass = usize::from(trimmed.trim() == "class << self");
+            continue;
+        }
+        if trimmed.trim() == "end"
+            && scopes.last().is_some_and(|(scope_indent, _)| *scope_indent == indentation)
+        {
+            scopes.pop();
+            visibility = 0;
+            eigenclass = 0;
+            continue;
+        }
         let accessor = ["attr_reader", "attr_writer", "attr_accessor"]
             .into_iter()
             .find(|accessor| {
@@ -296,38 +322,61 @@ fn grouped_accessors(context: &mut CopContext<'_, '_>, lines: &[(usize, &str)]) 
                         .is_some_and(|byte| matches!(byte, b' ' | b'('))
             });
         if let Some(accessor) = accessor {
-            let group_index = eigenclass * 9
-                + visibility * 3
-                + match accessor {
-                    "attr_reader" => 0,
-                    "attr_writer" => 1,
-                    _ => 2,
-                };
-            let typed_or_commented = lines[..index]
+            let enclosing_line = lines[..index].iter().rev().find(|(_, previous)| {
+                !previous.trim().is_empty()
+                    && previous.len() - previous.trim_start().len() < indentation
+            });
+            if enclosing_line.is_some_and(|(_, previous)| {
+                let previous = previous.trim_start();
+                !previous.starts_with("class ")
+                    && !previous.starts_with("module ")
+                    && previous.trim() != "class << self"
+                    && previous.trim() != "end"
+                    && !matches!(previous.trim(), "private" | "protected" | "public")
+            }) {
+                continue;
+            }
+            let group = groups
+                .entry((scopes.last().map_or(0, |(_, id)| *id), eigenclass, visibility, accessor))
+                .or_default();
+            let immediately_commented =
+                index > 0 && lines[index - 1].1.trim_start().starts_with('#');
+            let annotated = lines[..index]
                 .iter()
                 .rev()
                 .find(|(_, previous)| !previous.trim().is_empty())
                 .is_some_and(|(_, previous)| {
                     let previous = previous.trim_start();
-                    previous.starts_with('#')
-                        || previous.starts_with("sig ")
-                        || previous.starts_with("annotation_method ")
+                    previous.starts_with("sig ") || previous.starts_with("annotation_method ")
                 });
+            let typed_or_commented = immediately_commented || annotated;
             if typed_or_commented {
-                flush_accessor_group(&mut groups[group_index], context);
-                groups[group_index].push(accessor_line(*offset, line, trimmed, accessor, false));
-                flush_accessor_group(&mut groups[group_index], context);
                 continue;
+            }
+            if index > 0 {
+                let previous = lines[index - 1].1.trim_start();
+                let previous_is_accessor = ["attr_reader", "attr_writer", "attr_accessor"]
+                    .iter()
+                    .any(|name| previous.starts_with(name));
+                if !lines[index - 1].1.trim().is_empty()
+                    && !previous.starts_with('#')
+                    && !previous_is_accessor
+                    && !previous.starts_with("class ")
+                    && !previous.starts_with("module ")
+                    && previous.trim() != "class << self"
+                    && previous.trim() != "end"
+                    && !matches!(previous.trim(), "private" | "protected" | "public")
+                {
+                    continue;
+                }
             }
             if trimmed
                 .split_once('#')
-                .is_some_and(|(_, comment)| comment.trim_start().starts_with(':'))
+                .is_some_and(|(_, comment)| comment.starts_with(':'))
             {
-                groups[group_index].push(accessor_line(*offset, line, trimmed, accessor, false));
-                flush_accessor_group(&mut groups[group_index], context);
                 continue;
             }
-            groups[group_index].push(accessor_line(*offset, line, trimmed, accessor, true));
+            group.push(accessor_line(*offset, line, trimmed, accessor, true));
         } else if matches!(trimmed.trim(), "private" | "protected" | "public") {
             visibility = match trimmed.trim() {
                 "protected" => 1,
@@ -342,7 +391,7 @@ fn grouped_accessors(context: &mut CopContext<'_, '_>, lines: &[(usize, &str)]) 
             visibility = 0;
         }
     }
-    for group in &mut groups {
+    for group in groups.values_mut() {
         flush_accessor_group(group, context);
     }
 }

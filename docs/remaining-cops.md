@@ -1,7 +1,7 @@
 # Current project-parity gaps
 
 Generated from the same complete audit as [the evidence matrix](cop-support.md).
-Evidence updated at `2026-08-23T16:19:26-04:00`.
+Evidence updated at `2026-08-23T18:07:30-04:00`.
 This queue contains only failures from that 50-project audit; it does not use the old
 Verified/Heuristic qualification labels or captured-case pass counts.
 
@@ -9,15 +9,23 @@ The gap is unmatched complete diagnostic signatures, not the difference
 between aggregate offense counts. A cop can have equal counts and still have a
 nonzero gap because its message, severity, path, or source range differs.
 
-- Rust source: `7dd38fcc4cf0fa518efb211275216b177737925e`
-- Unresolved cops: 174
+- Rust source: `64d776587d04268b8a05146277d85990bf0cf0a6`
+- Unresolved cops: 183
 
 | Cop | Status | Rustocop | RuboCop | Exact | Signature gap | Project regression evidence |
 | --- | --- | ---: | ---: | ---: | ---: | --- |
 | `Style/InlineComment` | Mismatch | 229984 | 18651 | 18651 | 211333 | Passing |
 | `Lint/UnderscorePrefixedVariableName` | Mismatch | 2109 | 2109 | 897 | 2424 | No |
+| `Layout/ExtraSpacing` | Mismatch | 1329 | 1905 | 471 | 2292 | Passing |
+| `Style/IfUnlessModifier` | Mismatch | 11199 | 11656 | 11179 | 497 | Passing |
+| `Style/RedundantParentheses` | Mismatch | 712 | 522 | 480 | 274 | Passing |
+| `Style/ExplicitBlockArgument` | Mismatch | 282 | 357 | 248 | 143 | Passing |
 | `Style/EmptyLiteral` | Mismatch | 240 | 118 | 116 | 126 | Passing |
+| `Style/RedundantAssignment` | Mismatch | 249 | 201 | 176 | 98 | Passing |
 | `Style/StringConcatenation` | Mismatch | 3175 | 3080 | 3080 | 95 | Passing |
+| `Layout/RescueEnsureAlignment` | Mismatch | 455 | 372 | 372 | 83 | Passing |
+| `Style/EvalWithLocation` | Mismatch | 529 | 504 | 483 | 67 | Passing |
+| `Style/AccessorGrouping` | Mismatch | 2024 | 1978 | 1968 | 66 | Passing |
 | `Lint/OrAssignmentToConstant` | Mismatch | 159 | 172 | 136 | 59 | No |
 | `Layout/SpaceInsideParens` | Mismatch | 959 | 1012 | 958 | 55 | Passing |
 | `Gemspec/DependencyVersion` | Mismatch | 45 | 0 | 0 | 45 | No |
@@ -64,6 +72,7 @@ nonzero gap because its message, severity, path, or source range differs.
 | `Lint/UselessDefined` | Mismatch | 14 | 3 | 3 | 11 | Passing |
 | `Style/DirEmpty` | Mismatch | 12 | 1 | 1 | 11 | Passing |
 | `Style/RedundantStringEscape` | Mismatch | 1864 | 1875 | 1864 | 11 | No |
+| `Layout/EmptyLineAfterGuardClause` | Mismatch | 4958 | 4964 | 4956 | 10 | Passing |
 | `Lint/BigDecimalNew` | Mismatch | 10 | 0 | 0 | 10 | No |
 | `Lint/ConstantOverwrittenInRescue` | Mismatch | 10 | 0 | 0 | 10 | Passing |
 | `Style/ColonMethodDefinition` | Mismatch | 11 | 1 | 1 | 10 | Passing |

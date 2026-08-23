@@ -230,17 +230,22 @@ fn end_alignment(context: &mut CopContext<'_, '_>) {
         == Some("start_of_line")
         && context.related_config_explicit("Layout/BeginEndAlignment", "EnforcedStyleAlignWith")
         && context.related_config_value("Layout/BeginEndAlignment", "Enabled") != Some("false");
+    let comment_ranges = context.source_file().comment_ranges();
     let excluded = context
         .source_file()
         .literal_ranges()
         .into_iter()
-        .chain(context.source_file().comment_ranges())
+        .chain(comment_ranges.iter().cloned())
         .collect::<Vec<_>>();
     let mut stack: Vec<Opening> = Vec::new();
     for (line_index, (offset, line)) in context.source_file().lines().enumerate() {
         let trimmed = line.trim_start();
         let indentation = line.len() - trimmed.len();
-        if trimmed == "end" || trimmed.starts_with("end ") {
+        if trimmed == "end"
+            || trimmed.starts_with("end ")
+            || trimmed.starts_with("end.")
+            || trimmed.starts_with("end&.")
+        {
             stack.pop();
             continue;
         }
@@ -267,7 +272,20 @@ fn end_alignment(context: &mut CopContext<'_, '_>) {
                 continue;
             };
             let before = &line[..relative];
-            let Some(opening) = stack.iter().rev().find(|opening| opening.relevant) else {
+            let Some(opening) = stack.iter().rev().find(|opening| {
+                opening.relevant
+                    && !context.source_file().lines().any(|(candidate_offset, candidate)| {
+                        let candidate_line = context.source()[..candidate_offset]
+                            .bytes()
+                            .filter(|byte| *byte == b'\n')
+                            .count()
+                            + 1;
+                        opening.line < candidate_line
+                            && candidate_line < line_index + 1
+                            && candidate.trim() == "end"
+                            && candidate.len() - candidate.trim_start().len() == opening.column
+                    })
+            }) else {
                 continue;
             };
             if opening.line == line_index + 1 || opening.column == relative {
@@ -293,7 +311,12 @@ fn end_alignment(context: &mut CopContext<'_, '_>) {
             }
         }
 
-        let code = line.split('#').next().unwrap_or(line).trim_end();
+        let comment_at = comment_ranges
+            .iter()
+            .filter(|range| offset <= range.start && range.start < offset + line.len())
+            .map(|range| range.start - offset)
+            .min();
+        let code = line[..comment_at.unwrap_or(line.len())].trim_end();
         let relevant = if let Some(begin_at) = code.find("begin") {
             let boundary = code.as_bytes().get(begin_at.wrapping_sub(1));
             let after = code.as_bytes().get(begin_at + "begin".len());
@@ -326,12 +349,7 @@ fn end_alignment(context: &mut CopContext<'_, '_>) {
                 .find(|character: char| character == '<' || character == ';')
                 .map_or(code.len(), |at| indentation + at);
             Some((indentation, code[indentation..end].trim_end().to_string()))
-        } else if code
-            .split_whitespace()
-            .any(|word| word == "do" || word.starts_with("do|"))
-            || code.contains(" do ")
-            || code.ends_with(" do")
-            || code.contains(" do |")
+        } else if code.ends_with(" do") || code.contains(" do |")
         {
             if let Some(assignment) = rescue_assignment_lhs(&code[indentation..]) {
                 Some((indentation, assignment))
@@ -380,7 +398,12 @@ fn rescue_assignment_lhs(line: &str) -> Option<String> {
 fn starts_end_delimited_construct(line: &str) -> bool {
     ["if ", "unless ", "case ", "while ", "until ", "for "]
         .iter()
-        .any(|keyword| line.starts_with(keyword))
+        .any(|keyword| {
+            line.starts_with(keyword)
+                || line.contains(&format!("= {keyword}"))
+                || line.contains(&format!("||= {keyword}"))
+                || line.contains(&format!("&&= {keyword}"))
+        })
 }
 
 struct MultilineMethodCallIndentationCop;

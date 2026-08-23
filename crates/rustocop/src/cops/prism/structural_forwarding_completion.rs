@@ -181,10 +181,15 @@ fn explicit_block_argument(context: &mut CopContext<'_, '_>) {
         if !trimmed.starts_with("def ") {
             continue;
         }
-        let Some(relative_end) = source[def_offset..].find("\nend") else {
+        let def_indent = line.len() - trimmed.len();
+        let Some((end_offset, end_line)) = context.source_file().lines().find(|(offset, candidate)| {
+            *offset > def_offset
+                && candidate.trim() == "end"
+                && candidate.len() - candidate.trim_start().len() == def_indent
+        }) else {
             continue;
         };
-        let method_end = def_offset + relative_end + 4;
+        let method_end = end_offset + end_line.len();
         let body = &source[def_offset..method_end];
         if body
             .lines()
@@ -234,12 +239,15 @@ fn explicit_block_argument(context: &mut CopContext<'_, '_>) {
             };
             context.replace_many(
                 "Consider using explicit block argument in the surrounding method's signature over `yield`.",
-                call_start + indent.len()..close + 1,
+                call_expression_start(source, call_start, block_start)..close + 1,
                 vec![
                     (call_start..close + 1, replacement_call),
                     (signature_insert..signature_insert, signature_text.to_string()),
                 ],
             );
+            continue;
+        }
+        if explicit_no_argument_do_block(context, def_offset, line, method_end) {
             continue;
         }
         let Some(block_start_relative) = body.find(" do |") else {
@@ -287,6 +295,75 @@ fn explicit_block_argument(context: &mut CopContext<'_, '_>) {
     }
 }
 
+fn call_expression_start(source: &str, line_start: usize, block_start: usize) -> usize {
+    let prefix = &source[line_start..block_start];
+    let indentation = prefix.len() - prefix.trim_start().len();
+    let code_start = line_start + indentation;
+    [" = ", " && ", " || ", " if ", " unless "]
+        .into_iter()
+        .filter_map(|operator| prefix.rfind(operator).map(|at| at + operator.len()))
+        .max()
+        .map_or(code_start, |at| line_start + at)
+}
+
+fn explicit_no_argument_do_block(
+    context: &mut CopContext<'_, '_>,
+    def_offset: usize,
+    signature: &str,
+    method_end: usize,
+) -> bool {
+    let lines = context
+        .source_file()
+        .lines()
+        .filter(|(offset, _)| def_offset < *offset && *offset < method_end)
+        .collect::<Vec<_>>();
+    for window in lines.windows(3) {
+        let (call_offset, call_line) = window[0];
+        let (_, yield_line) = window[1];
+        let (end_offset, end_line) = window[2];
+        let call_trimmed = call_line.trim_start();
+        let call_indent = call_line.len() - call_trimmed.len();
+        let call_code = call_trimmed
+            .split('#')
+            .next()
+            .unwrap_or(call_trimmed)
+            .trim_end();
+        if !call_code.ends_with(" do")
+            || yield_line.trim() != "yield"
+            || end_line.trim() != "end"
+            || end_line.len() - end_line.trim_start().len() != call_indent
+        {
+            continue;
+        }
+        let call_without_block = call_code.strip_suffix(" do").unwrap_or(call_code);
+        let block_argument = signature
+            .split('&')
+            .nth(1)
+            .and_then(|tail| tail.split(|character: char| !character.is_ascii_alphanumeric() && character != '_').next())
+            .unwrap_or("block");
+        let forwarded = if block_argument.is_empty() {
+            "&".to_string()
+        } else {
+            format!("&{block_argument}")
+        };
+        let replacement = if let Some(call) = call_without_block.strip_suffix(')') {
+            format!("{call}, {forwarded})")
+        } else {
+            format!("{call_without_block}({forwarded})")
+        };
+        let offense_start = call_expression_start(context.source(), call_offset, call_offset + call_line.len());
+        let offense_end = end_offset + end_line.len();
+        context.replace(
+            "Consider using explicit block argument in the surrounding method's signature over `yield`.",
+            offense_start..offense_end,
+            call_offset + call_indent..offense_end,
+            replacement,
+        );
+        return true;
+    }
+    false
+}
+
 fn explicit_inline_blocks(
     context: &mut CopContext<'_, '_>,
     def_offset: usize,
@@ -304,7 +381,11 @@ fn explicit_inline_blocks(
         })
         .filter(|name| !name.is_empty());
     let block_name = existing_block.as_deref().unwrap_or("block");
-    let mut candidates = Vec::<(std::ops::Range<usize>, String)>::new();
+    let mut candidates = Vec::<(
+        std::ops::Range<usize>,
+        std::ops::Range<usize>,
+        String,
+    )>::new();
     for (line_offset, line) in context.source_file().lines() {
         if line_offset <= def_offset || line_offset >= method_end {
             continue;
@@ -323,7 +404,12 @@ fn explicit_inline_blocks(
             let Some((parameters, body)) = parameters.split_once('|') else {
                 continue;
             };
-            body.trim() == format!("yield {}", parameters.trim())
+            let yielded = body
+                .trim()
+                .strip_prefix("yield")
+                .unwrap_or_default()
+                .trim();
+            yielded.trim_matches(['(', ')']) == parameters.trim()
         } else {
             block == "yield"
         };
@@ -331,6 +417,9 @@ fn explicit_inline_blocks(
             continue;
         }
         let indent = line.len() - line.trim_start().len();
+        if open < indent {
+            continue;
+        }
         let call = line[indent..open].trim_end();
         let replacement = if call == "super" && signature.contains('(') {
             let parameters = signature
@@ -359,7 +448,9 @@ fn explicit_inline_blocks(
         } else {
             format!("{}(&{block_name})", call.trim_end_matches(','))
         };
-        candidates.push((line_offset + indent..line_offset + close + 1, replacement));
+        let edit = line_offset + indent..line_offset + close + 1;
+        let offense_start = multiline_call_start(context, line_offset, line_offset + open);
+        candidates.push((offense_start..line_offset + close + 1, edit, replacement));
     }
     if candidates.is_empty() {
         return false;
@@ -376,7 +467,7 @@ fn explicit_inline_blocks(
     } else {
         "(&block)"
     };
-    let mut edits = vec![candidates[0].clone()];
+    let mut edits = vec![(candidates[0].1.clone(), candidates[0].2.clone())];
     if existing_block.is_none() {
         edits.push((
             signature_insert..signature_insert,
@@ -385,8 +476,42 @@ fn explicit_inline_blocks(
     }
     let message = "Consider using explicit block argument in the surrounding method's signature over `yield`.";
     context.replace_many(message, candidates[0].0.clone(), edits);
-    for (range, replacement) in candidates.iter().skip(1) {
-        context.replace(message, range.clone(), range.clone(), replacement);
+    for (offense, edit, replacement) in candidates.iter().skip(1) {
+        context.replace(message, offense.clone(), edit.clone(), replacement);
     }
     true
+}
+
+fn multiline_call_start(
+    context: &CopContext<'_, '_>,
+    line_offset: usize,
+    block_start: usize,
+) -> usize {
+    let lines = context.source_file().lines().collect::<Vec<_>>();
+    let Some(mut position) = lines.iter().position(|(offset, _)| *offset == line_offset) else {
+        return call_expression_start(context.source(), line_offset, block_start);
+    };
+    let mut start = line_offset;
+    let mut balance = context.source()[line_offset..block_start]
+        .bytes()
+        .fold(0isize, |balance, byte| match byte {
+            b')' => balance + 1,
+            b'(' => balance - 1,
+            _ => balance,
+        });
+    let continuation = lines[position].1.trim_start().starts_with(['.', ')']);
+    while position > 0 && (balance > 0 || start == line_offset && continuation) {
+        position -= 1;
+        let (offset, line) = lines[position];
+        start = offset;
+        balance += line.bytes().fold(0isize, |balance, byte| match byte {
+            b')' => balance + 1,
+            b'(' => balance - 1,
+            _ => balance,
+        });
+        if balance <= 0 {
+            break;
+        }
+    }
+    call_expression_start(context.source(), start, block_start)
 }

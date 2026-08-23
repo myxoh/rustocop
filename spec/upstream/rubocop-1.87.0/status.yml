@@ -1,14 +1,14 @@
 ---
 rubocop_version: 1.87.0
 upstream_rspec:
-  examples: 24334
+  examples: 25180
   failures: 0
   pending: 3
-captured_cases: 24427
+captured_cases: 25277
 diagnostic_baseline:
-  passed_cases: 24426
-  passing_cops: 533
-  total_cops: 533
+  passed_cases: 25276
+  passing_cops: 543
+  total_cops: 543
 fully_compatible_cops:
 - Bundler/DuplicatedGem
 - Bundler/DuplicatedGroup
@@ -43,6 +43,7 @@ fully_compatible_cops:
 - Layout/DotPosition
 - Layout/ElseAlignment
 - Layout/EmptyComment
+- Layout/EmptyLineAfterGuardClause
 - Layout/EmptyLineAfterMagicComment
 - Layout/EmptyLineAfterMultilineCondition
 - Layout/EmptyLineBetweenDefs
@@ -57,6 +58,7 @@ fully_compatible_cops:
 - Layout/EmptyLinesAroundMethodBody
 - Layout/EmptyLinesAroundModuleBody
 - Layout/EndOfLine
+- Layout/ExtraSpacing
 - Layout/FirstArgumentIndentation
 - Layout/FirstHashElementIndentation
 - Layout/FirstMethodParameterLineBreak
@@ -72,11 +74,12 @@ fully_compatible_cops:
 - Layout/MultilineMethodDefinitionBraceLayout
 - Layout/MultilineMethodParameterLineBreaks
 - Layout/ParameterAlignment
+- Layout/RescueEnsureAlignment
 - Layout/SpaceAfterColon
 - Layout/SpaceAfterComma
+- Layout/SpaceAfterMethodName
 - Layout/SpaceAfterNot
 - Layout/SpaceAfterSemicolon
-- Layout/SpaceAfterMethodName
 - Layout/SpaceAroundEqualsInParameterDefault
 - Layout/SpaceAroundKeyword
 - Layout/SpaceAroundMethodCallOperator
@@ -97,6 +100,7 @@ fully_compatible_cops:
 - Layout/TrailingEmptyLines
 - Layout/TrailingWhitespace
 - Lint/AmbiguousAssignment
+- Lint/AmbiguousBlockAssociation
 - Lint/ArrayLiteralInRegexp
 - Lint/BigDecimalNew
 - Lint/BinaryOperatorWithIdenticalOperands
@@ -160,10 +164,10 @@ fully_compatible_cops:
 - Lint/NestedMethodDefinition
 - Lint/NestedPercentLiteral
 - Lint/NextWithoutAccumulator
+- Lint/NoReturnInBeginEndBlocks
 - Lint/NonAtomicFileOperation
 - Lint/NonDeterministicRequireOrder
 - Lint/NonLocalExitFromIterator
-- Lint/NoReturnInBeginEndBlocks
 - Lint/NumberConversion
 - Lint/NumberedParameterAssignment
 - Lint/NumericOperationWithConstantResult
@@ -262,6 +266,7 @@ fully_compatible_cops:
 - Security/Open
 - Security/YAMLLoad
 - Style/AccessModifierDeclarations
+- Style/AccessorGrouping
 - Style/Alias
 - Style/AmbiguousEndlessMethodDefinition
 - Style/AndOr
@@ -327,9 +332,11 @@ fully_compatible_cops:
 - Style/EndBlock
 - Style/EndlessMethod
 - Style/EnvHome
+- Style/EvalWithLocation
 - Style/EvenOdd
 - Style/ExactRegexpMatch
 - Style/ExpandPathArguments
+- Style/ExplicitBlockArgument
 - Style/ExponentialNotation
 - Style/FileEmpty
 - Style/FileNull
@@ -357,13 +364,14 @@ fully_compatible_cops:
 - Style/HashTransformValues
 - Style/IdenticalConditionalBranches
 - Style/IfInsideElse
+- Style/IfUnlessModifier
 - Style/IfUnlessModifierOfIfUnless
 - Style/IfWithBooleanLiteralBranches
 - Style/IfWithSemicolon
 - Style/ImplicitRuntimeError
-- Style/InlineComment
 - Style/InPatternThen
 - Style/InfiniteLoop
+- Style/InlineComment
 - Style/InverseMethods
 - Style/InvertibleUnlessCondition
 - Style/IpAddresses
@@ -443,6 +451,7 @@ fully_compatible_cops:
 - Style/RedundantArgument
 - Style/RedundantArrayConstructor
 - Style/RedundantArrayFlatten
+- Style/RedundantAssignment
 - Style/RedundantBegin
 - Style/RedundantCapitalW
 - Style/RedundantCondition
@@ -463,6 +472,7 @@ fully_compatible_cops:
 - Style/RedundantInterpolationUnfreeze
 - Style/RedundantLineContinuation
 - Style/RedundantMinMaxBy
+- Style/RedundantParentheses
 - Style/RedundantPercentQ
 - Style/RedundantRegexpArgument
 - Style/RedundantRegexpCharacterClass

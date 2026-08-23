@@ -1,14 +1,12 @@
 ---
 version: 1
 rubocop_version: 1.87.0
-updated_at: '2026-08-23T14:34:54-04:00'
+updated_at: '2026-08-23T17:59:22-04:00'
 reason: Existing implementations are intentionally withdrawn because source-pattern, placeholder, or incomplete structural behavior does not match the pinned real-project corpus.
 cops:
   - Layout/ArgumentAlignment
-  - Layout/EmptyLineAfterGuardClause
   - Layout/EmptyLines
   - Layout/EndAlignment
-  - Layout/ExtraSpacing
   - Layout/FirstArrayElementIndentation
   - Layout/FirstArrayElementLineBreak
   - Layout/FirstHashElementLineBreak
@@ -29,13 +27,11 @@ cops:
   - Layout/MultilineMethodCallIndentation
   - Layout/MultilineOperationIndentation
   - Layout/RedundantLineBreak
-  - Layout/RescueEnsureAlignment
   - Layout/SingleLineBlockChain
   - Layout/SpaceAroundBlockParameters
   - Layout/SpaceBeforeBlockBraces
   - Layout/SpaceBeforeComment
   - Layout/SpaceInsideHashLiteralBraces
-  - Lint/AmbiguousBlockAssociation
   - Lint/AmbiguousOperator
   - Lint/AmbiguousOperatorPrecedence
   - Lint/AmbiguousRange
@@ -61,19 +57,13 @@ cops:
   - Naming/HeredocDelimiterNaming
   - Naming/VariableName
   - Naming/VariableNumber
-  - Style/AccessorGrouping
   - Style/AutoResourceCleanup
   - Style/ConstantVisibility
   - Style/Copyright
   - Style/Documentation
   - Style/DocumentationMethod
-  - Style/EvalWithLocation
-  - Style/ExplicitBlockArgument
   - Style/FetchEnvVar
   - Style/FileWrite
-  - Style/IfUnlessModifier
   - Style/MethodCallWithArgsParentheses
   - Style/MethodCallWithoutArgsParentheses
   - Style/MissingElse
-  - Style/RedundantAssignment
-  - Style/RedundantParentheses

@@ -1185,6 +1185,19 @@ impl Cop for EmptyLineAfterGuardClause {
         let Some(guard) = guard_conditional(node) else {
             return;
         };
+        let branch_source =
+            &source[guard.0.location().start_offset()..guard.0.location().end_offset()];
+        if branch_source.trim_start().starts_with("<<") {
+            return;
+        }
+        if branch_source.contains('\n') && guard_heredoc_marker(branch_source).is_none() {
+            return;
+        }
+        if guard.1.is_some() {
+            if branch_source.contains('\n') && guard_heredoc_marker(branch_source).is_none() {
+                return;
+            }
+        }
         let Some(next) = right_sibling(node, ancestors) else {
             return;
         };
@@ -1196,14 +1209,61 @@ impl Cop for EmptyLineAfterGuardClause {
             return;
         }
 
-        let heredoc = guard_heredoc_terminator(node, source);
-        let effective_end = heredoc.as_ref().map_or_else(
+        let header = file.line(node.location().start_offset());
+        let header_trimmed = header.trim_start();
+        let header_indent = header.len() - header_trimmed.len();
+        let full_conditional_end = (header_trimmed.starts_with("if ")
+            || header_trimmed.starts_with("unless "))
+            .then(|| {
+                file.lines().find_map(|(offset, line)| {
+                    (node.location().start_offset() < offset
+                        && offset < next.location().start_offset()
+                        && line.trim() == "end"
+                        && line.len() - line.trim_start().len() == header_indent)
+                        .then_some(offset + header_indent..offset + header_indent + 3)
+                })
+            })
+            .flatten();
+
+        let node_first_line = file.line_range(node.location().start_offset());
+        let first_line_source = &source[node_first_line.clone()];
+        let predicate_heredoc = [" if ", " unless "].into_iter().any(|keyword| {
+            first_line_source
+                .find(keyword)
+                .is_some_and(|modifier| {
+                    let predicate = &first_line_source[modifier + keyword.len()..];
+                    guard_heredoc_marker(predicate).is_some()
+                        && !predicate.trim_start().starts_with("<<")
+                })
+        });
+        if predicate_heredoc {
+            let offense_end = file.line_end(node.location().start_offset());
+            let mut reporter = context.cop_context(self.name(), source, ancestors);
+            reporter.insert(
+                "Add empty line after guard clause.",
+                node.location().start_offset()..offense_end,
+                offense_end,
+                "\n",
+            );
+            return;
+        }
+        if source[node.location().end_offset()..next.location().start_offset()].contains("\n\n") {
+            return;
+        }
+        let heredoc = full_conditional_end.as_ref().map(|_| None).unwrap_or_else(|| {
+            guard
+            .1
+            .is_none()
+            .then(|| guard_heredoc_terminator(node, source))
+            .flatten()
+        });
+        let effective_end = full_conditional_end.as_ref().map_or_else(|| heredoc.as_ref().map_or_else(
             || {
                 file.line_range(node.location().end_offset().saturating_sub(1))
                     .end
             },
             |(_, line_end)| *line_end,
-        );
+        ), |range| file.line_range(range.end.saturating_sub(1)).end);
         if effective_end >= source.len() {
             return;
         }
@@ -1220,12 +1280,19 @@ impl Cop for EmptyLineAfterGuardClause {
         } else {
             effective_end
         };
-        let offense = heredoc.map(|(range, _)| range).unwrap_or_else(|| {
+        let offense = full_conditional_end.unwrap_or_else(|| heredoc.map(|(range, _)| range).unwrap_or_else(|| {
+            let node_source = &source[node.location().start_offset()..node.location().end_offset()];
+            if node_source.contains('\n') {
+                if let Some(end_relative) = node_source.rfind("end") {
+                    return node.location().start_offset() + end_relative
+                        ..node.location().start_offset() + end_relative + 3;
+                }
+            }
             guard.1.map_or_else(
                 || node.location().start_offset()..node.location().end_offset(),
                 |location| location.start_offset()..location.end_offset(),
             )
-        });
+        }));
         let mut reporter = context.cop_context(self.name(), source, ancestors);
         reporter.insert(
             "Add empty line after guard clause.",
@@ -1294,6 +1361,22 @@ fn right_sibling<'pr>(node: &Node<'pr>, ancestors: &[Node<'pr>]) -> Option<Node<
             begin.statements()
         } else if let Some(rescue) = ancestor.as_rescue_node() {
             rescue.statements()
+        } else if let Some(condition) = ancestor.as_if_node() {
+            condition.statements()
+        } else if let Some(condition) = ancestor.as_unless_node() {
+            condition.statements()
+        } else if let Some(branch) = ancestor.as_when_node() {
+            branch.statements()
+        } else if let Some(branch) = ancestor.as_in_node() {
+            branch.statements()
+        } else if let Some(branch) = ancestor.as_else_node() {
+            branch.statements()
+        } else if let Some(loop_node) = ancestor.as_while_node() {
+            loop_node.statements()
+        } else if let Some(loop_node) = ancestor.as_until_node() {
+            loop_node.statements()
+        } else if let Some(loop_node) = ancestor.as_for_node() {
+            loop_node.statements()
         } else {
             ancestor.as_statements_node()
         }?;
