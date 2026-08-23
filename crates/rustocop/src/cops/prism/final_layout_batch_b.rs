@@ -2374,9 +2374,23 @@ fn operator_alignment_is_allowed(
         .len();
     let leading_excess = operator_start.saturating_sub(whitespace_start) > 1;
     let trailing_excess = rhs_start.saturating_sub(operator_end) > 1;
-    [previous, next].into_iter().flatten().any(|line| {
+    if operator == "=" && leading_excess {
+        let line_end = source[line_offset..]
+            .find('\n')
+            .map_or(source.len(), |end| line_offset + end);
+        let line = &source[line_offset..line_end];
+        let first_equal = operator_layouts(line)
+            .into_iter()
+            .find(|layout| line[layout.0..layout.1].ends_with('='));
+        if first_equal.is_some_and(|layout| layout.0 != operator_start) {
+            return false;
+        }
+    }
+    let adjacent = [previous, next].into_iter().flatten().any(|line| {
         operator_layouts(line).into_iter().any(|layout| {
+            let candidate = &line[layout.0..layout.1];
             let leading_aligned = !leading_excess
+                || operator != "=" && candidate == operator && layout.0 == operator_start
                 || layout.1 == operator_end
                     && ((operator.ends_with('=') && line[layout.0..layout.1].ends_with('='))
                         || layout.2 != current_lhs);
@@ -2384,7 +2398,8 @@ fn operator_alignment_is_allowed(
                 || layout.2 != current_lhs && (layout.3 == rhs_start || layout.1 == operator_end);
             leading_aligned && trailing_aligned
         })
-    }) || alignment_table_is_allowed(
+    });
+    let table = alignment_table_is_allowed(
         source,
         line_offset,
         operator_start,
@@ -2393,7 +2408,8 @@ fn operator_alignment_is_allowed(
         trailing_excess,
         rhs_start,
         operator,
-    )
+    );
+    adjacent || table
 }
 
 fn alignment_table_is_allowed(
@@ -2425,7 +2441,9 @@ fn alignment_table_is_allowed(
         .into_iter()
         .find(|layout| {
             let candidate = &current_line[layout.0..layout.1];
-            candidate.ends_with('=') || matches!(candidate, "<<" | "|")
+            candidate == operator
+                || candidate.ends_with('=')
+                || matches!(candidate, "<<" | "|")
         })
         .is_some_and(|layout| layout.0 == operator_start);
     if operator.ends_with('=') && !first_aligned_operator {

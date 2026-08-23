@@ -32,6 +32,12 @@ ratio = "#{values[0]/values[1]}"
 backref = $&
 negative = -6
 
+links = {
+  "home"      => "homepage",
+  "changelog" => "changes",
+  "docs"      => "documentation",
+}
+
 where(:first, :second) do
   1       | 2
   100_000 | 3
