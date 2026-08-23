@@ -609,163 +609,13 @@ fn duplicate_character_class(context: &mut CopContext<'_, '_>) {
 
 fn out_of_range_ref(context: &mut CopContext<'_, '_>) {
     let parsed = parse(context.source().as_bytes());
-    let mut references = RegexpReferenceCollector::default();
-    references.visit(&parsed.node());
-    let reference_offsets = references.offsets;
-    let mut regexps = RegexpLiteralCollector::default();
-    regexps.visit(&parsed.node());
-    let mut captures = 0usize;
-    let mut captures_known = true;
-    for (offset, line) in context.source_file().lines() {
-        let references_first = line.trim_start().starts_with('$');
-        if references_first {
-            report_out_of_range_references(
-                context,
-                offset,
-                line,
-                captures,
-                captures_known,
-                &reference_offsets,
-            );
-        }
-        let literals = regexps
-            .ranges
-            .iter()
-            .filter(|range| range.start >= offset && range.start < offset + line.len())
-            .filter(|range| !context.source()[range.start..range.end].contains("#{"))
-            .map(|range| {
-                let body = &context.source()[range.start..range.end];
-                regexp_capture_count(&format!("/{body}/"))
-            })
-            .collect::<Vec<_>>();
-        let matching_method = [
-            ".match(",
-            ".grep(",
-            ".gsub(",
-            ".gsub!(",
-            ".sub(",
-            ".sub!(",
-            ".scan(",
-            ".slice(",
-            ".slice!(",
-            ".index(",
-            ".rindex(",
-            ".partition(",
-            ".rpartition(",
-            ".start_with?(",
-            ".end_with?(",
-            "&.match(",
-            "&.slice(",
-            "&.slice!(",
-            "&.index(",
-            "&.rindex(",
-            "&.partition(",
-            "&.rpartition(",
-            "&.start_with?(",
-            "&.end_with?(",
-        ]
-        .iter()
-        .any(|method| line.contains(method));
-        let pattern_clause =
-            line.trim_start().starts_with("when ") || line.trim_start().starts_with("in ");
-        let bracket_match = line.contains("[/") || line.contains("\"[") || line.contains("'[");
-        let matching_construct = line.contains("=~")
-            || line.contains(" === ")
-            || matching_method
-            || pattern_clause
-            || bracket_match;
-        if !line.contains(".match?(") && matching_construct {
-            if literals.is_empty() {
-                captures_known = false;
-            } else {
-                captures_known = true;
-                captures = if line.contains("=~") {
-                    *literals.last().unwrap_or(&0)
-                } else {
-                    literals.into_iter().max().unwrap_or(0)
-                };
-            }
-        }
-        if !references_first {
-            report_out_of_range_references(
-                context,
-                offset,
-                line,
-                captures,
-                captures_known,
-                &reference_offsets,
-            );
-        }
-    }
-}
-
-#[derive(Default)]
-struct RegexpLiteralCollector {
-    ranges: Vec<std::ops::Range<usize>>,
-}
-
-impl<'pr> Visit<'pr> for RegexpLiteralCollector {
-    fn visit_regular_expression_node(
-        &mut self,
-        node: &ruby_prism::RegularExpressionNode<'pr>,
-    ) {
-        self.ranges
-            .push(node.content_loc().start_offset()..node.content_loc().end_offset());
-        ruby_prism::visit_regular_expression_node(self, node);
-    }
-}
-
-#[derive(Default)]
-struct RegexpReferenceCollector {
-    offsets: HashSet<usize>,
-}
-
-impl<'pr> Visit<'pr> for RegexpReferenceCollector {
-    fn visit_numbered_reference_read_node(
-        &mut self,
-        node: &ruby_prism::NumberedReferenceReadNode<'pr>,
-    ) {
-        self.offsets.insert(node.location().start_offset());
-        ruby_prism::visit_numbered_reference_read_node(self, node);
-    }
-
-    fn visit_global_variable_read_node(
-        &mut self,
-        node: &ruby_prism::GlobalVariableReadNode<'pr>,
-    ) {
-        self.offsets.insert(node.location().start_offset());
-        ruby_prism::visit_global_variable_read_node(self, node);
-    }
-}
-
-fn report_out_of_range_references(
-    context: &mut CopContext<'_, '_>,
-    offset: usize,
-    line: &str,
-    captures: usize,
-    captures_known: bool,
-    reference_offsets: &HashSet<usize>,
-) {
-    if !captures_known {
-        return;
-    }
-    for (at, _) in line.match_indices('$') {
-        if !reference_offsets.contains(&(offset + at)) {
-            continue;
-        }
-        let digits = line[at + 1..]
-            .bytes()
-            .take_while(u8::is_ascii_digit)
-            .count();
-        if digits == 0 {
-            continue;
-        }
-        let Ok(reference) = line[at + 1..at + 1 + digits].parse::<usize>() else {
-            continue;
-        };
-        if reference <= captures {
-            continue;
-        }
+    let mut collector = OutOfRangeRefCollector {
+        source: context.source(),
+        valid_ref: Some(0),
+        offenses: Vec::new(),
+    };
+    collector.visit(&parsed.node());
+    for (range, reference, captures) in collector.offenses {
         let groups = match captures {
             0 => "no regexp capture groups detected".to_string(),
             1 => "1 regexp capture group detected".to_string(),
@@ -773,9 +623,147 @@ fn report_out_of_range_references(
         };
         context.report(
             format!("${reference} is out of range ({groups})."),
-            offset + at..offset + at + digits + 1,
+            range,
         );
     }
+}
+
+struct OutOfRangeRefCollector<'a> {
+    source: &'a str,
+    valid_ref: Option<usize>,
+    offenses: Vec<(std::ops::Range<usize>, usize, usize)>,
+}
+
+impl<'pr> Visit<'pr> for OutOfRangeRefCollector<'_> {
+    fn visit_numbered_reference_read_node(
+        &mut self,
+        node: &ruby_prism::NumberedReferenceReadNode<'pr>,
+    ) {
+        let location = node.location();
+        let source = &self.source[location.start_offset() + 1..location.end_offset()];
+        if let (Ok(reference), Some(captures)) = (source.parse::<usize>(), self.valid_ref) {
+            if reference > captures {
+                self.offenses.push((
+                    location.start_offset()..location.end_offset(),
+                    reference,
+                    captures,
+                ));
+            }
+        }
+        ruby_prism::visit_numbered_reference_read_node(self, node);
+    }
+
+    fn visit_call_node(&mut self, node: &CallNode<'pr>) {
+        let method = call_name(node);
+        let preserved_ref = self.valid_ref;
+        let receiver_methods = [b"=~".as_slice(), b"===", b"match"];
+        let argument_methods = [
+            b"=~".as_slice(),
+            b"match",
+            b"grep",
+            b"gsub",
+            b"gsub!",
+            b"sub",
+            b"sub!",
+            b"[]",
+            b"slice",
+            b"slice!",
+            b"index",
+            b"rindex",
+            b"scan",
+            b"partition",
+            b"rpartition",
+            b"start_with?",
+            b"end_with?",
+        ];
+        if let Some(receiver) = node.receiver() {
+            self.visit(&receiver);
+        }
+        if let Some(arguments) = node.arguments() {
+            self.visit(&arguments.as_node());
+        }
+        let relevant = receiver_methods.contains(&method) || argument_methods.contains(&method);
+        let regexp = if argument_methods.contains(&method) {
+            node.arguments()
+                .and_then(|arguments| arguments.arguments().iter().next())
+                .and_then(|argument| argument.as_regular_expression_node())
+                .or_else(|| {
+                    receiver_methods
+                        .contains(&method)
+                        .then(|| node.receiver())
+                        .flatten()
+                        .and_then(|receiver| receiver.as_regular_expression_node())
+                })
+        } else {
+            node.receiver()
+                .and_then(|receiver| receiver.as_regular_expression_node())
+        };
+        if relevant {
+            self.valid_ref = None;
+        }
+        if let Some(regexp) = regexp {
+            let body = &self.source
+                [regexp.content_loc().start_offset()..regexp.content_loc().end_offset()];
+            self.valid_ref = Some(regexp_capture_count(&format!("/{body}/")));
+        }
+        if let Some(block) = node.block() {
+            self.visit(&block);
+        }
+        if method == b"match?" {
+            self.valid_ref = preserved_ref;
+        }
+    }
+
+    fn visit_when_node(&mut self, node: &ruby_prism::WhenNode<'pr>) {
+        let mut captures = Vec::new();
+        for condition in node.conditions().iter() {
+            self.visit(&condition);
+            if let Some(regexp) = condition.as_regular_expression_node() {
+                captures.push(regexp_capture_count_from_node(self.source, &regexp));
+            }
+        }
+        self.valid_ref = captures.into_iter().max();
+        if let Some(statements) = node.statements() {
+            self.visit(&statements.as_node());
+        }
+    }
+
+    fn visit_in_node(&mut self, node: &ruby_prism::InNode<'pr>) {
+        let pattern = node.pattern();
+        self.visit(&pattern);
+        let mut regexps = PatternRegexpCollector {
+            source: self.source,
+            captures: Vec::new(),
+        };
+        regexps.visit(&pattern);
+        self.valid_ref = regexps.captures.into_iter().max();
+        if let Some(statements) = node.statements() {
+            self.visit(&statements.as_node());
+        }
+    }
+}
+
+struct PatternRegexpCollector<'a> {
+    source: &'a str,
+    captures: Vec<usize>,
+}
+
+impl<'pr> Visit<'pr> for PatternRegexpCollector<'_> {
+    fn visit_regular_expression_node(
+        &mut self,
+        node: &ruby_prism::RegularExpressionNode<'pr>,
+    ) {
+        self.captures
+            .push(regexp_capture_count_from_node(self.source, node));
+    }
+}
+
+fn regexp_capture_count_from_node(
+    source: &str,
+    regexp: &ruby_prism::RegularExpressionNode<'_>,
+) -> usize {
+    let body = &source[regexp.content_loc().start_offset()..regexp.content_loc().end_offset()];
+    regexp_capture_count(&format!("/{body}/"))
 }
 
 fn regexp_capture_count(literal: &str) -> usize {
