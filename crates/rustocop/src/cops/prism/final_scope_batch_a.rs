@@ -9,6 +9,7 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
         Box::new(ShadowedException) as Box<dyn Cop>,
         Box::new(ConstantDefinitionInBlock),
         Box::new(ShadowingOuterLocalVariable),
+        Box::new(ShadowingOuterLocalVariableLambda),
         report(
             "Lint/LiteralAssignmentInCondition",
             "if value = 1",
@@ -26,6 +27,7 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
 
 define_any_node_cop!(HeredocDelimiterCase => "Naming/HeredocDelimiterCase" => heredoc_case);
 define_node_cop!(ShadowingOuterLocalVariable => "Lint/ShadowingOuterLocalVariable" => as_block_node => shadowing_outer_local);
+define_node_cop!(ShadowingOuterLocalVariableLambda => "Lint/ShadowingOuterLocalVariable" => as_lambda_node => shadowing_outer_lambda);
 define_node_cop!(BlockForwarding => "Naming/BlockForwarding" => as_def_node => block_forwarding);
 define_node_cop!(RescuedExceptionsVariableName => "Naming/RescuedExceptionsVariableName" => as_rescue_node => rescued_exception_name);
 define_node_cop!(ShadowedException => "Lint/ShadowedException" => as_rescue_node => shadowed_exception);
@@ -258,14 +260,52 @@ fn shadowing_outer_local(node: &ruby_prism::BlockNode<'_>, context: &mut CopCont
     {
         return;
     }
-    let Some(parameters) = node
+    let Some(block_parameters) = node
         .parameters()
         .and_then(|parameters| parameters.as_block_parameters_node())
     else {
         return;
     };
-    for (name, range) in shadowing_block_parameters(&parameters) {
-        if name.starts_with('_') || !outer_scope_has_local(name.as_bytes(), node, context) {
+    if let Some(parameters) = block_parameters.parameters() {
+        report_shadowing_parameters(&parameters, node.location().start_offset(), context);
+    }
+    for local in block_parameters
+        .locals()
+        .iter()
+        .filter_map(|local| local.as_block_local_variable_node())
+    {
+        let name = String::from_utf8_lossy(local.name().as_slice()).into_owned();
+        if !name.starts_with('_')
+            && outer_scope_has_local(name.as_bytes(), node.location().start_offset(), context)
+        {
+            context.report(
+                format!("Shadowing outer local variable - `{name}`."),
+                local.location(),
+            );
+        }
+    }
+}
+
+fn shadowing_outer_lambda(
+    node: &ruby_prism::LambdaNode<'_>,
+    context: &mut CopContext<'_, '_>,
+) {
+    let Some(parameters) = node
+        .parameters()
+        .and_then(|parameters| parameters.as_parameters_node())
+    else {
+        return;
+    };
+    report_shadowing_parameters(&parameters, node.location().start_offset(), context);
+}
+
+fn report_shadowing_parameters(
+    parameters: &ruby_prism::ParametersNode<'_>,
+    cutoff: usize,
+    context: &mut CopContext<'_, '_>,
+) {
+    for (name, range) in shadowing_parameters(parameters) {
+        if name.starts_with('_') || !outer_scope_has_local(name.as_bytes(), cutoff, context) {
             continue;
         }
         context.report(format!("Shadowing outer local variable - `{name}`."), range);
@@ -274,12 +314,10 @@ fn shadowing_outer_local(node: &ruby_prism::BlockNode<'_>, context: &mut CopCont
 
 fn outer_scope_has_local(
     name: &[u8],
-    block: &ruby_prism::BlockNode<'_>,
+    cutoff: usize,
     context: &CopContext<'_, '_>,
 ) -> bool {
-    let cutoff = block.location().start_offset();
     let mut collector = OuterLocalDeclarations {
-        cutoff,
         declarations: Vec::new(),
     };
     let mut lexical_locals = Vec::new();
@@ -322,18 +360,15 @@ fn outer_scope_has_local(
 }
 
 struct OuterLocalDeclarations {
-    cutoff: usize,
     declarations: Vec<(Vec<u8>, std::ops::Range<usize>)>,
 }
 
 impl<'pr> ruby_prism::Visit<'pr> for OuterLocalDeclarations {
     fn visit_local_variable_write_node(&mut self, node: &ruby_prism::LocalVariableWriteNode<'pr>) {
-        if node.location().start_offset() < self.cutoff {
-            self.declarations.push((
-                node.name().as_slice().to_vec(),
-                node.location().start_offset()..node.location().end_offset(),
-            ));
-        }
+        self.declarations.push((
+            node.name().as_slice().to_vec(),
+            node.location().start_offset()..node.location().end_offset(),
+        ));
         ruby_prism::visit_local_variable_write_node(self, node);
     }
 
@@ -399,61 +434,73 @@ fn location_contains(location: ruby_prism::Location<'_>, offset: usize) -> bool 
     location.start_offset() <= offset && offset < location.end_offset()
 }
 
-fn shadowing_block_parameters(
-    block: &ruby_prism::BlockParametersNode<'_>,
+fn shadowing_parameters(
+    parameters: &ruby_prism::ParametersNode<'_>,
 ) -> Vec<(String, std::ops::Range<usize>)> {
     let mut result = Vec::new();
-    if let Some(parameters) = block.parameters() {
-        for parameter in parameters
-            .requireds()
-            .iter()
-            .chain(parameters.posts().iter())
-        {
-            if let Some(parameter) = parameter.as_required_parameter_node() {
-                let location = parameter.location();
-                result.push((
-                    String::from_utf8_lossy(parameter.name().as_slice()).into_owned(),
-                    location.start_offset()..location.end_offset(),
-                ));
-            }
+    for parameter in parameters
+        .requireds()
+        .iter()
+        .chain(parameters.posts().iter())
+    {
+        if let Some(parameter) = parameter.as_required_parameter_node() {
+            let location = parameter.location();
+            result.push((
+                String::from_utf8_lossy(parameter.name().as_slice()).into_owned(),
+                location.start_offset()..location.end_offset(),
+            ));
         }
-        for parameter in [parameters.rest(), parameters.keyword_rest()] {
-            let Some(parameter) = parameter else { continue };
-            let extracted = if let Some(rest) = parameter.as_rest_parameter_node() {
-                rest.name().map(|name| (name.as_slice(), rest.location()))
-            } else if let Some(rest) = parameter.as_keyword_rest_parameter_node() {
-                rest.name().map(|name| (name.as_slice(), rest.location()))
-            } else {
-                None
-            };
-            let Some((name, location)) = extracted else {
-                continue;
-            };
+    }
+    for parameter in parameters.optionals().iter() {
+        if let Some(parameter) = parameter.as_optional_parameter_node() {
+            let location = parameter.name_loc();
+            result.push((
+                String::from_utf8_lossy(parameter.name().as_slice()).into_owned(),
+                location.start_offset()..location.end_offset(),
+            ));
+        }
+    }
+    for parameter in parameters.keywords().iter() {
+        let extracted = if let Some(parameter) = parameter.as_required_keyword_parameter_node() {
+            Some((parameter.name().as_slice(), parameter.name_loc()))
+        } else if let Some(parameter) = parameter.as_optional_keyword_parameter_node() {
+            Some((parameter.name().as_slice(), parameter.name_loc()))
+        } else {
+            None
+        };
+        if let Some((name, location)) = extracted {
+            result.push((
+                String::from_utf8_lossy(name).into_owned(),
+                location.start_offset()..location.end_offset().saturating_sub(1),
+            ));
+        }
+    }
+    for parameter in [parameters.rest(), parameters.keyword_rest()] {
+        let Some(parameter) = parameter else { continue };
+        let extracted = if let Some(rest) = parameter.as_rest_parameter_node() {
+            rest.name()
+                .map(|name| (name.as_slice(), rest.location()))
+        } else if let Some(rest) = parameter.as_keyword_rest_parameter_node() {
+            rest.name()
+                .map(|name| (name.as_slice(), rest.location()))
+        } else {
+            None
+        };
+        if let Some((name, location)) = extracted {
             result.push((
                 String::from_utf8_lossy(name).into_owned(),
                 location.start_offset()..location.end_offset(),
             ));
         }
-        if let Some(parameter) = parameters.block() {
-            if let Some(name) = parameter.name() {
-                let location = parameter.location();
-                result.push((
-                    String::from_utf8_lossy(name.as_slice()).into_owned(),
-                    location.start_offset()..location.end_offset(),
-                ));
-            }
-        }
     }
-    for local in block
-        .locals()
-        .iter()
-        .filter_map(|local| local.as_block_local_variable_node())
-    {
-        let location = local.location();
-        result.push((
-            String::from_utf8_lossy(local.name().as_slice()).into_owned(),
-            location.start_offset()..location.end_offset(),
-        ));
+    if let Some(parameter) = parameters.block() {
+        if let Some(name) = parameter.name() {
+            let location = parameter.location();
+            result.push((
+                String::from_utf8_lossy(name.as_slice()).into_owned(),
+                location.start_offset()..location.end_offset(),
+            ));
+        }
     }
     result
 }
