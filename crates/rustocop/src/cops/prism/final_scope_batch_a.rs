@@ -117,6 +117,7 @@ fn exception_shadows(ancestor: &str, descendant: &str) -> bool {
         "Exception" => true,
         "StandardError" => {
             descendant.starts_with("Errno::")
+                || matches!(descendant, "Psych::Exception" | "Timeout::Error")
                 || matches!(
                     descendant_base,
                     "StandardError"
