@@ -1184,6 +1184,13 @@ impl Cop for ConditionalAssignment {
         if !include_ternary && conditional_ternary(node) {
             return;
         }
+        if node.as_if_node().is_none()
+            && node.as_unless_node().is_none()
+            && node.as_case_node().is_none()
+            && node.as_case_match_node().is_none()
+        {
+            return;
+        }
         let Some(branches) = conditional_assignment_branches(node, false) else {
             return;
         };
@@ -1213,12 +1220,12 @@ impl Cop for ConditionalAssignment {
             .related_config_value("Layout/LineLength", "Max")
             .and_then(|maximum| maximum.parse::<usize>().ok())
         {
-            let longest = source[range_for_node(node)]
+            let conditional_line = source[range_for_node(node)]
                 .lines()
-                .map(|line| line.replacen(&first.lhs, "", 1).len())
-                .max()
+                .next()
+                .map(str::len)
                 .unwrap_or(0);
-            if longest + first.lhs.len() > maximum {
+            if conditional_line + first.lhs.trim_end().len() + 1 > maximum {
                 return;
             }
         }
