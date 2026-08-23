@@ -597,11 +597,17 @@ fn check_multiline_condition(
     if require_multiline_node && file.same_line(location.start_offset(), location.end_offset()) {
         return;
     }
-    if condition_end
+    if let Some(block) = condition_end
         .as_call_node()
-        .is_some_and(|call| call.block().is_some())
+        .and_then(|call| call.block())
+        .and_then(|block| block.as_block_node())
     {
-        return;
+        if file.same_line(
+            block.opening_loc().start_offset(),
+            block.closing_loc().end_offset(),
+        ) {
+            return;
+        }
     }
     let condition_line = file.line_range(location.end_offset().saturating_sub(1));
     if condition_line.end >= context.source().len()
