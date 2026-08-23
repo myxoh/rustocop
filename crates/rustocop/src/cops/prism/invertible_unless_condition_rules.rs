@@ -19,7 +19,11 @@ impl InvertibleUnlessConditionRule<'_, '_, '_> {
         return_unless!(invert_condition(&condition, &inverse_methods, self.source_file(), &mut edits));
 
         let condition_range = condition.location().start_offset()..condition.location().end_offset();
-        let Some(preferred) = self.source_file().rewrite(condition_range.clone(), edits.clone()) else {
+        let Some(preferred) = preferred_condition(
+            &condition,
+            &inverse_methods,
+            self.source_file(),
+        ) else {
             return;
         };
         let current = self.source_file().slice(condition_range).unwrap_or_default();
@@ -77,6 +81,9 @@ fn invert_condition(
     let Some(call) = node.as_call_node() else {
         return false;
     };
+    if call.block().is_some() {
+        return false;
+    }
     let method = String::from_utf8_lossy(call.name().as_slice()).to_string();
     if method == "!" {
         let Some(selector) = call.message_loc() else { return false };
@@ -100,4 +107,60 @@ fn invert_condition(
         inverse.clone(),
     ));
     true
+}
+
+fn preferred_condition(
+    node: &Node<'_>,
+    inverse_methods: &HashMap<String, String>,
+    file: SourceFile<'_>,
+) -> Option<String> {
+    if let Some(parentheses) = node.as_parentheses_node() {
+        let inner = parentheses.body().and_then(single_expression)?;
+        return Some(format!(
+            "({})",
+            preferred_condition(&inner, inverse_methods, file)?
+        ));
+    }
+    if let Some(and) = node.as_and_node() {
+        return Some(format!(
+            "{} {} {}",
+            preferred_condition(&and.left(), inverse_methods, file)?,
+            if and.operator_loc().as_slice() == b"and" {
+                "or"
+            } else {
+                "||"
+            },
+            preferred_condition(&and.right(), inverse_methods, file)?
+        ));
+    }
+    if let Some(or) = node.as_or_node() {
+        return Some(format!(
+            "{} {} {}",
+            preferred_condition(&or.left(), inverse_methods, file)?,
+            if or.operator_loc().as_slice() == b"or" {
+                "and"
+            } else {
+                "&&"
+            },
+            preferred_condition(&or.right(), inverse_methods, file)?
+        ));
+    }
+    let call = node.as_call_node()?;
+    if call.block().is_some() {
+        return None;
+    }
+    let method = String::from_utf8_lossy(call.name().as_slice());
+    let selector = call.message_loc()?;
+    let replacement = if method == "!" {
+        ""
+    } else {
+        inverse_methods.get(method.as_ref())?
+    };
+    file.rewrite(
+        node.location().start_offset()..node.location().end_offset(),
+        vec![SourceEdit::replace(
+            selector.start_offset()..selector.end_offset(),
+            replacement,
+        )],
+    )
 }
