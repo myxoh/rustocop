@@ -114,40 +114,52 @@ fn report_multiline_combinable_loops(
         .filter_map(|(index, _)| parse_multiline_combinable_loop(lines, index))
         .collect::<Vec<_>>();
     let source = context.source();
-    let mut index = 0;
-    while index < loops.len() {
+    let mut consumed = vec![false; loops.len()];
+    for index in 0..loops.len() {
+        if consumed[index] {
+            continue;
+        }
         let first = &loops[index];
-        let mut group_end = index + 1;
-        while group_end < loops.len() {
-            let previous = &loops[group_end - 1];
-            let candidate = &loops[group_end];
-            if candidate.indent != first.indent
-                || candidate.identity != first.identity
+        let mut group = vec![index];
+        let mut current = index;
+        loop {
+            let Some(next) = (current + 1..loops.len()).find(|candidate| {
+                loops[*candidate].indent == first.indent
+                    && loops[*candidate].start >= loops[current].end
+            }) else {
+                break;
+            };
+            let previous = &loops[current];
+            let candidate = &loops[next];
+            if candidate.identity != first.identity
                 || !only_trivia(&source[previous.end..candidate.start])
             {
                 break;
             }
-            group_end += 1;
+            group.push(next);
+            current = next;
         }
-        if group_end == index + 1 {
-            index += 1;
+        if group.len() == 1 {
             continue;
         }
+        for member in &group {
+            consumed[*member] = true;
+        }
 
-        let same_parameters = loops[index..group_end]
+        let same_parameters = group
             .iter()
-            .all(|candidate| candidate.parameters == first.parameters);
+            .all(|candidate| loops[*candidate].parameters == first.parameters);
         let replacement = same_parameters.then(|| {
-            let last = &loops[group_end - 1];
+            let last = &loops[*group.last().expect("loop group")];
             let mut combined = source[first.start..first.closing_line_start].to_string();
-            for candidate in &loops[index + 1..group_end] {
+            for candidate in group.iter().skip(1).map(|candidate| &loops[*candidate]) {
                 combined.push_str(&source[candidate.body_start..candidate.closing_line_start]);
             }
             combined.push_str(&source[first.closing_line_start..first.end]);
             (first.start..last.end, combined)
         });
 
-        for candidate in &loops[index + 1..group_end] {
+        for candidate in group.iter().skip(1).map(|candidate| &loops[*candidate]) {
             let offense = candidate.start..candidate.end;
             if let Some((edit, combined)) = replacement.as_ref() {
                 context.replace(
@@ -160,7 +172,6 @@ fn report_multiline_combinable_loops(
                 context.report("Combine this loop with the previous loop.", offense);
             }
         }
-        index = group_end;
     }
 }
 
