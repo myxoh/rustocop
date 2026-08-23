@@ -66,22 +66,22 @@ fn parse_tokens(source: &str) -> Vec<Token> {
     while index + 1 < bytes.len() {
         if bytes[index] != b'%' { index += 1; continue; }
         if bytes[index + 1] == b'%' { index += 2; continue; }
-        if bytes[index + 1] == b'<' {
-            let Some(close) = bytes[index + 2..].iter().position(|byte| *byte == b'>').map(|at| index + 2 + at) else { index += 1; continue };
+        let mut opening = index + 1;
+        while opening < bytes.len()
+            && matches!(bytes[opening], b'#' | b'0' | b'-' | b'+' | b' ' | b'1'..=b'9' | b'.' | b'*')
+        {
+            opening += 1;
+        }
+        if bytes.get(opening) == Some(&b'<') {
+            let Some(close) = bytes[opening + 1..].iter().position(|byte| *byte == b'>').map(|at| opening + 1 + at) else { index += 1; continue };
             let mut end = close + 1;
             while end < bytes.len() && !bytes[end].is_ascii_alphabetic() { end += 1; }
             if end < bytes.len() {
-                tokens.push(Token { style: TokenStyle::Annotated, start: index, end: end + 1, name: Some((index + 2, close)), kind: bytes[end] });
+                tokens.push(Token { style: TokenStyle::Annotated, start: index, end: end + 1, name: Some((opening + 1, close)), kind: bytes[end] });
                 index = end + 1;
                 continue;
             }
         } else {
-            let mut opening = index + 1;
-            while opening < bytes.len()
-                && matches!(bytes[opening], b'#' | b'0' | b'-' | b'+' | b' ' | b'1'..=b'9' | b'.')
-            {
-                opening += 1;
-            }
             if bytes.get(opening) == Some(&b'{') {
                 if let Some(close) = bytes[opening + 1..].iter().position(|byte| *byte == b'}').map(|at| opening + 1 + at) {
                     let name = &bytes[opening + 1..close];
@@ -132,18 +132,18 @@ fn correction(source: &str, token: &Token, target: TokenStyle) -> Option<String>
 }
 
 fn typical_context(location: (usize, usize), ancestors: &[Node<'_>]) -> bool {
-    let subject = ancestors
+    let mut subjects = vec![location];
+    subjects.extend(ancestors
         .iter()
-        .rev()
-        .find(|ancestor| ancestor.as_interpolated_string_node().is_some())
-        .map_or(location, |ancestor| {
+        .filter(|ancestor| ancestor.as_interpolated_string_node().is_some())
+        .map(|ancestor| {
             (ancestor.location().start_offset(), ancestor.location().end_offset())
-        });
+        }));
     ancestors.iter().filter_map(Node::as_call_node).any(|call| {
         if matches!(call.name().as_slice(), b"format" | b"sprintf" | b"printf") {
-            call.arguments().and_then(|args| args.arguments().iter().next()).is_some_and(|argument| same_location(argument.location(), subject))
+            call.arguments().and_then(|args| args.arguments().iter().next()).is_some_and(|argument| subjects.iter().any(|subject| same_location(argument.location(), *subject)))
         } else if call.name().as_slice() == b"%" {
-            call.receiver().is_some_and(|receiver| same_location(receiver.location(), subject))
+            call.receiver().is_some_and(|receiver| subjects.iter().any(|subject| same_location(receiver.location(), *subject)))
         } else { false }
     })
 }
