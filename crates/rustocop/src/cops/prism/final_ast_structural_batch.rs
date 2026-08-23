@@ -3834,14 +3834,66 @@ impl Cop for SafeNavigation {
         } else if let Some(conditional) = node.as_unless_node() {
             safe_navigation_unless(&conditional, &mut cop_context);
         } else if let Some(and_node) = node.as_and_node() {
-            if !ancestors
-                .iter()
-                .any(|parent| parent.as_and_node().is_some())
+            if !safe_navigation_nested_and(ancestors)
+                && !safe_navigation_and_in_call_arguments(node, ancestors)
+                && !safe_navigation_and_negated(ancestors)
             {
                 safe_navigation_and(&and_node, &mut cop_context);
             }
         }
     }
+}
+
+fn safe_navigation_nested_and(ancestors: &[Node<'_>]) -> bool {
+    for ancestor in ancestors.iter().rev() {
+        if ancestor.as_or_node().is_some() {
+            return false;
+        }
+        if ancestor.as_and_node().is_some() {
+            return true;
+        }
+    }
+    false
+}
+
+fn safe_navigation_and_in_call_arguments(node: &Node<'_>, ancestors: &[Node<'_>]) -> bool {
+    let location = node.location();
+    for ancestor in ancestors.iter().rev() {
+        if ancestor.as_and_node().is_some()
+            || ancestor.as_or_node().is_some()
+            || ancestor.as_if_node().is_some()
+            || ancestor.as_unless_node().is_some()
+        {
+            return false;
+        }
+        if let Some(call) = ancestor.as_call_node() {
+            return call.arguments().is_some_and(|arguments| {
+                let arguments = arguments.location();
+                arguments.start_offset() <= location.start_offset()
+                    && location.end_offset() <= arguments.end_offset()
+            });
+        }
+    }
+    false
+}
+
+fn safe_navigation_and_negated(ancestors: &[Node<'_>]) -> bool {
+    for ancestor in ancestors.iter().rev() {
+        if ancestor.as_and_node().is_some()
+            || ancestor.as_or_node().is_some()
+            || ancestor.as_if_node().is_some()
+            || ancestor.as_unless_node().is_some()
+        {
+            return false;
+        }
+        if ancestor
+            .as_call_node()
+            .is_some_and(|call| call_name(&call) == b"!")
+        {
+            return true;
+        }
+    }
+    false
 }
 
 fn safe_navigation_if(node: &ruby_prism::IfNode<'_>, context: &mut CopContext<'_, '_>) {
@@ -4157,7 +4209,7 @@ fn safe_navigation_chain<'pr>(
         return None;
     }
     if calls.len() > 1
-        && context.related_config_value("Lint/SafeNavigationChain", "Enabled") == Some("false")
+        && context.related_config_value("Lint/SafeNavigationChain", "Enabled") != Some("true")
     {
         return None;
     }
