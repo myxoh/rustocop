@@ -26,6 +26,7 @@ enum PredicateReturn {
     Boolean,
     NonBoolean,
     Unknown,
+    UnknownCall,
     Super,
 }
 
@@ -84,7 +85,7 @@ impl Cop for PredicateMethod {
         if conservative
             && values
                 .iter()
-                .any(|value| matches!(value, PredicateReturn::Unknown | PredicateReturn::Super))
+                .any(|value| matches!(value, PredicateReturn::UnknownCall | PredicateReturn::Super))
         {
             return;
         }
@@ -194,13 +195,13 @@ fn collect_implicit_predicate_returns<'pr>(
         return;
     }
     if let Some(logical) = node.as_and_node() {
-        collect_implicit_predicate_returns(&logical.left(), wayward, values);
-        collect_implicit_predicate_returns(&logical.right(), wayward, values);
+        collect_logical_predicate_return(&logical.left(), wayward, values);
+        collect_logical_predicate_return(&logical.right(), wayward, values);
         return;
     }
     if let Some(logical) = node.as_or_node() {
-        collect_implicit_predicate_returns(&logical.left(), wayward, values);
-        collect_implicit_predicate_returns(&logical.right(), wayward, values);
+        collect_logical_predicate_return(&logical.left(), wayward, values);
+        collect_logical_predicate_return(&logical.right(), wayward, values);
         return;
     }
     if let Some(case_node) = node.as_case_node() {
@@ -256,6 +257,18 @@ fn collect_implicit_predicate_returns<'pr>(
     values.push(predicate_return_kind(node, wayward));
 }
 
+fn collect_logical_predicate_return<'pr>(
+    node: &Node<'pr>,
+    wayward: &[String],
+    values: &mut Vec<PredicateReturn>,
+) {
+    if node.as_parentheses_node().is_some() {
+        values.push(PredicateReturn::Unknown);
+    } else {
+        collect_implicit_predicate_returns(node, wayward, values);
+    }
+}
+
 fn predicate_return_kind(node: &Node<'_>, wayward: &[String]) -> PredicateReturn {
     if node.as_true_node().is_some() || node.as_false_node().is_some() {
         return PredicateReturn::Boolean;
@@ -281,7 +294,7 @@ fn predicate_return_kind(node: &Node<'_>, wayward: &[String]) -> PredicateReturn
         return if boolean {
             PredicateReturn::Boolean
         } else {
-            PredicateReturn::Unknown
+            PredicateReturn::UnknownCall
         };
     }
     if predicate_non_boolean_literal(node) {
