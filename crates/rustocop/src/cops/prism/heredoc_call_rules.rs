@@ -5,6 +5,9 @@ declare_source_cops! {
 }
 
 fn heredoc_method_call_position(source: &str, reporter: &mut Reporter<'_>) {
+    if !reporter.config_bool("Enabled", true) {
+        return;
+    }
     let lines = SourceFile::new(source)
         .lines()
         .map(|(start, line)| {
