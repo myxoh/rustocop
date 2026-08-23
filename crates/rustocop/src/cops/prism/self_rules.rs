@@ -171,20 +171,96 @@ fn local_name_conflicts(name: &[u8], context: &CopContext<'_, '_>) -> bool {
     context.ancestors().iter().rev().any(|scope| {
         if let Some(block) = scope.as_block_node() {
             block.locals().iter().any(|local| local.as_slice() == name)
+                || block
+                    .body()
+                    .is_some_and(|body| subtree_binds_name(&body, name))
         } else if let Some(definition) = scope.as_def_node() {
             definition
                 .locals()
                 .iter()
                 .any(|local| local.as_slice() == name)
+                || definition
+                    .body()
+                    .is_some_and(|body| subtree_binds_name(&body, name))
         } else if let Some(program) = scope.as_program_node() {
             program
                 .locals()
                 .iter()
                 .any(|local| local.as_slice() == name)
+                || subtree_binds_name(&program.statements().as_node(), name)
         } else {
             false
         }
     })
+}
+
+fn subtree_binds_name(node: &Node<'_>, name: &[u8]) -> bool {
+    struct BindingFinder<'a> {
+        name: &'a [u8],
+        found: bool,
+    }
+
+    impl BindingFinder<'_> {
+        fn check(&mut self, candidate: &[u8]) {
+            self.found |= candidate == self.name;
+        }
+    }
+
+    impl<'pr> Visit<'pr> for BindingFinder<'_> {
+        fn visit_def_node(&mut self, _node: &ruby_prism::DefNode<'pr>) {}
+
+        fn visit_required_parameter_node(
+            &mut self,
+            node: &ruby_prism::RequiredParameterNode<'pr>,
+        ) {
+            self.check(node.name().as_slice());
+            ruby_prism::visit_required_parameter_node(self, node);
+        }
+
+        fn visit_local_variable_target_node(
+            &mut self,
+            node: &ruby_prism::LocalVariableTargetNode<'pr>,
+        ) {
+            self.check(node.name().as_slice());
+            ruby_prism::visit_local_variable_target_node(self, node);
+        }
+
+        fn visit_local_variable_write_node(
+            &mut self,
+            node: &ruby_prism::LocalVariableWriteNode<'pr>,
+        ) {
+            self.check(node.name().as_slice());
+            ruby_prism::visit_local_variable_write_node(self, node);
+        }
+
+        fn visit_local_variable_or_write_node(
+            &mut self,
+            node: &ruby_prism::LocalVariableOrWriteNode<'pr>,
+        ) {
+            self.check(node.name().as_slice());
+            ruby_prism::visit_local_variable_or_write_node(self, node);
+        }
+
+        fn visit_local_variable_and_write_node(
+            &mut self,
+            node: &ruby_prism::LocalVariableAndWriteNode<'pr>,
+        ) {
+            self.check(node.name().as_slice());
+            ruby_prism::visit_local_variable_and_write_node(self, node);
+        }
+
+        fn visit_local_variable_operator_write_node(
+            &mut self,
+            node: &ruby_prism::LocalVariableOperatorWriteNode<'pr>,
+        ) {
+            self.check(node.name().as_slice());
+            ruby_prism::visit_local_variable_operator_write_node(self, node);
+        }
+    }
+
+    let mut finder = BindingFinder { name, found: false };
+    finder.visit(node);
+    finder.found
 }
 
 fn implicit_it_block(name: &[u8], context: &CopContext<'_, '_>) -> bool {
