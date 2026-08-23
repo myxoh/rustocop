@@ -322,12 +322,18 @@ fn exact_regexp_match(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
 
 fn ip_addresses(node: &ruby_prism::StringNode<'_>, context: &mut CopContext<'_, '_>) {
     let value = String::from_utf8_lossy(node.unescaped());
+    let default_unspecified = value == "::"
+        && !context.related_config_explicit("Style/IpAddresses", "AllowedAddresses");
+    let ipv4_shape = value.split('.').count() == 4;
+    let ipv6_shape = value.contains(':');
     if value.is_empty()
         || value.len() > 45
+        || default_unspecified
         || context
             .config_values("AllowedAddresses")
             .iter()
             .any(|allowed| allowed.eq_ignore_ascii_case(&value))
+        || !ipv4_shape && !ipv6_shape
         || value.parse::<std::net::IpAddr>().is_err()
     {
         return;
