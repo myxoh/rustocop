@@ -9,9 +9,19 @@ define_cops! {
 
 fn redundant_heredoc_delimiter_quotes(context: &mut CopContext<'_, '_>) {
     let source = context.source();
+    let heredoc_starts = context
+        .source_file()
+        .literal_ranges()
+        .into_iter()
+        .filter_map(|range| source[range.clone()].starts_with("<<").then_some(range.start))
+        .collect::<std::collections::HashSet<_>>();
     let mut search_from = 0;
     while let Some(relative) = source[search_from..].find("<<") {
         let start = search_from + relative;
+        if !heredoc_starts.contains(&start) {
+            search_from = start + 2;
+            continue;
+        }
         let bytes = source.as_bytes();
         let mut quote_offset = start + 2;
         if matches!(bytes.get(quote_offset), Some(b'~' | b'-')) {
