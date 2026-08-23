@@ -12,6 +12,8 @@ impl MapIntoArrayRule<'_, '_, '_> {
         let Some(each) = self.parent().and_then(Node::as_call_node) else { return };
         return_unless!(each.name().as_slice() == b"each" && argument_count(&each) == 0);
         return_if!(each.receiver().is_none_or(|receiver| receiver.as_self_node().is_some()));
+        let line_start = self.source_file().line_start(each.location().start_offset());
+        return_if!(!self.source()[line_start..each.location().start_offset()].trim().is_empty());
         let Some(push) = block.body().and_then(single_expression).and_then(|body| body.as_call_node()) else { return };
         return_unless!(matches!(push.name().as_slice(), b"<<" | b"push" | b"append"));
         let Some(destination) = push.receiver() else { return };
@@ -100,7 +102,7 @@ fn word_count(source: &str, word: &str) -> usize {
         .filter(|matched| {
             !matches!(
                 source.as_bytes().get(matched.start().saturating_sub(1)),
-                Some(b'@' | b'$' | b':')
+                Some(b'@' | b'$' | b':' | b'.')
             )
         })
         .count()
