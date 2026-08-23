@@ -175,7 +175,12 @@ fn literal_interpolation_expression(expression: &str) -> bool {
     let numeric = expression
         .bytes()
         .all(|byte| byte.is_ascii_digit() || matches!(byte, b'_' | b'.' | b'+' | b'-' | b'e' | b'E' | b'x' | b'o' | b'b' | b'a'..=b'f' | b'A'..=b'F'));
-    numeric && expression.bytes().any(|byte| byte.is_ascii_digit())
+    numeric
+        && expression.bytes().any(|byte| byte.is_ascii_digit())
+        && expression
+            .as_bytes()
+            .first()
+            .is_some_and(|byte| byte.is_ascii_digit() || matches!(byte, b'+' | b'-'))
 }
 
 fn interpolation_is_single_string(expression: &str) -> bool {
