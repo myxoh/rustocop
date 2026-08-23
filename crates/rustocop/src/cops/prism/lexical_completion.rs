@@ -106,21 +106,36 @@ fn closing_heredoc_indentation(node: &Node<'_>, context: &mut CopContext<'_, '_>
     let mut argument = false;
     let mut chained = false;
     let mut outer_call = None;
-    for ancestor in context.ancestors().iter().rev() {
-        let Some(call) = ancestor.as_call_node() else {
+    let ancestors = context.ancestors();
+    let mut direct_call = None;
+    for (index, ancestor) in ancestors.iter().enumerate().rev() {
+        if ancestor.as_arguments_node().is_some() {
             continue;
-        };
+        }
+        direct_call = ancestor.as_call_node().map(|call| (index, call));
+        break;
+    }
+    if let Some((call_index, call)) = direct_call {
         let contains = |location: ruby_prism::Location<'_>| {
             location.start_offset() <= heredoc_start && heredoc_start < location.end_offset()
         };
-        if call.arguments().is_some_and(|arguments| contains(arguments.location())) {
-            argument = true;
+        argument = call
+            .arguments()
+            .is_some_and(|arguments| contains(arguments.location()));
+        chained = call
+            .receiver()
+            .is_some_and(|receiver| contains(receiver.location()));
+        if argument || chained {
             outer_call = Some(call);
-        } else if call.receiver().is_some_and(|receiver| contains(receiver.location())) {
-            chained = true;
-            outer_call = Some(call);
-        } else if outer_call.is_some() && contains(call.location()) {
-            outer_call = Some(call);
+            for ancestor in ancestors[..call_index].iter().rev() {
+                if ancestor.as_arguments_node().is_some() {
+                    continue;
+                }
+                let Some(parent_call) = ancestor.as_call_node() else {
+                    break;
+                };
+                outer_call = Some(parent_call);
+            }
         }
     }
     if let Some(call) = outer_call {
