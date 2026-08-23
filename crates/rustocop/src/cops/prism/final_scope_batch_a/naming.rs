@@ -8,168 +8,416 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
 }
 
 fn shadowed_argument(context: &mut CopContext<'_, '_>) {
-    let lines = context.source_file().lines().collect::<Vec<_>>();
+    let parsed = ruby_prism::parse(context.source().as_bytes());
     let ignore_implicit = context.config_bool("IgnoreImplicitReferences", false);
-    for (opener_index, (opener_offset, opener)) in lines.iter().copied().enumerate() {
-        let method = opener.trim_start().starts_with("def ");
-        let argument_section = if method {
-            opener
-                .split_once('(')
-                .and_then(|(_, rest)| rest.rsplit_once(')').map(|(arguments, _)| arguments))
-        } else {
-            opener
-                .split_once('|')
-                .and_then(|(_, rest)| rest.split_once('|').map(|(arguments, _)| arguments))
-        };
-        let Some(argument_section) = argument_section else {
-            continue;
-        };
-        let section_start = opener.find(argument_section).unwrap_or(0);
-        for raw_argument in argument_section.split(',') {
-            let raw_argument = raw_argument.trim();
-            if raw_argument.is_empty() || raw_argument.contains(';') {
-                continue;
-            }
-            let argument = raw_argument
-                .trim_start_matches('*')
-                .split([':', '='])
-                .next()
-                .unwrap_or("")
-                .trim();
-            if argument.is_empty() {
-                continue;
-            }
-            if ignore_implicit
-                && (context.source().contains("super") || context.source().contains("binding"))
-            {
-                continue;
-            }
-            let declaration_at = section_start + argument_section.find(argument).unwrap_or(0);
-            let declaration_range =
-                opener_offset + declaration_at..opener_offset + declaration_at + argument.len();
-            let mut depth = 0usize;
-            let mut nested_assignment_before_direct = false;
-            let mut direct_assignment = None::<std::ops::Range<usize>>;
-            let mut used_before_assignment = false;
-            let mut used_after_direct = false;
+    let mut collector = ShadowedArgumentScopes {
+        offenses: Vec::new(),
+        ignore_implicit,
+    };
+    ruby_prism::Visit::visit(&mut collector, &parsed.node());
+    for (name, range) in collector.offenses {
+        context.report(
+            format!("Argument `{name}` was shadowed by a local variable before it was used."),
+            range,
+        );
+    }
+}
 
-            for (offset, line) in lines.iter().copied().skip(opener_index + 1) {
-                let trimmed = line.trim();
-                if trimmed == "end" {
-                    if depth == 0 {
-                        break;
-                    }
-                    depth -= 1;
+struct ShadowedArgumentScopes {
+    offenses: Vec<(String, std::ops::Range<usize>)>,
+    ignore_implicit: bool,
+}
+
+impl<'pr> ruby_prism::Visit<'pr> for ShadowedArgumentScopes {
+    fn visit_def_node(&mut self, node: &ruby_prism::DefNode<'pr>) {
+        if let (Some(parameters), Some(body)) = (node.parameters(), node.body()) {
+            self.inspect_scope(parameter_infos(&parameters), &body, true);
+        }
+        ruby_prism::visit_def_node(self, node);
+    }
+
+    fn visit_block_node(&mut self, node: &ruby_prism::BlockNode<'pr>) {
+        if let (Some(parameters), Some(body)) = (
+            node.parameters()
+                .and_then(|parameters| parameters.as_block_parameters_node())
+                .and_then(|parameters| parameters.parameters()),
+            node.body(),
+        ) {
+            self.inspect_scope(parameter_infos(&parameters), &body, false);
+        }
+        ruby_prism::visit_block_node(self, node);
+    }
+
+    fn visit_lambda_node(&mut self, node: &ruby_prism::LambdaNode<'pr>) {
+        if let (Some(parameters), Some(body)) = (
+            node.parameters()
+                .and_then(|parameters| parameters.as_parameters_node()),
+            node.body(),
+        ) {
+            self.inspect_scope(parameter_infos(&parameters), &body, false);
+        }
+        ruby_prism::visit_lambda_node(self, node);
+    }
+}
+
+impl ShadowedArgumentScopes {
+    fn inspect_scope<'pr>(
+        &mut self,
+        parameters: Vec<ArgumentInfo>,
+        body: &Node<'pr>,
+        implicit_references: bool,
+    ) {
+        if parameters.is_empty() {
+            return;
+        }
+        let mut events = ArgumentEvents::default();
+        ruby_prism::Visit::visit(&mut events, body);
+        for parameter in parameters {
+            let assignments = events
+                .assignments
+                .iter()
+                .filter(|assignment| assignment.name == parameter.name)
+                .collect::<Vec<_>>();
+            let references = events
+                .reads
+                .iter()
+                .filter(|read| {
+                    (read.name == parameter.name
+                        || (read.implicit
+                            && (implicit_references || read.implicit_for_blocks)))
+                        && (read.implicit
+                            || !events.reference_exclusions.iter().any(|range| {
+                                range.start <= read.position && read.position < range.end
+                            }))
+                })
+                .collect::<Vec<_>>();
+            if references.is_empty() {
+                continue;
+            }
+            let mut location_known = true;
+            for assignment in assignments {
+                if assignment.shorthand {
+                    location_known = false;
                     continue;
                 }
-
-                let occurrences = identifier_occurrences(line, argument);
-                let assignment = argument_assignment(line, argument);
-                if let Some((at, rhs_start, splat)) = assignment {
-                    let nested = depth > 0
-                        || line[..at].contains('{')
-                        || line[rhs_start..].contains(" if ")
-                        || line[rhs_start..].contains(" unless ");
-                    let rhs_uses_argument =
-                        occurrences.iter().any(|position| *position >= rhs_start);
-                    if rhs_uses_argument {
-                        if direct_assignment.is_some() {
-                            used_after_direct = true;
-                        } else {
-                            used_before_assignment = true;
-                        }
-                    }
-                    if nested {
-                        if direct_assignment.is_none() {
-                            nested_assignment_before_direct = true;
-                        }
-                    } else if direct_assignment.is_none() {
-                        let range = if splat {
-                            offset + at..offset + at + argument.len()
-                        } else {
-                            let end = line.trim_end().len();
-                            offset + at..offset + end
-                        };
-                        direct_assignment = Some(range);
-                    }
-                } else if !occurrences.is_empty() {
-                    if direct_assignment.is_some() {
-                        used_after_direct = true;
-                    } else {
-                        used_before_assignment = true;
-                    }
-                } else if !ignore_implicit
-                    && (trimmed == "binding" || method && trimmed == "super")
-                    && direct_assignment.is_some()
+                if assignment.uses_argument {
+                    continue;
+                }
+                if assignment.conditional {
+                    location_known = false;
+                    continue;
+                }
+                if references
+                    .iter()
+                    .any(|reference| {
+                        (reference.implicit && self.ignore_implicit)
+                            || reference.position <= assignment.range.start
+                    })
                 {
-                    used_after_direct = true;
+                    break;
                 }
-
-                if starts_nested_scope(trimmed) {
-                    depth += 1;
-                }
+                let range = if location_known {
+                    assignment.range.clone()
+                } else {
+                    parameter.range.clone()
+                };
+                self.offenses.push((
+                    String::from_utf8_lossy(&parameter.name).into_owned(),
+                    range,
+                ));
+                break;
             }
+        }
+    }
+}
 
-            if used_before_assignment || !used_after_direct {
-                continue;
-            }
-            let Some(assignment_range) = direct_assignment else {
-                continue;
-            };
-            let range = if nested_assignment_before_direct {
-                declaration_range
-            } else {
-                assignment_range
-            };
-            context.report(
-                format!(
-                    "Argument `{argument}` was shadowed by a local variable before it was used."
-                ),
-                range,
+struct ArgumentInfo {
+    name: Vec<u8>,
+    range: std::ops::Range<usize>,
+}
+
+fn parameter_infos(parameters: &ruby_prism::ParametersNode<'_>) -> Vec<ArgumentInfo> {
+    let mut result = Vec::new();
+    for parameter in parameters
+        .requireds()
+        .iter()
+        .chain(parameters.posts().iter())
+    {
+        if let Some(parameter) = parameter.as_required_parameter_node() {
+            push_argument(
+                &mut result,
+                parameter.name().as_slice(),
+                parameter.location(),
             );
         }
     }
-}
-
-fn identifier_occurrences(line: &str, identifier: &str) -> Vec<usize> {
-    line.match_indices(identifier)
-        .filter_map(|(start, _)| {
-            let before = line[..start].chars().next_back();
-            let after = line[start + identifier.len()..].chars().next();
-            (!before.is_some_and(|character| character.is_ascii_alphanumeric() || character == '_')
-                && !after
-                    .is_some_and(|character| character.is_ascii_alphanumeric() || character == '_'))
-            .then_some(start)
-        })
-        .collect()
-}
-
-fn argument_assignment(line: &str, argument: &str) -> Option<(usize, usize, bool)> {
-    for at in identifier_occurrences(line, argument) {
-        let rest = line[at + argument.len()..].trim_start();
-        if rest.starts_with("||=") || rest.starts_with("&&=") {
-            return Some((at, at, false));
-        }
-        if rest.starts_with('=') && !rest.starts_with("==") && !rest.starts_with("=>") {
-            let equal = line[at + argument.len()..].find('=')? + at + argument.len();
-            return Some((at, equal + 1, line[..at].trim_end().ends_with('*')));
-        }
-        if line[..at].trim_end().ends_with('*') && line[at + argument.len()..].contains('=') {
-            let equal = line[at + argument.len()..].find('=')? + at + argument.len();
-            return Some((at, equal + 1, true));
+    for parameter in parameters.optionals().iter() {
+        if let Some(parameter) = parameter.as_optional_parameter_node() {
+            push_argument(&mut result, parameter.name().as_slice(), parameter.name_loc());
         }
     }
-    None
+    for parameter in parameters.keywords().iter() {
+        if let Some(parameter) = parameter.as_required_keyword_parameter_node() {
+            push_argument(&mut result, parameter.name().as_slice(), parameter.name_loc());
+        } else if let Some(parameter) = parameter.as_optional_keyword_parameter_node() {
+            push_argument(&mut result, parameter.name().as_slice(), parameter.name_loc());
+        }
+    }
+    if let Some(parameter) = parameters.rest().and_then(|node| node.as_rest_parameter_node()) {
+        if let (Some(name), Some(location)) = (parameter.name(), parameter.name_loc()) {
+            push_argument(&mut result, name.as_slice(), location);
+        }
+    }
+    if let Some(parameter) = parameters
+        .keyword_rest()
+        .and_then(|node| node.as_keyword_rest_parameter_node())
+    {
+        if let (Some(name), Some(location)) = (parameter.name(), parameter.name_loc()) {
+            push_argument(&mut result, name.as_slice(), location);
+        }
+    }
+    if let Some(parameter) = parameters.block() {
+        if let (Some(name), Some(location)) = (parameter.name(), parameter.name_loc()) {
+            push_argument(&mut result, name.as_slice(), location);
+        }
+    }
+    result
 }
 
-fn starts_nested_scope(trimmed: &str) -> bool {
-    [
-        "if ", "unless ", "case ", "begin", "for ", "while ", "until ",
-    ]
-    .iter()
-    .any(|keyword| trimmed.starts_with(keyword))
-        || trimmed.ends_with(" do")
-        || trimmed.contains(" do |")
+fn push_argument(
+    arguments: &mut Vec<ArgumentInfo>,
+    name: &[u8],
+    location: ruby_prism::Location<'_>,
+) {
+    arguments.push(ArgumentInfo {
+        name: name.to_vec(),
+        range: location.start_offset()..location.end_offset().min(
+            location.start_offset() + name.len(),
+        ),
+    });
+}
+
+#[derive(Default)]
+struct ArgumentEvents {
+    assignments: Vec<ArgumentAssignment>,
+    reads: Vec<ArgumentRead>,
+    reference_exclusions: Vec<std::ops::Range<usize>>,
+    nested_scopes: u32,
+    conditional_depth: u32,
+}
+
+struct ArgumentAssignment {
+    name: Vec<u8>,
+    range: std::ops::Range<usize>,
+    conditional: bool,
+    shorthand: bool,
+    uses_argument: bool,
+}
+
+struct ArgumentRead {
+    name: Vec<u8>,
+    position: usize,
+    implicit: bool,
+    implicit_for_blocks: bool,
+}
+
+impl<'pr> ruby_prism::Visit<'pr> for ArgumentEvents {
+    fn visit_local_variable_read_node(&mut self, node: &ruby_prism::LocalVariableReadNode<'pr>) {
+        if node.depth() == self.nested_scopes {
+            self.reads.push(ArgumentRead {
+                name: node.name().as_slice().to_vec(),
+                position: node.location().start_offset(),
+                implicit: false,
+                implicit_for_blocks: false,
+            });
+        }
+    }
+
+    fn visit_local_variable_write_node(&mut self, node: &ruby_prism::LocalVariableWriteNode<'pr>) {
+        if node.depth() == self.nested_scopes {
+            self.reference_exclusions
+                .push(node.location().start_offset()..node.location().end_offset());
+            let mut reads = LocalReadNames::default();
+            ruby_prism::Visit::visit(&mut reads, &node.value());
+            self.assignments.push(ArgumentAssignment {
+                name: node.name().as_slice().to_vec(),
+                range: node.location().start_offset()..node.location().end_offset(),
+                conditional: self.conditional_depth > 0,
+                shorthand: false,
+                uses_argument: reads.names.contains(node.name().as_slice()),
+            });
+        }
+        ruby_prism::visit_local_variable_write_node(self, node);
+    }
+
+    fn visit_multi_write_node(&mut self, node: &ruby_prism::MultiWriteNode<'pr>) {
+        let mut reads = LocalReadNames::default();
+        ruby_prism::Visit::visit(&mut reads, &node.value());
+        let assignment_start = self.assignments.len();
+        self.reference_exclusions
+            .push(node.location().start_offset()..node.location().end_offset());
+        ruby_prism::visit_multi_write_node(self, node);
+        let operator = node.operator_loc().start_offset();
+        for assignment in &mut self.assignments[assignment_start..] {
+            if assignment.range.start < operator && reads.names.contains(&assignment.name) {
+                assignment.uses_argument = true;
+            }
+        }
+    }
+
+    fn visit_local_variable_target_node(
+        &mut self,
+        node: &ruby_prism::LocalVariableTargetNode<'pr>,
+    ) {
+        if node.depth() == self.nested_scopes {
+            self.assignments.push(ArgumentAssignment {
+                name: node.name().as_slice().to_vec(),
+                range: node.location().start_offset()..node.location().end_offset(),
+                conditional: self.conditional_depth > 0,
+                shorthand: false,
+                uses_argument: false,
+            });
+        }
+    }
+
+    fn visit_local_variable_operator_write_node(
+        &mut self,
+        node: &ruby_prism::LocalVariableOperatorWriteNode<'pr>,
+    ) {
+        self.record_shorthand(
+            node.name().as_slice(),
+            node.depth(),
+            node.location(),
+        );
+        ruby_prism::visit_local_variable_operator_write_node(self, node);
+    }
+
+    fn visit_local_variable_or_write_node(
+        &mut self,
+        node: &ruby_prism::LocalVariableOrWriteNode<'pr>,
+    ) {
+        self.record_shorthand(
+            node.name().as_slice(),
+            node.depth(),
+            node.location(),
+        );
+        ruby_prism::visit_local_variable_or_write_node(self, node);
+    }
+
+    fn visit_local_variable_and_write_node(
+        &mut self,
+        node: &ruby_prism::LocalVariableAndWriteNode<'pr>,
+    ) {
+        self.record_shorthand(
+            node.name().as_slice(),
+            node.depth(),
+            node.location(),
+        );
+        ruby_prism::visit_local_variable_and_write_node(self, node);
+    }
+
+    fn visit_call_node(&mut self, node: &ruby_prism::CallNode<'pr>) {
+        if node.receiver().is_none() && node.arguments().is_none() && node.name().as_slice() == b"binding" {
+            self.reads.push(ArgumentRead {
+                name: Vec::new(),
+                position: node.location().start_offset(),
+                implicit: true,
+                implicit_for_blocks: true,
+            });
+        }
+        ruby_prism::visit_call_node(self, node);
+    }
+
+    fn visit_forwarding_super_node(&mut self, node: &ruby_prism::ForwardingSuperNode<'pr>) {
+        self.reads.push(ArgumentRead {
+            name: Vec::new(),
+            position: node.location().start_offset(),
+            implicit: true,
+            implicit_for_blocks: false,
+        });
+        ruby_prism::visit_forwarding_super_node(self, node);
+    }
+
+    fn visit_block_node(&mut self, node: &ruby_prism::BlockNode<'pr>) {
+        self.nested_scopes += 1;
+        self.conditional_depth += 1;
+        ruby_prism::visit_block_node(self, node);
+        self.conditional_depth -= 1;
+        self.nested_scopes -= 1;
+    }
+
+    fn visit_lambda_node(&mut self, node: &ruby_prism::LambdaNode<'pr>) {
+        self.nested_scopes += 1;
+        self.conditional_depth += 1;
+        ruby_prism::visit_lambda_node(self, node);
+        self.conditional_depth -= 1;
+        self.nested_scopes -= 1;
+    }
+
+    fn visit_def_node(&mut self, _node: &ruby_prism::DefNode<'pr>) {}
+    fn visit_class_node(&mut self, _node: &ruby_prism::ClassNode<'pr>) {}
+    fn visit_module_node(&mut self, _node: &ruby_prism::ModuleNode<'pr>) {}
+
+    fn visit_if_node(&mut self, node: &ruby_prism::IfNode<'pr>) {
+        self.with_conditional(|visitor| ruby_prism::visit_if_node(visitor, node));
+    }
+    fn visit_unless_node(&mut self, node: &ruby_prism::UnlessNode<'pr>) {
+        self.with_conditional(|visitor| ruby_prism::visit_unless_node(visitor, node));
+    }
+    fn visit_case_node(&mut self, node: &ruby_prism::CaseNode<'pr>) {
+        self.with_conditional(|visitor| ruby_prism::visit_case_node(visitor, node));
+    }
+    fn visit_case_match_node(&mut self, node: &ruby_prism::CaseMatchNode<'pr>) {
+        self.with_conditional(|visitor| ruby_prism::visit_case_match_node(visitor, node));
+    }
+    fn visit_while_node(&mut self, node: &ruby_prism::WhileNode<'pr>) {
+        self.with_conditional(|visitor| ruby_prism::visit_while_node(visitor, node));
+    }
+    fn visit_until_node(&mut self, node: &ruby_prism::UntilNode<'pr>) {
+        self.with_conditional(|visitor| ruby_prism::visit_until_node(visitor, node));
+    }
+    fn visit_for_node(&mut self, node: &ruby_prism::ForNode<'pr>) {
+        self.with_conditional(|visitor| ruby_prism::visit_for_node(visitor, node));
+    }
+    fn visit_rescue_node(&mut self, node: &ruby_prism::RescueNode<'pr>) {
+        self.with_conditional(|visitor| ruby_prism::visit_rescue_node(visitor, node));
+    }
+}
+
+impl ArgumentEvents {
+    fn record_shorthand(
+        &mut self,
+        name: &[u8],
+        depth: u32,
+        location: ruby_prism::Location<'_>,
+    ) {
+        if depth == self.nested_scopes {
+            self.assignments.push(ArgumentAssignment {
+                name: name.to_vec(),
+                range: location.start_offset()..location.end_offset(),
+                conditional: self.conditional_depth > 0,
+                shorthand: true,
+                uses_argument: true,
+            });
+        }
+    }
+
+    fn with_conditional<'pr>(&mut self, visit: impl FnOnce(&mut Self)) {
+        self.conditional_depth += 1;
+        visit(self);
+        self.conditional_depth -= 1;
+    }
+}
+
+#[derive(Default)]
+struct LocalReadNames {
+    names: std::collections::HashSet<Vec<u8>>,
+}
+
+impl<'pr> ruby_prism::Visit<'pr> for LocalReadNames {
+    fn visit_local_variable_read_node(&mut self, node: &ruby_prism::LocalVariableReadNode<'pr>) {
+        self.names.insert(node.name().as_slice().to_vec());
+    }
 }
 
 fn inclusive_language(context: &mut CopContext<'_, '_>) {
