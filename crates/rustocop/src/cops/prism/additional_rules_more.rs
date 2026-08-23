@@ -59,12 +59,26 @@ fn empty_block_parameter(source: &str, reporter: &mut Reporter<'_>) {
 
 fn triple_quotes(source: &str, reporter: &mut Reporter<'_>) {
     let bytes = source.as_bytes();
+    let literal_ranges = SourceFile::new(source).literal_ranges();
+    let triple_starts = literal_ranges
+        .iter()
+        .filter_map(|range| {
+            let literal = &source[range.clone()];
+            ((literal.starts_with("\"\"\"") && literal.ends_with("\"\"\""))
+                || (literal.starts_with("'''") && literal.ends_with("'''")))
+                .then_some(range.start)
+        })
+        .collect::<std::collections::HashSet<_>>();
     let mut start = 0;
     while start + 2 < bytes.len() {
         let quote = bytes[start];
         if !matches!(quote, b'\'' | b'"') || bytes[start + 1] != quote || bytes[start + 2] != quote
         {
             start += 1;
+            continue;
+        }
+        if !triple_starts.contains(&start) {
+            start += 3;
             continue;
         }
         let run = bytes[start..]
