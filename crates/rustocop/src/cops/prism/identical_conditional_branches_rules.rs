@@ -106,7 +106,14 @@ fn assignment_conflict(node: &Node<'_>, condition: Option<&str>, file: SourceFil
     };
     if operator == " = " {
         let first_child = right.trim();
-        if first_child.bytes().all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'_' | b'@'))
+        let variable_write = node.as_local_variable_write_node().is_some()
+            || node.as_instance_variable_write_node().is_some()
+            || node.as_class_variable_write_node().is_some()
+            || node.as_global_variable_write_node().is_some();
+        if variable_write
+            && first_child
+                .bytes()
+                .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'_' | b'@'))
             && condition_mentions(first_child)
         {
             return true;
