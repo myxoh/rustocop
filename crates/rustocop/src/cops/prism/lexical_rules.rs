@@ -14,7 +14,7 @@ define_cops! {
     RequireRangeParentheses => "Lint/RequireRangeParentheses" => source(require_range_parentheses),
     AsciiIdentifiers => "Naming/AsciiIdentifiers" => source(ascii_identifiers),
     MultilineIfThen => "Style/MultilineIfThen" => source(multiline_if_then),
-    ReturnNil => "Style/ReturnNil" => source(return_nil),
+    ReturnNil => "Style/ReturnNil" => node(as_return_node, return_nil),
     VariableInterpolation => "Style/VariableInterpolation" => node(as_embedded_variable_node, variable_interpolation),
 }
 
@@ -270,40 +270,34 @@ fn multiline_if_then(context: &mut CopContext<'_, '_>) {
     }
 }
 
-fn return_nil(context: &mut CopContext<'_, '_>) {
-    let source = context.source();
+fn return_nil(node: &ruby_prism::ReturnNode<'_>, context: &mut CopContext<'_, '_>) {
     let return_nil = context.policy().enforced_style("return") == "return_nil";
-    let lexical_returns = context.source_file().code_offsets("return");
-    for (start, line) in source_lines(source) {
-        let leading = line.len() - line.trim_start().len();
-        let code = line.trim_start();
-        let absolute = start + leading;
-        if lexical_returns.binary_search(&absolute).is_err() {
-            continue;
-        }
-        if return_nil {
-            if code == "return" {
-                let range = start + leading..start + leading + 6;
-                context.replace(
-                    "Use `return nil` instead of `return`.",
-                    range.clone(),
-                    range,
-                    "return nil",
-                );
-            }
-        } else if code.starts_with("return nil")
-            && code
-                .as_bytes()
-                .get(10)
-                .is_none_or(|byte| !identifier_byte(*byte))
-        {
-            let range = start + leading..start + leading + 10;
-            context.replace(
-                "Use `return` instead of `return nil`.",
-                range.clone(),
-                range,
-                "return",
-            );
-        }
+    let arguments = node.arguments();
+    if return_nil
+        && arguments
+            .as_ref()
+            .is_none_or(|arguments| arguments.arguments().is_empty())
+    {
+        context.replace(
+            "Use `return nil` instead of `return`.",
+            node.location(),
+            node.location(),
+            "return nil",
+        );
+    } else if !return_nil
+        && arguments.as_ref().is_some_and(|arguments| {
+            arguments.arguments().len() == 1
+                && arguments
+                    .arguments()
+                    .first()
+                    .is_some_and(|argument| argument.as_nil_node().is_some())
+        })
+    {
+        context.replace(
+            "Use `return` instead of `return nil`.",
+            node.location(),
+            node.location(),
+            "return",
+        );
     }
 }
