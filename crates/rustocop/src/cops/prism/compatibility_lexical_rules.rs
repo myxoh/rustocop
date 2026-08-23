@@ -89,25 +89,69 @@ fn bare_percent_literals(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
 
 fn document_dynamic_eval_definition(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     let name = node.name().as_slice();
-    if !matches!(name, b"class_eval" | b"module_eval" | b"instance_eval") {
+    if !matches!(name, b"eval" | b"class_eval" | b"module_eval" | b"instance_eval") {
+        return;
+    }
+    let Some(argument) = first_argument(node) else {
+        return;
+    };
+    let Some(string) = argument.as_interpolated_string_node() else {
+        return;
+    };
+    let parts = string.parts().iter().collect::<Vec<_>>();
+    let interpolations = parts
+        .iter()
+        .filter(|part| part.as_embedded_statements_node().is_some())
+        .collect::<Vec<_>>();
+    if interpolations.is_empty() {
         return;
     }
     let source = context.source();
-    if !source.contains("def ") || !source.contains("#{") {
+    let file = context.source_file();
+    let opening = string.opening_loc();
+    let heredoc = opening
+        .as_ref()
+        .is_some_and(|location| file.at(location).starts_with("<<"));
+    let end = string
+        .closing_loc()
+        .map_or_else(|| argument.location().end_offset(), |location| location.end_offset());
+    let start = opening
+        .as_ref()
+        .map_or_else(|| argument.location().start_offset(), ruby_prism::Location::start_offset);
+    let inline_documented = interpolations.iter().all(|interpolation| {
+        let line_start = file.line_start(interpolation.location().start_offset());
+        let line_end = file.line_end(interpolation.location().end_offset());
+        comment_text(&source[line_start..line_end]).is_some()
+    });
+    if inline_documented {
         return;
     }
-    let comments = source.lines().filter_map(comment_text).collect::<Vec<_>>();
+    if !heredoc {
+        let literal = source.get(start..end).unwrap_or_default();
+        if comment_text(literal).is_some() {
+            return;
+        }
+        context.report_selector(node, "Add a comment block showing its appearance if interpolated.");
+        return;
+    }
+
+    let call_start = node.location().start_offset();
+    let call_end = node.location().end_offset().max(end);
+    let comments = source
+        .get(call_start..call_end)
+        .unwrap_or_default()
+        .lines()
+        .filter_map(comment_text)
+        .collect::<Vec<_>>()
+        .join("\n");
+    let normalized_comments = normalize_documentation(&comments).replace('\\', "");
     let documented = !comments.is_empty()
-        && (!source.contains("to_str.#{")
-            || comments.iter().any(|comment| comment.contains("to_str."))
-            || source
-                .lines()
-                .any(|line| line.contains("#{") && comment_text(line).is_some()));
+        && parts.iter().filter_map(Node::as_string_node).all(|part| {
+            let required = normalize_documentation(file.at(&part.content_loc())).replace('\\', "");
+            required.is_empty() || normalized_comments.contains(&required)
+        });
     if !documented {
-        context.report_selector(
-            node,
-            "Add a comment block showing its appearance if interpolated.",
-        );
+        context.report_selector(node, "Add a comment block showing its appearance if interpolated.");
     }
 }
 
@@ -119,6 +163,17 @@ fn comment_text(line: &str) -> Option<&str> {
         let before = line[..at].chars().next_back();
         (before.is_none() || before.is_some_and(char::is_whitespace)).then_some(&line[at + 1..])
     })
+}
+
+fn normalize_documentation(source: &str) -> String {
+    source
+        .lines()
+        .map(|line| comment_text(line).map_or(line, |_| {
+            line.split_once(" #").map_or(line, |(code, _)| code)
+        }))
+        .flat_map(str::split_whitespace)
+        .collect::<Vec<_>>()
+        .join(" ")
 }
 
 fn module_function(context: &mut CopContext<'_, '_>) {
