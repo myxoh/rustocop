@@ -17,7 +17,14 @@ fn assignment_indentation(context: &mut CopContext<'_, '_>) {
         let (_, left) = pair[0];
         let (right_start, right) = pair[1];
         let left_trimmed = left.trim_end();
-        if !left_trimmed.ends_with('=') || left_trimmed.ends_with("==") || right.trim().is_empty() {
+        if !left_trimmed.ends_with('=')
+            || left_trimmed.ends_with("==")
+            || !left_trimmed
+                .as_bytes()
+                .get(left_trimmed.len().saturating_sub(2))
+                .is_some_and(u8::is_ascii_whitespace)
+            || right.trim().is_empty()
+        {
             continue;
         }
         if !left.is_ascii() {
