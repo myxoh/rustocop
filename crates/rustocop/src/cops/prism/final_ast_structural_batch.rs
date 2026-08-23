@@ -4029,15 +4029,7 @@ fn safe_navigation_conditional(
     let strict_project_config = context
         .related_config_value("AllCops", "DisabledByDefault")
         == Some("true");
-    if strict_project_config
-        && context
-            .ancestors()
-            .iter()
-            .any(|ancestor| ancestor.as_block_node().is_some())
-        && body
-            .as_call_node()
-            .is_some_and(|call| call_name(&call) == b"call")
-    {
+    if strict_project_config && safe_navigation_in_chained_block(context.ancestors()) {
         return;
     }
     let checked_source = context.source_file().node(checked).to_string();
@@ -4120,11 +4112,7 @@ fn safe_navigation_and(node: &ruby_prism::AndNode<'_>, context: &mut CopContext<
             .any(|ancestor| ancestor.as_block_node().is_some());
     if strict_project_block
         && (candidates[0].index > 0
-            || context.ancestors().iter().any(|ancestor| {
-                ancestor
-                    .as_call_node()
-                    .is_some_and(|call| call_name(&call) == b"select")
-            }))
+            || safe_navigation_in_chained_block(context.ancestors()))
     {
         return;
     }
@@ -4185,6 +4173,22 @@ fn safe_navigation_and(node: &ruby_prism::AndNode<'_>, context: &mut CopContext<
             context.report(SAFE_NAVIGATION_MESSAGE, candidate.offense.clone());
         }
     }
+}
+
+fn safe_navigation_in_chained_block(ancestors: &[Node<'_>]) -> bool {
+    let mut saw_block = false;
+    let mut calls_outside_block = 0;
+    for ancestor in ancestors.iter().rev() {
+        if ancestor.as_block_node().is_some() {
+            if saw_block {
+                break;
+            }
+            saw_block = true;
+        } else if saw_block && ancestor.as_call_node().is_some() {
+            calls_outside_block += 1;
+        }
+    }
+    calls_outside_block > 1
 }
 
 fn safe_navigation_and_with_or(node: &ruby_prism::AndNode<'_>, context: &mut CopContext<'_, '_>) {
