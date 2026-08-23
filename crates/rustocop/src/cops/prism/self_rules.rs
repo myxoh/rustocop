@@ -18,7 +18,7 @@ fn redundant_self(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
         .as_slice()
         .first()
         .is_some_and(u8::is_ascii_uppercase)
-        || local_name_conflicts(call_name(node), context)
+        || local_name_conflicts(call_name(node), receiver.location().start_offset(), context)
         || implicit_it_block(call_name(node), context)
     {
         return;
@@ -162,7 +162,7 @@ fn excluded_method(name: &[u8]) -> bool {
         )
 }
 
-fn local_name_conflicts(name: &[u8], context: &CopContext<'_, '_>) -> bool {
+fn local_name_conflicts(name: &[u8], offense_start: usize, context: &CopContext<'_, '_>) -> bool {
     if let Some(branch) = context.ancestors().iter().rev().find_map(Node::as_in_node) {
         let mut bindings = PatternBindings::default();
         bindings.visit(&branch.pattern());
@@ -173,7 +173,7 @@ fn local_name_conflicts(name: &[u8], context: &CopContext<'_, '_>) -> bool {
             block.locals().iter().any(|local| local.as_slice() == name)
                 || block
                     .body()
-                    .is_some_and(|body| subtree_binds_name(&body, name, true))
+                    .is_some_and(|body| subtree_binds_name(&body, name, true, None))
         } else if let Some(definition) = scope.as_def_node() {
             definition
                 .locals()
@@ -181,24 +181,32 @@ fn local_name_conflicts(name: &[u8], context: &CopContext<'_, '_>) -> bool {
                 .any(|local| local.as_slice() == name)
                 || definition
                     .body()
-                    .is_some_and(|body| subtree_binds_name(&body, name, false))
+                    .is_some_and(|body| {
+                        subtree_binds_name(&body, name, false, Some(offense_start))
+                    })
         } else if let Some(program) = scope.as_program_node() {
             program
                 .locals()
                 .iter()
                 .any(|local| local.as_slice() == name)
-                || subtree_binds_name(&program.statements().as_node(), name, true)
+                || subtree_binds_name(&program.statements().as_node(), name, true, None)
         } else {
             false
         }
     })
 }
 
-fn subtree_binds_name(node: &Node<'_>, name: &[u8], include_writes: bool) -> bool {
+fn subtree_binds_name(
+    node: &Node<'_>,
+    name: &[u8],
+    include_writes: bool,
+    parameter_before: Option<usize>,
+) -> bool {
     struct BindingFinder<'a> {
         name: &'a [u8],
         found: bool,
         include_writes: bool,
+        parameter_before: Option<usize>,
     }
 
     impl BindingFinder<'_> {
@@ -214,7 +222,12 @@ fn subtree_binds_name(node: &Node<'_>, name: &[u8], include_writes: bool) -> boo
             &mut self,
             node: &ruby_prism::RequiredParameterNode<'pr>,
         ) {
-            self.check(node.name().as_slice());
+            if self
+                .parameter_before
+                .is_none_or(|cutoff| node.location().start_offset() < cutoff)
+            {
+                self.check(node.name().as_slice());
+            }
             ruby_prism::visit_required_parameter_node(self, node);
         }
 
@@ -271,6 +284,7 @@ fn subtree_binds_name(node: &Node<'_>, name: &[u8], include_writes: bool) -> boo
         name,
         found: false,
         include_writes,
+        parameter_before,
     };
     finder.visit(node);
     finder.found
