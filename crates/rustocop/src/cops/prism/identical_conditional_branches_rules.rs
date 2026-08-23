@@ -106,7 +106,11 @@ fn statement_nodes(statements: Option<StatementsNode<'_>>) -> Vec<Node<'_>> {
 fn same_sources(nodes: &[&Node<'_>], file: SourceFile<'_>) -> bool {
     nodes.first().is_some_and(|first| {
         let source = file.node(first);
-        source != "()" && nodes.iter().skip(1).all(|node| file.node(node) == source)
+        let structure = format!("{first:?}");
+        source != "()"
+            && nodes.iter().skip(1).all(|node| {
+                file.node(node) == source && format!("{node:?}") == structure
+            })
     })
 }
 
