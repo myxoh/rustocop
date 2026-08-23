@@ -194,12 +194,20 @@ fn encoding_comment_without_encoding(text: &str, lower: &str) -> String {
 fn disable_cops_within_source_code_directive(context: &mut CopContext<'_, '_>) {
     let allowed = context.config_values("AllowedCops").to_vec();
     let source = context.source();
+    let mut all_disabled = false;
     for range in context.source_file().comment_ranges() {
         let comment = source.get(range.clone()).unwrap_or_default();
         let Some((command, list)) = directive(comment) else {
             continue;
         };
         let cops = list.split(',').map(str::trim).collect::<Vec<_>>();
+        if command == "enable" && cops.contains(&"all") && all_disabled {
+            all_disabled = false;
+            continue;
+        }
+        if command == "disable" && cops.contains(&"all") {
+            all_disabled = true;
+        }
         let disallowed = cops
             .iter()
             .copied()
@@ -231,7 +239,8 @@ fn disable_cops_within_source_code_directive(context: &mut CopContext<'_, '_>) {
 }
 
 fn directive(comment: &str) -> Option<(&str, &str)> {
-    let body = comment.strip_prefix("# rubocop:")?;
+    let marker = comment.find("rubocop:")?;
+    let body = &comment[marker + "rubocop:".len()..];
     let (command, cops) = body.trim().split_once(' ')?;
     let cops = cops.split_once(" -- ").map_or(cops, |(cops, _)| cops).trim();
     matches!(command, "disable" | "enable" | "todo").then_some((command, cops))
