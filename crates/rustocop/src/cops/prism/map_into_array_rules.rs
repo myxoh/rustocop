@@ -36,6 +36,14 @@ impl MapIntoArrayRule<'_, '_, '_> {
         return_if!(self.ancestors().iter().any(|ancestor| {
             ancestor.as_array_node().is_some()
                 || ancestor.as_case_node().is_some()
+                || ancestor.as_if_node().is_some_and(|conditional| {
+                    conditional.if_keyword_loc().is_some_and(|keyword| {
+                        keyword.start_offset() > each.location().start_offset()
+                    })
+                })
+                || ancestor.as_unless_node().is_some_and(|conditional| {
+                    conditional.keyword_loc().start_offset() > each.location().start_offset()
+                })
         }));
         if let Some(assignment) = assignment.as_ref() {
             let line_start = self.source_file().line_start(each.location().start_offset());
