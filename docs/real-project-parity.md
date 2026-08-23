@@ -42,9 +42,10 @@ examples, while the complete matrix catches interactions and unrepresented
 syntax across the full 85,471-file corpus. The newly discovered failures still
 need provenance-backed minimized fixtures.
 
-See [the compatibility gap analysis](project-compatibility-gap-analysis.md) for
-why the near-90% fixture result does not imply near-90% project parity and for
-the revised real-project-first repair loop.
+Fixture parity does not imply project parity: upstream examples establish the
+captured contract, while this complete project matrix exercises negative cases,
+configuration interactions, recovered syntax, and source-range behavior that
+the fixture corpus may not contain.
 
 ## Original project cohort
 

@@ -1,8 +1,12 @@
-# Cop qualification evidence
+# Supplemental cop qualification records
 
-This directory is the authoritative evidence source for the five qualification
-checks summarized in the project README. Historical `verified` or `heuristic`
-labels do not grant qualification credit.
+This directory preserves the executable five-check audit used for the original
+60-cop qualification batch. It is still useful for replaying those manual,
+upstream, edge-case, and real-world checks, but it is not current public support
+evidence. Current support is determined by the complete fixture and 50-project
+snapshots documented in the root README and `docs/compatibility.md`.
+
+Historical `verified` or `heuristic` labels do not grant compatibility credit.
 
 The first qualification batch is the first 60 entries in the complete RuboCop
 1.87 built-in matrix. Work files use this schema:

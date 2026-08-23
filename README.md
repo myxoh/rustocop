@@ -50,7 +50,7 @@ cases and six configuration-mutation cases. The new 50-project mismatches have
 not yet been minimized; these fixtures remain regression coverage, not a
 substitute for the complete project comparison.
 
-After restoring five cops with structural implementations, the fixture review
+After restoring eleven cops with structural implementations, the fixture review
 updated at `2026-08-23T13:05:46-04:00` contains 24,298 retained executable cases.
 All 24,297 comparable cases match RuboCop 1.87.0 diagnostics, and all correction
 expectations also match; 523/523 active cops pass every retained fixture. One captured case
@@ -84,10 +84,11 @@ fixtures.
 
 See [the compatibility evidence table](docs/compatibility.md) for fixture and
 project matching by cop, and [the real-project parity report](docs/real-project-parity.md)
-for the pinned projects, limitations, and reproduction commands. The
-[project compatibility gap analysis](docs/project-compatibility-gap-analysis.md)
-explains why the fixture score near 90% has not translated to project parity.
-The related [non-scalable implementation catalog](docs/non-scalable-implementations.md)
+for the pinned projects, limitations, and reproduction commands. Fixture parity
+and project parity are deliberately separate: upstream examples prove the
+captured contract, while the 50-project run exposes unrepresented syntax,
+configuration, and negative cases. The related
+[non-scalable implementation catalog](docs/non-scalable-implementations.md)
 tracks the cops whose present design appears too narrow to generalize.
 
 Complete project audits reuse a checked-in, input-validated RuboCop diagnostic
@@ -291,14 +292,25 @@ The immutable archives and filtered corpora are cached under
 
 ## Development
 
-Read [Building a cop](docs/building-a-cop.md), the
-[Prism cop DSL reference](docs/adding-a-prism-cop.md),
-[the architecture](docs/architecture.md), and
-[the rules of engagement](CONTRIBUTING.md) before adding cops. The
-[substantial-work roadmap](docs/substantial-work.md) records the shared
-correctness and architecture work that does not belong in the generated
-per-cop queue. The default spec task enforces the documented module and function
-complexity ceilings.
+The maintained documentation is intentionally small:
+
+- [Building a cop](docs/building-a-cop.md) is the end-to-end implementation and
+  promotion workflow; the [Prism cop DSL reference](docs/adding-a-prism-cop.md)
+  documents its callback and correction APIs.
+- [Architecture](docs/architecture.md) and the
+  [rules of engagement](CONTRIBUTING.md) define repository boundaries and
+  validation requirements.
+- [Compatibility](docs/compatibility.md), [cop support](docs/cop-support.md),
+  [remaining cops](docs/remaining-cops.md), and
+  [real-project parity](docs/real-project-parity.md) are the current generated
+  or evidence-backed status sources.
+- [Non-scalable implementations](docs/non-scalable-implementations.md) and the
+  [substantial-work roadmap](docs/substantial-work.md) contain the active manual
+  backlog. Historical checkpoints and completed review notes live in Git
+  history instead of permanent Markdown files.
+
+The default spec task enforces the documented module and function complexity
+ceilings.
 
 Install dependencies:
 
