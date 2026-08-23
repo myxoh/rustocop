@@ -22,6 +22,36 @@ impl Cop for ArrayFirstLast {
         _source: &str,
         context: &mut Context,
     ) {
+        if let Some(write) = node.as_index_operator_write_node() {
+            let Some(arguments) = write.arguments() else {
+                return;
+            };
+            let arguments = arguments.arguments();
+            if arguments.len() != 1 {
+                return;
+            }
+            let argument = arguments.iter().next().expect("one index argument");
+            let Some(value) = integer_value(&argument) else {
+                return;
+            };
+            let preferred = match value {
+                0 => "first",
+                -1 => "last",
+                _ => return,
+            };
+            let opening = write.opening_loc();
+            let closing = write.closing_loc();
+            let offense = opening.start_offset()..closing.end_offset();
+            context.replace(
+                self.name(),
+                format!("Use `{preferred}`."),
+                offense.clone(),
+                offense,
+                format!(".{preferred}"),
+            );
+            return;
+        }
+
         let Some(call) = node.as_call_node() else {
             return;
         };
@@ -31,10 +61,7 @@ impl Cop for ArrayFirstLast {
         if call_name(&call) != b"[]" || chained_bracket_call(&call, ancestors) {
             return;
         }
-        let Some(value) = argument
-            .as_integer_node()
-            .and_then(|integer| TryInto::<i32>::try_into(integer.value()).ok())
-        else {
+        let Some(value) = integer_value(&argument) else {
             return;
         };
         let preferred = match value {
@@ -73,20 +100,23 @@ impl Cop for ArrayFirstLast {
     }
 }
 
+fn integer_value(node: &Node<'_>) -> Option<i32> {
+    node.as_integer_node()
+        .and_then(|integer| TryInto::<i32>::try_into(integer.value()).ok())
+}
+
 fn chained_bracket_call(call: &CallNode<'_>, ancestors: &[Node<'_>]) -> bool {
     if receiver_call(call).is_some_and(|receiver| call_name(&receiver) == b"[]") {
         return true;
     }
 
-    let call_node = call.as_node();
-    ancestors.iter().rev().any(|ancestor| {
-        ancestor.as_call_node().is_some_and(|parent| {
-            matches!(call_name(&parent), b"[]" | b"[]=")
-                && parent
-                    .receiver()
-                    .is_some_and(|receiver| same_location(&receiver, &call_node))
+    ancestors
+        .iter()
+        .rev()
+        .find_map(Node::as_call_node)
+        .is_some_and(|parent| {
+            !parent.is_safe_navigation() && matches!(call_name(&parent), b"[]" | b"[]=")
         })
-    })
 }
 
 struct RedundantArrayFlatten;
