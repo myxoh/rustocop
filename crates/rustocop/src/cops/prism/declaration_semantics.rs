@@ -17,40 +17,54 @@ fn ineffective_access_modifier(node: &ruby_prism::DefNode<'_>, context: &mut Cop
     {
         return;
     }
-    let Some(class) = context
+    let Some(statements) = context
         .ancestors()
         .iter()
         .rev()
-        .find_map(Node::as_class_node)
+        .find_map(Node::as_statements_node)
     else {
         return;
     };
-    let before = context
-        .source()
-        .get(class.location().start_offset()..node.location().start_offset())
-        .unwrap_or_default();
-    let Some((line_index, modifier)) = before
-        .lines()
-        .enumerate()
-        .filter(|(_, line)| matches!(line.trim(), "private" | "protected"))
-        .last()
-    else {
+    let mut visibility = None;
+    for sibling in statements.body().iter() {
+        if sibling.location().start_offset() >= node.location().start_offset() {
+            break;
+        }
+        let Some(call) = sibling.as_call_node() else {
+            continue;
+        };
+        if call.receiver().is_none()
+            && call.block().is_none()
+            && call
+                .arguments()
+                .is_none_or(|arguments| arguments.arguments().is_empty())
+            && matches!(call.name().as_slice(), b"private" | b"protected" | b"public")
+        {
+            let line = context.source()[..call.location().start_offset()]
+                .bytes()
+                .filter(|byte| *byte == b'\n')
+                .count()
+                + 1;
+            visibility = Some((String::from_utf8_lossy(call.name().as_slice()).into_owned(), line));
+        }
+    }
+    let Some((modifier, line)) = visibility.filter(|(modifier, _)| modifier != "public") else {
         return;
     };
     let method = String::from_utf8_lossy(node.name().as_slice());
-    if modifier.trim() == "private" {
-        let class_source = context.source_file().at(&class.location());
-        if class_source.contains(&format!("private_class_method :{method}")) {
+    if modifier == "private" {
+        let scope = context.ancestors().iter().rev().find(|ancestor| {
+            ancestor.as_class_node().is_some() || ancestor.as_module_node().is_some()
+        });
+        if scope.is_some_and(|scope| {
+            context
+                .source_file()
+                .at(&scope.location())
+                .contains(&format!("private_class_method :{method}"))
+        }) {
             return;
         }
     }
-    let line = context.source()[..class.location().start_offset()]
-        .bytes()
-        .filter(|byte| *byte == b'\n')
-        .count()
-        + line_index
-        + 1;
-    let modifier = modifier.trim();
     let advice = if modifier == "private" {
         "Use `private_class_method` or `private` inside a `class << self` block instead."
     } else {
