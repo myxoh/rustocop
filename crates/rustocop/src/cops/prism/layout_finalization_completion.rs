@@ -11,6 +11,7 @@ define_cops! {
 
 fn empty_comment(context: &mut CopContext<'_, '_>) {
     let lines = context.source_file().lines().collect::<Vec<_>>();
+    let comments = context.source_file().comment_ranges();
     for (index, (offset, line)) in lines.iter().copied().enumerate() {
         let trimmed = line.trim_start();
         if !context.config_bool("AllowBorderComment", true)
@@ -30,8 +31,10 @@ fn empty_comment(context: &mut CopContext<'_, '_>) {
             );
             continue;
         }
-        let inline = line
-            .find('#')
+        let inline = comments
+            .iter()
+            .find(|comment| comment.start >= offset && comment.start <= offset + line.len())
+            .map(|comment| comment.start - offset)
             .filter(|at| !line[..*at].trim().is_empty() && line[*at + 1..].trim().is_empty());
         if !matches!(trimmed.trim_end(), "#" | "# ") && inline.is_none() {
             continue;
@@ -39,14 +42,7 @@ fn empty_comment(context: &mut CopContext<'_, '_>) {
         if inline.is_none()
             && context.config_bool("AllowBorderComment", true)
             && context.config_bool("AllowMarginComment", true)
-            && [index.checked_sub(1), Some(index + 1)]
-                .into_iter()
-                .flatten()
-                .filter_map(|neighbor| lines.get(neighbor))
-                .any(|(_, neighbor)| {
-                    let neighbor = neighbor.trim_start();
-                    neighbor.starts_with('#') && !neighbor.trim_start_matches('#').trim().is_empty()
-                })
+            && comment_block_has_content(&lines, index)
         {
             continue;
         }
@@ -68,6 +64,25 @@ fn empty_comment(context: &mut CopContext<'_, '_>) {
                     ),
         );
     }
+}
+
+fn comment_block_has_content(lines: &[(usize, &str)], index: usize) -> bool {
+    let has_content = |line: &str| {
+        let line = line.trim_start();
+        line.starts_with('#') && !line.trim_start_matches('#').trim().is_empty()
+    };
+    let is_comment = |line: &str| line.trim_start().starts_with('#');
+    let mut before = index;
+    while before > 0 && is_comment(lines[before - 1].1) {
+        before -= 1;
+    }
+    let mut after = index + 1;
+    while after < lines.len() && is_comment(lines[after].1) {
+        after += 1;
+    }
+    lines[before..after]
+        .iter()
+        .any(|(_, line)| has_content(line))
 }
 
 fn empty_line_after_magic_comment(context: &mut CopContext<'_, '_>) {
