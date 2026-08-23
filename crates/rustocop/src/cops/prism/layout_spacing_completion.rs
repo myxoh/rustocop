@@ -5,7 +5,7 @@ define_cops! {
     BeginEndAlignment => "Layout/BeginEndAlignment" => source(begin_end_alignment),
     EndOfLine => "Layout/EndOfLine" => source(end_of_line),
     FirstParameterIndentation => "Layout/FirstParameterIndentation" => source(first_parameter_indentation),
-    SpaceBeforeBrackets => "Layout/SpaceBeforeBrackets" => source(space_before_brackets),
+    SpaceBeforeBrackets => "Layout/SpaceBeforeBrackets" => call(space_before_brackets),
     SpaceBeforeFirstArg => "Layout/SpaceBeforeFirstArg" => call(space_before_first_arg),
     SpaceInsideStringInterpolation => "Layout/SpaceInsideStringInterpolation" => node(as_embedded_statements_node, space_inside_string_interpolation),
 }
@@ -165,36 +165,27 @@ fn first_parameter_indentation(context: &mut CopContext<'_, '_>) {
     }
 }
 
-fn space_before_brackets(context: &mut CopContext<'_, '_>) {
-    let source = context.source();
-    for (at, _) in source.match_indices(" [") {
-        let before = source[..at].bytes().next_back();
-        if before.is_none_or(|byte| {
-            !(byte.is_ascii_alphanumeric() || matches!(byte, b'_' | b')' | b']'))
-        }) {
-            continue;
-        }
-        let line_start = source[..at].rfind('\n').map_or(0, |offset| offset + 1);
-        let receiver = source[line_start..at]
-            .split(|character: char| {
-                !(character.is_alphanumeric() || matches!(character, '_' | '@' | '$'))
-            })
-            .next_back()
-            .unwrap_or_default();
-        let known_local = receiver.starts_with(['@', '$'])
-            || source[line_start..at].trim_end().ends_with(')')
-            || source[..line_start]
-                .lines()
-                .any(|line| line.trim_start().starts_with(&format!("{receiver} =")));
-        if !known_local {
-            continue;
-        }
-        context.remove(
-            "Remove the space before the opening brackets.",
-            at..at + 1,
-            at..at + 1,
-        );
+fn space_before_brackets(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
+    if !matches!(call_name(node), b"[]" | b"[]=") {
+        return;
     }
+    let (Some(receiver), Some(opening)) = (node.receiver(), node.opening_loc()) else {
+        return;
+    };
+    let start = receiver.location().end_offset();
+    let end = opening.start_offset();
+    if start >= end
+        || !context.source()[start..end]
+            .bytes()
+            .all(|byte| byte.is_ascii_whitespace())
+    {
+        return;
+    }
+    context.remove(
+        "Remove the space before the opening brackets.",
+        start..end,
+        start..end,
+    );
 }
 
 fn space_before_first_arg(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
