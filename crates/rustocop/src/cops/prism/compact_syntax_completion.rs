@@ -200,6 +200,7 @@ impl FileWriteRule<'_, '_, '_> {
         return_unless!(self.source_file().node(&write_receiver) == parameter);
         let Some(content) = only_argument(&write) else { return };
         return_if!(content.as_splat_node().is_some());
+        return_unless!(file_write_block_content_safe(&content));
         let Some(open_selector) = node.message_loc() else { return };
         let mut replacement = format!(
             "{write_method}({}, {})",
@@ -216,6 +217,25 @@ impl FileWriteRule<'_, '_, '_> {
             corrector.replace(edit, replacement);
         });
     }
+}
+
+fn file_write_block_content_safe(node: &Node<'_>) -> bool {
+    if node
+        .as_string_node()
+        .and_then(|string| string.opening_loc())
+        .is_some_and(|opening| opening.as_slice().starts_with(b"<<"))
+        || node
+            .as_interpolated_string_node()
+            .and_then(|string| string.opening_loc())
+            .is_some_and(|opening| opening.as_slice().starts_with(b"<<"))
+    {
+        return true;
+    }
+    let Some(call) = node.as_call_node() else {
+        return false;
+    };
+    call.receiver()
+        .is_none_or(|receiver| file_write_block_content_safe(&receiver))
 }
 
 fn heredoc_tail<'a>(source: &'a str, content: &Node<'_>) -> Option<&'a str> {
