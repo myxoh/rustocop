@@ -4,7 +4,6 @@ use super::*;
 
 declare_source_cops! {
     DuplicateRescueException => "Lint/DuplicateRescueException" => duplicate_rescue,
-    EmptyClass => "Lint/EmptyClass" => empty_class,
     ImplicitRuntimeError => "Style/ImplicitRuntimeError" => implicit_runtime_error,
     EnvHome => "Style/EnvHome" => env_home,
     AsciiComments => "Style/AsciiComments" => ascii_comments,
@@ -29,36 +28,6 @@ fn duplicate_rescue(source: &str, context: &mut Reporter<'_>) {
                 );
             }
             cursor = relative + name.len();
-        }
-    }
-}
-
-fn empty_class(source: &str, context: &mut Reporter<'_>) {
-    let allow_comments = context.config_bool("AllowComments", true);
-    let lines = source_lines(source).collect::<Vec<_>>();
-    for (index, (offset, line)) in lines.iter().enumerate() {
-        let trimmed = line.trim();
-        if !trimmed.starts_with("class ") || trimmed.contains(" < ") {
-            continue;
-        }
-        if let Some((end_offset, end_line)) = lines[index + 1..]
-            .iter()
-            .find(|(_, candidate)| candidate.trim() == "end")
-        {
-            let body = &source[offset + line.len()..*end_offset];
-            let contains_comment = body.lines().any(|line| line.trim_start().starts_with('#'));
-            let empty = body
-                .lines()
-                .all(|line| line.trim().is_empty() || line.trim_start().starts_with('#'));
-            if empty && !(allow_comments && contains_comment) {
-                let message = if trimmed.starts_with("class <<") {
-                    "Empty metaclass detected."
-                } else {
-                    "Empty class detected."
-                };
-                let start = offset + line.len() - line.trim_start().len();
-                context.report(message, start..end_offset + end_line.len());
-            }
         }
     }
 }

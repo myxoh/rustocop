@@ -99,6 +99,7 @@ cop_modules!(
     empty_method_rules,
     empty_lambda_parameter_rules,
     empty_else_rules,
+    empty_class_rules,
     endless_method_rules,
     enum_argument_rules,
     exception_argument_rules,
