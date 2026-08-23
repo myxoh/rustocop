@@ -5,8 +5,22 @@ define_cops! {
 }
 
 fn class_vars(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
-    if let Some(write) = node.as_class_variable_write_node() {
-        let location = write.name_loc();
+    let write_location = node
+        .as_class_variable_write_node()
+        .map(|write| write.name_loc())
+        .or_else(|| {
+            node.as_class_variable_or_write_node()
+                .map(|write| write.name_loc())
+        })
+        .or_else(|| {
+            node.as_class_variable_and_write_node()
+                .map(|write| write.name_loc())
+        })
+        .or_else(|| {
+            node.as_class_variable_operator_write_node()
+                .map(|write| write.name_loc())
+        });
+    if let Some(location) = write_location {
         let name = context.source_file().at(&location);
         context.report(
             format!("Replace class var {name} with a class instance var."),
