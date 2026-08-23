@@ -1223,6 +1223,9 @@ fn block_is_ambiguous_argument(context: &CopContext<'_, '_>) -> bool {
         if ancestor.as_hash_node().is_some() {
             return false;
         }
+        if ancestor.as_splat_node().is_some() {
+            return false;
+        }
         if let Some(outer) = ancestor.as_call_node() {
             let single_argument_operator = matches!(
                 call_name(&outer),
