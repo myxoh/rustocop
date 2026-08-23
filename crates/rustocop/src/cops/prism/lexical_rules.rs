@@ -148,6 +148,13 @@ fn require_range_parentheses(context: &mut CopContext<'_, '_>) {
         if index + 1 >= lines.len() || lines[index + 1].1.trim().is_empty() {
             continue;
         }
+        if lines[index + 1]
+            .1
+            .trim_start()
+            .starts_with([')', ']', '}'])
+        {
+            continue;
+        }
         let expression_start = *start + line.len() - line.trim_start().len();
         if source[..expression_start].trim_end().ends_with('(') || trimmed.starts_with('(') {
             continue;
