@@ -712,7 +712,12 @@ impl Cop for Void {
         };
         let body = statements.body().iter().collect::<Vec<_>>();
         let direct_parent = ancestors.last();
-        let enclosing_definition = direct_parent.and_then(Node::as_def_node);
+        let enclosing_definition = direct_parent.and_then(Node::as_def_node).filter(|definition| {
+            definition.body().is_some_and(|body| {
+                body.location().start_offset() == node.location().start_offset()
+                    && body.location().end_offset() == node.location().end_offset()
+            })
+        });
         let ensure_body = ancestors.iter().rev().any(|ancestor| {
             ancestor.as_ensure_node().is_some_and(|ensure_node| {
                 ensure_node.statements().is_some_and(|body| {
@@ -731,12 +736,19 @@ impl Cop for Void {
         }) || direct_parent.is_some_and(|parent| {
             parent.as_for_node().is_some() || parent.as_ensure_node().is_some()
         }) || ensure_body
-            || direct_parent.and_then(Node::as_block_node).is_some()
-                && ancestors.iter().rev().any(|ancestor| {
-                    ancestor
-                        .as_call_node()
-                        .is_some_and(|call| call.name().as_slice() == b"tap")
-                });
+            || direct_parent.and_then(Node::as_block_node).is_some_and(|block| {
+                ancestors.iter().rev().any(|ancestor| {
+                    ancestor.as_call_node().is_some_and(|call| {
+                        call.name().as_slice() == b"tap"
+                            && call.block().is_some_and(|candidate| {
+                                candidate.location().start_offset()
+                                    == block.location().start_offset()
+                                    && candidate.location().end_offset()
+                                        == block.location().end_offset()
+                            })
+                    })
+                })
+            });
         let correctable = !enclosing_definition
             .as_ref()
             .is_some_and(|definition| void_setter_name(definition.name().as_slice()));
