@@ -1,4 +1,4 @@
-use ruby_prism::{BlockNode, CallNode, Node};
+use ruby_prism::{BlockNode, CallNode, Node, Visit};
 
 use super::*;
 use super::source_syntax::split_arguments;
@@ -19,11 +19,11 @@ impl HashEachMethodsRule<'_, '_, '_> {
 
     fn on_send(&mut self, node: &CallNode<'_>) {
         return_if!(node.block().is_some_and(|block| block.as_block_node().is_some()));
-        return_if!(node.block().is_some_and(|block| {
+        return_unless!(node.block().is_some_and(|block| {
             block
                 .as_block_argument_node()
                 .and_then(|argument| argument.expression())
-                .is_none_or(|expression| expression.as_symbol_node().is_none())
+                .is_some_and(|expression| expression.as_symbol_node().is_some())
         }));
         self.register_keys_values_each(node, None);
     }
@@ -42,11 +42,8 @@ impl HashEachMethodsRule<'_, '_, '_> {
         let root_source = self.source_file().node(&root);
         return_if!(allowed_receiver(self, &root, root_source), false);
         if let Some(block) = block {
-            let body_source = block
-                .body()
-                .map(|body| self.source_file().node(&body))
-                .unwrap_or_default();
-            return_if!(hash_mutated(body_source, root_source), false);
+            let facts = hash_each_body_facts(block.body(), self.source_file(), root_source);
+            return_if!(facts.mutated, false);
         }
         let Some(first_selector) = keys_values.message_loc() else { return false };
         let Some(last_selector) = each.message_loc() else { return false };
@@ -67,7 +64,8 @@ impl HashEachMethodsRule<'_, '_, '_> {
         return_if!(argument_count(each) != 0);
         return_if!(receiver.as_array_node().is_some() || array_converter(&receiver));
         let receiver_source = self.source_file().node(&receiver);
-        return_if!(hash_mutated(self.source_file().node(&block.as_node()), receiver_source));
+        let facts = hash_each_body_facts(block.body(), self.source_file(), receiver_source);
+        return_if!(facts.mutated);
         let Some(parameters) = block.parameters().and_then(|parameters| parameters.as_block_parameters_node()) else { return };
         let source = self
             .source_file()
@@ -80,12 +78,8 @@ impl HashEachMethodsRule<'_, '_, '_> {
         let [key_range, value_range] = arguments.as_slice() else { return };
         let key = self.source_file().slice(key_range.clone()).unwrap_or_default().trim();
         let value = self.source_file().slice(value_range.clone()).unwrap_or_default().trim();
-        let body = self
-            .source_file()
-            .slice(parameters.location().end_offset()..block.closing_loc().start_offset())
-            .unwrap_or_default();
-        let key_used = parameter_used(key, body);
-        let value_used = parameter_used(value, body);
+        let key_used = parameter_used(key, &facts.reads);
+        let value_used = parameter_used(value, &facts.reads);
         return_if!(key_used == value_used);
         let (preferred, used, unused) = if key_used {
             ("each_key", key, value)
@@ -128,19 +122,57 @@ fn allowed_receiver(
     })
 }
 
-fn hash_mutated(body: &str, receiver: &str) -> bool {
-    body.contains(&format!("{receiver}[")) && body.contains("] =")
+#[derive(Default)]
+struct HashEachBodyFacts {
+    reads: std::collections::HashSet<Vec<u8>>,
+    mutated: bool,
 }
 
-fn parameter_used(parameter: &str, body: &str) -> bool {
+struct HashEachBodyVisitor<'a> {
+    file: SourceFile<'a>,
+    receiver: &'a str,
+    facts: HashEachBodyFacts,
+}
+
+impl<'pr> Visit<'pr> for HashEachBodyVisitor<'_> {
+    fn visit_local_variable_read_node(&mut self, node: &ruby_prism::LocalVariableReadNode<'pr>) {
+        self.facts.reads.insert(node.name().as_slice().to_vec());
+    }
+
+    fn visit_call_node(&mut self, node: &ruby_prism::CallNode<'pr>) {
+        if node.name().as_slice() == b"[]="
+            && node
+                .receiver()
+                .is_some_and(|receiver| self.file.node(&receiver) == self.receiver)
+        {
+            self.facts.mutated = true;
+        }
+        ruby_prism::visit_call_node(self, node);
+    }
+}
+
+fn hash_each_body_facts(
+    body: Option<Node<'_>>,
+    file: SourceFile<'_>,
+    receiver: &str,
+) -> HashEachBodyFacts {
+    let mut visitor = HashEachBodyVisitor {
+        file,
+        receiver,
+        facts: HashEachBodyFacts::default(),
+    };
+    if let Some(body) = body {
+        visitor.visit(&body);
+    }
+    visitor.facts
+}
+
+fn parameter_used(
+    parameter: &str,
+    reads: &std::collections::HashSet<Vec<u8>>,
+) -> bool {
     parameter
         .split(|character: char| !character.is_ascii_alphanumeric() && character != '_')
         .filter(|name| !name.is_empty() && *name != "_")
-        .any(|name| contains_word(body, name))
-}
-
-fn contains_word(source: &str, name: &str) -> bool {
-    source
-        .split(|character: char| !character.is_ascii_alphanumeric() && character != '_')
-        .any(|word| word == name)
+        .any(|name| reads.contains(name.as_bytes()))
 }
