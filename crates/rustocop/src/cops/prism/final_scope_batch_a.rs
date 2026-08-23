@@ -197,6 +197,17 @@ fn constant_in_block(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
         return;
     };
     let block_start = block.location().start_offset();
+    for ancestor in context.ancestors().iter().rev() {
+        if ancestor
+            .as_block_node()
+            .is_some_and(|candidate| candidate.location().start_offset() == block_start)
+        {
+            break;
+        }
+        if ancestor.as_statements_node().is_none() && ancestor.as_begin_node().is_none() {
+            return;
+        }
+    }
     let block_method = context.ancestors().iter().rev().find_map(|ancestor| {
         let call = ancestor.as_call_node()?;
         call.block()
