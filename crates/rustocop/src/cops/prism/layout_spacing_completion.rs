@@ -39,9 +39,11 @@ fn assignment_indentation(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
             .len();
     let prefix = &source[assignment_line_start..operator];
     let chained = prefix.contains(" = ") || prefix.matches('=').count() > 0;
-    let current_start = if source[..node_start].rfind('\n').map_or(0, |at| at + 1)
-        == assignment_line_start
-    {
+    let node_line_start = source[..node_start].rfind('\n').map_or(0, |at| at + 1);
+    let multi_base = node
+        .as_multi_write_node()
+        .map(|_| node_start - node_line_start);
+    let current_start = if node_line_start == assignment_line_start {
         node_start
     } else {
         assignment_line_start + line_indentation
@@ -58,7 +60,9 @@ fn assignment_indentation(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
         .chain(std::iter::once(current_start))
         .min()
         .unwrap_or(current_start);
-    let base = if chained {
+    let base = if let Some(base) = multi_base {
+        base
+    } else if chained {
         line_indentation
     } else {
         chain_start - assignment_line_start
