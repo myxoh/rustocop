@@ -13,7 +13,7 @@ define_cops! {
     InterpolationCheck => "Lint/InterpolationCheck" => source(interpolation_check),
     RequireRangeParentheses => "Lint/RequireRangeParentheses" => source(require_range_parentheses),
     AsciiIdentifiers => "Naming/AsciiIdentifiers" => source(ascii_identifiers),
-    MultilineIfThen => "Style/MultilineIfThen" => source(multiline_if_then),
+    MultilineIfThen => "Style/MultilineIfThen" => any_node(multiline_if_then),
     ReturnNil => "Style/ReturnNil" => node(as_return_node, return_nil),
     VariableInterpolation => "Style/VariableInterpolation" => node(as_embedded_variable_node, variable_interpolation),
 }
@@ -223,51 +223,48 @@ fn ascii_identifiers(context: &mut CopContext<'_, '_>) {
     }
 }
 
-fn multiline_if_then(context: &mut CopContext<'_, '_>) {
-    let source = context.source();
-    let lines = source_lines(source).collect::<Vec<_>>();
-    for (line_index, (line_start, line)) in lines.iter().copied().enumerate() {
-        let code = line.split('#').next().unwrap_or_default();
-        let trimmed = code.trim_start();
-        let mut keyword = ["if", "elsif", "unless"]
-            .into_iter()
-            .find(|keyword| trimmed.starts_with(&format!("{keyword} ")) || trimmed == *keyword);
-        if keyword.is_none() && trimmed == "then" {
-            keyword = lines[..line_index].iter().rev().find_map(|(_, previous)| {
-                let previous = previous.trim_start();
-                ["if", "elsif", "unless"]
-                    .into_iter()
-                    .find(|word| previous.starts_with(&format!("{word} ")))
-            });
-        }
-        let Some(keyword) = keyword else { continue };
-        let Some(relative) = code.find("then") else {
-            continue;
-        };
-        let before = code.as_bytes().get(relative.wrapping_sub(1)).copied();
-        let after = code.as_bytes().get(relative + 4).copied();
-        if before.is_some_and(identifier_byte) || after.is_some_and(identifier_byte) {
-            continue;
-        }
-        let has_body = !line[relative + 4..].trim().is_empty()
-            && !line[relative + 4..].trim_start().starts_with('#');
-        if has_body {
-            continue;
-        }
-        let token = line_start + relative..line_start + relative + 4;
-        let edit = if line[..relative].trim().is_empty() {
-            line_start..line_end(source, line_start)
-        } else if line[relative + 4..].starts_with(' ') {
-            token.start..token.end + 1
-        } else {
-            token.start.saturating_sub(1)..token.end
-        };
-        context.remove(
-            format!("Do not use `then` for multi-line `{keyword}`."),
-            token,
-            edit,
-        );
+fn multiline_if_then(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
+    let (then_keyword, statements, keyword) = if let Some(if_node) = node.as_if_node() {
+        (
+            if_node.then_keyword_loc(),
+            if_node.statements(),
+            if_node
+                .if_keyword_loc()
+                .map(|location| context.source_file().at(&location))
+                .unwrap_or("if"),
+        )
+    } else if let Some(unless_node) = node.as_unless_node() {
+        (
+            unless_node.then_keyword_loc(),
+            unless_node.statements(),
+            "unless",
+        )
+    } else {
+        return;
+    };
+    let Some(then_keyword) = then_keyword else { return };
+    if statements.is_some_and(|statements| {
+        context.source_file().same_line(
+            then_keyword.start_offset(),
+            statements.location().start_offset(),
+        )
+    }) {
+        return;
     }
+    let token = then_keyword.start_offset()..then_keyword.end_offset();
+    let line_start = context.source_file().line_start(token.start);
+    let edit = if context.source()[line_start..token.start].trim().is_empty() {
+        line_start..line_end(context.source(), line_start)
+    } else if context.source().as_bytes().get(token.end) == Some(&b' ') {
+        token.start..token.end + 1
+    } else {
+        token.start.saturating_sub(1)..token.end
+    };
+    context.remove(
+        format!("Do not use `then` for multi-line `{keyword}`."),
+        token,
+        edit,
+    );
 }
 
 fn return_nil(node: &ruby_prism::ReturnNode<'_>, context: &mut CopContext<'_, '_>) {
