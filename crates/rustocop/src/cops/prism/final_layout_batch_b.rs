@@ -1607,6 +1607,9 @@ fn hash_alignment_deltas<'a>(
             let mut delta = HashAlignmentDelta::default();
             match style {
                 HashAlignmentStyle::Key => {
+                    if index > 0 && !on_own_line {
+                        return (*entry, delta);
+                    }
                     if index > 0 && on_own_line {
                         delta.key = first_key_column as isize - key_column as isize;
                     }

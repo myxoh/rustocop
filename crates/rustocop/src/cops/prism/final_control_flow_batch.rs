@@ -1197,10 +1197,7 @@ fn flow_expression(
             b"raise" | b"fail" | b"throw" | b"exit" | b"exit!" | b"abort"
         );
         let receiver_is_kernel = root_constant(call.receiver(), b"Kernel");
-        let receiver_is_self = call
-            .receiver()
-            .is_some_and(|receiver| receiver.as_self_node().is_some());
-        if !flow || call.receiver().is_some() && !receiver_is_kernel && !receiver_is_self {
+        if !flow || call.receiver().is_some() && !receiver_is_kernel {
             return false;
         }
         return receiver_is_kernel

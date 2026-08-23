@@ -16,6 +16,9 @@ fn predicate_prefix(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
             definition.name_loc(),
         )
     } else if let Some(call) = node.as_call_node() {
+        if call.receiver().is_some() {
+            return;
+        }
         let method = String::from_utf8_lossy(call_name(&call));
         if !context
             .config_values("MethodDefinitionMacros")

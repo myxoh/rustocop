@@ -2,12 +2,29 @@ use super::*;
 use unicode_width::UnicodeWidthChar;
 
 define_cops! {
-    BlockAlignment => "Layout/BlockAlignment" => node(as_block_node, block_alignment),
+    BlockAlignment => "Layout/BlockAlignment" => any_node(block_alignment_node),
     DotPosition => "Layout/DotPosition" => call(dot_position),
     EmptyLineBetweenDefs => "Layout/EmptyLineBetweenDefs" => node(as_statements_node, empty_line_between_defs),
     EmptyLinesAfterModuleInclusion => "Layout/EmptyLinesAfterModuleInclusion" => call(empty_lines_after_module_inclusion),
     EmptyLinesAroundAccessModifier => "Layout/EmptyLinesAroundAccessModifier" => call(empty_lines_around_access_modifier),
     FirstArgumentIndentation => "Layout/FirstArgumentIndentation" => any_node(first_argument_indentation),
+}
+
+fn block_alignment_node(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
+    if let Some(block) = node.as_block_node() {
+        block_alignment(&block, context);
+    } else if let Some(lambda) = node.as_lambda_node() {
+        let opening = lambda.opening_loc();
+        let block_start = lambda.location().start_offset();
+        let block_column = context.source_file().column(block_start);
+        block_alignment_locations(
+            lambda.closing_loc(),
+            opening,
+            block_start,
+            block_column,
+            context,
+        );
+    }
 }
 
 fn dot_position(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
@@ -231,7 +248,29 @@ fn empty_lines_around_access_modifier(node: &CallNode<'_>, context: &mut CopCont
 }
 
 fn block_alignment(node: &ruby_prism::BlockNode<'_>, context: &mut CopContext<'_, '_>) {
-    let closing = node.closing_loc();
+    let opening = node.opening_loc();
+    let opening_line = line_index(context.source(), opening.start_offset());
+    let block_column = context
+        .source_file()
+        .indentation(opening.start_offset())
+        .len();
+    let block_start = line_start(context.source(), opening_line) + block_column;
+    block_alignment_locations(
+        node.closing_loc(),
+        opening,
+        block_start,
+        block_column,
+        context,
+    );
+}
+
+fn block_alignment_locations(
+    closing: ruby_prism::Location<'_>,
+    opening: ruby_prism::Location<'_>,
+    block_start: usize,
+    block_column: usize,
+    context: &mut CopContext<'_, '_>,
+) {
     let file = context.source_file();
     let closing_line = line_index(context.source(), closing.start_offset());
     let closing_start = line_start(context.source(), closing_line);
@@ -290,9 +329,7 @@ fn block_alignment(node: &ruby_prism::BlockNode<'_>, context: &mut CopContext<'_
     let start_line = line_index(context.source(), target.start_offset());
     let start_offset = target.start_offset();
     let start_column = file.column(start_offset);
-    let opening = node.opening_loc();
     let opening_line = line_index(context.source(), opening.start_offset());
-    let block_column = file.indentation(opening.start_offset()).len();
     let current_column = file.column(closing.start_offset());
     let style = context
         .config_value("EnforcedStyleAlignWith")
@@ -325,7 +362,7 @@ fn block_alignment(node: &ruby_prism::BlockNode<'_>, context: &mut CopContext<'_
         context.source(),
         opening_line,
         block_column,
-        line_start(context.source(), opening_line) + block_column,
+        block_start,
     );
     let preferred = if style == "start_of_block" {
         &block

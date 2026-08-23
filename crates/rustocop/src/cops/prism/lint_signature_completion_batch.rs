@@ -1078,7 +1078,11 @@ fn unmodified_reduce_accumulator(
                 arguments
                     .arguments()
                     .iter()
-                    .any(|argument| reduce_node_uses_name(&argument, element.as_bytes()))
+                    .any(|argument| {
+                        argument
+                            .as_local_variable_read_node()
+                            .is_some_and(|read| read.name().as_slice() == element.as_bytes())
+                    })
             })
     }) {
         context.report(

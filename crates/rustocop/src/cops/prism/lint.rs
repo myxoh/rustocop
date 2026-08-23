@@ -389,7 +389,9 @@ fn report_compound_self_assignments(source: &str, context: &mut Context, cop: &'
         let code = line.split('#').next().unwrap_or_default().trim_end();
         let self_assignment = [" ||= ", " &&= "].iter().any(|operator| {
             code.split_once(operator)
-                .is_some_and(|(left, right)| left.trim() == right.trim())
+                .is_some_and(|(left, right)| {
+                    !left.contains('[') && left.trim() == right.trim()
+                })
         }) || code.split_once(" = ").is_some_and(|(left, right)| {
             left.contains(',')
                 && left.trim() == right.trim().trim_start_matches('[').trim_end_matches(']')

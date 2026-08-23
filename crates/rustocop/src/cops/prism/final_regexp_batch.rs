@@ -358,6 +358,14 @@ impl Cop for UnescapedBracketInRegexp {
             } else if byte == b']' {
                 if character_class_depth > 0 {
                     character_class_depth -= 1;
+                } else if node.as_call_node().is_some()
+                    && relative > 0
+                    && source.as_bytes().get(start + relative - 1) == Some(&b'\\')
+                {
+                    // `Regexp.new` receives the interpreted string. In a Ruby
+                    // string, even a source-level doubled slash can escape the
+                    // closing bracket in the resulting regular expression.
+                    continue;
                 } else if relative > 0 {
                     let at = start + relative;
                     context.replace(
