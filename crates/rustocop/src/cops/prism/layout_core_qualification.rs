@@ -105,18 +105,18 @@ fn empty_lines_after_module_inclusion(node: &CallNode<'_>, context: &mut CopCont
     {
         return;
     }
-    if context.parent().is_some_and(|parent| {
-        parent.as_call_node().is_some()
-            || parent.as_block_node().is_some()
-            || parent.as_array_node().is_some()
-    }) || context
-        .ancestors()
-        .iter()
-        .rev()
-        .take(2)
-        .any(|ancestor| ancestor.as_if_node().is_some() || ancestor.as_unless_node().is_some())
-    {
-        return;
+    for ancestor in context.ancestors().iter().rev() {
+        if ancestor.as_statements_node().is_some() {
+            break;
+        }
+        if ancestor.as_call_node().is_some()
+            || ancestor.as_block_node().is_some()
+            || ancestor.as_array_node().is_some()
+            || ancestor.as_if_node().is_some()
+            || ancestor.as_unless_node().is_some()
+        {
+            return;
+        }
     }
 
     let source = context.source();
@@ -131,8 +131,13 @@ fn empty_lines_after_module_inclusion(node: &CallNode<'_>, context: &mut CopCont
         return;
     };
     let follower = line(source, next).trim_start();
+    let follower_call = call_name(follower);
     if matches!(follower, "end" | "else" | "ensure" | "rescue")
-        || matches!(call_name(follower), "include" | "extend" | "prepend")
+        || ["include", "extend", "prepend"].iter().any(|method| {
+            follower_call == *method
+                || follower_call.ends_with(&format!(".{method}"))
+                || follower_call.ends_with(&format!("&.{method}"))
+        })
     {
         return;
     }
