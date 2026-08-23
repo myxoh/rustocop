@@ -1506,7 +1506,7 @@ fn redundant_safe_navigation(node: &ruby_prism::CallNode<'_>, context: &mut CopC
         }
     }
 
-    if statically_non_nil(receiver_source) {
+    if statically_non_nil(&receiver) {
         context.replace(
             "Redundant safe navigation detected, use `.` instead.",
             operator.start_offset()..operator.end_offset(),
@@ -1685,28 +1685,48 @@ fn inferred_non_nil_from_source(
     false
 }
 
-fn statically_non_nil(source: &str) -> bool {
-    let source = source.trim();
-    if source == "self"
-        || matches!(source, "true" | "false")
-        || source.starts_with(['\'', '"', '[', '{'])
-        || source.as_bytes().first().is_some_and(u8::is_ascii_digit)
+fn statically_non_nil(node: &Node<'_>) -> bool {
+    if node.as_self_node().is_some()
+        || node.as_true_node().is_some()
+        || node.as_false_node().is_some()
+        || node.as_string_node().is_some()
+        || node.as_interpolated_string_node().is_some()
+        || node.as_symbol_node().is_some()
+        || node.as_interpolated_symbol_node().is_some()
+        || node.as_integer_node().is_some()
+        || node.as_float_node().is_some()
+        || node.as_rational_node().is_some()
+        || node.as_imaginary_node().is_some()
+        || node.as_array_node().is_some()
+        || node.as_hash_node().is_some()
+        || node.as_regular_expression_node().is_some()
+        || node.as_interpolated_regular_expression_node().is_some()
     {
         return true;
     }
-    if !source.contains("&.")
-        && [".to_s", ".to_i", ".to_f", ".to_a", ".to_h"]
-            .iter()
-            .any(|conversion| source.contains(conversion))
-    {
+    if node.as_call_node().is_some_and(|call| {
+        !call
+            .call_operator_loc()
+            .is_some_and(|operator| operator.as_slice() == b"&.")
+            && matches!(
+                call_name(&call),
+                b"to_s" | b"to_i" | b"to_f" | b"to_a" | b"to_h"
+            )
+    }) {
         return true;
     }
-    let name = source.rsplit("::").next().unwrap_or(source);
-    name.as_bytes().first().is_some_and(u8::is_ascii_uppercase)
-        && name
-            .bytes()
-            .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
-        && name.bytes().any(|byte| byte.is_ascii_lowercase())
+    let name = node
+        .as_constant_read_node()
+        .map(|constant| constant.name().as_slice())
+        .or_else(|| {
+            node.as_constant_path_node()
+                .and_then(|constant| constant.name())
+                .map(|name| name.as_slice())
+        });
+    name.is_some_and(|name| {
+        name.first().is_some_and(u8::is_ascii_uppercase)
+            && name.iter().any(u8::is_ascii_lowercase)
+    })
 }
 
 fn and_or(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
