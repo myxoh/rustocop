@@ -19,8 +19,17 @@ end
 values.any? { |value| value }
 values << +"text"
 options = { spread_interval: -10 }
+status = $?
+
+where(:first, :second) do
+  1       | 2
+  100_000 | 3
+end
 
 instance = Object.new
 def (instance.foo).kw(a:)
   a
 end
+
+__END__
+Calculating -------------------------------------

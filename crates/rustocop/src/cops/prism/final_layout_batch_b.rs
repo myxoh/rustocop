@@ -1817,6 +1817,9 @@ fn operator_spacing(context: &mut CopContext<'_, '_>) {
     let literal_ranges = context.source_file().literal_ranges();
 
     for (line_offset, line) in context.source_file().lines().collect::<Vec<_>>() {
+        if line.trim() == "__END__" {
+            break;
+        }
         let code_end = ruby_comment_start(line).unwrap_or(line.len());
         let code = &line[..code_end];
         let mut index = 0;
@@ -1908,6 +1911,16 @@ fn operator_spacing(context: &mut CopContext<'_, '_>) {
             let right_space = &code[end..right_end];
             let rational = operator == "/" && rational_rhs(&code[right_end..]);
             let compact = operator == "**" && !exponent_space || rational && !rational_space;
+
+            if allow_alignment
+                && operator == "|"
+                && single_pipe_count(code) >= 2
+                && !left_space.is_empty()
+                && !right_space.is_empty()
+            {
+                index = end;
+                continue;
+            }
 
             if operator == "=>"
                 && hash_table_style
@@ -2014,6 +2027,19 @@ fn spacing_operator_at(source: &str, index: usize) -> Option<&str> {
         .copied()
 }
 
+fn single_pipe_count(source: &str) -> usize {
+    let bytes = source.as_bytes();
+    bytes
+        .iter()
+        .enumerate()
+        .filter(|(index, byte)| {
+            **byte == b'|'
+                && (*index == 0 || bytes.get(index - 1) != Some(&b'|'))
+                && bytes.get(index + 1) != Some(&b'|')
+        })
+        .count()
+}
+
 fn slash_starts_regexp(source: &str, index: usize) -> bool {
     let before = source[..index].trim_end();
     before.is_empty()
@@ -2054,6 +2080,9 @@ fn operator_is_non_binary(source: &str, start: usize, end: usize, operator: &str
         return true;
     }
     if operator == "&" && after.starts_with('.') {
+        return true;
+    }
+    if operator == "?" && source[..start].ends_with('$') {
         return true;
     }
     if (operator == "-" && source[end..].starts_with('>'))
