@@ -123,6 +123,12 @@ fn interpolation_check(context: &mut CopContext<'_, '_>) {
 fn require_range_parentheses(context: &mut CopContext<'_, '_>) {
     let source = context.source();
     let lines = source_lines(source).collect::<Vec<_>>();
+    let excluded = context
+        .source_file()
+        .literal_ranges()
+        .into_iter()
+        .chain(context.source_file().comment_ranges())
+        .collect::<Vec<_>>();
     for (index, (start, line)) in lines.iter().enumerate() {
         let trimmed = line.trim_end();
         let operator_len = if trimmed.ends_with("...") {
@@ -132,6 +138,13 @@ fn require_range_parentheses(context: &mut CopContext<'_, '_>) {
         } else {
             continue;
         };
+        let operator_start = *start + trimmed.len() - operator_len;
+        if excluded
+            .iter()
+            .any(|range| range.start <= operator_start && operator_start < range.end)
+        {
+            continue;
+        }
         if index + 1 >= lines.len() || lines[index + 1].1.trim().is_empty() {
             continue;
         }
