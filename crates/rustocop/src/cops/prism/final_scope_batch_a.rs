@@ -563,7 +563,17 @@ fn declaration_in_same_conditional_branch(
                 .find(|branch| branch.contains(&declaration))
                 .cloned();
             if context.related_config_value("AllCops", "ParserEngine") == Some("parser_prism") {
-                if declaration_branch.is_some() {
+                let nested_block_depth = selected.as_ref().map_or(0, |selected| {
+                    context
+                        .ancestors()
+                        .iter()
+                        .filter(|ancestor| {
+                            ancestor.as_block_node().is_some()
+                                && selected.contains(&ancestor.location().start_offset())
+                        })
+                        .count()
+                });
+                if declaration_branch.is_some() && nested_block_depth >= 2 {
                     continue;
                 }
                 if case
