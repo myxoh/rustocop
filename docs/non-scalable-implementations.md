@@ -1,6 +1,6 @@
 # Non-scalable cop implementations
 
-`updated_at: 2026-08-23T09:16:26-04:00`
+`updated_at: 2026-08-23T11:28:28-04:00`
 
 This is the catalog for category C: cops whose current implementation appears
 too narrow to generalize from the fixture corpus to arbitrary Ruby projects.
@@ -19,8 +19,15 @@ The additional withdrawals were established by the complete audit generated at
 `2026-08-23T09:13:26-04:00`. They comprise every cop classified as mismatch in
 the preceding 558-cop audit, plus `Lint/RedundantCopDisableDirective` and
 `Style/FileWrite`, for which RuboCop 1.87 cannot produce stable isolated project
-reference output. The resulting 512-cop active corpus has 402 exercised
-project-exact cops, 110 dormant cops, and no mismatches or engine errors.
+reference output. On that original ten-project corpus, the resulting 512-cop
+active set had 402 exercised project-exact cops, 110 dormant cops, and no
+mismatches or engine errors.
+
+The expanded 50-project audit at `2026-08-23T11:28:28-04:00` shows that this
+withdrawal was not sufficient to make the retained implementations scalable:
+289 cops are project-exact, 49 are dormant, 172 mismatch, one crashes, and one
+is blocked by a RuboCop error. Those newly exposed cops require review and
+minimized fixtures before this catalog can be treated as complete.
 
 The evidence snapshot is the complete ten-project audit generated at
 `2026-08-22T00:56:18-04:00` in
@@ -192,7 +199,7 @@ adding project-specific exclusions is not sufficient. Removal requires:
 2. positive, negative, configuration, and source-range fixtures derived from
    more than one real project;
 3. all fixtures passing for the target and affected shared infrastructure; and
-4. a focused ten-project run showing the target project-exact, or documenting
+4. a focused 50-project run showing the target project-exact, or documenting
    a smaller residual gap whose cause is no longer a narrow implementation.
 
 The project numbers are a snapshot, not manually maintained truth. Refresh

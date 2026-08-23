@@ -23,6 +23,15 @@ RSpec.describe Rustocop::ProjectCorpus do
     expect(projects).to all(satisfy { |project| !project.fetch("license").empty? })
   end
 
+  it "records every project-specific parser exclusion with a reason" do
+    expect(described_class::EXCLUDED_FILES).to eq(
+      "logger" => {
+        "test/logger/test_logger.rb" =>
+          "RuboCop 1.87.0 parser_prism raises while translating a valid binary-byte regexp"
+      }
+    )
+  end
+
   it "freezes the corpus and every normalized project entry" do
     expect(projects).to be_frozen
     expect(projects).to all(be_frozen)

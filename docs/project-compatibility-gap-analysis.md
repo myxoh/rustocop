@@ -10,12 +10,12 @@ The category-C implementation-risk register is maintained separately in
 > pre-withdrawal diagnostic evidence.
 
 > [!IMPORTANT]
-> This historical gap was closed for the retained corpus at
-> `2026-08-23T09:13:26-04:00`. After withdrawing all remaining project-inexact
-> and RuboCop-reference-blocked cops, the active set contains 512 cops: 402 are
-> exercised and project-exact, 110 are dormant in both engines, and none
-> mismatch or crash. Its separate fixture gate is 23,999/23,999 cases and
-> 512/512 cops at `2026-08-23T09:16:26-04:00`.
+> This historical gap was closed only for the original ten-project corpus at
+> `2026-08-23T09:13:26-04:00`. The expanded 50-project audit at
+> `2026-08-23T11:28:28-04:00` reopened it: 289 cops are project-exact, 49 are
+> dormant, 172 mismatch, one crashes, and one is blocked by a RuboCop error.
+> The separate fixture gate remains 23,999/23,999 cases and 512/512 cops at
+> `2026-08-23T09:16:26-04:00`.
 
 The intermediate retained fixture corpus reached 26,717/26,717 cases and 558/558 cops
 at `2026-08-22T20:40:35-04:00`. That completes the fixture gate but does not

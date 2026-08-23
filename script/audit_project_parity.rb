@@ -141,6 +141,10 @@ def accepted?(result)
     !result.fetch("stderr").include?("An error occurred while")
 end
 
+def cop_inspection_error?(result)
+  result.fetch("stderr").include?("An error occurred while")
+end
+
 def native_command(native, jobs, common, corpus, cops)
   [native, "--jobs", jobs.to_s, "--format", "json", "--only", cops.join(","), *common, corpus]
 end
@@ -240,6 +244,8 @@ if options[:refresh_rubocop_reference]
       probe_rubocop_result = result
       break
     end
+    abort "RuboCop could not parse the #{projects.fetch(0).fetch('name')} corpus: #{result.fetch('stderr')}" unless
+      cop_inspection_error?(result)
 
     culprit = isolate_crash(rubocop_survivors) do |subset|
       probe = capture(rubocop_command(rubocop, common, probe_corpus, subset))
@@ -264,7 +270,28 @@ if options[:refresh_rubocop_reference]
              else
                capture(rubocop_command(rubocop, common, project.fetch("corpus"), rubocop_survivors))
              end
-    abort "RuboCop failed: #{result.fetch('stderr')}" unless accepted?(result)
+    until accepted?(result)
+      abort "RuboCop could not parse the #{project.fetch('name')} corpus: #{result.fetch('stderr')}" unless
+        cop_inspection_error?(result)
+
+      culprit = isolate_crash(rubocop_survivors) do |subset|
+        probe = capture(rubocop_command(rubocop, common, project.fetch("corpus"), subset))
+        !accepted?(probe)
+      end
+      abort "could not isolate interacting RuboCop error among: #{culprit.join(', ')}" unless culprit.one?
+
+      cop = culprit.fetch(0)
+      rubocop_errors << {
+        "cop" => cop,
+        "project" => project.fetch("name"),
+        "stderr" => result.fetch("stderr").lines.first(12).join
+      }
+      rubocop_survivors.delete(cop)
+      abort "every selected cop failed a RuboCop reference gate" if rubocop_survivors.empty?
+
+      warn "RuboCop reference retry: #{project.fetch('name')} (#{rubocop_survivors.length} cops)"
+      result = capture(rubocop_command(rubocop, common, project.fetch("corpus"), rubocop_survivors))
+    end
 
     offenses = Rustocop::DiagnosticSignatures.hashes_from_report(
       JSON.parse(result.fetch("stdout")), corpus: project.fetch("corpus"), root: ROOT
@@ -468,7 +495,7 @@ rows = cops.map do |cop|
 end
 summary = combined.values.group_by { |row| row.fetch("classification") }.transform_values(&:length)
 markdown = <<~MARKDOWN
-  # Ten-project parity audit: positions #{positions.max}–#{positions.min}
+  # #{projects.length}-project parity audit: positions #{positions.max}–#{positions.min}
 
   Generated against Rust source `#{report.fetch('rust_commit')}` and RuboCop
   #{report.fetch('rubocop_version')} across the pinned project corpora.

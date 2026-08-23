@@ -86,12 +86,13 @@ def extract_archive(project, archive)
   destination
 end
 
-def selected_source_files(source_root)
+def selected_source_files(project, source_root)
+  project_exclusions = Rustocop::ProjectCorpus::EXCLUDED_FILES.fetch(project.fetch("name"), {})
   Dir.glob(File.join(source_root, "**/*.rb"), File::FNM_DOTMATCH).sort.reject do |path|
     relative = Pathname(path).relative_path_from(Pathname(source_root)).to_s
     components = relative.split(File::SEPARATOR)
     components.any? { |component| EXCLUDED_COMPONENTS.include?(component) || component.start_with?(".") } ||
-      EXCLUDED_FILES.include?(relative)
+      EXCLUDED_FILES.include?(relative) || project_exclusions.key?(relative)
   end
 end
 
@@ -99,7 +100,7 @@ def build_corpus(project, source_root)
   destination = File.join(CACHE_ROOT, "corpora", "#{project.fetch("name")}-#{project.fetch("revision")}")
   return destination if File.file?(File.join(destination, ".complete"))
 
-  files = selected_source_files(source_root)
+  files = selected_source_files(project, source_root)
   raise "#{project.fetch("repository")} contained no selected Ruby files" if files.empty?
 
   FileUtils.mkdir_p(File.dirname(destination))
@@ -247,7 +248,8 @@ report = {
     "path" => "benchmark/project-rubocop.yml",
     "cops" => COPS,
     "excluded_components" => EXCLUDED_COMPONENTS,
-    "excluded_files" => EXCLUDED_FILES
+    "excluded_files" => EXCLUDED_FILES,
+    "project_excluded_files" => Rustocop::ProjectCorpus::EXCLUDED_FILES
   },
   "results" => results
 }

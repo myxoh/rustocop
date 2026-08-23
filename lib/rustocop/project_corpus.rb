@@ -5,6 +5,13 @@ module Rustocop
     RUBOCOP_VERSION = "1.87.0"
     RUBOCOP_COMMIT = "e5b788dba181ad94de30cfbad661c5d6aa08a4e5"
 
+    EXCLUDED_FILES = {
+      "logger" => {
+        "test/logger/test_logger.rb" =>
+          "RuboCop 1.87.0 parser_prism raises while translating a valid binary-byte regexp"
+      }.freeze
+    }.freeze
+
     # Rows contain: local name, GitHub repository, full commit, repository license.
     BASELINE_PROJECTS = [
       ["chatwoot", "chatwoot/chatwoot", "8d93d69e8e356216e85c28de7c4240e66b8e83fa", "MIT outside enterprise/"],

@@ -2,9 +2,8 @@
 
 This report is the broad real-world compatibility standard. It uses RuboCop
 1.87.0 with `parser_prism`, the strict configuration in
-`benchmark/project-rubocop.yml`. The published checkpoint below covers the
-original ten pinned open-source projects containing 54,146 Ruby files. The
-configured next audit expands that corpus to 50 projects and 85,472 Ruby files.
+`benchmark/project-rubocop.yml`, and 50 pinned open-source projects containing
+85,471 Ruby files.
 
 An exact signature includes the relative path, cop name, severity, message,
 start line and column, and end line and column. Count-only equality is not
@@ -14,39 +13,40 @@ cases, and configuration branches that the projects do not exercise.
 ## Latest realistic status
 
 The latest complete checkpoint was generated at
-`2026-08-23T09:13:26-04:00` from Rust source
-`67b6005782c5129ccae2b445a14897777bc8649e` and native binary SHA-256
-`2f200485daea030ae11336049256d46959e62e5f8f326961893c8849e53cf85a`.
-The stored RuboCop reference was captured at `2026-08-23T08:43:27-04:00`
+`2026-08-23T11:28:28-04:00` from Rust source
+`0cef87c348d274e1e41b7e49a619c87afc9bfd81` and native binary SHA-256
+`694ab1d76097c5b541ffc7381ced058bea967365ad05f37bf68bdc3b9be9134c`.
+The stored RuboCop reference was captured at `2026-08-23T11:21:47-04:00`
 and has SHA-256
-`34c374aaf167efc7ca3d92a60c15b2c6f4d45e86aeeb1e2cb2c6891eaae89688`.
+`3c892aea6c455b6b11d9613589a38ea287d1cf6e74a1940342df0b0721d8951a`.
 After excluding the 94 intentionally pending cops, its active-cop slice reports:
 
 | Classification | Complete checkpoint |
 | --- | ---: |
-| Project-exact | 402 |
-| Exact but dormant | 110 |
-| Mismatching | 0 |
-| Rust crash | 0 |
-| RuboCop gate error | 0 |
+| Project-exact | 289 |
+| Exact but dormant | 49 |
+| Mismatching | 172 |
+| Rust crash | 1 |
+| RuboCop gate error | 1 |
 
-Every exercised active cop matches RuboCop's complete diagnostic signatures.
-Dormant cops emitted no diagnostics in either engine and remain subject to the
-separate 100%-passing fixture gate. `Lint/RedundantCopDisableDirective` and
-`Style/FileWrite` are intentionally pending because RuboCop 1.87 cannot produce
-stable isolated project-reference output for them.
+Among the 461 exercised cops, 289 are exact (62.7%). The expansion promoted 24
+previously dormant cops directly to project-exact, exposed mismatches in 37
+previously dormant cops, and invalidated 135 of the 402 old project-exact
+classifications. `Layout/SpaceAroundOperators` crashes on Puppet;
+`Style/ClassAndModuleChildren` triggers a RuboCop 1.87 error on Puppet.
 
 The minimized project-regression corpus contains 336 passing cases and no
 pending active-cop mismatch directions. The
 configuration-mutation corpus contains six. They preserve fixed pathological
 examples, while the complete matrix catches interactions and unrepresented
-syntax across the full 54,146-file corpus.
+syntax across the full 85,471-file corpus. The newly discovered failures still
+need provenance-backed minimized fixtures.
 
 See [the compatibility gap analysis](project-compatibility-gap-analysis.md) for
 why the near-90% fixture result does not imply near-90% project parity and for
 the revised real-project-first repair loop.
 
-## Recorded checkpoint projects
+## Original project cohort
 
 | Project | Ruby files | Revision |
 | --- | ---: | --- |
@@ -61,14 +61,13 @@ the revised real-project-first repair loop.
 | RSpec Core | 233 | `aec5f494` |
 | Homebrew | 1,876 | `44d5dd83` |
 
-## Configured 50-project corpus
+## Expanded project cohort
 
-The 40-project expansion adds 31,326 Ruby files to the original 54,146-file
+The 40-project expansion adds 31,325 Ruby files to the original 54,146-file
 baseline. Every repository is pinned to a full immutable commit in
 `lib/rustocop/project_corpus.rb`, and all 50 prepared corpora have been checked
-to contain the expected total of 85,472 Ruby files. These projects do not count
-as compatibility evidence until the complete RuboCop reference and Rustocop
-comparison have been refreshed.
+to contain the expected total of 85,471 Ruby files. The checkpoint above covers
+the complete original and expanded cohorts.
 
 | Added project | Ruby files | Revision |
 | --- | ---: | --- |
@@ -110,7 +109,7 @@ comparison have been refreshed.
 | debug | 107 | `6510cfbc` |
 | Psych | 89 | `9b12bb3f` |
 | net-http | 23 | `10433873` |
-| Logger | 13 | `026eb968` |
+| Logger | 12 | `026eb968` |
 | RDoc | 206 | `5bd8719f` |
 
 ## Reproducing the complete audit
@@ -123,26 +122,23 @@ PROJECT_BENCHMARK_PREPARE_ONLY=1 \
   bundle exec ruby script/benchmark_projects.rb
 ```
 
-The next audit requires a clean committed Rust tree. It builds the release binary,
+The audit requires a clean committed Rust tree. It builds the release binary,
 records both the Rust commit and binary SHA-256, runs Rust crash gates, and
 then compares complete diagnostic signatures against the checked-in compressed
-RuboCop reference. Because the configured project pins changed, the first
-50-project run must include `--refresh-rubocop-reference`:
+RuboCop reference. The normal command reuses the complete cached 50-project
+reference and runs only Rustocop:
 
 ```sh
 bundle exec ruby script/audit_project_parity.rb \
   --active \
-  --refresh-rubocop-reference \
   --report tmp/project-parity/all-cops-current.json \
   --markdown tmp/project-parity/all-cops-current.md
 ```
 
-After that one refresh, the normal command can omit
-`--refresh-rubocop-reference` and run only Rustocop. The reference stores RuboCop's
-normalized diagnostic signatures and is accepted only when its RuboCop
-version, strict-config SHA-256, complete cop selection, pinned project
-revisions, and per-project file counts match. Refresh it after any of those
-inputs intentionally changes:
+The reference stores RuboCop's normalized diagnostic signatures and is accepted
+only when its RuboCop version, strict-config SHA-256, complete cop selection,
+pinned project revisions, and per-project file counts match. Refresh it after
+any of those inputs intentionally changes:
 
 ```sh
 bundle exec ruby script/audit_project_parity.rb \

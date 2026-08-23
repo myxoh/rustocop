@@ -11,7 +11,7 @@ The only completed report currently available was measured on 2026-08-19,
 before the runner expanded from three projects to ten and before the recent
 parity repairs. Its three timing rows are retained below as a dated historical
 baseline. Its old offense and exact-match counts have been removed because they
-are superseded by the current ten-project audit and should not be mistaken for
+are superseded by the current 50-project audit and should not be mistaken for
 the present implementation.
 
 | Historical project | Ruby files | Lines | Rustocop sequential | Rustocop, 4 workers | RuboCop Prism | 4-worker speedup |
@@ -65,6 +65,11 @@ coverage/  ee/  enterprise/  log/  node_modules/  public/  tmp/  vendor/
 db/schema.rb
 ```
 
+One additional project-specific exclusion is recorded in the canonical corpus
+metadata: Logger's `test/logger/test_logger.rb` contains a valid binary-byte
+regexp that RuboCop 1.87.0's `parser_prism` translation raises on before any cop
+can inspect it.
+
 Tests, migrations, scripts, application code, and library code remain. Paths
 are preserved, both engines must inspect the expected file count, and RuboCop
 must produce at least one offense.
@@ -78,7 +83,7 @@ PROJECT_BENCHMARK_PREPARE_ONLY=1 \
   bundle exec ruby script/benchmark_projects.rb
 ```
 
-The prepared corpus contains 85,472 Ruby files. The preparation command is
+The prepared corpus contains 85,471 Ruby files. The preparation command is
 idempotent and reuses the immutable archives and completed filtered corpora.
 
 Run this only when the machine can remain otherwise idle:

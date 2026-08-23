@@ -28,9 +28,7 @@ intentionally pending and unregistered because their implementations are not
 project-exact or RuboCop 1.87 cannot produce stable comparison output. Public
 support evidence comes from RuboCop-derived fixtures and complete project
 signatures; the old Verified/Heuristic qualification scoreboard is not used.
-The configured real-project corpus now contains 50 pinned repositories. The
-published project evidence remains the last completed ten-project checkpoint
-until the expanded audit is run.
+The configured and audited real-project corpus contains 50 pinned repositories.
 
 ## Validation standard
 
@@ -47,9 +45,10 @@ output on every pinned project is **project-exact** for that corpus and
 configuration. Neither offense-count similarity, a captured-case label, nor an
 old manual review record is accepted as compatibility evidence.
 
-The minimized real-project corpus currently contains 336 passing cases, no
-pending active-cop mismatches, and six configuration-mutation cases. These are
-regression coverage, not a substitute for the complete project comparison.
+The minimized real-project corpus currently contains 336 previously passing
+cases and six configuration-mutation cases. The new 50-project mismatches have
+not yet been minimized; these fixtures remain regression coverage, not a
+substitute for the complete project comparison.
 
 After withdrawing the intentionally pending cops, the fixture review updated at
 `2026-08-23T09:16:26-04:00` contains 23,999 retained executable cases. All
@@ -58,35 +57,34 @@ also match; 512/512 active cops pass every retained fixture. One captured case
 with unsupported synthetic upstream state is explicitly excluded rather than
 counted as passing.
 
-## Recorded ten-project output parity
+## Fifty-project output parity
 
 The real-project matrix asks whether each cop emits the same path, severity,
-message, and source range as RuboCop across 54,146 Ruby files in ten projects.
+message, and source range as RuboCop across 85,471 Ruby files in 50 projects.
 
-The complete audit updated at `2026-08-23T09:13:26-04:00` covers all 512 active
-cops. It leaves 402 project-exact cops and 110 dormant cops, with no mismatches,
-native crashes, or RuboCop command-line errors.
+The complete audit updated at `2026-08-23T11:28:28-04:00` covers all 512 active
+cops. It leaves 289 project-exact cops, 49 dormant cops, 172 mismatches, one
+native crash, and one RuboCop command-line error.
 
 | Real-project classification | Complete checkpoint |
 | --- | ---: |
-| Project-exact | 402 / 512 (78.5%) |
-| Exact but dormant | 110 / 512 |
-| Mismatching | 0 / 512 |
-| Rust crashes | 0 / 512 |
-| RuboCop `--only` limitation | 0 / 512 |
+| Project-exact | 289 / 512 (56.4%) |
+| Exact but dormant | 49 / 512 |
+| Mismatching | 172 / 512 |
+| Rust crashes | 1 / 512 |
+| RuboCop `--only` limitation | 1 / 512 |
 
-The checkpoint is bound to Rust source `67b6005` and native binary SHA-256
-`2f200485daea030ae11336049256d46959e62e5f8f326961893c8849e53cf85a`.
+The checkpoint is bound to Rust source `0cef87c` and native binary SHA-256
+`694ab1d76097c5b541ffc7381ced058bea967365ad05f37bf68bdc3b9be9134c`.
 Its RuboCop reference SHA-256 is
-`34c374aaf167efc7ca3d92a60c15b2c6f4d45e86aeeb1e2cb2c6891eaae89688`.
+`3c892aea6c455b6b11d9613589a38ea287d1cf6e74a1940342df0b0721d8951a`.
 Project-exact status is the strongest current diagnostic evidence. Unexercised
 configuration and autocorrection branches still require RuboCop-derived
 fixtures.
 
 See [the compatibility evidence table](docs/compatibility.md) for fixture and
 project matching by cop, and [the real-project parity report](docs/real-project-parity.md)
-for the recorded projects, the configured 50-project expansion, limitations,
-and reproduction commands. The
+for the pinned projects, limitations, and reproduction commands. The
 [project compatibility gap analysis](docs/project-compatibility-gap-analysis.md)
 explains why the fixture score near 90% has not translated to project parity.
 The related [non-scalable implementation catalog](docs/non-scalable-implementations.md)
