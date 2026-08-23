@@ -25,7 +25,7 @@ success = system(environment, *command)
 
 if success
   puts "#{cop_name} passes every captured diagnostic and correction case."
-  puts "Run the ten-project parity audit before calling it project-exact."
+  puts "Run the 50-project parity audit before calling it project-exact."
 else
   if File.file?(report)
     results = JSON.parse(File.read(report)).fetch("results", {})

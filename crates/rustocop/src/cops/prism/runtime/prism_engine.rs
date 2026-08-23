@@ -31,7 +31,8 @@ impl Engine {
         for error in parsed.errors() {
             for cop in self
                 .registry
-                .parse_error_cops
+                .phases
+                .parse_errors
                 .iter()
                 .map(|index| &self.registry.cops[*index])
             {
@@ -40,13 +41,14 @@ impl Engine {
         }
         for cop in self
             .registry
-            .source_cops
+            .phases
+            .source
             .iter()
             .map(|index| &self.registry.cops[*index])
         {
             cop.on_source(source, &mut context);
         }
-        if has_unrecoverable_parse_errors && self.registry.recovered_node_cops.is_empty() {
+        if has_unrecoverable_parse_errors && self.registry.phases.recovered_nodes.is_empty() {
             return context.finish(source);
         }
         let mut investigation_states: Vec<Box<dyn Any>> = self
@@ -66,9 +68,9 @@ impl Engine {
             ancestors: Vec::new(),
             investigation_states: &mut investigation_states,
             node_cops: if has_unrecoverable_parse_errors {
-                &self.registry.recovered_node_cops
+                &self.registry.phases.recovered_nodes
             } else {
-                &self.registry.node_cops
+                &self.registry.phases.nodes
             },
         };
         runner.visit(&parsed.node());

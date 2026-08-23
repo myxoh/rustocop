@@ -1,7 +1,7 @@
 # Substantial work roadmap
 
 This roadmap tracks shared work that cannot be completed by repairing one cop.
-The live per-cop queue is generated from a complete ten-project audit in
+The live per-cop queue is generated from a complete project audit in
 [Current project-parity gaps](remaining-cops.md). Captured upstream cases are a
 regression layer, not the prioritization scoreboard.
 
@@ -10,7 +10,7 @@ regression layer, not the prioritization scoreboard.
 - RuboCop 1.87.0 defines 606 built-in cops. The native registry advertises 512;
   94 non-scalable, incomplete, or reference-blocked implementations are intentionally pending.
 - The executable trust standard is differential: minimized fixtures plus
-  complete diagnostic signatures across ten pinned projects.
+  complete diagnostic signatures across 50 pinned projects.
 - The project-regression corpus currently contains 126 RuboCop-derived cases,
   with five additional configuration-mutation cases.
 - Atomic multi-edit correction transactions and deterministic file-level
@@ -44,7 +44,7 @@ diagnostic signatures. For each repaired cop:
    repository, revision, and source path;
 3. match RuboCop diagnostics and correction output in the focused fixture;
 4. run all Rust tests and the complete cross-engine fixture corpus;
-5. commit the Rust code, then run the SHA-bound ten-project audit; and
+5. commit the Rust code, then run the SHA-bound 50-project audit; and
 6. regenerate the public evidence docs only from a complete active-cop audit.
 
 Focused exact reports are useful development evidence but never replace the

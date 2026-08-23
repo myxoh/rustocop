@@ -26,8 +26,11 @@ false positives, false negatives, and breaking changes.
 The active native registry contains 512 RuboCop built-in cops. Another 94 are
 intentionally pending and unregistered because their implementations are not
 project-exact or RuboCop 1.87 cannot produce stable comparison output. Public
-support evidence comes from RuboCop-derived fixtures and complete ten-project
+support evidence comes from RuboCop-derived fixtures and complete project
 signatures; the old Verified/Heuristic qualification scoreboard is not used.
+The configured real-project corpus now contains 50 pinned repositories. The
+published project evidence remains the last completed ten-project checkpoint
+until the expanded audit is run.
 
 ## Validation standard
 
@@ -36,7 +39,7 @@ The gold standard is executable behavior checked against RuboCop 1.87.0:
 1. RuboCop-derived upstream, adversarial, autocorrection, and minimized
    real-project fixtures must pass with matching diagnostics and corrected
    source.
-2. Complete diagnostic signatures must match across all ten pinned real
+2. Complete diagnostic signatures must match across all 50 pinned real
    projects: path, cop, severity, message, and complete source range.
 
 A registered cop with no exercised fixture is unvalidated. A cop with exact
@@ -55,7 +58,7 @@ also match; 512/512 active cops pass every retained fixture. One captured case
 with unsupported synthetic upstream state is explicitly excluded rather than
 counted as passing.
 
-## Ten-project output parity
+## Recorded ten-project output parity
 
 The real-project matrix asks whether each cop emits the same path, severity,
 message, and source range as RuboCop across 54,146 Ruby files in ten projects.
@@ -82,7 +85,8 @@ fixtures.
 
 See [the compatibility evidence table](docs/compatibility.md) for fixture and
 project matching by cop, and [the real-project parity report](docs/real-project-parity.md)
-for the ten projects, limitations, and reproduction commands. The
+for the recorded projects, the configured 50-project expansion, limitations,
+and reproduction commands. The
 [project compatibility gap analysis](docs/project-compatibility-gap-analysis.md)
 explains why the fixture score near 90% has not translated to project parity.
 The related [non-scalable implementation catalog](docs/non-scalable-implementations.md)
@@ -141,7 +145,7 @@ and methodology.
 
 ### Real-project performance
 
-The repository also has a sustained-workload runner for all ten pinned
+The repository also has a sustained-workload runner for all 50 pinned
 projects. The checked-in timing table is a dated 2026-08-19 three-project
 baseline and is no longer presented as current correctness evidence. See the
 [project benchmark note](benchmark/project-benchmarks.md) for those historical
@@ -277,6 +281,16 @@ Generated corpora and reports live under `tmp/` and are intentionally ignored.
 The comparison command is diagnostic-only for now; correction parity remains a
 separate required fixture gate.
 
+Prepare or restore the pinned 50-project corpus without running either linter:
+
+```sh
+PROJECT_BENCHMARK_PREPARE_ONLY=1 \
+  bundle exec ruby script/benchmark_projects.rb
+```
+
+The immutable archives and filtered corpora are cached under
+`tmp/project-benchmarks/`; a repeated preparation reuses them.
+
 ## Development
 
 Read [Building a cop](docs/building-a-cop.md), the
@@ -326,7 +340,7 @@ bundle exec ruby script/report_compatibility_drift.rb \
 ```
 
 Generate the public per-cop matrix and current gap queue only from a complete
-ten-project audit:
+50-project audit:
 
 ```sh
 ruby script/generate_project_parity_docs.rb \

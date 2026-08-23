@@ -4,22 +4,25 @@ require "fileutils"
 require "digest"
 require "json"
 require "open-uri"
-require "open3"
-require "pathname"
 require "rbconfig"
 require "shellwords"
 require "tempfile"
 require "time"
 require_relative "support/benchmark"
+require_relative "../lib/rustocop/artifact_store"
+require_relative "../lib/rustocop/diagnostic_signatures"
+require_relative "../lib/rustocop/process_runner"
 require_relative "../lib/rustocop/project_corpus"
+require_relative "../lib/rustocop/repository_layout"
 
 extend BenchmarkSupport
 
-ROOT = File.expand_path("..", __dir__)
-CACHE_ROOT = File.join(ROOT, "tmp/project-benchmarks")
+LAYOUT = Rustocop::RepositoryLayout.default
+ROOT = LAYOUT.root
+CACHE_ROOT = LAYOUT.path("tmp", "project-benchmarks")
 REPORT_PATH = File.join(CACHE_ROOT, "project-benchmarks.json")
-CONFIG_PATH = File.join(ROOT, "benchmark/project-rubocop.yml")
-NATIVE = File.join(ROOT, "libexec/rustocop-native")
+CONFIG_PATH = LAYOUT.benchmark_config
+NATIVE = LAYOUT.path("libexec", "rustocop-native")
 RUBOCOP = [RbConfig.ruby, Gem.bin_path("rubocop", "rubocop")].freeze
 RUNS = Integer(ENV.fetch("PROJECT_BENCHMARK_RUNS", "5"))
 WARMUPS = Integer(ENV.fetch("PROJECT_BENCHMARK_WARMUPS", "1"))
@@ -33,21 +36,7 @@ COPS = %w[
   Style/Semicolon
   Style/StringLiterals
 ].freeze
-PROJECT_LICENSES = {
-  "chatwoot" => "MIT outside enterprise/",
-  "rubygems.org" => "MIT",
-  "gitlab-ce" => "MIT Community Edition",
-  "rails" => "MIT",
-  "discourse" => "GPL-2.0-or-later",
-  "mastodon" => "AGPL-3.0-or-later",
-  "sidekiq" => "LGPL-3.0-or-later",
-  "devise" => "MIT",
-  "rspec-core" => "MIT",
-  "homebrew" => "BSD-2-Clause"
-}.freeze
-PROJECTS = Rustocop::ProjectCorpus::PROJECTS.map do |project|
-  project.merge("license" => PROJECT_LICENSES.fetch(project.fetch("name")))
-end.freeze
+PROJECTS = Rustocop::ProjectCorpus::PROJECTS
 EXCLUDED_COMPONENTS = %w[
   .git
   coverage
@@ -130,11 +119,11 @@ def build_corpus(project, source_root)
 end
 
 def command_result(command)
-  stdout, stderr, status = Open3.capture3(*command)
-  unless [0, 1].include?(status.exitstatus)
-    raise "command failed (#{status.exitstatus}): #{command.shelljoin}\n#{stderr}"
+  result = Rustocop::ProcessRunner.capture(*command)
+  unless result.accepted?(0, 1)
+    raise "command failed (#{result.exitstatus}): #{command.shelljoin}\n#{result.stderr}"
   end
-  warnings = stderr.lines.map(&:strip).reject(&:empty?)
+  warnings = result.stderr.lines.map(&:strip).reject(&:empty?)
   unexpected = warnings.reject do |warning|
     warning.match?(%r{Warning: RSpec/VariableName has the wrong namespace})
   end
@@ -142,33 +131,13 @@ def command_result(command)
     raise "command wrote unexpected stderr: #{command.shelljoin}\n#{unexpected.join("\n")}"
   end
 
-  [JSON.parse(stdout), warnings]
-end
-
-def offense_signatures(report, corpus)
-  report.fetch("files").flat_map do |file|
-    reported_path = file.fetch("path")
-    absolute_path = Pathname(reported_path).absolute? ? reported_path : File.expand_path(reported_path, ROOT)
-    relative = Pathname(absolute_path).relative_path_from(Pathname(corpus)).to_s
-    file.fetch("offenses").map do |offense|
-      location = offense.fetch("location")
-      [
-        relative,
-        offense.fetch("cop_name"),
-        offense.fetch("severity"),
-        offense.fetch("message"),
-        location.fetch("start_line"),
-        location.fetch("start_column"),
-        location.fetch("last_line"),
-        location.fetch("last_column")
-      ]
-    end
-  end
+  [JSON.parse(result.stdout), warnings]
 end
 
 def correctness(rustocop_report, rubocop_report, corpus)
-  rustocop = offense_signatures(rustocop_report, corpus).tally
-  rubocop = offense_signatures(rubocop_report, corpus).tally
+  options = { corpus:, root: ROOT }
+  rustocop = Rustocop::DiagnosticSignatures.tuples_from_report(rustocop_report, **options).tally
+  rubocop = Rustocop::DiagnosticSignatures.tuples_from_report(rubocop_report, **options).tally
   matched = rustocop.sum { |signature, count| [count, rubocop.fetch(signature, 0)].min }
   rustocop_count = rustocop.values.sum
   rubocop_count = rubocop.values.sum
@@ -258,14 +227,14 @@ results = PROJECTS.map do |project|
   )
 end
 
-rust_commit, rust_commit_status = Open3.capture2(
+rust_commit_result = Rustocop::ProcessRunner.capture(
   "git", "log", "-1", "--format=%H", "--", "crates/rustocop", chdir: ROOT
 )
-raise "could not determine the Rust source commit" unless rust_commit_status.success?
+raise "could not determine the Rust source commit" unless rust_commit_result.success?
 
 report = {
   "generated_at" => Time.now.iso8601,
-  "rust_commit" => rust_commit.strip,
+  "rust_commit" => rust_commit_result.stdout.strip,
   "native_sha256" => Digest::SHA256.file(NATIVE).hexdigest,
   "environment" => {
     "ruby" => RUBY_VERSION,
@@ -282,7 +251,7 @@ report = {
   },
   "results" => results
 }
-File.write(REPORT_PATH, JSON.pretty_generate(report))
+Rustocop::ArtifactStore.write_json(REPORT_PATH, report)
 
 puts "project\tfiles\toffenses(rust/rubocop)\texact\tsequential_ms\tjobs4_ms\trubocop_ms\tspeedup"
 results.each do |result|

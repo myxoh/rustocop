@@ -123,11 +123,32 @@ families keep the short `super::*` authoring surface. New reusable authoring
 APIs belong in `framework/`; parse/traversal/dispatch code belongs in
 `runtime/`; actual lint behavior stays in a named cop-family file.
 
+Within `runtime/`, `PhasePlan` owns the source, node, parse-error, and recovered
+node partitions. The AST runner has one diagnostic dispatch path shared by
+branch, leaf, and typed Prism callbacks. Keeping these mechanics centralized
+prevents callback-specific behavior from drifting as cop families are added.
+
 `--parallel` distributes complete files across scoped worker threads. Results
 are restored to discovery order before formatting, so parallel and sequential
 output must remain byte-identical. `--jobs N` sets an explicit worker count.
 Autocorrection falls back to sequential execution when requested paths resolve
 to the same file.
+
+## Ruby tooling infrastructure
+
+Compatibility and benchmark scripts share four small library boundaries:
+
+- `RepositoryLayout` owns paths to binaries, evidence, pinned projects, and
+  regression fixtures.
+- `ArtifactStore` owns validated JSON reads and deterministic atomic JSON/gzip
+  writes.
+- `ProcessRunner` owns subprocess result shape, timing, and exit-status checks.
+- `DiagnosticSignatures` owns complete RuboCop path/message/location
+  normalization.
+
+Scripts remain orchestration entrypoints; they should not independently rebuild
+these conventions. This keeps cached reference generation, full audits,
+benchmarks, and mismatch isolation on the same data model.
 
 ## Complexity limits
 

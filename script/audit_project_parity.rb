@@ -3,24 +3,25 @@
 require "json"
 require "fileutils"
 require "digest"
-require "open3"
 require "optparse"
 require "pathname"
 require "rbconfig"
 require "time"
-require "zlib"
+require_relative "../lib/rustocop/artifact_store"
+require_relative "../lib/rustocop/diagnostic_signatures"
+require_relative "../lib/rustocop/process_runner"
+require_relative "../lib/rustocop/repository_layout"
 require_relative "../lib/rustocop/project_corpus"
 require_relative "../lib/rustocop/compatibility_status"
 
 gem "rubocop", "=#{Rustocop::ProjectCorpus::RUBOCOP_VERSION}"
 require "rubocop"
 
-ROOT = File.expand_path("..", __dir__)
-DEFAULT_CONFIG = File.join(ROOT, "benchmark/project-rubocop.yml")
-DEFAULT_NATIVE = File.join(ROOT, "crates/rustocop/target/release/rustocop")
-DEFAULT_RUBOCOP_REFERENCE = File.join(
-  ROOT, "spec/compatibility_evidence/project_rubocop_reference.json.gz"
-)
+LAYOUT = Rustocop::RepositoryLayout.default
+ROOT = LAYOUT.root
+DEFAULT_CONFIG = LAYOUT.benchmark_config
+DEFAULT_NATIVE = LAYOUT.native_binary
+DEFAULT_RUBOCOP_REFERENCE = LAYOUT.compatibility_evidence("project_rubocop_reference.json.gz")
 RUBOCOP_REFERENCE_VERSION = 2
 
 options = {
@@ -87,23 +88,23 @@ if options[:dry_run]
   exit
 end
 
-rust_status, status_error, status_ok = Open3.capture3(
+rust_status = Rustocop::ProcessRunner.capture(
   "git", "status", "--porcelain", "--", "crates/rustocop", chdir: ROOT
 )
-abort "could not inspect native Rust source: #{status_error}" unless status_ok.success?
-abort "native Rust source has uncommitted changes; commit it before auditing" unless rust_status.empty?
-rust_commit, commit_error, commit_ok = Open3.capture3(
+abort "could not inspect native Rust source: #{rust_status.stderr}" unless rust_status.success?
+abort "native Rust source has uncommitted changes; commit it before auditing" unless rust_status.stdout.empty?
+commit = Rustocop::ProcessRunner.capture(
   "git", "log", "-1", "--format=%H", "--", "crates/rustocop", chdir: ROOT
 )
-abort "could not determine the native Rust commit: #{commit_error}" unless commit_ok.success?
-rust_commit = rust_commit.strip
+abort "could not determine the native Rust commit: #{commit.stderr}" unless commit.success?
+rust_commit = commit.stdout.strip
 
 if options[:build]
-  build_output, build_error, built = Open3.capture3(
+  build = Rustocop::ProcessRunner.capture(
     "cargo", "build", "--release", "--manifest-path",
-    File.join(ROOT, "crates/rustocop/Cargo.toml"), chdir: ROOT
+    LAYOUT.rust_manifest, chdir: ROOT
   )
-  abort "Rust release build failed:\n#{build_output}\n#{build_error}" unless built.success?
+  abort "Rust release build failed:\n#{build.stdout}\n#{build.stderr}" unless build.success?
 end
 
 abort "native binary not found: #{options[:native]}" unless File.executable?(options[:native])
@@ -114,11 +115,11 @@ options[:report] ||= File.join(ROOT, "tmp/project-parity/project-gate-#{position
 options[:markdown] ||= options[:report].sub(/\.json\z/, ".md")
 
 projects = Rustocop::ProjectCorpus::PROJECTS.map do |project|
-  corpus = File.join(
-    ROOT, "tmp/project-benchmarks/corpora",
-    "#{project.fetch('name')}-#{project.fetch('revision')}"
-  )
-  abort "project corpus not found: #{corpus}; run script/benchmark_projects.rb once" unless File.directory?(corpus)
+  corpus = LAYOUT.project_corpus(project)
+  unless File.directory?(corpus)
+    abort "project corpus not found: #{corpus}; " \
+      "run PROJECT_BENCHMARK_PREPARE_ONLY=1 bundle exec ruby script/benchmark_projects.rb"
+  end
   project.merge("corpus" => corpus)
 end
 
@@ -131,15 +132,7 @@ rubocop = [
 ].freeze
 
 def capture(command)
-  started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-  stdout, stderr, status = Open3.capture3(*command, chdir: ROOT)
-  elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started
-  {
-    "stdout" => stdout,
-    "stderr" => stderr,
-    "exitstatus" => status.exitstatus,
-    "seconds" => elapsed
-  }
+  Rustocop::ProcessRunner.capture(*command, chdir: ROOT).to_h
 end
 
 def accepted?(result)
@@ -157,26 +150,6 @@ def rubocop_command(rubocop, common, corpus, cops)
     *rubocop, "--cache", "false", "--no-server", "--format", "json",
     "--only", cops.join(","), *common, corpus
   ]
-end
-
-def read_gzip_json(path)
-  Zlib::GzipReader.open(path) { |gzip| JSON.parse(gzip.read) }
-rescue Errno::ENOENT
-  abort "RuboCop reference not found: #{path}; rerun with --refresh-rubocop-reference"
-rescue Zlib::GzipFile::Error, JSON::ParserError => e
-  abort "invalid RuboCop reference #{path}: #{e.message}"
-end
-
-def write_gzip_json(path, value)
-  FileUtils.mkdir_p(File.dirname(path))
-  temporary = "#{path}.#{$$}.tmp"
-  Zlib::GzipWriter.open(temporary) do |gzip|
-    gzip.mtime = 0
-    gzip.write(JSON.generate(value))
-  end
-  File.rename(temporary, path)
-ensure
-  FileUtils.rm_f(temporary) if defined?(temporary)
 end
 
 def validate_reference!(reference, path, rubocop_version:, config_sha256:, projects:, cops:)
@@ -215,27 +188,6 @@ def isolate_crash(cops, &fails)
 end
 
 common = ["--config", options[:config]]
-def offense_signatures(report, corpus)
-  report.fetch("files").flat_map do |file|
-    reported = file.fetch("path")
-    absolute = Pathname(reported).absolute? ? reported : File.expand_path(reported, ROOT)
-    relative = Pathname(absolute).relative_path_from(Pathname(corpus)).to_s
-    file.fetch("offenses").map do |offense|
-      location = offense.fetch("location")
-      {
-        "path" => relative,
-        "cop" => offense.fetch("cop_name"),
-        "severity" => offense.fetch("severity"),
-        "message" => offense.fetch("message"),
-        "start_line" => location.fetch("start_line"),
-        "start_column" => location.fetch("start_column"),
-        "last_line" => location.fetch("last_line"),
-        "last_column" => location.fetch("last_column")
-      }
-    end
-  end
-end
-
 def encode_offenses(offenses, cops)
   paths = offenses.map { |offense| offense.fetch("path") }.uniq
   messages = offenses.map { |offense| offense.fetch("message") }.uniq
@@ -314,7 +266,9 @@ if options[:refresh_rubocop_reference]
              end
     abort "RuboCop failed: #{result.fetch('stderr')}" unless accepted?(result)
 
-    offenses = offense_signatures(JSON.parse(result.fetch("stdout")), project.fetch("corpus"))
+    offenses = Rustocop::DiagnosticSignatures.hashes_from_report(
+      JSON.parse(result.fetch("stdout")), corpus: project.fetch("corpus"), root: ROOT
+    )
     [project.fetch("name"), {
       "files" => Dir.glob(File.join(project.fetch("corpus"), "**/*.rb")).length,
       "seconds" => result.fetch("seconds"),
@@ -332,9 +286,15 @@ if options[:refresh_rubocop_reference]
     "rubocop_errors" => rubocop_errors,
     "projects" => reference_projects
   }
-  write_gzip_json(options[:rubocop_reference], rubocop_reference)
+  Rustocop::ArtifactStore.write_gzip_json(options[:rubocop_reference], rubocop_reference)
 else
-  rubocop_reference = read_gzip_json(options[:rubocop_reference])
+  begin
+    rubocop_reference = Rustocop::ArtifactStore.read_gzip_json(
+      options[:rubocop_reference], label: "RuboCop reference"
+    )
+  rescue Rustocop::ArtifactStore::Error => e
+    abort "#{e.message}; rerun with --refresh-rubocop-reference"
+  end
 end
 validate_reference!(
   rubocop_reference, options[:rubocop_reference], rubocop_version: rubocop_version,
@@ -423,7 +383,9 @@ project_results = projects.to_h do |project|
   rust_result = rust_results.fetch(project.fetch("name"))
   ruby_result = rubocop_reference.fetch("projects").fetch(project.fetch("name"))
 
-  rust_offenses = offense_signatures(JSON.parse(rust_result.fetch("stdout")), corpus)
+  rust_offenses = Rustocop::DiagnosticSignatures.hashes_from_report(
+    JSON.parse(rust_result.fetch("stdout")), corpus:, root: ROOT
+  )
   ruby_offenses = decode_offenses(ruby_result, rubocop_reference.fetch("cops")).select do |offense|
     survivor_lookup.key?(offense.fetch("cop"))
   end
@@ -497,8 +459,7 @@ report = {
   "projects" => project_results,
   "combined_by_cop" => combined
 }
-FileUtils.mkdir_p(File.dirname(options[:report]))
-File.write(options[:report], JSON.pretty_generate(report))
+Rustocop::ArtifactStore.write_json(options[:report], report)
 
 rows = cops.map do |cop|
   row = combined.fetch(cop)

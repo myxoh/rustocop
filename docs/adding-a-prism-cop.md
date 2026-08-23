@@ -286,7 +286,7 @@ ruby script/verify_cop.rb Style/Example
 It builds the current native binary, checks every captured diagnostic and
 correction case for that cop, and writes a categorized JSON report. A focused
 pass does not update public support status: the user-facing evidence matrix is
-generated only from a complete SHA-bound ten-project audit. Changes to
+generated only from a complete SHA-bound 50-project audit. Changes to
 traversal, diagnostics, correction ordering, or the registry still require the
 full upstream suite described in `CONTRIBUTING.md`.
 

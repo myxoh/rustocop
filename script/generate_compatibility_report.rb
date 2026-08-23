@@ -3,25 +3,28 @@
 require "fileutils"
 require "digest"
 require "json"
-require "open3"
 require "optparse"
 require "rbconfig"
 require "time"
+require_relative "../lib/rustocop/artifact_store"
 require_relative "../lib/rustocop/compatibility_status"
+require_relative "../lib/rustocop/process_runner"
+require_relative "../lib/rustocop/project_corpus"
+require_relative "../lib/rustocop/repository_layout"
 
-ROOT = File.expand_path("..", __dir__)
-EVIDENCE_ROOT = File.join(ROOT, "spec", "compatibility_evidence")
-DEFAULT_FIXTURE_SNAPSHOT = File.join(EVIDENCE_ROOT, "fixtures.json")
-DEFAULT_PROJECT_SNAPSHOT = File.join(EVIDENCE_ROOT, "projects.json")
-DEFAULT_OUTPUT = File.join(ROOT, "docs", "compatibility.md")
-RUST_COP_ROOT = File.join(ROOT, "crates", "rustocop", "src", "cops")
+LAYOUT = Rustocop::RepositoryLayout.default
+ROOT = LAYOUT.root
+DEFAULT_FIXTURE_SNAPSHOT = LAYOUT.compatibility_evidence("fixtures.json")
+DEFAULT_PROJECT_SNAPSHOT = LAYOUT.compatibility_evidence("projects.json")
+DEFAULT_OUTPUT = LAYOUT.path("docs", "compatibility.md")
+RUST_COP_ROOT = LAYOUT.path("crates", "rustocop", "src", "cops")
 ACTIVE_COPS = Rustocop::CompatibilityStatus.load(root: ROOT).built_in_cops.sort.freeze
 
 options = {
   fixture_snapshot: DEFAULT_FIXTURE_SNAPSHOT,
   project_snapshot: DEFAULT_PROJECT_SNAPSHOT,
   output: DEFAULT_OUTPUT,
-  native: File.join(ROOT, "crates", "rustocop", "target", "release", "rustocop"),
+  native: LAYOUT.native_binary,
   jobs: 8,
   check: false
 }
@@ -75,7 +78,7 @@ if options[:refresh_fixtures]
   unless options[:refresh_projects]
     build = [
       "cargo", "build", "--release", "--manifest-path",
-      File.join(ROOT, "crates", "rustocop", "Cargo.toml")
+      LAYOUT.rust_manifest
     ]
     abort "Rust release build failed" unless system(*build, chdir: ROOT)
   end
@@ -98,11 +101,9 @@ if options[:refresh_fixtures]
 end
 
 def read_json(path, label)
-  abort "#{label} not found: #{path}" unless File.file?(path)
-
-  JSON.parse(File.read(path))
-rescue JSON::ParserError => e
-  abort "invalid #{label} #{path}: #{e.message}"
+  Rustocop::ArtifactStore.read_json(path, label:)
+rescue Rustocop::ArtifactStore::Error => e
+  abort e.message
 end
 
 def evidence_time(report, path)
@@ -167,18 +168,13 @@ def project_snapshot(report, path)
   }
 end
 
-def formatted_json(value)
-  "#{JSON.pretty_generate(value)}\n"
-end
-
 def update_file(path, content, check:, label:)
   if check
     abort "#{label} is stale: #{path}" unless File.file?(path) && File.read(path) == content
     return
   end
 
-  FileUtils.mkdir_p(File.dirname(path))
-  File.write(path, content)
+  Rustocop::ArtifactStore.atomic_write(path, content)
 end
 
 if options[:fixture_report]
@@ -187,7 +183,8 @@ if options[:fixture_report]
     options[:fixture_report]
   )
   update_file(
-    options[:fixture_snapshot], formatted_json(imported),
+    options[:fixture_snapshot],
+    Rustocop::ArtifactStore.serialize_json(imported, trailing_newline: true),
     check: options[:check], label: "fixture snapshot"
   )
 end
@@ -200,7 +197,8 @@ if options[:project_report]
   abort "project report must cover all #{ACTIVE_COPS.length} active cops" unless
     imported.fetch("results").keys.sort == ACTIVE_COPS
   update_file(
-    options[:project_snapshot], formatted_json(imported),
+    options[:project_snapshot],
+    Rustocop::ArtifactStore.serialize_json(imported, trailing_newline: true),
     check: options[:check], label: "project snapshot"
   )
 end
@@ -249,11 +247,11 @@ end
 git_dates = {}
 implementation_paths.values.flatten.uniq.each do |path|
   relative = path.delete_prefix("#{ROOT}/")
-  stdout, stderr, status = Open3.capture3(
+  result = Rustocop::ProcessRunner.capture(
     "git", "log", "-1", "--format=%cI", "--", relative, chdir: ROOT
   )
-  abort "could not date implementation #{relative}: #{stderr}" unless status.success?
-  git_dates[path] = stdout.strip
+  abort "could not date implementation #{relative}: #{result.stderr}" unless result.success?
+  git_dates[path] = result.stdout.strip
 end
 
 def changed_implementation_paths(commit, native_sha256:, native_path:)
@@ -269,11 +267,11 @@ def changed_implementation_paths(commit, native_sha256:, native_path:)
     return {}
   end
 
-  stdout, stderr, status = Open3.capture3(
+  result = Rustocop::ProcessRunner.capture(
     "git", "diff", "--name-only", commit, "--", "crates/rustocop/src/cops", chdir: ROOT
   )
-  abort "could not compare implementation evidence with #{commit}: #{stderr}" unless status.success?
-  stdout.lines.map(&:chomp).to_h { |path| [path, true] }
+  abort "could not compare implementation evidence with #{commit}: #{result.stderr}" unless result.success?
+  result.stdout.lines.map(&:chomp).to_h { |path| [path, true] }
 end
 
 fixture_changes = changed_implementation_paths(
@@ -393,6 +391,15 @@ summary_rows = [
 end
 
 table_rows = rows.map { |row| "| #{row.join(' | ')} |" }
+configured_project_count = Rustocop::ProjectCorpus::PROJECTS.length
+project_corpus_status = if projects.fetch("project_count") == configured_project_count
+                          "This evidence covers the complete configured #{configured_project_count}-project corpus."
+                        else
+                          "The configured corpus now contains #{configured_project_count} pinned projects. " \
+                            "The project metrics below remain the last completed " \
+                            "#{projects.fetch('project_count')}-project checkpoint and must be refreshed " \
+                            "before they are described as #{configured_project_count}-project parity."
+                        end
 report = <<~MARKDOWN
   # RuboCop compatibility evidence
 
@@ -411,6 +418,8 @@ report = <<~MARKDOWN
   #{projects.fetch('project_count')} projects and #{projects.fetch('ruby_files')} Ruby files.
   Fixture source: #{evidence_source.call(fixtures)}. Project source:
   #{evidence_source.call(projects)}.
+
+  #{project_corpus_status}
 
   ## Overall
 

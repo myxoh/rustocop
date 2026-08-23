@@ -2,7 +2,7 @@
 
 Generated from the same complete audit as [the evidence matrix](cop-support.md).
 Evidence updated at `2026-08-23T09:13:26-04:00`.
-This queue contains only current ten-project failures; it does not use the old
+This queue contains only failures from that 10-project audit; it does not use the old
 Verified/Heuristic qualification labels or captured-case pass counts.
 
 The gap is unmatched complete diagnostic signatures, not the difference

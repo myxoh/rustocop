@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "yaml"
+require_relative "repository_layout"
 
 module Rustocop
   class CompatibilityStatus
@@ -19,15 +20,15 @@ module Rustocop
     end
 
     def self.status_path(root, version)
-      File.join(root, "spec/upstream/rubocop-#{version}/status.yml")
+      RepositoryLayout.new(root).upstream(version, "status.yml")
     end
 
     def self.hardening_path(root)
-      File.join(root, "spec/hardening/status.yml")
+      RepositoryLayout.new(root).path("spec", "hardening", "status.yml")
     end
 
     def self.pending_path(root, version)
-      File.join(root, "spec/upstream/rubocop-#{version}/intentionally_pending_cops.yml")
+      RepositoryLayout.new(root).upstream(version, "intentionally_pending_cops.yml")
     end
 
     def initialize(root:, version:, data:, hardening_data: { "cops" => {} }, pending_data: nil)
@@ -48,7 +49,7 @@ module Rustocop
 
     def heuristic_cops
       @heuristic_cops ||= begin
-        path = File.join(root, "spec/upstream/rubocop-#{version}/remaining_cops.yml")
+        path = RepositoryLayout.new(root).upstream(version, "remaining_cops.yml")
         YAML.safe_load_file(path).fetch("cops").filter_map do |entry|
           entry.fetch("cop") if entry.fetch("state") == "heuristic"
         end.freeze

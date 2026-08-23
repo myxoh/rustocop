@@ -2,19 +2,22 @@
 
 require "fileutils"
 require "json"
-require "open3"
 require "optparse"
 require "pathname"
 require "prism"
 require "tmpdir"
 
+require_relative "../lib/rustocop/diagnostic_signatures"
+require_relative "../lib/rustocop/process_runner"
 require_relative "../lib/rustocop/project_corpus"
+require_relative "../lib/rustocop/repository_layout"
 
-ROOT = Pathname.new(__dir__).join("..").expand_path
-FIXTURE_ROOT = ROOT.join("spec/fixtures/project_parity_regressions")
+LAYOUT = Rustocop::RepositoryLayout.default
+ROOT = Pathname.new(LAYOUT.root)
+FIXTURE_ROOT = Pathname.new(LAYOUT.project_regressions)
 MANIFEST = FIXTURE_ROOT.join("mismatches.tsv")
-CONFIG = ROOT.join("benchmark/project-rubocop.yml")
-NATIVE = ROOT.join("crates/rustocop/target/release/rustocop")
+CONFIG = Pathname.new(LAYOUT.benchmark_config)
+NATIVE = Pathname.new(LAYOUT.native_binary)
 
 options = { jobs: 8, refresh_invalid: false }
 OptionParser.new do |parser|
@@ -27,33 +30,26 @@ end.parse!
 report_path = ARGV.shift or abort "missing project-parity report"
 report = JSON.parse(File.read(report_path))
 
-Offense = Data.define(:severity, :message, :line, :column, :last_line, :last_column)
 Candidate = Data.define(:cop, :kind, :project, :example)
 
 def signatures(output, cop)
   offenses = JSON.parse(output).fetch("files", []).flat_map { |file| file.fetch("offenses", []) }
   return if cop != "Lint/Syntax" && offenses.any? { |offense| offense.fetch("cop_name") == "Lint/Syntax" }
 
-  offenses.select { |offense| offense.fetch("cop_name") == cop }
-      .map do |offense|
-    location = offense.fetch("location")
-    Offense.new(
-      offense.fetch("severity"), offense.fetch("message"),
-      location.fetch("start_line"), location.fetch("start_column"),
-      location.fetch("last_line"), location.fetch("last_column")
-    )
-  end.tally
+  Rustocop::DiagnosticSignatures.for_cop({ "files" => [{ "path" => "input.rb", "offenses" => offenses }] }, cop)
+                                .map(&:location_tuple)
+                                .tally
 rescue JSON::ParserError, KeyError
   nil
 end
 
 def run_engine(command, cop, path)
-  stdout, stderr, status = Open3.capture3(
+  result = Rustocop::ProcessRunner.capture(
     *command, "--config", CONFIG.to_s, "--format", "json", "--only", cop, path
   )
-  return unless [0, 1].include?(status.exitstatus) && stderr.empty?
+  return unless result.accepted?(0, 1) && result.stderr.empty?
 
-  signatures(stdout, cop)
+  signatures(result.stdout, cop)
 end
 
 def reproduces?(source, cop, kind, relative_path, rubocop, rustocop)
@@ -133,10 +129,7 @@ workers = Array.new([options.fetch(:jobs), candidates.length].min) do
       key, examples = queue.pop(true)
       isolated = examples.lazy.filter_map do |candidate|
         project = project_metadata.fetch(candidate.project)
-        corpus = ROOT.join(
-          "tmp/project-benchmarks/corpora",
-          "#{candidate.project}-#{project.fetch('revision')}"
-        )
+        corpus = Pathname.new(LAYOUT.project_corpus(project))
         source_path = candidate.example.fetch(0)
         full_path = corpus.join(source_path)
         next unless full_path.file?

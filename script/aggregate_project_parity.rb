@@ -1,12 +1,13 @@
 # frozen_string_literal: true
 
-require "fileutils"
-require "json"
 require "optparse"
 require "rubocop"
 require "time"
+require_relative "../lib/rustocop/artifact_store"
+require_relative "../lib/rustocop/repository_layout"
 
-ROOT = File.expand_path("..", __dir__)
+LAYOUT = Rustocop::RepositoryLayout.default
+ROOT = LAYOUT.root
 options = {
   input: File.join(ROOT, "tmp/project-parity/batches/*.json"),
   report: File.join(ROOT, "tmp/project-parity/all-cops.json"),
@@ -22,7 +23,13 @@ end.parse!
 
 paths = Dir[options[:input]].sort
 abort "no project-gate reports matched #{options[:input]}" if paths.empty?
-reports = paths.map { |path| JSON.parse(File.read(path)).merge("report_path" => path) }
+reports = paths.map do |path|
+  begin
+    Rustocop::ArtifactStore.read_json(path, label: "project-gate report").merge("report_path" => path)
+  rescue Rustocop::ArtifactStore::Error => e
+    abort e.message
+  end
+end
 commits = reports.map { |report| report.fetch("rust_commit") }.uniq
 versions = reports.map { |report| report.fetch("rubocop_version") }.uniq
 abort "project-gate reports use multiple Rust commits" unless commits.one?
@@ -63,8 +70,7 @@ payload = {
   "timing_seconds" => timing,
   "combined_by_cop" => ordered.to_h
 }
-FileUtils.mkdir_p(File.dirname(options[:report]))
-File.write(options[:report], JSON.pretty_generate(payload))
+Rustocop::ArtifactStore.write_json(options[:report], payload)
 
 exact = ordered.select { |_cop, row| row.fetch("classification") == "project_exact" }
 failures = ordered.select { |_cop, row| %w[crash rubocop_error].include?(row.fetch("classification")) }
@@ -125,8 +131,7 @@ markdown = <<~MARKDOWN
   | ---: | --- | ---: | ---: | ---: | --- |
   #{rows.join("\n")}
 MARKDOWN
-FileUtils.mkdir_p(File.dirname(options[:markdown]))
-File.write(options[:markdown], markdown)
+Rustocop::ArtifactStore.atomic_write(options[:markdown], markdown)
 
 puts "Aggregated #{combined.length} cops from #{reports.length} reports."
 puts "Summary: #{summary.sort.map { |key, value| "#{key}=#{value}" }.join(', ')}"

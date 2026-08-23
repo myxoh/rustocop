@@ -16,6 +16,8 @@ evidence was updated at `2026-08-23T09:13:26-04:00` from
 Fixture source: `67b6005782c5129ccae2b445a14897777bc8649e`. Project source:
 `67b6005782c5129ccae2b445a14897777bc8649e`.
 
+The configured corpus now contains 50 pinned projects. The project metrics below remain the last completed 10-project checkpoint and must be refreshed before they are described as 50-project parity.
+
 ## Overall
 
 | Measure | Result | Percent |

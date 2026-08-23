@@ -1,6 +1,6 @@
 # Real-project performance benchmark
 
-This benchmark measures sustained parsing and cop execution on the same ten
+This benchmark measures sustained parsing and cop execution on the same 50
 pinned repositories used by the correctness audit. It is a performance tool,
 not a source of compatibility status: `docs/real-project-parity.md` owns current
 complete-signature results.
@@ -52,7 +52,7 @@ Style/StringLiterals (EnforcedStyle: double_quotes)
 ```
 
 No custom cops or extension gems are loaded. A new result should replace the
-historical table only after the full ten-project run completes in isolation and
+historical table only after the full 50-project run completes in isolation and
 its commit and binary digest are recorded.
 
 ## Corpus construction
@@ -70,6 +70,16 @@ are preserved, both engines must inspect the expected file count, and RuboCop
 must produce at least one offense.
 
 ## Reproducing
+
+Prepare all 50 pinned corpora without running the benchmark:
+
+```sh
+PROJECT_BENCHMARK_PREPARE_ONLY=1 \
+  bundle exec ruby script/benchmark_projects.rb
+```
+
+The prepared corpus contains 85,472 Ruby files. The preparation command is
+idempotent and reuses the immutable archives and completed filtered corpora.
 
 Run this only when the machine can remain otherwise idle:
 

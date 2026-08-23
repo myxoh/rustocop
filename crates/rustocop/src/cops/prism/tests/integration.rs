@@ -19,7 +19,7 @@ fn partitions_cops_by_the_work_they_perform() {
     };
 
     assert_eq!(
-        indices_for(&registry.source_cops),
+        indices_for(&registry.phases.source),
         [
             "Lint/Syntax",
             "Lint/DuplicateMagicComment",
@@ -27,10 +27,10 @@ fn partitions_cops_by_the_work_they_perform() {
         ]
     );
     assert_eq!(
-        indices_for(&registry.node_cops),
+        indices_for(&registry.phases.nodes),
         ["Security/Eval", "Security/CompoundHash"]
     );
-    assert_eq!(indices_for(&registry.parse_error_cops), ["Lint/Syntax"]);
+    assert_eq!(indices_for(&registry.phases.parse_errors), ["Lint/Syntax"]);
 }
 
 #[test]

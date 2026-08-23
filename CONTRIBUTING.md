@@ -7,7 +7,7 @@
    compare complete RuboCop diagnostics and corrected source.
 3. Turn every real-project discrepancy into a minimized, provenance-backed
    fixture so it cannot recur silently.
-4. Run the cop across all ten pinned projects before making a compatibility
+4. Run the cop across all 50 pinned projects before making a compatibility
    claim. Representative examples and aggregate offense counts are insufficient.
 
 Use evidence labels precisely:
@@ -15,7 +15,7 @@ Use evidence labels precisely:
 - **registered** means only that the native registry advertises the cop;
 - **fixture-validated** means the RuboCop-derived fixture corpus passes,
   including corrections where applicable;
-- **project-exact** means complete diagnostic signatures match on all ten pinned
+- **project-exact** means complete diagnostic signatures match on all 50 pinned
   projects for one committed Rust binary.
 
 Never turn a focused audit into a repository-wide claim. If the full 606-cop
@@ -112,7 +112,7 @@ in `spec/project_parity_mismatches_spec.rb`. A fix must make its pending example
 unexpectedly pass, then move that row into `manifest.tsv`.
 
 After unit and upstream checks pass, commit the Rust source before running the
-ten-project gate:
+50-project gate:
 
 ```sh
 bundle exec ruby script/audit_project_parity.rb \
