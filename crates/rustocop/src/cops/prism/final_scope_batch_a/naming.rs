@@ -82,15 +82,9 @@ impl ShadowedArgumentScopes {
                 .reads
                 .iter()
                 .filter(|read| {
-                    (read.name == parameter.name
+                    read.name == parameter.name
                         || (read.implicit
-                            && (implicit_references || read.implicit_for_blocks)))
-                        && (read.implicit
-                            || !events.reference_exclusions.iter().any(|(name, range)| {
-                                *name == parameter.name
-                                    && range.start <= read.position
-                                    && read.position < range.end
-                            }))
+                            && (implicit_references || read.implicit_for_blocks))
                 })
                 .collect::<Vec<_>>();
             if references.is_empty() {
@@ -109,22 +103,29 @@ impl ShadowedArgumentScopes {
                     location_known = false;
                     continue;
                 }
+                let assignment_reference_range = events
+                    .reference_exclusions
+                    .iter()
+                    .find(|(name, range)| {
+                        *name == parameter.name
+                            && range.start <= assignment.range.start
+                            && assignment.range.end <= range.end
+                    })
+                    .map(|(_, range)| range);
                 if references
                     .iter()
                     .any(|reference| {
-                        (reference.implicit && self.ignore_implicit)
-                            || events
-                                .reference_exclusions
-                                .iter()
-                                .find(|(name, range)| {
-                                    reference.implicit
-                                        && *name == parameter.name
-                                        && range.start < assignment.range.start
-                                        && range.start <= reference.position
-                                        && reference.position < range.end
-                                })
-                                .map_or(reference.position, |(_, range)| range.start)
-                                <= assignment.range.start
+                        if reference.implicit && self.ignore_implicit {
+                            return true;
+                        }
+                        if assignment_reference_range.is_some_and(|range| {
+                            range.start <= reference.position && reference.position < range.end
+                        }) {
+                            return reference.implicit
+                                && assignment_reference_range
+                                    .is_some_and(|range| range.start < assignment.range.start);
+                        }
+                        reference.position <= assignment.range.start
                     })
                 {
                     break;
