@@ -243,6 +243,9 @@ fn multiline_if_then(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
         return;
     };
     let Some(then_keyword) = then_keyword else { return };
+    if then_keyword.as_slice() != b"then" {
+        return;
+    }
     if statements.is_some_and(|statements| {
         context.source_file().same_line(
             then_keyword.start_offset(),
