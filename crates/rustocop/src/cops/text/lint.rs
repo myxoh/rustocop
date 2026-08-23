@@ -70,6 +70,15 @@ fn check_small_line_cops(
     offenses: &mut Vec<Offense>,
 ) {
     let mut begin_without_rescue = Vec::new();
+    let next_statement_is_definition = (0..lines.len())
+        .map(|index| {
+            lines[index + 1..]
+                .iter()
+                .map(|line| line.body.trim_start())
+                .find(|line| !line.trim().is_empty() && !line.starts_with('#'))
+                .is_some_and(|line| line.starts_with("def "))
+        })
+        .collect::<Vec<_>>();
 
     for (index, line) in lines.iter_mut().enumerate() {
         let original = line.body.clone();
@@ -84,7 +93,14 @@ fn check_small_line_cops(
             options,
             offenses,
         );
-        check_trailing_attribute_comma(index, line, &original, options, offenses);
+        check_trailing_attribute_comma(
+            index,
+            line,
+            &original,
+            next_statement_is_definition[index],
+            options,
+            offenses,
+        );
 
         check_end_block(index, line, trimmed, indentation, options, offenses);
 
@@ -244,15 +260,17 @@ fn check_trailing_attribute_comma(
     index: usize,
     line: &mut SourceLine,
     original: &str,
+    next_statement_is_definition: bool,
     options: &InspectionConfig,
     offenses: &mut Vec<Offense>,
 ) {
     let trimmed = original.trim_start();
     if !options.cop_enabled("Lint/TrailingCommaInAttributeDeclaration")
-        || !["attr_reader", "attr_writer", "attr_accessor"]
+        || !["attr_reader", "attr_writer", "attr_accessor", "attr"]
             .iter()
             .any(|keyword| trimmed.starts_with(keyword))
         || !trimmed.ends_with(',')
+        || !next_statement_is_definition
     {
         return;
     }
