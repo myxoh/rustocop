@@ -2149,11 +2149,46 @@ fn operator_layouts(line: &str) -> Vec<(usize, usize, usize, usize)> {
     }
     let code = &line[..ruby_comment_start(line).unwrap_or(line.len())];
     let mut index = 0;
+    let mut quote = None;
     while index < code.len() {
-        if code.as_bytes()[index] == b'/' && code[..index].trim_end().ends_with('~') {
-            index += code[index + 1..]
-                .find('/')
-                .map_or(code.len() - index, |closing| closing + 2);
+        if !code.is_char_boundary(index) {
+            index += 1;
+            continue;
+        }
+        let byte = code.as_bytes()[index];
+        let character_width = code[index..]
+            .chars()
+            .next()
+            .map_or(1, char::len_utf8);
+        if let Some(delimiter) = quote {
+            if byte == b'\\' {
+                index += 1;
+                if index < code.len() {
+                    index += code[index..]
+                        .chars()
+                        .next()
+                        .map_or(1, char::len_utf8);
+                }
+                continue;
+            }
+            if byte == delimiter {
+                quote = None;
+            }
+            index += character_width;
+            continue;
+        }
+        if matches!(byte, b'\'' | b'"' | b'`') {
+            quote = Some(byte);
+            index += 1;
+            continue;
+        }
+        if byte == b'/' && slash_starts_regexp(code, index) {
+            quote = Some(b'/');
+            index += 1;
+            continue;
+        }
+        if !byte.is_ascii() {
+            index += character_width;
             continue;
         }
         let Some(operator) = spacing_operator_at(code, index) else {
@@ -2164,7 +2199,12 @@ fn operator_layouts(line: &str) -> Vec<(usize, usize, usize, usize)> {
         if !operator_is_non_binary(code, index, end, operator) {
             let whitespace_start = code[..index]
                 .rfind(|character: char| !character.is_ascii_whitespace())
-                .map_or(index, |at| at + 1);
+                .map_or(index, |at| {
+                    at + code[at..]
+                        .chars()
+                        .next()
+                        .map_or(1, char::len_utf8)
+                });
             let rhs_start = end
                 + code[end..]
                     .find(|character: char| !character.is_ascii_whitespace())
