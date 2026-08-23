@@ -15,7 +15,9 @@ fn empty_method(node: &ruby_prism::DefNode<'_>, context: &mut CopContext<'_, '_>
         return;
     };
     let before_end = &context.source()[location.start_offset()..end.start_offset()];
-    if before_end.lines().skip(1).any(|line| line.contains('#')) {
+    let through_end_line = &context.source()
+        [location.start_offset()..file.line_range(end.start_offset()).end];
+    if through_end_line.lines().any(|line| line.contains('#')) {
         return;
     }
     let style = context.policy().enforced_style("compact").to_string();
