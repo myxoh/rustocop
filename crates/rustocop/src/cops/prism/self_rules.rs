@@ -189,7 +189,6 @@ fn local_name_conflicts(name: &[u8], offense_start: usize, context: &CopContext<
                 .locals()
                 .iter()
                 .any(|local| local.as_slice() == name)
-                || subtree_binds_name(&program.statements().as_node(), name, true, None)
         } else {
             false
         }
