@@ -502,46 +502,85 @@ fn declaration_in_same_conditional_branch(
     context: &CopContext<'_, '_>,
 ) -> bool {
     for ancestor in context.ancestors() {
-        let selected = if let Some(conditional) = ancestor.as_if_node() {
-            conditional
-                .statements()
-                .and_then(|statements| {
-                    location_contains(statements.location(), target).then(|| statements.location())
-                })
-                .or_else(|| {
-                    conditional.subsequent().and_then(|branch| {
-                        location_contains(branch.location(), target).then(|| branch.location())
-                    })
-                })
+        let (selected, declaration_branch) = if let Some(conditional) = ancestor.as_if_node() {
+            let branches = [
+                conditional
+                    .statements()
+                    .map(|statements| location_offsets(statements.location())),
+                conditional
+                    .subsequent()
+                    .map(|branch| location_offsets(branch.location())),
+            ];
+            (
+                branches
+                    .iter()
+                    .flatten()
+                    .find(|branch| branch.contains(&target))
+                    .cloned(),
+                branches
+                    .iter()
+                    .flatten()
+                    .find(|branch| branch.contains(&declaration))
+                    .cloned(),
+            )
         } else if let Some(conditional) = ancestor.as_unless_node() {
-            conditional
-                .statements()
-                .and_then(|statements| {
-                    location_contains(statements.location(), target).then(|| statements.location())
-                })
-                .or_else(|| {
-                    conditional.else_clause().and_then(|branch| {
-                        location_contains(branch.location(), target).then(|| branch.location())
-                    })
-                })
+            let branches = [
+                conditional
+                    .statements()
+                    .map(|statements| location_offsets(statements.location())),
+                conditional
+                    .else_clause()
+                    .map(|branch| location_offsets(branch.location())),
+            ];
+            (
+                branches
+                    .iter()
+                    .flatten()
+                    .find(|branch| branch.contains(&target))
+                    .cloned(),
+                branches
+                    .iter()
+                    .flatten()
+                    .find(|branch| branch.contains(&declaration))
+                    .cloned(),
+            )
         } else if let Some(case) = ancestor.as_case_node() {
-            case.conditions()
+            let branches = case
+                .conditions()
                 .iter()
-                .find_map(|branch| {
-                    location_contains(branch.location(), target).then(|| branch.location())
-                })
-                .or_else(|| {
-                    case.else_clause().and_then(|branch| {
-                        location_contains(branch.location(), target).then(|| branch.location())
-                    })
-                })
+                .map(|branch| location_offsets(branch.location()))
+                .chain(
+                    case.else_clause()
+                        .map(|branch| location_offsets(branch.location())),
+                )
+                .collect::<Vec<_>>();
+            let selected = branches
+                .iter()
+                .find(|branch| branch.contains(&target))
+                .cloned();
+            let declaration_branch = branches
+                .iter()
+                .find(|branch| branch.contains(&declaration))
+                .cloned();
+            if context.related_config_value("AllCops", "ParserEngine") == Some("parser_prism") {
+                if declaration_branch.is_some() {
+                    continue;
+                }
+                if case
+                    .predicate()
+                    .is_some_and(|predicate| location_contains(predicate.location(), declaration))
+                {
+                    return false;
+                }
+            }
+            (selected, declaration_branch)
         } else {
-            None
+            continue;
         };
         let Some(selected) = selected else { continue };
-        if location_contains(ancestor.location(), declaration)
-            && !location_contains(selected, declaration)
-        {
+        if declaration_branch.is_some_and(|branch| {
+            branch.start != selected.start || branch.end != selected.end
+        }) {
             return false;
         }
     }
@@ -550,6 +589,10 @@ fn declaration_in_same_conditional_branch(
 
 fn location_contains(location: ruby_prism::Location<'_>, offset: usize) -> bool {
     location.start_offset() <= offset && offset < location.end_offset()
+}
+
+fn location_offsets(location: ruby_prism::Location<'_>) -> std::ops::Range<usize> {
+    location.start_offset()..location.end_offset()
 }
 
 fn shadowing_parameters(
