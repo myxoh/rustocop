@@ -28,7 +28,7 @@ fn endless_method(context: &mut CopContext<'_, '_>) {
             ) {
                 continue;
             }
-            let last = endless_method_expression_end(&lines, index);
+            let last = endless_method_expression_end(&lines, index, def_column + equal);
             let multiline = last > index;
             if !multiline && style != "disallow" {
                 continue;
@@ -139,7 +139,11 @@ fn endless_method_equal(definition: &str) -> Option<usize> {
     })
 }
 
-fn endless_method_expression_end(lines: &[(usize, &str)], index: usize) -> usize {
+fn endless_method_expression_end(
+    lines: &[(usize, &str)],
+    index: usize,
+    equal: usize,
+) -> usize {
     if lines[index].1.contains(" = begin") {
         return lines[index + 1..]
             .iter()
@@ -153,6 +157,18 @@ fn endless_method_expression_end(lines: &[(usize, &str)], index: usize) -> usize
             _ => depth,
         })
     };
+    if lines[index].1[equal + 1..].trim().is_empty() {
+        let mut depth = 0_isize;
+        for (relative, (_, line)) in lines[index + 1..].iter().enumerate() {
+            depth += delimiter_delta(line);
+            if relative == 0 && depth == 0 {
+                return index + 1;
+            }
+            if depth <= 0 {
+                return index + 1 + relative;
+            }
+        }
+    }
     let mut depth = delimiter_delta(lines[index].1);
     if depth > 0 {
         for (relative, (_, line)) in lines[index + 1..].iter().enumerate() {
