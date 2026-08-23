@@ -570,12 +570,20 @@ fn modifier_has_following_statement(node: &Node<'_>, context: &CopContext<'_, '_
         .is_some_and(|line| {
             let keyword = line.split_whitespace().next();
             if keyword == Some("else") {
-                return context
+                let only_statement = context
                     .ancestors()
                     .iter()
                     .rev()
                     .find_map(Node::as_statements_node)
                     .is_some_and(|statements| statements.body().len() == 1);
+                let line_start = file.line_range(node.location().start_offset()).start;
+                let follows_branch_opening = context.source()[..line_start]
+                    .lines()
+                    .rev()
+                    .map(str::trim)
+                    .find(|line| !line.is_empty() && !line.starts_with('#'))
+                    .is_some_and(|line| line.starts_with("if ") || line.starts_with("unless "));
+                return only_statement || follows_branch_opening;
             }
             !matches!(keyword, Some("end" | "elsif" | "rescue" | "ensure" | "when"))
         })
