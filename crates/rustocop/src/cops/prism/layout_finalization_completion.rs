@@ -4,7 +4,7 @@ define_cops! {
     EmptyComment => "Layout/EmptyComment" => source(empty_comment),
     EmptyLineAfterMagicComment => "Layout/EmptyLineAfterMagicComment" => source(empty_line_after_magic_comment),
     SpaceAroundEqualsInParameterDefault => "Layout/SpaceAroundEqualsInParameterDefault" => source(space_around_parameter_equals),
-    SpaceInLambdaLiteral => "Layout/SpaceInLambdaLiteral" => source(space_in_lambda_literal),
+    SpaceInLambdaLiteral => "Layout/SpaceInLambdaLiteral" => node(as_lambda_node, space_in_lambda_literal),
     TrailingEmptyLines => "Layout/TrailingEmptyLines" => source(trailing_empty_lines),
     TrailingBodyOnMethodDefinition => "Style/TrailingBodyOnMethodDefinition" => node(as_def_node, trailing_method_body),
 }
@@ -140,37 +140,35 @@ fn is_magic_comment(line: &str) -> bool {
         || matches!(line, "# rbs_inline: enabled" | "# rbs_inline: disabled")
 }
 
-fn space_in_lambda_literal(context: &mut CopContext<'_, '_>) {
+fn space_in_lambda_literal(
+    node: &ruby_prism::LambdaNode<'_>,
+    context: &mut CopContext<'_, '_>,
+) {
     let require_space = context.policy().enforced_style("require_no_space") == "require_space";
-    let source = context.source();
-    let mut search = 0;
-    while let Some(relative) = source[search..].find("->") {
-        let arrow = search + relative;
-        let after = arrow + 2;
-        let spaces = source[after..]
-            .bytes()
-            .take_while(|byte| *byte == b' ')
-            .count();
-        if source.as_bytes().get(after + spaces) != Some(&b'(') {
-            search = after;
-            continue;
-        }
-        let end = matching_paren_end(source, after + spaces).unwrap_or(after + spaces + 1);
-        if require_space && spaces == 0 {
-            context.insert(
-                "Use a space between `->` and `(` in lambda literals.",
-                arrow..end,
-                after,
-                " ",
-            );
-        } else if !require_space && spaces > 0 {
-            context.remove(
-                "Do not use spaces between `->` and `(` in lambda literals.",
-                after..after + spaces,
-                after..after + spaces,
-            );
-        }
-        search = after;
+    let Some(arguments) = node
+        .parameters()
+        .and_then(|parameters| parameters.as_block_parameters_node())
+    else {
+        return;
+    };
+    let (Some(opening), Some(closing)) = (arguments.opening_loc(), arguments.closing_loc()) else {
+        return;
+    };
+    let arrow = node.operator_loc();
+    let between = arrow.end_offset()..opening.start_offset();
+    if require_space && between.is_empty() {
+        context.insert(
+            "Use a space between `->` and `(` in lambda literals.",
+            arrow.start_offset()..closing.end_offset(),
+            arrow.end_offset(),
+            " ",
+        );
+    } else if !require_space && !between.is_empty() {
+        context.remove(
+            "Do not use spaces between `->` and `(` in lambda literals.",
+            between.clone(),
+            between,
+        );
     }
 }
 
@@ -285,21 +283,4 @@ fn trailing_method_body(node: &ruby_prism::DefNode<'_>, context: &mut CopContext
         "Place the first line of a multi-line method definition's body on its own line.",
         context,
     );
-}
-
-fn matching_paren_end(source: &str, open: usize) -> Option<usize> {
-    let mut depth = 0usize;
-    for (relative, byte) in source.as_bytes()[open..].iter().enumerate() {
-        match byte {
-            b'(' => depth += 1,
-            b')' => {
-                depth = depth.checked_sub(1)?;
-                if depth == 0 {
-                    return Some(open + relative + 1);
-                }
-            }
-            _ => {}
-        }
-    }
-    None
 }
