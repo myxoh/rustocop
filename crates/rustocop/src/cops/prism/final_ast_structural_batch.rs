@@ -4208,10 +4208,15 @@ fn safe_navigation_chain<'pr>(
     if calls.len() > context.config_usize("MaxChainLength", 2) {
         return None;
     }
-    if calls.len() > 1
-        && context.related_config_value("Lint/SafeNavigationChain", "Enabled") != Some("true")
-    {
-        return None;
+    if calls.len() > 1 {
+        let disabled_by_default = context
+            .related_config_value("AllCops", "DisabledByDefault")
+            == Some("true");
+        if disabled_by_default
+            || context.related_config_value("Lint/SafeNavigationChain", "Enabled") != Some("true")
+        {
+            return None;
+        }
     }
     let first = calls.first()?;
     let first_operator = first.call_operator_loc()?;
