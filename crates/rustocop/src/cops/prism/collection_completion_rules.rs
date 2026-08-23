@@ -145,14 +145,7 @@ fn collection_compact(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
         let Some(body) = block.body() else {
             return;
         };
-        let body = context.source_file().node(&body);
-        if !body.contains("nil?") {
-            false
-        } else if matches!(method, b"reject" | b"reject!") {
-            !body.contains('!')
-        } else {
-            body.contains('!')
-        }
+        collection_compact_block_matches(&block, &body, method, context.source_file())
     };
     if !matches {
         return;
@@ -163,6 +156,36 @@ fn collection_compact(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
         offense,
         preferred,
     );
+}
+
+fn collection_compact_block_matches(
+    block: &ruby_prism::BlockNode<'_>,
+    body: &Node<'_>,
+    method: &[u8],
+    file: SourceFile<'_>,
+) -> bool {
+    let body = file.node(body).chars().filter(|ch| !ch.is_whitespace()).collect::<String>();
+    let parameter = block
+        .parameters()
+        .and_then(|parameters| parameters.as_block_parameters_node())
+        .and_then(|parameters| parameters.parameters())
+        .and_then(|parameters| parameters.requireds().last())
+        .and_then(|parameter| parameter.as_required_parameter_node())
+        .map(|parameter| String::from_utf8_lossy(parameter.name().as_slice()).into_owned())
+        .unwrap_or_else(|| {
+            if body.contains("_1") {
+                "_1".to_string()
+            } else {
+                "it".to_string()
+            }
+        });
+    let nil = format!("{parameter}.nil?");
+    let safe_nil = format!("{parameter}&.nil?");
+    if matches!(method, b"reject" | b"reject!") {
+        body == nil || body == safe_nil
+    } else {
+        body == format!("!{nil}") || body == format!("{safe_nil}&.!")
+    }
 }
 
 fn receiver_uses_allowed_name(node: &Node<'_>, context: &CopContext<'_, '_>) -> bool {
