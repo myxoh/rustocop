@@ -6,10 +6,10 @@ define_cops! {
 }
 
 fn combinable_loops(context: &mut CopContext<'_, '_>) {
-    let parsed = context
-        .source_file()
-        .lines()
-        .map(|(offset, line)| parse_combinable_loop(offset, line))
+    let lines = context.source_file().lines().collect::<Vec<_>>();
+    let parsed = lines
+        .iter()
+        .map(|(offset, line)| parse_combinable_loop(*offset, line))
         .collect::<Vec<_>>();
     let mut index = 0;
     while index < parsed.len() {
@@ -90,6 +90,128 @@ fn combinable_loops(context: &mut CopContext<'_, '_>) {
         }
         index = group_end;
     }
+
+    report_multiline_combinable_loops(&lines, context);
+}
+
+struct MultilineCombinableLoop {
+    identity: String,
+    parameters: String,
+    start: usize,
+    body_start: usize,
+    closing_line_start: usize,
+    end: usize,
+    indent: usize,
+}
+
+fn report_multiline_combinable_loops(
+    lines: &[(usize, &str)],
+    context: &mut CopContext<'_, '_>,
+) {
+    let loops = lines
+        .iter()
+        .enumerate()
+        .filter_map(|(index, _)| parse_multiline_combinable_loop(lines, index))
+        .collect::<Vec<_>>();
+    let source = context.source();
+    let mut index = 0;
+    while index < loops.len() {
+        let first = &loops[index];
+        let mut group_end = index + 1;
+        while group_end < loops.len() {
+            let previous = &loops[group_end - 1];
+            let candidate = &loops[group_end];
+            if candidate.indent != first.indent
+                || candidate.identity != first.identity
+                || !only_trivia(&source[previous.end..candidate.start])
+            {
+                break;
+            }
+            group_end += 1;
+        }
+        if group_end == index + 1 {
+            index += 1;
+            continue;
+        }
+
+        let same_parameters = loops[index..group_end]
+            .iter()
+            .all(|candidate| candidate.parameters == first.parameters);
+        let replacement = same_parameters.then(|| {
+            let last = &loops[group_end - 1];
+            let mut combined = source[first.start..first.closing_line_start].to_string();
+            for candidate in &loops[index + 1..group_end] {
+                combined.push_str(&source[candidate.body_start..candidate.closing_line_start]);
+            }
+            combined.push_str(&source[first.closing_line_start..first.end]);
+            (first.start..last.end, combined)
+        });
+
+        for candidate in &loops[index + 1..group_end] {
+            let offense = candidate.start..candidate.end;
+            if let Some((edit, combined)) = replacement.as_ref() {
+                context.replace(
+                    "Combine this loop with the previous loop.",
+                    offense,
+                    edit.clone(),
+                    combined.clone(),
+                );
+            } else {
+                context.report("Combine this loop with the previous loop.", offense);
+            }
+        }
+        index = group_end;
+    }
+}
+
+fn parse_multiline_combinable_loop(
+    lines: &[(usize, &str)],
+    index: usize,
+) -> Option<MultilineCombinableLoop> {
+    let (offset, line) = lines[index];
+    let source = line.trim_start();
+    let indent = line.len() - source.len();
+    let opening = source.rfind(" do")?;
+    if source[opening + 3..].contains(" end") {
+        return None;
+    }
+    let call = source[..opening].trim_end();
+    let method = call
+        .rsplit_once('.')
+        .map_or(call, |(_, method)| method)
+        .split(['(', ' '])
+        .next()?;
+    if !method.starts_with("each") && !method.ends_with("_each") {
+        return None;
+    }
+    let parameters = source[opening + 3..].trim().to_string();
+    let closing_index = (index + 1..lines.len()).find(|candidate| {
+        let candidate_line = lines[*candidate].1;
+        let trimmed = candidate_line.trim_start();
+        candidate_line.len() - trimmed.len() == indent
+            && (trimmed == "end" || trimmed.starts_with("end "))
+    })?;
+    if closing_index == index + 1 {
+        return None;
+    }
+    let closing_line = lines[closing_index].1;
+    let closing_line_start = lines[closing_index].0;
+    Some(MultilineCombinableLoop {
+        identity: call.to_string(),
+        parameters,
+        start: offset + indent,
+        body_start: lines[index + 1].0,
+        closing_line_start,
+        end: closing_line_start + closing_line.len() - closing_line.trim_start().len() + 3,
+        indent,
+    })
+}
+
+fn only_trivia(source: &str) -> bool {
+    source.lines().all(|line| {
+        let line = line.trim();
+        line.is_empty() || line.starts_with('#') || line == "end"
+    })
 }
 
 struct CombinableLoop<'source> {
