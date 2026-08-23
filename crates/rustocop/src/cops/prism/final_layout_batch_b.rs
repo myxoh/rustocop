@@ -2008,6 +2008,8 @@ fn ruby_comment_start(line: &str) -> Option<usize> {
             quote = None;
         } else if quote.is_none() && matches!(byte, b'\'' | b'"' | b'`') {
             quote = Some(byte);
+        } else if quote.is_none() && byte == b'/' && slash_starts_regexp(line, index) {
+            quote = Some(byte);
         } else if quote.is_none() && byte == b'#' {
             return Some(index);
         }
@@ -2095,8 +2097,9 @@ fn operator_is_non_binary(source: &str, start: usize, end: usize, operator: &str
     }
     let predicate_suffix = source[..start]
         .chars()
-        .next_back()
-        .is_some_and(|character| character.is_alphabetic() || character == '_');
+        .rev()
+        .take_while(|character| character.is_alphanumeric() || *character == '_')
+        .any(|character| character.is_alphabetic() || character == '_');
     if operator == "?"
         && (predicate_suffix
             || after.starts_with([':', '?', '('])
@@ -2122,8 +2125,12 @@ fn operator_is_non_binary(source: &str, start: usize, end: usize, operator: &str
     }
     if matches!(operator, "+" | "-" | "!" | "~")
         && (before.is_empty()
-            || before.ends_with(['(', '[', '{', ',', '=', ':', '|', '>'])
-            || before.ends_with("<<"))
+            || before.ends_with(['(', '[', '{', ',', '=', ':', '|', '>', '<', '?'])
+            || before.ends_with("<<")
+            || before
+                .split_ascii_whitespace()
+                .next_back()
+                .is_some_and(|word| matches!(word, "return" | "next" | "break" | "when")))
     {
         return true;
     }
