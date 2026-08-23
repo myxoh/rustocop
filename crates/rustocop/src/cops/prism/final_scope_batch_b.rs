@@ -1009,7 +1009,8 @@ impl Cop for MethodName {
         if matches!(
             call_name(&call),
             b"attr" | b"attr_reader" | b"attr_writer" | b"attr_accessor"
-        ) {
+        ) && call.receiver().is_none()
+        {
             let issue = arguments.iter().find_map(|argument| {
                 method_name_literal(argument)
                     .and_then(|name| method_identifier_message(&name, &context))
@@ -1025,10 +1026,12 @@ impl Cop for MethodName {
             return;
         }
         let selected: Vec<Node<'_>> = match call_name(&call) {
-            b"define_method" | b"define_singleton_method" => {
+            b"define_method" | b"define_singleton_method" if call.receiver().is_none() => {
                 arguments.into_iter().take(1).collect()
             }
-            b"alias_method" if arguments.len() == 2 => arguments.into_iter().take(1).collect(),
+            b"alias_method" if call.receiver().is_none() && arguments.len() == 2 => {
+                arguments.into_iter().take(1).collect()
+            }
             b"new" if method_name_constant_receiver(&call, b"Struct") => {
                 let skip = arguments
                     .first()
@@ -1142,14 +1145,38 @@ fn method_identifier_message(name: &str, context: &CopContext<'_, '_>) -> Option
     }
     let style = context.policy().enforced_style("snake_case");
     let core = name.trim_end_matches(['?', '!', '=']);
+    let mut characters = core.chars();
+    let first = characters.next();
     let invalid = if style == "camelCase" {
-        core.contains('_')
-            || core
-                .bytes()
-                .next()
-                .is_some_and(|byte| byte.is_ascii_uppercase())
+        first.is_none_or(|character| {
+            if character.is_ascii() {
+                !character.is_ascii_lowercase()
+            } else {
+                !character.is_alphabetic()
+            }
+        }) || characters.any(|character| {
+            if character.is_ascii() {
+                !character.is_ascii_alphanumeric()
+            } else {
+                !character.is_alphanumeric()
+            }
+        })
     } else {
-        core.bytes().any(|byte| byte.is_ascii_uppercase())
+        first.is_none_or(|character| {
+            if character.is_ascii() {
+                !character.is_ascii_lowercase() && character != '_'
+            } else {
+                !character.is_alphabetic()
+            }
+        }) || characters.any(|character| {
+            if character.is_ascii() {
+                !character.is_ascii_lowercase()
+                    && !character.is_ascii_digit()
+                    && character != '_'
+            } else {
+                !character.is_alphanumeric()
+            }
+        })
     };
     if invalid {
         Some(format!("Use {style} for method names."))
