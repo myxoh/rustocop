@@ -110,13 +110,18 @@ fn chained_bracket_call(call: &CallNode<'_>, ancestors: &[Node<'_>]) -> bool {
         return true;
     }
 
-    ancestors
+    let parent = ancestors
         .iter()
         .rev()
-        .find_map(Node::as_call_node)
-        .is_some_and(|parent| {
+        .find(|ancestor| ancestor.as_arguments_node().is_none());
+    parent.is_some_and(|parent| {
+        parent.as_call_node().is_some_and(|parent| {
             !parent.is_safe_navigation() && matches!(call_name(&parent), b"[]" | b"[]=")
         })
+            || parent.as_index_operator_write_node().is_some()
+            || parent.as_index_or_write_node().is_some()
+            || parent.as_index_and_write_node().is_some()
+    })
 }
 
 struct RedundantArrayFlatten;
