@@ -491,7 +491,7 @@ fn double_negation_return_value(node: &CallNode<'_>, context: &CopContext<'_, '_
             prefix.contains("define_method") || prefix.contains("define_singleton_method")
         })
         .and_then(|block| block.body());
-    let Some(body) = definition_body.or(define_method_body) else {
+    let Some(body) = define_method_body.or(definition_body) else {
         return false;
     };
     let Some((last, sequence_body)) = return_body_last_with_sequence(body) else {
@@ -531,13 +531,19 @@ fn double_negation_return_value(node: &CallNode<'_>, context: &CopContext<'_, '_
             || prefix.starts_with('[')
             || prefix.starts_with('{'))
             && !nested_in_call;
+        let nested_elsif = context.source()
+            [conditional.location().start_offset()..node.location().start_offset()]
+            .lines()
+            .any(|line| line.trim_start().starts_with("elsif "));
+        let conditional_last_line = line_at(context.source(), conditional.location().end_offset())
+            .saturating_sub(usize::from(nested_elsif && sequence_body));
         (!standalone_or_collection
             || conditional_branch_tail(
                 context.source(),
                 node.location().end_offset(),
                 conditional.location().end_offset(),
             ))
-            && reference_end <= conditional.location().end_offset()
+            && line_at(context.source(), reference_end) <= conditional_last_line
     } else {
         let child = if sequence_body {
             Some((last, false))
