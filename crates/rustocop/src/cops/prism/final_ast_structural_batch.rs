@@ -3855,12 +3855,20 @@ fn safe_navigation_if(node: &ruby_prism::IfNode<'_>, context: &mut CopContext<'_
     let ternary = node.if_keyword_loc().is_none()
         && node.then_keyword_loc().is_some()
         && node.end_keyword_loc().is_none();
-    let then_branch = node.statements().and_then(|body| body.body().first());
+    let then_branch = node.statements().and_then(|body| {
+        (body.body().len() == 1)
+            .then(|| body.body().first())
+            .flatten()
+    });
     let else_branch = node
         .subsequent()
         .and_then(|subsequent| subsequent.as_else_node())
         .and_then(|else_node| else_node.statements())
-        .and_then(|body| body.body().first());
+        .and_then(|body| {
+            (body.body().len() == 1)
+                .then(|| body.body().first())
+                .flatten()
+        });
     let (checked, body) = if ternary {
         let Some(then_branch) = then_branch else {
             return;
@@ -3907,7 +3915,11 @@ fn safe_navigation_unless(node: &ruby_prism::UnlessNode<'_>, context: &mut CopCo
     if node.else_clause().is_some() {
         return;
     }
-    let Some(body) = node.statements().and_then(|body| body.body().first()) else {
+    let Some(body) = node.statements().and_then(|body| {
+        (body.body().len() == 1)
+            .then(|| body.body().first())
+            .flatten()
+    }) else {
         return;
     };
     let checked = if let Some(checked) = nil_checked_receiver(&node.predicate()) {
