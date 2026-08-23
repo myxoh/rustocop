@@ -226,6 +226,7 @@ fn check_useless_else(
     } else if trimmed == "else"
         && begin_without_rescue.last().copied() == Some(true)
         && options.cop_enabled("Lint/UselessElseWithoutRescue")
+        && !options.target_ruby_version.at_least(2, 6)
     {
         push_offense(
             offenses,
