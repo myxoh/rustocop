@@ -4,7 +4,6 @@ use super::*;
 
 declare_source_cops! {
     DuplicateRescueException => "Lint/DuplicateRescueException" => duplicate_rescue,
-    ImplicitRuntimeError => "Style/ImplicitRuntimeError" => implicit_runtime_error,
     EnvHome => "Style/EnvHome" => env_home,
     AsciiComments => "Style/AsciiComments" => ascii_comments,
 }
@@ -29,28 +28,6 @@ fn duplicate_rescue(source: &str, context: &mut Reporter<'_>) {
             }
             cursor = relative + name.len();
         }
-    }
-}
-
-fn implicit_runtime_error(source: &str, context: &mut Reporter<'_>) {
-    for (offset, line) in source_lines(source) {
-        let trimmed = line.trim_start();
-        let method = if trimmed.starts_with("raise '") || trimmed.starts_with("raise \"") {
-            "raise"
-        } else if trimmed.starts_with("fail '") || trimmed.starts_with("fail \"") {
-            "fail"
-        } else {
-            continue;
-        };
-        let start = offset + line.len() - trimmed.len();
-        let end = if line.trim_end().ends_with('\\') {
-            source[offset + line.len() + 1..]
-                .find('\n')
-                .map_or(source.len(), |next| offset + line.len() + 1 + next)
-        } else {
-            offset + line.len()
-        };
-        context.report(format!("Use `{method}` with an explicit exception class and message, rather than just a message."), start..end);
     }
 }
 

@@ -19,7 +19,6 @@ declare_source_cops! {
     EmptyHeredoc => "Style/EmptyHeredoc" => empty_heredoc,
     SpaceInsideRangeLiteral => "Layout/SpaceInsideRangeLiteral" => space_inside_range,
     SpaceAfterMethodName => "Layout/SpaceAfterMethodName" => space_after_method_name,
-    RedundantConstantBase => "Style/RedundantConstantBase" => redundant_constant_base,
 }
 
 fn ruby_version_globals(source: &str, reporter: &mut Reporter<'_>) {

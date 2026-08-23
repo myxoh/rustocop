@@ -1,7 +1,7 @@
 ---
 version: 1
 rubocop_version: 1.87.0
-updated_at: '2026-08-23T08:29:39-04:00'
+updated_at: '2026-08-23T11:47:43-04:00'
 reason: Existing implementations are intentionally withdrawn because source-pattern, placeholder, or incomplete structural behavior does not match the pinned real-project corpus.
 cops:
   - Layout/ArgumentAlignment
@@ -51,10 +51,8 @@ cops:
   - Lint/AssignmentInCondition
   - Lint/ConstantResolution
   - Lint/CopDirectiveSyntax
-  - Lint/DuplicateHashKey
   - Lint/DuplicateRegexpCharacterClassElement
   - Lint/DuplicateRescueException
-  - Lint/InterpolationCheck
   - Lint/LiteralAssignmentInCondition
   - Lint/MissingCopEnableDirective
   - Lint/NoReturnInBeginEndBlocks
@@ -62,7 +60,6 @@ cops:
   - Lint/RedundantCopEnableDirective
   - Lint/RescueType
   - Lint/SymbolConversion
-  - Lint/TopLevelReturnWithArgument
   - Lint/UnusedMethodArgument
   - Lint/UselessAssignment
   - Lint/UselessConstantScoping
@@ -89,12 +86,10 @@ cops:
   - Style/FetchEnvVar
   - Style/FileWrite
   - Style/IfUnlessModifier
-  - Style/ImplicitRuntimeError
   - Style/InlineComment
   - Style/MethodCallWithArgsParentheses
   - Style/MethodCallWithoutArgsParentheses
   - Style/MissingElse
   - Style/MultilineTernaryOperator
   - Style/RedundantAssignment
-  - Style/RedundantConstantBase
   - Style/RedundantParentheses

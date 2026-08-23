@@ -115,29 +115,3 @@ pub(super) fn space_after_method_name(source: &str, reporter: &mut Reporter<'_>)
         }
     }
 }
-
-pub(super) fn redundant_constant_base(source: &str, reporter: &mut Reporter<'_>) {
-    if reporter.related_config_value("Lint/ConstantResolution", "Enabled") == Some("true") {
-        return;
-    }
-    let nested_class = source
-        .lines()
-        .map(str::trim_start)
-        .find(|line| !line.is_empty() && !line.starts_with('#'))
-        .is_some_and(|line| line.starts_with("class ") || line.starts_with("module "));
-    for start in all_offsets(source, "::") {
-        if start > 0
-            && (identifier_byte(source.as_bytes()[start - 1])
-                || source.as_bytes()[start - 1] == b':')
-        {
-            continue;
-        }
-        let line_start = source[..start].rfind('\n').map_or(0, |offset| offset + 1);
-        let prefix = source[line_start..start].trim();
-        let superclass = prefix.ends_with('<');
-        let singleton = source[..line_start].contains("class << self");
-        if start == 0 || superclass || singleton || !nested_class {
-            reporter.remove("Remove redundant `::`.", start..start + 2, start..start + 2);
-        }
-    }
-}

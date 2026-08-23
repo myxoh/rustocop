@@ -219,6 +219,7 @@ cop_modules!(
     rescue_rules,
     rescue_modifier_rules,
     rescue_standard_error_rules,
+    restored_structural_cops,
     return_nil_predicate_rules,
     ruby2_keywords_rules,
     lexical_rules,

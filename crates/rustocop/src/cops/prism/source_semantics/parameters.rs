@@ -21,47 +21,6 @@ pub(super) fn shared_mutable_default(context: &mut CopContext<'_, '_>) {
     }
 }
 
-pub(super) fn top_level_return_with_argument(context: &mut CopContext<'_, '_>) {
-    const MESSAGE: &str = "Top level return with argument detected.";
-    let source = context.source();
-    let mut method_depth = 0_usize;
-    for (line_start, line) in source_lines(source) {
-        let trimmed = line.trim_start();
-        if trimmed.starts_with("def ") {
-            method_depth += 1;
-            continue;
-        }
-        if method_depth > 0 {
-            if trimmed == "end" {
-                method_depth -= 1;
-            }
-            continue;
-        }
-        for (relative, _) in line.match_indices("return ") {
-            if relative > 0 && identifier_byte(line.as_bytes()[relative - 1]) {
-                continue;
-            }
-            if line[..relative].contains('{') && !line[..relative].contains('}') {
-                continue;
-            }
-            let tail = &line[relative + 7..];
-            if tail.starts_with("if ") || tail.starts_with("unless ") {
-                continue;
-            }
-            let argument_len = tail
-                .find(" if ")
-                .or_else(|| tail.find(" unless "))
-                .or_else(|| tail.find(';'))
-                .unwrap_or(tail.len());
-            if argument_len == 0 {
-                continue;
-            }
-            let offense = line_start + relative..line_start + relative + 7 + argument_len;
-            context.replace(MESSAGE, offense.clone(), offense, "return");
-        }
-    }
-}
-
 pub(super) fn optional_arguments(
     node: &ruby_prism::DefNode<'_>,
     context: &mut CopContext<'_, '_>,

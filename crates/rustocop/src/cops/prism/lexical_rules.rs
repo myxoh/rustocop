@@ -10,7 +10,6 @@ define_cops! {
     InitialIndentation => "Layout/InitialIndentation" => source(initial_indentation),
     DuplicateMagicComment => "Lint/DuplicateMagicComment" => source(duplicate_magic_comment),
     EmptyInterpolation => "Lint/EmptyInterpolation" => any_node(empty_interpolation),
-    InterpolationCheck => "Lint/InterpolationCheck" => source(interpolation_check),
     RequireRangeParentheses => "Lint/RequireRangeParentheses" => source(require_range_parentheses),
     AsciiIdentifiers => "Naming/AsciiIdentifiers" => source(ascii_identifiers),
     MultilineIfThen => "Style/MultilineIfThen" => any_node(multiline_if_then),
@@ -87,37 +86,6 @@ fn inside_percent_word_array(context: &CopContext<'_, '_>) -> bool {
             .and_then(|array| array.opening_loc())
             .is_some_and(|opening| matches!(opening.as_slice(), b"%W[" | b"%I["))
     })
-}
-
-fn interpolation_check(context: &mut CopContext<'_, '_>) {
-    const MESSAGE: &str = "Interpolation in single quoted string detected. Use double quoted strings if you need interpolation.";
-    let source = context.source();
-    for range in single_quoted_ranges(source) {
-        let content = &source[range.start + 1..range.end - 1];
-        let Some(open) = content.find("#{") else {
-            continue;
-        };
-        let Some(close) = content[open + 2..].find('}') else {
-            continue;
-        };
-        let expression = &content[open + 2..open + 2 + close];
-        if expression.is_empty()
-            || !expression
-                .bytes()
-                .all(|byte| identifier_byte(byte) || matches!(byte, b'.' | b'@' | b'$'))
-        {
-            continue;
-        }
-        let replacement = if content.contains('"') {
-            if unmatched_closing_brace(content) {
-                continue;
-            }
-            format!("%{{{content}}}")
-        } else {
-            format!("\"{content}\"")
-        };
-        context.replace(MESSAGE, range.clone(), range, replacement);
-    }
 }
 
 fn require_range_parentheses(context: &mut CopContext<'_, '_>) {

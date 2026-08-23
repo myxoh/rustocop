@@ -106,6 +106,7 @@ fully_compatible_cops:
 - Lint/DuplicateBranch
 - Lint/DuplicateCaseCondition
 - Lint/DuplicateElsifCondition
+- Lint/DuplicateHashKey
 - Lint/DuplicateMagicComment
 - Lint/DuplicateMatchPattern
 - Lint/DuplicateMethods
@@ -136,6 +137,7 @@ fully_compatible_cops:
 - Lint/IncompatibleIoSelectWithFiberScheduler
 - Lint/IneffectiveAccessModifier
 - Lint/InheritException
+- Lint/InterpolationCheck
 - Lint/ItWithoutArgumentsInBlock
 - Lint/LambdaWithoutLiteralBlock
 - Lint/LiteralAsCondition
@@ -194,6 +196,7 @@ fully_compatible_cops:
 - Lint/Syntax
 - Lint/ToEnumArguments
 - Lint/ToJSON
+- Lint/TopLevelReturnWithArgument
 - Lint/TrailingCommaInAttributeDeclaration
 - Lint/TripleQuotes
 - Lint/UnderscorePrefixedVariableName
@@ -343,6 +346,7 @@ fully_compatible_cops:
 - Style/IfUnlessModifierOfIfUnless
 - Style/IfWithBooleanLiteralBranches
 - Style/IfWithSemicolon
+- Style/ImplicitRuntimeError
 - Style/InPatternThen
 - Style/InfiniteLoop
 - Style/InverseMethods
@@ -427,6 +431,7 @@ fully_compatible_cops:
 - Style/RedundantCapitalW
 - Style/RedundantCondition
 - Style/RedundantConditional
+- Style/RedundantConstantBase
 - Style/RedundantCurrentDirectoryInPath
 - Style/RedundantDoubleSplatHashBraces
 - Style/RedundantEach

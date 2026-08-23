@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 
 use super::*;
 
@@ -6,47 +6,11 @@ mod helpers;
 use helpers::*;
 
 define_cops! {
-    DuplicateHashKey => "Lint/DuplicateHashKey" => source(duplicate_hash_key),
     DuplicateSetElement => "Lint/DuplicateSetElement" => source(duplicate_set_element),
     NumericOperationWithConstantResult => "Lint/NumericOperationWithConstantResult" => source(numeric_constant_result),
     SymbolConversion => "Lint/SymbolConversion" => source(symbol_conversion),
     DoubleNegation => "Style/DoubleNegation" => call(double_negation),
     EmptyLiteral => "Style/EmptyLiteral" => source(empty_literal),
-}
-
-fn duplicate_hash_key(context: &mut CopContext<'_, '_>) {
-    let source = context.source();
-    let mut cursor = 0;
-    while let Some(open_relative) = source[cursor..].find('{') {
-        let open = cursor + open_relative;
-        let Some(close_relative) = source[open..].rfind('}') else {
-            break;
-        };
-        let close = open + close_relative;
-        let body = &source[open + 1..close];
-        let mut seen = HashMap::<String, usize>::new();
-        for (position, entry) in top_level_entries(body) {
-            let leading = entry.len() - entry.trim_start().len();
-            let trimmed = entry.trim();
-            let key = if let Some((key, _)) = trimmed
-                .split_once(" => ")
-                .or_else(|| trimmed.split_once("=>"))
-            {
-                key.trim()
-            } else if let Some((key, _)) = trimmed.split_once(':') {
-                key.trim()
-            } else {
-                continue;
-            };
-            if !key.is_empty() && seen.contains_key(key) {
-                let start = open + 1 + position + leading;
-                context.report("Duplicated key in hash literal.", start..start + key.len());
-            } else {
-                seen.insert(key.to_string(), position);
-            }
-        }
-        cursor = close + 1;
-    }
 }
 
 fn duplicate_set_element(context: &mut CopContext<'_, '_>) {

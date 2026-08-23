@@ -49,10 +49,8 @@ pub(crate) const INTENTIONALLY_PENDING_COP_NAMES: &[&str] = &[
     "Lint/AssignmentInCondition",
     "Lint/ConstantResolution",
     "Lint/CopDirectiveSyntax",
-    "Lint/DuplicateHashKey",
     "Lint/DuplicateRegexpCharacterClassElement",
     "Lint/DuplicateRescueException",
-    "Lint/InterpolationCheck",
     "Lint/LiteralAssignmentInCondition",
     "Lint/MissingCopEnableDirective",
     "Lint/NoReturnInBeginEndBlocks",
@@ -60,7 +58,6 @@ pub(crate) const INTENTIONALLY_PENDING_COP_NAMES: &[&str] = &[
     "Lint/RedundantCopEnableDirective",
     "Lint/RescueType",
     "Lint/SymbolConversion",
-    "Lint/TopLevelReturnWithArgument",
     "Lint/UnusedMethodArgument",
     "Lint/UselessAssignment",
     "Lint/UselessConstantScoping",
@@ -87,14 +84,12 @@ pub(crate) const INTENTIONALLY_PENDING_COP_NAMES: &[&str] = &[
     "Style/FetchEnvVar",
     "Style/FileWrite",
     "Style/IfUnlessModifier",
-    "Style/ImplicitRuntimeError",
     "Style/InlineComment",
     "Style/MethodCallWithArgsParentheses",
     "Style/MethodCallWithoutArgsParentheses",
     "Style/MissingElse",
     "Style/MultilineTernaryOperator",
     "Style/RedundantAssignment",
-    "Style/RedundantConstantBase",
     "Style/RedundantParentheses",
 ];
 
@@ -118,7 +113,7 @@ mod tests {
     #[test]
     fn public_inventory_is_sorted_unique_and_complete() {
         let names = cop_names();
-        assert_eq!(names.len(), 528);
+        assert_eq!(names.len(), 533);
         assert!(names.windows(2).all(|pair| pair[0] < pair[1]));
         assert!(INTENTIONALLY_PENDING_COP_NAMES
             .windows(2)
