@@ -26,6 +26,7 @@ fn block_alignment_node(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
             opening,
             block_start,
             block_column,
+            true,
             context,
         );
     }
@@ -264,6 +265,7 @@ fn block_alignment(node: &ruby_prism::BlockNode<'_>, context: &mut CopContext<'_
         opening,
         block_start,
         block_column,
+        false,
         context,
     );
 }
@@ -273,6 +275,7 @@ fn block_alignment_locations(
     opening: ruby_prism::Location<'_>,
     block_start: usize,
     block_column: usize,
+    prefer_block: bool,
     context: &mut CopContext<'_, '_>,
 ) {
     let file = context.source_file();
@@ -368,17 +371,21 @@ fn block_alignment_locations(
         block_column,
         block_start,
     );
-    let preferred = if style == "start_of_block" {
+    let preferred = if style == "start_of_block" || style == "either" && prefer_block {
         &block
     } else {
         &start
     };
-    let alternate =
-        if style == "either" && (start_line != opening_line || start_column != block_column) {
-            format!(" or {block}")
+    let alternate = if style == "either" && (start_line != opening_line || start_column != block_column)
+    {
+        if prefer_block {
+            format!(" or {start}")
         } else {
-            String::new()
-        };
+            format!(" or {block}")
+        }
+    } else {
+        String::new()
+    };
     let target = if style == "start_of_block" {
         block_column
     } else {
