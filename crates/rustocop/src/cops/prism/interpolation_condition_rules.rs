@@ -39,14 +39,13 @@ fn empty_branch_to_modifier(node: &ruby_prism::IfNode<'_>, context: &mut CopCont
     else {
         return;
     };
-    let (value, keyword) =
-        if empty_value(&else_value, context.source_file()) && literal_value(&if_value) {
-            (if_value, "if")
-        } else if empty_value(&if_value, context.source_file()) && literal_value(&else_value) {
-            (else_value, "unless")
-        } else {
-            return;
-        };
+    let (value, keyword) = if empty_value(&else_value, context.source_file()) {
+        (if_value, "if")
+    } else if empty_value(&if_value, context.source_file()) {
+        (else_value, "unless")
+    } else {
+        return;
+    };
     let replacement = format!(
         "{} {keyword} {}",
         context.source_file().node(&value),
@@ -114,11 +113,4 @@ fn empty_value(node: &Node<'_>, file: SourceFile<'_>) -> bool {
         || node
             .as_string_node()
             .is_some_and(|_| matches!(file.node(node), "''" | "\"\""))
-}
-
-fn literal_value(node: &Node<'_>) -> bool {
-    node.as_string_node().is_some()
-        || node.as_integer_node().is_some()
-        || node.as_float_node().is_some()
-        || node.as_symbol_node().is_some()
 }
