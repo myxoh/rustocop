@@ -2,7 +2,7 @@ use super::source_syntax::top_level_elements;
 use super::*;
 
 define_cops! {
-    ParameterLists => "Metrics/ParameterLists" => node(as_def_node, parameter_lists),
+    ParameterLists => "Metrics/ParameterLists" => any_node(parameter_lists),
     CollectionLiteralLength => "Metrics/CollectionLiteralLength" => any_node(collection_literal_length),
     BinaryOperatorParameterName => "Naming/BinaryOperatorParameterName" => node(as_def_node, binary_operator_parameter_name),
     BlockParameterName => "Naming/BlockParameterName" => source(block_parameter_name),
@@ -92,7 +92,18 @@ fn predicate_prefix(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
     context.report(format!("Rename `{name}` to `{replacement}`."), location);
 }
 
-fn parameter_lists(node: &ruby_prism::DefNode<'_>, context: &mut CopContext<'_, '_>) {
+fn parameter_lists(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
+    if let Some(definition) = node.as_def_node() {
+        parameter_lists_definition(&definition, context);
+    } else if let Some(block) = node.as_block_node() {
+        parameter_lists_block(&block, context);
+    }
+}
+
+fn parameter_lists_definition(
+    node: &ruby_prism::DefNode<'_>,
+    context: &mut CopContext<'_, '_>,
+) {
     if node.name().as_slice() == b"initialize"
         && context.ancestors().iter().any(|ancestor| {
             let source = context.source_file().at(&ancestor.location()).trim_start();
@@ -150,6 +161,47 @@ fn parameter_lists(node: &ruby_prism::DefNode<'_>, context: &mut CopContext<'_, 
         context.report(
             format!("Method has too many optional parameters. [{optional}/{optional_max}]"),
             node.location(),
+        );
+    }
+}
+
+fn parameter_lists_block(node: &ruby_prism::BlockNode<'_>, context: &mut CopContext<'_, '_>) {
+    let Some(parameters) = node
+        .parameters()
+        .and_then(|parameters| parameters.as_block_parameters_node())
+    else {
+        return;
+    };
+    if context.parent().and_then(Node::as_call_node).is_some_and(|call| {
+        matches!(call_name(&call), b"lambda" | b"proc")
+            || call_name(&call) == b"new"
+                && call
+                    .receiver()
+                    .is_some_and(|receiver| root_constant(Some(receiver), b"Proc"))
+    }) {
+        return;
+    }
+    let location = parameters.location();
+    let source = context.source_file().at(&location);
+    let inner = source
+        .strip_prefix('|')
+        .and_then(|value| value.strip_suffix('|'))
+        .unwrap_or(source);
+    let base = location.start_offset() + usize::from(source.starts_with('|'));
+    let ranges = top_level_elements(context.source(), base, base + inner.len());
+    let count_keywords = context.config_bool("CountKeywordArgs", true);
+    let count = ranges
+        .iter()
+        .filter(|range| {
+            let parameter = context.source()[(*range).clone()].trim();
+            !parameter.starts_with('&') && (count_keywords || !parameter.contains(':'))
+        })
+        .count();
+    let maximum = context.config_usize("Max", 5);
+    if count > maximum {
+        context.report(
+            format!("Avoid parameter lists longer than {maximum} parameters. [{count}/{maximum}]"),
+            location,
         );
     }
 }
