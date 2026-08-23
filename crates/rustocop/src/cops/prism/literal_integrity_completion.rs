@@ -511,12 +511,19 @@ fn double_negation_return_value(node: &CallNode<'_>, context: &CopContext<'_, '_
             && node.location().end_offset() <= ancestor.location().end_offset()
     });
     if let Some(conditional) = conditional {
-        let branch_tail = conditional_branch_tail(
-            context.source(),
-            node.location().end_offset(),
-            conditional.location().end_offset(),
-        );
-        branch_tail && last.location().end_offset() <= conditional.location().end_offset()
+        let line_start = context.source()[..node.location().start_offset()]
+            .rfind('\n')
+            .map_or(0, |offset| offset + 1);
+        let prefix = context.source()[line_start..node.location().start_offset()].trim();
+        let standalone_or_collection =
+            prefix.is_empty() || prefix.starts_with('[') || prefix.starts_with('{');
+        (!standalone_or_collection
+            || conditional_branch_tail(
+                context.source(),
+                node.location().end_offset(),
+                conditional.location().end_offset(),
+            ))
+            && last.location().end_offset() <= conditional.location().end_offset()
     } else {
         let child = if sequence_body {
             Some((last, false))
@@ -535,6 +542,9 @@ fn double_negation_return_value(node: &CallNode<'_>, context: &CopContext<'_, '_
 
 fn double_negation_last_child(node: Node<'_>) -> Option<(Node<'_>, bool)> {
     if let Some(call) = node.as_call_node() {
+        if let Some(block) = call.block().and_then(|block| block.as_block_node()) {
+            return block.body().map(|body| (body, false));
+        }
         if let Some(argument) = call
             .arguments()
             .and_then(|arguments| arguments.arguments().iter().last())
@@ -575,7 +585,9 @@ fn conditional_branch_tail(source: &str, node_end: usize, conditional_end: usize
         let line = line.trim();
         if line.is_empty()
             || line.starts_with('#')
-            || line.bytes().all(|byte| matches!(byte, b']' | b'}' | b')' | b','))
+            || line
+                .bytes()
+                .all(|byte| matches!(byte, b']' | b'}' | b')' | b','))
         {
             continue;
         }
