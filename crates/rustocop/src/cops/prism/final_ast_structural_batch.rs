@@ -1223,15 +1223,13 @@ impl Cop for ConditionalAssignment {
             let longest = source[range_for_node(node)]
                 .lines()
                 .map(|line| {
-                    if line.contains(&first.lhs) {
-                        line.trim_start().replacen(&first.lhs, "", 1).len()
-                    } else {
-                        line.len()
-                    }
+                    line.trim_start()
+                        .strip_prefix(&first.lhs)
+                        .map_or(line.len(), |rest| rest.trim_start().len())
                 })
                 .max()
                 .unwrap_or(0);
-            if longest + first.lhs.len() > maximum {
+            if longest + first.lhs.trim_end().len() + 1 > maximum {
                 return;
             }
         }
