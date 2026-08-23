@@ -602,7 +602,10 @@ fn first_argument_indentation(node: &Node<'_>, context: &mut CopContext<'_, '_>)
             return;
         };
         let name = call.name().as_slice();
-        if name.ends_with(b"=") || call.call_operator_loc().is_none() && is_operator_name(name) {
+        if name == b"[]"
+            || name.ends_with(b"=")
+            || call.call_operator_loc().is_none() && is_operator_name(name)
+        {
             return;
         }
         (first, call.location().start_offset(), true, Some(call))
