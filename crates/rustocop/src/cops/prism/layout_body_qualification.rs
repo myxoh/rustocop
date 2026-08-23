@@ -125,6 +125,18 @@ fn empty_around_accessor(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) 
     {
         return;
     }
+    let source = context.source();
+    let location = node.location();
+    let accessor_line_start = line_start(source, line_index(source, location.start_offset()));
+    if !source[accessor_line_start..location.start_offset()]
+        .trim()
+        .is_empty()
+        || node
+            .arguments()
+            .is_none_or(|arguments| arguments.arguments().is_empty())
+    {
+        return;
+    }
     if context
         .ancestors()
         .iter()
@@ -135,7 +147,6 @@ fn empty_around_accessor(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) 
         return;
     }
 
-    let source = context.source();
     let current_line = line_index(source, node.location().end_offset());
     if is_enable_directive(line(source, current_line + 1))
         && line(source, current_line + 2).is_empty()
@@ -158,7 +169,6 @@ fn empty_around_accessor(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) 
         return;
     }
 
-    let location = node.location();
     let mut insertion_line = current_line + 1;
     if is_enable_directive(line(source, insertion_line)) {
         insertion_line += 1;
