@@ -1829,7 +1829,7 @@ fn operator_spacing(context: &mut CopContext<'_, '_>) {
         if line.contains("<%") || line.contains("%>") {
             continue;
         }
-        let code_end = ruby_comment_start(line).unwrap_or(line.len());
+        let code_end = line.len();
         let code = &line[..code_end];
         let mut index = 0;
         let mut quote = None;
@@ -1857,20 +1857,39 @@ fn operator_spacing(context: &mut CopContext<'_, '_>) {
                     // The selected range is the enclosing interpolated literal,
                     // while this offset is executable Ruby inside `#{...}`.
                 } else {
-                let next_embedded = embedded_code_ranges
-                    .iter()
-                    .filter(|embedded| {
-                        absolute < embedded.start
-                            && range.start <= embedded.start
-                            && embedded.start < range.end
-                    })
-                    .map(|embedded| embedded.start)
-                    .min();
-                index = next_embedded
-                    .unwrap_or(range.end)
-                    .saturating_sub(line_offset)
-                    .min(code.len());
-                continue;
+                    let literal = &source[range.clone()];
+                    let heredoc_tail = literal.starts_with("<<")
+                        && line_offset <= range.start
+                        && range.start < line_offset + line.len()
+                        && literal.find('\n').is_some();
+                    if heredoc_tail {
+                        let marker_end = range.start
+                            + literal
+                                .bytes()
+                                .take_while(|byte| {
+                                    !byte.is_ascii_whitespace() && !matches!(byte, b',' | b')')
+                                })
+                                .count();
+                        if absolute < marker_end {
+                            index = marker_end.saturating_sub(line_offset).min(code.len());
+                            continue;
+                        }
+                    } else {
+                        let next_embedded = embedded_code_ranges
+                            .iter()
+                            .filter(|embedded| {
+                                absolute < embedded.start
+                                    && range.start <= embedded.start
+                                    && embedded.start < range.end
+                            })
+                            .map(|embedded| embedded.start)
+                            .min();
+                        index = next_embedded
+                            .unwrap_or(range.end)
+                            .saturating_sub(line_offset)
+                            .min(code.len());
+                        continue;
+                    }
                 }
             }
             if !code.is_char_boundary(index) {
@@ -1988,7 +2007,10 @@ fn operator_spacing(context: &mut CopContext<'_, '_>) {
                 }
                 format!("Surrounding space missing for operator `{operator}`.")
             } else if left_space.len() > 1 || right_space.len() > 1 {
-                if right_end == code.len() && code_end < line.len() {
+                if comment_ranges
+                    .iter()
+                    .any(|comment| comment.start == line_offset + right_end)
+                {
                     index = end;
                     continue;
                 }
@@ -2062,6 +2084,19 @@ fn unary_operator_offsets(source: &str) -> std::collections::HashSet<usize> {
                 self.0.insert(closing.start_offset());
             }
             ruby_prism::visit_block_parameters_node(self, node);
+        }
+
+        fn visit_rest_parameter_node(&mut self, node: &ruby_prism::RestParameterNode<'pr>) {
+            self.0.insert(node.operator_loc().start_offset());
+            ruby_prism::visit_rest_parameter_node(self, node);
+        }
+
+        fn visit_keyword_rest_parameter_node(
+            &mut self,
+            node: &ruby_prism::KeywordRestParameterNode<'pr>,
+        ) {
+            self.0.insert(node.operator_loc().start_offset());
+            ruby_prism::visit_keyword_rest_parameter_node(self, node);
         }
 
         fn visit_call_node(&mut self, node: &ruby_prism::CallNode<'pr>) {
@@ -2330,10 +2365,16 @@ fn operator_is_non_binary(source: &str, start: usize, end: usize, operator: &str
 fn operator_is_method_name(source: &str, operator_start: usize) -> bool {
     let indentation = source.len() - source.trim_start().len();
     let trimmed = &source[indentation..];
-    let Some(rest) = trimmed.strip_prefix("def ") else {
+    let (name_start, rest) = if let Some(rest) = trimmed.strip_prefix("def ") {
+        (indentation + "def ".len(), rest)
+    } else if let Some(definition) = source[..operator_start].rfind("def ") {
+        let name_start = definition + "def ".len();
+        return source[name_start..operator_start]
+            .chars()
+            .all(|character| !character.is_whitespace() && character != '(');
+    } else {
         return false;
     };
-    let name_start = indentation + "def ".len();
     let name_len = rest
         .find(|character: char| character.is_ascii_whitespace() || character == '(')
         .unwrap_or(rest.len());
@@ -2369,33 +2410,50 @@ fn operator_alignment_is_allowed(
     let next = source[after_line..]
         .lines()
         .find(|line| !line.trim().is_empty() && !line.trim_start().starts_with('#'));
-    let current_lhs = source[line_offset..line_offset + whitespace_start]
-        .trim_end()
-        .len();
-    let leading_excess = operator_start.saturating_sub(whitespace_start) > 1;
+    let current_line_end = source[line_offset..]
+        .find('\n')
+        .map_or(source.len(), |end| line_offset + end);
+    let current_line_source = &source[line_offset..current_line_end];
+    let current_lhs = current_line_source[..whitespace_start].trim_end().chars().count();
+    let operator_start_column = current_line_source[..operator_start].chars().count();
+    let operator_end_column = current_line_source[..operator_end].chars().count();
+    let rhs_start_column = current_line_source[..rhs_start].chars().count();
+    let mut leading_excess = operator_start.saturating_sub(whitespace_start) > 1;
     let trailing_excess = rhs_start.saturating_sub(operator_end) > 1;
     if operator == "=" && leading_excess {
-        let line_end = source[line_offset..]
-            .find('\n')
-            .map_or(source.len(), |end| line_offset + end);
-        let line = &source[line_offset..line_end];
-        let first_equal = operator_layouts(line)
+        let first_equal = operator_layouts(current_line_source)
             .into_iter()
-            .find(|layout| line[layout.0..layout.1].ends_with('='));
+            .find(|layout| current_line_source[layout.0..layout.1].ends_with('='));
         if first_equal.is_some_and(|layout| layout.0 != operator_start) {
             return false;
         }
+        if !assignment_leading_alignment_is_allowed(
+            source,
+            line_offset,
+            operator_end_column,
+        ) {
+            return false;
+        }
+        leading_excess = false;
     }
     let adjacent = [previous, next].into_iter().flatten().any(|line| {
         operator_layouts(line).into_iter().any(|layout| {
             let candidate = &line[layout.0..layout.1];
+            let candidate_start_column = line[..layout.0].chars().count();
+            let candidate_end_column = line[..layout.1].chars().count();
+            let candidate_lhs = line[..layout.2].trim_end().chars().count();
+            let candidate_rhs_column = line[..layout.3].chars().count();
             let leading_aligned = !leading_excess
-                || operator != "=" && candidate == operator && layout.0 == operator_start
-                || layout.1 == operator_end
+                || operator != "="
+                    && candidate == operator
+                    && candidate_start_column == operator_start_column
+                || candidate_end_column == operator_end_column
                     && ((operator.ends_with('=') && line[layout.0..layout.1].ends_with('='))
-                        || layout.2 != current_lhs);
+                        || candidate_lhs != current_lhs);
             let trailing_aligned = !trailing_excess
-                || layout.2 != current_lhs && (layout.3 == rhs_start || layout.1 == operator_end);
+                || candidate_lhs != current_lhs
+                    && (candidate_rhs_column == rhs_start_column
+                        || candidate_end_column == operator_end_column);
             leading_aligned && trailing_aligned
         })
     });
@@ -2410,6 +2468,48 @@ fn operator_alignment_is_allowed(
         operator,
     );
     adjacent || table
+}
+
+fn assignment_leading_alignment_is_allowed(
+    source: &str,
+    line_offset: usize,
+    operator_end_column: usize,
+) -> bool {
+    let lines = source.lines().collect::<Vec<_>>();
+    let current_line = source[..line_offset].bytes().filter(|byte| *byte == b'\n').count();
+    let current_indent = lines
+        .get(current_line)
+        .map_or(0, |line| line.len() - line.trim_start().len());
+    let candidate = |direction: isize| {
+        let mut position = current_line as isize + direction;
+        while let Some(line) = usize::try_from(position)
+            .ok()
+            .and_then(|position| lines.get(position))
+        {
+            position += direction;
+            if line.trim().is_empty() {
+                break;
+            }
+            if line.trim_start().starts_with('#') {
+                continue;
+            }
+            let indent = line.len() - line.trim_start().len();
+            if indent < current_indent {
+                break;
+            }
+            if indent == current_indent {
+                if let Some(layout) = operator_layouts(line)
+                    .into_iter()
+                    .find(|layout| line[layout.0..layout.1].ends_with('='))
+                {
+                    return Some(line[..layout.1].chars().count() == operator_end_column);
+                }
+            }
+        }
+        None
+    };
+
+    candidate(-1) == Some(true) || candidate(1).is_none_or(|aligned| aligned)
 }
 
 fn alignment_table_is_allowed(
@@ -2437,6 +2537,8 @@ fn alignment_table_is_allowed(
         .map_or(source.len(), |end| line_offset + end);
     let current_line = &source[line_offset..line_end];
     let current_indent = current_line.len() - current_line.trim_start().len();
+    let operator_end_column = current_line[..operator_end].chars().count();
+    let rhs_start_column = current_line[..rhs_start].chars().count();
     let first_aligned_operator = operator_layouts(current_line)
         .into_iter()
         .find(|layout| {
@@ -2456,16 +2558,21 @@ fn alignment_table_is_allowed(
         }
         operator_layouts(line).into_iter().any(|layout| {
             let candidate = &line[layout.0..layout.1];
-            let candidate_lhs = line[..layout.2].trim_end().len();
+            let candidate_lhs = line[..layout.2].trim_end().chars().count();
             let current_lhs = current_line[..operator_start]
                 .trim_end_matches(char::is_whitespace)
-                .len();
+                .chars()
+                .count();
             let different_width = candidate_lhs != current_lhs;
             let compatible = candidate == operator
                 || operator.ends_with('=') && (candidate.ends_with('=') || candidate == "<<")
                 || operator == "<<" && candidate.ends_with('=');
-            let leading_aligned = !leading_excess || compatible && layout.1 == operator_end;
-            let trailing_aligned = !trailing_excess || different_width && layout.3 == rhs_start;
+            let candidate_end_column = line[..layout.1].chars().count();
+            let candidate_rhs_column = line[..layout.3].chars().count();
+            let leading_aligned =
+                !leading_excess || compatible && candidate_end_column == operator_end_column;
+            let trailing_aligned =
+                !trailing_excess || different_width && candidate_rhs_column == rhs_start_column;
             leading_aligned && trailing_aligned
         })
     })

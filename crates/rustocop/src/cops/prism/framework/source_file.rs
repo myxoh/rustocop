@@ -320,6 +320,22 @@ impl<'source> SourceFile<'source> {
                 self.push(node.location());
             }
 
+            fn visit_integer_node(&mut self, node: &ruby_prism::IntegerNode<'pr>) {
+                self.push(node.location());
+            }
+
+            fn visit_float_node(&mut self, node: &ruby_prism::FloatNode<'pr>) {
+                self.push(node.location());
+            }
+
+            fn visit_rational_node(&mut self, node: &ruby_prism::RationalNode<'pr>) {
+                self.push(node.location());
+            }
+
+            fn visit_imaginary_node(&mut self, node: &ruby_prism::ImaginaryNode<'pr>) {
+                self.push(node.location());
+            }
+
             fn visit_interpolated_symbol_node(
                 &mut self,
                 node: &ruby_prism::InterpolatedSymbolNode<'pr>,

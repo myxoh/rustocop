@@ -38,6 +38,13 @@ links = {
   "docs"      => "documentation",
 }
 
+exponent = 1.0e-6
+handler = -> *_args { nil }
+object.instance_eval { def value=(value); value; end }
+path = <<~TEXT
+  #{home/"Documents"}
+TEXT
+
 where(:first, :second) do
   1       | 2
   100_000 | 3
