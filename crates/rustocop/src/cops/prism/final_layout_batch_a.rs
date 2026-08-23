@@ -905,10 +905,17 @@ impl Cop for ElseAlignment {
                             || ancestor.as_class_variable_write_node().is_some()
                             || ancestor.as_global_variable_write_node().is_some()
                             || ancestor.as_constant_write_node().is_some();
-                        assignment
-                            .then(|| ancestor.location())
-                            .or_else(|| ancestor.as_call_node().map(|call| call.location()))
-                            .or_else(|| ancestor.as_def_node().map(|def| def.def_keyword_loc()))
+                        assignment.then(|| ancestor.location())
+                    })
+                    .or_else(|| {
+                        ancestors.iter().rev().find_map(|ancestor| {
+                            ancestor
+                                .as_call_node()
+                                .map(|call| call.location())
+                                .or_else(|| {
+                                    ancestor.as_def_node().map(|def| def.def_keyword_loc())
+                                })
+                        })
                     })
                     .unwrap_or_else(|| rescue.keyword_loc())
             });
