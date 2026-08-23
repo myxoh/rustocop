@@ -3467,7 +3467,10 @@ fn anonymous_class_scope(ancestors: &[Node<'_>], source: &str) -> Option<(String
         });
     if let Some(name) = assigned_name {
         let name = name.trim_start_matches("::").to_string();
-        return Some((name.clone(), Some(format!("constant: {name}"))));
+        return Some((
+            name,
+            Some(format!("constant: {}", call.location().start_offset())),
+        ));
     }
 
     let enclosing = rubocop_parent_module_name(&ancestors[..call_index], source);
@@ -3483,7 +3486,13 @@ fn anonymous_class_scope(ancestors: &[Node<'_>], source: &str) -> Option<(String
         .iter()
         .rev()
         .take_while(|ancestor| ancestor.as_block_node().is_none())
-        .any(|ancestor| ancestor.as_ensure_node().is_some() || ancestor.as_rescue_node().is_some())
+        .any(|ancestor| {
+            ancestor.as_ensure_node().is_some()
+                || ancestor.as_rescue_node().is_some()
+                || ancestor
+                    .as_begin_node()
+                    .is_some_and(|begin| begin.ensure_clause().is_some())
+        })
     {
         return Some((base, None));
     }
