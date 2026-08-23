@@ -28,11 +28,17 @@ fn empty_node(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
     let parent_source = parent
         .map(|parent| context.source_file().at(&parent.location()))
         .unwrap_or_default();
-    let lambda_or_proc = parent_source.trim_start().starts_with("->")
-        || parent_source.trim_start().starts_with("lambda")
-        || parent_source.trim_start().starts_with("proc")
-        || parent_source.trim_start().starts_with("Proc.new")
-        || parent_source.trim_start().starts_with("::Proc.new");
+    let parent_source = parent_source.trim_start();
+    let named_proc = ["lambda", "proc", "Proc.new", "::Proc.new"]
+        .iter()
+        .any(|name| {
+            parent_source.strip_prefix(name).is_some_and(|rest| {
+                rest.starts_with(|character: char| {
+                    character.is_whitespace() || matches!(character, '(' | '{')
+                })
+            })
+        });
+    let lambda_or_proc = parent_source.starts_with("->") || named_proc;
     if lambda_or_proc && context.config_bool("AllowEmptyLambdas", true) {
         return;
     }
@@ -50,15 +56,7 @@ fn empty_node(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
         return;
     }
     let start = location.start_offset();
-    let end = if lambda_or_proc && block_source.contains('\n')
-        || block_source.contains('#') && !context.config_bool("AllowComments", true)
-    {
-        location.end_offset()
-    } else if block_source.contains('\n') {
-        line_end
-    } else {
-        node.location().end_offset()
-    };
+    let end = location.end_offset();
     context.report("Empty block detected.", start..end);
 }
 
