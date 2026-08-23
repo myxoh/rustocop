@@ -580,12 +580,43 @@ fn memoized_final_expression(body: &Node<'_>, candidate: &Node<'_>) -> bool {
     {
         return true;
     }
-    body.as_statements_node()
+    if let Some(last) = body
+        .as_statements_node()
         .and_then(|statements| statements.body().iter().last())
-        .is_some_and(|last| {
-            last.location().start_offset() == candidate.location().start_offset()
-                && last.location().end_offset() == candidate.location().end_offset()
-        })
+    {
+        return memoized_final_expression(&last, candidate);
+    }
+    if let Some(block) = body.as_block_node() {
+        return block
+            .body()
+            .is_some_and(|body| memoized_final_expression(&body, candidate));
+    }
+    if let Some(call) = body.as_call_node() {
+        return call
+            .block()
+            .and_then(|block| block.as_block_node())
+            .and_then(|block| block.body())
+            .is_some_and(|body| memoized_final_expression(&body, candidate));
+    }
+    if let Some(condition) = body.as_if_node() {
+        if let Some(subsequent) = condition.subsequent() {
+            return memoized_final_expression(&subsequent, candidate);
+        }
+        return condition
+            .statements()
+            .is_some_and(|statements| memoized_final_expression(&statements.as_node(), candidate));
+    }
+    if let Some(otherwise) = body.as_else_node() {
+        return otherwise
+            .statements()
+            .is_some_and(|statements| memoized_final_expression(&statements.as_node(), candidate));
+    }
+    if let Some(begin) = body.as_begin_node() {
+        return begin
+            .statements()
+            .is_some_and(|statements| memoized_final_expression(&statements.as_node(), candidate));
+    }
+    false
 }
 
 fn report_memoized_name(
