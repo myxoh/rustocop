@@ -54,6 +54,11 @@ fn empty_when(node: &WhenNode<'_>, context: &mut CopContext<'_, '_>) {
 }
 
 fn else_layout(node: &ElseNode<'_>, context: &mut CopContext<'_, '_>) {
+    if context.parent().is_none_or(|parent| {
+        parent.as_if_node().is_none() && parent.as_unless_node().is_none()
+    }) {
+        return;
+    }
     let Some(statements) = node.statements() else {
         return;
     };
