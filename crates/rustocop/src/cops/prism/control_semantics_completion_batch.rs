@@ -632,10 +632,14 @@ fn directly_nested_definition_offsets(source: &str) -> HashSet<usize> {
             let Some(statements) = body.and_then(|body| body.as_statements_node()) else {
                 return;
             };
-            for child in statements.body().iter() {
-                if child.as_class_node().is_some() || child.as_module_node().is_some() {
-                    self.offsets.insert(child.location().start_offset());
-                }
+            if statements.body().len() != 1 {
+                return;
+            }
+            let Some(child) = statements.body().first() else {
+                return;
+            };
+            if child.as_class_node().is_some() || child.as_module_node().is_some() {
+                self.offsets.insert(child.location().start_offset());
             }
         }
     }
