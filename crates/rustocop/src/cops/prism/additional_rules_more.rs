@@ -115,7 +115,10 @@ fn triple_quotes(source: &str, reporter: &mut Reporter<'_>) {
 }
 
 fn uri_escape_unescape(source: &str, reporter: &mut Reporter<'_>) {
-    if !reporter.config_bool("Enabled", true) {
+    if !reporter.config_bool("Enabled", true)
+        || reporter.related_config_value("AllCops", "DisabledByDefault") == Some("true")
+            && !reporter.related_config_explicit("Lint/UriEscapeUnescape", "Enabled")
+    {
         return;
     }
     for method in ["escape", "encode", "unescape", "decode"] {
