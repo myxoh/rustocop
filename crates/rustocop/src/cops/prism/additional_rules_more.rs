@@ -115,6 +115,9 @@ fn triple_quotes(source: &str, reporter: &mut Reporter<'_>) {
 }
 
 fn uri_escape_unescape(source: &str, reporter: &mut Reporter<'_>) {
+    if !reporter.config_bool("Enabled", true) {
+        return;
+    }
     for method in ["escape", "encode", "unescape", "decode"] {
         for prefix in ["::URI.", "URI."] {
             let needle = format!("{prefix}{method}(");
