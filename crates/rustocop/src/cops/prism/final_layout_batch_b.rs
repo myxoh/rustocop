@@ -2211,16 +2211,21 @@ fn operator_alignment_is_allowed(
                 || layout.2 != current_lhs && (layout.3 == rhs_start || layout.1 == operator_end);
             leading_aligned && trailing_aligned
         })
-    }) || operator.ends_with('=')
-        && !trailing_excess
+    }) || (matches!(operator, "|") || operator.ends_with('='))
         && source
             .as_bytes()
             .get(line_offset)
             .is_some_and(u8::is_ascii_whitespace)
         && source.lines().any(|line| {
-            operator_layouts(line)
-                .into_iter()
-                .any(|layout| layout.1 == operator_end && layout.2 != current_lhs)
+            operator_layouts(line).into_iter().any(|layout| {
+                let different_width = layout.2 != current_lhs;
+                let leading_aligned = !leading_excess
+                    || layout.1 == operator_end
+                        && (operator.ends_with('=') || different_width);
+                let trailing_aligned = !trailing_excess
+                    || layout.3 == rhs_start && different_width;
+                leading_aligned && trailing_aligned
+            })
         })
 }
 
