@@ -122,6 +122,7 @@ fn insecure_protocol_source(source: &str, reporter: &mut Reporter<'_>) {
 fn disjunctive_assignment(source: &str, reporter: &mut Reporter<'_>) {
     let mut in_initialize = false;
     let mut unsafe_call_seen = false;
+    let mut rescued_constructor = false;
     for (offset, line) in source_lines(source) {
         let trimmed = line.trim();
         if trimmed.strip_prefix("def initialize").is_some_and(|rest| {
@@ -129,12 +130,18 @@ fn disjunctive_assignment(source: &str, reporter: &mut Reporter<'_>) {
         }) {
             in_initialize = true;
             unsafe_call_seen = false;
+            rescued_constructor = constructor_has_rescue(source, offset, line);
             continue;
         }
         if in_initialize && trimmed == "end" {
             in_initialize = false;
         }
-        if in_initialize && !unsafe_call_seen && !trimmed.is_empty() && !trimmed.starts_with('#') {
+        if in_initialize
+            && !rescued_constructor
+            && !unsafe_call_seen
+            && !trimmed.is_empty()
+            && !trimmed.starts_with('#')
+        {
             let operator = trimmed.find("||=");
             let instance_variable = operator.is_some_and(|operator| {
                 let lhs = trimmed[..operator].trim();
@@ -159,6 +166,24 @@ fn disjunctive_assignment(source: &str, reporter: &mut Reporter<'_>) {
             }
         }
     }
+}
+
+fn constructor_has_rescue(source: &str, definition_offset: usize, definition_line: &str) -> bool {
+    let indentation = definition_line.len() - definition_line.trim_start().len();
+    for (offset, line) in source_lines(source) {
+        if offset <= definition_offset {
+            continue;
+        }
+        let trimmed = line.trim();
+        let line_indentation = line.len() - line.trim_start().len();
+        if trimmed == "end" && line_indentation <= indentation {
+            return false;
+        }
+        if trimmed.starts_with("rescue") && line_indentation == indentation {
+            return true;
+        }
+    }
+    false
 }
 
 fn refinement_import_methods(source: &str, reporter: &mut Reporter<'_>) {
