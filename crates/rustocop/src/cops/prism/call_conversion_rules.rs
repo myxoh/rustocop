@@ -321,6 +321,9 @@ fn exact_regexp_match(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
 }
 
 fn ip_addresses(node: &ruby_prism::StringNode<'_>, context: &mut CopContext<'_, '_>) {
+    if node.opening_loc().is_none() {
+        return;
+    }
     let value = String::from_utf8_lossy(node.unescaped());
     let default_unspecified = value == "::"
         && !context.related_config_explicit("Style/IpAddresses", "AllowedAddresses");
