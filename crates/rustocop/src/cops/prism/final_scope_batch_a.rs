@@ -9,7 +9,6 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
         Box::new(ShadowedException) as Box<dyn Cop>,
         Box::new(ConstantDefinitionInBlock),
         Box::new(ShadowingOuterLocalVariable),
-        Box::new(ShadowingOuterLocalVariableLambda),
         report(
             "Lint/LiteralAssignmentInCondition",
             "if value = 1",
@@ -26,8 +25,7 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
 }
 
 define_any_node_cop!(HeredocDelimiterCase => "Naming/HeredocDelimiterCase" => heredoc_case);
-define_node_cop!(ShadowingOuterLocalVariable => "Lint/ShadowingOuterLocalVariable" => as_block_node => shadowing_outer_local);
-define_node_cop!(ShadowingOuterLocalVariableLambda => "Lint/ShadowingOuterLocalVariable" => as_lambda_node => shadowing_outer_lambda);
+define_any_node_cop!(ShadowingOuterLocalVariable => "Lint/ShadowingOuterLocalVariable" => shadowing_outer_local);
 define_node_cop!(BlockForwarding => "Naming/BlockForwarding" => as_def_node => block_forwarding);
 define_node_cop!(RescuedExceptionsVariableName => "Naming/RescuedExceptionsVariableName" => as_rescue_node => rescued_exception_name);
 define_node_cop!(ShadowedException => "Lint/ShadowedException" => as_rescue_node => shadowed_exception);
@@ -246,7 +244,20 @@ fn constant_in_block(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
     context.report_node(node, "Do not define constants this way within a block.");
 }
 
-fn shadowing_outer_local(node: &ruby_prism::BlockNode<'_>, context: &mut CopContext<'_, '_>) {
+fn shadowing_outer_local(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
+    if let Some(lambda) = node.as_lambda_node() {
+        let Some(parameters) = lambda
+            .parameters()
+            .and_then(|parameters| parameters.as_parameters_node())
+        else {
+            return;
+        };
+        report_shadowing_parameters(&parameters, lambda.location().start_offset(), context);
+        return;
+    }
+    let Some(node) = node.as_block_node() else {
+        return;
+    };
     if context
         .parent()
         .and_then(Node::as_call_node)
@@ -284,19 +295,6 @@ fn shadowing_outer_local(node: &ruby_prism::BlockNode<'_>, context: &mut CopCont
             );
         }
     }
-}
-
-fn shadowing_outer_lambda(
-    node: &ruby_prism::LambdaNode<'_>,
-    context: &mut CopContext<'_, '_>,
-) {
-    let Some(parameters) = node
-        .parameters()
-        .and_then(|parameters| parameters.as_parameters_node())
-    else {
-        return;
-    };
-    report_shadowing_parameters(&parameters, node.location().start_offset(), context);
 }
 
 fn report_shadowing_parameters(
@@ -372,10 +370,54 @@ impl<'pr> ruby_prism::Visit<'pr> for OuterLocalDeclarations {
         ruby_prism::visit_local_variable_write_node(self, node);
     }
 
+    fn visit_local_variable_target_node(
+        &mut self,
+        node: &ruby_prism::LocalVariableTargetNode<'pr>,
+    ) {
+        self.declarations.push((
+            node.name().as_slice().to_vec(),
+            node.location().start_offset()..node.location().end_offset(),
+        ));
+    }
+
+    fn visit_multi_write_node(&mut self, node: &ruby_prism::MultiWriteNode<'pr>) {
+        let mut targets = OuterTargetNames::default();
+        for target in node
+            .lefts()
+            .iter()
+            .chain(node.rest())
+            .chain(node.rights().iter())
+        {
+            ruby_prism::Visit::visit(&mut targets, &target);
+        }
+        let range = node.location().start_offset()..node.location().end_offset();
+        self.declarations.extend(
+            targets
+                .names
+                .into_iter()
+                .map(|name| (name, range.clone())),
+        );
+        ruby_prism::Visit::visit(self, &node.value());
+    }
+
     fn visit_block_node(&mut self, _node: &ruby_prism::BlockNode<'pr>) {}
     fn visit_def_node(&mut self, _node: &ruby_prism::DefNode<'pr>) {}
     fn visit_class_node(&mut self, _node: &ruby_prism::ClassNode<'pr>) {}
     fn visit_module_node(&mut self, _node: &ruby_prism::ModuleNode<'pr>) {}
+}
+
+#[derive(Default)]
+struct OuterTargetNames {
+    names: Vec<Vec<u8>>,
+}
+
+impl<'pr> ruby_prism::Visit<'pr> for OuterTargetNames {
+    fn visit_local_variable_target_node(
+        &mut self,
+        node: &ruby_prism::LocalVariableTargetNode<'pr>,
+    ) {
+        self.names.push(node.name().as_slice().to_vec());
+    }
 }
 
 fn declaration_in_same_conditional_branch(
