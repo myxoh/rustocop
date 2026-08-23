@@ -41,12 +41,19 @@ fn case_like_if(context: &mut CopContext<'_, '_>) {
             index += 1;
             continue;
         };
+        let indent = &first_line[..first_line.len() - first.len()];
         let mut branches = vec![(index, value)];
         let mut end_index = None;
         let mut has_conditional_else = false;
         let mut cursor = index + 1;
         while cursor < lines.len() {
-            let line = lines[cursor].1.trim_start();
+            let raw_line = lines[cursor].1;
+            let line = raw_line.trim_start();
+            let line_indent = &raw_line[..raw_line.len() - line.len()];
+            if line_indent != indent {
+                cursor += 1;
+                continue;
+            }
             if let Some(condition) = line.strip_prefix("elsif ") {
                 let Some((candidate, value)) = case_comparison(condition) else {
                     break;
@@ -73,10 +80,9 @@ fn case_like_if(context: &mut CopContext<'_, '_>) {
             continue;
         };
         if branches.len() + usize::from(has_conditional_else) < minimum {
-            index = end_index + 1;
+            index += 1;
             continue;
         }
-        let indent = &first_line[..first_line.len() - first.len()];
         let mut edits = Vec::new();
         for (branch, value) in &branches {
             let (offset, line) = lines[*branch];
@@ -93,7 +99,7 @@ fn case_like_if(context: &mut CopContext<'_, '_>) {
             start_offset + indent.len()..end,
             edits,
         );
-        index = end_index + 1;
+        index += 1;
     }
 }
 
