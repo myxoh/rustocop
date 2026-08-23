@@ -70,12 +70,17 @@ fn percent_string_array(node: &ruby_prism::ArrayNode<'_>, context: &mut CopConte
     let elements = node.elements().iter().collect::<Vec<_>>();
     let unwanted = elements.iter().any(|element| {
         let value = context.source_file().node(element);
-        let has_word = value.chars().any(char::is_alphanumeric);
+        let inspected = if element.as_interpolated_string_node().is_some() {
+            value.split("#{").next().unwrap_or(value)
+        } else {
+            value
+        };
+        let has_word = inspected.chars().any(char::is_alphanumeric);
         has_word
-            && (value.ends_with(',')
-                || value.len() > 1
-                    && (value.starts_with('\'') && value.ends_with('\'')
-                        || value.starts_with('"') && value.ends_with('"')))
+            && (inspected.ends_with(',')
+                || inspected.len() > 1
+                    && (inspected.starts_with('\'') && inspected.ends_with('\'')
+                        || inspected.starts_with('"') && inspected.ends_with('"')))
     });
     if !unwanted {
         return;
