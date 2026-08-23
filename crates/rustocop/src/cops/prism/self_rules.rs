@@ -171,23 +171,19 @@ fn local_name_conflicts(name: &[u8], offense_start: usize, context: &CopContext<
     context.ancestors().iter().rev().any(|scope| {
         if let Some(block) = scope.as_block_node() {
             block.locals().iter().any(|local| local.as_slice() == name)
-                || block
-                    .parameters()
-                    .is_some_and(|parameters| {
-                        if parameters.as_block_parameters_node().is_none() {
-                            return false;
-                        }
-                        context
-                            .source_file()
-                            .node(&parameters)
-                            .split(|character: char| {
-                                !character.is_ascii_alphanumeric() && character != '_'
-                            })
-                            .any(|parameter| parameter.as_bytes() == name)
-                    })
+                || block.parameters().is_some_and(|parameters| {
+                    explicit_block_parameters_include(&parameters, name, context)
+                })
                 || block
                     .body()
                     .is_some_and(|body| subtree_binds_name(&body, name, true, None))
+        } else if let Some(call) = scope.as_call_node() {
+            call.block()
+                .and_then(|block| block.as_block_node())
+                .and_then(|block| block.parameters())
+                .is_some_and(|parameters| {
+                    explicit_block_parameters_include(&parameters, name, context)
+                })
         } else if let Some(definition) = scope.as_def_node() {
             definition
                 .locals()
@@ -207,6 +203,19 @@ fn local_name_conflicts(name: &[u8], offense_start: usize, context: &CopContext<
             false
         }
     })
+}
+
+fn explicit_block_parameters_include(
+    parameters: &Node<'_>,
+    name: &[u8],
+    context: &CopContext<'_, '_>,
+) -> bool {
+    parameters.as_block_parameters_node().is_some()
+        && context
+            .source_file()
+            .node(parameters)
+            .split(|character: char| !character.is_ascii_alphanumeric() && character != '_')
+            .any(|parameter| parameter.as_bytes() == name)
 }
 
 fn subtree_binds_name(
