@@ -1,0 +1,3 @@
+{
+  "ae8f37e5067c131a": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/MultilineIfModifier:\n  Description: Only use if/unless modifiers on single line statements.\n  StyleGuide: \"#no-multiline-if-modifiers\"\n  Enabled: true\n  VersionAdded: '0.45'\n  AutoCorrect: always\n"
+}

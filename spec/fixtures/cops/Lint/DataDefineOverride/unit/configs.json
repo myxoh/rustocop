@@ -1,0 +1,3 @@
+{
+  "1dc005a0941a2688": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/DataDefineOverride:\n  Description: Disallow overriding the `Data` built-in methods via `Data.define`.\n  Enabled: true\n  VersionAdded: '1.85'\n  AutoCorrect: always\n"
+}

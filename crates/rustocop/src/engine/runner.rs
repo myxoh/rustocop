@@ -13,7 +13,8 @@ pub(crate) fn inspect_files(
     options: &RunOptions,
     plan: &InspectionPlan,
 ) -> io::Result<Vec<InspectionResult>> {
-    let parallelism = if options.inspection.autocorrect && contains_duplicate_files(files) {
+    let parallelism = if options.inspection.autocorrect_enabled() && contains_duplicate_files(files)
+    {
         Parallelism::Sequential
     } else {
         options.parallelism
@@ -80,7 +81,7 @@ fn contains_duplicate_files(files: &[String]) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::{CopConfig, CopSelection, InspectionConfig, RubyVersion};
+    use crate::config::{AutocorrectMode, CopConfig, CopSelection, InspectionConfig, RubyVersion};
     use std::sync::Arc;
 
     fn options(parallelism: Parallelism) -> RunOptions {
@@ -92,7 +93,7 @@ mod tests {
             rubocop_loaders: Vec::new(),
             config_path: None,
             inspection: InspectionConfig {
-                autocorrect: false,
+                autocorrect: AutocorrectMode::None,
                 cops: CopSelection::only("Lint/EmptyExpression"),
                 target_ruby_version: RubyVersion::default(),
                 cop_config: Arc::new(CopConfig::default()),
@@ -110,11 +111,15 @@ mod tests {
     #[test]
     fn parallel_inspection_preserves_sequential_output_order() {
         let fixture_root = format!(
-            "{}/../../spec/fixtures/rubocop_builtin_examples/lint_empty_expression",
+            "{}/../../spec/fixtures/shared/engine/parallel_order",
             env!("CARGO_MANIFEST_DIR")
         );
-        let files = ["03_offense.rb", "01_offense.rb", "02_offense.rb"]
-            .map(|name| format!("{fixture_root}/{name}"));
+        let files = [
+            "empty_expression_03.rb",
+            "empty_expression_01.rb",
+            "empty_expression_02.rb",
+        ]
+        .map(|name| format!("{fixture_root}/{name}"));
 
         let sequential_options = options(Parallelism::Sequential);
         let parallel_options = options(Parallelism::Fixed(3));
@@ -143,7 +148,7 @@ mod tests {
     #[test]
     fn recognizes_duplicate_correction_targets() {
         let path = format!(
-            "{}/../../spec/fixtures/rubocop_builtin_examples/lint_empty_expression/01_offense.rb",
+            "{}/../../spec/fixtures/shared/engine/parallel_order/empty_expression_01.rb",
             env!("CARGO_MANIFEST_DIR")
         );
 

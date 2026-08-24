@@ -1,0 +1,4 @@
+{
+  "4475a6af9e23f0a0": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/RedundantInterpolationUnfreeze:\n  Description: Checks for redundant unfreezing of interpolated strings.\n  Enabled: true\n  VersionAdded: '1.66'\n  AutoCorrect: always\n",
+  "ffd9bfab97ea065d": "---\nAllCops:\n  TargetRubyVersion: 3.0\nStyle/RedundantInterpolationUnfreeze:\n  Description: Checks for redundant unfreezing of interpolated strings.\n  Enabled: true\n  VersionAdded: '1.66'\n  AutoCorrect: always\n"
+}

@@ -1,0 +1,4 @@
+{
+  "7eac16eefd6cfa23": "---\nAllCops:\n  TargetRubyVersion: 3.4\nLint/ItWithoutArgumentsInBlock:\n  Description: Checks uses of `it` calls without arguments in block.\n  References:\n  - https://bugs.ruby-lang.org/issues/18980\n  Enabled: true\n  VersionAdded: '1.59'\n  AutoCorrect: always\n",
+  "b95946ac12274e2e": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/ItWithoutArgumentsInBlock:\n  Description: Checks uses of `it` calls without arguments in block.\n  References:\n  - https://bugs.ruby-lang.org/issues/18980\n  Enabled: true\n  VersionAdded: '1.59'\n  AutoCorrect: always\n"
+}

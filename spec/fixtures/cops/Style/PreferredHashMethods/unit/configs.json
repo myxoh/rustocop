@@ -1,0 +1,4 @@
+{
+  "516c13353ad7914f": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/PreferredHashMethods:\n  Description: Checks use of `has_key?` and `has_value?` Hash methods.\n  StyleGuide: \"#hash-key\"\n  Enabled: true\n  Safe: false\n  VersionAdded: '0.41'\n  VersionChanged: '0.70'\n  EnforcedStyle: verbose\n  SupportedStyles:\n  - short\n  - verbose\n  AutoCorrect: always\n",
+  "9fba00e57634e291": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/PreferredHashMethods:\n  Description: Checks use of `has_key?` and `has_value?` Hash methods.\n  StyleGuide: \"#hash-key\"\n  Enabled: true\n  Safe: false\n  VersionAdded: '0.41'\n  VersionChanged: '0.70'\n  EnforcedStyle: short\n  SupportedStyles:\n  - short\n  - verbose\n  AutoCorrect: always\n"
+}

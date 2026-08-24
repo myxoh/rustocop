@@ -1,0 +1,3 @@
+{
+  "efe7614dc3acd51f": "---\nAllCops:\n  TargetRubyVersion: 2.7\nSecurity/MarshalLoad:\n  Description: Avoid using of `Marshal.load` or `Marshal.restore` due to potential\n    security issues. See reference for more information.\n  References:\n  - https://ruby-doc.org/core-2.7.0/Marshal.html#module-Marshal-label-Security+considerations\n  Enabled: true\n  VersionAdded: '0.47'\n  AutoCorrect: always\n"
+}

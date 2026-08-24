@@ -1,0 +1,4 @@
+{
+  "580c8ead0c69054b": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/AsciiComments:\n  Description: Use only ascii symbols in comments.\n  StyleGuide: \"#english-comments\"\n  Enabled: true\n  VersionAdded: '0.9'\n  VersionChanged: '1.21'\n  AllowedChars:\n  - \"©\"\n  AutoCorrect: always\n",
+  "a486154040b607cc": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/AsciiComments:\n  Description: Use only ascii symbols in comments.\n  StyleGuide: \"#english-comments\"\n  Enabled: true\n  VersionAdded: '0.9'\n  VersionChanged: '1.21'\n  AllowedChars:\n  - \"∂\"\n  AutoCorrect: always\n"
+}

@@ -1,0 +1,5 @@
+{
+  "75436d22a9995afd": "---\nAllCops:\n  TargetRubyVersion: 3.4\nLint/SafeNavigationChain:\n  Description: Do not chain ordinary method call after safe navigation operator.\n  Enabled: true\n  VersionAdded: '0.47'\n  VersionChanged: '0.77'\n  AllowedMethods:\n  - present?\n  - blank?\n  - presence\n  - try\n  - try!\n  - in?\n  AutoCorrect: always\n",
+  "8d4b43985c13c28b": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/SafeNavigationChain:\n  Description: Do not chain ordinary method call after safe navigation operator.\n  Enabled: true\n  VersionAdded: '0.47'\n  VersionChanged: '0.77'\n  AllowedMethods:\n  - present?\n  - blank?\n  - presence\n  - try\n  - try!\n  - in?\n  AutoCorrect: always\n",
+  "a2c7580a93c44081": "---\nAllCops:\n  TargetRubyVersion: 2.3\nLint/SafeNavigationChain:\n  Description: Do not chain ordinary method call after safe navigation operator.\n  Enabled: true\n  VersionAdded: '0.47'\n  VersionChanged: '0.77'\n  AllowedMethods:\n  - present?\n  - blank?\n  - presence\n  - try\n  - try!\n  - in?\n  AutoCorrect: always\n"
+}

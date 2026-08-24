@@ -1,0 +1,4 @@
+{
+  "48198105cc4da499": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/EmptyLineAfterGuardClause:\n  Description: Add empty line after guard clause.\n  Enabled: true\n  VersionAdded: '0.56'\n  VersionChanged: '0.59'\n  AutoCorrect: always\n",
+  "d3637b0fecd1338b": "---\nAllCops:\n  TargetRubyVersion: 3.2\nLayout/EmptyLineAfterGuardClause:\n  Description: Add empty line after guard clause.\n  Enabled: true\n  VersionAdded: '0.56'\n  VersionChanged: '0.59'\n  AutoCorrect: always\n"
+}

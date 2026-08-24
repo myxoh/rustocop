@@ -1,0 +1,6 @@
+{
+  "526f7d02121f5e28": "---\nGemspec/DependencyVersion:\n  Description: Requires or forbids specifying gem dependency versions.\n  Enabled: true\n  VersionAdded: '1.29'\n  EnforcedStyle: forbidden\n  SupportedStyles:\n  - required\n  - forbidden\n  Include:\n  - \"**/*.gemspec\"\n  AllowedGems: []\n",
+  "60082fe38c303b45": "---\nGemspec/DependencyVersion:\n  Description: Requires or forbids specifying gem dependency versions.\n  Enabled: true\n  VersionAdded: '1.29'\n  EnforcedStyle: forbidden\n  SupportedStyles:\n  - required\n  - forbidden\n  Include:\n  - \"**/*.gemspec\"\n  AllowedGems:\n  - rubocop\n",
+  "b340c2d705969d7b": "---\nGemspec/DependencyVersion:\n  Description: Requires or forbids specifying gem dependency versions.\n  Enabled: true\n  VersionAdded: '1.29'\n  EnforcedStyle: required\n  SupportedStyles:\n  - required\n  - forbidden\n  Include:\n  - \"**/*.gemspec\"\n  AllowedGems: []\n",
+  "f34fa9be650d97e5": "---\nGemspec/DependencyVersion:\n  Description: Requires or forbids specifying gem dependency versions.\n  Enabled: true\n  VersionAdded: '1.29'\n  EnforcedStyle: required\n  SupportedStyles:\n  - required\n  - forbidden\n  Include:\n  - \"**/*.gemspec\"\n  AllowedGems:\n  - rubocop\n"
+}

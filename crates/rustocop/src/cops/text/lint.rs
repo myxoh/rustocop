@@ -28,6 +28,7 @@ fn check_empty_ensure(
     if !options.cop_enabled(cop) {
         return;
     }
+    let autocorrect = options.autocorrect_for(cop);
 
     for index in 0..lines.len() {
         let ensure_line = lines[index].body.trim_start();
@@ -53,9 +54,9 @@ fn check_empty_ensure(
                 index + 1,
                 indentation + 1,
                 "ensure".len(),
-                CorrectionStatus::correctable(options.autocorrect),
+                CorrectionStatus::correctable(autocorrect),
             );
-            if options.autocorrect {
+            if autocorrect {
                 lines[index]
                     .body
                     .replace_range(indentation..indentation + "ensure".len(), "");
@@ -106,6 +107,7 @@ fn check_small_line_cops(
         check_end_block(index, line, trimmed, indentation, options, offenses);
 
         if options.cop_enabled("Style/ColonMethodDefinition") && trimmed.starts_with("def ") {
+            let autocorrect = options.autocorrect_for("Style/ColonMethodDefinition");
             let signature = &trimmed[4..];
             let method_end = signature
                 .find(|character: char| character.is_whitespace() || character == '(')
@@ -119,15 +121,16 @@ fn check_small_line_cops(
                     index + 1,
                     column + 1,
                     2,
-                    CorrectionStatus::correctable(options.autocorrect),
+                    CorrectionStatus::correctable(autocorrect),
                 );
-                if options.autocorrect {
+                if autocorrect {
                     line.body.replace_range(column..column + 2, ".");
                 }
             }
         }
 
         if options.cop_enabled("Lint/BigDecimalNew") {
+            let autocorrect = options.autocorrect_for("Lint/BigDecimalNew");
             if let Some(new_start) = original.find("BigDecimal.new") {
                 let selector = new_start + "BigDecimal.".len();
                 push_offense(
@@ -137,9 +140,9 @@ fn check_small_line_cops(
                     index + 1,
                     selector + 1,
                     3,
-                    CorrectionStatus::correctable(options.autocorrect),
+                    CorrectionStatus::correctable(autocorrect),
                 );
-                if options.autocorrect {
+                if autocorrect {
                     line.body.replace_range(selector - 1..selector + 3, "");
                     if line.body[0..new_start].ends_with("::") {
                         line.body.replace_range(new_start - 2..new_start, "");
@@ -168,6 +171,7 @@ fn check_small_line_cops(
         }
 
         if options.cop_enabled("Style/DoubleCopDisableDirective") {
+            let autocorrect = options.autocorrect_for("Style/DoubleCopDisableDirective");
             let directive = if original.matches("# rubocop:disable ").count() > 1 {
                 Some("disable")
             } else if original.matches("# rubocop:todo ").count() > 1 {
@@ -185,9 +189,9 @@ fn check_small_line_cops(
                     index + 1,
                     start + 1,
                     original[start..].chars().count(),
-                    CorrectionStatus::correctable(options.autocorrect),
+                    CorrectionStatus::correctable(autocorrect),
                 );
-                if options.autocorrect {
+                if autocorrect {
                     let names = original[start..]
                         .split(&marker)
                         .filter(|name| !name.is_empty())
@@ -224,9 +228,9 @@ fn check_end_block(
         index + 1,
         indentation + 1,
         3,
-        CorrectionStatus::correctable(options.autocorrect),
+        CorrectionStatus::correctable(options.autocorrect_for("Style/EndBlock")),
     );
-    if options.autocorrect {
+    if options.autocorrect_for("Style/EndBlock") {
         line.body
             .replace_range(indentation..indentation + 3, "at_exit");
     }
@@ -291,9 +295,11 @@ fn check_trailing_attribute_comma(
         index + 1,
         comma + 1,
         1,
-        CorrectionStatus::correctable(options.autocorrect),
+        CorrectionStatus::correctable(
+            options.autocorrect_for("Lint/TrailingCommaInAttributeDeclaration"),
+        ),
     );
-    if options.autocorrect {
+    if options.autocorrect_for("Lint/TrailingCommaInAttributeDeclaration") {
         line.body.remove(comma);
     }
 }

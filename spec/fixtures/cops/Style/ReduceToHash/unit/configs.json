@@ -1,0 +1,5 @@
+{
+  "2d0f7a578840305f": "---\nAllCops:\n  TargetRubyVersion: 2.5\nStyle/ReduceToHash:\n  Description: Use `to_h { ... }` instead of `each_with_object`, `inject`, or `reduce`\n    to build a hash.\n  Enabled: true\n  Safe: false\n  VersionAdded: '1.85'\n  AutoCorrect: always\n",
+  "d7518ef98ac98a39": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/ReduceToHash:\n  Description: Use `to_h { ... }` instead of `each_with_object`, `inject`, or `reduce`\n    to build a hash.\n  Enabled: true\n  Safe: false\n  VersionAdded: '1.85'\n  AutoCorrect: always\n",
+  "eec2b5117049681d": "---\nAllCops:\n  TargetRubyVersion: 2.6\nStyle/ReduceToHash:\n  Description: Use `to_h { ... }` instead of `each_with_object`, `inject`, or `reduce`\n    to build a hash.\n  Enabled: true\n  Safe: false\n  VersionAdded: '1.85'\n  AutoCorrect: always\n"
+}

@@ -1,0 +1,7 @@
+{
+  "0c4cd605eef64c9c": "---\nAllCops:\n  ActiveSupportExtensionsEnabled: false\nLint/DuplicateMethods:\n  Enabled: true\n",
+  "9398c0410b8f0318": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/DuplicateMethods:\n  Description: Checks for duplicate method definitions.\n  Enabled: true\n  VersionAdded: '0.29'\n  AutoCorrect: always\n",
+  "99f00ccaa9a7c99d": "---\nAllCops:\n  ActiveSupportExtensionsEnabled: true\nLint/DuplicateMethods:\n  Enabled: true\n",
+  "a380ae3aee1d8b0e": "---\nAllCops:\n  TargetRubyVersion: 3.0\nLint/DuplicateMethods:\n  Description: Checks for duplicate method definitions.\n  Enabled: true\n  VersionAdded: '0.29'\n  AutoCorrect: always\n",
+  "c1af6e815f380c87": "---\nAllCops:\n  TargetRubyVersion: 3.4\nLint/DuplicateMethods:\n  Description: Checks for duplicate method definitions.\n  Enabled: true\n  VersionAdded: '0.29'\n  AutoCorrect: always\n"
+}

@@ -1,0 +1,16 @@
+{
+  "0d9d4bae9ab9194e": "---\nLayout/HashAlignment:\n  EnforcedHashRocketStyle: key\n  EnforcedColonStyle: key\n  EnforcedLastArgumentHashStyle: ignore_explicit\n  Enabled: true\nLayout/ArgumentAlignment:\n  EnforcedStyle: with_first_argument\n",
+  "11a3c67326d4036a": "---\nLayout/HashAlignment:\n  EnforcedHashRocketStyle: table\n  EnforcedColonStyle: table\n  Enabled: true\nLayout/ArgumentAlignment:\n  EnforcedStyle: with_first_argument\n",
+  "19d6cfd2eb8cd2d3": "---\nLayout/HashAlignment:\n  EnforcedHashRocketStyle: key\n  EnforcedColonStyle: key\n  Enabled: true\nLayout/ArgumentAlignment:\n  EnforcedStyle: with_first_argument\n",
+  "271dd803c87df109": "---\nLayout/HashAlignment:\n  EnforcedHashRocketStyle:\n  - key\n  - table\n  EnforcedColonStyle:\n  - key\n  - table\n  Enabled: true\nLayout/ArgumentAlignment:\n  EnforcedStyle: with_first_argument\n",
+  "7dc5479d23ae1f57": "---\nLayout/HashAlignment:\n  EnforcedHashRocketStyle: key\n  EnforcedColonStyle: key\n  EnforcedLastArgumentHashStyle: always_inspect\n  Enabled: true\nLayout/ArgumentAlignment:\n  EnforcedStyle: with_first_argument\n",
+  "82ec0ed4427bf1a8": "---\nLayout/HashAlignment:\n  EnforcedHashRocketStyle:\n  - table\n  - key\n  EnforcedColonStyle:\n  - table\n  - key\n  Enabled: true\nLayout/ArgumentAlignment:\n  EnforcedStyle: with_first_argument\n",
+  "ad2c74cc496cd55f": "---\nLayout/HashAlignment:\n  EnforcedHashRocketStyle: table\n  EnforcedColonStyle: separator\n  Enabled: true\nLayout/ArgumentAlignment:\n  EnforcedStyle: with_first_argument\n",
+  "b103c4569afe1726": "---\nLayout/HashAlignment:\n  EnforcedHashRocketStyle: key\n  EnforcedColonStyle: key\n  EnforcedLastArgumentHashStyle: always_ignore\n  Enabled: true\nLayout/ArgumentAlignment:\n  EnforcedStyle: with_first_argument\n",
+  "b57d88751ff6ce4d": "---\nLayout/HashAlignment:\n  EnforcedHashRocketStyle: separator\n  EnforcedColonStyle: separator\n  Enabled: true\nLayout/ArgumentAlignment:\n  EnforcedStyle: with_first_argument\n",
+  "c35c20a536647559": "---\nLayout/HashAlignment:\n  EnforcedHashRocketStyle: key\n  EnforcedColonStyle: table\n  Enabled: true\nLayout/ArgumentAlignment:\n  EnforcedStyle: with_first_argument\n",
+  "d13cf0fd59619493": "---\nLayout/HashAlignment:\n  EnforcedHashRocketStyle: key\n  EnforcedColonStyle: key\n  EnforcedLastArgumentHashStyle: ignore_implicit\n  Enabled: true\nLayout/ArgumentAlignment:\n  EnforcedStyle: with_first_argument\n",
+  "ec183fed6f6093f2": "---\nLayout/HashAlignment:\n  EnforcedHashRocketStyle: key\n  EnforcedColonStyle: separator\n  Enabled: true\nLayout/ArgumentAlignment:\n  EnforcedStyle: with_first_argument\n",
+  "f676591f47ff5711": "---\nLayout/HashAlignment:\n  EnforcedHashRocketStyle: table\n  EnforcedColonStyle: key\n  Enabled: true\nLayout/ArgumentAlignment:\n  EnforcedStyle: with_first_argument\n",
+  "fc695b9cae3907b9": "---\nLayout/HashAlignment:\n  EnforcedHashRocketStyle: key\n  EnforcedColonStyle: key\n  Enabled: true\nLayout/ArgumentAlignment:\n  EnforcedStyle: with_fixed_indentation\n"
+}

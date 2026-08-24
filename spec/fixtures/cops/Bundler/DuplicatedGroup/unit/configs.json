@@ -1,0 +1,3 @@
+{
+  "436647b61d982811": "---\nAllCops:\n  TargetRubyVersion: 2.7\nBundler/DuplicatedGroup:\n  Description: Checks for duplicate group entries in Gemfile.\n  Enabled: true\n  Severity: warning\n  VersionAdded: '1.56'\n  Include:\n  - \"**/Gemfile\"\n  AutoCorrect: always\n"
+}

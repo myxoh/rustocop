@@ -1,0 +1,4 @@
+{
+  "24201ac1c7d09077": "---\nAllCops:\n  TargetRubyVersion: 3.0\nLayout/EmptyLinesAroundMethodBody:\n  Description: Keeps track of empty lines around method bodies.\n  StyleGuide: \"#empty-lines-around-bodies\"\n  Enabled: true\n  VersionAdded: '0.49'\n  AutoCorrect: always\n",
+  "c7bbca8d4fd9134c": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/EmptyLinesAroundMethodBody:\n  Description: Keeps track of empty lines around method bodies.\n  StyleGuide: \"#empty-lines-around-bodies\"\n  Enabled: true\n  VersionAdded: '0.49'\n  AutoCorrect: always\n"
+}

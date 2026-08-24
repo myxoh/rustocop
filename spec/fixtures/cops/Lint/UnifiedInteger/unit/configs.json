@@ -1,0 +1,5 @@
+{
+  "0f54e438ffc9fc30": "---\nAllCops:\n  TargetRubyVersion: 2.4\nLint/UnifiedInteger:\n  Description: Use Integer instead of Fixnum or Bignum.\n  Enabled: true\n  VersionAdded: '0.43'\n  AutoCorrect: always\n",
+  "b55e12bca2a39d6e": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/UnifiedInteger:\n  Description: Use Integer instead of Fixnum or Bignum.\n  Enabled: true\n  VersionAdded: '0.43'\n  AutoCorrect: always\n",
+  "e1af7219932869b9": "---\nAllCops:\n  TargetRubyVersion: 2.3\nLint/UnifiedInteger:\n  Description: Use Integer instead of Fixnum or Bignum.\n  Enabled: true\n  VersionAdded: '0.43'\n  AutoCorrect: always\n"
+}

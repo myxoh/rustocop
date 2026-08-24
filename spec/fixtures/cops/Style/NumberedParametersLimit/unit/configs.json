@@ -1,0 +1,5 @@
+{
+  "8133b18b4e39e19d": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/NumberedParametersLimit:\n  Description: Avoid excessive numbered params in a single block.\n  Enabled: true\n  VersionAdded: '1.22'\n  Max: 5\n  AutoCorrect: always\n",
+  "a423bf724ef23e18": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/NumberedParametersLimit:\n  Description: Avoid excessive numbered params in a single block.\n  Enabled: true\n  VersionAdded: '1.22'\n  Max: 2\n  AutoCorrect: always\n",
+  "ab3a3beb3522b159": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/NumberedParametersLimit:\n  Description: Avoid excessive numbered params in a single block.\n  Enabled: true\n  VersionAdded: '1.22'\n  Max: 1\n  AutoCorrect: always\n"
+}

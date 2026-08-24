@@ -1,0 +1,3 @@
+{
+  "3398f0db36eaab00": "---\nStyle/InverseMethods:\n  InverseMethods:\n    :any?: :none?\n    :even?: :odd?\n    :present?: :blank?\n    :include?: :exclude?\n    :==: :!=\n    :=~: :!~\n    :<: :>=\n    :>: :<=\n  InverseBlocks:\n    :select: :reject\n    :select!: :reject!\n  Enabled: true\n"
+}

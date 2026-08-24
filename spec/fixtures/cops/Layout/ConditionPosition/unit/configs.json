@@ -1,0 +1,3 @@
+{
+  "83662c0f26b03c29": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/ConditionPosition:\n  Description: Checks for condition placed in a confusing position relative to the\n    keyword.\n  StyleGuide: \"#same-line-condition\"\n  Enabled: true\n  VersionAdded: '0.53'\n  VersionChanged: '0.83'\n  AutoCorrect: always\n"
+}

@@ -9,7 +9,6 @@ require "thread"
 require "tmpdir"
 require "time"
 require "yaml"
-require_relative "../lib/rustocop/compatibility_baseline"
 require_relative "../lib/rustocop/compatibility_status"
 require_relative "../lib/rustocop/config_serialization"
 require_relative "../lib/rustocop/repository_layout"
@@ -28,7 +27,6 @@ options = {
   limit: nil,
   only: nil,
   corrections: false,
-  baseline: nil,
   report: File.join(root, "tmp/rubocop-1.87.0-compatibility.json"),
   native: default_native
 }
@@ -39,18 +37,11 @@ OptionParser.new do |parser|
   parser.on("--limit-per-cop COUNT", Integer) { |count| options[:limit] = count }
   parser.on("--only COPS", "comma-separated cop names") { |cops| options[:only] = cops.split(",") }
   parser.on("--corrections", "also verify asserted corrected source") { options[:corrections] = true }
-  parser.on("--baseline PATH", "reject regressions below an approved compatibility baseline") do |path|
-    options[:baseline] = File.expand_path(path)
-  end
   parser.on("--report PATH") { |path| options[:report] = File.expand_path(path) }
   parser.on("--native PATH", "Rustocop executable (defaults to the newest local build)") do |path|
     options[:native] = File.expand_path(path)
   end
 end.parse!
-
-if options[:baseline] && (options[:only] || options[:limit] || options[:corrections])
-  abort "--baseline requires a complete diagnostic run without --only, --limit-per-cop, or --corrections"
-end
 
 native = options[:native]
 abort "native Rustocop executable not found; run cargo build --release" unless native
@@ -314,17 +305,4 @@ File.write(options[:report], JSON.pretty_generate(summary))
 puts "#{summary.fetch("passed_cases")}/#{summary.fetch("cases")} cases pass; " \
      "#{summary.fetch("passing_cops")}/#{summary.fetch("cops")} cops pass every selected case"
 puts "Report: #{options[:report]}"
-if options[:baseline]
-  baseline_errors = Rustocop::CompatibilityBaseline.errors(
-    summary,
-    YAML.safe_load(File.read(options[:baseline]))
-  )
-  if baseline_errors.empty?
-    puts "Compatibility baseline preserved."
-    exit 0
-  end
-  warn "Compatibility baseline regression:"
-  baseline_errors.each { |error| warn "  - #{error}" }
-  exit 1
-end
 exit(summary.fetch("passed_cases") == summary.fetch("cases") ? 0 : 1)

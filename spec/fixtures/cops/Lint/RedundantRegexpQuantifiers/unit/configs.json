@@ -1,0 +1,3 @@
+{
+  "f59abd33b4a0d563": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/RedundantRegexpQuantifiers:\n  Description: Checks for redundant quantifiers in Regexps.\n  Enabled: true\n  VersionAdded: '1.53'\n  AutoCorrect: always\n"
+}

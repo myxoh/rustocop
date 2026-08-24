@@ -1,0 +1,4 @@
+{
+  "a20cacf2ee8829b8": "---\nAllCops:\n  TargetRubyVersion: 2.7\nNaming/AsciiIdentifiers:\n  Description: Use only ascii symbols in identifiers and constants.\n  StyleGuide: \"#english-identifiers\"\n  Enabled: true\n  VersionAdded: '0.50'\n  VersionChanged: '0.87'\n  AsciiConstants: false\n  AutoCorrect: always\n",
+  "cf81ba09af35a5b9": "---\nAllCops:\n  TargetRubyVersion: 2.7\nNaming/AsciiIdentifiers:\n  Description: Use only ascii symbols in identifiers and constants.\n  StyleGuide: \"#english-identifiers\"\n  Enabled: true\n  VersionAdded: '0.50'\n  VersionChanged: '0.87'\n  AsciiConstants: true\n  AutoCorrect: always\n"
+}

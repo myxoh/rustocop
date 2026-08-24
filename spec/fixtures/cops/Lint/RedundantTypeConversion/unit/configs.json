@@ -1,0 +1,3 @@
+{
+  "d640ada95014eb5b": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/RedundantTypeConversion:\n  Description: Checks for redundantly converting a literal to the same type.\n  Enabled: true\n  VersionAdded: '1.72'\n  AutoCorrect: always\n"
+}

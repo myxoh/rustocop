@@ -8,7 +8,7 @@ RSpec.describe "hardened cop compatibility" do
   status.hardening_entries.each do |cop, evidence|
     fixture = File.join(ROOT, evidence.fetch("fixture"))
 
-    it "matches RuboCop diagnostics for adversarial #{cop} input" do
+    it "matches RuboCop diagnostics for adversarial #{cop} input", cop: cop do
       rubocop = run_rubocop("--format", "json", "--only", cop, fixture)
       rustocop = run_rustocop("--format", "json", "--only", cop, fixture)
 
@@ -19,7 +19,7 @@ RSpec.describe "hardened cop compatibility" do
       )
     end
 
-    it "matches RuboCop correction for adversarial #{cop} input" do
+    it "matches RuboCop correction for adversarial #{cop} input", cop: cop do
       Dir.mktmpdir("rustocop-hardening") do |directory|
         rubocop_path = copy_fixture(fixture, directory, "rubocop")
         rustocop_path = copy_fixture(fixture, directory, "rustocop")

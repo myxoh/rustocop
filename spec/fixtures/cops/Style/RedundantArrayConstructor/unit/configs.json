@@ -1,0 +1,3 @@
+{
+  "456958778910c2d9": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/RedundantArrayConstructor:\n  Description: Checks for the instantiation of array using redundant `Array` constructor.\n  Enabled: true\n  VersionAdded: '1.52'\n  AutoCorrect: always\n"
+}

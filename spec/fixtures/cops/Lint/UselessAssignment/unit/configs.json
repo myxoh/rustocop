@@ -1,0 +1,5 @@
+{
+  "2296c928d1bfabd0": "---\nAllCops:\n  TargetRubyVersion: 3.4\nLint/UselessAssignment:\n  Description: Checks for useless assignment to a local variable.\n  StyleGuide: \"#underscore-unused-vars\"\n  Enabled: true\n  AutoCorrect: always\n  VersionAdded: '0.11'\n  VersionChanged: '1.66'\n",
+  "7d733618cfa70004": "---\nAllCops:\n  TargetRubyVersion: 3.0\nLint/UselessAssignment:\n  Description: Checks for useless assignment to a local variable.\n  StyleGuide: \"#underscore-unused-vars\"\n  Enabled: true\n  AutoCorrect: always\n  VersionAdded: '0.11'\n  VersionChanged: '1.66'\n",
+  "d82662cdabe86992": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/UselessAssignment:\n  Description: Checks for useless assignment to a local variable.\n  StyleGuide: \"#underscore-unused-vars\"\n  Enabled: true\n  AutoCorrect: always\n  VersionAdded: '0.11'\n  VersionChanged: '1.66'\n"
+}

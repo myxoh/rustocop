@@ -1,0 +1,3 @@
+{
+  "b35fadc1588fdeb5": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/OpenStructUse:\n  Description: Avoid using OpenStruct. As of Ruby 3.0, use is officially discouraged\n    due to performance, version compatibility, and potential security issues.\n  References:\n  - https://docs.ruby-lang.org/en/3.0/OpenStruct.html#class-OpenStruct-label-Caveats\n  Enabled: true\n  Safe: false\n  VersionAdded: '1.23'\n  VersionChanged: '1.51'\n  AutoCorrect: always\n"
+}

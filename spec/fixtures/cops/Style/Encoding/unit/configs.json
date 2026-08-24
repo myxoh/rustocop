@@ -1,0 +1,3 @@
+{
+  "dd39e72f4fc0d3a1": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/Encoding:\n  Description: Use UTF-8 as the source file encoding.\n  StyleGuide: \"#utf-8\"\n  Enabled: true\n  VersionAdded: '0.9'\n  VersionChanged: '0.50'\n  AutoCorrect: always\n"
+}

@@ -1,0 +1,4 @@
+{
+  "251fdcec3affaf50": "---\nAllCops:\n  TargetRubyVersion: 2.7\nGemspec/OrderedDependencies:\n  Description: Dependencies in the gemspec should be alphabetically sorted.\n  Enabled: true\n  VersionAdded: '0.51'\n  TreatCommentsAsGroupSeparators: false\n  ConsiderPunctuation: false\n  Include:\n  - \"**/*.gemspec\"\n  AutoCorrect: always\n",
+  "c08b9d55fc86a399": "---\nAllCops:\n  TargetRubyVersion: 2.7\nGemspec/OrderedDependencies:\n  Description: Dependencies in the gemspec should be alphabetically sorted.\n  Enabled: true\n  VersionAdded: '0.51'\n  TreatCommentsAsGroupSeparators: true\n  ConsiderPunctuation: false\n  Include:\n  - \"**/*.gemspec\"\n  AutoCorrect: always\n"
+}

@@ -3,7 +3,8 @@ use std::fs;
 use std::sync::Arc;
 
 use crate::config::{
-    CopConfig, CopSelection, InspectionConfig, Parallelism, RubyVersion, RunOptions,
+    AutocorrectMode, CopConfig, CopSelection, InspectionConfig, Parallelism, RubyVersion,
+    RunOptions,
 };
 
 pub(super) enum Command {
@@ -22,7 +23,7 @@ pub(super) fn parse_args(mut args: Vec<String>) -> Result<Command, String> {
         rubocop_loaders: Vec::new(),
         config_path: None,
         inspection: InspectionConfig {
-            autocorrect: false,
+            autocorrect: AutocorrectMode::None,
             cops: CopSelection::default_enabled(),
             target_ruby_version: RubyVersion::default(),
             cop_config: Arc::new(CopConfig::default()),
@@ -35,8 +36,12 @@ pub(super) fn parse_args(mut args: Vec<String>) -> Result<Command, String> {
             "--version" => return Ok(Command::Version),
             "-V" => return Ok(Command::VerboseVersion),
             "--show-cops" => return Ok(Command::ShowCops),
-            "-A" | "-a" | "--autocorrect" | "--autocorrect-all" | "--auto-correct"
-            | "--auto-correct-all" => options.inspection.autocorrect = true,
+            "-a" | "--autocorrect" | "--auto-correct" => {
+                options.inspection.autocorrect = AutocorrectMode::Safe;
+            }
+            "-A" | "--autocorrect-all" | "--auto-correct-all" => {
+                options.inspection.autocorrect = AutocorrectMode::All;
+            }
             "--format" | "-f" => options.format = take_value(&mut args, &arg)?,
             "--only" => {
                 options.inspection.cops = CopSelection::only(&take_value(&mut args, &arg)?);
@@ -169,6 +174,18 @@ mod tests {
         };
         assert_eq!(automatic.parallelism, Parallelism::Automatic);
         assert_eq!(fixed.parallelism, Parallelism::Fixed(4));
+    }
+
+    #[test]
+    fn distinguishes_safe_and_all_autocorrection() {
+        let Command::Run(safe) = parse_args(vec!["-a".to_string()]).unwrap() else {
+            panic!("expected run command");
+        };
+        let Command::Run(all) = parse_args(vec!["-A".to_string()]).unwrap() else {
+            panic!("expected run command");
+        };
+        assert_eq!(safe.inspection.autocorrect, AutocorrectMode::Safe);
+        assert_eq!(all.inspection.autocorrect, AutocorrectMode::All);
     }
 
     #[test]

@@ -1,0 +1,3 @@
+{
+  "992fca2f633943dc": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/BigDecimalNew:\n  Description: \"`BigDecimal.new()` is deprecated. Use `BigDecimal()` instead.\"\n  Enabled: true\n  VersionAdded: '0.53'\n  AutoCorrect: always\n"
+}

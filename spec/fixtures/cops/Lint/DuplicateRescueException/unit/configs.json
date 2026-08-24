@@ -1,0 +1,3 @@
+{
+  "9549f7746c66c07f": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/DuplicateRescueException:\n  Description: Checks that there are no repeated exceptions used in `rescue` expressions.\n  Enabled: true\n  VersionAdded: '0.89'\n  AutoCorrect: always\n"
+}

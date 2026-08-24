@@ -26,10 +26,45 @@ pub(crate) struct RunOptions {
 
 #[derive(Clone, Debug)]
 pub(crate) struct InspectionConfig {
-    pub(crate) autocorrect: bool,
+    pub(crate) autocorrect: AutocorrectMode,
     pub(crate) cops: CopSelection,
     pub(crate) target_ruby_version: RubyVersion,
     pub(crate) cop_config: Arc<CopConfig>,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum AutocorrectMode {
+    None,
+    Safe,
+    All,
+}
+
+impl AutocorrectMode {
+    pub(crate) const fn enabled(self) -> bool {
+        !matches!(self, Self::None)
+    }
+
+    pub(crate) fn enabled_for(self, config: &CopConfig, cop: &str) -> bool {
+        match self {
+            Self::None => false,
+            Self::Safe => {
+                config.bool(cop, "Safe").unwrap_or(true)
+                    && config.bool(cop, "SafeAutoCorrect").unwrap_or(true)
+                    && !matches!(config.value(cop, "AutoCorrect"), Some("false" | "disabled"))
+            }
+            Self::All => !matches!(config.value(cop, "AutoCorrect"), Some("false" | "disabled")),
+        }
+    }
+}
+
+impl InspectionConfig {
+    pub(crate) fn autocorrect_enabled(&self) -> bool {
+        self.autocorrect.enabled()
+    }
+
+    pub(crate) fn autocorrect_for(&self, cop: &str) -> bool {
+        self.autocorrect.enabled_for(&self.cop_config, cop)
+    }
 }
 
 #[derive(Clone, Debug)]

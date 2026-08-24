@@ -1,0 +1,3 @@
+{
+  "6286a96e016bdb61": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/KeywordParametersOrder:\n  Description: Enforces that optional keyword parameters are placed at the end of\n    the parameters list.\n  StyleGuide: \"#keyword-parameters-order\"\n  Enabled: true\n  VersionAdded: '0.90'\n  VersionChanged: '1.7'\n  AutoCorrect: always\n"
+}

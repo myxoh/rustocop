@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use super::correction_engine::{accepted_corrections, apply_edits, Correction, Edit};
 use super::{CopContext, CopPolicy};
-use crate::config::{CopConfig, RubyVersion};
+use crate::config::{AutocorrectMode, CopConfig, RubyVersion};
 
 #[path = "diagnostic/reporter.rs"]
 mod reporter;
@@ -56,7 +56,7 @@ impl ByteRange for &Location<'_> {
 }
 
 pub(crate) struct Context {
-    autocorrect: bool,
+    autocorrect: AutocorrectMode,
     path: Arc<str>,
     target_ruby_version: RubyVersion,
     cop_config: Arc<CopConfig>,
@@ -66,7 +66,7 @@ pub(crate) struct Context {
 
 impl Context {
     pub(super) fn new(
-        autocorrect: bool,
+        autocorrect: AutocorrectMode,
         path: impl Into<Arc<str>>,
         target_ruby_version: RubyVersion,
         cop_config: Arc<CopConfig>,
@@ -217,7 +217,7 @@ impl Context {
             start_offset: offense.start,
             end_offset: offense.end,
         });
-        if self.autocorrect {
+        if self.autocorrect.enabled_for(&self.cop_config, cop_name) {
             if let Some(edits) = correction {
                 self.corrections.push(Correction {
                     finding_index,

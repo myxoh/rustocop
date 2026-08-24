@@ -1,0 +1,3 @@
+{
+  "06ec9377af1f6811": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/SuperWithArgsParentheses:\n  Description: Use parentheses for `super` with arguments.\n  StyleGuide: \"#super-with-args\"\n  Enabled: true\n  VersionAdded: '1.58'\n  AutoCorrect: always\n"
+}

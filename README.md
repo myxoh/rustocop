@@ -48,11 +48,12 @@ The minimized real-project corpus currently contains 609 provenance-backed
 mismatch cases, with no pending active-cop mismatch directions. These fixtures
 remain regression coverage, not a substitute for the complete project comparison.
 
-After restoring the remaining pending cops with structural implementations, the
-fixture review contains 28,606 captured cases. All 28,601 comparable cases match
-RuboCop 1.87.0 diagnostics and corrected source; 606/606 built-in cops pass
-every retained fixture. Five LSP-only cases are explicitly excluded rather than
-counted as passing.
+The upstream capture contains 28,606 cases. Five LSP-only cases are explicitly
+excluded. Auditing the remaining 28,601 inputs produced 28,049 controlled unit
+cases owned by all 606 cops and removed 552 exact duplicates while retaining
+their provenance. The stricter cached runner currently exposes 363 expectation
+differences across 32 cops: 153 exact-diagnostic differences and 210 `-a`/`-A`
+differences. The earlier 606/606 fixture-parity claim was therefore incorrect.
 
 ## Fifty-project output parity
 
@@ -192,7 +193,10 @@ exe/rustocop --config /path/to/project/.rubocop.yml /path/to/project
 exe/rustocop --require ./lib/rubocop/cop/custom/no_foo.rb \
   --only Style/ArrayJoin,Custom/NoFoo /path/to/project
 
-# Apply available corrections; use this on a clean working tree
+# Apply only corrections RuboCop marks safe; use this on a clean working tree
+exe/rustocop -a /path/to/project
+
+# Apply safe and unsafe corrections
 exe/rustocop -A /path/to/project
 
 # Produce RuboCop-style JSON
@@ -249,9 +253,9 @@ Check the [compatibility evidence table](docs/compatibility.md) and the
 Every inspected file is parsed once with Prism. Enabled AST cops are registered
 with a shared visitor, receive typed nodes plus ancestor context, and report
 byte-accurate source ranges. Compatible edits are collected during the traversal
-and applied as one batch. The differential compatibility suite runs 20 cops
-against 500 generated and committed Ruby fixture files, both cop-by-cop and as a
-single corpus, and compares their JSON reports directly with RuboCop.
+and applied as one batch. Local fixtures are owned by their target cop under
+`spec/fixtures/cops/<Department>/<Cop>/`; whole-project artifacts have a
+separate `spec/fixtures/projects/` boundary.
 
 The intentionally-pending manifest is currently empty. A cop remains registered
 only after a scalable implementation passes the fixture gate; registration by
@@ -266,22 +270,21 @@ The official RuboCop 1.87.0 cop specs are vendored under
 is empty, so no built-in cop specs are excluded from the active fixture corpus.
 
 The capture harness executes RuboCop's test DSL and records the resulting
-source, configuration, path, Ruby version, offenses, and correction. It does
-not infer expectations by scraping spec source. The active corpus contains
-28,606 captured cases for all 606 built-in cops; 28,601 executable cases pass
-the diagnostic-and-correction comparison. These cases become compatibility
-evidence only when Rustocop matches the captured diagnostics and corrections.
-Project-exact output is the broader guard against cases absent from upstream
-specs.
+source, configuration, path, Ruby version, parser, encodings, offenses, and
+correction. It does not infer expectations by scraping spec source. The
+28,049-case committed unit cache stores exact diagnostics plus distinct safe
+`-a` and all-cop `-A` results. These cases become compatibility evidence only
+when Rustocop matches the cache; currently 32 cops do not. Project-exact output
+is the broader guard against cases absent from upstream specs.
 
 ```sh
 bundle exec ruby script/extract_upstream_cop_specs.rb
-bundle exec ruby script/compare_upstream_cop_specs.rb
+bundle exec ruby script/generate_unit_fixtures.rb
 ```
 
-Generated corpora and reports live under `tmp/` and are intentionally ignored.
-The comparison command is diagnostic-only for now; correction parity remains a
-separate required fixture gate.
+The raw capture lives under ignored `tmp/`; the deduplicated per-cop cache is
+committed under `spec/fixtures/cops/`. Routine Rustocop work reads the cache and
+does not invoke RuboCop.
 
 Prepare or restore the pinned 50-project corpus without running either linter:
 
@@ -292,6 +295,11 @@ PROJECT_BENCHMARK_PREPARE_ONLY=1 \
 
 The immutable archives and filtered corpora are cached under
 `tmp/project-benchmarks/`; a repeated preparation reuses them.
+
+Project-derived regression and configuration-variation differentials are
+excluded from ordinary RSpec runs because they still start both linters. Run
+them explicitly with `PROJECT_AUDIT=1`; the controlled per-cop cache remains
+the normal development loop.
 
 ## Development
 
@@ -339,29 +347,36 @@ The explicit spec task is equivalent to the default task:
 bundle exec rake spec
 ```
 
-Regenerate the compatibility corpus after changing its case templates:
+Run the cached controlled unit contract for only the cops being changed:
 
 ```sh
-bundle exec ruby script/generate_compatibility_corpus.rb
-bundle exec ruby script/generate_compatibility_corpus.rb --check
+bundle exec ruby script/verify_cop.rb Style/StringLiterals Layout/TrailingWhitespace
 ```
 
-The reproducible 500-example corpus is one fixture layer, not a compatibility
-claim by itself. Benchmarks use the separate pinned `benchmark/corpus.json`, so
-improving a correctness fixture does not silently redefine historical
-performance work.
+Run all 28,049 controlled cases, or explicitly refresh the slow RuboCop cache:
 
-Run the complete upstream differential with its non-regression gate:
+```sh
+bundle exec rake fixtures:unit
+bundle exec rake fixtures:refresh_unit
+```
+
+The ownership gate rejects orphaned and cross-cop fixture paths:
+
+```sh
+bundle exec ruby script/check_fixture_ownership.rb
+```
+
+See [`spec/fixtures/README.md`](spec/fixtures/README.md) for the fixture layers.
+Benchmarks use the separate pinned `benchmark/corpus.json`, so improving a
+correctness fixture does not silently redefine historical performance work.
+
+Run the complete upstream differential. The command fails if any retained case
+differs:
 
 ```sh
 RUSTOCOP_NATIVE_PATH=crates/rustocop/target/debug/rustocop \
   bundle exec ruby script/compare_upstream_cop_specs.rb \
-  --baseline spec/upstream/rubocop-1.87.0/status.yml \
   --report tmp/full-compatibility.json
-
-bundle exec ruby script/report_compatibility_drift.rb \
-  tmp/full-compatibility.json \
-  --output tmp/compatibility-promotion-drift.md
 ```
 
 Generate the public per-cop matrix and current gap queue only from a complete

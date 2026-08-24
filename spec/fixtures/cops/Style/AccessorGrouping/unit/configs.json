@@ -1,0 +1,4 @@
+{
+  "1d9f5859221cad4a": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/AccessorGrouping:\n  Description: Checks for grouping of accessors in `class` and `module` bodies.\n  Enabled: true\n  VersionAdded: '0.87'\n  EnforcedStyle: grouped\n  SupportedStyles:\n  - separated\n  - grouped\n  AutoCorrect: always\n",
+  "c1ef61aa1792095f": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/AccessorGrouping:\n  Description: Checks for grouping of accessors in `class` and `module` bodies.\n  Enabled: true\n  VersionAdded: '0.87'\n  EnforcedStyle: separated\n  SupportedStyles:\n  - separated\n  - grouped\n  AutoCorrect: always\n"
+}

@@ -1,0 +1,3 @@
+{
+  "a716ca658b7befec": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/MultilineWhenThen:\n  Description: Do not use then for multi-line when statement.\n  StyleGuide: \"#no-then\"\n  Enabled: true\n  VersionAdded: '0.73'\n  AutoCorrect: always\n"
+}

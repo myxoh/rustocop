@@ -1,0 +1,5 @@
+{
+  "4210fe11ed96f387": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/RedundantRegexpArgument:\n  Description: Identifies places where argument can be replaced from a deterministic\n    regexp to a string.\n  Enabled: true\n  VersionAdded: '1.53'\n  AutoCorrect: always\n",
+  "882d20c1289b751f": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/RedundantRegexpArgument:\n  Description: Identifies places where argument can be replaced from a deterministic\n    regexp to a string.\n  Enabled: true\n  VersionAdded: '1.53'\n  AutoCorrect: always\nStyle/StringLiterals:\n  EnforcedStyle: double_quotes\n",
+  "fb1a26ee2f4f913b": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/RedundantRegexpArgument:\n  Description: Identifies places where argument can be replaced from a deterministic\n    regexp to a string.\n  Enabled: true\n  VersionAdded: '1.53'\n  AutoCorrect: always\nStyle/StringLiterals:\n  EnforcedStyle: single_quotes\n"
+}

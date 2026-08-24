@@ -1,0 +1,3 @@
+{
+  "cd55053203597a44": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/ScriptPermission:\n  Description: Grant script file execute permission.\n  Enabled: true\n  VersionAdded: '0.49'\n  VersionChanged: '0.50'\n  AutoCorrect: always\n"
+}

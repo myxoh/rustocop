@@ -41,8 +41,9 @@ Use the generated [gap queue](remaining-cops.md), ordered by unmatched complete
 diagnostic signatures. For each repaired cop:
 
 1. isolate the smallest real-project trigger and a nearby clean control;
-2. add it to `spec/fixtures/project_parity_regressions/manifest.tsv` with
-   repository, revision, and source path;
+2. add it under `spec/fixtures/cops/<Department>/<Cop>/project/` and index it in
+   `spec/fixtures/cop_project_cases.tsv` with repository, revision, and source
+   path;
 3. match RuboCop diagnostics and correction output in the focused fixture;
 4. run all Rust tests and the complete cross-engine fixture corpus;
 5. commit the Rust code, then run the SHA-bound 50-project audit; and

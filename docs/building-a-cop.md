@@ -111,7 +111,8 @@ Without `--family`, the generator creates and wires:
 
 - a focused module under `crates/rustocop/src/cops/prism/`;
 - one `cop_modules!` entry in `prism/mod.rs`, which declares and registers it;
-- `input.rb` and `offenses.tsv` fixtures;
+- `input.rb` and `offenses.tsv` under
+  `spec/fixtures/cops/<Department>/<Cop>/native/`;
 - `corrected.rb` when `--autocorrect` is used;
 - a fixture test registration in `engine/fixture_tests.rs`.
 
@@ -307,13 +308,11 @@ comparison:
 ```sh
 RUSTOCOP_NATIVE_PATH=crates/rustocop/target/debug/rustocop \
   ruby script/compare_upstream_cop_specs.rb \
-  --baseline spec/upstream/rubocop-1.87.0/status.yml \
   --report tmp/full-compatibility.json
 ```
 
-The baseline option preserves the captured upstream regression layer while
-allowing improvements. It does not generate the public work queue; that queue
-comes from complete real-project signatures.
+The comparator fails if any retained case differs. It does not generate the
+public work queue; that queue comes from complete real-project signatures.
 
 For layout cops, use `SourceFile`'s `line_start`, `line_end`, `line`,
 `line_range`, `full_line_range`, `indentation`, `indentation_text`, `same_line`,

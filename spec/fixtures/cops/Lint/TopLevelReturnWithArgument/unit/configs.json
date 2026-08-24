@@ -1,0 +1,3 @@
+{
+  "c2083ceb3afc5e27": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/TopLevelReturnWithArgument:\n  Description: Detects top level return statements with argument.\n  Enabled: true\n  VersionAdded: '0.89'\n  Exclude:\n  - \"/Users/nicco/work/rustocop/**/*.jb\"\n  AutoCorrect: always\n"
+}

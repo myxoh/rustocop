@@ -29,6 +29,7 @@ fn check_trailing_whitespace(
     if !options.cop_enabled(cop) {
         return;
     }
+    let autocorrect = options.autocorrect_for(cop);
 
     let allow_in_heredoc = options
         .cop_config
@@ -60,7 +61,7 @@ fn check_trailing_whitespace(
         let length = trailing_whitespace_len(&line.body);
         if length != 0 && !(allow_in_heredoc && in_heredoc) {
             let correctable = !in_heredoc || heredoc_is_interpolated;
-            let corrected = options.autocorrect && correctable;
+            let corrected = autocorrect && correctable;
             let column = line.body.chars().count() - length + 1;
             push_offense(
                 offenses,
@@ -172,6 +173,7 @@ fn check_line_length(
     if !options.cop_enabled(cop) {
         return;
     }
+    let autocorrect = options.autocorrect_for(cop);
 
     let max = options
         .cop_config
@@ -294,7 +296,7 @@ fn check_line_length(
             let message = format!("Line is too long. [{}/{}]", effective_length, max);
             let length = effective_length.saturating_sub(column - 1).max(1);
             let correctable = breakable;
-            let corrected = options.autocorrect && breakable;
+            let corrected = autocorrect && breakable;
             let raw_length = line.body.chars().count();
             let (last_line, last_column) = if effective_length > raw_length {
                 (

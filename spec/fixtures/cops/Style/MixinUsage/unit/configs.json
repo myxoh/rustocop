@@ -1,0 +1,3 @@
+{
+  "7285146bb38df879": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/MixinUsage:\n  Description: Checks that `include`, `extend` and `prepend` exists at the top level.\n  Enabled: true\n  VersionAdded: '0.51'\n  AutoCorrect: always\n"
+}

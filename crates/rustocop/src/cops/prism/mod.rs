@@ -376,7 +376,11 @@ fn inspect(
     Engine::new(enabled).inspect(
         "example.rb",
         source,
-        autocorrect,
+        if autocorrect {
+            crate::config::AutocorrectMode::All
+        } else {
+            crate::config::AutocorrectMode::None
+        },
         target_ruby_version,
         Arc::new(CopConfig::default()),
     )

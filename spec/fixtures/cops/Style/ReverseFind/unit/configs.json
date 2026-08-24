@@ -1,0 +1,4 @@
+{
+  "f2ca0cada8ef250e": "---\nAllCops:\n  TargetRubyVersion: 3.4\nStyle/ReverseFind:\n  Description: Use `array.rfind` instead of `array.reverse.find`.\n  Enabled: true\n  Safe: false\n  VersionAdded: '1.84'\n  AutoCorrect: always\n",
+  "f6356d5b8d5d7820": "---\nAllCops:\n  TargetRubyVersion: 4.0\nStyle/ReverseFind:\n  Description: Use `array.rfind` instead of `array.reverse.find`.\n  Enabled: true\n  Safe: false\n  VersionAdded: '1.84'\n  AutoCorrect: always\n"
+}

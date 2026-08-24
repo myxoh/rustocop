@@ -1,0 +1,4 @@
+{
+  "195ecd7ed70c886b": "---\nAllCops:\n  TargetRubyVersion: 3.0\nStyle/RedundantInterpolation:\n  Description: Checks for strings that are just an interpolated expression.\n  Enabled: true\n  SafeAutoCorrect: false\n  VersionAdded: '0.76'\n  VersionChanged: '1.30'\n  AutoCorrect: always\n",
+  "379ffc3ba511e37c": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/RedundantInterpolation:\n  Description: Checks for strings that are just an interpolated expression.\n  Enabled: true\n  SafeAutoCorrect: false\n  VersionAdded: '0.76'\n  VersionChanged: '1.30'\n  AutoCorrect: always\n"
+}

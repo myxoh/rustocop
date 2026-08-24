@@ -1,0 +1,5 @@
+{
+  "2c393ea3bd73a38a": "---\nAllCops:\n  TargetRubyVersion: 2.7\nNaming/RescuedExceptionsVariableName:\n  Description: Use consistent rescued exceptions variables naming.\n  Enabled: true\n  VersionAdded: '0.67'\n  VersionChanged: '0.68'\n  PreferredName: e\n  AutoCorrect: always\n",
+  "b776ee55f3602478": "---\nAllCops:\n  TargetRubyVersion: 2.7\nNaming/RescuedExceptionsVariableName:\n  Description: Use consistent rescued exceptions variables naming.\n  Enabled: true\n  VersionAdded: '0.67'\n  VersionChanged: '0.68'\n  PreferredName: exception\n  AutoCorrect: always\n",
+  "ca189995e344f55c": "---\nAllCops:\n  TargetRubyVersion: 3.1\nNaming/RescuedExceptionsVariableName:\n  Description: Use consistent rescued exceptions variables naming.\n  Enabled: true\n  VersionAdded: '0.67'\n  VersionChanged: '0.68'\n  PreferredName: e\n  AutoCorrect: always\n"
+}

@@ -1,0 +1,4 @@
+{
+  "7945c0667f37c9b6": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/SpaceAroundBlockParameters:\n  Description: Checks the spacing inside and after block parameters pipes.\n  Enabled: true\n  VersionAdded: '0.49'\n  EnforcedStyleInsidePipes: no_space\n  SupportedStylesInsidePipes:\n  - space\n  - no_space\n  AutoCorrect: always\n",
+  "9e909f05fa270243": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/SpaceAroundBlockParameters:\n  Description: Checks the spacing inside and after block parameters pipes.\n  Enabled: true\n  VersionAdded: '0.49'\n  EnforcedStyleInsidePipes: space\n  SupportedStylesInsidePipes:\n  - space\n  - no_space\n  AutoCorrect: always\n"
+}

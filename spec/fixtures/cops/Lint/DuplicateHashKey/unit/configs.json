@@ -1,0 +1,4 @@
+{
+  "04b3d05edc60fb71": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/DuplicateHashKey:\n  Description: Checks for duplicate keys in hash literals.\n  Enabled: true\n  VersionAdded: '0.34'\n  VersionChanged: '0.77'\n  AutoCorrect: always\n",
+  "8e27b9a6b8c97a40": "---\nAllCops:\n  TargetRubyVersion: 2.6\nLint/DuplicateHashKey:\n  Description: Checks for duplicate keys in hash literals.\n  Enabled: true\n  VersionAdded: '0.34'\n  VersionChanged: '0.77'\n  AutoCorrect: always\n"
+}

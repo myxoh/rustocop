@@ -1,0 +1,3 @@
+{
+  "b848c16763135c60": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/DuplicateSetElement:\n  Description: Checks for duplicate elements in Set.\n  Enabled: true\n  VersionAdded: '1.67'\n  AutoCorrect: always\n"
+}

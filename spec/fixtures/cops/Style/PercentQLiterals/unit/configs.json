@@ -1,0 +1,4 @@
+{
+  "604ff58fad5479b4": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/PercentQLiterals:\n  Description: Checks if uses of %Q/%q match the configured preference.\n  Enabled: true\n  VersionAdded: '0.25'\n  EnforcedStyle: lower_case_q\n  SupportedStyles:\n  - lower_case_q\n  - upper_case_q\n  AutoCorrect: always\n",
+  "9d6065263d29c97b": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/PercentQLiterals:\n  Description: Checks if uses of %Q/%q match the configured preference.\n  Enabled: true\n  VersionAdded: '0.25'\n  EnforcedStyle: upper_case_q\n  SupportedStyles:\n  - lower_case_q\n  - upper_case_q\n  AutoCorrect: always\n"
+}

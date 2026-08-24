@@ -10,6 +10,10 @@ require_relative "../lib/rustocop"
 
 ROOT = Rustocop::RepositoryLayout.default.root
 
+RSpec.configure do |config|
+  config.filter_run_excluding project_audit: true unless ENV["PROJECT_AUDIT"] == "1"
+end
+
 def run_rustocop(*args, stdin: nil, env: {}, chdir: nil)
   Rustocop::ProcessRunner.capture(
     RbConfig.ruby, File.join(ROOT, "exe", "rustocop"), *args,

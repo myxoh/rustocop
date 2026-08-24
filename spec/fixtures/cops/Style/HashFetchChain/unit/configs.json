@@ -1,0 +1,4 @@
+{
+  "75510349c5b12728": "---\nAllCops:\n  TargetRubyVersion: 2.2\nStyle/HashFetchChain:\n  Description: Use `Hash#dig` instead of chained `fetch` calls.\n  Enabled: true\n  Safe: false\n  VersionAdded: '1.75'\n  AutoCorrect: always\n",
+  "ad0a6582afd5810c": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/HashFetchChain:\n  Description: Use `Hash#dig` instead of chained `fetch` calls.\n  Enabled: true\n  Safe: false\n  VersionAdded: '1.75'\n  AutoCorrect: always\n"
+}

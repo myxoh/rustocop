@@ -1,0 +1,4 @@
+{
+  "8f40afe8b780de2f": "---\nAllCops:\n  TargetRubyVersion: 3.0\nStyle/DefWithParentheses:\n  Description: Use def with parentheses when there are arguments.\n  StyleGuide: \"#method-parens\"\n  Enabled: true\n  VersionAdded: '0.9'\n  VersionChanged: '0.12'\n  AutoCorrect: always\n",
+  "c57a1c6240c80311": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/DefWithParentheses:\n  Description: Use def with parentheses when there are arguments.\n  StyleGuide: \"#method-parens\"\n  Enabled: true\n  VersionAdded: '0.9'\n  VersionChanged: '0.12'\n  AutoCorrect: always\n"
+}

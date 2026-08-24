@@ -1,0 +1,4 @@
+{
+  "8524bfec617865a4": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/PredicateWithKind:\n  Description: Prefer `any?(Klass)` to `any? { |x| x.is_a?(Klass) }`.\n  Enabled: true\n  SafeAutoCorrect: false\n  VersionAdded: '1.85'\n  AutoCorrect: always\n",
+  "9fcedcbf70a984ff": "---\nAllCops:\n  TargetRubyVersion: 3.4\nStyle/PredicateWithKind:\n  Description: Prefer `any?(Klass)` to `any? { |x| x.is_a?(Klass) }`.\n  Enabled: true\n  SafeAutoCorrect: false\n  VersionAdded: '1.85'\n  AutoCorrect: always\n"
+}

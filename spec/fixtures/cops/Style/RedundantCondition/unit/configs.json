@@ -1,0 +1,6 @@
+{
+  "77ace0b666ebbc1f": "---\nAllCops:\n  TargetRubyVersion: 3.1\nStyle/RedundantCondition:\n  Description: Checks for unnecessary conditional expressions.\n  Enabled: true\n  VersionAdded: '0.76'\n  VersionChanged: '1.73'\n  AllowedMethods:\n  - infinite?\n  - nonzero?\n  AutoCorrect: always\n",
+  "b6da88f55a43ffbd": "---\nAllCops:\n  TargetRubyVersion: 3.2\nStyle/RedundantCondition:\n  Description: Checks for unnecessary conditional expressions.\n  Enabled: true\n  VersionAdded: '0.76'\n  VersionChanged: '1.73'\n  AllowedMethods:\n  - infinite?\n  - nonzero?\n  AutoCorrect: always\n",
+  "c54b1165ba1850b1": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/RedundantCondition:\n  Description: Checks for unnecessary conditional expressions.\n  Enabled: true\n  VersionAdded: '0.76'\n  VersionChanged: '1.73'\n  AllowedMethods:\n  - infinite?\n  - nonzero?\n  AutoCorrect: always\n",
+  "d02191ed5b201cf5": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/RedundantCondition:\n  Description: Checks for unnecessary conditional expressions.\n  Enabled: true\n  VersionAdded: '0.76'\n  VersionChanged: '1.73'\n  AllowedMethods:\n  - nonzero?\n  AutoCorrect: always\n"
+}

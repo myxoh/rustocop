@@ -1,14 +1,14 @@
 # frozen_string_literal: true
 
-RSpec.describe "configuration mutation parity regressions" do
-  fixture_root = File.join(ROOT, "spec", "fixtures", "configuration_parity_regressions")
-  native = File.join(ROOT, "crates", "rustocop", "target", "release", "rustocop")
-  rows = File.readlines(File.join(fixture_root, "manifest.tsv"), chomp: true).drop(1).map do |line|
+RSpec.describe "configuration mutation parity regressions", project_audit: true do
+  fixture_root = File.join(ROOT, "spec", "fixtures")
+  native = ENV.fetch("RUSTOCOP_NATIVE_PATH", File.join(ROOT, "crates", "rustocop", "target", "release", "rustocop"))
+  rows = File.readlines(File.join(fixture_root, "cop_configuration_cases.tsv"), chomp: true).drop(1).map do |line|
     line.split("\t", 5)
   end
 
-  rows.each do |cop, file, config, repository, source_path|
-    it "matches RuboCop for #{cop} with #{config} from #{repository}:#{source_path}" do
+  rows.each do |cop, config, file, repository, source_path|
+    it "matches RuboCop for #{cop} with #{config} from #{repository}:#{source_path}", cop: cop do
       arguments = [
         "--config", File.join(fixture_root, config),
         "--format", "json",

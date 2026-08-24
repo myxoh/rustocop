@@ -1,0 +1,3 @@
+{
+  "e36b06cdd6372221": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/ArrayFirstLast:\n  Description: Use `arr.first` and `arr.last` instead of `arr[0]` and `arr[-1]`.\n  References:\n  - \"#first-and-last\"\n  Enabled: true\n  VersionAdded: '1.58'\n  Safe: false\n  AutoCorrect: always\n"
+}

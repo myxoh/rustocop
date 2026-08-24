@@ -1,0 +1,5 @@
+{
+  "3b36ff9533464c0f": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/SignalException:\n  Description: Checks for proper usage of fail and raise.\n  StyleGuide: \"#prefer-raise-over-fail\"\n  Enabled: true\n  VersionAdded: '0.11'\n  VersionChanged: '0.37'\n  EnforcedStyle: only_fail\n  SupportedStyles:\n  - only_raise\n  - only_fail\n  - semantic\n  AutoCorrect: always\n",
+  "4c275d062f5b8c0d": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/SignalException:\n  Description: Checks for proper usage of fail and raise.\n  StyleGuide: \"#prefer-raise-over-fail\"\n  Enabled: true\n  VersionAdded: '0.11'\n  VersionChanged: '0.37'\n  EnforcedStyle: semantic\n  SupportedStyles:\n  - only_raise\n  - only_fail\n  - semantic\n  AutoCorrect: always\n",
+  "e583b13083f85a92": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/SignalException:\n  Description: Checks for proper usage of fail and raise.\n  StyleGuide: \"#prefer-raise-over-fail\"\n  Enabled: true\n  VersionAdded: '0.11'\n  VersionChanged: '0.37'\n  EnforcedStyle: only_raise\n  SupportedStyles:\n  - only_raise\n  - only_fail\n  - semantic\n  AutoCorrect: always\n"
+}

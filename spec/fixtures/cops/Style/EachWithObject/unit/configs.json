@@ -1,0 +1,4 @@
+{
+  "1153d045f4ca1cc3": "---\nAllCops:\n  TargetRubyVersion: 3.4\nStyle/EachWithObject:\n  Description: Prefer `each_with_object` over `inject` or `reduce`.\n  Enabled: true\n  VersionAdded: '0.22'\n  VersionChanged: '0.42'\n  AutoCorrect: always\n",
+  "feddf8512a715c4d": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/EachWithObject:\n  Description: Prefer `each_with_object` over `inject` or `reduce`.\n  Enabled: true\n  VersionAdded: '0.22'\n  VersionChanged: '0.42'\n  AutoCorrect: always\n"
+}

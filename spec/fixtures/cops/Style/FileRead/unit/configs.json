@@ -1,0 +1,3 @@
+{
+  "56256142a3ffd0e3": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/FileRead:\n  Description: Favor `File.(bin)read` convenience methods.\n  StyleGuide: \"#file-read\"\n  Enabled: true\n  VersionAdded: '1.24'\n  AutoCorrect: always\n"
+}

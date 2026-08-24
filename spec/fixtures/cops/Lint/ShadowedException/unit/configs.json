@@ -1,0 +1,3 @@
+{
+  "fb08c8d2de42ebd0": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/ShadowedException:\n  Description: Avoid rescuing a higher level exception before a lower level exception.\n  Enabled: true\n  VersionAdded: '0.41'\n  AutoCorrect: always\n"
+}

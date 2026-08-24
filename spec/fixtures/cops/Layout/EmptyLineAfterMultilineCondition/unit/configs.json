@@ -1,0 +1,3 @@
+{
+  "af5c0bc53bec33f4": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/EmptyLineAfterMultilineCondition:\n  Description: Enforces empty line after multiline condition.\n  Enabled: true\n  VersionAdded: '0.90'\n  References:\n  - https://github.com/airbnb/ruby#multiline-if-newline\n  AutoCorrect: always\n"
+}

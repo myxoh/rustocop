@@ -1,0 +1,5 @@
+{
+  "8e43fa1b2f59c352": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/HashLookupMethod:\n  Description: Enforces the use of either `Hash#[]` or `Hash#fetch` for hash lookup.\n  Enabled: true\n  Safe: false\n  VersionAdded: '1.84'\n  EnforcedStyle: brackets\n  SupportedStyles:\n  - brackets\n  - fetch\n  AutoCorrect: always\n  AllowedReceivers:\n  - Rails.cache\n",
+  "ae9666f7e3e8362d": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/HashLookupMethod:\n  Description: Enforces the use of either `Hash#[]` or `Hash#fetch` for hash lookup.\n  Enabled: true\n  Safe: false\n  VersionAdded: '1.84'\n  EnforcedStyle: fetch\n  SupportedStyles:\n  - brackets\n  - fetch\n  AutoCorrect: always\n",
+  "c1d78c17df7225a1": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/HashLookupMethod:\n  Description: Enforces the use of either `Hash#[]` or `Hash#fetch` for hash lookup.\n  Enabled: true\n  Safe: false\n  VersionAdded: '1.84'\n  EnforcedStyle: brackets\n  SupportedStyles:\n  - brackets\n  - fetch\n  AutoCorrect: always\n"
+}

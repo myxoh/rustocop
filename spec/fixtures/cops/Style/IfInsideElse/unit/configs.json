@@ -1,0 +1,4 @@
+{
+  "01c8bbe201c7bb08": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/IfInsideElse:\n  Description: Finds if nodes inside else, which can be converted to elsif.\n  Enabled: true\n  AllowIfModifier: false\n  VersionAdded: '0.36'\n  VersionChanged: '1.3'\n  AutoCorrect: always\n",
+  "3c2b5d32c77079cd": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/IfInsideElse:\n  Description: Finds if nodes inside else, which can be converted to elsif.\n  Enabled: true\n  AllowIfModifier: true\n  VersionAdded: '0.36'\n  VersionChanged: '1.3'\n  AutoCorrect: always\n"
+}

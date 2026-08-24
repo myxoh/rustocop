@@ -1,0 +1,3 @@
+{
+  "b144f9e9b6f43fed": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/NonAtomicFileOperation:\n  Description: Checks for non-atomic file operations.\n  StyleGuide: \"#atomic-file-operations\"\n  Enabled: true\n  VersionAdded: '1.31'\n  SafeAutoCorrect: false\n  AutoCorrect: always\n"
+}

@@ -1,0 +1,3 @@
+{
+  "7c3165c547c474f9": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/EvalWithLocation:\n  Description: Pass `__FILE__` and `__LINE__` to `eval` method, as they are used by\n    backtraces.\n  Enabled: true\n  VersionAdded: '0.52'\n  AutoCorrect: always\n"
+}

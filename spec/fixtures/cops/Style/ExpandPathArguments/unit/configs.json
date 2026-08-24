@@ -1,0 +1,3 @@
+{
+  "f7c661e4cf4c0e99": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/ExpandPathArguments:\n  Description: Use `expand_path(__dir__)` instead of `expand_path('..', __FILE__)`.\n  Enabled: true\n  VersionAdded: '0.53'\n  AutoCorrect: always\n"
+}

@@ -1,0 +1,4 @@
+{
+  "04e9e14086a3a82e": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/RedundantSplatExpansion:\n  Description: Checks for splat unnecessarily being called on literals.\n  Enabled: true\n  VersionAdded: '0.76'\n  VersionChanged: '1.7'\n  AllowPercentLiteralArrayArgument: false\n  AutoCorrect: always\n",
+  "80fe0d1b3b7b9b06": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/RedundantSplatExpansion:\n  Description: Checks for splat unnecessarily being called on literals.\n  Enabled: true\n  VersionAdded: '0.76'\n  VersionChanged: '1.7'\n  AllowPercentLiteralArrayArgument: true\n  AutoCorrect: always\n"
+}

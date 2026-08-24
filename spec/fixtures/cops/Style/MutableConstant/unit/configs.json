@@ -1,0 +1,6 @@
+{
+  "2fbd21ec91a5250f": "---\nAllCops:\n  TargetRubyVersion: 3.0\nStyle/MutableConstant:\n  Description: Do not assign mutable objects to constants.\n  Enabled: true\n  VersionAdded: '0.34'\n  VersionChanged: '1.8'\n  SafeAutoCorrect: false\n  EnforcedStyle: literals\n  SupportedStyles:\n  - literals\n  - strict\n  AutoCorrect: always\n",
+  "3b0fd006ffce90a5": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/MutableConstant:\n  Description: Do not assign mutable objects to constants.\n  Enabled: true\n  VersionAdded: '0.34'\n  VersionChanged: '1.8'\n  SafeAutoCorrect: false\n  EnforcedStyle: literals\n  SupportedStyles:\n  - literals\n  - strict\n  AutoCorrect: always\n",
+  "449cf04166de677c": "---\nAllCops:\n  TargetRubyVersion: 3.0\nStyle/MutableConstant:\n  Description: Do not assign mutable objects to constants.\n  Enabled: true\n  VersionAdded: '0.34'\n  VersionChanged: '1.8'\n  SafeAutoCorrect: false\n  EnforcedStyle: strict\n  SupportedStyles:\n  - literals\n  - strict\n  AutoCorrect: always\n",
+  "bf4a3f9e959402f3": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/MutableConstant:\n  Description: Do not assign mutable objects to constants.\n  Enabled: true\n  VersionAdded: '0.34'\n  VersionChanged: '1.8'\n  SafeAutoCorrect: false\n  EnforcedStyle: strict\n  SupportedStyles:\n  - literals\n  - strict\n  AutoCorrect: always\n"
+}

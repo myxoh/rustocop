@@ -1,0 +1,3 @@
+{
+  "2881ce56e0b813e3": "---\nAllCops:\n  TargetRubyVersion: 2.7\nSecurity/Eval:\n  Description: The use of eval represents a serious security risk.\n  Enabled: true\n  VersionAdded: '0.47'\n  AutoCorrect: always\n"
+}

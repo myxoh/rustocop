@@ -1,0 +1,7 @@
+{
+  "2d3775c89703cdca": "---\nLayout/FirstArrayElementIndentation:\n  EnforcedStyle: consistent\n  SupportedStyles:\n  - special_inside_parentheses\n  - consistent\n  - align_brackets\n  IndentationWidth:\n  Enabled: true\nLayout/IndentationWidth:\n  Width: 2\n",
+  "46d9d3d3ea48b041": "---\nLayout/FirstArrayElementIndentation:\n  EnforcedStyle: align_brackets\n  SupportedStyles:\n  - special_inside_parentheses\n  - consistent\n  - align_brackets\n  IndentationWidth:\n  Enabled: true\nLayout/IndentationWidth:\n  Width: 2\n",
+  "6784ca3b836d3630": "---\nLayout/FirstArrayElementIndentation:\n  EnforcedStyle: special_inside_parentheses\n  SupportedStyles:\n  - special_inside_parentheses\n  - consistent\n  - align_brackets\n  IndentationWidth: 4\n  Enabled: true\nLayout/IndentationWidth:\n  Width: 2\n",
+  "93afed14f50cc13d": "---\nLayout/FirstArrayElementIndentation:\n  EnforcedStyle: align_brackets\n  SupportedStyles:\n  - special_inside_parentheses\n  - consistent\n  - align_brackets\n  IndentationWidth: 4\n  Enabled: true\nLayout/IndentationWidth:\n  Width: 2\n",
+  "efb10ca6a20e27b0": "---\nLayout/FirstArrayElementIndentation:\n  EnforcedStyle: special_inside_parentheses\n  SupportedStyles:\n  - special_inside_parentheses\n  - consistent\n  - align_brackets\n  IndentationWidth:\n  Enabled: true\nLayout/IndentationWidth:\n  Width: 2\n"
+}

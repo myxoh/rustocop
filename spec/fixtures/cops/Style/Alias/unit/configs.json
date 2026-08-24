@@ -1,0 +1,4 @@
+{
+  "04305a7e5b77022d": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/Alias:\n  Description: Use alias instead of alias_method.\n  StyleGuide: \"#alias-method-lexically\"\n  Enabled: true\n  VersionAdded: '0.9'\n  VersionChanged: '0.36'\n  EnforcedStyle: prefer_alias\n  SupportedStyles:\n  - prefer_alias\n  - prefer_alias_method\n  AutoCorrect: always\n",
+  "5efdc6503d768d24": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/Alias:\n  Description: Use alias instead of alias_method.\n  StyleGuide: \"#alias-method-lexically\"\n  Enabled: true\n  VersionAdded: '0.9'\n  VersionChanged: '0.36'\n  EnforcedStyle: prefer_alias_method\n  SupportedStyles:\n  - prefer_alias\n  - prefer_alias_method\n  AutoCorrect: always\n"
+}

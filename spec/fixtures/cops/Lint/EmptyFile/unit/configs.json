@@ -1,0 +1,4 @@
+{
+  "7dc09304096ff11b": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/EmptyFile:\n  Description: Enforces that Ruby source files are not empty.\n  Enabled: true\n  AllowComments: true\n  VersionAdded: '0.90'\n  AutoCorrect: always\n",
+  "ad0964be1486d01e": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/EmptyFile:\n  Description: Enforces that Ruby source files are not empty.\n  Enabled: true\n  AllowComments: false\n  VersionAdded: '0.90'\n  AutoCorrect: always\n"
+}

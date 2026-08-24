@@ -1,0 +1,4 @@
+{
+  "81f2f8791d8e3dc0": "---\nAllCops:\n  TargetRubyVersion: 3.4\nStyle/MultilineBlockChain:\n  Description: Avoid multi-line chains of blocks.\n  StyleGuide: \"#single-line-blocks\"\n  Enabled: true\n  VersionAdded: '0.13'\n  AutoCorrect: always\n",
+  "eee197569a8c2075": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/MultilineBlockChain:\n  Description: Avoid multi-line chains of blocks.\n  StyleGuide: \"#single-line-blocks\"\n  Enabled: true\n  VersionAdded: '0.13'\n  AutoCorrect: always\n"
+}

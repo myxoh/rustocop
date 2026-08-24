@@ -1,0 +1,3 @@
+{
+  "3ccb04cd59156033": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/DoubleCopDisableDirective:\n  Description: Checks for double rubocop:disable comments on a single line.\n  Enabled: true\n  VersionAdded: '0.73'\n  AutoCorrect: always\n"
+}

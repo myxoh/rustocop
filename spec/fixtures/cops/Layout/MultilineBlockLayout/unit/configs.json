@@ -1,0 +1,5 @@
+{
+  "2273d619ab6772ec": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/MultilineBlockLayout:\n  Description: Ensures newlines after multiline block do statements.\n  Enabled: true\n  VersionAdded: '0.49'\n  AutoCorrect: always\n",
+  "3d51f50703ceecb5": "---\nAllCops:\n  TargetRubyVersion: 3.4\nLayout/MultilineBlockLayout:\n  Description: Ensures newlines after multiline block do statements.\n  Enabled: true\n  VersionAdded: '0.49'\n  AutoCorrect: always\n",
+  "c648fbe420e18097": "---\nLayout/LineLength:\n  Enabled: false\nLayout/MultilineBlockLayout:\n  Enabled: true\n"
+}

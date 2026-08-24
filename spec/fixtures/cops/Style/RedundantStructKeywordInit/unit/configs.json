@@ -1,0 +1,4 @@
+{
+  "875a6449fbf2fd75": "---\nAllCops:\n  TargetRubyVersion: 3.1\nStyle/RedundantStructKeywordInit:\n  Description: Checks for redundant `keyword_init` option for `Struct.new`.\n  Enabled: true\n  SafeAutoCorrect: false\n  VersionAdded: '1.85'\n  VersionChanged: '1.86'\n  AutoCorrect: always\n",
+  "91bf327f99ff5bbd": "---\nAllCops:\n  TargetRubyVersion: 3.2\nStyle/RedundantStructKeywordInit:\n  Description: Checks for redundant `keyword_init` option for `Struct.new`.\n  Enabled: true\n  SafeAutoCorrect: false\n  VersionAdded: '1.85'\n  VersionChanged: '1.86'\n  AutoCorrect: always\n"
+}

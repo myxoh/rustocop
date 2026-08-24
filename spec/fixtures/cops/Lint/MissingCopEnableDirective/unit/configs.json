@@ -1,0 +1,6 @@
+{
+  "07a044510b34a91f": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/MissingCopEnableDirective:\n  Description: Checks for a `# rubocop:enable` after `# rubocop:disable`.\n  Enabled: true\n  VersionAdded: '0.52'\n  MaximumRangeSize: 2\n  AutoCorrect: always\n",
+  "5bd8bfce01fbeb8d": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/MissingCopEnableDirective:\n  Description: Checks for a `# rubocop:enable` after `# rubocop:disable`.\n  Enabled: true\n  VersionAdded: '0.52'\n  MaximumRangeSize:\n    \"$float\": Infinity\n  AutoCorrect: always\n",
+  "6b1d6fc00a40acd4": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/MissingCopEnableDirective:\n  Description: Checks for a `# rubocop:enable` after `# rubocop:disable`.\n  Enabled: true\n  VersionAdded: '0.52'\n  MaximumRangeSize:\n    \"$float\": Infinity\n  AutoCorrect: always\nLayout/SpaceAroundOperators:\n  Enabled: true\n",
+  "b070aca8e6deebe1": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/MissingCopEnableDirective:\n  Description: Checks for a `# rubocop:enable` after `# rubocop:disable`.\n  Enabled: true\n  VersionAdded: '0.52'\n  MaximumRangeSize:\n    \"$float\": Infinity\n  AutoCorrect: always\nLayout/LineLength:\n  Enabled: false\n"
+}

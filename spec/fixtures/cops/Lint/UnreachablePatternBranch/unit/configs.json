@@ -1,0 +1,4 @@
+{
+  "1e81a9c3badf9657": "---\nAllCops:\n  TargetRubyVersion: 3.0\nLint/UnreachablePatternBranch:\n  Description: Checks for unreachable `in` pattern branches after an unconditional\n    catch-all pattern.\n  Enabled: true\n  VersionAdded: '1.85'\n  AutoCorrect: always\n",
+  "aa22f6d46716f371": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/UnreachablePatternBranch:\n  Description: Checks for unreachable `in` pattern branches after an unconditional\n    catch-all pattern.\n  Enabled: true\n  VersionAdded: '1.85'\n  AutoCorrect: always\n"
+}

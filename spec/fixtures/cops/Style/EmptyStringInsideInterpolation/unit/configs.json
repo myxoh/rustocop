@@ -1,0 +1,4 @@
+{
+  "1793ccc56b401e3e": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/EmptyStringInsideInterpolation:\n  Description: Checks for empty strings being assigned inside string interpolation.\n  StyleGuide: \"#empty-strings-in-interpolation\"\n  Enabled: true\n  EnforcedStyle: trailing_conditional\n  SupportedStyles:\n  - trailing_conditional\n  - ternary\n  VersionAdded: '1.76'\n  AutoCorrect: always\n",
+  "a1be08a1708b1cfb": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/EmptyStringInsideInterpolation:\n  Description: Checks for empty strings being assigned inside string interpolation.\n  StyleGuide: \"#empty-strings-in-interpolation\"\n  Enabled: true\n  EnforcedStyle: ternary\n  SupportedStyles:\n  - trailing_conditional\n  - ternary\n  VersionAdded: '1.76'\n  AutoCorrect: always\n"
+}

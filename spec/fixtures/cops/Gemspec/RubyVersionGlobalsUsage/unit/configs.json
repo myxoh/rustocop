@@ -1,0 +1,3 @@
+{
+  "7b525ed693dc614f": "---\nAllCops:\n  TargetRubyVersion: 2.7\nGemspec/RubyVersionGlobalsUsage:\n  Description: Checks usage of RUBY_VERSION in gemspec.\n  StyleGuide: \"#no-ruby-version-in-the-gemspec\"\n  Enabled: true\n  Severity: warning\n  VersionAdded: '0.72'\n  VersionChanged: '1.40'\n  Include:\n  - \"**/*.gemspec\"\n  AutoCorrect: always\n"
+}

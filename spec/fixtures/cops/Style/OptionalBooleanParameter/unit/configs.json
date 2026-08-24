@@ -1,0 +1,4 @@
+{
+  "6c77d983d2125dcb": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/OptionalBooleanParameter:\n  Description: Use keyword arguments when defining method with boolean argument.\n  StyleGuide: \"#boolean-keyword-arguments\"\n  Enabled: true\n  Safe: false\n  VersionAdded: '0.89'\n  AllowedMethods: []\n  AutoCorrect: always\n",
+  "8a5672c4e13ef1eb": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/OptionalBooleanParameter:\n  Description: Use keyword arguments when defining method with boolean argument.\n  StyleGuide: \"#boolean-keyword-arguments\"\n  Enabled: true\n  Safe: false\n  VersionAdded: '0.89'\n  AllowedMethods:\n  - respond_to_missing?\n  AutoCorrect: always\n"
+}

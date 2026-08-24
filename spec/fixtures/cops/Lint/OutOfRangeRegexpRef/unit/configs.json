@@ -1,0 +1,3 @@
+{
+  "27fa583db5a88e86": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/OutOfRangeRegexpRef:\n  Description: Checks for out of range reference for Regexp because it always returns\n    nil.\n  Enabled: true\n  Safe: false\n  VersionAdded: '0.89'\n  AutoCorrect: always\n"
+}

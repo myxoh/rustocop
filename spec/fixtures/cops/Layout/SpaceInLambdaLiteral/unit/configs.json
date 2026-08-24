@@ -1,0 +1,4 @@
+{
+  "0cc8293fd9c9ffd7": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/SpaceInLambdaLiteral:\n  Description: Checks for spaces in lambda literals.\n  Enabled: true\n  VersionAdded: '0.49'\n  EnforcedStyle: require_no_space\n  SupportedStyles:\n  - require_no_space\n  - require_space\n  AutoCorrect: always\n",
+  "86fc63140200e808": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/SpaceInLambdaLiteral:\n  Description: Checks for spaces in lambda literals.\n  Enabled: true\n  VersionAdded: '0.49'\n  EnforcedStyle: require_space\n  SupportedStyles:\n  - require_no_space\n  - require_space\n  AutoCorrect: always\n"
+}

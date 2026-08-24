@@ -1,0 +1,4 @@
+{
+  "55b0dd57f75239fa": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/SendWithLiteralMethodName:\n  Description: Detects the use of the `public_send` method with a static method name\n    argument.\n  Enabled: true\n  Safe: false\n  AllowSend: false\n  VersionAdded: '1.64'\n  AutoCorrect: always\n",
+  "cb9826be3608d30e": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/SendWithLiteralMethodName:\n  Description: Detects the use of the `public_send` method with a static method name\n    argument.\n  Enabled: true\n  Safe: false\n  AllowSend: true\n  VersionAdded: '1.64'\n  AutoCorrect: always\n"
+}

@@ -1,0 +1,4 @@
+{
+  "cfc37c21b2b9b6f7": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/RedundantSelf:\n  Description: Don't use self where it's not needed.\n  StyleGuide: \"#no-self-unless-required\"\n  Enabled: true\n  VersionAdded: '0.10'\n  VersionChanged: '0.13'\n  AutoCorrect: always\n",
+  "fb2fd61b1b48e0ad": "---\nAllCops:\n  TargetRubyVersion: 3.4\nStyle/RedundantSelf:\n  Description: Don't use self where it's not needed.\n  StyleGuide: \"#no-self-unless-required\"\n  Enabled: true\n  VersionAdded: '0.10'\n  VersionChanged: '0.13'\n  AutoCorrect: always\n"
+}

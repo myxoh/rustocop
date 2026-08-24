@@ -187,3 +187,15 @@ fn merges_user_configuration_over_pinned_rubocop_defaults() {
     assert_eq!(delimiters.get("default").map(String::as_str), Some("[]"));
     assert_eq!(delimiters.get("%r").map(String::as_str), None);
 }
+
+#[test]
+fn safe_autocorrection_honors_rubocop_safety_metadata() {
+    let config = CopConfig::from_source(
+        "Style/UnsafeExample:\n  SafeAutoCorrect: false\nStyle/DisabledExample:\n  AutoCorrect: false\n",
+    );
+
+    assert!(!AutocorrectMode::Safe.enabled_for(&config, "Style/UnsafeExample"));
+    assert!(AutocorrectMode::All.enabled_for(&config, "Style/UnsafeExample"));
+    assert!(!AutocorrectMode::Safe.enabled_for(&config, "Style/DisabledExample"));
+    assert!(!AutocorrectMode::All.enabled_for(&config, "Style/DisabledExample"));
+}

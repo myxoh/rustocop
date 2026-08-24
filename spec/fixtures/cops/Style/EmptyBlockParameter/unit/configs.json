@@ -1,0 +1,3 @@
+{
+  "495942332abfb20e": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/EmptyBlockParameter:\n  Description: Omit pipes for empty block parameters.\n  Enabled: true\n  VersionAdded: '0.52'\n  AutoCorrect: always\n"
+}

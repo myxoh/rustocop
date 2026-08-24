@@ -85,15 +85,19 @@ RSpec.describe "rustocop executable" do
   end
 
   it "preserves output order when inspecting files in parallel" do
-    files = Dir[File.join(ROOT, "spec/fixtures/rubocop_builtin_examples/lint_empty_expression/*.rb")].first(10)
-    arguments = ["--format", "json", "--only", "Lint/EmptyExpression", *files]
+    Dir.mktmpdir("rustocop-parallel-order-") do |directory|
+      files = 10.times.map do |index|
+        File.join(directory, format("%02d.rb", index)).tap { |path| File.write(path, "value_#{index} = ()\n") }
+      end
+      arguments = ["--format", "json", "--only", "Lint/EmptyExpression", *files]
 
-    sequential = run_rustocop(*arguments)
-    parallel = run_rustocop("--jobs", "4", *arguments)
+      sequential = run_rustocop(*arguments)
+      parallel = run_rustocop("--jobs", "4", *arguments)
 
-    expect(parallel.stderr).to eq("")
-    expect(parallel.status.exitstatus).to eq(sequential.status.exitstatus)
-    expect(parallel.stdout).to eq(sequential.stdout)
+      expect(parallel.stderr).to eq("")
+      expect(parallel.status.exitstatus).to eq(sequential.status.exitstatus)
+      expect(parallel.stdout).to eq(sequential.stdout)
+    end
   end
 
   it "rejects an invalid parallel worker count" do
@@ -104,20 +108,24 @@ RSpec.describe "rustocop executable" do
   end
 
   it "delegates required custom cops while keeping built-in cops native" do
-    files = Dir[File.join(ROOT, "spec/fixtures/rubocop_builtin_examples/lint_empty_expression/*.rb")].first(3)
-    custom_cop = File.join(ROOT, "benchmark/custom_cops/synthetic_file_header.rb")
-    config = File.join(ROOT, "benchmark/custom-cop-rubocop.yml")
-    arguments = [
-      "--no-parallel", "--format", "json", "--config", config,
-      "--require", custom_cop, "--only", "Lint/EmptyExpression,Custom/SyntheticFileHeader", *files
-    ]
+    Dir.mktmpdir("rustocop-mixed-cops-") do |directory|
+      files = 3.times.map do |index|
+        File.join(directory, format("%02d.rb", index)).tap { |path| File.write(path, "value_#{index} = ()\n") }
+      end
+      custom_cop = File.join(ROOT, "benchmark/custom_cops/synthetic_file_header.rb")
+      config = File.join(ROOT, "benchmark/custom-cop-rubocop.yml")
+      arguments = [
+        "--no-parallel", "--format", "json", "--config", config,
+        "--require", custom_cop, "--only", "Lint/EmptyExpression,Custom/SyntheticFileHeader", *files
+      ]
 
-    mixed = run_rustocop(*arguments)
-    rubocop = run_rubocop(*arguments.reject { |argument| argument == "--no-parallel" }, "--no-server")
+      mixed = run_rustocop(*arguments)
+      rubocop = run_rubocop(*arguments.reject { |argument| argument == "--no-parallel" }, "--no-server")
 
-    expect(mixed.stderr).to eq("")
-    expect(mixed.status.exitstatus).to eq(1)
-    expect(normalize_rubocop_report(parsed_json(mixed))).to eq(normalize_rubocop_report(parsed_json(rubocop)))
+      expect(mixed.stderr).to eq("")
+      expect(mixed.status.exitstatus).to eq(1)
+      expect(normalize_rubocop_report(parsed_json(mixed))).to eq(normalize_rubocop_report(parsed_json(rubocop)))
+    end
   end
 
   it "rejects autocorrection when native and custom cops are mixed" do

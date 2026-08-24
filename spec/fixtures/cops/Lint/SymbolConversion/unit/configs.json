@@ -1,0 +1,4 @@
+{
+  "3e0b65a5038d5d56": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/SymbolConversion:\n  Description: Checks for unnecessary symbol conversions.\n  Enabled: true\n  VersionAdded: '1.9'\n  VersionChanged: '1.16'\n  EnforcedStyle: consistent\n  SupportedStyles:\n  - strict\n  - consistent\n  AutoCorrect: always\n",
+  "9868306de10e4d58": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/SymbolConversion:\n  Description: Checks for unnecessary symbol conversions.\n  Enabled: true\n  VersionAdded: '1.9'\n  VersionChanged: '1.16'\n  EnforcedStyle: strict\n  SupportedStyles:\n  - strict\n  - consistent\n  AutoCorrect: always\n"
+}

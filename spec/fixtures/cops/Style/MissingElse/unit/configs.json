@@ -1,0 +1,8 @@
+{
+  "069687d0e70532ee": "---\nStyle/MissingElse:\n  Enabled: true\n  EnforcedStyle: both\n  SupportedStyles:\n  - if\n  - case\n  - both\nStyle/UnlessElse:\n  Enabled: true\n",
+  "1346445a33ad872e": "---\nStyle/MissingElse:\n  Enabled: true\n  EnforcedStyle: case\n  SupportedStyles:\n  - if\n  - case\n  - both\nStyle/UnlessElse:\n  Enabled: false\nStyle/EmptyElse:\n  Enabled: true\n  EnforcedStyle: nil\n  SupportedStyles:\n  - empty\n  - nil\n  - both\n",
+  "167d4ae1f13f4f57": "---\nStyle/MissingElse:\n  Enabled: true\n  EnforcedStyle: both\n  SupportedStyles:\n  - if\n  - case\n  - both\nStyle/UnlessElse:\n  Enabled: false\n",
+  "54af3a44c553c149": "---\nStyle/MissingElse:\n  Enabled: true\n  EnforcedStyle: if\n  SupportedStyles:\n  - if\n  - case\n  - both\nStyle/UnlessElse:\n  Enabled: false\nStyle/EmptyElse:\n  Enabled: true\n  EnforcedStyle: nil\n  SupportedStyles:\n  - empty\n  - nil\n  - both\n",
+  "7f27d18a700ce8bf": "---\nStyle/MissingElse:\n  Enabled: true\n  EnforcedStyle: both\n  SupportedStyles:\n  - if\n  - case\n  - both\nStyle/UnlessElse:\n  Enabled: false\nStyle/EmptyElse:\n  Enabled: true\n  EnforcedStyle: nil\n  SupportedStyles:\n  - empty\n  - nil\n  - both\n",
+  "e9284fe9838af012": "---\nStyle/MissingElse:\n  Enabled: true\n  EnforcedStyle: both\n  SupportedStyles:\n  - if\n  - case\n  - both\nStyle/UnlessElse:\n  Enabled: false\nStyle/EmptyElse:\n  Enabled: true\n  EnforcedStyle: empty\n  SupportedStyles:\n  - empty\n  - nil\n  - both\n"
+}

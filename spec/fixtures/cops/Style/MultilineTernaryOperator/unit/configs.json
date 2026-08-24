@@ -1,0 +1,4 @@
+{
+  "397ac438812f7571": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/MultilineTernaryOperator:\n  Description: 'Avoid multi-line ?: (the ternary operator); use if/unless instead.'\n  StyleGuide: \"#no-multiline-ternary\"\n  Enabled: true\n  VersionAdded: '0.9'\n  VersionChanged: '0.86'\n  AutoCorrect: always\n",
+  "759f96aedc8cd0cf": "---\nAllCops:\n  TargetRubyVersion: 3.2\nStyle/MultilineTernaryOperator:\n  Description: 'Avoid multi-line ?: (the ternary operator); use if/unless instead.'\n  StyleGuide: \"#no-multiline-ternary\"\n  Enabled: true\n  VersionAdded: '0.9'\n  VersionChanged: '0.86'\n  AutoCorrect: always\n"
+}

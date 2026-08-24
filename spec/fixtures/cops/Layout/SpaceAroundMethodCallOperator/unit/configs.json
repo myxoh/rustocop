@@ -1,0 +1,3 @@
+{
+  "5ef5d0f94716c0af": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/SpaceAroundMethodCallOperator:\n  Description: Checks method call operators to not have spaces around them.\n  Enabled: true\n  VersionAdded: '0.82'\n  AutoCorrect: always\n"
+}

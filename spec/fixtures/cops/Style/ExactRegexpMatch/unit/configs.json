@@ -1,0 +1,3 @@
+{
+  "021008ea7c425c99": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/ExactRegexpMatch:\n  Description: Checks for exact regexp match inside Regexp literals.\n  Enabled: true\n  VersionAdded: '1.51'\n  AutoCorrect: always\n"
+}

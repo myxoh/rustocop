@@ -95,19 +95,23 @@ bundle exec rake quality:test_contracts
 bundle exec rspec
 ```
 
-For a cop implementation, also run the extracted upstream contract for that cop.
-For parser, traversal, correction ordering, or registry changes, run the full
-upstream suite. Performance comparisons must use identical files, configuration,
-Ruby version, warmup, and process model; report medians and disclose whether
-RuboCop's Prism parser was enabled.
+For a cop implementation, also run its cached controlled contract with
+`script/verify_cop.rb Department/CopName`. For parser, traversal, correction
+ordering, or registry changes, run `bundle exec rake fixtures:unit`. Neither
+command starts RuboCop. Performance comparisons must use identical files,
+configuration, Ruby version, warmup, and process model; report medians and
+disclose whether RuboCop's Prism parser was enabled.
 
 Every real-project discrepancy used to change a cop must become a minimized
 fixture. Cop-level parity cases belong in
-`spec/fixtures/project_parity_regressions/manifest.tsv`; shared parser/engine
-regressions can use `crates/rustocop/tests/fixtures/inspection/` with a
-`provenance.yml`. Keep the repository, revision, path, and triggering line;
+`spec/fixtures/cops/<Department>/<Cop>/project/` and are indexed in
+`spec/fixtures/cop_project_cases.tsv`; shared parser/engine regressions belong
+under `spec/fixtures/shared/`, and cross-cop real-project output belongs under
+`spec/fixtures/projects/<Project>/`, with a `provenance.yml`. Keep the
+repository, revision, path, and triggering line;
 include a nearby clean control and exact autocorrection when applicable.
-Unresolved minimized cases live in `mismatches.tsv` and run as pending examples
+Unresolved minimized cases live in `spec/fixtures/cop_project_mismatches.tsv`
+and run as pending examples
 in `spec/project_parity_mismatches_spec.rb`. A fix must make its pending example
 unexpectedly pass, then move that row into `manifest.tsv`.
 
@@ -121,6 +125,15 @@ bundle exec ruby script/audit_project_parity.rb \
   --markdown tmp/project-parity/current-head.md
 ```
 
+The older minimized project/configuration differential is also opt-in and does
+not run in the normal RSpec suite:
+
+```sh
+PROJECT_AUDIT=1 bundle exec rspec \
+  spec/project_parity_regressions_spec.rb \
+  spec/configuration_parity_regressions_spec.rb
+```
+
 The gate records a clean-tree Git commit when available. For a dirty tree it
 records a deterministic SHA-256 over every native cop source file; both forms
 are paired with the release-binary SHA-256. Compare paths, severities, messages,
@@ -130,10 +143,9 @@ new source identity before calling it current. Project-exact is a statement
 about the pinned corpus and configuration; fixture coverage remains required
 for autocorrection and unexercised branches.
 
-Use `--baseline spec/upstream/rubocop-1.87.0/status.yml` for the full captured
-diagnostic run. That gate accepts improvements while preserving its regression
-baseline. Generate the public evidence matrix and work queue only from a
-complete real-project audit:
+The full captured diagnostic run fails on any retained fixture difference.
+Generate the public evidence matrix and work queue only from a complete
+real-project audit:
 
 ```sh
 ruby script/generate_project_parity_docs.rb \
@@ -142,9 +154,12 @@ ruby script/generate_project_parity_docs.rb \
 
 The generator rejects focused or truncated reports.
 
-`quality:test_contracts` also checks that the committed 500-example corpus is
-exactly reproducible. Use `script/generate_compatibility_corpus.rb --check` for
-a read-only check. Performance scripts consume the independent pinned
+`quality:test_contracts` checks that every committed compatibility fixture is
+owned by a known cop, indexed files are complete, and all controlled cache
+digests are intact. Use `script/verify_cop.rb Department/CopName` for the fast
+focused contract. Add `--live-rubocop` only when deliberately validating the
+capture pipeline; refresh the complete cache with
+`bundle exec rake fixtures:refresh_unit`. Performance scripts consume the independent pinned
 `benchmark/corpus.json` and update their marked README, performance-guide, and
 ADR sections from the measured JSON reports.
 

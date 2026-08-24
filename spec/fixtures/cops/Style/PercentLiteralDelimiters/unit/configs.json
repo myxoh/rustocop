@@ -1,0 +1,4 @@
+{
+  "b3e555c8c0c622c1": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/PercentLiteralDelimiters:\n  Description: Use `%`-literal delimiters consistently.\n  StyleGuide: \"#percent-literal-braces\"\n  Enabled: true\n  VersionAdded: '0.19'\n  PreferredDelimiters:\n    default: \"[]\"\n  VersionChanged: '0.48'\n  AutoCorrect: always\n",
+  "e6c67a05cd4e5bf4": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/PercentLiteralDelimiters:\n  Description: Use `%`-literal delimiters consistently.\n  StyleGuide: \"#percent-literal-braces\"\n  Enabled: true\n  VersionAdded: '0.19'\n  PreferredDelimiters:\n    default: \"[]\"\n    \"%\": \"()\"\n  VersionChanged: '0.48'\n  AutoCorrect: always\n"
+}

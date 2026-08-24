@@ -1,0 +1,4 @@
+{
+  "09a57f2c5d2faf43": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/DisableCopsWithinSourceCodeDirective:\n  Description: Forbids disabling/enabling cops within source code.\n  Enabled: true\n  VersionAdded: '0.82'\n  VersionChanged: '1.9'\n  AllowedCops: []\n  AutoCorrect: always\n",
+  "d7cca30df3eea3ee": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/DisableCopsWithinSourceCodeDirective:\n  Description: Forbids disabling/enabling cops within source code.\n  Enabled: true\n  VersionAdded: '0.82'\n  VersionChanged: '1.9'\n  AllowedCops:\n  - Metrics/CyclomaticComplexity\n  - Metrics/AbcSize\n  AutoCorrect: always\n"
+}

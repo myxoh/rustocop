@@ -1,0 +1,4 @@
+{
+  "23ee1e46f9d2147e": "---\nStyle/ReturnNil:\n  EnforcedStyle: return\n  SupportedStyles:\n  - return\n  - return_nil\n  Enabled: true\n",
+  "57777ddf0886bbba": "---\nStyle/ReturnNil:\n  EnforcedStyle: return_nil\n  SupportedStyles:\n  - return\n  - return_nil\n  Enabled: true\n"
+}

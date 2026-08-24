@@ -1,0 +1,3 @@
+{
+  "21dfee99f9f1c62f": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/ClassVars:\n  Description: Avoid the use of class variables.\n  StyleGuide: \"#no-class-vars\"\n  Enabled: true\n  VersionAdded: '0.13'\n  AutoCorrect: always\n"
+}

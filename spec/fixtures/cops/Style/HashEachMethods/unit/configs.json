@@ -1,0 +1,5 @@
+{
+  "773fbdf88579ab0a": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/HashEachMethods:\n  Description: Use Hash#each_key and Hash#each_value.\n  StyleGuide: \"#hash-each\"\n  Enabled: true\n  Safe: false\n  VersionAdded: '0.80'\n  VersionChanged: '1.16'\n  AllowedReceivers:\n  - Thread.current\n  AutoCorrect: always\n",
+  "fe6ab7563203ab96": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/HashEachMethods:\n  Description: Use Hash#each_key and Hash#each_value.\n  StyleGuide: \"#hash-each\"\n  Enabled: true\n  Safe: false\n  VersionAdded: '0.80'\n  VersionChanged: '1.16'\n  AllowedReceivers:\n  - execute\n  AutoCorrect: always\n",
+  "fecba7bffd6b6f60": "---\nAllCops:\n  TargetRubyVersion: 3.4\nStyle/HashEachMethods:\n  Description: Use Hash#each_key and Hash#each_value.\n  StyleGuide: \"#hash-each\"\n  Enabled: true\n  Safe: false\n  VersionAdded: '0.80'\n  VersionChanged: '1.16'\n  AllowedReceivers:\n  - Thread.current\n  AutoCorrect: always\n"
+}

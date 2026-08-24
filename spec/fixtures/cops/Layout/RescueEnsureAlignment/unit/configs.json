@@ -1,0 +1,9 @@
+{
+  "1a35a008c982c262": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/RescueEnsureAlignment:\n  Description: Align rescues and ensures correctly.\n  Enabled: true\n  VersionAdded: '0.49'\n  AutoCorrect: always\n  EnforcedStyle: require_parentheses\nLayout/BeginEndAlignment:\n  EnforcedStyleAlignWith: start_of_line\n",
+  "5017927687e3c467": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/RescueEnsureAlignment:\n  Description: Align rescues and ensures correctly.\n  Enabled: true\n  VersionAdded: '0.49'\n  AutoCorrect: always\n  EnforcedStyle: require_parentheses\nLayout/BeginEndAlignment:\n  EnforcedStyleAlignWith: begin\n",
+  "7554c6d8f9cdafe5": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/RescueEnsureAlignment:\n  Description: Align rescues and ensures correctly.\n  Enabled: true\n  VersionAdded: '0.49'\n  AutoCorrect: always\n",
+  "8c0875cd487f21dc": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/RescueEnsureAlignment:\n  Description: Align rescues and ensures correctly.\n  Enabled: true\n  VersionAdded: '0.49'\n  AutoCorrect: always\n  Style/AccessModifierDeclarations:\n    EnforcedStyle: inline\n",
+  "e3a6543de160e474": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/RescueEnsureAlignment:\n  Description: Align rescues and ensures correctly.\n  Enabled: true\n  VersionAdded: '0.49'\n  AutoCorrect: always\n  EnforcedStyle: require_parentheses\nLayout/BeginEndAlignment:\n  Enabled: false\n  EnforcedStyleAlignWith: start_of_line\n",
+  "e492554af33a6586": "---\nLayout/RescueEnsureAlignment:\n  Enabled: true\n  Exclude:\n  - \"**/**\"\n",
+  "fd8b7735d478d941": "---\nAllCops:\n  TargetRubyVersion: 3.4\nLayout/RescueEnsureAlignment:\n  Description: Align rescues and ensures correctly.\n  Enabled: true\n  VersionAdded: '0.49'\n  AutoCorrect: always\n"
+}

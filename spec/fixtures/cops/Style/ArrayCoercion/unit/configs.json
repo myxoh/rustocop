@@ -1,0 +1,3 @@
+{
+  "19d509b6b5156c36": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/ArrayCoercion:\n  Description: Use Array() instead of explicit Array check or [*var], when dealing\n    with a variable you want to treat as an Array, but you're not certain it's an\n    array.\n  StyleGuide: \"#array-coercion\"\n  Safe: false\n  Enabled: true\n  VersionAdded: '0.88'\n  AutoCorrect: always\n"
+}

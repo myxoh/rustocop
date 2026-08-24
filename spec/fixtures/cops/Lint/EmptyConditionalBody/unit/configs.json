@@ -1,0 +1,5 @@
+{
+  "611606de237c12e8": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/EmptyConditionalBody:\n  Description: Checks for the presence of `if`, `elsif` and `unless` branches without\n    a body.\n  Enabled: true\n  AutoCorrect: always\n  AllowComments: false\n  VersionAdded: '0.89'\n  VersionChanged: '1.73'\n",
+  "d674cf07cb2a795f": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/EmptyConditionalBody:\n  Description: Checks for the presence of `if`, `elsif` and `unless` branches without\n    a body.\n  Enabled: true\n  AutoCorrect: always\n  AllowComments: true\n  VersionAdded: '0.89'\n  VersionChanged: '1.73'\n",
+  "ffc6a1deaae64ca4": "---\nAllCops:\n  TargetRubyVersion: 3.1\nLint/EmptyConditionalBody:\n  Description: Checks for the presence of `if`, `elsif` and `unless` branches without\n    a body.\n  Enabled: true\n  AutoCorrect: always\n  AllowComments: true\n  VersionAdded: '0.89'\n  VersionChanged: '1.73'\n"
+}

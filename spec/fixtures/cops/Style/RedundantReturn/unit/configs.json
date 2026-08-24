@@ -1,0 +1,4 @@
+{
+  "6e51a2c34858d07d": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/RedundantReturn:\n  Description: Don't use return where it's not required.\n  StyleGuide: \"#no-explicit-return\"\n  Enabled: true\n  VersionAdded: '0.10'\n  VersionChanged: '0.14'\n  AllowMultipleReturnValues: true\n  AutoCorrect: always\n",
+  "dcc05001c075174e": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/RedundantReturn:\n  Description: Don't use return where it's not required.\n  StyleGuide: \"#no-explicit-return\"\n  Enabled: true\n  VersionAdded: '0.10'\n  VersionChanged: '0.14'\n  AllowMultipleReturnValues: false\n  AutoCorrect: always\n"
+}

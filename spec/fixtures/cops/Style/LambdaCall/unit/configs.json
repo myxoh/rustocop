@@ -1,0 +1,4 @@
+{
+  "90667a884b6019f8": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/LambdaCall:\n  Description: Use lambda.call(...) instead of lambda.(...).\n  StyleGuide: \"#proc-call\"\n  Enabled: true\n  AutoCorrect: always\n  VersionAdded: '0.13'\n  VersionChanged: '1.81'\n  EnforcedStyle: call\n  SupportedStyles:\n  - call\n  - braces\n",
+  "a95523cce8906b87": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/LambdaCall:\n  Description: Use lambda.call(...) instead of lambda.(...).\n  StyleGuide: \"#proc-call\"\n  Enabled: true\n  AutoCorrect: always\n  VersionAdded: '0.13'\n  VersionChanged: '1.81'\n  EnforcedStyle: braces\n  SupportedStyles:\n  - call\n  - braces\n"
+}

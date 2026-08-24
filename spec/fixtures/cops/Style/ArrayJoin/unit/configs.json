@@ -1,0 +1,3 @@
+{
+  "7abc1b08b0dd056c": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/ArrayJoin:\n  Description: Use Array#join instead of Array#*.\n  StyleGuide: \"#array-join\"\n  Enabled: true\n  VersionAdded: '0.20'\n  VersionChanged: '0.31'\n  AutoCorrect: always\n"
+}

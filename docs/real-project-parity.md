@@ -136,6 +136,14 @@ bundle exec ruby script/audit_project_parity.rb \
   --markdown tmp/project-parity/all-cops-current.md
 ```
 
+Turn newly observed signature differences into minimized, provenance-backed
+fixtures before changing implementations:
+
+```sh
+bundle exec ruby script/isolate_project_parity_mismatches.rb \
+  tmp/project-parity/all-cops-current.json
+```
+
 The reference stores RuboCop's normalized diagnostic signatures and is accepted
 only when its RuboCop version, strict-config SHA-256, complete cop selection,
 pinned project revisions, and per-project file counts match. Refresh it after
@@ -159,6 +167,6 @@ bundle exec ruby script/generate_compatibility_report.rb --refresh-projects
 Generated JSON and Markdown under `tmp/project-parity/` are intentionally
 untracked. The compressed RuboCop reference under
 `spec/compatibility_evidence/` is tracked. Any committed claim must include the
-source commit, binary digest, reference digest, corpus revisions,
+source identity, binary digest, reference digest, corpus revisions,
 classification counts, and whether it came from a complete matrix or a focused
 reconciliation.

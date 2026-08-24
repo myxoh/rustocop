@@ -1,0 +1,4 @@
+{
+  "3af179353320bcab": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/EmptyHeredoc:\n  Description: Checks for using empty heredoc to reduce redundancy.\n  Enabled: true\n  AutoCorrect: always\n  VersionAdded: '1.32'\n  VersionChanged: '1.61'\nStyle/StringLiterals:\n  EnforcedStyle: double_quotes\n",
+  "528027f8129922b6": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/EmptyHeredoc:\n  Description: Checks for using empty heredoc to reduce redundancy.\n  Enabled: true\n  AutoCorrect: always\n  VersionAdded: '1.32'\n  VersionChanged: '1.61'\n"
+}

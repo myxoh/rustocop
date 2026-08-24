@@ -1,0 +1,3 @@
+{
+  "d53a3dce5040317a": "---\nAllCops:\n  TargetRubyVersion: 2.7\nSecurity/Open:\n  Description: The use of `Kernel#open` and `URI.open` represent a serious security\n    risk.\n  Enabled: true\n  VersionAdded: '0.53'\n  VersionChanged: '1.0'\n  Safe: false\n  AutoCorrect: always\n"
+}

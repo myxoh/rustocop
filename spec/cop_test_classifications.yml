@@ -1,5 +1,0 @@
----
-version: 1.87.0
-non_behavioral_files:
-- spec/rustocop/executable_spec.rb
-heuristic_regressions: {}

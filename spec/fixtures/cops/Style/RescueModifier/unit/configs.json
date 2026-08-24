@@ -1,0 +1,4 @@
+{
+  "75db1e7de5ef3957": "---\nLayout/IndentationWidth:\n  Width: 2\nStyle/RescueModifier:\n  Enabled: true\n",
+  "aa1e7dfa66d5d3b5": "---\nStyle/RescueModifier:\n  Enabled: true\n  Exclude:\n  - \"**/**\"\n"
+}

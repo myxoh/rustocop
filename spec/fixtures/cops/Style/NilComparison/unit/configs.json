@@ -1,0 +1,4 @@
+{
+  "d73fe26bc0d4779e": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/NilComparison:\n  Description: Prefer x.nil? to x == nil.\n  StyleGuide: \"#predicate-methods\"\n  Enabled: true\n  VersionAdded: '0.12'\n  VersionChanged: '0.59'\n  EnforcedStyle: comparison\n  SupportedStyles:\n  - predicate\n  - comparison\n  AutoCorrect: always\n",
+  "e8b93dfbcbc77d0c": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/NilComparison:\n  Description: Prefer x.nil? to x == nil.\n  StyleGuide: \"#predicate-methods\"\n  Enabled: true\n  VersionAdded: '0.12'\n  VersionChanged: '0.59'\n  EnforcedStyle: predicate\n  SupportedStyles:\n  - predicate\n  - comparison\n  AutoCorrect: always\n"
+}

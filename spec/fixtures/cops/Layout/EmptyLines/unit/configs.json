@@ -1,0 +1,3 @@
+{
+  "3532433e6c63a52d": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/EmptyLines:\n  Description: Don't use several empty lines in a row.\n  StyleGuide: \"#two-or-more-empty-lines\"\n  Enabled: true\n  VersionAdded: '0.49'\n  AutoCorrect: always\n"
+}

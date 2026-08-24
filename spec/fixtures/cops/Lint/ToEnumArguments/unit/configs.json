@@ -1,0 +1,5 @@
+{
+  "16b6b9f64a469569": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/ToEnumArguments:\n  Description: Ensures that `to_enum`/`enum_for`, called for the current method, has\n    correct arguments.\n  Enabled: true\n  VersionAdded: '1.1'\n  AutoCorrect: always\n",
+  "a12d224822f0b412": "---\nAllCops:\n  TargetRubyVersion: 3.0\nLint/ToEnumArguments:\n  Description: Ensures that `to_enum`/`enum_for`, called for the current method, has\n    correct arguments.\n  Enabled: true\n  VersionAdded: '1.1'\n  AutoCorrect: always\n",
+  "b31bc914bd0f4181": "---\nAllCops:\n  TargetRubyVersion: 3.2\nLint/ToEnumArguments:\n  Description: Ensures that `to_enum`/`enum_for`, called for the current method, has\n    correct arguments.\n  Enabled: true\n  VersionAdded: '1.1'\n  AutoCorrect: always\n"
+}

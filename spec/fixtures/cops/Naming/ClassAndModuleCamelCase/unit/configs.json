@@ -1,0 +1,4 @@
+{
+  "5523ca8aa317224f": "---\nAllCops:\n  TargetRubyVersion: 2.7\nNaming/ClassAndModuleCamelCase:\n  Description: Use CamelCase for classes and modules.\n  StyleGuide: \"#camelcase-classes\"\n  Enabled: true\n  VersionAdded: '0.50'\n  VersionChanged: '0.85'\n  AllowedNames:\n  - module_parent\n  AutoCorrect: always\n",
+  "907c95678128c659": "---\nAllCops:\n  TargetRubyVersion: 2.7\nNaming/ClassAndModuleCamelCase:\n  Description: Use CamelCase for classes and modules.\n  StyleGuide: \"#camelcase-classes\"\n  Enabled: true\n  VersionAdded: '0.50'\n  VersionChanged: '0.85'\n  AllowedNames:\n  - getter_class\n  - setter_class\n  AutoCorrect: always\n"
+}

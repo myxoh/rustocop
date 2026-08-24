@@ -1,0 +1,5 @@
+{
+  "405d1547dd112cd4": "---\nAllCops:\n  TargetRubyVersion: 3.1\nStyle/RedundantLineContinuation:\n  Description: Checks for redundant line continuation.\n  Enabled: true\n  VersionAdded: '1.49'\n  AutoCorrect: always\n",
+  "6cc7a87e1e7e0721": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/RedundantLineContinuation:\n  Description: Checks for redundant line continuation.\n  Enabled: true\n  VersionAdded: '1.49'\n  AutoCorrect: always\n",
+  "b29514e8afb82628": "---\nAllCops:\n  TargetRubyVersion: 3.2\nStyle/RedundantLineContinuation:\n  Description: Checks for redundant line continuation.\n  Enabled: true\n  VersionAdded: '1.49'\n  AutoCorrect: always\n"
+}

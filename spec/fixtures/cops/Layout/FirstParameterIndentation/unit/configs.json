@@ -1,0 +1,4 @@
+{
+  "7b607b272b453d29": "---\nLayout/FirstParameterIndentation:\n  EnforcedStyle: align_parentheses\n  SupportedStyles:\n  - consistent\n  - align_parentheses\n  IndentationWidth:\n  Enabled: true\nLayout/IndentationWidth:\n  Width: 2\n",
+  "fe15375b5d939778": "---\nLayout/FirstParameterIndentation:\n  EnforcedStyle: consistent\n  SupportedStyles:\n  - consistent\n  - align_parentheses\n  IndentationWidth:\n  Enabled: true\nLayout/IndentationWidth:\n  Width: 2\n"
+}

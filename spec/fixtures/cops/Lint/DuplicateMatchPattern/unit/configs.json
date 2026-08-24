@@ -1,0 +1,3 @@
+{
+  "408f01033147db1c": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/DuplicateMatchPattern:\n  Description: Do not repeat patterns in `in` keywords.\n  Enabled: true\n  VersionAdded: '1.50'\n  AutoCorrect: always\n"
+}

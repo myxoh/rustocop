@@ -1,0 +1,3 @@
+{
+  "7fdbdaa0447212f0": "---\nAllCops:\n  TargetRubyVersion: 3.0\nStyle/AmbiguousEndlessMethodDefinition:\n  Description: Checks for endless methods inside operators of lower precedence.\n  StyleGuide: \"#ambiguous-endless-method-definitions\"\n  Enabled: true\n  VersionAdded: '1.68'\n  AutoCorrect: always\n"
+}

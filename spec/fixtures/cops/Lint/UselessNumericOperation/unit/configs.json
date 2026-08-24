@@ -1,0 +1,3 @@
+{
+  "49a5072d5931b40c": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/UselessNumericOperation:\n  Description: Checks for useless numeric operations.\n  Enabled: true\n  VersionAdded: '1.66'\n  AutoCorrect: always\n"
+}

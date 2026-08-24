@@ -1,0 +1,3 @@
+{
+  "5d8549a5bdc59e45": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/KeywordArgumentsMerging:\n  Description: When passing an existing hash as keyword arguments, provide additional\n    arguments directly rather than using `merge`.\n  StyleGuide: \"#merging-keyword-arguments\"\n  Enabled: true\n  VersionAdded: '1.68'\n  AutoCorrect: always\n"
+}

@@ -1,0 +1,3 @@
+{
+  "137b3901a7238be6": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/MixedRegexpCaptureTypes:\n  Description: Do not mix named captures and numbered captures in a Regexp literal.\n  Enabled: true\n  VersionAdded: '0.85'\n  AutoCorrect: always\n"
+}

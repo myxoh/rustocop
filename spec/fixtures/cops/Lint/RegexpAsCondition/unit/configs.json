@@ -1,0 +1,3 @@
+{
+  "55c0f0a3a530496f": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/RegexpAsCondition:\n  Description: Do not use regexp literal as a condition. The regexp literal matches\n    `$_` implicitly.\n  Enabled: true\n  VersionAdded: '0.51'\n  VersionChanged: '0.86'\n  AutoCorrect: always\n"
+}

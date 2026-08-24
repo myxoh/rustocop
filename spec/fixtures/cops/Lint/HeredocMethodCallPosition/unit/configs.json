@@ -1,0 +1,3 @@
+{
+  "e91e3e36716cf223": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/HeredocMethodCallPosition:\n  Description: Checks for the ordering of a method call where the receiver of the\n    call is a HEREDOC.\n  Enabled: true\n  StyleGuide: \"#heredoc-method-calls\"\n  VersionAdded: '0.68'\n  AutoCorrect: always\n"
+}

@@ -1,16 +1,10 @@
 # frozen_string_literal: true
 
 RSpec.describe "Prism cop compatibility" do
-  cops = {
-    "security_eval" => "Security/Eval",
-    "security_json_load" => "Security/JSONLoad",
-    "security_marshal_load" => "Security/MarshalLoad",
-    "security_open" => "Security/Open",
-    "security_io_methods" => "Security/IoMethods"
-  }
+  cops = %w[Security/Eval Security/JSONLoad Security/MarshalLoad Security/Open Security/IoMethods]
 
-  examples = cops.flat_map do |directory, cop|
-    Dir[File.join(ROOT, "spec", "fixtures", "prism_examples", directory, "*.rb")].sort.map do |path|
+  examples = cops.flat_map do |cop|
+    Dir[File.join(ROOT, "spec", "fixtures", "cops", *cop.split("/"), "prism", "*.rb")].sort.map do |path|
       [cop, path]
     end
   end
@@ -20,7 +14,7 @@ RSpec.describe "Prism cop compatibility" do
   examples.each do |cop, path|
     relative_path = path.delete_prefix("#{ROOT}/")
 
-    it "matches RuboCop for #{cop} on #{relative_path}" do
+    it "matches RuboCop for #{cop} on #{relative_path}", cop: cop do
       rubocop = run_rubocop("--cache", "false", "--format", "json", "--only", cop, path)
       rustocop = run_rustocop("--cache", "false", "--format", "json", "--only", cop, path)
 
@@ -48,7 +42,7 @@ RSpec.describe "Prism cop compatibility" do
     "Security/JSONLoad" => ["JSON.load(payload)\n", "JSON.parse(payload)\n"],
     "Security/IoMethods" => ["IO.read(path)\n", "File.read(path)\n"]
   }.each do |cop, (source, corrected_source)|
-    it "matches RuboCop autocorrection for #{cop}" do
+    it "matches RuboCop autocorrection for #{cop}", cop: cop do
       Dir.mktmpdir do |dir|
         rubocop_dir = File.join(dir, "rubocop")
         rustocop_dir = File.join(dir, "rustocop")

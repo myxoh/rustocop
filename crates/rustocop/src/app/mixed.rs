@@ -24,7 +24,7 @@ pub(super) fn custom_cops(options: &RunOptions) -> Option<Vec<String>> {
 }
 
 pub(super) fn run(options: &RunOptions, custom_cops: &[String]) -> i32 {
-    if options.inspection.autocorrect {
+    if options.inspection.autocorrect_enabled() {
         return fail("mixed custom-cop runs do not yet support autocorrection");
     }
     if options.stdin_path.is_some() {

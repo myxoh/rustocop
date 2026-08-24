@@ -1,0 +1,4 @@
+{
+  "332247e2f03641d1": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/HashAsLastArrayItem:\n  Description: Checks for presence or absence of braces around hash literal as a last\n    array item depending on configuration.\n  StyleGuide: \"#hash-literal-as-last-array-item\"\n  Enabled: true\n  VersionAdded: '0.88'\n  EnforcedStyle: braces\n  SupportedStyles:\n  - braces\n  - no_braces\n  AutoCorrect: always\n",
+  "f1f3b3f5d0da4e8b": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/HashAsLastArrayItem:\n  Description: Checks for presence or absence of braces around hash literal as a last\n    array item depending on configuration.\n  StyleGuide: \"#hash-literal-as-last-array-item\"\n  Enabled: true\n  VersionAdded: '0.88'\n  EnforcedStyle: no_braces\n  SupportedStyles:\n  - braces\n  - no_braces\n  AutoCorrect: always\n"
+}

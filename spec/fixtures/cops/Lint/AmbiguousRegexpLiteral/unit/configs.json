@@ -1,0 +1,4 @@
+{
+  "8a1e8406c2595779": "---\nAllCops:\n  TargetRubyVersion: 3.0\nLint/AmbiguousRegexpLiteral:\n  Description: Checks for ambiguous regexp literals in the first argument of a method\n    invocation without parentheses.\n  Enabled: true\n  VersionAdded: '0.17'\n  VersionChanged: '0.83'\n  AutoCorrect: always\n",
+  "b00d84a6a5d96ff0": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/AmbiguousRegexpLiteral:\n  Description: Checks for ambiguous regexp literals in the first argument of a method\n    invocation without parentheses.\n  Enabled: true\n  VersionAdded: '0.17'\n  VersionChanged: '0.83'\n  AutoCorrect: always\n"
+}

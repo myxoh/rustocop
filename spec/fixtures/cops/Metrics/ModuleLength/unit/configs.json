@@ -1,0 +1,6 @@
+{
+  "044ce7deb680893f": "---\nAllCops:\n  TargetRubyVersion: 2.7\nMetrics/ModuleLength:\n  Description: Avoid modules longer than 100 lines of code.\n  Enabled: true\n  VersionAdded: '0.31'\n  VersionChanged: '0.87'\n  CountComments: true\n  Max: 5\n  CountAsOne: []\n  AutoCorrect: always\n",
+  "2635a930ca099b60": "---\nAllCops:\n  TargetRubyVersion: 2.7\nMetrics/ModuleLength:\n  Description: Avoid modules longer than 100 lines of code.\n  Enabled: true\n  VersionAdded: '0.31'\n  VersionChanged: '0.87'\n  CountComments: false\n  Max: 5\n  CountAsOne:\n  - array\n  AutoCorrect: always\n",
+  "750963a92dee1171": "---\nAllCops:\n  TargetRubyVersion: 2.7\nMetrics/ModuleLength:\n  Description: Avoid modules longer than 100 lines of code.\n  Enabled: true\n  VersionAdded: '0.31'\n  VersionChanged: '0.87'\n  CountComments: false\n  Max: 5\n  CountAsOne: []\n  AutoCorrect: always\n",
+  "ecf566a18c115be9": "---\nAllCops:\n  TargetRubyVersion: 3.4\nMetrics/ModuleLength:\n  Description: Avoid modules longer than 100 lines of code.\n  Enabled: true\n  VersionAdded: '0.31'\n  VersionChanged: '0.87'\n  CountComments: false\n  Max: 5\n  CountAsOne: []\n  AutoCorrect: always\n"
+}

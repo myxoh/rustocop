@@ -1,10 +1,10 @@
 # Supplemental cop qualification records
 
-This directory preserves the executable five-check audit used for the original
-60-cop qualification batch. It is still useful for replaying those manual,
-upstream, edge-case, and real-world checks, but it is not current public support
-evidence. Current support is determined by the complete fixture and 50-project
-snapshots documented in the root README and `docs/compatibility.md`.
+This directory preserves the historical five-check records used for the
+original 60-cop qualification batch. The retired qualification runner has been
+removed; these records are not current public support evidence. Current support
+is determined by the complete fixture and 50-project snapshots documented in
+the root README and `docs/compatibility.md`.
 
 Historical `verified` or `heuristic` labels do not grant compatibility credit.
 
@@ -57,20 +57,11 @@ cops:
             non_offending_example
 ```
 
-Each edge and real-world case must be executable Ruby source. The differential
-qualification runner will execute only the named cop with the recorded config
-and require Rustocop's normalized diagnostics to match RuboCop exactly. A real
-positive must produce at least one RuboCop offense; a real negative must
-produce none.
-
-Run only the edge-case fixture check while a batch is being assembled with:
-
-```sh
-bundle exec ruby script/verify_qualification.rb --no-upstream --checks 3
-```
-
-`RUSTOCOP_NATIVE_PATH` can point the verifier at a worktree build without
-overwriting the checked-in native executable.
+Each recorded edge and real-world case was required to be executable Ruby
+source. The historical differential runner executed only the named cop with the
+recorded config and required Rustocop's normalized diagnostics to match RuboCop
+exactly. A real positive had to produce at least one RuboCop offense; a real
+negative had to produce none.
 
 A cop earns credit only when all of the following are true:
 

@@ -1,0 +1,3 @@
+{
+  "65f1037555b3e407": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/SpaceAfterMethodName:\n  Description: Do not put a space between a method name and the opening parenthesis\n    in a method definition.\n  StyleGuide: \"#parens-no-spaces\"\n  Enabled: true\n  VersionAdded: '0.49'\n  AutoCorrect: always\n"
+}

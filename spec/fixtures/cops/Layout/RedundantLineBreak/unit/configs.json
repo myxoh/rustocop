@@ -1,0 +1,15 @@
+{
+  "0a58f2decd173fd3": "---\nLayout/LineLength:\n  Enabled: true\n  Max: 100\nLayout/RedundantLineBreak:\n  InspectBlocks: false\n  Enabled: true\nLayout/SingleLineBlockChain:\n  Enabled: false\n",
+  "0b7a1f9e778a731f": "---\nLayout/LineLength:\n  Enabled: true\n  Max: 100\nLayout/RedundantLineBreak:\n  InspectBlocks: false\n  Enabled: true\nLayout/SingleLineBlockChain:\n  Enabled: true\n",
+  "1b82e71ed732ed16": "---\nLayout/LineLength:\n  Enabled: true\n  Max: 90\nLayout/RedundantLineBreak:\n  InspectBlocks: true\n  Enabled: true\nLayout/SingleLineBlockChain:\n  Enabled: false\n",
+  "29d4a1b5a1520cc8": "---\nLayout/LineLength:\n  Enabled: true\n  Max: 31\nLayout/RedundantLineBreak:\n  InspectBlocks: true\n  Enabled: true\nLayout/SingleLineBlockChain:\n  Enabled: true\n",
+  "39940e551ef2316c": "---\nLayout/LineLength:\n  Enabled: true\n  Max: 82\nLayout/RedundantLineBreak:\n  InspectBlocks: true\n  Enabled: true\nLayout/SingleLineBlockChain:\n  Enabled: true\n",
+  "68d57ef6f5d29b6e": "---\nLayout/LineLength:\n  Enabled: true\n  Max: 31\nLayout/RedundantLineBreak:\n  InspectBlocks: false\n  Enabled: true\nLayout/SingleLineBlockChain:\n  Enabled: true\n",
+  "9bfa58182a98ce92": "---\nLayout/LineLength:\n  Enabled: true\n  Max: 90\nLayout/RedundantLineBreak:\n  InspectBlocks: false\n  Enabled: true\nLayout/SingleLineBlockChain:\n  Enabled: true\n",
+  "9e363db0e0b2bf71": "---\nLayout/LineLength:\n  Enabled: true\n  Max: 90\nLayout/RedundantLineBreak:\n  InspectBlocks: true\n  Enabled: true\nLayout/SingleLineBlockChain:\n  Enabled: true\n",
+  "b4526c6bd0c8bc00": "---\nLayout/LineLength:\n  Enabled: false\n  Max: 31\nLayout/RedundantLineBreak:\n  InspectBlocks: false\n  Enabled: true\nLayout/SingleLineBlockChain:\n  Enabled: true\n",
+  "b601d5a2d1479a9d": "---\nLayout/LineLength:\n  Enabled: true\n  Max: 90\nLayout/RedundantLineBreak:\n  InspectBlocks: false\n  Enabled: true\nLayout/SingleLineBlockChain:\n  Enabled: false\n",
+  "b70a7a45020a42b0": "---\nLayout/LineLength:\n  Enabled: true\n  Max: 82\nLayout/RedundantLineBreak:\n  InspectBlocks: true\n  Enabled: true\nLayout/SingleLineBlockChain:\n  Enabled: false\n",
+  "eeea02635c3c2e0e": "---\nLayout/LineLength:\n  Enabled: true\n  Max: 100\nLayout/RedundantLineBreak:\n  InspectBlocks: true\n  Enabled: true\nLayout/SingleLineBlockChain:\n  Enabled: true\n",
+  "f7ba63999e858a5c": "---\nLayout/LineLength:\n  Enabled: true\n  Max: 82\nLayout/RedundantLineBreak:\n  InspectBlocks: false\n  Enabled: true\nLayout/SingleLineBlockChain:\n  Enabled: true\n"
+}

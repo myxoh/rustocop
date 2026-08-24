@@ -1,0 +1,3 @@
+{
+  "84064063e99620bb": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/FileOpen:\n  Description: Checks for `File.open` without a block, which can leak file descriptors.\n  Enabled: true\n  Safe: false\n  VersionAdded: '1.85'\n  AutoCorrect: always\n"
+}

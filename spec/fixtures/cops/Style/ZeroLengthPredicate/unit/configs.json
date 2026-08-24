@@ -1,0 +1,3 @@
+{
+  "37f6ca24f5ef07fc": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/ZeroLengthPredicate:\n  Description: 'Use #empty? when testing for objects of length 0.'\n  Enabled: true\n  Safe: false\n  VersionAdded: '0.37'\n  VersionChanged: '0.39'\n  AutoCorrect: always\n"
+}

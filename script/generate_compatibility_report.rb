@@ -88,16 +88,29 @@ if options[:refresh_fixtures]
   FileUtils.mkdir_p(File.dirname(fixture_report))
   FileUtils.rm_f(fixture_report)
   command = [
-    RbConfig.ruby, File.join(ROOT, "script", "compare_upstream_cop_specs.rb"),
-    "--jobs", options[:jobs].to_s, "--report", fixture_report
+    "cargo", "test", "--manifest-path", LAYOUT.rust_manifest, "--release",
+    "cached_unit_contracts_match", "--", "--ignored", "--nocapture"
   ]
-  system(
-    { "RUSTOCOP_NATIVE_PATH" => options[:native] },
-    *command,
-    chdir: ROOT
-  )
+  system({ "RUSTOCOP_UNIT_REPORT" => fixture_report }, *command, chdir: ROOT)
   exitstatus = Process.last_status.exitstatus
-  abort "fixture differential failed" unless [0, 1].include?(exitstatus) && File.file?(fixture_report)
+  abort "fixture differential did not produce a report" unless [0, 101].include?(exitstatus) && File.file?(fixture_report)
+  report = JSON.parse(File.read(fixture_report))
+  dirty = Rustocop::ProcessRunner.capture(
+    "git", "status", "--porcelain", "--", "crates/rustocop", chdir: ROOT
+  )
+  commit = Rustocop::ProcessRunner.capture(
+    "git", "log", "-1", "--format=%H", "--", "crates/rustocop", chdir: ROOT
+  )
+  report.merge!(
+    "generated_at" => Time.now.iso8601,
+    "rust_commit" => dirty.success? && dirty.stdout.empty? && commit.success? ? commit.stdout.strip : nil,
+    "cop_source_sha256" => Rustocop::SourceFingerprint.cops(root: ROOT),
+    "native_sha256" => Digest::SHA256.file(options[:native]).hexdigest,
+    "fixture_corpus_sha256" => Digest::SHA256.file(
+      File.join(ROOT, "spec", "fixtures", "unit_manifest.json")
+    ).hexdigest
+  )
+  File.write(fixture_report, JSON.pretty_generate(report) + "\n")
   options[:fixture_report] = fixture_report
 end
 
@@ -440,14 +453,14 @@ report = <<~MARKDOWN
 
   ## Updating
 
-  Refresh fixture evidence while retaining the existing project columns:
+  Refresh the Rust-only controlled unit evidence while retaining the existing
+  project columns:
 
   ```sh
   bundle exec ruby script/generate_compatibility_report.rb --refresh-fixtures
   ```
 
-  Refresh both evidence sets only when the expensive legacy RuboCop project scan
-  is intended:
+  Refresh both evidence sets only when the expensive project scan is intended:
 
   ```sh
   bundle exec ruby script/generate_compatibility_report.rb \\

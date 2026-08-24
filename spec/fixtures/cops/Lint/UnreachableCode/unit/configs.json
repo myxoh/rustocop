@@ -1,0 +1,4 @@
+{
+  "88977e45fb7eefaf": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/UnreachableCode:\n  Description: Unreachable code.\n  Enabled: true\n  VersionAdded: '0.9'\n  AutoCorrect: always\n",
+  "de52ea0518388dc6": "---\nAllCops:\n  TargetRubyVersion: 3.4\nLint/UnreachableCode:\n  Description: Unreachable code.\n  Enabled: true\n  VersionAdded: '0.9'\n  AutoCorrect: always\n"
+}

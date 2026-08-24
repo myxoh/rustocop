@@ -1,0 +1,3 @@
+{
+  "29f0d15da0aa3ed8": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/RequireOrder:\n  Description: Sort `require` and `require_relative` in alphabetical order.\n  Enabled: true\n  SafeAutoCorrect: false\n  VersionAdded: '1.40'\n  AutoCorrect: always\n"
+}

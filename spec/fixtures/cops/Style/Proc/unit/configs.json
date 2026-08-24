@@ -1,0 +1,4 @@
+{
+  "69c719b9328f4314": "---\nAllCops:\n  TargetRubyVersion: 3.4\nStyle/Proc:\n  Description: Use proc instead of Proc.new.\n  StyleGuide: \"#proc\"\n  Enabled: true\n  VersionAdded: '0.9'\n  VersionChanged: '0.18'\n  AutoCorrect: always\n",
+  "a3ef454a36bd95a4": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/Proc:\n  Description: Use proc instead of Proc.new.\n  StyleGuide: \"#proc\"\n  Enabled: true\n  VersionAdded: '0.9'\n  VersionChanged: '0.18'\n  AutoCorrect: always\n"
+}

@@ -1,0 +1,4 @@
+{
+  "dabe6541be59f918": "---\nAllCops:\n  ActiveSupportExtensionsEnabled: false\nStyle/RedundantFilterChain:\n  Enabled: true\n",
+  "e5a0714c797823a7": "---\nAllCops:\n  ActiveSupportExtensionsEnabled: true\nStyle/RedundantFilterChain:\n  Enabled: true\n"
+}

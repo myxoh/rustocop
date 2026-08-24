@@ -1,0 +1,3 @@
+{
+  "62d1326a74fafa31": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/UnescapedBracketInRegexp:\n  Description: Checks for unescaped literal `]` in Regexp.\n  Enabled: true\n  VersionAdded: '1.68'\n  AutoCorrect: always\n"
+}

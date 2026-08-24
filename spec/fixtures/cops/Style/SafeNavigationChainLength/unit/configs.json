@@ -1,0 +1,5 @@
+{
+  "27fd51eea48dd3fc": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/SafeNavigationChainLength:\n  Description: Enforces safe navigation chains length to not exceed the configured\n    maximum.\n  StyleGuide: \"#safe-navigation\"\n  Enabled: true\n  VersionAdded: '1.68'\n  Max: 1\n  AutoCorrect: always\n",
+  "6b4c8b780e3eb43c": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/SafeNavigationChainLength:\n  Description: Enforces safe navigation chains length to not exceed the configured\n    maximum.\n  StyleGuide: \"#safe-navigation\"\n  Enabled: true\n  VersionAdded: '1.68'\n  Max: 2\n  AutoCorrect: always\n",
+  "b998fb4d58786c2a": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/SafeNavigationChainLength:\n  Description: Enforces safe navigation chains length to not exceed the configured\n    maximum.\n  StyleGuide: \"#safe-navigation\"\n  Enabled: true\n  VersionAdded: '1.68'\n  Max: 3\n  AutoCorrect: always\n"
+}

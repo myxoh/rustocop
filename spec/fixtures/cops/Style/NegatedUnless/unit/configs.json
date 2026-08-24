@@ -1,0 +1,5 @@
+{
+  "7e6fd1b0edf4e3ff": "---\nStyle/NegatedUnless:\n  SupportedStyles:\n  - both\n  - prefix\n  - postfix\n  EnforcedStyle: both\n  Enabled: true\n",
+  "b364f1b85b59f99e": "---\nStyle/NegatedUnless:\n  SupportedStyles:\n  - both\n  - prefix\n  - postfix\n  EnforcedStyle: postfix\n  Enabled: true\n",
+  "e0b410f8212e3e2a": "---\nStyle/NegatedUnless:\n  SupportedStyles:\n  - both\n  - prefix\n  - postfix\n  EnforcedStyle: prefix\n  Enabled: true\n"
+}

@@ -1,0 +1,4 @@
+{
+  "2f363fce41ff625f": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/InheritException:\n  Description: Avoid inheriting from the `Exception` class.\n  Enabled: true\n  SafeAutoCorrect: false\n  VersionAdded: '0.41'\n  VersionChanged: '1.26'\n  EnforcedStyle: runtime_error\n  SupportedStyles:\n  - standard_error\n  - runtime_error\n  AutoCorrect: always\n",
+  "c6dcc71acda2c104": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/InheritException:\n  Description: Avoid inheriting from the `Exception` class.\n  Enabled: true\n  SafeAutoCorrect: false\n  VersionAdded: '0.41'\n  VersionChanged: '1.26'\n  EnforcedStyle: standard_error\n  SupportedStyles:\n  - standard_error\n  - runtime_error\n  AutoCorrect: always\n"
+}

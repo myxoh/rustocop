@@ -1,0 +1,4 @@
+{
+  "08e94d05e63c9b1c": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/UnlessLogicalOperators:\n  Description: Checks for use of logical operators in an unless condition.\n  Enabled: true\n  VersionAdded: '1.11'\n  EnforcedStyle: forbid_mixed_logical_operators\n  SupportedStyles:\n  - forbid_mixed_logical_operators\n  - forbid_logical_operators\n  AutoCorrect: always\n",
+  "53e4ca0acee2e6e6": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/UnlessLogicalOperators:\n  Description: Checks for use of logical operators in an unless condition.\n  Enabled: true\n  VersionAdded: '1.11'\n  EnforcedStyle: forbid_logical_operators\n  SupportedStyles:\n  - forbid_mixed_logical_operators\n  - forbid_logical_operators\n  AutoCorrect: always\n"
+}

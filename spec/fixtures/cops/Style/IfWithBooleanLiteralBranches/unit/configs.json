@@ -1,0 +1,4 @@
+{
+  "08a65fea9cde436f": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/IfWithBooleanLiteralBranches:\n  Description: Checks for redundant `if` with boolean literal branches.\n  Enabled: true\n  VersionAdded: '1.9'\n  SafeAutoCorrect: false\n  AllowedMethods:\n  - nonzero?\n  AutoCorrect: always\n",
+  "9c1e9a5cbfe614a7": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/IfWithBooleanLiteralBranches:\n  Description: Checks for redundant `if` with boolean literal branches.\n  Enabled: true\n  VersionAdded: '1.9'\n  SafeAutoCorrect: false\n  AllowedMethods:\n  - infinite?\n  - nonzero?\n  AutoCorrect: always\n"
+}

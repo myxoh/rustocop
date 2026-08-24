@@ -1,0 +1,6 @@
+{
+  "399b7098de348092": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/SingleLineDoEndBlock:\n  Description: Checks for single-line `do`...`end` blocks.\n  StyleGuide: \"#single-line-do-end-block\"\n  Enabled: true\n  VersionAdded: '1.57'\n  AutoCorrect: always\nLayout/LineLength:\n  Enabled: false\n",
+  "94870d16b105d896": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/SingleLineDoEndBlock:\n  Description: Checks for single-line `do`...`end` blocks.\n  StyleGuide: \"#single-line-do-end-block\"\n  Enabled: true\n  VersionAdded: '1.57'\n  AutoCorrect: always\n",
+  "a22368b7e72684eb": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/SingleLineDoEndBlock:\n  Description: Checks for single-line `do`...`end` blocks.\n  StyleGuide: \"#single-line-do-end-block\"\n  Enabled: true\n  VersionAdded: '1.57'\n  AutoCorrect: always\nLayout/RedundantLineBreak:\n  Enabled: true\n  InspectBlocks: true\nLayout/LineLength:\n  Max: 20\n",
+  "c6a22763d74c7a21": "---\nAllCops:\n  TargetRubyVersion: 3.4\nStyle/SingleLineDoEndBlock:\n  Description: Checks for single-line `do`...`end` blocks.\n  StyleGuide: \"#single-line-do-end-block\"\n  Enabled: true\n  VersionAdded: '1.57'\n  AutoCorrect: always\n"
+}

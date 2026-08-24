@@ -1,0 +1,3 @@
+{
+  "0d9975a7c5b4d664": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/UriEscapeUnescape:\n  Description: \"`URI.escape` method is obsolete and should not be used. Instead, use\n    `CGI.escape`, `URI.encode_www_form` or `URI.encode_www_form_component` depending\n    on your specific use case. Also `URI.unescape` method is obsolete and should not\n    be used. Instead, use `CGI.unescape`, `URI.decode_www_form` or `URI.decode_www_form_component`\n    depending on your specific use case.\"\n  Enabled: true\n  VersionAdded: '0.50'\n  AutoCorrect: always\n"
+}

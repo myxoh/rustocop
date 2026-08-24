@@ -1,0 +1,3 @@
+{
+  "590df67ac4659ed0": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/FlipFlop:\n  Description: Checks for flip-flops.\n  StyleGuide: \"#no-flip-flops\"\n  Enabled: true\n  VersionAdded: '0.16'\n  AutoCorrect: always\n"
+}

@@ -1,0 +1,4 @@
+{
+  "53642dbbf08ab474": "---\nAllCops:\n  TargetRubyVersion: 2.3\nStyle/FileEmpty:\n  Description: Prefer to use `File.empty?('path/to/file')` when checking if a file\n    is empty.\n  Enabled: true\n  Safe: false\n  VersionAdded: '1.48'\n  AutoCorrect: always\n",
+  "fecdf12cfa1e9712": "---\nAllCops:\n  TargetRubyVersion: 2.4\nStyle/FileEmpty:\n  Description: Prefer to use `File.empty?('path/to/file')` when checking if a file\n    is empty.\n  Enabled: true\n  Safe: false\n  VersionAdded: '1.48'\n  AutoCorrect: always\n"
+}

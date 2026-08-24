@@ -1,0 +1,4 @@
+{
+  "2ececa7524e46bc6": "---\nAllCops:\n  TargetRubyVersion: 2.5\nLint/UselessElseWithoutRescue:\n  Description: Checks for useless `else` in `begin..end` without `rescue`.\n  Enabled: true\n  VersionAdded: '0.17'\n  VersionChanged: '1.31'\n  AutoCorrect: always\n",
+  "77b7532d1331cc7b": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/UselessElseWithoutRescue:\n  Description: Checks for useless `else` in `begin..end` without `rescue`.\n  Enabled: true\n  VersionAdded: '0.17'\n  VersionChanged: '1.31'\n  AutoCorrect: always\n"
+}

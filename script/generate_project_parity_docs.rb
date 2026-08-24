@@ -9,8 +9,8 @@ LAYOUT = Rustocop::RepositoryLayout.default
 ROOT = LAYOUT.root
 SUPPORT_OUTPUT = LAYOUT.path("docs", "cop-support.md")
 REMAINING_OUTPUT = LAYOUT.path("docs", "remaining-cops.md")
-PASSING_MANIFEST = LAYOUT.project_regressions("manifest.tsv")
-PENDING_MANIFEST = LAYOUT.project_regressions("mismatches.tsv")
+PASSING_MANIFEST = LAYOUT.project_regression_manifest
+PENDING_MANIFEST = LAYOUT.project_regression_manifest(pending: true)
 
 report_path = File.expand_path(
   ARGV.fetch(0) { abort "Usage: ruby script/generate_project_parity_docs.rb FULL_AUDIT.json" }

@@ -1,0 +1,3 @@
+{
+  "0bb1670b7e5735ba": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/EachForSimpleLoop:\n  Description: Use `Integer#times` for a simple loop which iterates a fixed number\n    of times.\n  Enabled: true\n  VersionAdded: '0.41'\n  AutoCorrect: always\n"
+}

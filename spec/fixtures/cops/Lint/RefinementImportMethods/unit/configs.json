@@ -1,0 +1,4 @@
+{
+  "61d65e985bf24bff": "---\nAllCops:\n  TargetRubyVersion: 3.1\nLint/RefinementImportMethods:\n  Description: Use `Refinement#import_methods` when using `include` or `prepend` in\n    `refine` block.\n  Enabled: true\n  SafeAutoCorrect: false\n  VersionAdded: '1.27'\n  AutoCorrect: always\n",
+  "f934f4ebe0149811": "---\nAllCops:\n  TargetRubyVersion: 3.0\nLint/RefinementImportMethods:\n  Description: Use `Refinement#import_methods` when using `include` or `prepend` in\n    `refine` block.\n  Enabled: true\n  SafeAutoCorrect: false\n  VersionAdded: '1.27'\n  AutoCorrect: always\n"
+}

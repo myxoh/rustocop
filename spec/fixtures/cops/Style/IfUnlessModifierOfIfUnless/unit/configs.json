@@ -1,0 +1,3 @@
+{
+  "ccbd782e37142945": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/IfUnlessModifierOfIfUnless:\n  Description: Avoid modifier if/unless usage on conditionals.\n  Enabled: true\n  VersionAdded: '0.39'\n  VersionChanged: '0.87'\n  AutoCorrect: always\n"
+}

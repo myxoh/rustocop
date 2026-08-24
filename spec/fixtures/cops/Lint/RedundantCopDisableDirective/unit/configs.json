@@ -1,0 +1,5 @@
+{
+  "408ae8a238f8c4d0": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/RedundantCopDisableDirective:\n  Description: 'Checks for rubocop:disable comments that can be removed. Note: this\n    cop is not disabled when disabling all cops. It must be explicitly disabled.'\n  Enabled: true\n  VersionAdded: '0.76'\n  AutoCorrect: always\nMetrics/MethodLength:\n  Enabled: false\n",
+  "779ec14b42166d12": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/RedundantCopDisableDirective:\n  Description: 'Checks for rubocop:disable comments that can be removed. Note: this\n    cop is not disabled when disabling all cops. It must be explicitly disabled.'\n  Enabled: true\n  VersionAdded: '0.76'\n  AutoCorrect: always\n",
+  "8f21c56b55857281": "---\nMetrics:\n  Enabled: false\nLint/RedundantCopDisableDirective:\n  Enabled: true\n"
+}

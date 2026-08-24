@@ -113,6 +113,8 @@ module UpstreamCopCapture
       "path" => path,
       "ruby_version" => ruby_version.to_s,
       "parser_engine" => parser_engine.to_s,
+      "default_external_encoding" => Encoding.default_external.name,
+      "default_internal_encoding" => Encoding.default_internal&.name,
       "cop_options" => defined?(cop_options) ? cop_options : {},
       "lsp" => defined?(RuboCop::LSP) && RuboCop::LSP.enabled?,
       # Some upstream specs construct the subject with a custom Config instead

@@ -1,0 +1,4 @@
+{
+  "3f21d024fc90fd2f": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/ConstantVisibility:\n  Description: Check that class- and module constants have visibility declarations.\n  Enabled: true\n  VersionAdded: '0.66'\n  VersionChanged: '1.10'\n  IgnoreModules: true\n  AutoCorrect: always\n",
+  "61a40d884f012937": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/ConstantVisibility:\n  Description: Check that class- and module constants have visibility declarations.\n  Enabled: true\n  VersionAdded: '0.66'\n  VersionChanged: '1.10'\n  IgnoreModules: false\n  AutoCorrect: always\n"
+}

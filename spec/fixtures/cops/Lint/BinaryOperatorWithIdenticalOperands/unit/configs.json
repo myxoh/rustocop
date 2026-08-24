@@ -1,0 +1,3 @@
+{
+  "f13d45480cd6d55b": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/BinaryOperatorWithIdenticalOperands:\n  Description: Checks for places where binary operator has identical operands.\n  Enabled: true\n  Safe: false\n  VersionAdded: '0.89'\n  VersionChanged: '1.69'\n  AutoCorrect: always\n"
+}

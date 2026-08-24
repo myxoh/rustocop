@@ -1,0 +1,3 @@
+{
+  "155a561d8102568e": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/EmptyLinesAroundArguments:\n  Description: Keeps track of empty lines around method arguments.\n  Enabled: true\n  VersionAdded: '0.52'\n  AutoCorrect: always\n"
+}

@@ -1,0 +1,3 @@
+{
+  "91e01dee57be5ba5": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/SpaceAfterNot:\n  Description: Tracks redundant space after the ! operator.\n  StyleGuide: \"#no-space-bang\"\n  Enabled: true\n  VersionAdded: '0.49'\n  AutoCorrect: always\n"
+}

@@ -1,0 +1,3 @@
+{
+  "bf931d7afc1b12ec": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/EmptyLinesAroundBeginBody:\n  Description: Keeps track of empty lines around begin-end bodies.\n  StyleGuide: \"#empty-lines-around-bodies\"\n  Enabled: true\n  VersionAdded: '0.49'\n  AutoCorrect: always\n"
+}

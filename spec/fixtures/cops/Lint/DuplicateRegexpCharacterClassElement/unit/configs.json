@@ -1,0 +1,3 @@
+{
+  "1028b09899447422": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/DuplicateRegexpCharacterClassElement:\n  Description: Checks for duplicate elements in Regexp character classes.\n  Enabled: true\n  VersionAdded: '1.1'\n  AutoCorrect: always\n"
+}

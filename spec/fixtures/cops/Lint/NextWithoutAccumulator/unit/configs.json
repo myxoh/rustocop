@@ -1,0 +1,4 @@
+{
+  "81bcc71959a4ba5f": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/NextWithoutAccumulator:\n  Description: Do not omit the accumulator when calling `next` in a `reduce`/`inject`\n    block.\n  Enabled: true\n  VersionAdded: '0.36'\n  AutoCorrect: always\n",
+  "98898cef66bf4997": "---\nAllCops:\n  TargetRubyVersion: 3.4\nLint/NextWithoutAccumulator:\n  Description: Do not omit the accumulator when calling `next` in a `reduce`/`inject`\n    block.\n  Enabled: true\n  VersionAdded: '0.36'\n  AutoCorrect: always\n"
+}

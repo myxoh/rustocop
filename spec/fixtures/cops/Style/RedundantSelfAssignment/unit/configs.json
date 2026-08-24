@@ -1,0 +1,3 @@
+{
+  "f7961403ff3ff6b5": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/RedundantSelfAssignment:\n  Description: Checks for places where redundant assignments are made for in place\n    modification methods.\n  Enabled: true\n  Safe: false\n  VersionAdded: '0.90'\n  AutoCorrect: always\n"
+}

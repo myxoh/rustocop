@@ -1,0 +1,6 @@
+{
+  "3700c015141decd9": "---\nLayout/IndentationWidth:\n  Width: 2\nLayout/CommentIndentation:\n  AllowForAlignment: true\n  Enabled: true\n",
+  "8a61de512ade932a": "---\nLayout/CommentIndentation:\n  IndentationWidth: 1\n  Enabled: true\nLayout/IndentationWidth:\n  Width: 2\n",
+  "c971e935d9a7e611": "---\nLayout/AccessModifierIndentation:\n  Enabled: true\n  EnforcedStyle: outdent\nLayout/CommentIndentation:\n  Enabled: true\nLayout/IndentationWidth:\n  Width: 2\n",
+  "f1b96c3675ad3bf7": "---\nLayout/IndentationWidth:\n  Width: 2\nLayout/CommentIndentation:\n  AllowForAlignment: false\n  Enabled: true\n"
+}

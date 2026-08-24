@@ -1,0 +1,3 @@
+{
+  "2e6f18cbbcc76173": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/DuplicateElsifCondition:\n  Description: Do not repeat conditions used in if `elsif`.\n  Enabled: true\n  VersionAdded: '0.88'\n  AutoCorrect: always\n"
+}

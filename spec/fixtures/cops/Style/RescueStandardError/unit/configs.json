@@ -1,0 +1,4 @@
+{
+  "780a1800a2a29349": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/RescueStandardError:\n  Description: Avoid rescuing without specifying an error class.\n  Enabled: true\n  VersionAdded: '0.52'\n  EnforcedStyle: implicit\n  SupportedStyles:\n  - implicit\n  - explicit\n  AutoCorrect: always\n",
+  "b104e5eca8465443": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/RescueStandardError:\n  Description: Avoid rescuing without specifying an error class.\n  Enabled: true\n  VersionAdded: '0.52'\n  EnforcedStyle: explicit\n  SupportedStyles:\n  - implicit\n  - explicit\n  AutoCorrect: always\n"
+}

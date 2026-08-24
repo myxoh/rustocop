@@ -1,0 +1,3 @@
+{
+  "f142ad3ef7eaba5e": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/SwapValues:\n  Description: Enforces the use of shorthand-style swapping of 2 variables.\n  StyleGuide: \"#values-swapping\"\n  Enabled: true\n  VersionAdded: '1.1'\n  SafeAutoCorrect: false\n  AutoCorrect: always\n"
+}

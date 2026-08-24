@@ -1,0 +1,3 @@
+{
+  "29d38ad7eed5a5f4": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/ImplicitRuntimeError:\n  Description: Use `raise` or `fail` with an explicit exception class and message,\n    rather than just a message.\n  Enabled: true\n  VersionAdded: '0.41'\n  AutoCorrect: always\n"
+}

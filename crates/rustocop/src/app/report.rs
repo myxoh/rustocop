@@ -21,7 +21,7 @@ pub(super) fn exit_status(options: &RunOptions, results: &[InspectionResult]) ->
     let (count, uncorrected) = offenses.fold((0, 0), |(count, uncorrected), offense| {
         (count + 1, uncorrected + usize::from(!offense.corrected))
     });
-    if count == 0 || (options.inspection.autocorrect && uncorrected == 0) {
+    if count == 0 || (options.inspection.autocorrect_enabled() && uncorrected == 0) {
         0
     } else {
         1

@@ -1,0 +1,3 @@
+{
+  "a65f449961113a7d": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/InlineComment:\n  Description: Avoid trailing inline comments.\n  Enabled: true\n  VersionAdded: '0.23'\n  AutoCorrect: always\n"
+}

@@ -1,0 +1,3 @@
+{
+  "bfac87646c9ea390": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/StringChars:\n  Description: Checks for uses of `String#split` with empty string or regexp literal\n    argument.\n  StyleGuide: \"#string-chars\"\n  Enabled: true\n  Safe: false\n  VersionAdded: '1.12'\n  AutoCorrect: always\n"
+}

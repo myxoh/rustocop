@@ -1,0 +1,4 @@
+{
+  "2febd37b251b3ea7": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/RequireRangeParentheses:\n  Description: Checks that a range literal is enclosed in parentheses when the end\n    of the range is at a line break.\n  Enabled: true\n  VersionAdded: '1.32'\n  AutoCorrect: always\n",
+  "ec4671d7c84f1956": "---\nAllCops:\n  TargetRubyVersion: 2.6\nLint/RequireRangeParentheses:\n  Description: Checks that a range literal is enclosed in parentheses when the end\n    of the range is at a line break.\n  Enabled: true\n  VersionAdded: '1.32'\n  AutoCorrect: always\n"
+}

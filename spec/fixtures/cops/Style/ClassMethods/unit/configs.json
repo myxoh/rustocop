@@ -1,0 +1,3 @@
+{
+  "b7f7203915743667": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/ClassMethods:\n  Description: Use self when defining module/class methods.\n  StyleGuide: \"#def-self-class-methods\"\n  Enabled: true\n  VersionAdded: '0.9'\n  VersionChanged: '0.20'\n  AutoCorrect: always\n"
+}

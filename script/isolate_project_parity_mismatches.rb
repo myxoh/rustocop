@@ -14,8 +14,9 @@ require_relative "../lib/rustocop/repository_layout"
 
 LAYOUT = Rustocop::RepositoryLayout.default
 ROOT = Pathname.new(LAYOUT.root)
-FIXTURE_ROOT = Pathname.new(LAYOUT.project_regressions)
-MANIFEST = FIXTURE_ROOT.join("mismatches.tsv")
+FIXTURE_ROOT = Pathname.new(LAYOUT.fixture_root)
+MANIFEST = Pathname.new(LAYOUT.project_regression_manifest(pending: true))
+PASSING_MANIFEST = Pathname.new(LAYOUT.project_regression_manifest)
 CONFIG = Pathname.new(LAYOUT.benchmark_config)
 NATIVE = Pathname.new(LAYOUT.native_binary)
 
@@ -80,10 +81,11 @@ end
 
 def slug(cop, kind, occupied)
   stem = "#{cop.downcase.tr('/', '_').gsub(/[^a-z0-9_]+/, '_')}_#{kind}"
+  department, name = cop.split("/", 2)
   sequence = 1
   loop do
     suffix = sequence == 1 ? "" : "_#{sequence}"
-    candidate = "pending/#{stem}#{suffix}.rb"
+    candidate = File.join("cops", department, name, "project", "#{stem}#{suffix}.rb")
     return candidate unless occupied.include?(candidate)
 
     sequence += 1
@@ -92,7 +94,7 @@ end
 
 project_metadata = Rustocop::ProjectCorpus::PROJECTS.to_h { |project| [project.fetch("name"), project] }
 existing_rows = File.readlines(MANIFEST, chomp: true).drop(1).map { |line| line.split("\t", 7) }
-promoted_files = File.readlines(FIXTURE_ROOT.join("manifest.tsv"), chomp: true)
+promoted_files = File.readlines(PASSING_MANIFEST, chomp: true)
   .drop(1)
   .map { |line| line.split("\t", 5).fetch(1) }
 if options[:refresh_invalid]
@@ -102,7 +104,8 @@ if options[:refresh_invalid]
 
     path = FIXTURE_ROOT.join(file)
     invalid = path.file? && !Prism.parse(path.binread).success?
-    FileUtils.rm_f(path) if invalid && path.to_s.start_with?(FIXTURE_ROOT.join("pending").to_s)
+    expected_root = FIXTURE_ROOT.join("cops", *cop.split("/"), "project")
+    FileUtils.rm_f(path) if invalid && path.to_s.start_with?(expected_root.to_s)
     invalid
   end
 end
@@ -166,7 +169,6 @@ end
 workers.each(&:join)
 
 new_rows = []
-FileUtils.mkdir_p(FIXTURE_ROOT.join("pending"))
 occupied = (promoted_files + existing_rows.map { |row| row.fetch(1) }).to_h { |file| [file, true] }
 results.sort.each do |(cop, kind), isolated|
   next unless isolated
@@ -174,6 +176,7 @@ results.sort.each do |(cop, kind), isolated|
   candidate, project, source_path, source = isolated
   file = slug(cop, kind, occupied)
   occupied[file] = true
+  FileUtils.mkdir_p(FIXTURE_ROOT.join(file).dirname)
   FIXTURE_ROOT.join(file).write(source)
   new_rows << [
     cop, file, project.fetch("repository"), project.fetch("revision"), source_path, kind

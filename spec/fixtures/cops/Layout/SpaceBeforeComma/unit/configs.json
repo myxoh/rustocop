@@ -1,0 +1,3 @@
+{
+  "5cbaa5bbf50da774": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/SpaceBeforeComma:\n  Description: No spaces before commas.\n  Enabled: true\n  VersionAdded: '0.49'\n  AutoCorrect: always\n"
+}

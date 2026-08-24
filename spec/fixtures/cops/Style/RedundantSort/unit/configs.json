@@ -1,0 +1,3 @@
+{
+  "093184801bb65c3b": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/RedundantSort:\n  Description: Use `min` instead of `sort.first`, `max_by` instead of `sort_by...last`,\n    etc.\n  Enabled: true\n  VersionAdded: '0.76'\n  VersionChanged: '1.22'\n  Safe: false\n  AutoCorrect: always\n"
+}

@@ -1,0 +1,4 @@
+{
+  "bf4101881ec563ab": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/AndOr:\n  Description: Use &&/|| instead of and/or.\n  StyleGuide: \"#no-and-or-or\"\n  Enabled: true\n  SafeAutoCorrect: false\n  VersionAdded: '0.9'\n  VersionChanged: '1.21'\n  EnforcedStyle: always\n  SupportedStyles:\n  - always\n  - conditionals\n  AutoCorrect: always\n",
+  "f058cf408d8ee095": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/AndOr:\n  Description: Use &&/|| instead of and/or.\n  StyleGuide: \"#no-and-or-or\"\n  Enabled: true\n  SafeAutoCorrect: false\n  VersionAdded: '0.9'\n  VersionChanged: '1.21'\n  EnforcedStyle: conditionals\n  SupportedStyles:\n  - always\n  - conditionals\n  AutoCorrect: always\n"
+}

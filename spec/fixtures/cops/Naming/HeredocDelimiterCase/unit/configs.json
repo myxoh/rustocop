@@ -1,0 +1,4 @@
+{
+  "1f7c309e17d72845": "---\nAllCops:\n  TargetRubyVersion: 2.7\nNaming/HeredocDelimiterCase:\n  Description: Use configured case for heredoc delimiters.\n  StyleGuide: \"#heredoc-delimiters\"\n  Enabled: true\n  VersionAdded: '0.50'\n  VersionChanged: '1.2'\n  EnforcedStyle: lowercase\n  SupportedStyles:\n  - uppercase\n  - lowercase\n  AutoCorrect: always\n",
+  "f9c4971bb77dad4a": "---\nAllCops:\n  TargetRubyVersion: 2.7\nNaming/HeredocDelimiterCase:\n  Description: Use configured case for heredoc delimiters.\n  StyleGuide: \"#heredoc-delimiters\"\n  Enabled: true\n  VersionAdded: '0.50'\n  VersionChanged: '1.2'\n  EnforcedStyle: uppercase\n  SupportedStyles:\n  - uppercase\n  - lowercase\n  AutoCorrect: always\n"
+}

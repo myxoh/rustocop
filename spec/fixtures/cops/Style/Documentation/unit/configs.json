@@ -1,0 +1,4 @@
+{
+  "1bbb3f93b7bec4d8": "---\nStyle/CommentAnnotation:\n  Keywords:\n  - TODO\n  - FIXME\n  - OPTIMIZE\n  - HACK\n  - REVIEW\nStyle/Documentation:\n  Enabled: true\n",
+  "d92892ce2a3becc7": "---\nStyle/CommentAnnotation:\n  Keywords:\n  - TODO\n  - FIXME\n  - OPTIMIZE\n  - HACK\n  - REVIEW\nStyle/Documentation:\n  AllowedConstants:\n  - ClassMethods\n  Enabled: true\n"
+}

@@ -1,0 +1,4 @@
+{
+  "6ff0c1832f2a2b20": "---\nAllCops:\n  TargetRubyVersion: 3.4\nLint/RedundantWithObject:\n  Description: Checks for redundant `with_object`.\n  Enabled: true\n  VersionAdded: '0.51'\n  AutoCorrect: always\n",
+  "9615fe67480f8618": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/RedundantWithObject:\n  Description: Checks for redundant `with_object`.\n  Enabled: true\n  VersionAdded: '0.51'\n  AutoCorrect: always\n"
+}

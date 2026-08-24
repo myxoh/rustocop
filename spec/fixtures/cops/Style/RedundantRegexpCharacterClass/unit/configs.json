@@ -1,0 +1,3 @@
+{
+  "a977d79a170f8951": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/RedundantRegexpCharacterClass:\n  Description: Checks for unnecessary single-element Regexp character classes.\n  Enabled: true\n  VersionAdded: '0.85'\n  AutoCorrect: always\n"
+}

@@ -1,0 +1,7 @@
+{
+  "026492067e4fe975": "---\nAllCops:\n  TargetRubyVersion: 2.4\nStyle/RedundantBegin:\n  Description: Don't use begin blocks when they are not needed.\n  StyleGuide: \"#begin-implicit\"\n  Enabled: true\n  VersionAdded: '0.10'\n  VersionChanged: '0.21'\n  AutoCorrect: always\n",
+  "1e0cc51b47351deb": "---\nAllCops:\n  TargetRubyVersion: 3.4\nStyle/RedundantBegin:\n  Description: Don't use begin blocks when they are not needed.\n  StyleGuide: \"#begin-implicit\"\n  Enabled: true\n  VersionAdded: '0.10'\n  VersionChanged: '0.21'\n  AutoCorrect: always\n",
+  "ebf882bcb10c249c": "---\nAllCops:\n  TargetRubyVersion: 2.5\nStyle/RedundantBegin:\n  Description: Don't use begin blocks when they are not needed.\n  StyleGuide: \"#begin-implicit\"\n  Enabled: true\n  VersionAdded: '0.10'\n  VersionChanged: '0.21'\n  AutoCorrect: always\n",
+  "f2aaaaf41123c2ec": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/RedundantBegin:\n  Description: Don't use begin blocks when they are not needed.\n  StyleGuide: \"#begin-implicit\"\n  Enabled: true\n  VersionAdded: '0.10'\n  VersionChanged: '0.21'\n  AutoCorrect: always\n",
+  "f3393bd94c2cde04": "---\nAllCops:\n  TargetRubyVersion: 3.0\nStyle/RedundantBegin:\n  Description: Don't use begin blocks when they are not needed.\n  StyleGuide: \"#begin-implicit\"\n  Enabled: true\n  VersionAdded: '0.10'\n  VersionChanged: '0.21'\n  AutoCorrect: always\n"
+}

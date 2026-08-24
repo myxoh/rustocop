@@ -1,0 +1,3 @@
+{
+  "effde2a86ee4d561": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/PercentStringArray:\n  Description: Checks for unwanted commas and quotes in %w/%W literals.\n  Enabled: true\n  Safe: false\n  VersionAdded: '0.41'\n  AutoCorrect: always\n"
+}

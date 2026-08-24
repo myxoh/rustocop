@@ -1,0 +1,4 @@
+{
+  "1486b25a2dd35683": "---\nAllCops:\n  TargetRubyVersion: 2.1\nStyle/OptionalArguments:\n  Description: Checks for optional arguments that do not appear at the end of the\n    argument list.\n  StyleGuide: \"#optional-arguments\"\n  Enabled: true\n  Safe: false\n  VersionAdded: '0.33'\n  VersionChanged: '0.83'\n  AutoCorrect: always\n",
+  "3d285708dc990e28": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/OptionalArguments:\n  Description: Checks for optional arguments that do not appear at the end of the\n    argument list.\n  StyleGuide: \"#optional-arguments\"\n  Enabled: true\n  Safe: false\n  VersionAdded: '0.33'\n  VersionChanged: '0.83'\n  AutoCorrect: always\n"
+}

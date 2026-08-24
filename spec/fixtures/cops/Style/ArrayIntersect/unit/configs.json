@@ -1,0 +1,7 @@
+{
+  "23a59940f6d17789": "---\nAllCops:\n  TargetRubyVersion: 3.1\nStyle/ArrayIntersect:\n  Description: Use `array1.intersect?(array2)` instead of `(array1 & array2).any?`.\n  Enabled: true\n  Safe: false\n  VersionAdded: '1.40'\n  AutoCorrect: always\n",
+  "6a456ea989383e25": "---\nAllCops:\n  TargetRubyVersion: 3.4\nStyle/ArrayIntersect:\n  Description: Use `array1.intersect?(array2)` instead of `(array1 & array2).any?`.\n  Enabled: true\n  Safe: false\n  VersionAdded: '1.40'\n  AutoCorrect: always\n",
+  "6f0be27044a6d6b0": "---\nAllCops:\n  TargetRubyVersion: '3.1'\n  ActiveSupportExtensionsEnabled: true\nStyle/ArrayIntersect:\n  Enabled: true\n",
+  "b1c23ad21aadb74e": "---\nAllCops:\n  TargetRubyVersion: 3.3\nStyle/ArrayIntersect:\n  Description: Use `array1.intersect?(array2)` instead of `(array1 & array2).any?`.\n  Enabled: true\n  Safe: false\n  VersionAdded: '1.40'\n  AutoCorrect: always\n",
+  "b3a9f6b4f51ed446": "---\nAllCops:\n  TargetRubyVersion: 3.0\nStyle/ArrayIntersect:\n  Description: Use `array1.intersect?(array2)` instead of `(array1 & array2).any?`.\n  Enabled: true\n  Safe: false\n  VersionAdded: '1.40'\n  AutoCorrect: always\n"
+}

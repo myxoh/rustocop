@@ -1,0 +1,3 @@
+{
+  "fbdb5dc8402c55fc": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/RedundantCapitalW:\n  Description: Checks for %W when interpolation is not needed.\n  Enabled: true\n  VersionAdded: '0.76'\n  AutoCorrect: always\n"
+}

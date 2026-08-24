@@ -1,0 +1,4 @@
+{
+  "935c75fa53246ae0": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/CaseLikeIf:\n  Description: Identifies places where `if-elsif` constructions can be replaced with\n    `case-when`.\n  StyleGuide: \"#case-vs-if-else\"\n  Enabled: true\n  Safe: false\n  VersionAdded: '0.88'\n  VersionChanged: '1.48'\n  MinBranchesCount: 3\n  AutoCorrect: always\n",
+  "cf787a9560e6ccfc": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/CaseLikeIf:\n  Description: Identifies places where `if-elsif` constructions can be replaced with\n    `case-when`.\n  StyleGuide: \"#case-vs-if-else\"\n  Enabled: true\n  Safe: false\n  VersionAdded: '0.88'\n  VersionChanged: '1.48'\n  MinBranchesCount: 2\n  AutoCorrect: always\n"
+}

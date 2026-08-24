@@ -1,0 +1,4 @@
+{
+  "043ccdf5552fd538": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/ShadowedArgument:\n  Description: Avoid reassigning arguments before they were used.\n  Enabled: true\n  VersionAdded: '0.52'\n  IgnoreImplicitReferences: false\n  AutoCorrect: always\n",
+  "e457d468fe10370a": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/ShadowedArgument:\n  Description: Avoid reassigning arguments before they were used.\n  Enabled: true\n  VersionAdded: '0.52'\n  IgnoreImplicitReferences: true\n  AutoCorrect: always\n"
+}

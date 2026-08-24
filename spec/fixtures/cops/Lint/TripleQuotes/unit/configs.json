@@ -1,0 +1,3 @@
+{
+  "7d8c5d3aa0a7728a": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/TripleQuotes:\n  Description: Checks for useless triple quote constructs.\n  Enabled: true\n  VersionAdded: '1.9'\n  AutoCorrect: always\n"
+}

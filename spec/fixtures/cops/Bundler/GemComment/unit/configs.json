@@ -1,0 +1,6 @@
+{
+  "363e294fc3e13999": "---\nAllCops:\n  TargetRubyVersion: 2.7\nBundler/GemComment:\n  Description: Add a comment describing each gem.\n  Enabled: true\n  VersionAdded: '0.59'\n  VersionChanged: '0.85'\n  Include:\n  - \"**/Gemfile\"\n  IgnoredGems:\n  - rake\n  OnlyFor:\n  - version_specifiers\n  AutoCorrect: always\n",
+  "90c3a92903e239ac": "---\nAllCops:\n  TargetRubyVersion: 2.7\nBundler/GemComment:\n  Description: Add a comment describing each gem.\n  Enabled: true\n  VersionAdded: '0.59'\n  VersionChanged: '0.85'\n  Include:\n  - \"**/Gemfile\"\n  IgnoredGems:\n  - rake\n  OnlyFor:\n  - github\n  - required\n  AutoCorrect: always\n",
+  "b3ba15b993ad27a6": "---\nAllCops:\n  TargetRubyVersion: 2.7\nBundler/GemComment:\n  Description: Add a comment describing each gem.\n  Enabled: true\n  VersionAdded: '0.59'\n  VersionChanged: '0.85'\n  Include:\n  - \"**/Gemfile\"\n  IgnoredGems:\n  - rake\n  OnlyFor: []\n  AutoCorrect: always\n",
+  "e36080b2e996009a": "---\nAllCops:\n  TargetRubyVersion: 2.7\nBundler/GemComment:\n  Description: Add a comment describing each gem.\n  Enabled: true\n  VersionAdded: '0.59'\n  VersionChanged: '0.85'\n  Include:\n  - \"**/Gemfile\"\n  IgnoredGems:\n  - rake\n  OnlyFor:\n  - restrictive_version_specifiers\n  AutoCorrect: always\n"
+}

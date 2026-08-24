@@ -1,0 +1,3 @@
+{
+  "2c34e2ca54fa5507": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/FileNull:\n  Description: Use `File::NULL` instead of hardcoding \"dev/null\".\n  Enabled: true\n  SafeAutoCorrect: false\n  VersionAdded: '1.69'\n  AutoCorrect: always\n"
+}

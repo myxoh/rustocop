@@ -1,0 +1,10 @@
+{
+  "12cf68f4ffcc496d": "---\nStyle/PercentLiteralDelimiters:\n  PreferredDelimiters:\n    \"%x\": \"()\"\nStyle/CommandLiteral:\n  EnforcedStyle: percent_x\n  SupportedStyles:\n  - backticks\n  - percent_x\n  - mixed\n  Enabled: true\n",
+  "1c670f5285e90d98": "---\nStyle/PercentLiteralDelimiters:\n  PreferredDelimiters:\n    \"%x\": \"()\"\nStyle/CommandLiteral:\n  EnforcedStyle: mixed\n  SupportedStyles:\n  - backticks\n  - percent_x\n  - mixed\n  Enabled: true\n",
+  "3fda1a8c93555298": "---\nStyle/PercentLiteralDelimiters:\n  PreferredDelimiters:\n    default: \"()\"\nStyle/CommandLiteral:\n  EnforcedStyle: percent_x\n  SupportedStyles:\n  - backticks\n  - percent_x\n  - mixed\n  Enabled: true\n",
+  "7a1a505d837df1a5": "---\nStyle/PercentLiteralDelimiters:\n  PreferredDelimiters:\n    \"%x\": \"()\"\nStyle/CommandLiteral:\n  EnforcedStyle: mixed\n  AllowInnerBackticks: true\n  SupportedStyles:\n  - backticks\n  - percent_x\n  - mixed\n  Enabled: true\n",
+  "9fb093b01cc9c778": "---\nStyle/PercentLiteralDelimiters:\n  PreferredDelimiters:\n    \"%x\": \"()\"\nStyle/CommandLiteral:\n  EnforcedStyle: backticks\n  AllowInnerBackticks: true\n  SupportedStyles:\n  - backticks\n  - percent_x\n  - mixed\n  Enabled: true\n",
+  "afde27e953b84f67": "---\nStyle/PercentLiteralDelimiters:\n  PreferredDelimiters:\n    \"%x\": \"()\"\nStyle/CommandLiteral:\n  EnforcedStyle: backticks\n  SupportedStyles:\n  - backticks\n  - percent_x\n  - mixed\n  Enabled: true\n",
+  "ce9e3962171fef32": "---\nStyle/PercentLiteralDelimiters:\n  PreferredDelimiters:\n    \"%x\": \"[]\"\n    default: \"()\"\nStyle/CommandLiteral:\n  EnforcedStyle: percent_x\n  SupportedStyles:\n  - backticks\n  - percent_x\n  - mixed\n  Enabled: true\n",
+  "e8e5de9bf6061a14": "---\nStyle/PercentLiteralDelimiters:\n  PreferredDelimiters:\n    \"%x\": \"[]\"\nStyle/CommandLiteral:\n  EnforcedStyle: percent_x\n  SupportedStyles:\n  - backticks\n  - percent_x\n  - mixed\n  Enabled: true\n"
+}

@@ -1,0 +1,4 @@
+{
+  "a75570cd3037c26a": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/PartitionInsteadOfDoubleSelect:\n  Description: Checks for consecutive `select`/`filter`/`find_all` and `reject` calls\n    on the same receiver with the same block body.\n  Enabled: true\n  Safe: false\n  VersionAdded: '1.85'\n  AutoCorrect: always\n",
+  "cf3b6cd7ae93de12": "---\nAllCops:\n  TargetRubyVersion: 3.4\nStyle/PartitionInsteadOfDoubleSelect:\n  Description: Checks for consecutive `select`/`filter`/`find_all` and `reject` calls\n    on the same receiver with the same block body.\n  Enabled: true\n  Safe: false\n  VersionAdded: '1.85'\n  AutoCorrect: always\n"
+}

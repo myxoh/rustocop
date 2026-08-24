@@ -1,0 +1,3 @@
+{
+  "9b2542a7fd6afacd": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/NoReturnInBeginEndBlocks:\n  Description: Do not `return` inside `begin..end` blocks in assignment contexts.\n  Enabled: true\n  VersionAdded: '1.2'\n  AutoCorrect: always\n"
+}

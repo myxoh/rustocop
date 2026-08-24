@@ -1,0 +1,3 @@
+{
+  "57ea877bc9b9c442": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/FloatOutOfRange:\n  Description: Catches floating-point literals too large or small for Ruby to represent.\n  Enabled: true\n  VersionAdded: '0.36'\n  AutoCorrect: always\n"
+}

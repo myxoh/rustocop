@@ -1,0 +1,5 @@
+{
+  "2290a6607994c5cc": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/OperatorMethodCall:\n  Description: Checks for redundant dot before operator method call.\n  StyleGuide: \"#operator-method-call\"\n  Enabled: true\n  VersionAdded: '1.37'\n  AutoCorrect: always\n",
+  "cfd9c230b4332b85": "---\nAllCops:\n  TargetRubyVersion: 3.2\nStyle/OperatorMethodCall:\n  Description: Checks for redundant dot before operator method call.\n  StyleGuide: \"#operator-method-call\"\n  Enabled: true\n  VersionAdded: '1.37'\n  AutoCorrect: always\n",
+  "d17e701ebfef6510": "---\nAllCops:\n  TargetRubyVersion: 3.1\nStyle/OperatorMethodCall:\n  Description: Checks for redundant dot before operator method call.\n  StyleGuide: \"#operator-method-call\"\n  Enabled: true\n  VersionAdded: '1.37'\n  AutoCorrect: always\n"
+}

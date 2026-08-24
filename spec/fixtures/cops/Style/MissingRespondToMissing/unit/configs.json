@@ -1,0 +1,3 @@
+{
+  "49236161c963533f": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/MissingRespondToMissing:\n  Description: Checks if `method_missing` is implemented without implementing `respond_to_missing`.\n  StyleGuide: \"#no-method-missing\"\n  Enabled: true\n  VersionAdded: '0.56'\n  AutoCorrect: always\n"
+}

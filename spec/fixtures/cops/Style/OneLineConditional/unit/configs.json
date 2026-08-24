@@ -1,0 +1,5 @@
+{
+  "604502dd4b08d9ab": "---\nStyle/OneLineConditional:\n  AlwaysCorrectToMultiline: true\n  Enabled: true\nLayout/IndentationWidth:\n  Width: 4\n",
+  "c3f98dcaee812906": "---\nStyle/OneLineConditional:\n  AlwaysCorrectToMultiline: false\n  Enabled: true\n",
+  "ecc58554552f064d": "---\nStyle/OneLineConditional:\n  AlwaysCorrectToMultiline: true\n  Enabled: true\n"
+}

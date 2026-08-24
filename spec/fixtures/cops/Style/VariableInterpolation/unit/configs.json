@@ -1,0 +1,3 @@
+{
+  "9152e813a961bc5c": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/VariableInterpolation:\n  Description: Don't interpolate global, instance and class variables directly in\n    strings.\n  StyleGuide: \"#curlies-interpolate\"\n  Enabled: true\n  VersionAdded: '0.9'\n  VersionChanged: '0.20'\n  AutoCorrect: always\n"
+}

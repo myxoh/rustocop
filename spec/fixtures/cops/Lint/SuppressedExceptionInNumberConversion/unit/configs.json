@@ -1,0 +1,4 @@
+{
+  "106d8ef21d2f9d34": "---\nAllCops:\n  TargetRubyVersion: 2.6\nLint/SuppressedExceptionInNumberConversion:\n  Description: Checks for cases where exceptions unrelated to the numeric constructors\n    may be unintentionally swallowed.\n  Enabled: true\n  SafeAutoCorrect: false\n  VersionAdded: '1.72'\n  AutoCorrect: always\n",
+  "55f2f775bc19871a": "---\nAllCops:\n  TargetRubyVersion: 2.5\nLint/SuppressedExceptionInNumberConversion:\n  Description: Checks for cases where exceptions unrelated to the numeric constructors\n    may be unintentionally swallowed.\n  Enabled: true\n  SafeAutoCorrect: false\n  VersionAdded: '1.72'\n  AutoCorrect: always\n"
+}

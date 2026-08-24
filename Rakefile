@@ -15,25 +15,33 @@ namespace :quality do
        "--all-targets", "--", "-D", "warnings"
   end
 
-  desc "Reject regressions in a completed full upstream compatibility report"
-  task :compatibility_baseline do
-    report = ENV.fetch("REPORT", "tmp/rubocop-1.87.0-compatibility.json")
-    ruby "script/check_compatibility_baseline.rb", report
-    ruby "script/report_compatibility_drift.rb", report,
-         "--output", "tmp/compatibility-promotion-drift.md"
-  end
-
-  desc "Reject unclassified heuristic cops in trusted test surfaces"
+  desc "Validate generated compatibility test contracts"
   task :test_contracts do
-    ruby "script/check_test_cop_classifications.rb"
-    ruby "script/check_hardening_contracts.rb"
     ruby "script/generate_source_cop_inventory.rb", "--check"
-    ruby "script/generate_compatibility_corpus.rb", "--check"
+    ruby "script/check_fixture_ownership.rb"
+    ruby "script/generate_unit_fixtures.rb", "--check"
   end
 
   desc "Compare configured cop mutations against ten pinned real projects"
   task :configuration_mutations do
     ruby "script/audit_configuration_mutations.rb"
+  end
+end
+
+namespace :fixtures do
+  desc "Run cached RuboCop unit contracts (set COP=Department/Name to focus)"
+  task :unit do
+    environment = {}
+    environment["RUSTOCOP_UNIT_COP"] = ENV.fetch("COP") if ENV["COP"]
+    sh environment,
+       "cargo", "test", "--manifest-path", "crates/rustocop/Cargo.toml",
+       "--release", "cached_unit_contracts_match", "--", "--ignored", "--nocapture"
+  end
+
+  desc "Recapture RuboCop 1.87 specs and regenerate the committed unit cache"
+  task :refresh_unit do
+    ruby "script/extract_upstream_cop_specs.rb"
+    ruby "script/generate_unit_fixtures.rb"
   end
 end
 

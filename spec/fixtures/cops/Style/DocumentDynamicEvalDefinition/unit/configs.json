@@ -1,0 +1,3 @@
+{
+  "de24fabab4819aa7": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/DocumentDynamicEvalDefinition:\n  Description: When using `class_eval` (or other `eval`) with string interpolation,\n    add a comment block showing its appearance if interpolated.\n  StyleGuide: \"#eval-comment-docs\"\n  Enabled: true\n  VersionAdded: '1.1'\n  VersionChanged: '1.3'\n  AutoCorrect: always\n"
+}

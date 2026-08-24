@@ -1,0 +1,5 @@
+{
+  "2a8428b9b58fbb02": "---\nAllCops:\n  TargetRubyVersion: 3.3\nStyle/ItAssignment:\n  Description: Checks for local variables and method parameters named `it`.\n  Enabled: true\n  VersionAdded: '1.70'\n  AutoCorrect: always\n",
+  "895d880524c2344d": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/ItAssignment:\n  Description: Checks for local variables and method parameters named `it`.\n  Enabled: true\n  VersionAdded: '1.70'\n  AutoCorrect: always\n",
+  "ea3f1fe79458d2fd": "---\nAllCops:\n  TargetRubyVersion: 3.4\nStyle/ItAssignment:\n  Description: Checks for local variables and method parameters named `it`.\n  Enabled: true\n  VersionAdded: '1.70'\n  AutoCorrect: always\n"
+}

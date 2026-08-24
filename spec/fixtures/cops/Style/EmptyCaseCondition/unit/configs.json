@@ -1,0 +1,4 @@
+{
+  "03fa40c7638640cf": "---\nAllCops:\n  TargetRubyVersion: 3.2\nStyle/EmptyCaseCondition:\n  Description: Avoid empty condition in case statements.\n  Enabled: true\n  VersionAdded: '0.40'\n  AutoCorrect: always\n",
+  "594f355da0e06450": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/EmptyCaseCondition:\n  Description: Avoid empty condition in case statements.\n  Enabled: true\n  VersionAdded: '0.40'\n  AutoCorrect: always\n"
+}

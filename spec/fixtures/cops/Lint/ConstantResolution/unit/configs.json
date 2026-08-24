@@ -1,0 +1,5 @@
+{
+  "6ef4f78446f2237f": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/ConstantResolution:\n  Description: Checks that constants are fully qualified with `::`.\n  Enabled: true\n  VersionAdded: '0.86'\n  Only: []\n  Ignore:\n  - MY_CONST\n  AutoCorrect: always\n",
+  "ebe404376b098428": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/ConstantResolution:\n  Description: Checks that constants are fully qualified with `::`.\n  Enabled: true\n  VersionAdded: '0.86'\n  Only:\n  - MY_CONST\n  Ignore: []\n  AutoCorrect: always\n",
+  "fa5ff41af572d325": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/ConstantResolution:\n  Description: Checks that constants are fully qualified with `::`.\n  Enabled: true\n  VersionAdded: '0.86'\n  Only: []\n  Ignore: []\n  AutoCorrect: always\n"
+}

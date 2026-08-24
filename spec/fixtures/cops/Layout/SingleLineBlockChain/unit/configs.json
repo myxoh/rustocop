@@ -1,0 +1,4 @@
+{
+  "68dda6eb708a3943": "---\nAllCops:\n  TargetRubyVersion: 3.4\nLayout/SingleLineBlockChain:\n  Description: Put method call on a separate line if chained to a single line block.\n  Enabled: true\n  VersionAdded: '1.14'\n  AutoCorrect: always\n",
+  "e80682d7bff9415b": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/SingleLineBlockChain:\n  Description: Put method call on a separate line if chained to a single line block.\n  Enabled: true\n  VersionAdded: '1.14'\n  AutoCorrect: always\n"
+}

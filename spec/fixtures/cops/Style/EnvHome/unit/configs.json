@@ -1,0 +1,3 @@
+{
+  "b8902e63465d2dbb": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/EnvHome:\n  Description: Checks for consistent usage of `ENV['HOME']`.\n  Enabled: true\n  Safe: false\n  VersionAdded: '1.29'\n  AutoCorrect: always\n"
+}

@@ -1,0 +1,3 @@
+{
+  "c904568e0bf1ec35": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/StaticClass:\n  Description: Prefer modules to classes with only class methods.\n  StyleGuide: \"#modules-vs-classes\"\n  Enabled: true\n  Safe: false\n  VersionAdded: '1.3'\n  AutoCorrect: always\n"
+}

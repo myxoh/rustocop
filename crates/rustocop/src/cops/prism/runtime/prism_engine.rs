@@ -1,4 +1,5 @@
 use super::*;
+use crate::config::AutocorrectMode;
 
 pub struct Engine {
     registry: Registry,
@@ -19,7 +20,7 @@ impl Engine {
         &self,
         path: &str,
         source: &str,
-        autocorrect: bool,
+        autocorrect: AutocorrectMode,
         target_ruby_version: RubyVersion,
         cop_config: Arc<CopConfig>,
     ) -> Inspection {

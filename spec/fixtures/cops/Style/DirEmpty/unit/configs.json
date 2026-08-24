@@ -1,0 +1,4 @@
+{
+  "50cd814d51139b1d": "---\nAllCops:\n  TargetRubyVersion: 2.3\nStyle/DirEmpty:\n  Description: Prefer to use `Dir.empty?('path/to/dir')` when checking if a directory\n    is empty.\n  Enabled: true\n  VersionAdded: '1.48'\n  AutoCorrect: always\n",
+  "a3f817fe6c60ad37": "---\nAllCops:\n  TargetRubyVersion: 2.4\nStyle/DirEmpty:\n  Description: Prefer to use `Dir.empty?('path/to/dir')` when checking if a directory\n    is empty.\n  Enabled: true\n  VersionAdded: '1.48'\n  AutoCorrect: always\n"
+}

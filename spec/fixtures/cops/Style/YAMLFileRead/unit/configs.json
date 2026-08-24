@@ -1,0 +1,4 @@
+{
+  "bb84a9061fb906aa": "---\nAllCops:\n  TargetRubyVersion: 3.0\nStyle/YAMLFileRead:\n  Description: Checks for the use of `YAML.load`, `YAML.safe_load`, and `YAML.parse`\n    with `File.read` argument.\n  Enabled: true\n  VersionAdded: '1.53'\n  AutoCorrect: always\n",
+  "eb4a6dd3c6e705a3": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/YAMLFileRead:\n  Description: Checks for the use of `YAML.load`, `YAML.safe_load`, and `YAML.parse`\n    with `File.read` argument.\n  Enabled: true\n  VersionAdded: '1.53'\n  AutoCorrect: always\n"
+}

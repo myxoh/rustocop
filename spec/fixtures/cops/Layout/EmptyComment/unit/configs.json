@@ -1,0 +1,5 @@
+{
+  "7e2dbc735a762819": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/EmptyComment:\n  Description: Checks empty comment.\n  Enabled: true\n  AutoCorrect: always\n  VersionAdded: '0.53'\n  VersionChanged: '1.61'\n  AllowBorderComment: true\n  AllowMarginComment: false\n",
+  "a7aa04bdc44c7c07": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/EmptyComment:\n  Description: Checks empty comment.\n  Enabled: true\n  AutoCorrect: always\n  VersionAdded: '0.53'\n  VersionChanged: '1.61'\n  AllowBorderComment: false\n  AllowMarginComment: true\n",
+  "f712efa66067489e": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/EmptyComment:\n  Description: Checks empty comment.\n  Enabled: true\n  AutoCorrect: always\n  VersionAdded: '0.53'\n  VersionChanged: '1.61'\n  AllowBorderComment: true\n  AllowMarginComment: true\n"
+}

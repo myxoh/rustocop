@@ -1,0 +1,4 @@
+{
+  "4d0241bf496491f1": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/ReturnInVoidContext:\n  Description: Checks for return in void context.\n  Enabled: true\n  VersionAdded: '0.50'\n  AutoCorrect: always\n",
+  "9a7e68e256f3246e": "---\nAllCops:\n  TargetRubyVersion: 3.4\nLint/ReturnInVoidContext:\n  Description: Checks for return in void context.\n  Enabled: true\n  VersionAdded: '0.50'\n  AutoCorrect: always\n"
+}

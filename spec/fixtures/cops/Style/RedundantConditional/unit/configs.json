@@ -1,0 +1,3 @@
+{
+  "2b4fba02869cca7f": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/RedundantConditional:\n  Description: Don't return true/false from a conditional.\n  Enabled: true\n  VersionAdded: '0.50'\n  AutoCorrect: always\n"
+}

@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::fs;
 use std::io;
 use std::path::PathBuf;
@@ -11,9 +12,28 @@ mod diagnostic;
 mod fixture_tests;
 mod runner;
 pub(crate) mod source;
+#[cfg(test)]
+mod unit_contract_tests;
 
 use diagnostic::{append_prism_offenses, sort_offenses};
 pub(crate) use runner::inspect_files;
+
+const MAX_CORRECTION_ITERATIONS: usize = 200;
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum CorrectionError {
+    InfiniteLoop,
+    MaximumIterations,
+}
+
+impl CorrectionError {
+    pub(crate) const fn as_str(self) -> &'static str {
+        match self {
+            Self::InfiniteLoop => "infinite_loop",
+            Self::MaximumIterations => "maximum_iterations",
+        }
+    }
+}
 
 pub(crate) struct InspectionPlan {
     prism: prism::Engine,
@@ -40,10 +60,16 @@ impl InspectionPlan {
         let original = fs::read(path)?;
         let content = source::DecodedSource::from_bytes(&original)?;
         let absolute_path = expanded_path(path);
-        let (offenses, corrected_content) =
-            self.inspect_content(&absolute_path, content.as_str(), options);
+        let (offenses, corrected_content, correction_error) =
+            self.inspect_content_with_corrections(&absolute_path, content.as_str(), options);
+        if let Some(error) = correction_error {
+            return Err(io::Error::other(format!(
+                "autocorrection failed: {}",
+                error.as_str()
+            )));
+        }
         let corrected_bytes = content.restore(&corrected_content);
-        if options.autocorrect && corrected_bytes != original {
+        if options.autocorrect_enabled() && corrected_bytes != original {
             fs::write(path, corrected_bytes)?;
         }
         Ok(InspectionResult {
@@ -79,6 +105,35 @@ impl InspectionPlan {
         text::after_prism(path, &original_lines, options, &mut offenses);
         sort_offenses(&mut offenses);
         (offenses, prism_inspection.corrected_source)
+    }
+
+    pub(crate) fn inspect_content_with_corrections(
+        &self,
+        path: &str,
+        content: &str,
+        options: &InspectionConfig,
+    ) -> (Vec<Offense>, String, Option<CorrectionError>) {
+        let (offenses, mut corrected) = self.inspect_content(path, content, options);
+        if !options.autocorrect_enabled() || corrected == content {
+            return (offenses, corrected, None);
+        }
+
+        let mut seen = HashSet::from([content.to_string()]);
+        for _iteration in 1..MAX_CORRECTION_ITERATIONS {
+            if !seen.insert(corrected.clone()) {
+                return (offenses, corrected, Some(CorrectionError::InfiniteLoop));
+            }
+            let (_, next) = self.inspect_content(path, &corrected, options);
+            if next == corrected {
+                return (offenses, corrected, None);
+            }
+            corrected = next;
+        }
+        (
+            offenses,
+            corrected,
+            Some(CorrectionError::MaximumIterations),
+        )
     }
 
     fn inspect_prism_only(

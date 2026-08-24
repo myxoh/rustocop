@@ -1,0 +1,4 @@
+{
+  "37ec53b06d39c2cf": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/MultilineArrayLineBreaks:\n  Description: Checks that each item in a multi-line array literal starts on a separate\n    line.\n  Enabled: true\n  VersionAdded: '0.67'\n  AllowMultilineFinalElement: false\n  AutoCorrect: always\n",
+  "3f7f5ce1a7744231": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/MultilineArrayLineBreaks:\n  Description: Checks that each item in a multi-line array literal starts on a separate\n    line.\n  Enabled: true\n  VersionAdded: '0.67'\n  AllowMultilineFinalElement: true\n  AutoCorrect: always\n"
+}

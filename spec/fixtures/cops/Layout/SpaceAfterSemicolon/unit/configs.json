@@ -1,0 +1,5 @@
+{
+  "869cf09581927903": "---\nLayout/SpaceInsideBlockBraces:\n  Enabled: true\n  EnforcedStyle: space\nLayout/SpaceAfterSemicolon:\n  Enabled: true\n",
+  "d5b2f0d330f2537c": "---\nLayout/SpaceInsideBlockBraces:\n  Enabled: true\n  EnforcedStyle: no_space\nLayout/SpaceAfterSemicolon:\n  Enabled: true\n",
+  "dd17814aff1995af": "---\nLayout/SpaceInsideBlockBraces: {}\nLayout/SpaceAfterSemicolon:\n  Enabled: true\n"
+}

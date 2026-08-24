@@ -1,0 +1,3 @@
+{
+  "334c46fd408d7447": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/ComparableBetween:\n  Description: Enforces the use of `Comparable#between?` instead of logical comparison.\n  Enabled: true\n  Safe: false\n  VersionAdded: '1.74'\n  VersionChanged: '1.75'\n  StyleGuide: \"#ranges-or-between\"\n  AutoCorrect: always\n"
+}

@@ -1,0 +1,4 @@
+{
+  "0281622e460667ba": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/ClassMethodsDefinitions:\n  Description: Enforces using `def self.method_name` or `class << self` to define\n    class methods.\n  StyleGuide: \"#def-self-class-methods\"\n  Enabled: true\n  VersionAdded: '0.89'\n  EnforcedStyle: def_self\n  SupportedStyles:\n  - def_self\n  - self_class\n  AutoCorrect: always\n",
+  "55962ba8b4853809": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/ClassMethodsDefinitions:\n  Description: Enforces using `def self.method_name` or `class << self` to define\n    class methods.\n  StyleGuide: \"#def-self-class-methods\"\n  Enabled: true\n  VersionAdded: '0.89'\n  EnforcedStyle: self_class\n  SupportedStyles:\n  - def_self\n  - self_class\n  AutoCorrect: always\n"
+}

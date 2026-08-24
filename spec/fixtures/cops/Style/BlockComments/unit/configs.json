@@ -1,0 +1,3 @@
+{
+  "b6a483b6aa687c64": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/BlockComments:\n  Description: Do not use block comments.\n  StyleGuide: \"#no-block-comments\"\n  Enabled: true\n  VersionAdded: '0.9'\n  VersionChanged: '0.23'\n  AutoCorrect: always\n"
+}

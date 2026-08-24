@@ -1,0 +1,4 @@
+{
+  "5180c9822b921d32": "---\nAllCops:\n  TargetRubyVersion: 2.7\nMetrics/ParameterLists:\n  Description: Avoid parameter lists longer than three or four parameters.\n  StyleGuide: \"#too-many-params\"\n  Enabled: true\n  VersionAdded: '0.25'\n  VersionChanged: '1.5'\n  Max: 4\n  CountKeywordArgs: true\n  MaxOptionalParameters: 3\n  AutoCorrect: always\n",
+  "7f556b5ee23040bf": "---\nAllCops:\n  TargetRubyVersion: 2.7\nMetrics/ParameterLists:\n  Description: Avoid parameter lists longer than three or four parameters.\n  StyleGuide: \"#too-many-params\"\n  Enabled: true\n  VersionAdded: '0.25'\n  VersionChanged: '1.5'\n  Max: 4\n  CountKeywordArgs: false\n  MaxOptionalParameters: 3\n  AutoCorrect: always\n"
+}

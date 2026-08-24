@@ -1,0 +1,3 @@
+{
+  "461995ed604c82da": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/RequireRelativeSelfPath:\n  Description: Checks for uses a file requiring itself with `require_relative`.\n  Enabled: true\n  VersionAdded: '1.22'\n  AutoCorrect: always\n"
+}

@@ -1,0 +1,6 @@
+{
+  "38fbb93e030ff7c6": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/Semicolon:\n  Description: Don't use semicolons to terminate expressions.\n  StyleGuide: \"#no-semicolon\"\n  Enabled: true\n  VersionAdded: '0.9'\n  VersionChanged: '0.19'\n  AllowAsExpressionSeparator: false\n  AutoCorrect: always\n",
+  "df8f02bd4fb3d8a6": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/Semicolon:\n  Description: Don't use semicolons to terminate expressions.\n  StyleGuide: \"#no-semicolon\"\n  Enabled: true\n  VersionAdded: '0.9'\n  VersionChanged: '0.19'\n  AllowAsExpressionSeparator: true\n  AutoCorrect: always\n",
+  "e2a3db6314d1c41c": "---\nAllCops:\n  TargetRubyVersion: 2.6\nStyle/Semicolon:\n  Description: Don't use semicolons to terminate expressions.\n  StyleGuide: \"#no-semicolon\"\n  Enabled: true\n  VersionAdded: '0.9'\n  VersionChanged: '0.19'\n  AllowAsExpressionSeparator: false\n  AutoCorrect: always\n",
+  "ea85040e28e6552e": "---\nAllCops:\n  TargetRubyVersion: 3.1\nStyle/Semicolon:\n  Description: Don't use semicolons to terminate expressions.\n  StyleGuide: \"#no-semicolon\"\n  Enabled: true\n  VersionAdded: '0.9'\n  VersionChanged: '0.19'\n  AllowAsExpressionSeparator: false\n  AutoCorrect: always\n"
+}

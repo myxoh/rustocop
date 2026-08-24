@@ -1,0 +1,4 @@
+{
+  "5c9c56aec45b5c33": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/BeginEndAlignment:\n  Description: Align ends corresponding to begins correctly.\n  Enabled: true\n  VersionAdded: '0.91'\n  EnforcedStyleAlignWith: start_of_line\n  SupportedStylesAlignWith:\n  - start_of_line\n  - begin\n  Severity: warning\n  AutoCorrect: always\n",
+  "f10734e4a0def6bb": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/BeginEndAlignment:\n  Description: Align ends corresponding to begins correctly.\n  Enabled: true\n  VersionAdded: '0.91'\n  EnforcedStyleAlignWith: begin\n  SupportedStylesAlignWith:\n  - start_of_line\n  - begin\n  Severity: warning\n  AutoCorrect: always\n"
+}

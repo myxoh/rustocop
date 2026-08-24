@@ -1,0 +1,10 @@
+{
+  "0060a09748ee7a38": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/UselessAccessModifier:\n  Description: Checks for useless access modifiers.\n  Enabled: true\n  AutoCorrect: always\n  VersionAdded: '0.20'\n  VersionChanged: '1.61'\n  ContextCreatingMethods: []\n  MethodCreatingMethods: []\n",
+  "61b89d0cbf1c44bf": "---\nAllCops:\n  TargetRubyVersion: 3.4\nLint/UselessAccessModifier:\n  Description: Checks for useless access modifiers.\n  Enabled: true\n  AutoCorrect: always\n  VersionAdded: '0.20'\n  VersionChanged: '1.61'\n  ContextCreatingMethods: []\n  MethodCreatingMethods: []\n",
+  "6719e8b77b2890d9": "---\nAllCops:\n  TargetRubyVersion: 3.2\nLint/UselessAccessModifier:\n  Description: Checks for useless access modifiers.\n  Enabled: true\n  AutoCorrect: always\n  VersionAdded: '0.20'\n  VersionChanged: '1.61'\n  ContextCreatingMethods: []\n  MethodCreatingMethods: []\n",
+  "a04af69ef549a8ab": "---\nAllCops:\n  ActiveSupportExtensionsEnabled: false\nLint/UselessAccessModifier:\n  Enabled: true\n",
+  "a473e5e5553e7faa": "---\nLint/UselessAccessModifier:\n  ContextCreatingMethods:\n  - concerning\n  Enabled: true\n",
+  "ac751e28ecbb06c9": "---\nLint/UselessAccessModifier:\n  ContextCreatingMethods:\n  - class_methods\n  Enabled: true\n",
+  "cc29d624246189fd": "---\nLint/UselessAccessModifier:\n  MethodCreatingMethods:\n  - delegate\n  Enabled: true\n",
+  "d2d01bf62f935dfc": "---\nAllCops:\n  ActiveSupportExtensionsEnabled: true\nLint/UselessAccessModifier:\n  Enabled: true\n"
+}

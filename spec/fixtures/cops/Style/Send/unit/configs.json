@@ -1,0 +1,3 @@
+{
+  "845f61bdf3041d2d": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/Send:\n  Description: Prefer `Object#__send__` or `Object#public_send` to `send`, as `send`\n    may overlap with existing methods.\n  StyleGuide: \"#prefer-public-send\"\n  Enabled: true\n  VersionAdded: '0.33'\n  AutoCorrect: always\n"
+}

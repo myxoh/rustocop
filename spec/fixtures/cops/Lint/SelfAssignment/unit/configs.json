@@ -1,0 +1,4 @@
+{
+  "b1c02281bd5404b9": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/SelfAssignment:\n  Description: Checks for self-assignments.\n  Enabled: true\n  VersionAdded: '0.89'\n  AllowRBSInlineAnnotation: false\n  AutoCorrect: always\n",
+  "c5d1f69dfd79aea5": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/SelfAssignment:\n  Description: Checks for self-assignments.\n  Enabled: true\n  VersionAdded: '0.89'\n  AllowRBSInlineAnnotation: true\n  AutoCorrect: always\n"
+}

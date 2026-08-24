@@ -1,0 +1,3 @@
+{
+  "8c286fa30122e229": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/InvertibleUnlessCondition:\n  Description: Favor `if` with inverted condition over `unless`.\n  Enabled: true\n  Safe: false\n  VersionAdded: '1.44'\n  VersionChanged: '1.50'\n  InverseMethods:\n    :!=: :==\n    :even?: :odd?\n    :odd?: :even?\n    :>=: :<\n    :<: :>=\n    :zero?: :nonzero?\n    :include?: :exclude?\n    :exclude?: :include?\n  AutoCorrect: always\n"
+}

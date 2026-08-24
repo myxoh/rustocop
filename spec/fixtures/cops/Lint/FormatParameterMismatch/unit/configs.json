@@ -1,0 +1,3 @@
+{
+  "01edd4c8411503ea": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/FormatParameterMismatch:\n  Description: The number of parameters to format/sprint must match the fields.\n  Enabled: true\n  VersionAdded: '0.33'\n  AutoCorrect: always\n"
+}

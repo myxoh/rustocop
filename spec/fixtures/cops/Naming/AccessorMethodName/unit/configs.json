@@ -1,0 +1,3 @@
+{
+  "8007b9d132afc93e": "---\nAllCops:\n  TargetRubyVersion: 2.7\nNaming/AccessorMethodName:\n  Description: Checks the naming of accessor methods for get_/set_.\n  StyleGuide: \"#accessor_mutator_method_names\"\n  Enabled: true\n  VersionAdded: '0.50'\n  AutoCorrect: always\n"
+}

@@ -9,7 +9,9 @@ pub(in super::super) struct Reporter<'context> {
 
 impl Reporter<'_> {
     pub(in super::super) fn autocorrect_enabled(&self) -> bool {
-        self.context.autocorrect
+        self.context
+            .autocorrect
+            .enabled_for(&self.context.cop_config, self.cop_name)
     }
 
     #[allow(dead_code)]

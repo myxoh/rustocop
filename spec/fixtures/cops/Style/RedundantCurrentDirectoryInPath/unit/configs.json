@@ -1,0 +1,3 @@
+{
+  "92cf77e939e403cc": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/RedundantCurrentDirectoryInPath:\n  Description: Checks for a redundant current directory in a path given to `require_relative`.\n  Enabled: true\n  VersionAdded: '1.53'\n  AutoCorrect: always\n"
+}

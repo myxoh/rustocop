@@ -32,9 +32,17 @@ module Rustocop
       path("spec", "compatibility_evidence", name)
     end
 
-    def project_regressions(name = nil)
-      base = path("spec", "fixtures", "project_parity_regressions")
-      name ? File.join(base, name) : base
+    def fixture_root
+      path("spec", "fixtures")
+    end
+
+    def project_regression_manifest(pending: false)
+      name = pending ? "cop_project_mismatches.tsv" : "cop_project_cases.tsv"
+      path("spec", "fixtures", name)
+    end
+
+    def project_regression_config
+      path("spec", "fixtures", "support", "project_regressions.yml")
     end
 
     def project_corpus(project)

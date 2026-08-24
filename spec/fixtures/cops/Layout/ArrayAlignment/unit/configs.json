@@ -1,0 +1,4 @@
+{
+  "1680b3e1a2e5f12b": "---\nLayout/ArrayAlignment:\n  EnforcedStyle: with_first_element\n  Enabled: true\nLayout/IndentationWidth:\n  Width: 2\n",
+  "97ada57881b4a6a8": "---\nLayout/ArrayAlignment:\n  EnforcedStyle: with_fixed_indentation\n  Enabled: true\nLayout/IndentationWidth:\n  Width: 2\n"
+}

@@ -2,7 +2,11 @@ use super::*;
 
 fn context(autocorrect: bool) -> Context {
     Context::new(
-        autocorrect,
+        if autocorrect {
+            AutocorrectMode::All
+        } else {
+            AutocorrectMode::None
+        },
         "example.rb",
         RubyVersion::default(),
         Arc::new(CopConfig::default()),

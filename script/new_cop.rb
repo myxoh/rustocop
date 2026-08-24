@@ -61,7 +61,8 @@ if options[:family]
 else
   abort "#{path} already exists" if File.exist?(path)
 end
-fixture = File.join(ROOT, "crates/rustocop/tests/fixtures/inspection", fixture_name)
+fixture_relative = File.join("cops", department, short_name, "native", fixture_name)
+fixture = File.join(ROOT, "spec", "fixtures", fixture_relative)
 abort "#{fixture} already exists" if File.exist?(fixture)
 
 rubocop_node_types = {
@@ -178,7 +179,7 @@ fixture_header = "cop\tline\tcolumn\tlast_line\tlast_column\tcorrectable\tcorrec
 fixture_test = <<~RUST
   fixture_test!(
       checks_#{fixture_name},
-      #{fixture_name.dump},
+      #{fixture_relative.dump},
       #{options.fetch(:fixture_path).dump},
       #{cop_name.dump},
       #{options.fetch(:autocorrect)},

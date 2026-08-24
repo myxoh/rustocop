@@ -1,0 +1,3 @@
+{
+  "35914b2b4f297786": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/FileWrite:\n  Description: Favor `File.(bin)write` convenience methods.\n  StyleGuide: \"#file-write\"\n  Enabled: true\n  VersionAdded: '1.24'\n  AutoCorrect: always\n"
+}

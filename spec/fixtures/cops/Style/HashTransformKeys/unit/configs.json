@@ -1,0 +1,5 @@
+{
+  "149abb62f4837c85": "---\nAllCops:\n  TargetRubyVersion: 2.6\nStyle/HashTransformKeys:\n  Description: Prefer `transform_keys` over `each_with_object`, `map`, or `to_h`.\n  Enabled: true\n  VersionAdded: '0.80'\n  VersionChanged: '0.90'\n  Safe: false\n  AutoCorrect: always\n",
+  "3658708798df946f": "---\nAllCops:\n  TargetRubyVersion: 2.5\nStyle/HashTransformKeys:\n  Description: Prefer `transform_keys` over `each_with_object`, `map`, or `to_h`.\n  Enabled: true\n  VersionAdded: '0.80'\n  VersionChanged: '0.90'\n  Safe: false\n  AutoCorrect: always\n",
+  "e3bfb8f0390e5f84": "---\nAllCops:\n  TargetRubyVersion: 2.4\nStyle/HashTransformKeys:\n  Description: Prefer `transform_keys` over `each_with_object`, `map`, or `to_h`.\n  Enabled: true\n  VersionAdded: '0.80'\n  VersionChanged: '0.90'\n  Safe: false\n  AutoCorrect: always\n"
+}

@@ -1,0 +1,3 @@
+{
+  "4564107f8a914c94": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/FloatComparison:\n  Description: Checks for the presence of precise comparison of floating point numbers.\n  StyleGuide: \"#float-comparison\"\n  Enabled: true\n  VersionAdded: '0.89'\n  AutoCorrect: always\n"
+}

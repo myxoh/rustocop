@@ -1,0 +1,5 @@
+{
+  "b2ded0501facbb86": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/RedundantArgument:\n  Description: Checks for a redundant argument passed to certain methods.\n  Enabled: true\n  Safe: false\n  VersionAdded: '1.4'\n  VersionChanged: '1.55'\n  Methods:\n    chomp:\n      \"$hex\": '82'\n  AutoCorrect: always\n",
+  "e41d0aa6f7fa0fba": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/RedundantArgument:\n  Description: Checks for a redundant argument passed to certain methods.\n  Enabled: true\n  Safe: false\n  VersionAdded: '1.4'\n  VersionChanged: '1.55'\n  Methods:\n    foo: 2\n  AutoCorrect: always\n",
+  "eaba3afa913677c6": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/RedundantArgument:\n  Description: Checks for a redundant argument passed to certain methods.\n  Enabled: true\n  Safe: false\n  VersionAdded: '1.4'\n  VersionChanged: '1.55'\n  Methods:\n    join: ''\n    sum: 0\n    exit: true\n    exit!: false\n    to_i: 10\n    split: \" \"\n    chomp: \"\\n\"\n    chomp!: \"\\n\"\n  AutoCorrect: always\n"
+}

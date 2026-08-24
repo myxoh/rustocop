@@ -1,0 +1,3 @@
+{
+  "76fc0741c3404fcb": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/HeredocArgumentClosingParenthesis:\n  Description: Checks for the placement of the closing parenthesis in a method call\n    that passes a HEREDOC string as an argument.\n  Enabled: true\n  StyleGuide: \"#heredoc-argument-closing-parentheses\"\n  VersionAdded: '0.68'\n  AutoCorrect: always\n"
+}

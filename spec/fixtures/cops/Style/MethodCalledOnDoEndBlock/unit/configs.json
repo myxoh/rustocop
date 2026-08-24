@@ -1,0 +1,4 @@
+{
+  "6b7635dda1b3d90d": "---\nAllCops:\n  TargetRubyVersion: 3.4\nStyle/MethodCalledOnDoEndBlock:\n  Description: Avoid chaining a method call on a do...end block.\n  StyleGuide: \"#single-line-blocks\"\n  Enabled: true\n  VersionAdded: '0.14'\n  AutoCorrect: always\n",
+  "8a2601fe824cdf02": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/MethodCalledOnDoEndBlock:\n  Description: Avoid chaining a method call on a do...end block.\n  StyleGuide: \"#single-line-blocks\"\n  Enabled: true\n  VersionAdded: '0.14'\n  AutoCorrect: always\n"
+}
