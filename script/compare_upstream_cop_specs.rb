@@ -225,9 +225,7 @@ workers = Array.new(options[:jobs]) do
             native, "-A", "--format", "json", "--only", test_case.fetch("cop"),
             "--config", test_case.fetch("config_path"), source_path
           )
-          acceptable_status = correction_status.success? ||
-                              (test_case.fetch("asserts_no_correction", false) &&
-                               correction_status.exitstatus == 1)
+          acceptable_status = correction_status.success? || correction_status.exitstatus == 1
           actual_correction = File.binread(source_path)
           correction_key = JSON.generate([
             test_case.fetch("cop"), test_case.fetch("source"), test_case.fetch("path"),

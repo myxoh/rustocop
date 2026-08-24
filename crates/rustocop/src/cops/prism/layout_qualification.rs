@@ -319,6 +319,9 @@ fn end_alignment(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
     let keyword_end = keyword.end_offset();
     let closing_start = closing.start_offset();
     let closing_end = closing.end_offset();
+    if file.same_line(keyword_start, closing_start) {
+        return;
+    }
     let keyword_line_end = file.line_end(keyword_start);
     let bom = usize::from(source.starts_with('\u{feff}') && file.line_start(keyword_start) == 0);
     let first_code = if bom == 1 {

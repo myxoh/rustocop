@@ -14,11 +14,10 @@ pub(super) fn before_prism(
 }
 
 pub(super) fn after_prism(
-    lines: &[SourceLine],
-    options: &InspectionConfig,
-    offenses: &mut Vec<Offense>,
+    _lines: &[SourceLine],
+    _options: &InspectionConfig,
+    _offenses: &mut Vec<Offense>,
 ) {
-    check_indentation(lines, options, offenses);
 }
 
 fn check_trailing_whitespace(
@@ -897,40 +896,4 @@ fn heredoc_delimiters(line: &str) -> Vec<String> {
         delimiters.push(delimiter);
     }
     delimiters
-}
-
-fn check_indentation(
-    lines: &[SourceLine],
-    options: &InspectionConfig,
-    offenses: &mut Vec<Offense>,
-) {
-    for cop in ["Layout/IndentationConsistency", "Layout/IndentationWidth"] {
-        if crate::cops::intentionally_pending(cop) {
-            continue;
-        }
-        if !options.cop_enabled(cop) {
-            continue;
-        }
-
-        for (index, line) in lines.iter().enumerate() {
-            if line.body.trim().is_empty() {
-                continue;
-            }
-
-            let indent = leading_spaces(&line.body);
-            if indent != line.body.len() - line.body.trim_start_matches(' ').len()
-                || !indent.is_multiple_of(2)
-            {
-                push_offense(
-                    offenses,
-                    cop,
-                    "Use 2 spaces for indentation.",
-                    index + 1,
-                    1,
-                    indent.max(1),
-                    CorrectionStatus::Unavailable,
-                );
-            }
-        }
-    }
 }

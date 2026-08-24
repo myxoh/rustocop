@@ -11,8 +11,25 @@ declare_source_cops! {
 }
 
 fn empty_lines(source: &str, context: &mut Reporter<'_>) {
-    for (start, _) in source.match_indices("\n\n\n") {
-        if !inside_quoted_text(source, start + 2) {
+    let literals = SourceFile::new(source).literal_ranges();
+    let ruby_end = source
+        .lines()
+        .scan(0usize, |offset, line| {
+            let start = *offset;
+            *offset += line.len() + 1;
+            Some((start, line))
+        })
+        .find_map(|(offset, line)| (line.trim() == "__END__").then_some(offset))
+        .unwrap_or(source.len());
+    let content_end = source[..ruby_end]
+        .rfind(|character: char| !character.is_whitespace())
+        .map_or(0, |offset| offset + 1);
+    for (start, window) in source.as_bytes()[..content_end].windows(3).enumerate() {
+        if window == b"\n\n\n"
+            && !literals
+                .iter()
+                .any(|range| range.start <= start + 2 && start + 2 < range.end)
+        {
             context.remove(
                 "Extra blank line detected.",
                 start + 2..start + 3,
@@ -136,11 +153,6 @@ fn spacing_before(source: &str, context: &mut Reporter<'_>, token: u8, message: 
         }
         context.remove(message, start..index, start..index);
     }
-}
-
-fn inside_quoted_text(source: &str, offset: usize) -> bool {
-    let before = &source[..offset];
-    before.bytes().filter(|byte| *byte == b'"').count() % 2 == 1 || before.contains("<<-")
 }
 
 fn ignored_syntax_ranges(source: &str) -> Vec<std::ops::Range<usize>> {

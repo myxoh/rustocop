@@ -2,14 +2,12 @@ use super::source_syntax::{matching_delimiter, top_level_elements};
 use super::*;
 
 define_cops! {
-    FirstArrayElementLineBreak => "Layout/FirstArrayElementLineBreak" => source(first_array_element_line_break),
-    FirstHashElementLineBreak => "Layout/FirstHashElementLineBreak" => source(first_hash_element_line_break),
-    FirstMethodArgumentLineBreak => "Layout/FirstMethodArgumentLineBreak" => source(first_method_argument_line_break),
     MultilineHashKeyLineBreaks => "Layout/MultilineHashKeyLineBreaks" => source(multiline_hash_key_line_breaks),
     SingleLineBlockChain => "Layout/SingleLineBlockChain" => source(single_line_block_chain),
     ConditionPosition => "Layout/ConditionPosition" => any_node(condition_position),
 }
 
+#[allow(dead_code)]
 fn first_array_element_line_break(context: &mut CopContext<'_, '_>) {
     first_literal_element(context, b'[', b']', "array", |source, opening| {
         opening == 0
@@ -24,6 +22,7 @@ fn first_array_element_line_break(context: &mut CopContext<'_, '_>) {
     implicit_array_assignment(context);
 }
 
+#[allow(dead_code)]
 fn first_hash_element_line_break(context: &mut CopContext<'_, '_>) {
     first_literal_element(context, b'{', b'}', "hash", |source, opening| {
         let rest = &source[opening + 1..];
@@ -135,6 +134,7 @@ fn implicit_array_assignment(context: &mut CopContext<'_, '_>) {
     }
 }
 
+#[allow(dead_code)]
 fn first_method_argument_line_break(context: &mut CopContext<'_, '_>) {
     first_parenthesized_list(context, false);
 }

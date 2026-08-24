@@ -2,16 +2,6 @@ pub(crate) mod prism;
 pub(crate) mod text;
 
 pub(crate) const INTENTIONALLY_PENDING_COP_NAMES: &[&str] = &[
-    "Layout/ArgumentAlignment",
-    "Layout/EmptyLines",
-    "Layout/EndAlignment",
-    "Layout/FirstArrayElementIndentation",
-    "Layout/FirstArrayElementLineBreak",
-    "Layout/FirstHashElementLineBreak",
-    "Layout/FirstMethodArgumentLineBreak",
-    "Layout/HeredocIndentation",
-    "Layout/IndentationConsistency",
-    "Layout/IndentationWidth",
     "Layout/LineContinuationLeadingSpace",
     "Layout/LineEndStringConcatenationIndentation",
     "Layout/LineLength",
@@ -77,7 +67,7 @@ mod tests {
     #[test]
     fn public_inventory_is_sorted_unique_and_complete() {
         let names = cop_names();
-        assert_eq!(names.len(), 569);
+        assert_eq!(names.len(), 579);
         assert!(names.windows(2).all(|pair| pair[0] < pair[1]));
         assert!(INTENTIONALLY_PENDING_COP_NAMES
             .windows(2)

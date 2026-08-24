@@ -1,14 +1,14 @@
 {
   "version": 1,
   "kind": "project_compatibility",
-  "updated_at": "2026-08-23T19:53:23-04:00",
-  "rust_commit": "2a436cabdb399a1d64fc48d3a4e1a18dcf65a048",
-  "native_sha256": "b844a8687b0d06076947daa0540ce030f77c97d947e7994c01b73f29e5d6b6ee",
+  "updated_at": "2026-08-23T22:35:26-04:00",
+  "rust_commit": null,
+  "native_sha256": "ae260c2476fd87fb7b0b0ae7288a6315962af23bdb6bb9a0ac6f7dd1e881095e",
   "rubocop_version": "1.87.0",
   "rubocop_reference": {
-    "path": "tmp/project-rubocop-reference-553.json.gz",
-    "sha256": "694693b6b7fb15462e5662cc24b78d02c0058c9943c670abe9d1bcb796f220b0",
-    "generated_at": "2026-08-23T19:24:35-04:00",
+    "path": "tmp/project-rubocop-reference-563.json.gz",
+    "sha256": "64c53e1870f8ce5dcf3d8eb4b5f82868779000d915d59200c607c15b7676a033",
+    "generated_at": "2026-08-23T22:10:02-04:00",
     "config_sha256": "0e505e2432b2af2d479bd48d335ae5c4c18b39edf328e500157ba57bf6f6726a",
     "source": "cached"
   },
@@ -121,6 +121,12 @@
       "rustocop": 173,
       "rubocop": 173,
       "exact": 173,
+      "classification": "project_exact"
+    },
+    "Layout/ArgumentAlignment": {
+      "rustocop": 20632,
+      "rubocop": 20632,
+      "exact": 20632,
       "classification": "project_exact"
     },
     "Layout/ArrayAlignment": {
@@ -237,6 +243,12 @@
       "exact": 729,
       "classification": "project_exact"
     },
+    "Layout/EmptyLines": {
+      "rustocop": 498,
+      "rubocop": 498,
+      "exact": 498,
+      "classification": "project_exact"
+    },
     "Layout/EmptyLinesAfterModuleInclusion": {
       "rustocop": 1032,
       "rubocop": 1024,
@@ -297,6 +309,12 @@
       "exact": 347,
       "classification": "mismatch"
     },
+    "Layout/EndAlignment": {
+      "rustocop": 1119,
+      "rubocop": 1119,
+      "exact": 1119,
+      "classification": "project_exact"
+    },
     "Layout/EndOfLine": {
       "rustocop": 0,
       "rubocop": 0,
@@ -315,10 +333,34 @@
       "exact": 878,
       "classification": "mismatch"
     },
+    "Layout/FirstArrayElementIndentation": {
+      "rustocop": 3431,
+      "rubocop": 3431,
+      "exact": 3431,
+      "classification": "project_exact"
+    },
+    "Layout/FirstArrayElementLineBreak": {
+      "rustocop": 3665,
+      "rubocop": 3665,
+      "exact": 3665,
+      "classification": "project_exact"
+    },
     "Layout/FirstHashElementIndentation": {
       "rustocop": 7366,
       "rubocop": 7366,
       "exact": 7366,
+      "classification": "project_exact"
+    },
+    "Layout/FirstHashElementLineBreak": {
+      "rustocop": 3723,
+      "rubocop": 3723,
+      "exact": 3723,
+      "classification": "project_exact"
+    },
+    "Layout/FirstMethodArgumentLineBreak": {
+      "rustocop": 31974,
+      "rubocop": 31974,
+      "exact": 31974,
       "classification": "project_exact"
     },
     "Layout/FirstMethodParameterLineBreak": {
@@ -345,11 +387,29 @@
       "exact": 34,
       "classification": "mismatch"
     },
+    "Layout/HeredocIndentation": {
+      "rustocop": 3447,
+      "rubocop": 3447,
+      "exact": 3447,
+      "classification": "project_exact"
+    },
+    "Layout/IndentationConsistency": {
+      "rustocop": 7197,
+      "rubocop": 7197,
+      "exact": 7197,
+      "classification": "project_exact"
+    },
     "Layout/IndentationStyle": {
       "rustocop": 7,
       "rubocop": 22,
       "exact": 7,
       "classification": "mismatch"
+    },
+    "Layout/IndentationWidth": {
+      "rustocop": 8652,
+      "rubocop": 8652,
+      "exact": 8652,
+      "classification": "project_exact"
     },
     "Layout/InitialIndentation": {
       "rustocop": 2,

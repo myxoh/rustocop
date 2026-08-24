@@ -25,7 +25,7 @@ pub(crate) fn sort_offenses(offenses: &mut [Offense]) {
 
 fn prism_offense(source: &str, index: &SourceIndex, finding: prism::Finding) -> Offense {
     let (line, column) = index.position(source, finding.start_offset);
-    let empty_location = finding.start_offset == finding.end_offset;
+    let empty_location = finding.start_offset >= finding.end_offset;
     let ends_at_newline = finding.end_offset > finding.start_offset
         && source.as_bytes().get(finding.end_offset - 1) == Some(&b'\n');
     let reversed_empty = finding.end_offset < finding.start_offset;
@@ -43,6 +43,8 @@ fn prism_offense(source: &str, index: &SourceIndex, finding: prism::Finding) -> 
     let (last_line, last_column) =
         if reversed_empty && finding.start_offset == source.len() && source.ends_with('\n') {
             (line, 0)
+        } else if reversed_empty {
+            index.position(source, finding.end_offset)
         } else if empty_location {
             // Parser represents an empty source range as ending immediately
             // before its start. RuboCop's public JSON formatter renders that
@@ -50,6 +52,8 @@ fn prism_offense(source: &str, index: &SourceIndex, finding: prism::Finding) -> 
             // of a non-newline-terminated source.
             if finding.start_offset == source.len() && !source.is_empty() && !source.ends_with('\n')
             {
+                (line, column.saturating_sub(1))
+            } else if finding.cop_name == "Layout/IndentationWidth" && column > 3 {
                 (line, column.saturating_sub(1))
             } else {
                 (line, column)

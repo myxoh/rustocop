@@ -1,17 +1,17 @@
 # Non-scalable cop implementations
 
-`updated_at: 2026-08-23T19:53:23-04:00`
+`updated_at: 2026-08-23T22:35:26-04:00`
 
 This is the catalog for category C: cops whose current implementation appears
 too narrow to generalize from the fixture corpus to arbitrary Ruby projects.
 It is an implementation-risk register, not a list of every cop that currently
 mismatches RuboCop.
 
-All 40 category-C cops in this catalog are intentionally pending. A further 11
+All 32 category-C cops in this catalog are intentionally pending. A further 9
 project-inexact cops and two RuboCop-reference blockers are also pending, for a
-total of 53; they are absent from
+total of 43; they are absent from
 the active registry, qualification corpus, compatibility evidence, and fixture
-suite. Forty-one cops have now returned through structural rewrites and the full
+suite. Sixty-one cops have now returned through structural rewrites and the full
 fixture gate, with project status recorded separately. The machine-readable source of truth is
 [`intentionally_pending_cops.yml`](../spec/upstream/rubocop-1.87.0/intentionally_pending_cops.yml).
 Their old implementation source remains only as rewrite reference.
@@ -24,16 +24,15 @@ reference output. On that original ten-project corpus, the resulting 512-cop
 active set had 402 exercised project-exact cops, 110 dormant cops, and no
 mismatches or engine errors.
 
-The expanded 50-project audit at `2026-08-23T19:53:23-04:00` shows that this
+The expanded 50-project audit at `2026-08-23T22:35:26-04:00` shows that this
 withdrawal was not sufficient to make the retained implementations scalable:
-307 cops are project-exact, 53 are dormant, 192 mismatch, none crash, and one
+317 cops are project-exact, 53 are dormant, 192 mismatch, none crash, and one
 is blocked by a RuboCop error. Those newly exposed cops require review and
 minimized fixtures before this catalog can be treated as complete.
 
-The evidence snapshot is the complete ten-project audit generated at
-`2026-08-22T00:56:18-04:00` in
-`tmp/project-parity/all-cops-current.json`, paired with
-`spec/compatibility_evidence/fixtures.json`. The project corpus contains 54,146
+The current evidence snapshots are
+`spec/compatibility_evidence/projects.json` and
+`spec/compatibility_evidence/fixtures.json`. The project corpus contains 85,471
 Ruby files. “Gap” is Rustocop-only plus RuboCop-only diagnostic signatures.
 
 ## Inclusion criteria
@@ -96,13 +95,8 @@ on a non-empty line as a comment.
 | `Style/InlineComment` | compatible 3/3 | mismatch | 129,107 | 10,115 | 9,470 | 120,282 |
 | `Lint/ConstantResolution` | compatible 18/18 | mismatch | 111 | 544,649 | 29 | 544,702 |
 | `Lint/DuplicateRegexpCharacterClassElement` | mismatch 6/16 | mismatch | 329,911 | 99 | 0 | 330,010 |
-| `Layout/FirstArrayElementLineBreak` | compatible 14/14 | mismatch | 71,921 | 1,739 | 1,491 | 70,678 |
-| `Layout/FirstHashElementLineBreak` | compatible 11/11 | mismatch | 2,405 | 1,835 | 1,834 | 572 |
-| `Layout/FirstMethodArgumentLineBreak` | compatible 14/14 | mismatch | 16,729 | 13,234 | 13,130 | 3,703 |
 | `Layout/MultilineHashKeyLineBreaks` | compatible 10/10 | mismatch | 3,097 | 1,835 | 1,786 | 1,360 |
 | `Layout/SingleLineBlockChain` | compatible 9/9 | mismatch | 40,204 | 25,643 | 25,335 | 15,177 |
-| `Layout/IndentationConsistency` | mismatch 32/53 | mismatch | 33,603 | 6,077 | 0 | 39,680 |
-| `Layout/IndentationWidth` | mismatch 89/179 | mismatch | 33,603 | 6,874 | 0 | 40,477 |
 | `Lint/UnusedMethodArgument` | mismatch 14/46 | mismatch | 3,902 | 1,933 | 777 | 4,281 |
 | `Naming/VariableName` | mismatch 62/118 | mismatch | 73,576 | 123 | 42 | 73,615 |
 | `Naming/VariableNumber` | mismatch 62/115 | mismatch | 0 | 8,050 | 0 | 8,050 |
@@ -134,8 +128,6 @@ placeholder rather than coincidental behavior.
 | `Layout/MultilineArrayBraceLayout` | mismatch 16/35 | mismatch | 9,440 | 43 | 0 | 9,483 |
 | `Layout/MultilineHashBraceLayout` | mismatch 16/34 | mismatch | 48,256 | 33 | 0 | 48,289 |
 | `Layout/MultilineMethodCallBraceLayout` | mismatch 22/44 | mismatch | 74,680 | 3,268 | 0 | 77,948 |
-| `Layout/ArgumentAlignment` | mismatch 32/53 | mismatch | 583 | 18,096 | 0 | 18,679 |
-| `Layout/FirstArrayElementIndentation` | mismatch 32/53 | mismatch | 583 | 2,587 | 0 | 3,170 |
 | `Layout/LineEndStringConcatenationIndentation` | mismatch 39/59 | mismatch | 583 | 2,497 | 0 | 3,080 |
 
 Both callbacks are in
@@ -171,7 +163,6 @@ comments, heredoc variants, or parser recovery.
 
 | Cop | Fixture result | Project result | Rustocop | RuboCop | Exact | Gap |
 | --- | --- | --- | ---: | ---: | ---: | ---: |
-| `Layout/EmptyLines` | compatible 5/5 | mismatch | 169 | 112 | 96 | 89 |
 | `Layout/SpaceBeforeComment` | compatible 5/5 | mismatch | 4,519 | 0 | 0 | 4,519 |
 | `Layout/SpaceAfterSemicolon` | compatible 9/9 | mismatch | 1,663 | 0 | 0 | 1,663 |
 | `Layout/SpaceAfterComma` | compatible 9/9 | mismatch | 6,153 | 58 | 53 | 6,105 |

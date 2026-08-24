@@ -4,11 +4,11 @@ upstream_rspec:
   examples: 25388
   failures: 0
   pending: 3
-captured_cases: 25489
+captured_cases: 26177
 diagnostic_baseline:
-  passed_cases: 25488
-  passing_cops: 553
-  total_cops: 553
+  passed_cases: 26158
+  passing_cops: 563
+  total_cops: 563
 fully_compatible_cops:
 - Bundler/DuplicatedGem
 - Bundler/DuplicatedGroup
@@ -28,6 +28,7 @@ fully_compatible_cops:
 - Gemspec/RequiredRubyVersion
 - Gemspec/RubyVersionGlobalsUsage
 - Layout/AccessModifierIndentation
+- Layout/ArgumentAlignment
 - Layout/ArrayAlignment
 - Layout/AssignmentIndentation
 - Layout/BeginEndAlignment
@@ -47,6 +48,7 @@ fully_compatible_cops:
 - Layout/EmptyLineAfterMagicComment
 - Layout/EmptyLineAfterMultilineCondition
 - Layout/EmptyLineBetweenDefs
+- Layout/EmptyLines
 - Layout/EmptyLinesAfterModuleInclusion
 - Layout/EmptyLinesAroundAccessModifier
 - Layout/EmptyLinesAroundArguments
@@ -57,15 +59,23 @@ fully_compatible_cops:
 - Layout/EmptyLinesAroundExceptionHandlingKeywords
 - Layout/EmptyLinesAroundMethodBody
 - Layout/EmptyLinesAroundModuleBody
+- Layout/EndAlignment
 - Layout/EndOfLine
 - Layout/ExtraSpacing
 - Layout/FirstArgumentIndentation
+- Layout/FirstArrayElementIndentation
+- Layout/FirstArrayElementLineBreak
 - Layout/FirstHashElementIndentation
+- Layout/FirstHashElementLineBreak
+- Layout/FirstMethodArgumentLineBreak
 - Layout/FirstMethodParameterLineBreak
 - Layout/FirstParameterIndentation
 - Layout/HashAlignment
 - Layout/HeredocArgumentClosingParenthesis
+- Layout/HeredocIndentation
+- Layout/IndentationConsistency
 - Layout/IndentationStyle
+- Layout/IndentationWidth
 - Layout/InitialIndentation
 - Layout/LeadingCommentSpace
 - Layout/LeadingEmptyLines

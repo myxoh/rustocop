@@ -2762,11 +2762,124 @@ fn heredoc_indentation(context: &mut CopContext<'_, '_>) {
     })
     .flatten();
 
+    let mut skip_until = 0;
+    let mut block_comment = false;
     for (opening_index, (opening_offset, opening_line)) in lines.iter().copied().enumerate() {
-        let Some(marker_at) = opening_line.find("<<") else {
+        if opening_line.starts_with("=begin") {
+            block_comment = true;
+        }
+        if block_comment {
+            if opening_line.starts_with("=end") {
+                block_comment = false;
+            }
             continue;
-        };
-        let after = &opening_line[marker_at + 2..];
+        }
+        if opening_index < skip_until
+            && !opening_line
+                .split("<<")
+                .next()
+                .is_some_and(inside_interpolation)
+        {
+            continue;
+        }
+        let openers = heredoc_openers(opening_line);
+        let mut body_index = opening_index + 1;
+        for (marker_at, modifier, marker) in openers {
+            let Some(closing_index) = lines[body_index..]
+                .iter()
+                .position(|(_, line)| line.trim() == marker)
+                .map(|index| index + body_index)
+            else {
+                continue;
+            };
+            let body = &lines[body_index..closing_index];
+            body_index = closing_index + 1;
+            skip_until = skip_until.max(body_index);
+            if body.is_empty() || body.iter().all(|(_, line)| line.trim().is_empty()) {
+                continue;
+            }
+            let closing_indent =
+                lines[closing_index].1.len() - lines[closing_index].1.trim_start().len();
+            let opening_indent = opening_line.len() - opening_line.trim_start().len();
+            let min_indent = body
+                .iter()
+                .filter(|(_, line)| !line.trim().is_empty())
+                .map(|(_, line)| line.len() - line.trim_start().len())
+                .min()
+                .unwrap_or(0);
+            let desired = opening_indent + width;
+            let squish = active_support && opening_line.contains(".squish");
+            let nested_interpolation = inside_interpolation(&opening_line[..marker_at]);
+            let wrong = if modifier == "<<~" {
+                min_indent != desired
+            } else {
+                min_indent == 0 || squish
+            };
+            if !wrong
+                || (!nested_interpolation
+                    && min_indent < desired
+                    && max.is_some_and(|max| {
+                        body.iter().any(|(_, line)| {
+                            line.chars().count() + desired.saturating_sub(min_indent) > max
+                        })
+                    }))
+            {
+                continue;
+            }
+
+            let message = if modifier == "<<~" {
+                format!("Use {width} spaces for indentation in a heredoc.")
+            } else {
+                format!(
+                    "Use {width} spaces for indentation in a heredoc by using `<<~` instead of `{modifier}`."
+                )
+            };
+            let body_start = lines[closing_index - body.len()].0;
+            let closing_start = lines[closing_index].0;
+            let mut edits = Vec::new();
+            for (offset, line) in body {
+                if line.trim().is_empty() {
+                    continue;
+                }
+                let indentation = line.len() - line.trim_start().len();
+                let replacement = if indentation >= min_indent {
+                    " ".repeat(desired + indentation - min_indent)
+                } else {
+                    " ".repeat(desired)
+                };
+                edits.push((*offset..*offset + indentation, replacement));
+            }
+            if modifier != "<<~" {
+                edits.push((
+                    opening_offset + marker_at..opening_offset + marker_at + modifier.len(),
+                    "<<~".to_string(),
+                ));
+                edits.push((
+                    closing_start..closing_start + closing_indent,
+                    " ".repeat(opening_indent),
+                ));
+            }
+            context.replace_many(message, body_start..closing_start, edits);
+        }
+    }
+}
+
+fn heredoc_openers(line: &str) -> Vec<(usize, &'static str, &str)> {
+    let mut openers = Vec::new();
+    for (marker_at, _) in line.match_indices("<<") {
+        let prefix = line[..marker_at].trim_start();
+        if prefix.starts_with('#') && !prefix.starts_with("#{") {
+            break;
+        }
+        if inside_quoted_literal(&line[..marker_at])
+            && !inside_interpolation(&line[..marker_at])
+        {
+            continue;
+        }
+        if line[..marker_at].trim_end().ends_with('/') {
+            continue;
+        }
+        let after = &line[marker_at + 2..];
         let (modifier, after) = if let Some(after) = after.strip_prefix('~') {
             ("<<~", after)
         } else if let Some(after) = after.strip_prefix('-') {
@@ -2779,94 +2892,61 @@ fn heredoc_indentation(context: &mut CopContext<'_, '_>) {
             .first()
             .copied()
             .filter(|byte| matches!(byte, b'\'' | b'"' | b'`'));
-        let name_start = usize::from(quote.is_some());
-        let Some(name_end) = after[name_start..]
-            .find(|character: char| !(character.is_ascii_alphanumeric() || character == '_'))
-            .map(|at| at + name_start)
-            .or(Some(after.len()))
-        else {
-            continue;
+        let quoted = quote.is_some();
+        let name_start = usize::from(quoted);
+        let name_end = if let Some(quote) = quote {
+            after[name_start..]
+                .bytes()
+                .position(|byte| byte == quote)
+                .map_or(after.len(), |at| at + name_start)
+        } else {
+            after[name_start..]
+                .find(|character: char| !(character.is_ascii_alphanumeric() || character == '_'))
+                .map_or(after.len(), |at| at + name_start)
         };
         let marker = &after[name_start..name_end];
-        if marker.is_empty() {
-            continue;
+        if !marker.is_empty() {
+            openers.push((marker_at, modifier, marker));
         }
-        let Some(closing_index) = lines[opening_index + 1..]
-            .iter()
-            .position(|(_, line)| line.trim() == marker)
-            .map(|index| index + opening_index + 1)
-        else {
-            continue;
-        };
-        let body = &lines[opening_index + 1..closing_index];
-        if body.is_empty() || body.iter().all(|(_, line)| line.trim().is_empty()) {
-            continue;
-        }
-        let closing_indent =
-            lines[closing_index].1.len() - lines[closing_index].1.trim_start().len();
-        let opening_indent = opening_line.len() - opening_line.trim_start().len();
-        let min_indent = body
-            .iter()
-            .filter(|(_, line)| !line.trim().is_empty())
-            .map(|(_, line)| line.len() - line.trim_start().len())
-            .min()
-            .unwrap_or(0);
-        let desired = if modifier == "<<~" {
-            closing_indent + width
-        } else {
-            opening_indent + width
-        };
-        let squish = active_support && opening_line.contains(".squish");
-        let wrong = if modifier == "<<~" {
-            min_indent != desired
-        } else {
-            min_indent == 0 || squish
-        };
-        if !wrong {
-            continue;
-        }
-        if min_indent < desired
-            && max.is_some_and(|max| {
-                body.iter().any(|(_, line)| {
-                    line.chars().count() + desired.saturating_sub(min_indent) > max
-                })
-            })
-        {
-            continue;
-        }
-
-        let message = if modifier == "<<~" {
-            format!("Use {width} spaces for indentation in a heredoc.")
-        } else {
-            format!(
-                "Use {width} spaces for indentation in a heredoc by using `<<~` instead of `{modifier}`."
-            )
-        };
-        let body_start = lines[opening_index + 1].0;
-        let closing_start = lines[closing_index].0;
-        let mut edits = Vec::new();
-        for (offset, line) in body {
-            if line.trim().is_empty() {
-                continue;
-            }
-            let indentation = line.len() - line.trim_start().len();
-            let replacement = if indentation >= min_indent {
-                " ".repeat(desired + indentation - min_indent)
-            } else {
-                " ".repeat(desired)
-            };
-            edits.push((*offset..*offset + indentation, replacement));
-        }
-        if modifier != "<<~" {
-            edits.push((
-                opening_offset + marker_at..opening_offset + marker_at + modifier.len(),
-                "<<~".to_string(),
-            ));
-            edits.push((
-                closing_start..closing_start + closing_indent,
-                " ".repeat(opening_indent),
-            ));
-        }
-        context.replace_many(message, body_start..closing_start, edits);
     }
+    openers
+}
+
+fn inside_quoted_literal(source: &str) -> bool {
+    let mut quote = None;
+    let mut escaped = false;
+    for byte in source.bytes() {
+        if escaped {
+            escaped = false;
+            continue;
+        }
+        if byte == b'\\' && quote.is_some() {
+            escaped = true;
+            continue;
+        }
+        if quote == Some(byte) {
+            quote = None;
+        } else if quote.is_none() && matches!(byte, b'\'' | b'"' | b'`') {
+            quote = Some(byte);
+        }
+    }
+    quote.is_some()
+}
+
+fn inside_interpolation(source: &str) -> bool {
+    let bytes = source.as_bytes();
+    let mut depth = 0usize;
+    let mut index = 0usize;
+    while index < bytes.len() {
+        if bytes[index..].starts_with(b"#{") {
+            depth += 1;
+            index += 2;
+            continue;
+        }
+        if bytes[index] == b'}' && depth > 0 {
+            depth -= 1;
+        }
+        index += 1;
+    }
+    depth > 0
 }

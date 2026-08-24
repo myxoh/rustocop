@@ -220,6 +220,8 @@ cop_modules!(
     rescue_modifier_rules,
     rescue_standard_error_rules,
     restored_structural_cops,
+    restored_layout_indentation,
+    restored_layout_line_breaks,
     return_nil_predicate_rules,
     ruby2_keywords_rules,
     lexical_rules,

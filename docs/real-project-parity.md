@@ -13,27 +13,26 @@ cases, and configuration branches that the projects do not exercise.
 ## Latest realistic status
 
 The latest complete checkpoint was generated at
-`2026-08-23T19:53:23-04:00` from Rust source
-`2a436cabdb399a1d64fc48d3a4e1a18dcf65a048` and native binary SHA-256
-`b844a8687b0d06076947daa0540ce030f77c97d947e7994c01b73f29e5d6b6ee`.
+`2026-08-23T22:35:26-04:00` from worktree native binary SHA-256
+`ae260c2476fd87fb7b0b0ae7288a6315962af23bdb6bb9a0ac6f7dd1e881095e`.
 The stored RuboCop reference has SHA-256
-`a85d689ef7a38d212227f109c4cdc649751c6a12b3cfc7d7ed3b6d76300446e5`.
-After excluding the 53 intentionally pending cops, its active-cop slice reports:
+`64c53e1870f8ce5dcf3d8eb4b5f82868779000d915d59200c607c15b7676a033`.
+After excluding the 43 intentionally pending cops, its active-cop slice reports:
 
 | Classification | Complete checkpoint |
 | --- | ---: |
-| Project-exact | 307 |
+| Project-exact | 317 |
 | Exact but dormant | 53 |
 | Mismatching | 192 |
 | Rust crash | 0 |
 | RuboCop gate error | 1 |
 
-Among the 499 exercised cops, 307 are exact (61.5%). The ten cops restored in
-this iteration pass every captured fixture but remain project-inexact; three
-rounds of new minimized regressions materially narrowed their gaps.
+Among the 509 exercised cops, 317 are exact (62.3%). The ten cops restored in
+this iteration pass every captured fixture and are project-exact across all 50
+pinned repositories.
 `Style/ClassAndModuleChildren` still triggers a RuboCop 1.87 error on Puppet.
 
-The minimized project-regression corpus contains 528 passing cases and no
+The minimized project-regression corpus contains 599 passing cases and no
 pending active-cop mismatch directions. The
 configuration-mutation corpus contains six. They preserve fixed pathological
 examples, while the complete matrix catches interactions and unrepresented

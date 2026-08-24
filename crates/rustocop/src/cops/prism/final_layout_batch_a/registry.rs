@@ -16,8 +16,6 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
             "{ ",
             "Extra space inside hash braces detected.",
         ),
-        custom("Layout/ArgumentAlignment", align_continuation),
-        custom("Layout/FirstArrayElementIndentation", align_continuation),
         replace(
             "Layout/LineContinuationLeadingSpace",
             "\n .",
