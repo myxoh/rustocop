@@ -72,11 +72,27 @@ fn assignment_indentation(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
     if current == expected {
         return;
     }
-    context.replace(
+    let location = value.location();
+    let delta = expected as isize - current as isize;
+    let edits = context
+        .source_file()
+        .lines()
+        .filter(|(offset, _)| {
+            value_line_start <= *offset && *offset < location.end_offset()
+        })
+        .filter_map(|(offset, line)| {
+            if line.trim().is_empty() {
+                return None;
+            }
+            let indentation = line.len() - line.trim_start().len();
+            let adjusted = (indentation as isize + delta).max(0) as usize;
+            Some((offset..offset + indentation, " ".repeat(adjusted)))
+        })
+        .collect::<Vec<_>>();
+    context.replace_many(
         "Indent the first line of the right-hand-side of a multi-line assignment.",
-        value.location(),
-        value_line_start..value_start,
-        " ".repeat(expected),
+        &location,
+        edits,
     );
 }
 

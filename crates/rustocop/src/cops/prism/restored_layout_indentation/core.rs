@@ -107,7 +107,17 @@ fn first_array_element_indentation(
         .policy()
         .enforced_style("special_inside_parentheses")
         .to_string();
-    let parenthesis = enclosing_argument_parenthesis(context, opening.start_offset());
+    let parenthesis = enclosing_argument_parenthesis(context, opening.start_offset()).or_else(|| {
+        if style != "special_inside_parentheses" {
+            return None;
+        }
+        let line_start = file.line_start(opening.start_offset());
+        let prefix = &context.source()[line_start..opening.start_offset()];
+        let relative = prefix.rfind('(')?;
+        let nested = &prefix[relative + 1..];
+        (!nested.contains(')') && nested.contains('{') && !nested.contains(','))
+            .then_some(line_start + relative)
+    });
     let parent_hash_column = parent_hash_key_column(context, opening.start_offset());
     let base_kind;
     let base_column = if let Some(column) = parent_hash_column {
@@ -139,16 +149,12 @@ fn first_array_element_indentation(
             if indentation.end == location.start_offset() {
                 let expected = base_column + configured_width(context);
                 if file.column(location.start_offset()) != expected {
-                    context.replace(
-                        format!(
-                            "Use {} spaces for indentation in an array, relative to {}.",
-                            configured_width(context),
-                            base_kind.description()
-                        ),
-                        &location,
-                        indentation,
-                        " ".repeat(expected),
+                    let message = format!(
+                        "Use {} spaces for indentation in an array, relative to {}.",
+                        configured_width(context),
+                        base_kind.description()
                     );
+                    align_node(context, first, expected, &message, false);
                 }
             }
         }

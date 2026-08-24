@@ -251,12 +251,27 @@ fn flush_accessor_group(group: &mut Vec<AccessorLine>, context: &mut CopContext<
     let anchor = group
         .iter()
         .position(|entry| entry.3.contains('*'))
+        .or_else(|| {
+            group.iter().rposition(|(_, end, _, _)| {
+                let line_end = context.source_file().line_end(*end);
+                context.source()[*end..line_end].contains('#')
+            })
+        })
         .unwrap_or(0);
     let first_start = group[anchor].0;
-    let first_end = group[anchor].1;
+    let first_end = context.source_file().line_end(group[anchor].0);
+    let trailing_comment = group.iter().rev().find_map(|(_, end, _, _)| {
+        let line_end = context.source_file().line_end(*end);
+        let suffix = &context.source()[*end..line_end];
+        suffix.contains('#').then_some(suffix)
+    });
     let mut edits = vec![(
         first_start..first_end,
-        format!("{accessor} {}", attributes.join(", ")),
+        format!(
+            "{accessor} {}{}",
+            attributes.join(", "),
+            trailing_comment.unwrap_or_default()
+        ),
     )];
     for (index, (start, end, _, _)) in group.iter().enumerate() {
         if index == anchor {
@@ -267,7 +282,9 @@ fn flush_accessor_group(group: &mut Vec<AccessorLine>, context: &mut CopContext<
             && context.source().as_bytes().get(line_start - 1) == Some(&b'\n')
             && context.source().as_bytes().get(line_start - 2) == Some(&b'\n');
         let removal_start = line_start - usize::from(preceded_by_blank);
-        let removal_end = *end + usize::from(context.source().as_bytes().get(*end) == Some(&b'\n'));
+        let line_end = context.source_file().line_end(*end);
+        let removal_end = line_end
+            + usize::from(context.source().as_bytes().get(line_end) == Some(&b'\n'));
         edits.push((removal_start..removal_end, String::new()));
     }
     for (start, end, _, _) in group.iter() {

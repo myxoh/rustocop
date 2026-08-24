@@ -252,7 +252,7 @@ fn combinable_defined(context: &mut CopContext<'_, '_>) {
             };
             offenses.push((chain_start..calls[current].end, edit));
         }
-        for (offense, edit) in offenses.into_iter().rev() {
+        for (offense, edit) in offenses {
             context.remove("Combine nested `defined?` calls.", offense, edit);
         }
         search = calls.last().map_or(chain_start + 1, |call| call.end);
@@ -475,25 +475,12 @@ fn class_module_children(context: &mut CopContext<'_, '_>) {
                 continue;
             }
             let parts = path.split("::").collect::<Vec<_>>();
-            let mut depth = 0usize;
-            let mut end_index = None;
-            for (child_index, (_, child)) in lines.iter().enumerate().skip(index + 1) {
-                let child = child.trim_start();
-                if child.starts_with("class ")
-                    || child.starts_with("module ")
-                    || child.starts_with("def ")
-                    || child.ends_with(" do")
-                {
-                    depth += 1;
-                }
-                if child == "end" || child.starts_with("end #") {
-                    if depth == 0 {
-                        end_index = Some(child_index);
-                        break;
-                    }
-                    depth -= 1;
-                }
-            }
+            let end_index = definitions.ends.get(&declaration_start).and_then(|end| {
+                let last = end.saturating_sub(1);
+                lines.iter().position(|(offset, line)| {
+                    *offset <= last && last <= offset + line.len()
+                })
+            });
             let Some(end_index) = end_index else {
                 context.report(
                     "Use nested module/class definitions instead of compact style.",
@@ -630,6 +617,7 @@ fn class_module_children(context: &mut CopContext<'_, '_>) {
 struct DefinitionOffsets {
     all: HashSet<usize>,
     directly_nested: HashSet<usize>,
+    ends: HashMap<usize, usize>,
 }
 
 fn definition_offsets(source: &str) -> DefinitionOffsets {
@@ -660,12 +648,18 @@ fn definition_offsets(source: &str) -> DefinitionOffsets {
     impl<'pr> Visit<'pr> for Collector {
         fn visit_class_node(&mut self, node: &ruby_prism::ClassNode<'pr>) {
             self.definitions.all.insert(node.location().start_offset());
+            self.definitions
+                .ends
+                .insert(node.location().start_offset(), node.location().end_offset());
             self.collect_body(node.body());
             ruby_prism::visit_class_node(self, node);
         }
 
         fn visit_module_node(&mut self, node: &ruby_prism::ModuleNode<'pr>) {
             self.definitions.all.insert(node.location().start_offset());
+            self.definitions
+                .ends
+                .insert(node.location().start_offset(), node.location().end_offset());
             self.collect_body(node.body());
             ruby_prism::visit_module_node(self, node);
         }

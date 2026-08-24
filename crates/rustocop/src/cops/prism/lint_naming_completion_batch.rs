@@ -299,7 +299,7 @@ fn deprecated_constants(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
 
 fn redundant_enable(context: &mut CopContext<'_, '_>) {
     let mut disabled = HashSet::new();
-    let mut configured_disable_consumed = HashSet::new();
+    let mut configured_enable_edits = HashMap::new();
     for (offset, line) in context.source_file().lines() {
         if let Some(list) = line.split("rubocop:disable ").nth(1) {
             let list = list.split("--").next().unwrap_or_default();
@@ -327,8 +327,14 @@ fn redundant_enable(context: &mut CopContext<'_, '_>) {
                 continue;
             }
             if context.related_config_value(cop, "Enabled") == Some("false")
-                && configured_disable_consumed.insert(cop.to_string())
+                && !configured_enable_edits.contains_key(cop)
             {
+                let start = offset + line.find('#').unwrap_or_default();
+                let mut end = offset + line.len();
+                if context.source().as_bytes().get(end) == Some(&b'\n') {
+                    end += 1;
+                }
+                configured_enable_edits.insert(cop.to_string(), start..end);
                 necessary.push(cop);
                 continue;
             }
@@ -364,14 +370,29 @@ fn redundant_enable(context: &mut CopContext<'_, '_>) {
                     let mut edit_end = offset + line.len();
                     if context.source().as_bytes().get(edit_end) == Some(&b'\n') {
                         edit_end += 1;
+                        if context.source().as_bytes().get(edit_end) == Some(&b'\n') {
+                            edit_end += 1;
+                        }
                     }
                     let replacement = if preserve_department_line { "\n" } else { "" };
-                    context.replace(
-                        message,
-                        start..start + cop.len(),
-                        offset..edit_end,
-                        replacement,
-                    );
+                    let edit_start = offset + line.find('#').unwrap_or_default();
+                    if let Some(first_edit) = configured_enable_edits.get(*cop) {
+                        context.replace_many(
+                            message,
+                            start..start + cop.len(),
+                            vec![
+                                (first_edit.clone(), String::new()),
+                                (edit_start..edit_end, replacement.to_string()),
+                            ],
+                        );
+                    } else {
+                        context.replace(
+                            message,
+                            start..start + cop.len(),
+                            edit_start..edit_end,
+                            replacement,
+                        );
+                    }
                 } else {
                     context.replace(
                         message,

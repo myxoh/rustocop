@@ -23,6 +23,10 @@ impl Reporter<'_> {
         self.context.target_ruby_version()
     }
 
+    pub(in super::super) fn source_encoding(&self) -> SourceEncoding {
+        self.context.source_encoding()
+    }
+
     pub(in super::super) fn config_value(&self, key: &str) -> Option<&str> {
         self.context.config_value(self.cop_name, key)
     }

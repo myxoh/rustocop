@@ -22,10 +22,17 @@ impl Engine {
         source: &str,
         autocorrect: AutocorrectMode,
         target_ruby_version: RubyVersion,
+        source_encoding: SourceEncoding,
         cop_config: Arc<CopConfig>,
     ) -> Inspection {
         let parsed = parse(source.as_bytes());
-        let mut context = Context::new(autocorrect, path, target_ruby_version, cop_config);
+        let mut context = Context::new(
+            autocorrect,
+            path,
+            target_ruby_version,
+            source_encoding,
+            cop_config,
+        );
         let has_unrecoverable_parse_errors = parsed
             .errors()
             .any(|error| !is_context_only_parse_error(error.message()));

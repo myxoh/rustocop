@@ -38,10 +38,6 @@ mod source_file;
 mod source_helpers;
 #[path = "framework/source_syntax.rs"]
 mod source_syntax;
-#[path = "framework/ternary_conversion.rs"]
-mod ternary_conversion;
-use ternary_conversion::*;
-
 macro_rules! cop_modules {
     ($($module:ident),+ $(,)?) => {
         $(mod $module;)+
@@ -268,7 +264,7 @@ cop_modules!(
     gemspec_completion,
 );
 
-use crate::config::{CopConfig, RubyVersion};
+use crate::config::{CopConfig, RubyVersion, SourceEncoding};
 use context_node_facade::*;
 use cop_context::CopContext;
 use cop_policy::CopPolicy;
@@ -382,6 +378,7 @@ fn inspect(
             crate::config::AutocorrectMode::None
         },
         target_ruby_version,
+        crate::config::SourceEncoding::Utf8,
         Arc::new(CopConfig::default()),
     )
 }

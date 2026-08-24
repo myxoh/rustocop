@@ -73,9 +73,6 @@ fn indentation_width(
             continue;
         }
         let after_ensure = follows_keyword(file, location.start_offset(), "ensure");
-        if inside_block_ensure(context, location.start_offset()) {
-            continue;
-        }
         let indentation = file.indentation(location.start_offset());
         if indentation.end != location.start_offset() {
             continue;
@@ -97,8 +94,8 @@ fn indentation_width(
         } else {
             format!("Use {width} (not {actual}) spaces for indentation.")
         };
-        let branch_parent = (structural_branch || after_ensure)
-            && enclosing_scope_has_width_offense(context, width);
+        let branch_parent = after_ensure
+            || structural_branch && enclosing_scope_has_width_offense(context, width);
         align_node_with_indentation_offense(
             context,
             child,
@@ -259,7 +256,7 @@ fn align_node_with_indentation_offense(
         && context.config_value("EnforcedStyleAlignWith") != Some("relative_to_receiver")
         && location.start_offset() > file.line_start(location.start_offset())
     {
-        location.start_offset()..location.start_offset() - 1
+        location.start_offset()..location.start_offset()
     } else {
         indentation_offense_range(file, location.start_offset(), actual)
     };
@@ -272,15 +269,22 @@ fn align_node_with_indentation_offense(
         return;
     }
     let delta = expected as isize - actual_column as isize;
-    let mut edits = shifted_indentation_edits(file, &location, delta, using_tabs, width, true);
-    edits.extend(branch_keyword_edits(
-        context,
-        &location,
-        actual_column,
-        delta,
-        using_tabs,
-        width,
-    ));
+    let mut edits = shifted_indentation_edits(file, &location, delta, using_tabs, width, false);
+    let nested_branch_body = context.parent().is_some_and(|parent| {
+        parent.as_rescue_node().is_some()
+            || parent.as_else_node().is_some()
+            || parent.as_ensure_node().is_some()
+    });
+    if !nested_branch_body {
+        edits.extend(branch_keyword_edits(
+            context,
+            &location,
+            actual_column,
+            delta,
+            using_tabs,
+            width,
+        ));
+    }
     let edits = consolidate_branch_correction(context, edits);
     context.add_offense(offense, message, |corrector| {
         for (range, replacement) in edits {
@@ -300,6 +304,7 @@ fn shifted_indentation_edits(
     let mut edits = Vec::new();
     let mut line_start = file.line_start(location.start_offset());
     let heredocs = file.heredoc_ranges();
+    let literals = file.literal_ranges();
     let first_indentation = visual_indentation(file.indentation_text(line_start), width);
     let mut after_ensure = false;
     while line_start < location.end_offset() {
@@ -323,7 +328,14 @@ fn shifted_indentation_edits(
             && branch_keyword
             && current_indentation != first_indentation;
         let skip_after_ensure = branch_aware && after_ensure;
-        if !heredocs
+        let literal_continuation = literals.iter().any(|range| {
+            location.start_offset() < range.start
+                && file.line_start(range.start) < line_start
+                && line_start < range.end
+        });
+        if !trimmed.is_empty()
+            && !literal_continuation
+            && !heredocs
             .iter()
             .any(|range| range.start <= line_start && line_start < range.end)
             && !skip_branch_keyword

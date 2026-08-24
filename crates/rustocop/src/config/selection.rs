@@ -1,5 +1,22 @@
 use super::CopConfig;
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum SourceEncoding {
+    Utf8,
+    UsAscii,
+}
+
+impl SourceEncoding {
+    #[cfg(test)]
+    pub(crate) fn parse(value: &str) -> Self {
+        if value.eq_ignore_ascii_case("US-ASCII") {
+            Self::UsAscii
+        } else {
+            Self::Utf8
+        }
+    }
+}
+
 // Extension cops are not present in RuboCop's built-in configuration. Preserve
 // their established defaults until extension configuration is loaded directly.
 const DEFAULT_DISABLED_EXTENSION_COPS: &[&str] = &[

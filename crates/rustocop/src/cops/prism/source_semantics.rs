@@ -161,8 +161,7 @@ fn multiline_array_line_breaks(context: &mut CopContext<'_, '_>) {
             let comma = source[previous.end..element.start]
                 .find(',')
                 .map_or(previous.end, |at| previous.end + at);
-            let expands_final_element = context.config_bool("AllowMultilineFinalElement", false)
-                && index + 3 == elements.len()
+            let expands_final_element = index + 3 == elements.len()
                 && source[element.clone()].contains('\n');
             let edit = if expands_final_element {
                 comma + 1..elements[index + 2].start

@@ -145,22 +145,6 @@ fn ensure_keyword_belongs_to_block(file: SourceFile<'_>, ensure_offset: usize) -
     false
 }
 
-fn inside_block_ensure(context: &CopContext<'_, '_>, offset: usize) -> bool {
-    let file = context.source_file();
-    context.ancestors().iter().rev().any(|ancestor| {
-        let Some(block) = ancestor.as_block_node() else {
-            return false;
-        };
-        let closing_indent = file.indentation(block.closing_loc().start_offset()).len();
-        file.lines().any(|(line_start, line)| {
-            ancestor.location().start_offset() < line_start
-                && line_start < offset
-                && line.trim() == "ensure"
-                && file.indentation(line_start).len() == closing_indent
-        })
-    })
-}
-
 fn branch_keyword_edits(
     context: &CopContext<'_, '_>,
     location: &ruby_prism::Location<'_>,
@@ -174,15 +158,20 @@ fn branch_keyword_edits(
     }
     let file = context.source_file();
     let Some(container_end) = context.ancestors().iter().rev().find_map(|ancestor| {
-        (ancestor.as_begin_node().is_some() || ancestor.as_block_node().is_some())
+        ancestor.as_begin_node().and_then(|begin| {
+            (begin.rescue_clause().is_some()
+                || begin.else_clause().is_some()
+                || begin.ensure_clause().is_some())
             .then(|| ancestor.location().end_offset())
+        })
     }) else {
         return Vec::new();
     };
     let mut edits = Vec::new();
     let mut in_branch_body = false;
+    let location_last_line = file.line_start(location.end_offset().saturating_sub(1));
     for (line_start, line) in file.lines() {
-        if line_start <= file.line_start(location.start_offset()) || line_start >= container_end {
+        if line_start <= location_last_line || line_start >= container_end {
             continue;
         }
         let trimmed = line.trim_start();
@@ -213,7 +202,7 @@ fn branch_keyword_edits(
             edits.push((indentation, shift_space_indentation(current, delta)));
         }
         if ensure {
-            if column == original_column {
+            if column == original_column || ensure_keyword_belongs_to_block(file, line_start) {
                 break;
             }
             in_branch_body = true;
@@ -232,8 +221,11 @@ fn consolidate_branch_correction(
     let Some(container) = context.ancestors().iter().rev().find_map(|ancestor| {
         let location = ancestor.location();
         let source = file.at(&location);
-        ((ancestor.as_begin_node().is_some() || ancestor.as_block_node().is_some())
-            && source.lines().any(|line| {
+        (ancestor.as_begin_node().is_some_and(|begin| {
+            begin.rescue_clause().is_some()
+                || begin.else_clause().is_some()
+                || begin.ensure_clause().is_some()
+        }) && source.lines().any(|line| {
                 matches!(line.trim(), "rescue" | "else" | "ensure")
                     || line.trim_start().starts_with("rescue ")
             }))

@@ -1126,6 +1126,7 @@ impl Cop for EmptyLineAfterGuardClause {
         "Layout/EmptyLineAfterGuardClause"
     }
 
+    #[allow(clippy::too_many_lines)]
     fn on_node<'pr>(
         &self,
         node: &Node<'pr>,
@@ -1188,6 +1189,12 @@ impl Cop for EmptyLineAfterGuardClause {
         });
         if predicate_heredoc {
             let offense_end = file.line_end(node.location().start_offset());
+            if offense_end >= source.len()
+                || source[offense_end..].starts_with("\n\n")
+                || file.line(offense_end).trim().is_empty()
+            {
+                return;
+            }
             let mut reporter = context.cop_context(self.name(), source, ancestors);
             reporter.insert(
                 "Add empty line after guard clause.",

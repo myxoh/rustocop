@@ -18,7 +18,10 @@ impl IfWithSemicolonRule<'_, '_, '_> {
             boundary,
             self.source(),
         ) else { return };
-        return_if!(self.ancestors().iter().any(|parent| parent.as_if_node().is_some() || parent.as_unless_node().is_some()));
+        return_if!(self
+            .ancestors()
+            .iter()
+            .any(|parent| conditional_has_semicolon(parent, self.source())));
         let condition = self.source_file().node(&node.predicate());
         let branches = if_parts(node, self.source_file());
         let elsif = self.source_file().at(&node.location()).contains(" elsif ");
@@ -36,7 +39,10 @@ impl IfWithSemicolonRule<'_, '_, '_> {
             boundary,
             self.source(),
         ) else { return };
-        return_if!(self.ancestors().iter().any(|parent| parent.as_if_node().is_some() || parent.as_unless_node().is_some()));
+        return_if!(self
+            .ancestors()
+            .iter()
+            .any(|parent| conditional_has_semicolon(parent, self.source())));
         let condition = self.source_file().node(&node.predicate());
         let mut branches = unless_parts(node, self.source_file());
         std::mem::swap(&mut branches.0, &mut branches.1);
@@ -60,6 +66,40 @@ impl IfWithSemicolonRule<'_, '_, '_> {
             add_offense!(self, offense.clone(), message: message, |corrector| { corrector.replace(offense, replacement); });
         }
     }
+}
+
+fn conditional_has_semicolon(node: &Node<'_>, source: &str) -> bool {
+    if let Some(node) = node.as_if_node() {
+        let boundary = node
+            .statements()
+            .map(|body| body.location().start_offset())
+            .or_else(|| {
+                node.subsequent()
+                    .map(|branch| branch.location().start_offset())
+            })
+            .unwrap_or_else(|| {
+                node.end_keyword_loc()
+                    .map_or(node.location().end_offset(), |end| end.start_offset())
+            });
+        return semicolon_between(node.predicate().location().end_offset(), boundary, source)
+            .is_some();
+    }
+    if let Some(node) = node.as_unless_node() {
+        let boundary = node
+            .statements()
+            .map(|body| body.location().start_offset())
+            .or_else(|| {
+                node.else_clause()
+                    .map(|branch| branch.location().start_offset())
+            })
+            .unwrap_or_else(|| {
+                node.end_keyword_loc()
+                    .map_or(node.location().end_offset(), |end| end.start_offset())
+            });
+        return semicolon_between(node.predicate().location().end_offset(), boundary, source)
+            .is_some();
+    }
+    false
 }
 
 fn semicolon_between(start: usize, end: usize, source: &str) -> Option<std::ops::Range<usize>> {

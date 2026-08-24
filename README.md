@@ -47,13 +47,12 @@ old manual review record is accepted as compatibility evidence.
 The upstream capture contains 28,606 cases. Five LSP-only cases are explicitly
 excluded. Auditing the remaining 28,601 inputs produced 28,049 controlled unit
 cases owned by all 606 cops and removed 552 exact duplicates while retaining
-their provenance. The completed legacy-fixture audit retained another 725
+their provenance. The completed legacy-fixture audit retained another 720
 unique project-derived, configuration, Prism, hardening, end-to-end, and native
-examples in the same schema, for 28,774 unit contracts total. Whole projects
+examples in the same schema, for 28,769 unit contracts total. Whole projects
 remain transient and are not a substitute for this focused coverage.
-The expanded strict run currently passes 28,442 cases and exposes 332 failing
-cases across 73 cops (484 diagnostic/`-a`/`-A` comparison failures); the cache
-is a truthful work queue, not a compatibility claim.
+The expanded strict run currently passes all 28,769 cases across all 606 cops,
+including exact diagnostics and distinct safe `-a` and full `-A` corrections.
 
 ## Fifty-project output parity
 
@@ -272,8 +271,8 @@ is empty, so no built-in cop specs are excluded from the active fixture corpus.
 The capture harness executes RuboCop's test DSL and records the resulting
 source, configuration, path, Ruby version, parser, encodings, offenses, and
 correction. It does not infer expectations by scraping spec source. The
-28,774-case committed unit cache stores exact diagnostics plus distinct safe
-`-a` and all-cop `-A` results, including 725 unique cases imported from the
+28,769-case committed unit cache stores exact diagnostics plus distinct safe
+`-a` and all-cop `-A` results, including 720 unique cases imported from the
 retired fixture layouts. These cases become compatibility evidence only when
 Rustocop matches the cache. Project-exact output is the broader guard against
 cases absent from unit contracts.
@@ -353,7 +352,7 @@ Run the cached controlled unit contract for only the cops being changed:
 ruby script/verify_cop.rb Style/StringLiterals Layout/TrailingWhitespace
 ```
 
-Run all 28,774 controlled cases, or explicitly refresh the slow RuboCop cache:
+Run all 28,769 controlled cases, or explicitly refresh the slow RuboCop cache:
 
 ```sh
 bundle exec rake fixtures:unit

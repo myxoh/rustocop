@@ -305,42 +305,21 @@ fn class_structure(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
                     continue;
                 }
                 let previous_element = &elements[position - 1];
-                let left_start = class_structure_unit_start(
+                let previous_range = class_structure_source_range(
                     context.source_file(),
-                    previous_element.node.location().start_offset(),
+                    &previous_element.node.location(),
                 );
-                let right_start = class_structure_unit_start(
-                    context.source_file(),
-                    element.node.location().start_offset(),
+                let current_range =
+                    class_structure_source_range(context.source_file(), &element.node.location());
+                let current_source = context.source()[current_range.clone()].to_string();
+                context.replace_many(
+                    message,
+                    offense,
+                    vec![
+                        (previous_range.start..previous_range.start, current_source),
+                        (current_range, String::new()),
+                    ],
                 );
-                let mut run_end = position + 1;
-                while run_end < elements.len()
-                    && elements[run_end].category == element.category
-                    && elements[run_end].correctable
-                {
-                    run_end += 1;
-                }
-                let right_end = if run_end < elements.len() {
-                    class_structure_unit_start(
-                        context.source_file(),
-                        elements[run_end].node.location().start_offset(),
-                    )
-                } else {
-                    class_end
-                };
-                let left_source = context.source()[left_start..right_start].to_string();
-                let right_source = context.source()[right_start..right_end].to_string();
-                let replacement = if element.category == "constants" && right_source.contains("<<")
-                {
-                    format!(
-                        "{}\n\n{}\n",
-                        right_source.trim_end_matches('\n'),
-                        left_source.trim_end_matches('\n')
-                    )
-                } else {
-                    format!("{right_source}{left_source}")
-                };
-                context.replace_many(message, offense, vec![(left_start..right_end, replacement)]);
             } else {
                 context.report(message, offense);
             }
@@ -364,6 +343,45 @@ fn class_structure_unit_start(file: SourceFile<'_>, offset: usize) -> usize {
         start = previous_start;
     }
     start
+}
+
+fn class_structure_source_range(
+    file: SourceFile<'_>,
+    location: &ruby_prism::Location<'_>,
+) -> std::ops::Range<usize> {
+    let start = class_structure_unit_start(file, location.start_offset()).saturating_sub(1);
+    let heredoc_end = file
+        .heredoc_ranges()
+        .into_iter()
+        .filter(|range| {
+            location.start_offset() <= range.start && range.start < location.end_offset()
+        })
+        .map(|range| range.end)
+        .max()
+        .or_else(|| {
+            let header = file.line(location.start_offset());
+            let marker_start = header.find("<<").map(|offset| offset + 2)?;
+            let marker = header[marker_start..]
+                .trim_start_matches(['~', '-'])
+                .trim_start_matches(['`', '\'', '"'])
+                .split(|character: char| !character.is_ascii_alphanumeric() && character != '_')
+                .next()?;
+            (!marker.is_empty()).then_some(())?;
+            file.lines()
+                .find(|(offset, line)| {
+                    *offset > location.start_offset() && line.trim() == marker
+                })
+                .map(|(offset, line)| offset + line.len())
+        });
+    let structural_end = heredoc_end
+        .unwrap_or(0)
+        .max(location.end_offset());
+    let end = if heredoc_end.is_some_and(|end| end > location.end_offset()) {
+        file.line_range(structural_end.saturating_sub(1)).end
+    } else {
+        file.line_end(structural_end.saturating_sub(1))
+    };
+    start..end
 }
 
 fn structural_call_arguments<'pr>(call: &CallNode<'pr>) -> Vec<Node<'pr>> {

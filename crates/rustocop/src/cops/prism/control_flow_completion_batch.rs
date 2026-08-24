@@ -165,22 +165,36 @@ fn report_multiline_combinable_loops(
         let same_parameters = group
             .iter()
             .all(|candidate| loops[*candidate].parameters == first.parameters);
-        let replacement = same_parameters
-            .then(|| {
-                group
-                    .iter()
-                    .all(|candidate| loops[*candidate].multiline)
-                    .then(|| {
+        let replacement = same_parameters.then(|| {
             let last = &loops[*group.last().expect("loop group")];
-            let mut combined = source[first.start..first.closing_line_start].to_string();
-            for candidate in group.iter().skip(1).map(|candidate| &loops[*candidate]) {
-                combined.push_str(&source[candidate.body_start..candidate.closing_line_start]);
+            let (mut combined, closing) = if first.multiline {
+                (
+                    source[first.start..first.closing_line_start].to_string(),
+                    format!(" {}", &source[first.closing_line_start..first.end]),
+                )
+            } else {
+                let whole = &source[first.start..first.end];
+                let closing_start = whole
+                    .rfind('}')
+                    .or_else(|| whole.rfind(" end"))
+                    .unwrap_or(whole.len());
+                (
+                    whole[..closing_start].trim_end().to_string(),
+                    whole[closing_start..].to_string(),
+                )
+            };
+            if !combined.ends_with('\n') {
+                combined.push('\n');
             }
-            combined.push_str(&source[first.closing_line_start..first.end]);
+            for candidate in group.iter().skip(1).map(|candidate| &loops[*candidate]) {
+                combined.push('\n');
+                combined.push_str(
+                    source[candidate.body_start..candidate.closing_line_start].trim_start(),
+                );
+            }
+            combined.push_str(&closing);
             (first.start..last.end, combined)
-                    })
-            })
-            .flatten();
+        });
 
         for candidate in group.iter().skip(1).map(|candidate| &loops[*candidate]) {
             let offense = candidate.start..candidate.end;

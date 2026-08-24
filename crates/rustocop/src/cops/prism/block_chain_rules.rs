@@ -5,15 +5,20 @@ define_cops! {
 }
 
 fn multiline_block_chain(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
-    let Some(current_block) = node.block().and_then(|block| block.as_block_node()) else {
+    let Some(_) = node.block().and_then(|block| block.as_block_node()) else {
         return;
     };
     let mut receiver = node.receiver();
     let mut prior_block = None;
     while let Some(call) = receiver.and_then(|receiver| receiver.as_call_node()) {
         if let Some(block) = call.block().and_then(|block| block.as_block_node()) {
-            prior_block = Some(block);
-            break;
+            if !context.source_file().same_line(
+                block.opening_loc().start_offset(),
+                block.closing_loc().start_offset(),
+            ) {
+                prior_block = Some(block);
+                break;
+            }
         }
         receiver = call.receiver();
     }
@@ -28,38 +33,8 @@ fn multiline_block_chain(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) 
     {
         return;
     }
-    let chain_start = node.location().start_offset();
     let current_end = call_send_end(node, context.source());
-    let offense_end = if context.source_file().same_line(
-        current_block.opening_loc().start_offset(),
-        current_block.closing_loc().start_offset(),
-    ) {
-        let mut outer_blocks = context
-            .ancestors()
-            .iter()
-            .filter_map(Node::as_call_node)
-            .filter(|ancestor| ancestor.location().start_offset() == chain_start)
-            .filter_map(|ancestor| {
-                let block = ancestor.block().and_then(|block| block.as_block_node())?;
-                Some((call_send_end(&ancestor, context.source()), block))
-            })
-            .filter(|(end, _)| *end > current_end)
-            .collect::<Vec<_>>();
-        outer_blocks.sort_by_key(|(end, _)| *end);
-        let mut end = current_end;
-        for (outer_end, block) in outer_blocks {
-            end = outer_end;
-            if !context.source_file().same_line(
-                block.opening_loc().start_offset(),
-                block.closing_loc().start_offset(),
-            ) {
-                break;
-            }
-        }
-        end
-    } else {
-        current_end
-    };
+    let offense_end = current_end;
     context.report(
         "Avoid multi-line chains of blocks.",
         closing.start_offset()..offense_end,

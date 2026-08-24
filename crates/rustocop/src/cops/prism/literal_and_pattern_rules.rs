@@ -110,15 +110,14 @@ fn empty_case_condition(node: &ruby_prism::CaseNode<'_>, context: &mut CopContex
                 " || ".to_string(),
             ));
         }
-        if let (Some(last), Some(then_keyword)) = (conditions.last(), branch.then_keyword_loc()) {
-            let inline_body = branch
-                .statements()
-                .and_then(|statements| statements.body().first())
-                .is_some_and(|statement| {
-                    file.line_start(statement.location().start_offset())
-                        == file.line_start(then_keyword.start_offset())
-                });
-            if !inline_body {
+        let case_begins_expression = context.source()
+            [file.line_start(keyword.start_offset())..keyword.start_offset()]
+            .trim()
+            .is_empty();
+        if !case_begins_expression {
+            if let (Some(last), Some(then_keyword)) =
+                (conditions.last(), branch.then_keyword_loc())
+            {
                 edits.push((
                     last.location().end_offset()..then_keyword.end_offset(),
                     "\n".to_string(),

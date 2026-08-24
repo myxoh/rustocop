@@ -831,6 +831,7 @@ fn end_alignment(context: &mut CopContext<'_, '_>) {
     struct Opening {
         line: usize,
         column: usize,
+        correction_column: usize,
         source: String,
         relevant: bool,
     }
@@ -914,7 +915,7 @@ fn end_alignment(context: &mut CopContext<'_, '_>) {
                     message,
                     offense,
                     offset..offset + relative,
-                    " ".repeat(opening.column),
+                    " ".repeat(opening.correction_column),
                 );
             } else {
                 context.report(message, offense);
@@ -971,9 +972,29 @@ fn end_alignment(context: &mut CopContext<'_, '_>) {
             None
         };
         if let Some((column, source)) = relevant {
+            let chained_call = (code.ends_with(" do") || code.contains(" do |"))
+                && (trimmed.starts_with('.')
+                    || line_index > 0
+                        && context
+                            .source_file()
+                            .lines()
+                            .nth(line_index - 1)
+                            .is_some_and(|(_, previous)| previous.trim_end().ends_with('.')));
+            let correction_column = if chained_call && line_index > 0 {
+                context
+                    .source_file()
+                    .lines()
+                    .nth(line_index - 1)
+                    .map_or(column, |(_, previous)| {
+                        previous.len() - previous.trim_start().len()
+                    })
+            } else {
+                column
+            };
             stack.push(Opening {
                 line: line_index + 1,
                 column,
+                correction_column,
                 source,
                 relevant: true,
             });
@@ -981,6 +1002,7 @@ fn end_alignment(context: &mut CopContext<'_, '_>) {
             stack.push(Opening {
                 line: line_index + 1,
                 column: indentation,
+                correction_column: indentation,
                 source: String::new(),
                 relevant: false,
             });
@@ -2537,7 +2559,6 @@ fn operator_spacing(context: &mut CopContext<'_, '_>) {
     let literal_ranges = context.source_file().literal_ranges();
     let comment_ranges = context.source_file().comment_ranges();
     let unary_operator_offsets = unary_operator_offsets(&source);
-    let embedded_code_ranges = embedded_code_ranges(&source);
     let hash_pair_starts = hash_pair_starts(&source);
 
     for (line_offset, line) in context.source_file().lines().collect::<Vec<_>>() {
@@ -2569,48 +2590,26 @@ fn operator_spacing(context: &mut CopContext<'_, '_>) {
                 .filter(|range| range.start <= absolute && absolute < range.end)
                 .min_by_key(|range| range.end - range.start)
             {
-                let containing_embedded = embedded_code_ranges
-                    .iter()
-                    .find(|embedded| embedded.start <= absolute && absolute < embedded.end);
-                if containing_embedded.is_some_and(|embedded| {
-                    range.start < embedded.start || embedded.end < range.end
-                }) {
-                    // The selected range is the enclosing interpolated literal,
-                    // while this offset is executable Ruby inside `#{...}`.
-                } else {
-                    let literal = &source[range.clone()];
-                    let heredoc_tail = literal.starts_with("<<")
-                        && line_offset <= range.start
-                        && range.start < line_offset + line.len()
-                        && literal.find('\n').is_some();
-                    if heredoc_tail {
-                        let marker_end = range.start
-                            + literal
-                                .bytes()
-                                .take_while(|byte| {
-                                    !byte.is_ascii_whitespace() && !matches!(byte, b',' | b')')
-                                })
-                                .count();
-                        if absolute < marker_end {
-                            index = marker_end.saturating_sub(line_offset).min(code.len());
-                            continue;
-                        }
-                    } else {
-                        let next_embedded = embedded_code_ranges
-                            .iter()
-                            .filter(|embedded| {
-                                absolute < embedded.start
-                                    && range.start <= embedded.start
-                                    && embedded.start < range.end
+                let literal = &source[range.clone()];
+                let heredoc_tail = literal.starts_with("<<")
+                    && line_offset <= range.start
+                    && range.start < line_offset + line.len()
+                    && literal.find('\n').is_some();
+                if heredoc_tail {
+                    let marker_end = range.start
+                        + literal
+                            .bytes()
+                            .take_while(|byte| {
+                                !byte.is_ascii_whitespace() && !matches!(byte, b',' | b')')
                             })
-                            .map(|embedded| embedded.start)
-                            .min();
-                        index = next_embedded
-                            .unwrap_or(range.end)
-                            .saturating_sub(line_offset)
-                            .min(code.len());
+                            .count();
+                    if absolute < marker_end {
+                        index = marker_end.saturating_sub(line_offset).min(code.len());
                         continue;
                     }
+                } else {
+                    index = range.end.saturating_sub(line_offset).min(code.len());
+                    continue;
                 }
             }
             if !code.is_char_boundary(index) {
@@ -2879,35 +2878,6 @@ fn unary_operator_offsets(source: &str) -> std::collections::HashSet<usize> {
     let mut operators = UnaryOperators::default();
     operators.visit(&parsed.node());
     operators.0
-}
-
-fn embedded_code_ranges(source: &str) -> Vec<std::ops::Range<usize>> {
-    #[derive(Default)]
-    struct EmbeddedCode(Vec<std::ops::Range<usize>>);
-
-    impl<'pr> ruby_prism::Visit<'pr> for EmbeddedCode {
-        fn visit_embedded_statements_node(
-            &mut self,
-            node: &ruby_prism::EmbeddedStatementsNode<'pr>,
-        ) {
-            let location = node.location();
-            self.0
-                .push(location.start_offset()..location.end_offset());
-            ruby_prism::visit_embedded_statements_node(self, node);
-        }
-
-        fn visit_embedded_variable_node(&mut self, node: &ruby_prism::EmbeddedVariableNode<'pr>) {
-            let location = node.location();
-            self.0
-                .push(location.start_offset()..location.end_offset());
-            ruby_prism::visit_embedded_variable_node(self, node);
-        }
-    }
-
-    let parsed = ruby_prism::parse(source.as_bytes());
-    let mut embedded = EmbeddedCode::default();
-    embedded.visit(&parsed.node());
-    embedded.0
 }
 
 fn hash_pair_starts(source: &str) -> std::collections::HashMap<usize, usize> {
@@ -3517,6 +3487,9 @@ fn heredoc_indentation(context: &mut CopContext<'_, '_>) {
             let mut edits = Vec::new();
             for (offset, line) in body {
                 if line.trim().is_empty() {
+                    if modifier != "<<~" {
+                        edits.push((*offset..*offset + line.len(), " ".repeat(desired)));
+                    }
                     continue;
                 }
                 let indentation = line.len() - line.trim_start().len();

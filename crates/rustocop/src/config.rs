@@ -4,7 +4,7 @@ use std::sync::Arc;
 use regex::Regex;
 
 mod selection;
-pub(crate) use selection::{CopSelection, RubyVersion};
+pub(crate) use selection::{CopSelection, RubyVersion, SourceEncoding};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum Parallelism {
@@ -29,6 +29,7 @@ pub(crate) struct InspectionConfig {
     pub(crate) autocorrect: AutocorrectMode,
     pub(crate) cops: CopSelection,
     pub(crate) target_ruby_version: RubyVersion,
+    pub(crate) source_encoding: SourceEncoding,
     pub(crate) cop_config: Arc<CopConfig>,
 }
 

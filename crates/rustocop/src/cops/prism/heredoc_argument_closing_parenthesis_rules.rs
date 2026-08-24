@@ -27,12 +27,26 @@ fn on_send(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     {
         return;
     }
-    if heredoc.closing.end_offset() < closing.start_offset()
-        && !context.source()[heredoc.closing.end_offset()..closing.start_offset()]
-            .trim()
-            .is_empty()
-    {
-        return;
+    if heredoc.closing.end_offset() < closing.start_offset() {
+        let between = &context.source()[heredoc.closing.end_offset()..closing.start_offset()];
+        let nested_call_followup = arguments
+            .arguments()
+            .iter()
+            .any(|argument| {
+                argument.as_call_node().is_some()
+                    && argument.location().start_offset() < heredoc.opening.start_offset()
+                    && context.source()
+                        [argument.location().start_offset()..heredoc.opening.start_offset()]
+                        .contains('(')
+            });
+        if !between.trim().is_empty()
+            && (!nested_call_followup
+                || between
+                    .lines()
+                    .any(|line| line.trim_start().starts_with(')')))
+        {
+            return;
+        }
     }
 
     let message = "Put the closing parenthesis for a method call with a HEREDOC parameter on the same line as the HEREDOC opening.";

@@ -2,7 +2,7 @@ use ruby_prism::{CallNode, Node};
 
 use super::diagnostic::{ByteRange, Reporter};
 use super::{CopPolicy, CorrectionPlan, SourceFile};
-use crate::config::RubyVersion;
+use crate::config::{RubyVersion, SourceEncoding};
 
 /// The complete, read-only inspection view available to a cop callback, plus
 /// its cop-scoped diagnostic reporter.
@@ -61,6 +61,10 @@ impl<'context, 'pr> CopContext<'context, 'pr> {
 
     pub(super) fn target_ruby_version(&self) -> RubyVersion {
         self.reporter.target_ruby_version()
+    }
+
+    pub(super) fn source_encoding(&self) -> SourceEncoding {
+        self.reporter.source_encoding()
     }
 
     pub(super) fn autocorrect_enabled(&self) -> bool {

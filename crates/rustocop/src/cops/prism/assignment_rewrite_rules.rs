@@ -107,7 +107,14 @@ impl ParallelAssignmentRule<'_, '_, '_> {
         let left_source = left.iter().map(|node| self.source_file().node(node).to_string()).collect::<Vec<_>>();
         let right_source = right.iter().map(|node| render_parallel_value(node, self.source_file())).collect::<Vec<_>>();
         let Some(order) = parallel_assignment_order(&left_source, &right_source) else { return };
-        let indent = self.source_file().indentation_text(node.location().start_offset()).to_string();
+        let node_start = node.location().start_offset();
+        let line_start = self.source_file().line_start(node_start);
+        let prefix = &self.source()[line_start..node_start];
+        let indent = if prefix.trim().is_empty() {
+            prefix.to_string()
+        } else {
+            " ".repeat(self.source_file().column(node_start))
+        };
         let assignments = order.into_iter().map(|index| format!("{} = {}", left_source[index], right_source[index])).collect::<Vec<_>>();
         let replacement = assignments.join(&format!("\n{indent}"));
         let offense = node.location().start_offset()..array.location().end_offset();

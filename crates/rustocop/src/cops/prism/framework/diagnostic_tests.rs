@@ -9,6 +9,7 @@ fn context(autocorrect: bool) -> Context {
         },
         "example.rb",
         RubyVersion::default(),
+        SourceEncoding::Utf8,
         Arc::new(CopConfig::default()),
     )
 }

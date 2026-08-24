@@ -119,6 +119,26 @@ fn statement_nodes<'pr>(statements: Option<StatementsNode<'pr>>) -> Vec<Node<'pr
 
 fn expression_replacement(node: Option<&Node<'_>>, file: SourceFile<'_>) -> String {
     let Some(node) = node else { return "nil".to_string() };
+    if let Some(parts) = conditional_parts_for_one_line(node) {
+        if file.same_line(
+            parts.location.start,
+            parts.location.end.saturating_sub(1),
+        ) && !parts.elsif
+            && !parts.has_elsif
+            && parts.if_branch.len() <= 1
+            && parts.else_branch.len() == 1
+        {
+            let condition = expression_replacement(Some(&parts.predicate), file);
+            let if_branch = expression_replacement(parts.if_branch.first(), file);
+            let else_branch = expression_replacement(parts.else_branch.first(), file);
+            let (truthy, falsey) = if parts.unless {
+                (else_branch, if_branch)
+            } else {
+                (if_branch, else_branch)
+            };
+            return format!("({condition} ? {truthy} : {falsey})");
+        }
+    }
     let source = file.node(node);
     if requires_ternary_parentheses(node, source) { format!("({source})") } else { source.to_string() }
 }

@@ -7,6 +7,7 @@ require "optparse"
 require "rubocop"
 require "stringio"
 require "time"
+require "yaml"
 
 require_relative "../lib/rustocop/config_serialization"
 
@@ -66,7 +67,9 @@ def rubocop_config_value(value)
 end
 
 def rubocop_config(test_case)
-  values = rubocop_config_value(test_case.fetch("config"))
+  decoded = rubocop_config_value(test_case.fetch("config"))
+  yaml = Rustocop::ConfigSerialization.rubocop_yaml(decoded)
+  values = YAML.safe_load(yaml, permitted_classes: [Regexp, Symbol], aliases: true)
   values = Marshal.load(Marshal.dump(values))
   Array(test_case["selection"] || test_case.fetch("cop")).flat_map { |value| value.split(",") }.each do |cop|
     values[cop] = (values[cop] || {}).merge("Enabled" => true)
@@ -119,6 +122,8 @@ def captured_offenses(test_case)
       "last_line" => location.last_line,
       "last_column" => location.last_line > location.line && location.last_column.zero? ? 1 : location.last_column
     }
+  end.sort_by do |offense|
+    offense.values_at("line", "column", "last_line", "last_column", "message", "severity")
   end
 end
 
@@ -128,20 +133,18 @@ def normalized_offenses(test_case)
     captured = offense.slice(
       "message", "severity", "correctable", "line", "column", "last_line", "last_column"
     )
-    eof_line = source.count("\n") + 1
-    eof_column = source.rpartition("\n").last.each_char.count + 1
-    insertion_at_nonterminated_eof = !source.empty? && !source.end_with?("\n") &&
-                                      captured["line"] == eof_line &&
-                                      captured["column"] == eof_column
-    if !insertion_at_nonterminated_eof && captured["last_line"] == captured["line"] &&
-       captured["last_column"] + 1 == captured["column"]
-      captured["last_column"] = captured["column"]
-    end
     captured["last_column"] = 1 if captured["last_line"] > captured["line"] && captured["last_column"].zero?
     captured
   end.sort_by do |offense|
     offense.values_at("line", "column", "last_line", "last_column", "message", "severity")
   end
+end
+
+def controlled_diagnostics(cases)
+  captured = cases.find { |test_case| !test_case["offenses"].nil? }
+  return normalized_offenses(captured) if captured
+
+  captured_offenses(cases.first)
 end
 
 def with_encodings(test_case)
@@ -190,17 +193,40 @@ def input_key(test_case)
   ))
 end
 
-def preserved_imported_contracts
+def imported_capture_cases
   return [] unless File.file?(MANIFEST_PATH)
 
   manifest = JSON.parse(File.read(MANIFEST_PATH))
   manifest.fetch("cops").values.flat_map do |entry|
     configs = JSON.parse(File.read(File.join(FIXTURE_ROOT, entry.fetch("configs"))))
-    File.foreach(File.join(FIXTURE_ROOT, entry.fetch("cases"))).filter_map do |line|
+    File.foreach(File.join(FIXTURE_ROOT, entry.fetch("cases"))).flat_map do |line|
       item = JSON.parse(line)
-      next unless item.fetch("origins", []).any? { |origin| origin.key?("kind") }
+      origins = item.fetch("origins", []).select { |origin| origin.key?("kind") }
+      next [] if origins.empty?
 
-      item.merge("config_yaml" => configs.fetch(item.fetch("config")))
+      source = item.fetch("source")
+      source = { "$hex" => source.fetch("hex") } if source.is_a?(Hash) && source.key?("hex")
+      config = YAML.safe_load(
+        configs.fetch(item.fetch("config")),
+        permitted_classes: [Regexp, Symbol],
+        aliases: true
+      )
+      origins.map do |origin|
+        {
+          "cop" => item.fetch("cop"),
+          "selection" => item["selection"],
+          "source" => source,
+          "path" => item.fetch("path"),
+          "ruby_version" => item.fetch("ruby_version"),
+          "parser_engine" => item.fetch("parser_engine"),
+          "default_external_encoding" => item.fetch("external_encoding"),
+          "default_internal_encoding" => item["internal_encoding"],
+          "file_mode" => item["file_mode"],
+          "lsp" => false,
+          "config" => config,
+          "example" => origin
+        }.compact
+      end
     end
   end
 end
@@ -256,13 +282,15 @@ options.fetch(:supplements).each do |path|
 
   raw_cases.concat(File.foreach(path).map { |line| JSON.parse(line) })
 end
-preserved = preserved_imported_contracts
+raw_cases.concat(imported_capture_cases)
 comparable = raw_cases.reject { |test_case| test_case.fetch("lsp", false) }
 base_comparable = raw_cases.first(base_raw_cases).reject { |test_case| test_case.fetch("lsp", false) }
 grouped = comparable.group_by { |test_case| input_key(test_case) }
 
 conflicts = grouped.values.filter_map do |cases|
-  offenses = cases.map { |test_case| normalized_offenses(test_case) }.uniq
+  offenses = cases.filter_map do |test_case|
+    normalized_offenses(test_case) unless test_case["offenses"].nil?
+  end.uniq
   [cases.first.fetch("cop"), cases.map { |item| item.dig("example", "id") }] if offenses.length > 1
 end
 abort "captured inputs have conflicting diagnostics: #{conflicts.inspect}" unless conflicts.empty?
@@ -270,8 +298,9 @@ abort "captured inputs have conflicting diagnostics: #{conflicts.inspect}" unles
 controlled = grouped.values.map.with_index do |cases, index|
   test_case = cases.first
   source = decoded_source(test_case.fetch("source"))
+  diagnostics = controlled_diagnostics(cases)
   should_check_correction = cases.any? { |item| item.key?("correction") || item["check_autocorrect"] } ||
-                            normalized_offenses(test_case).any? { |offense| offense.fetch("correctable") }
+                            diagnostics.any? { |offense| offense.fetch("correctable") }
   all_result = should_check_correction ? rubocop_correction(test_case, safe: false) : { "source" => source }
   safe_result = should_check_correction ? rubocop_correction(test_case, safe: true) : { "source" => source }
   all_output = all_result.fetch("source")
@@ -294,7 +323,7 @@ controlled = grouped.values.map.with_index do |cases, index|
     "file_mode" => test_case["file_mode"],
     "config" => config_id,
     "config_yaml" => config_yaml,
-    "diagnostics" => normalized_offenses(test_case),
+    "diagnostics" => diagnostics,
     "autocorrect_checked" => should_check_correction,
     "autocorrect_all" => all_output == source ? nil : captured_value(all_output),
     "autocorrect_all_error" => all_result["error"],
@@ -310,17 +339,6 @@ controlled = grouped.values.map.with_index do |cases, index|
   }
   controlled_case.delete("selection") unless controlled_case["selection"]
   controlled_case
-end
-
-controlled_by_id = controlled.to_h { |test_case| [test_case.fetch("id"), test_case] }
-preserved.each do |test_case|
-  existing = controlled_by_id[test_case.fetch("id")]
-  if existing
-    existing["origins"] = (existing.fetch("origins") + test_case.fetch("origins")).uniq
-  else
-    controlled << test_case
-    controlled_by_id[test_case.fetch("id")] = test_case
-  end
 end
 
 updated_at = Time.now.iso8601

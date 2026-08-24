@@ -430,6 +430,30 @@ fn decoded_string_literal(expression: &str) -> Option<String> {
             &expression[start..expression.len() - 1],
             true,
         ))
+    } else if expression.starts_with('%') {
+        let bytes = expression.as_bytes();
+        let (delimiter_index, interpolated) = match bytes.get(1) {
+            Some(b'q') => (2, false),
+            Some(b'Q') => (2, true),
+            _ => (1, true),
+        };
+        let opening = *bytes.get(delimiter_index)?;
+        if opening.is_ascii_alphanumeric() || opening.is_ascii_whitespace() {
+            return None;
+        }
+        let closing = match opening {
+            b'(' => b')',
+            b'[' => b']',
+            b'{' => b'}',
+            b'<' => b'>',
+            other => other,
+        };
+        (bytes.last() == Some(&closing)).then(|| {
+            decode_interpolated_string(
+                &expression[delimiter_index + 1..expression.len() - 1],
+                interpolated,
+            )
+        })
     } else {
         None
     }
@@ -3160,6 +3184,15 @@ fn check_arguments_forwarding(
                         .iter()
                         .any(|offset| !use_collector.forwarded_reads.contains(offset))
                 })
+                || body.lines().any(|line| {
+                    line.match_indices(&token.name).any(|(at, _)| {
+                        let before = line[..at].chars().next_back();
+                        let after = &line[at + token.name.len()..];
+                        !before.is_some_and(|character| {
+                            character.is_ascii_alphanumeric() || character == '_'
+                        }) && (after.trim_start().starts_with('=') || after.starts_with('.'))
+                    })
+                })
         })
         .collect::<Vec<_>>();
 
@@ -3285,6 +3318,29 @@ fn report_anonymous_full_forwarding(
         let body_end = definition.location().end_offset();
         let body = &context.source()[body_start..body_end];
         if body.contains(" do") {
+            return false;
+        }
+        let forwarded_names = sequence
+            .split(',')
+            .map(str::trim)
+            .map(|parameter| parameter.trim_start_matches(['*', '&']))
+            .filter(|name| !name.is_empty())
+            .collect::<Vec<_>>();
+        if forwarded_names.iter().any(|name| {
+            body.lines().any(|line| {
+                line.trim_start().strip_prefix(name).is_some_and(|rest| {
+                    rest.trim_start().starts_with('=') || rest.starts_with('.')
+                })
+            })
+        }) {
+            return false;
+        }
+        if body.lines().any(|line| {
+            line.contains('*')
+                && line.contains('&')
+                && line.contains('(')
+                && !line.contains(sequence)
+        }) {
             return false;
         }
         let matches = body.match_indices(sequence).collect::<Vec<_>>();
@@ -3476,6 +3532,12 @@ fn forwarding_replacement_edits(
     }
     let line_start = context.source_file().line_start(range.start);
     let prefix = &source[line_start..range.start];
+    if prefix.trim().is_empty() && line_start > 0 {
+        let previous = context.source_file().line(line_start - 1).trim_end();
+        if previous.ends_with(',') || previous.ends_with('(') {
+            return edits;
+        }
+    }
     let nesting = prefix.bytes().fold(0isize, |depth, byte| match byte {
         b'(' | b'[' => depth + 1,
         b')' | b']' => depth - 1,

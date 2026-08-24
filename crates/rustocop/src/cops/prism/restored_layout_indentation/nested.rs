@@ -92,12 +92,22 @@ fn nested_alignment_offense(context: &CopContext<'_, '_>, _node: &CallNode<'_>) 
     context.ancestors().iter().rev().any(|ancestor| {
         ancestor.as_call_node().is_some_and(|call| {
             call.arguments().is_some_and(|arguments| {
-                arguments.arguments().iter().any(|argument| {
+                let arguments = arguments.arguments().iter().collect::<Vec<_>>();
+                let Some(first) = arguments.first() else {
+                    return false;
+                };
+                let expected = display_column(
+                    context.source_file(),
+                    first.location().start_offset(),
+                );
+                arguments.iter().any(|argument| {
                     let location = argument.location();
                     location.start_offset() <= _node.location().start_offset()
                         && _node.location().end_offset() <= location.end_offset()
                         && context.source_file().indentation(location.start_offset()).end
                             == location.start_offset()
+                        && display_column(context.source_file(), location.start_offset())
+                            != expected
                 })
             })
         })

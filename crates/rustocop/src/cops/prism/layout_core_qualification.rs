@@ -882,6 +882,13 @@ fn first_argument_indentation(node: &Node<'_>, context: &mut CopContext<'_, '_>)
             if content.trim().is_empty() {
                 return None;
             }
+            if delta > 0
+                && inside_parenthesized_argument
+                && number > first_line
+                && content.trim_start().starts_with(')')
+            {
+                return None;
+            }
             let indentation = content.len() - content.trim_start().len();
             let preserve_nested = delta > 0
                 && previous.is_some_and(|(previous_indent, opened)| {

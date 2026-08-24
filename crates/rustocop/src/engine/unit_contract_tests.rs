@@ -43,7 +43,7 @@ fn extension_cops_keep_their_inline_smoke_contracts() {
         let config = Arc::new(CopConfig::from_source(&format!(
             "---\n{cop}:\n  Enabled: true\n"
         )));
-        let options = inspection_options(cop, "2.7", config, AutocorrectMode::None);
+        let options = inspection_options(cop, "2.7", "UTF-8", config, AutocorrectMode::None);
         let plan = InspectionPlan::new(&options);
         let (offenses, _) = plan.inspect_content(path, source, &options);
         assert_eq!(offenses.len(), 1, "{cop}");

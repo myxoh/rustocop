@@ -200,6 +200,7 @@ fn case_literal(value: &str) -> bool {
 }
 
 impl MultilineTernaryOperatorRule<'_, '_, '_> {
+    #[allow(clippy::too_many_lines)]
     fn on_if(&mut self, node: &ruby_prism::IfNode<'_>) {
         if node.if_keyword_loc().is_some()
             || node
@@ -223,6 +224,43 @@ impl MultilineTernaryOperatorRule<'_, '_, '_> {
         else {
             return;
         };
+        let file = self.source_file();
+        let predicate_location = node.predicate().location();
+        let predicate_is_multiline_equality = node.predicate().as_call_node().is_some_and(|call| {
+            call.name().as_slice() == b"=="
+                && !file.same_line(
+                    predicate_location.start_offset(),
+                    predicate_location.end_offset().saturating_sub(1),
+                )
+        });
+        let truthy_location = node
+            .statements()
+            .and_then(|statements| statements.body().first())
+            .map(|statement| statement.location());
+        let falsey_location = node
+            .subsequent()
+            .and_then(|branch| branch.as_else_node())
+            .and_then(|branch| branch.statements())
+            .and_then(|statements| statements.body().first())
+            .map(|statement| statement.location());
+        if file.same_line(
+            question_location.start_offset(),
+            colon_location.start_offset(),
+        ) && truthy_location.as_ref().is_some_and(|truthy| {
+            file.same_line(question_location.start_offset(), truthy.start_offset())
+                && file.same_line(
+                    truthy.start_offset(),
+                    truthy.end_offset().saturating_sub(1),
+                )
+        }) && falsey_location.as_ref().is_some_and(|falsey| {
+            file.same_line(colon_location.start_offset(), falsey.start_offset())
+                && file.same_line(
+                    falsey.start_offset(),
+                    falsey.end_offset().saturating_sub(1),
+                )
+        }) && !predicate_is_multiline_equality {
+            return;
+        }
         let question = question_location.start_offset() - location.start_offset();
         let colon = colon_location.start_offset() - location.start_offset();
         if !(source[question..].contains('\n')
@@ -248,7 +286,7 @@ impl MultilineTernaryOperatorRule<'_, '_, '_> {
         let mut replacement = if single_line {
             format!("{condition} ? {truthy} : {falsey}")
         } else {
-            convert_multiline_ternary(source)
+            multiline_ternary_ast_replacement(node, self.source_file())
                 .unwrap_or_else(|| format!("if {condition}\n  {truthy}\nelse\n  {falsey}\nend"))
         };
         if !comments.is_empty() {
@@ -288,6 +326,31 @@ impl MultilineTernaryOperatorRule<'_, '_, '_> {
             });
         }
     }
+}
+
+fn multiline_ternary_ast_replacement(
+    node: &ruby_prism::IfNode<'_>,
+    file: SourceFile<'_>,
+) -> Option<String> {
+    let condition = file.node(&node.predicate());
+    let truthy = only_statement(node.statements())?;
+    let else_node = node.subsequent()?.as_else_node()?;
+    let falsey = only_statement(else_node.statements())?;
+    let truthy = file.node(&truthy);
+    let falsey_source = file.node(&falsey);
+    let falsey = falsey
+        .as_if_node()
+        .filter(|nested| {
+            nested
+                .then_keyword_loc()
+                .is_some_and(|keyword| keyword.as_slice() == b"?")
+                && falsey_source.contains('\n')
+        })
+        .and_then(|nested| multiline_ternary_ast_replacement(&nested, file))
+        .unwrap_or_else(|| falsey_source.to_string());
+    Some(format!(
+        "if {condition}\n  {truthy}\nelse\n  {falsey}\nend"
+    ))
 }
 
 fn ternary_comments(source: &str) -> String {

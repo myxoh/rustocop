@@ -152,10 +152,13 @@ fn parameter_lists_definition(
             .map_or(parameters.location().end_offset(), |right| {
                 right.end_offset()
             });
-        context.report(
-            format!("Avoid parameter lists longer than {maximum} parameters. [{count}/{maximum}]"),
-            start..end,
-        );
+        let message =
+            format!("Avoid parameter lists longer than {maximum} parameters. [{count}/{maximum}]");
+        if context.source()[start..end].contains("# rubocop:disable Metrics/ParameterLists") {
+            context.add_offense(start..end, message, |_| {});
+        } else {
+            context.report(message, start..end);
+        }
     }
     let optional = ranges
         .iter()
@@ -216,12 +219,6 @@ fn parameter_lists_block(node: &ruby_prism::BlockNode<'_>, context: &mut CopCont
 
 fn collection_literal_length(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
     let threshold = context.config_usize("LengthThreshold", 250);
-    if context.ancestors().iter().any(|ancestor| {
-        ancestor.location().start_offset() == node.location().start_offset()
-            && collection_element_count(ancestor).is_some_and(|count| count >= threshold)
-    }) {
-        return;
-    }
     let count = if let Some(array) = node.as_array_node() {
         array.elements().len()
     } else if let Some(hash) = node.as_hash_node() {
@@ -254,21 +251,6 @@ fn collection_literal_length(node: &Node<'_>, context: &mut CopContext<'_, '_>) 
             node,
             "Avoid hard coding large quantities of data in code. Prefer reading the data from an external source.",
         );
-    }
-}
-
-fn collection_element_count(node: &Node<'_>) -> Option<usize> {
-    if let Some(array) = node.as_array_node() {
-        Some(array.elements().len())
-    } else if let Some(hash) = node.as_hash_node() {
-        Some(hash.elements().len())
-    } else if let Some(hash) = node.as_keyword_hash_node() {
-        Some(hash.elements().len())
-    } else if let Some(call) = node.as_call_node() {
-        (call_name(&call) == b"[]" && root_constant(call.receiver(), b"Set"))
-            .then(|| argument_count(&call))
-    } else {
-        None
     }
 }
 

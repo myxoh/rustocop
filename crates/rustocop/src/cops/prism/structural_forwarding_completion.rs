@@ -336,34 +336,59 @@ fn explicit_no_argument_do_block(
             continue;
         }
         let call_without_block = call_code.strip_suffix(" do").unwrap_or(call_code);
-        let block_argument = signature
+        let existing_block = signature
             .split('&')
             .nth(1)
-            .and_then(|tail| tail.split(|character: char| !character.is_ascii_alphanumeric() && character != '_').next())
-            .unwrap_or("block");
+            .map(|tail| {
+                tail.split(|character: char| {
+                    !character.is_ascii_alphanumeric() && character != '_'
+                })
+                .next()
+                .unwrap_or_default()
+            });
+        let block_argument = existing_block.unwrap_or("block");
         let forwarded = if block_argument.is_empty() {
             "&".to_string()
         } else {
             format!("&{block_argument}")
         };
         let replacement = if let Some(call) = call_without_block.strip_suffix(')') {
-            format!("{call}, {forwarded})")
+            if command_call_has_balanced_argument(call) {
+                format!("{call_without_block}, {forwarded}")
+            } else {
+                format!("{call}, {forwarded})")
+            }
         } else {
             format!("{call_without_block}({forwarded})")
         };
         let offense_start = call_expression_start(context.source(), call_offset, call_offset + call_line.len());
         let offense_end = end_offset + end_line.len();
-        context.replace(
+        let mut edits = vec![(call_offset + call_indent..offense_end, replacement)];
+        if existing_block.is_none() {
+            let signature_insert = signature
+                .rfind(')')
+                .map_or(def_offset + signature.len(), |close| def_offset + close);
+            let signature_text = if signature.contains('(') {
+                ", &block"
+            } else {
+                "(&block)"
+            };
+            edits.push((
+                signature_insert..signature_insert,
+                signature_text.to_string(),
+            ));
+        }
+        context.replace_many(
             "Consider using explicit block argument in the surrounding method's signature over `yield`.",
             offense_start..offense_end,
-            call_offset + call_indent..offense_end,
-            replacement,
+            edits,
         );
         return true;
     }
     false
 }
 
+#[allow(clippy::too_many_lines)]
 fn explicit_inline_blocks(
     context: &mut CopContext<'_, '_>,
     def_offset: usize,
@@ -378,8 +403,7 @@ fn explicit_inline_blocks(
                 .take_while(|byte| byte.is_ascii_alphanumeric() || *byte == b'_')
                 .map(char::from)
                 .collect::<String>()
-        })
-        .filter(|name| !name.is_empty());
+        });
     let block_name = existing_block.as_deref().unwrap_or("block");
     let mut candidates = Vec::<(
         std::ops::Range<usize>,
@@ -421,7 +445,18 @@ fn explicit_inline_blocks(
             continue;
         }
         let call = line[indent..open].trim_end();
-        let replacement = if call == "super" && signature.contains('(') {
+        let call_start = multiline_call_start(context, line_offset, line_offset + open);
+        let (edit, replacement) = if call == ")" && call_start < line_offset {
+            let call_end = line_offset + open;
+            let original = &context.source()[call_start..call_end];
+            let Some(paren_close) = original.rfind(')') else {
+                continue;
+            };
+            let insertion = original[..paren_close].trim_end().len();
+            let mut corrected = original.to_string();
+            corrected.insert_str(insertion, &format!(", &{block_name}"));
+            (call_start..line_offset + close + 1, corrected)
+        } else if call == "super" && signature.contains('(') {
             let parameters = signature
                 .split_once('(')
                 .and_then(|(_, rest)| rest.rsplit_once(')'))
@@ -440,17 +475,31 @@ fn explicit_inline_blocks(
                 })
                 .unwrap_or_default();
             let separator = if parameters.is_empty() { "" } else { ", " };
-            format!("super({parameters}{separator}&{block_name})")
+            (
+                line_offset + indent..line_offset + close + 1,
+                format!("super({parameters}{separator}&{block_name})"),
+            )
         } else if let Some(call) = call.strip_suffix(')') {
-            let inner = call.trim_end_matches(',');
-            let separator = if inner.ends_with('(') { "" } else { ", " };
-            format!("{inner}{separator}&{block_name})")
+            if command_call_has_balanced_argument(call) {
+                (
+                    line_offset + indent..line_offset + close + 1,
+                    format!("{}, &{block_name}", call.trim_end_matches(',')),
+                )
+            } else {
+                let inner = call.trim_end_matches(',');
+                let separator = if inner.ends_with('(') { "" } else { ", " };
+                (
+                    line_offset + indent..line_offset + close + 1,
+                    format!("{inner}{separator}&{block_name})"),
+                )
+            }
         } else {
-            format!("{}(&{block_name})", call.trim_end_matches(','))
+            (
+                line_offset + indent..line_offset + close + 1,
+                format!("{}(&{block_name})", call.trim_end_matches(',')),
+            )
         };
-        let edit = line_offset + indent..line_offset + close + 1;
-        let offense_start = multiline_call_start(context, line_offset, line_offset + open);
-        candidates.push((offense_start..line_offset + close + 1, edit, replacement));
+        candidates.push((call_start..line_offset + close + 1, edit, replacement));
     }
     if candidates.is_empty() {
         return false;
@@ -480,6 +529,19 @@ fn explicit_inline_blocks(
         context.replace(message, offense.clone(), edit.clone(), replacement);
     }
     true
+}
+
+fn command_call_has_balanced_argument(call: &str) -> bool {
+    let mut depth = 0isize;
+    for byte in call.bytes() {
+        match byte {
+            b'(' => depth += 1,
+            b')' => depth -= 1,
+            b' ' | b'\t' if depth == 0 => return true,
+            _ => {}
+        }
+    }
+    false
 }
 
 fn multiline_call_start(

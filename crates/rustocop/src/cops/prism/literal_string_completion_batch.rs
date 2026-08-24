@@ -169,7 +169,7 @@ fn percent_symbol_array(
     let kind = if wide { "%I" } else { "%i" };
     let delimiters = context
         .related_config_map("Style/PercentLiteralDelimiters", "PreferredDelimiters")
-        .and_then(|values| values.get(kind).or_else(|| values.get("default")))
+        .and_then(|values| values.get(kind))
         .map(String::as_str)
         .unwrap_or("[]");
     let (open, close) = delimiters.split_at(1);
@@ -940,7 +940,9 @@ fn percent_word_array(
     for element in elements {
         let string = element.as_string_node()?;
         let value = std::str::from_utf8(string.unescaped()).ok()?;
-        if value.chars().any(char::is_control) {
+        if value.chars().any(char::is_control)
+            || context.source_encoding() == SourceEncoding::UsAscii && !value.is_ascii()
+        {
             wide = true;
         }
         words.push(escape_percent_word(value, wide, context));
@@ -960,11 +962,7 @@ fn percent_word_array(
     }
     let delimiters = context
         .related_config_map("Style/PercentLiteralDelimiters", "PreferredDelimiters")
-        .and_then(|values| {
-            values
-                .get(if wide { "%W" } else { "%w" })
-                .or_else(|| values.get("default"))
-        })
+        .and_then(|values| values.get(if wide { "%W" } else { "%w" }))
         .map(String::as_str)
         .unwrap_or("[]");
     let (open, close) = delimiters.split_at(1);
@@ -984,11 +982,7 @@ fn percent_word_array(
 fn escape_percent_word(value: &str, wide: bool, context: &CopContext<'_, '_>) -> String {
     let delimiters = context
         .related_config_map("Style/PercentLiteralDelimiters", "PreferredDelimiters")
-        .and_then(|values| {
-            values
-                .get(if wide { "%W" } else { "%w" })
-                .or_else(|| values.get("default"))
-        })
+        .and_then(|values| values.get(if wide { "%W" } else { "%w" }))
         .map(String::as_str)
         .unwrap_or("[]");
     let (open, close) = delimiters.split_at(1);
@@ -1003,6 +997,16 @@ fn escape_percent_word(value: &str, wide: bool, context: &CopContext<'_, '_>) ->
             '\u{08}' if wide => "\\b".to_string(),
             '\u{0b}' if wide => "\\v".to_string(),
             '\u{0c}' if wide => "\\f".to_string(),
+            character
+                if context.source_encoding() == SourceEncoding::UsAscii
+                    && !character.is_ascii() =>
+            {
+                if character as u32 <= 0xffff {
+                    format!("\\u{:04X}", character as u32)
+                } else {
+                    format!("\\u{{{:X}}}", character as u32)
+                }
+            }
             character if character.is_control() => format!("\\u{:04X}", character as u32),
             character => character.to_string(),
         };

@@ -99,6 +99,7 @@ impl InspectionPlan {
             &prism_source,
             options.autocorrect,
             options.target_ruby_version,
+            options.source_encoding,
             options.cop_config.clone(),
         );
         append_prism_offenses(&mut offenses, &prism_source, prism_inspection.findings);
@@ -120,6 +121,9 @@ impl InspectionPlan {
 
         let mut seen = HashSet::from([content.to_string()]);
         for _iteration in 1..MAX_CORRECTION_ITERATIONS {
+            if std::env::var_os("RUSTOCOP_CORRECTION_TRACE").is_some() {
+                eprintln!("correction iteration {_iteration}: {corrected:?}");
+            }
             if !seen.insert(corrected.clone()) {
                 return (offenses, corrected, Some(CorrectionError::InfiniteLoop));
             }
@@ -147,6 +151,7 @@ impl InspectionPlan {
             content,
             options.autocorrect,
             options.target_ruby_version,
+            options.source_encoding,
             options.cop_config.clone(),
         );
         let mut offenses = Vec::with_capacity(inspection.findings.len());

@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use super::correction_engine::{accepted_corrections, apply_edits, Correction, Edit};
 use super::{CopContext, CopPolicy};
-use crate::config::{AutocorrectMode, CopConfig, RubyVersion};
+use crate::config::{AutocorrectMode, CopConfig, RubyVersion, SourceEncoding};
 
 #[path = "diagnostic/reporter.rs"]
 mod reporter;
@@ -59,6 +59,7 @@ pub(crate) struct Context {
     autocorrect: AutocorrectMode,
     path: Arc<str>,
     target_ruby_version: RubyVersion,
+    source_encoding: SourceEncoding,
     cop_config: Arc<CopConfig>,
     findings: Vec<Finding>,
     corrections: Vec<Correction>,
@@ -69,12 +70,14 @@ impl Context {
         autocorrect: AutocorrectMode,
         path: impl Into<Arc<str>>,
         target_ruby_version: RubyVersion,
+        source_encoding: SourceEncoding,
         cop_config: Arc<CopConfig>,
     ) -> Self {
         Self {
             autocorrect,
             path: path.into(),
             target_ruby_version,
+            source_encoding,
             cop_config,
             findings: Vec::new(),
             corrections: Vec::new(),
@@ -83,6 +86,10 @@ impl Context {
 
     pub(super) fn target_ruby_version(&self) -> RubyVersion {
         self.target_ruby_version
+    }
+
+    pub(super) fn source_encoding(&self) -> SourceEncoding {
+        self.source_encoding
     }
 
     fn config_value(&self, cop_name: &str, key: &str) -> Option<&str> {
@@ -378,12 +385,18 @@ fn disabled_findings(source: &str, findings: &[Finding]) -> Vec<bool> {
         .collect::<HashSet<_>>();
     let mut state = DisabledState::default();
     let mut line_starts = Vec::new();
+    let mut line_ends = Vec::new();
     let mut states = Vec::new();
+    let mut base_states = Vec::new();
+    let mut inline_comments = Vec::new();
     let mut offset = 0;
     for physical_line in source.split_inclusive('\n') {
         line_starts.push(offset);
         let line = physical_line.strip_suffix('\n').unwrap_or(physical_line);
+        line_ends.push(offset + line.len());
+        base_states.push(state.clone());
         let mut line_state = state.clone();
+        let mut inline_comment = None;
         if let Some((comment_at, disabled, names)) = cop_directive(line)
             .filter(|(comment_at, _, _)| directive_comments.contains(&(offset + comment_at)))
         {
@@ -392,14 +405,19 @@ fn disabled_findings(source: &str, findings: &[Finding]) -> Vec<bool> {
                 line_state = state.clone();
             } else {
                 line_state.update(&names, disabled);
+                inline_comment = Some(offset + comment_at);
             }
         }
         states.push(line_state);
+        inline_comments.push(inline_comment);
         offset += physical_line.len();
     }
     if states.is_empty() {
         line_starts.push(0);
+        line_ends.push(0);
         states.push(state);
+        base_states.push(DisabledState::default());
+        inline_comments.push(None);
     }
 
     findings
@@ -408,7 +426,13 @@ fn disabled_findings(source: &str, findings: &[Finding]) -> Vec<bool> {
             let line = line_starts
                 .partition_point(|start| *start <= finding.start_offset)
                 .saturating_sub(1);
-            states[line].contains(finding.cop_name)
+            if inline_comments[line].is_some_and(|comment| {
+                finding.start_offset < comment && finding.end_offset > line_ends[line]
+            }) {
+                base_states[line].contains(finding.cop_name)
+            } else {
+                states[line].contains(finding.cop_name)
+            }
         })
         .collect()
 }

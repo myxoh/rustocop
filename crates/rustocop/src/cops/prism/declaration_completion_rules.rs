@@ -188,9 +188,18 @@ fn redundant_initialize(node: &DefNode<'_>, context: &mut CopContext<'_, '_>) {
         "Remove unnecessary `initialize` method."
     };
     let location = node.location();
+    let line_start = context.source_file().line_start(location.start_offset());
+    let start = if context.source()[line_start..location.start_offset()]
+        .trim()
+        .is_empty()
+    {
+        line_start
+    } else {
+        location.start_offset()
+    };
     let end = location.end_offset()
         + usize::from(context.source().as_bytes().get(location.end_offset()) == Some(&b'\n'));
-    context.remove(message, &location, location.start_offset()..end);
+    context.remove(message, &location, start..end);
 }
 
 fn comments_before_next_statement(offset: usize, source: &str) -> bool {
@@ -241,6 +250,7 @@ fn redundant_struct_keyword_init(node: &CallNode<'_>, context: &mut CopContext<'
     let Some(last_argument) = arguments.arguments().iter().last() else {
         return;
     };
+    let explicit_hash = last_argument.as_hash_node().is_some();
     let pairs = if let Some(keyword_hash) = last_argument.as_keyword_hash_node() {
         keyword_hash
             .elements()
@@ -282,7 +292,8 @@ fn redundant_struct_keyword_init(node: &CallNode<'_>, context: &mut CopContext<'
             context.source()[..offense.start_offset()]
                 .rfind(',')
                 .filter(|comma| {
-                    !context.source()[*comma + 1..offense.start_offset()]
+                    explicit_hash
+                        || !context.source()[*comma + 1..offense.start_offset()]
                         .chars()
                         .any(|character| matches!(character, '(' | '{'))
                 })

@@ -4,6 +4,7 @@ define_cops! {
     EndlessMethod => "Style/EndlessMethod" => source(endless_method),
 }
 
+#[allow(clippy::too_many_lines)]
 fn endless_method(context: &mut CopContext<'_, '_>) {
     let style = context
         .policy()
@@ -42,14 +43,25 @@ fn endless_method(context: &mut CopContext<'_, '_>) {
             };
             let header = definition[..equal].trim_end().trim_end_matches("()");
             let first_expression = definition[equal + 1..].trim();
-            let indent = &line[..def_column];
-            let mut replacement = format!("{header}\n{indent}  {first_expression}");
-            for (_, continuation) in &lines[index + 1..=last] {
-                replacement.push('\n');
-                replacement.push_str(continuation);
+            let mut replacement = format!("{header}\n");
+            let continuation_start = if first_expression.is_empty() {
+                if let Some((_, continuation)) = lines.get(index + 1) {
+                    replacement.push_str("  ");
+                    replacement.push_str(continuation.trim_start());
+                }
+                index + 2
+            } else {
+                replacement.push_str("  ");
+                replacement.push_str(first_expression);
+                index + 1
+            };
+            if continuation_start <= last {
+                for (_, continuation) in &lines[continuation_start..=last] {
+                    replacement.push('\n');
+                    replacement.push_str(continuation);
+                }
             }
             replacement.push('\n');
-            replacement.push_str(indent);
             replacement.push_str("end");
             context.replace(message, start..end, start..end, replacement);
             continue;

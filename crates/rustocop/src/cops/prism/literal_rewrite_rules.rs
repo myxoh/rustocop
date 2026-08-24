@@ -169,13 +169,15 @@ impl PercentLiteralDelimitersRule<'_, '_, '_> {
             "`{literal_type}`-literals should be delimited by `{}` and `{}`.",
             preferred_bytes[0] as char, preferred_bytes[1] as char
         );
+        let correction_preferred = self.correction_delimiters(literal_type, &preferred);
+        let correction_bytes = correction_preferred.as_bytes();
         let start = node.location().start_offset();
         let opening = start..start + prefix_len + 1;
         let closing = start + close_at..start + close_at + 1;
-        let replacement_open = format!("{literal_type}{}", preferred_bytes[0] as char);
+        let replacement_open = format!("{literal_type}{}", correction_bytes[0] as char);
         add_offense!(self, node.location(), message: message, |corrector| {
             corrector.replace(opening, replacement_open);
-            corrector.replace(closing, (preferred_bytes[1] as char).to_string());
+            corrector.replace(closing, (correction_bytes[1] as char).to_string());
         });
     }
 
@@ -184,6 +186,17 @@ impl PercentLiteralDelimitersRule<'_, '_, '_> {
             .and_then(|map| map.get(literal_type).or_else(|| map.get("default")))
             .cloned()
             .unwrap_or_else(|| "[]".to_string())
+    }
+
+    fn correction_delimiters(&self, literal_type: &str, preferred: &str) -> String {
+        if literal_type != "%r"
+            || self
+                .config_map("PreferredDelimiters")
+                .is_some_and(|map| map.contains_key(literal_type))
+        {
+            return preferred.to_string();
+        }
+        "{}".to_string()
     }
 }
 

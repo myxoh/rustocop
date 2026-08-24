@@ -74,23 +74,7 @@ fn redundant_disable(context: &mut CopContext<'_, '_>) {
         };
         let message = format!("Unnecessary disabling of {subject}.");
         let offense = offset + directive.start..offset + line.len();
-        let standalone = line[..directive.start].trim().is_empty();
-        let mut edit_start = if standalone {
-            offset
-        } else {
-            offset + line[..directive.start].trim_end().len()
-        };
-        let mut edit_end = offset + line.len();
-        if standalone && context.source().as_bytes().get(edit_end) == Some(&b'\n') {
-            edit_end += 1;
-            if offset == 0 && context.source().as_bytes().get(edit_end) == Some(&b'\n') {
-                edit_end += 1;
-            }
-        }
-        if edit_start > edit_end {
-            edit_start = offset + directive.start;
-        }
-        context.replace(message, offense, edit_start..edit_end, "");
+        context.add_offense(offense, message, |_| {});
     }
 }
 

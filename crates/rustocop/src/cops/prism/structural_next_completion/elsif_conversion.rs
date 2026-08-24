@@ -24,7 +24,9 @@ pub(super) fn if_inside_else(context: &mut CopContext<'_, '_>) {
             continue;
         }
         let condition = if_line.trim_start()[3..].trim_end();
-        if condition.contains(" then ") && correct_then_form(context, &lines, else_offset, if_offset, if_line, condition) {
+        if condition.contains(" then ")
+            && correct_then_form(context, &lines, else_offset, if_offset, if_line)
+        {
             return;
         }
         if condition.ends_with(" then") || condition.contains(" #") {
@@ -231,7 +233,6 @@ fn correct_then_form(
     else_offset: usize,
     if_offset: usize,
     if_line: &str,
-    condition: &str,
 ) -> bool {
     let indent = &if_line[..if_line.len() - if_line.trim_start().len()];
     let nested_index = lines.iter().position(|(offset, _)| *offset == if_offset).unwrap_or(0);
@@ -261,21 +262,30 @@ fn correct_then_form(
         expanded.push_str(&line);
     }
     let offense = if_offset + indent.len()..if_offset + indent.len() + 2;
-    let has_final_else = !multiline && condition.contains(" else ");
-    if has_final_else {
-        let mut lines = expanded.lines();
-        let first = lines.next().unwrap_or_default().trim_start().strip_prefix("if ").unwrap_or_default();
-        let outer_line = context.source()[else_offset..if_offset].lines().next().unwrap_or("");
-        let outer_indent = &outer_line[..outer_line.len() - outer_line.trim_start().len()];
-        let mut replacement = format!("{outer_indent}elsif {first}");
-        let rest = lines.collect::<Vec<_>>();
-        for line in rest.iter().take(rest.len().saturating_sub(1)) {
-            replacement.push('\n');
-            replacement.push_str(line);
-        }
-        context.replace("Convert `if` nested inside `else` to `elsif`.", offense, else_offset..if_offset + if_line.len(), replacement);
-    } else {
-        context.replace("Convert `if` nested inside `else` to `elsif`.", offense, if_offset..lines[end_index].0 + lines[end_index].1.len(), expanded);
+    let correction_end = lines[end_index].0 + lines[end_index].1.len();
+    let mut expanded_lines = expanded.lines();
+    let first = expanded_lines
+        .next()
+        .unwrap_or_default()
+        .trim_start()
+        .strip_prefix("if ")
+        .unwrap_or_default();
+    let outer_line = context.source()[else_offset..if_offset]
+        .lines()
+        .next()
+        .unwrap_or("");
+    let outer_indent = &outer_line[..outer_line.len() - outer_line.trim_start().len()];
+    let mut replacement = format!("{outer_indent}elsif {first}");
+    let rest = expanded_lines.collect::<Vec<_>>();
+    for line in rest.iter().take(rest.len().saturating_sub(1)) {
+        replacement.push('\n');
+        replacement.push_str(line);
     }
+    context.replace(
+        "Convert `if` nested inside `else` to `elsif`.",
+        offense,
+        else_offset..correction_end,
+        replacement,
+    );
     true
 }

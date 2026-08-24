@@ -105,9 +105,6 @@ fn ambiguous_operator_precedence(node: &Node<'_>, context: &mut CopContext<'_, '
     let Some(parent_node) = context.parent() else {
         return;
     };
-    if current == 1 && !context.source_file().node(node).contains(" ** ") {
-        return;
-    }
     if parent_node.as_parentheses_node().is_some() {
         return;
     }

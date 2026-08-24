@@ -81,6 +81,10 @@ impl RedundantArgumentRule<'_, '_, '_> {
         let offense = selector.end_offset()..node.location().end_offset();
         let message =
             format!("Argument {argument_source} is redundant because it is implied by default.");
+        if invalid_byte_default && name == "chomp" {
+            self.replace_many(message, offense, Vec::new());
+            return;
+        }
         add_offense!(self, offense.clone(), message: message, |corrector| {
             corrector.remove(offense);
         });

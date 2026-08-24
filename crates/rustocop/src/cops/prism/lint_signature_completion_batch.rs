@@ -410,7 +410,15 @@ fn unused_block_argument(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
         if ignore_empty {
             return;
         }
-        let unused = (0..parameters.len()).collect::<Vec<_>>();
+        let unused = parameters
+            .iter()
+            .enumerate()
+            .filter_map(|(index, parameter)| {
+                (!(parameter.name.starts_with('_')
+                    || (allow_keywords && parameter.keyword)))
+                .then_some(index)
+            })
+            .collect::<Vec<_>>();
         return report_unused_block_parameters(
             context,
             &parameters,

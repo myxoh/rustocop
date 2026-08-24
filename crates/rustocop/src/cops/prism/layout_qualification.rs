@@ -528,7 +528,6 @@ fn extra_spacing(_context: &mut CopContext<'_, '_>) {
     }
 
     let mut ordinary_offenses = Vec::new();
-    let mut hidden_hash_cleanup = Vec::new();
     for pair in tokens.windows(2) {
         let (left, right) = (&pair[0], &pair[1]);
         if literal_ranges.iter().any(|range| {
@@ -550,9 +549,6 @@ fn extra_spacing(_context: &mut CopContext<'_, '_>) {
             continue;
         }
         if ignored_hash_spacing(source, left, right, &delimiters) {
-            if !allow_alignment {
-                hidden_hash_cleanup.push(left.end..right.start - 1);
-            }
             continue;
         }
         let definition_line = lines
@@ -619,7 +615,6 @@ fn extra_spacing(_context: &mut CopContext<'_, '_>) {
     let mut ordinary_edits = ordinary_offenses
         .iter()
         .cloned()
-        .chain(hidden_hash_cleanup)
         .map(|range| (range, String::new()))
         .collect::<Vec<_>>();
     ordinary_edits.sort_by_key(|(range, _)| (range.start, range.end));

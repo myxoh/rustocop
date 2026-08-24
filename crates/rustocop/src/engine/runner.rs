@@ -81,7 +81,9 @@ fn contains_duplicate_files(files: &[String]) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::{AutocorrectMode, CopConfig, CopSelection, InspectionConfig, RubyVersion};
+    use crate::config::{
+        AutocorrectMode, CopConfig, CopSelection, InspectionConfig, RubyVersion, SourceEncoding,
+    };
     use std::sync::Arc;
     use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -120,6 +122,7 @@ mod tests {
                 autocorrect: AutocorrectMode::None,
                 cops: CopSelection::only("Lint/EmptyExpression"),
                 target_ruby_version: RubyVersion::default(),
+                source_encoding: SourceEncoding::Utf8,
                 cop_config: Arc::new(CopConfig::default()),
             },
         }

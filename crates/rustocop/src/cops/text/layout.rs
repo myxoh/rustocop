@@ -229,6 +229,7 @@ fn check_line_length(
     let mut heredoc: Option<(String, bool)> = None;
     let mut nesting = 0isize;
     let mut directive_disabled = false;
+    let mut follows_autocorrect_split = false;
     for (index, line) in lines.iter_mut().enumerate() {
         if line.body == "__END__" && heredoc.is_none() {
             break;
@@ -266,7 +267,8 @@ fn check_line_length(
                     tab_width,
                 );
         if effective_length > max && !exempt && !line_disabled {
-            let breakable = (heredoc.is_none() || line.body.contains("#{"))
+            let breakable = !follows_autocorrect_split
+                && (heredoc.is_none() || line.body.contains("#{"))
                 && line_length_breakable(&line.body, max, split_strings, nesting);
             let indentation_difference = line
                 .body
@@ -348,6 +350,8 @@ fn check_line_length(
             nesting += delimiter_delta(&line.body);
             nesting = nesting.max(0);
         }
+        follows_autocorrect_split = line.body.ends_with(", ")
+            || line.body.trim_end().ends_with('|') && line.body.contains('{');
     }
 }
 
@@ -491,7 +495,6 @@ fn block_break_position(line: &str) -> Option<usize> {
         let block_like = line[open..].starts_with("{|")
             || line[open..].starts_with("{ |")
             || line[..open].contains("select")
-            || line[..open].contains("let(")
             || line[..open].trim_start().starts_with("->");
         if !block_like || open > 0 && line.as_bytes().get(open - 1) == Some(&b'#') {
             return None;
@@ -895,7 +898,11 @@ fn line_length_breakable(line: &str, max: usize, split_strings: bool, _nesting: 
         }
     }
     let comma_before_limit = line.match_indices(',').any(|(at, _)| at < max);
-    let breakable_block = line.find('{').is_some_and(|at| at > 0) || line.contains(" do");
+    let plain_let_block = line
+        .find('{')
+        .is_some_and(|open| line[..open].contains("let("));
+    let breakable_block =
+        plain_let_block || block_break_position(line).is_some_and(|at| at < line.trim_end().len());
     let breakable_semicolon = line
         .find(';')
         .is_some_and(|at| at < line.trim_end_matches(';').len());

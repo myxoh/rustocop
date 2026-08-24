@@ -10,7 +10,9 @@ use serde_json::Value;
 use super::source::DecodedSource;
 use super::unit_contract_tests::UnitManifestEntry;
 use super::InspectionPlan;
-use crate::config::{AutocorrectMode, CopConfig, CopSelection, InspectionConfig, RubyVersion};
+use crate::config::{
+    AutocorrectMode, CopConfig, CopSelection, InspectionConfig, RubyVersion, SourceEncoding,
+};
 use crate::model::Offense;
 
 #[derive(Deserialize)]
@@ -21,6 +23,8 @@ struct UnitCase {
     source: Value,
     path: String,
     ruby_version: String,
+    external_encoding: String,
+    file_mode: Option<u32>,
     config: String,
     diagnostics: Vec<ExpectedOffense>,
     autocorrect_checked: bool,
@@ -59,23 +63,33 @@ pub(super) fn check_cop(
     let configs: HashMap<String, String> =
         serde_json::from_str(&fs::read_to_string(root.join(&entry.configs)).unwrap()).unwrap();
     let cases = fs::read_to_string(root.join(&entry.cases)).unwrap();
-    let mut plans = HashMap::<String, (Arc<CopConfig>, InspectionPlan)>::new();
+    let requested_case = std::env::var("RUSTOCOP_UNIT_CASE").ok();
+    let mut plans = HashMap::<(String, String), (Arc<CopConfig>, InspectionPlan)>::new();
     let mut failures = Vec::new();
     let mut passed = 0;
     let mut total = 0;
 
     for line in cases.lines() {
         let unit: UnitCase = serde_json::from_str(line).unwrap();
+        if requested_case
+            .as_deref()
+            .is_some_and(|requested| requested != unit.id)
+        {
+            continue;
+        }
         if std::env::var_os("RUSTOCOP_UNIT_TRACE").is_some() {
             eprintln!("checking {} {}", unit.cop, unit.id);
         }
         total += 1;
         let failure_count_before = failures.len();
-        let (config, plan) = plans.entry(unit.config.clone()).or_insert_with(|| {
+        let selection = unit.selection.as_deref().unwrap_or(&unit.cop);
+        let plan_key = (unit.config.clone(), selection.to_string());
+        let (config, plan) = plans.entry(plan_key).or_insert_with(|| {
             let config = Arc::new(CopConfig::from_source(configs.get(&unit.config).unwrap()));
             let options = inspection_options(
-                unit.selection.as_deref().unwrap_or(&unit.cop),
+                selection,
                 &unit.ruby_version,
+                &unit.external_encoding,
                 config.clone(),
                 AutocorrectMode::None,
             );
@@ -84,21 +98,30 @@ pub(super) fn check_cop(
         });
         let original = source_bytes(&unit.source);
         let decoded = DecodedSource::from_bytes(&original).unwrap();
+        let materialized_path = materialize_file_metadata(&unit, &original);
+        let inspection_path = materialized_path
+            .as_deref()
+            .and_then(Path::to_str)
+            .unwrap_or(&unit.path);
         let diagnostic_options = inspection_options(
             unit.selection.as_deref().unwrap_or(&unit.cop),
             &unit.ruby_version,
+            &unit.external_encoding,
             config.clone(),
             AutocorrectMode::None,
         );
-        let (offenses, _) = plan.inspect_content(&unit.path, decoded.as_str(), &diagnostic_options);
+        let (offenses, _) =
+            plan.inspect_content(inspection_path, decoded.as_str(), &diagnostic_options);
         let actual = offenses.iter().map(expected_offense).collect::<Vec<_>>();
         if actual != unit.diagnostics {
             failures.push(ContractFailure {
                 cop: unit.cop.clone(),
                 kind: "diagnostics",
                 detail: format!(
-                    "{} {} diagnostics\nexpected: {:?}\nactual:   {:?}",
-                    unit.cop, unit.id, unit.diagnostics, actual
+                    "{} {} diagnostics\n{}",
+                    unit.cop,
+                    unit.id,
+                    diagnostic_diff(&unit.diagnostics, &actual),
                 ),
             });
         }
@@ -109,6 +132,8 @@ pub(super) fn check_cop(
                 plan,
                 &decoded,
                 &original,
+                inspection_path,
+                &offenses,
                 AutocorrectMode::All,
                 &unit.autocorrect_all,
                 unit.autocorrect_all_error.as_deref(),
@@ -120,17 +145,38 @@ pub(super) fn check_cop(
                 plan,
                 &decoded,
                 &original,
+                inspection_path,
+                &offenses,
                 AutocorrectMode::Safe,
                 &unit.autocorrect_safe,
                 unit.autocorrect_safe_error.as_deref(),
                 &mut failures,
             );
         }
+        if let Some(path) = materialized_path {
+            let _ = fs::remove_dir_all(path.parent().unwrap_or(&path));
+        }
         if failures.len() == failure_count_before {
             passed += 1;
         }
     }
     (cop.to_string(), failures, passed, total, started.elapsed())
+}
+
+fn diagnostic_diff(expected: &[ExpectedOffense], actual: &[ExpectedOffense]) -> String {
+    let first = expected
+        .iter()
+        .zip(actual)
+        .position(|(expected, actual)| expected != actual)
+        .unwrap_or_else(|| expected.len().min(actual.len()));
+    format!(
+        "first differing offense: {}\nexpected ({}): {:?}\nactual ({}): {:?}",
+        first + 1,
+        expected.len(),
+        expected.get(first),
+        actual.len(),
+        actual.get(first),
+    )
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -140,6 +186,8 @@ fn check_correction(
     plan: &InspectionPlan,
     decoded: &DecodedSource,
     original: &[u8],
+    inspection_path: &str,
+    diagnostic_offenses: &[Offense],
     mode: AutocorrectMode,
     cached: &Option<Value>,
     cached_error: Option<&str>,
@@ -152,13 +200,25 @@ fn check_correction(
         return;
     }
     let options = inspection_options(
-        unit.selection.as_deref().unwrap_or(&unit.cop),
+        correction_selection(unit, config, diagnostic_offenses, mode),
         &unit.ruby_version,
+        &unit.external_encoding,
         config.clone(),
         mode,
     );
+    let correction_plan;
+    let plan = if unit
+        .selection
+        .as_deref()
+        .is_some_and(|selection| selection.contains(','))
+    {
+        correction_plan = InspectionPlan::new(&options);
+        &correction_plan
+    } else {
+        plan
+    };
     let (_, corrected, actual_error) =
-        plan.inspect_content_with_corrections(&unit.path, decoded.as_str(), &options);
+        plan.inspect_content_with_corrections(inspection_path, decoded.as_str(), &options);
     let actual_error = actual_error.map(|error| error.as_str());
     let actual = decoded.restore(&corrected);
     let expected = expected_correction(cached, &unit.autocorrect_all, original);
@@ -172,8 +232,12 @@ fn check_correction(
             cop: unit.cop.clone(),
             kind: mode_name,
             detail: format!(
-                "{} {} {mode_name} error\nexpected: {:?}\nactual:   {:?}",
-                unit.cop, unit.id, cached_error, actual_error
+                "{} {} {mode_name} error\nexpected: {:?}\nactual:   {:?}\nterminal source: {:?}",
+                unit.cop,
+                unit.id,
+                cached_error,
+                actual_error,
+                String::from_utf8_lossy(&actual)
             ),
         });
     } else if actual != expected {
@@ -181,19 +245,103 @@ fn check_correction(
             cop: unit.cop.clone(),
             kind: mode_name,
             detail: format!(
-                "{} {} {mode_name} correction\nexpected: {:?}\nactual:   {:?}",
+                "{} {} {mode_name} correction\n{}",
                 unit.cop,
                 unit.id,
-                String::from_utf8_lossy(&expected),
-                String::from_utf8_lossy(&actual)
+                correction_diff(&expected, &actual),
             ),
         });
     }
 }
 
+fn correction_diff(expected: &[u8], actual: &[u8]) -> String {
+    let expected = String::from_utf8_lossy(expected);
+    let actual = String::from_utf8_lossy(actual);
+    let expected_lines = expected.split_inclusive('\n').collect::<Vec<_>>();
+    let actual_lines = actual.split_inclusive('\n').collect::<Vec<_>>();
+    let first = expected_lines
+        .iter()
+        .zip(&actual_lines)
+        .position(|(expected, actual)| expected != actual)
+        .unwrap_or_else(|| expected_lines.len().min(actual_lines.len()));
+    let start = first.saturating_sub(2);
+    let end = (first + 3).max(start + 1);
+    let context = |lines: &[&str]| {
+        lines
+            .iter()
+            .enumerate()
+            .skip(start)
+            .take(end.saturating_sub(start))
+            .map(|(index, line)| format!("{:>5}: {line:?}", index + 1))
+            .collect::<Vec<_>>()
+            .join("\n")
+    };
+    format!(
+        "first differing line: {}\nexpected ({} bytes):\n{}\nactual ({} bytes):\n{}",
+        first + 1,
+        expected.len(),
+        context(&expected_lines),
+        actual.len(),
+        context(&actual_lines),
+    )
+}
+
+fn correction_selection<'a>(
+    unit: &'a UnitCase,
+    config: &CopConfig,
+    diagnostic_offenses: &'a [Offense],
+    mode: AutocorrectMode,
+) -> &'a str {
+    let selected = unit
+        .selection
+        .as_deref()
+        .unwrap_or(&unit.cop)
+        .split(',')
+        .map(str::trim)
+        .find(|cop| mode.enabled_for(config, cop))
+        .unwrap_or(&unit.cop);
+    if diagnostic_offenses
+        .iter()
+        .any(|offense| offense.cop_name == selected && offense.correctable)
+    {
+        return selected;
+    }
+    diagnostic_offenses
+        .iter()
+        .find(|offense| {
+            offense.correctable
+                && unit
+                    .selection
+                    .as_deref()
+                    .unwrap_or(&unit.cop)
+                    .split(',')
+                    .map(str::trim)
+                    .any(|cop| cop == offense.cop_name && mode.enabled_for(config, cop))
+        })
+        .map_or(selected, |offense| offense.cop_name.as_str())
+}
+
+fn materialize_file_metadata(unit: &UnitCase, source: &[u8]) -> Option<std::path::PathBuf> {
+    let mode = unit.file_mode?;
+    let file_name = Path::new(&unit.path).file_name()?;
+    let directory = std::env::temp_dir()
+        .join(format!("rustocop-unit-contracts-{}", std::process::id()))
+        .join(&unit.id);
+    fs::create_dir_all(&directory).ok()?;
+    let path = directory.join(file_name);
+    fs::write(&path, source).ok()?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(&path, fs::Permissions::from_mode(mode)).ok()?;
+    }
+    Some(path)
+}
+
 pub(super) fn inspection_options(
     cop: &str,
     ruby_version: &str,
+    external_encoding: &str,
     config: Arc<CopConfig>,
     autocorrect: AutocorrectMode,
 ) -> InspectionConfig {
@@ -201,6 +349,7 @@ pub(super) fn inspection_options(
         autocorrect,
         cops: CopSelection::only(cop),
         target_ruby_version: RubyVersion::parse(ruby_version).unwrap(),
+        source_encoding: SourceEncoding::parse(external_encoding),
         cop_config: config,
     }
 }

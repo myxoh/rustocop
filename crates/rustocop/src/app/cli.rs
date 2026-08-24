@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use crate::config::{
     AutocorrectMode, CopConfig, CopSelection, InspectionConfig, Parallelism, RubyVersion,
-    RunOptions,
+    RunOptions, SourceEncoding,
 };
 
 pub(super) enum Command {
@@ -26,6 +26,7 @@ pub(super) fn parse_args(mut args: Vec<String>) -> Result<Command, String> {
             autocorrect: AutocorrectMode::None,
             cops: CopSelection::default_enabled(),
             target_ruby_version: RubyVersion::default(),
+            source_encoding: SourceEncoding::Utf8,
             cop_config: Arc::new(CopConfig::default()),
         },
     };

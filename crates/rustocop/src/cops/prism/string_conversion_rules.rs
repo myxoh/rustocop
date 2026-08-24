@@ -18,7 +18,7 @@ fn string_hash_keys(node: &ruby_prism::AssocNode<'_>, context: &mut CopContext<'
             "Prefer symbols instead of strings as hash keys.",
             key.location(),
             key.location(),
-            ruby_symbol_inspect(context.source_file().node(&key)),
+            ruby_symbol_inspect(context.path()),
         );
         return;
     }
