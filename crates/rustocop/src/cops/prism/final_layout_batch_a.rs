@@ -14,7 +14,6 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
         custom("Layout/CommentIndentation", comment_indentation),
         Box::new(ElseAlignment),
         Box::new(AccessModifierIndentation),
-        custom("Layout/MultilineHashBraceLayout", hash_brace_layout),
         Box::new(CaseIndentation),
     ];
     cops.extend(registry::cops());
@@ -68,17 +67,6 @@ fn leading_comment_space(context: &mut CopContext<'_, '_>) {
     }
 }
 
-fn array_brace_layout(context: &mut CopContext<'_, '_>) {
-    brace_layout(context, '[', ']');
-}
-
-fn hash_brace_layout(context: &mut CopContext<'_, '_>) {
-    brace_layout(context, '{', '}');
-}
-
-fn method_call_brace_layout(context: &mut CopContext<'_, '_>) {
-    brace_layout(context, '(', ')');
-}
 
 struct MultilineMethodDefinitionBraceLayout;
 
@@ -183,26 +171,6 @@ fn closes_immediately_after_heredoc(source: &str, closing: usize) -> bool {
     source[..closing_line]
         .lines()
         .any(|line| line.contains("<<") && line.contains(preceding))
-}
-
-fn brace_layout(context: &mut CopContext<'_, '_>, open: char, close: char) {
-    let style = context.policy().enforced_style("symmetrical").to_string();
-    let lines = context.source_file().lines().collect::<Vec<_>>();
-    for window in lines.windows(2) {
-        if !window[0].1.trim_end().ends_with(open) || window[1].1.trim() == close.to_string() {
-            continue;
-        }
-        if matches!(style.as_str(), "symmetrical" | "new_line")
-            && lines.iter().any(|(_, line)| {
-                line.trim_end().ends_with(close) && line.trim() != close.to_string()
-            })
-        {
-            context.report(
-                "Closing brace must be on a new line.",
-                window[0].0..window[1].0 + window[1].1.len(),
-            );
-        }
-    }
 }
 
 fn align_continuation(context: &mut CopContext<'_, '_>) {

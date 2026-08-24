@@ -13,21 +13,21 @@ cases, and configuration branches that the projects do not exercise.
 ## Latest realistic status
 
 The latest complete checkpoint was generated at
-`2026-08-23T22:35:26-04:00` from worktree native binary SHA-256
-`ae260c2476fd87fb7b0b0ae7288a6315962af23bdb6bb9a0ac6f7dd1e881095e`.
+`2026-08-23T23:47:05-04:00` from worktree native binary SHA-256
+`20c89920eb40516eeabd285def50104cf443c3e7ae9f8e3cd7d39f0128dc73d4`.
 The stored RuboCop reference has SHA-256
-`64c53e1870f8ce5dcf3d8eb4b5f82868779000d915d59200c607c15b7676a033`.
-After excluding the 43 intentionally pending cops, its active-cop slice reports:
+`e4a929416f04cd6ef9c249cbeae65e89af41fa40cf3c0201fab47083e1825d07`.
+After excluding the 38 intentionally pending cops, its active-cop slice reports:
 
 | Classification | Complete checkpoint |
 | --- | ---: |
-| Project-exact | 317 |
+| Project-exact | 322 |
 | Exact but dormant | 53 |
 | Mismatching | 192 |
 | Rust crash | 0 |
 | RuboCop gate error | 1 |
 
-Among the 509 exercised cops, 317 are exact (62.3%). The ten cops restored in
+Among the 514 exercised cops, 322 are exact (62.6%). The five cops restored in
 this iteration pass every captured fixture and are project-exact across all 50
 pinned repositories.
 `Style/ClassAndModuleChildren` still triggers a RuboCop 1.87 error on Puppet.

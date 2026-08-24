@@ -222,6 +222,7 @@ cop_modules!(
     restored_structural_cops,
     restored_layout_indentation,
     restored_layout_line_breaks,
+    restored_multiline_delimiters,
     return_nil_predicate_rules,
     ruby2_keywords_rules,
     lexical_rules,

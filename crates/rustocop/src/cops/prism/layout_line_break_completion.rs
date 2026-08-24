@@ -2,7 +2,7 @@ use super::source_syntax::{matching_delimiter, top_level_elements};
 use super::*;
 
 define_cops! {
-    MultilineHashKeyLineBreaks => "Layout/MultilineHashKeyLineBreaks" => source(multiline_hash_key_line_breaks),
+    MultilineHashKeyLineBreaks => "Layout/MultilineHashKeyLineBreaks" => any_node(multiline_hash_key_line_breaks),
     SingleLineBlockChain => "Layout/SingleLineBlockChain" => source(single_line_block_chain),
     ConditionPosition => "Layout/ConditionPosition" => any_node(condition_position),
 }
@@ -238,63 +238,64 @@ fn leading_code_offset(source: &str, mut start: usize, end: usize) -> usize {
     start
 }
 
-fn multiline_hash_key_line_breaks(context: &mut CopContext<'_, '_>) {
-    let source = context.source();
-    for opening in source
-        .bytes()
-        .enumerate()
-        .filter_map(|(offset, byte)| (byte == b'{').then_some(offset))
-        .collect::<Vec<_>>()
-    {
-        let Some(closing) = matching_delimiter(source, opening, b'{', b'}') else {
-            continue;
-        };
-        if !source[opening..=closing].contains('\n') {
-            continue;
-        }
-        let elements = top_level_elements(source, opening + 1, closing);
-        let element_lines = elements
-            .iter()
-            .map(|element| {
-                source[..element.start]
-                    .bytes()
-                    .filter(|byte| *byte == b'\n')
-                    .count()
-            })
-            .collect::<std::collections::BTreeSet<_>>();
-        if element_lines.len() <= 1 {
-            continue;
-        }
-        for (index, pair) in elements.windows(2).enumerate() {
-            let previous = &pair[0];
-            let current = &pair[1];
-            if context.config_bool("AllowMultilineFinalElement", false)
-                && index + 1 == elements.len() - 1
+fn multiline_hash_key_line_breaks(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
+    let Some(hash) = node.as_hash_node() else {
+        return;
+    };
+    let location = hash.location();
+    let elements = hash.elements().iter().collect::<Vec<_>>();
+    let file = context.source_file();
+    if file.same_line(location.start_offset(), location.end_offset()) {
+        return;
+    }
+    let Some(first) = elements.first() else { return };
+    let Some(last) = elements.last() else { return };
+    let allow_multiline_final = context.config_bool("AllowMultilineFinalElement", false);
+    let first_line = file.line_start(first.location().start_offset());
+    let last_line = if allow_multiline_final {
+        file.line_start(last.location().start_offset())
+    } else {
+        file.line_start(last.location().end_offset().saturating_sub(1))
+    };
+    if first_line == last_line {
+        return;
+    }
+    let mut last_seen_line = None;
+    let element_count = elements.len();
+    for (index, element) in elements.iter().enumerate() {
+        let element_location = element.location();
+        let element_first_line = file.line_start(element_location.start_offset());
+        if last_seen_line.is_some_and(|line| line >= element_first_line) {
+            let message = "Each key in a multi-line hash must start on a separate line.";
+            if allow_multiline_final
+                && index + 2 == element_count
+                && element_first_line
+                    != file.line_start(element_location.end_offset().saturating_sub(1))
             {
-                continue;
+                let final_start = elements[index + 1].location().start_offset();
+                context.replace_many(
+                    message,
+                    &element_location,
+                    vec![
+                        (
+                            element_location.start_offset()..element_location.start_offset(),
+                            "\n".to_string(),
+                        ),
+                        (final_start..final_start, "\n".to_string()),
+                    ],
+                );
+            } else {
+                context.insert(
+                    message,
+                    &element_location,
+                    element_location.start_offset(),
+                    "\n",
+                );
             }
-            let start = current.start + source[current.clone()].len()
-                - source[current.clone()].trim_start().len();
-            if source[previous.end..start].contains('\n') {
-                continue;
-            }
-            let end = current.end
-                - (source[current.clone()].len() - source[current.clone()].trim_end().len());
-            let mut edits = vec![(start..start, "\n".to_string())];
-            if context.config_bool("AllowMultilineFinalElement", false)
-                && index + 2 == elements.len() - 1
-                && source[current.clone()].contains('\n')
-            {
-                let final_element = &elements[index + 2];
-                let final_start = final_element.start + source[final_element.clone()].len()
-                    - source[final_element.clone()].trim_start().len();
-                edits.push((final_start..final_start, "\n".to_string()));
-            }
-            context.replace_many(
-                "Each key in a multi-line hash must start on a separate line.",
-                start..end,
-                edits,
-            );
+        } else {
+            last_seen_line = Some(file.line_start(
+                element_location.end_offset().saturating_sub(1),
+            ));
         }
     }
 }

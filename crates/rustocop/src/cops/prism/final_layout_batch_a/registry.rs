@@ -1,9 +1,8 @@
-use super::super::catalog_cop::{custom, replace, report};
+use super::super::catalog_cop::{custom, replace};
 use super::*;
 
 pub(super) fn cops() -> Vec<Box<dyn Cop>> {
     vec![
-        custom("Layout/MultilineArrayBraceLayout", array_brace_layout),
         Box::new(EmptyLineAfterGuardClause),
         custom(
             "Layout/LineEndStringConcatenationIndentation",
@@ -21,15 +20,6 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
             "\n .",
             "\n.",
             "Line continuation should not have leading space.",
-        ),
-        custom(
-            "Layout/MultilineMethodCallBraceLayout",
-            method_call_brace_layout,
-        ),
-        report(
-            "Layout/MultilineBlockLayout",
-            " { |",
-            "Multi-line block argument must be on a separate line.",
         ),
     ]
 }

@@ -54,6 +54,8 @@ classification_labels = {
   "rubocop_error" => "RuboCop gate error"
 }.freeze
 counts = results.values.map { |entry| entry.fetch("classification") }.tally
+rust_source = report["rust_commit"] ||
+              "uncommitted native #{report.fetch("native_sha256")[0, 12]}"
 
 summary_rows = classification_labels.filter_map do |classification, label|
   count = counts.fetch(classification, 0)
@@ -81,7 +83,7 @@ support = <<~MARKDOWN
   fixture cannot establish general compatibility. Autocorrection and
   configuration branches require their own differential fixtures.
 
-  - Rust source: `#{report.fetch("rust_commit")}`
+  - Rust source: `#{rust_source}`
   - Native SHA-256: `#{report.fetch("native_sha256")}`
   - Active cops: #{registry.length}
   - Intentionally pending cops: #{Rustocop::CompatibilityStatus.load(root: ROOT).intentionally_pending_cops.length}
@@ -133,7 +135,7 @@ remaining = <<~MARKDOWN
   between aggregate offense counts. A cop can have equal counts and still have a
   nonzero gap because its message, severity, path, or source range differs.
 
-  - Rust source: `#{report.fetch("rust_commit")}`
+  - Rust source: `#{rust_source}`
   - Unresolved cops: #{unresolved.length}
 
   | Cop | Status | Rustocop | RuboCop | Exact | Signature gap | Project regression evidence |

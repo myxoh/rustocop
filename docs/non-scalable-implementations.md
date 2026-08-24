@@ -1,17 +1,17 @@
 # Non-scalable cop implementations
 
-`updated_at: 2026-08-23T22:35:26-04:00`
+`updated_at: 2026-08-23T23:47:05-04:00`
 
 This is the catalog for category C: cops whose current implementation appears
 too narrow to generalize from the fixture corpus to arbitrary Ruby projects.
 It is an implementation-risk register, not a list of every cop that currently
 mismatches RuboCop.
 
-All 32 category-C cops in this catalog are intentionally pending. A further 9
+All 27 category-C cops in this catalog are intentionally pending. A further 9
 project-inexact cops and two RuboCop-reference blockers are also pending, for a
-total of 43; they are absent from
+total of 38; they are absent from
 the active registry, qualification corpus, compatibility evidence, and fixture
-suite. Sixty-one cops have now returned through structural rewrites and the full
+suite. Sixty-six cops have now returned through structural rewrites and the full
 fixture gate, with project status recorded separately. The machine-readable source of truth is
 [`intentionally_pending_cops.yml`](../spec/upstream/rubocop-1.87.0/intentionally_pending_cops.yml).
 Their old implementation source remains only as rewrite reference.
@@ -24,7 +24,7 @@ reference output. On that original ten-project corpus, the resulting 512-cop
 active set had 402 exercised project-exact cops, 110 dormant cops, and no
 mismatches or engine errors.
 
-The expanded 50-project audit at `2026-08-23T22:35:26-04:00` shows that this
+The expanded 50-project audit at `2026-08-23T23:47:05-04:00` shows that this
 withdrawal was not sufficient to make the retained implementations scalable:
 317 cops are project-exact, 53 are dormant, 192 mismatch, none crash, and one
 is blocked by a RuboCop error. Those newly exposed cops require review and
@@ -67,7 +67,6 @@ the text.
 | Cop | Fixture result | Project result | Rustocop | RuboCop | Exact | Gap |
 | --- | --- | --- | ---: | ---: | ---: | ---: |
 | `Layout/LineContinuationLeadingSpace` | mismatch 11/32 | mismatch | 0 | 49 | 0 | 49 |
-| `Layout/MultilineBlockLayout` | mismatch 7/30 | mismatch | 24,105 | 12 | 0 | 24,117 |
 | `Layout/RedundantLineBreak` | mismatch 72/118 | mismatch | 0 | 14,996 | 0 | 14,996 |
 | `Layout/SpaceAroundBlockParameters` | mismatch 19/45 | mismatch | 64 | 4 | 0 | 68 |
 | `Layout/SpaceInsideHashLiteralBraces` | mismatch 20/40 | mismatch | 130 | 1,420 | 0 | 1,550 |
@@ -95,7 +94,6 @@ on a non-empty line as a comment.
 | `Style/InlineComment` | compatible 3/3 | mismatch | 129,107 | 10,115 | 9,470 | 120,282 |
 | `Lint/ConstantResolution` | compatible 18/18 | mismatch | 111 | 544,649 | 29 | 544,702 |
 | `Lint/DuplicateRegexpCharacterClassElement` | mismatch 6/16 | mismatch | 329,911 | 99 | 0 | 330,010 |
-| `Layout/MultilineHashKeyLineBreaks` | compatible 10/10 | mismatch | 3,097 | 1,835 | 1,786 | 1,360 |
 | `Layout/SingleLineBlockChain` | compatible 9/9 | mismatch | 40,204 | 25,643 | 25,335 | 15,177 |
 | `Lint/UnusedMethodArgument` | mismatch 14/46 | mismatch | 3,902 | 1,933 | 777 | 4,281 |
 | `Naming/VariableName` | mismatch 62/118 | mismatch | 73,576 | 123 | 42 | 73,615 |
@@ -125,9 +123,6 @@ placeholder rather than coincidental behavior.
 
 | Cop | Fixture result | Project result | Rustocop | RuboCop | Exact | Gap |
 | --- | --- | --- | ---: | ---: | ---: | ---: |
-| `Layout/MultilineArrayBraceLayout` | mismatch 16/35 | mismatch | 9,440 | 43 | 0 | 9,483 |
-| `Layout/MultilineHashBraceLayout` | mismatch 16/34 | mismatch | 48,256 | 33 | 0 | 48,289 |
-| `Layout/MultilineMethodCallBraceLayout` | mismatch 22/44 | mismatch | 74,680 | 3,268 | 0 | 77,948 |
 | `Layout/LineEndStringConcatenationIndentation` | mismatch 39/59 | mismatch | 583 | 2,497 | 0 | 3,080 |
 
 Both callbacks are in

@@ -1,14 +1,14 @@
 ---
 rubocop_version: 1.87.0
 upstream_rspec:
-  examples: 25388
+  examples: 26244
   failures: 0
-  pending: 3
-captured_cases: 26177
+  pending: 5
+captured_cases: 26345
 diagnostic_baseline:
-  passed_cases: 26158
-  passing_cops: 563
-  total_cops: 563
+  passed_cases: 26344
+  passing_cops: 568
+  total_cops: 568
 fully_compatible_cops:
 - Bundler/DuplicatedGem
 - Bundler/DuplicatedGroup
@@ -80,7 +80,12 @@ fully_compatible_cops:
 - Layout/LeadingCommentSpace
 - Layout/LeadingEmptyLines
 - Layout/LineContinuationSpacing
+- Layout/MultilineArrayBraceLayout
 - Layout/MultilineArrayLineBreaks
+- Layout/MultilineBlockLayout
+- Layout/MultilineHashBraceLayout
+- Layout/MultilineHashKeyLineBreaks
+- Layout/MultilineMethodCallBraceLayout
 - Layout/MultilineMethodArgumentLineBreaks
 - Layout/MultilineMethodDefinitionBraceLayout
 - Layout/MultilineMethodParameterLineBreaks

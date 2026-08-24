@@ -1,14 +1,14 @@
 {
   "version": 1,
   "kind": "project_compatibility",
-  "updated_at": "2026-08-23T22:35:26-04:00",
+  "updated_at": "2026-08-23T23:47:05-04:00",
   "rust_commit": null,
-  "native_sha256": "ae260c2476fd87fb7b0b0ae7288a6315962af23bdb6bb9a0ac6f7dd1e881095e",
+  "native_sha256": "20c89920eb40516eeabd285def50104cf443c3e7ae9f8e3cd7d39f0128dc73d4",
   "rubocop_version": "1.87.0",
   "rubocop_reference": {
-    "path": "tmp/project-rubocop-reference-563.json.gz",
-    "sha256": "64c53e1870f8ce5dcf3d8eb4b5f82868779000d915d59200c607c15b7676a033",
-    "generated_at": "2026-08-23T22:10:02-04:00",
+    "path": "spec/compatibility_evidence/project_rubocop_reference.json.gz",
+    "sha256": "e4a929416f04cd6ef9c249cbeae65e89af41fa40cf3c0201fab47083e1825d07",
+    "generated_at": "2026-08-23T23:18:30-04:00",
     "config_sha256": "0e505e2432b2af2d479bd48d335ae5c4c18b39edf328e500157ba57bf6f6726a",
     "source": "cached"
   },
@@ -435,16 +435,46 @@
       "exact": 349,
       "classification": "mismatch"
     },
+    "Layout/MultilineArrayBraceLayout": {
+      "rustocop": 329,
+      "rubocop": 329,
+      "exact": 329,
+      "classification": "project_exact"
+    },
     "Layout/MultilineArrayLineBreaks": {
       "rustocop": 13345,
       "rubocop": 22550,
       "exact": 13010,
       "classification": "mismatch"
     },
+    "Layout/MultilineBlockLayout": {
+      "rustocop": 200,
+      "rubocop": 200,
+      "exact": 200,
+      "classification": "project_exact"
+    },
+    "Layout/MultilineHashBraceLayout": {
+      "rustocop": 250,
+      "rubocop": 250,
+      "exact": 250,
+      "classification": "project_exact"
+    },
+    "Layout/MultilineHashKeyLineBreaks": {
+      "rustocop": 3242,
+      "rubocop": 3242,
+      "exact": 3242,
+      "classification": "project_exact"
+    },
     "Layout/MultilineMethodArgumentLineBreaks": {
       "rustocop": 47523,
       "rubocop": 47523,
       "exact": 47523,
+      "classification": "project_exact"
+    },
+    "Layout/MultilineMethodCallBraceLayout": {
+      "rustocop": 4092,
+      "rubocop": 4092,
+      "exact": 4092,
       "classification": "project_exact"
     },
     "Layout/MultilineMethodDefinitionBraceLayout": {
