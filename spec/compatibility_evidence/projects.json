@@ -2,7 +2,7 @@
   "version": 1,
   "kind": "project_compatibility",
   "updated_at": "2026-08-24T06:23:45-04:00",
-  "rust_commit": null,
+  "rust_commit": "48bd3ce1dbce49f8e191a789c86bda6960a78c5d",
   "native_sha256": "c8d088ddd9eece5ff9d38398f44b23c6cbf78bc06ba7f249333dff134530f0d8",
   "rubocop_version": "1.87.0",
   "rubocop_reference": {

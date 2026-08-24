@@ -23,6 +23,7 @@ RSpec.describe "compatibility evidence report" do
       updated_at = snapshot.fetch("updated_at")
       expect { Time.iso8601(updated_at) }.not_to raise_error
       expect(updated_at).to match(/T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})\z/)
+      expect(snapshot.fetch("rust_commit")).to match(/\A[0-9a-f]{40}\z/)
     end
   end
 

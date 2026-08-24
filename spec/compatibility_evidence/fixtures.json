@@ -2,7 +2,7 @@
   "version": 1,
   "kind": "fixture_compatibility",
   "updated_at": "2026-08-24T06:27:05-04:00",
-  "rust_commit": null,
+  "rust_commit": "48bd3ce1dbce49f8e191a789c86bda6960a78c5d",
   "native_sha256": "c8d088ddd9eece5ff9d38398f44b23c6cbf78bc06ba7f249333dff134530f0d8",
   "fixture_corpus_sha256": "4d68aea48d45476538eb87561445ee59d8e4a7ded4be7b71d8f56f3e63ba7327",
   "rubocop_version": "1.87.0",
