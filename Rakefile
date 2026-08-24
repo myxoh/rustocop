@@ -33,9 +33,10 @@ namespace :fixtures do
   task :unit do
     environment = {}
     environment["RUSTOCOP_UNIT_COP"] = ENV.fetch("COP") if ENV["COP"]
+    profile = ENV["COP"] ? "fixture" : "release"
     sh environment,
        "cargo", "test", "--manifest-path", "crates/rustocop/Cargo.toml",
-       "--release", "cached_unit_contracts_match", "--", "--ignored", "--nocapture"
+       "--profile", profile, "cached_unit_contracts_match", "--", "--ignored", "--nocapture"
   end
 
   desc "Audit sequential per-cop cached-contract timings (set REPORT=path for JSON)"

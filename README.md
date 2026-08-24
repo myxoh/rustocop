@@ -350,7 +350,7 @@ bundle exec rake spec
 Run the cached controlled unit contract for only the cops being changed:
 
 ```sh
-bundle exec ruby script/verify_cop.rb Style/StringLiterals Layout/TrailingWhitespace
+ruby script/verify_cop.rb Style/StringLiterals Layout/TrailingWhitespace
 ```
 
 Run all 28,774 controlled cases, or explicitly refresh the slow RuboCop cache:

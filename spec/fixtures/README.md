@@ -23,8 +23,18 @@ already-imported controlled cases, so removed legacy layouts cannot reappear.
 Run focused contracts without starting Ruby or RuboCop:
 
 ```sh
-bundle exec ruby script/verify_cop.rb Security/Eval
+ruby script/verify_cop.rb Security/Eval
 ```
+
+Focused runs use Cargo's incremental `fixture` profile: it omits debug symbols
+to reduce relinking work while leaving the full corpus on the optimized release
+profile. On the audit machine, a one-line cop edit followed by a focused run
+dropped from 10.7 seconds in the ordinary test profile (22.9 seconds in release)
+to 2.5 seconds, including a roughly 50 ms contract check. A no-change run is
+about 0.4 seconds. The first focused run builds and caches this profile once.
+The remaining edit latency is compilation and linking of the single native
+crate; splitting every cop into a separate binary or dynamic library is not
+currently justified.
 
 Run the complete cached corpus:
 

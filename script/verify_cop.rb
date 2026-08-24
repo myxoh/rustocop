@@ -19,7 +19,7 @@ manifest = File.join(root, "crates/rustocop/Cargo.toml")
 
 cached_success = system(
   { "RUSTOCOP_UNIT_COP" => cop_names.join(",") },
-  "cargo", "test", "--manifest-path", manifest, "--release",
+  "cargo", "test", "--manifest-path", manifest, "--profile", "fixture",
   "cached_unit_contracts_match", "--", "--ignored", "--nocapture"
 )
 exit(cached_success ? 0 : 1) unless options[:live_rubocop]
