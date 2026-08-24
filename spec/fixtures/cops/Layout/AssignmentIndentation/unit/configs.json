@@ -1,4 +1,5 @@
 {
   "0a83a86db5944237": "---\nLayout/AssignmentIndentation:\n  IndentationWidth: 7\n  Enabled: true\nLayout/IndentationWidth:\n  Width: 2\n",
-  "3f95874f74ae15be": "---\nLayout/AssignmentIndentation:\n  IndentationWidth:\n  Enabled: true\nLayout/IndentationWidth:\n  Width: 2\n"
+  "3f95874f74ae15be": "---\nLayout/AssignmentIndentation:\n  IndentationWidth:\n  Enabled: true\nLayout/IndentationWidth:\n  Width: 2\n",
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n"
 }

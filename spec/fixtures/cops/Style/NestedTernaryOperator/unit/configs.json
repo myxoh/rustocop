@@ -1,3 +1,4 @@
 {
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
   "a6c4d38e5f6f8b30": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/NestedTernaryOperator:\n  Description: Use one expression per branch in a ternary operator.\n  StyleGuide: \"#no-nested-ternary\"\n  Enabled: true\n  VersionAdded: '0.9'\n  VersionChanged: '0.86'\n  AutoCorrect: always\n"
 }

@@ -1,3 +1,4 @@
 {
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
   "8823622de536f6da": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/AutoResourceCleanup:\n  Description: Suggests the usage of an auto resource cleanup version of a method\n    (if available).\n  Enabled: true\n  VersionAdded: '0.30'\n  AutoCorrect: always\n"
 }

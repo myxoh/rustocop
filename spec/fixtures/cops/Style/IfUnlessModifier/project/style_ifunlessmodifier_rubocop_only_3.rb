@@ -1,1 +1,0 @@
-      return items if Feature.enabled?(:disable_anonymous_project_search, type: :ops) && current_user.nil? # rubocop:disable Gitlab/FeatureFlagWithoutActor -- feature flag is for anonymous users so no actor available

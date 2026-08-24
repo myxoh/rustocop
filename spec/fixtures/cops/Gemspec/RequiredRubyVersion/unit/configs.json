@@ -1,5 +1,6 @@
 {
   "10603c586803649a": "---\nAllCops:\n  TargetRubyVersion: 3.3\nGemspec/RequiredRubyVersion:\n  Description: Checks that `required_ruby_version` of gemspec is specified and equal\n    to `TargetRubyVersion` of .rubocop.yml.\n  Enabled: true\n  Severity: warning\n  VersionAdded: '0.52'\n  VersionChanged: '1.40'\n  Include:\n  - \"**/*.gemspec\"\n  AutoCorrect: always\n",
   "2f33c9345df9e0f0": "---\nAllCops:\n  TargetRubyVersion: 3.4\nGemspec/RequiredRubyVersion:\n  Description: Checks that `required_ruby_version` of gemspec is specified and equal\n    to `TargetRubyVersion` of .rubocop.yml.\n  Enabled: true\n  Severity: warning\n  VersionAdded: '0.52'\n  VersionChanged: '1.40'\n  Include:\n  - \"**/*.gemspec\"\n  AutoCorrect: always\n",
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
   "aa112a6b9bc9730f": "---\nAllCops:\n  TargetRubyVersion: 2.7\nGemspec/RequiredRubyVersion:\n  Description: Checks that `required_ruby_version` of gemspec is specified and equal\n    to `TargetRubyVersion` of .rubocop.yml.\n  Enabled: true\n  Severity: warning\n  VersionAdded: '0.52'\n  VersionChanged: '1.40'\n  Include:\n  - \"**/*.gemspec\"\n  AutoCorrect: always\n"
 }

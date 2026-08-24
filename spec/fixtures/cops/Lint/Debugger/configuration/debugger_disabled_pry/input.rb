@@ -1,2 +1,0 @@
-binding.pry
-binding.irb

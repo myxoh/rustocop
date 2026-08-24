@@ -137,7 +137,7 @@ bundle exec ruby script/audit_project_parity.rb \
 ```
 
 Turn newly observed signature differences into minimized, provenance-backed
-fixtures before changing implementations:
+cop-owned unit contracts before changing implementations:
 
 ```sh
 bundle exec ruby script/isolate_project_parity_mismatches.rb \

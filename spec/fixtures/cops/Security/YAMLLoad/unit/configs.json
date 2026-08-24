@@ -1,5 +1,7 @@
 {
   "6bde25df8319ac97": "---\nAllCops:\n  TargetRubyVersion: 2.7\nSecurity/YAMLLoad:\n  Description: Prefer usage of `YAML.safe_load` over `YAML.load` due to potential\n    security issues. See reference for more information.\n  References:\n  - https://ruby-doc.org/stdlib-2.7.0/libdoc/yaml/rdoc/YAML.html#module-YAML-label-Security\n  Enabled: true\n  VersionAdded: '0.47'\n  SafeAutoCorrect: false\n  AutoCorrect: always\n",
+  "75662d3613dc5ee7": "---\nAllCops:\n  TargetRubyVersion: '3.0'\n",
   "a1e1a5fb67aa81ab": "---\nAllCops:\n  TargetRubyVersion: 3.0\nSecurity/YAMLLoad:\n  Description: Prefer usage of `YAML.safe_load` over `YAML.load` due to potential\n    security issues. See reference for more information.\n  References:\n  - https://ruby-doc.org/stdlib-2.7.0/libdoc/yaml/rdoc/YAML.html#module-YAML-label-Security\n  Enabled: true\n  VersionAdded: '0.47'\n  SafeAutoCorrect: false\n  AutoCorrect: always\n",
+  "f3f34fc6574df394": "---\nAllCops:\n  TargetRubyVersion: '3.1'\n",
   "fb2f0e184db28819": "---\nAllCops:\n  TargetRubyVersion: 3.1\nSecurity/YAMLLoad:\n  Description: Prefer usage of `YAML.safe_load` over `YAML.load` due to potential\n    security issues. See reference for more information.\n  References:\n  - https://ruby-doc.org/stdlib-2.7.0/libdoc/yaml/rdoc/YAML.html#module-YAML-label-Security\n  Enabled: true\n  VersionAdded: '0.47'\n  SafeAutoCorrect: false\n  AutoCorrect: always\n"
 }

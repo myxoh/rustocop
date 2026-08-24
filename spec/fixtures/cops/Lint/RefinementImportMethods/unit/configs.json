@@ -1,4 +1,5 @@
 {
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
   "61d65e985bf24bff": "---\nAllCops:\n  TargetRubyVersion: 3.1\nLint/RefinementImportMethods:\n  Description: Use `Refinement#import_methods` when using `include` or `prepend` in\n    `refine` block.\n  Enabled: true\n  SafeAutoCorrect: false\n  VersionAdded: '1.27'\n  AutoCorrect: always\n",
   "f934f4ebe0149811": "---\nAllCops:\n  TargetRubyVersion: 3.0\nLint/RefinementImportMethods:\n  Description: Use `Refinement#import_methods` when using `include` or `prepend` in\n    `refine` block.\n  Enabled: true\n  SafeAutoCorrect: false\n  VersionAdded: '1.27'\n  AutoCorrect: always\n"
 }

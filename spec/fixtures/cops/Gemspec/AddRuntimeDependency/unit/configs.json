@@ -1,3 +1,4 @@
 {
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
   "d1afd5978b34bb16": "---\nAllCops:\n  TargetRubyVersion: 2.7\nGemspec/AddRuntimeDependency:\n  Description: Prefer `add_dependency` over `add_runtime_dependency`.\n  StyleGuide: \"#add_dependency_vs_add_runtime_dependency\"\n  References:\n  - https://github.com/ruby/rubygems/issues/7799#issuecomment-2192720316\n  Enabled: true\n  VersionAdded: '1.65'\n  Include:\n  - \"**/*.gemspec\"\n  AutoCorrect: always\n"
 }

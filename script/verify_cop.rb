@@ -40,37 +40,9 @@ command = [
 ]
 success = cached_success && system(environment, *command)
 
-fixture_test_source = File.read(File.join(root, "crates/rustocop/src/engine/fixture_tests.rs"))
-native_tests = fixture_test_source.scan(
-  /fixture_test!\(\s*(\w+),\s*"[^"]+",\s*"[^"]+",\s*"([^"]+)"/m
-).select do |_test_name, selection|
-  !(selection.split(",") & cop_names).empty?
-end
-native_tests.each do |test_name, _selection|
-  native_success = system(
-    "cargo", "test", "--manifest-path", manifest,
-    "engine::fixture_tests::#{test_name}", "--", "--exact"
-  )
-  success &&= native_success
-end
-
-focused_specs = %w[
-  spec/configuration_parity_regressions_spec.rb
-  spec/cop_end_to_end_fixtures_spec.rb
-  spec/hardening_spec.rb
-  spec/integration/prism_compatibility_spec.rb
-  spec/project_parity_regressions_spec.rb
-  spec/project_parity_mismatches_spec.rb
-].map { |path| File.join(root, path) }
-rspec = Gem.bin_path("rspec-core", "rspec")
-cop_names.each do |cop_name|
-  local_success = system(environment, RbConfig.ruby, rspec, *focused_specs, "--tag", "cop:#{cop_name}")
-  success &&= local_success
-end
-
 if success
   subject = cop_names.length == 1 ? "#{cop_names.first} passes" : "#{cop_names.join(', ')} pass"
-  puts "#{subject} every captured upstream and selected local fixture case."
+  puts "#{subject} every cached unit contract and freshly captured upstream case."
   puts "Run the 50-project parity audit before calling it project-exact."
 else
   if File.file?(report)

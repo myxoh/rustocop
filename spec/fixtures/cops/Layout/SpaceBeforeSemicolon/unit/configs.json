@@ -1,5 +1,6 @@
 {
   "51e1121edaa2bc6c": "---\nLayout/SpaceInsideBlockBraces:\n  Enabled: true\n  EnforcedStyle: space\nLayout/SpaceBeforeSemicolon:\n  Enabled: true\n",
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
   "727065f26174e9fa": "---\nLayout/SpaceInsideBlockBraces:\n  Enabled: true\n  EnforcedStyle: no_space\nLayout/SpaceBeforeSemicolon:\n  Enabled: true\n",
   "a366f85d6ac1c41e": "---\nLayout/SpaceInsideBlockBraces: {}\nLayout/SpaceBeforeSemicolon:\n  Enabled: true\n"
 }

@@ -1,3 +1,4 @@
 {
-  "356b4bdd12f3ffe6": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/EmptyLambdaParameter:\n  Description: Omit parens for empty lambda parameters.\n  Enabled: true\n  VersionAdded: '0.52'\n  AutoCorrect: always\n"
+  "356b4bdd12f3ffe6": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/EmptyLambdaParameter:\n  Description: Omit parens for empty lambda parameters.\n  Enabled: true\n  VersionAdded: '0.52'\n  AutoCorrect: always\n",
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n"
 }

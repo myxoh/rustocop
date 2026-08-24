@@ -1,4 +1,5 @@
 {
   "1680b3e1a2e5f12b": "---\nLayout/ArrayAlignment:\n  EnforcedStyle: with_first_element\n  Enabled: true\nLayout/IndentationWidth:\n  Width: 2\n",
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
   "97ada57881b4a6a8": "---\nLayout/ArrayAlignment:\n  EnforcedStyle: with_fixed_indentation\n  Enabled: true\nLayout/IndentationWidth:\n  Width: 2\n"
 }

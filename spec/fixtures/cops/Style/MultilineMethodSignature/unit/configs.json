@@ -1,6 +1,7 @@
 {
   "25b14e5bfdff8b9c": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/MultilineMethodSignature:\n  Description: Avoid multi-line method signatures.\n  Enabled: true\n  VersionAdded: '0.59'\n  VersionChanged: '1.7'\n  AutoCorrect: always\nLayout/LineLength:\n  Max: 25\n",
   "338b69e180a18a91": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/MultilineMethodSignature:\n  Description: Avoid multi-line method signatures.\n  Enabled: true\n  VersionAdded: '0.59'\n  VersionChanged: '1.7'\n  AutoCorrect: always\nLayout/LineLength:\n  Enabled: false\n",
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
   "c4b61adb66b232e6": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/MultilineMethodSignature:\n  Description: Avoid multi-line method signatures.\n  Enabled: true\n  VersionAdded: '0.59'\n  VersionChanged: '1.7'\n  AutoCorrect: always\nLayout/LineLength:\n  Max: 5\n",
   "d0cb34877d8ed17f": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/MultilineMethodSignature:\n  Description: Avoid multi-line method signatures.\n  Enabled: true\n  VersionAdded: '0.59'\n  VersionChanged: '1.7'\n  AutoCorrect: always\n"
 }

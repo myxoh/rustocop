@@ -1,4 +1,5 @@
 {
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
   "df5c9e35b18c7929": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/RedundantInitialize:\n  Description: Checks for redundant `initialize` methods.\n  Enabled: true\n  AutoCorrect: always\n  Safe: false\n  AllowComments: true\n  VersionAdded: '1.27'\n  VersionChanged: '1.61'\n",
   "faf84755e9138746": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/RedundantInitialize:\n  Description: Checks for redundant `initialize` methods.\n  Enabled: true\n  AutoCorrect: always\n  Safe: false\n  AllowComments: false\n  VersionAdded: '1.27'\n  VersionChanged: '1.61'\n"
 }

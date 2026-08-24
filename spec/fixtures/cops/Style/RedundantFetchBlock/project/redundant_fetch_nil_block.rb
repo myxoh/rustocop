@@ -1,1 +1,0 @@
-params.fetch(:foo) { nil }

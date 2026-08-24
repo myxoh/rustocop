@@ -1,2 +1,0 @@
-cop	line	column	last_line	last_column	correctable	corrected	message
-Style/StringLiterals	5	50	5	52	true	true	Prefer single-quoted strings when you don't need string interpolation or special symbols.

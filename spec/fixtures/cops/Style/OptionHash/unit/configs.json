@@ -1,5 +1,6 @@
 {
   "26f7e59d233b0da5": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/OptionHash:\n  Description: Don't use option hashes when you can use keyword arguments.\n  StyleGuide: \"#keyword-arguments-vs-option-hashes\"\n  Enabled: true\n  VersionAdded: '0.33'\n  VersionChanged: '0.34'\n  SuspiciousParamNames:\n  - options\n  - config\n  Allowlist: []\n  AutoCorrect: always\n",
   "288be41d40dc9413": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/OptionHash:\n  Description: Don't use option hashes when you can use keyword arguments.\n  StyleGuide: \"#keyword-arguments-vs-option-hashes\"\n  Enabled: true\n  VersionAdded: '0.33'\n  VersionChanged: '0.34'\n  SuspiciousParamNames:\n  - options\n  - opts\n  - args\n  - params\n  - parameters\n  Allowlist:\n  - to_json\n  AutoCorrect: always\n",
+  "77c39c64bd272713": "---\nAllCops:\n  TargetRubyVersion: '2.7'\n",
   "c52baaac163a818d": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/OptionHash:\n  Description: Don't use option hashes when you can use keyword arguments.\n  StyleGuide: \"#keyword-arguments-vs-option-hashes\"\n  Enabled: true\n  VersionAdded: '0.33'\n  VersionChanged: '0.34'\n  SuspiciousParamNames:\n  - options\n  Allowlist: []\n  AutoCorrect: always\n"
 }

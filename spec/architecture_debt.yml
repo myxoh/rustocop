@@ -60,4 +60,3 @@ crates/rustocop/src/cops/prism/structural_forwarding_completion.rs: 517
 crates/rustocop/src/cops/prism/style_compat.rs: 385
 crates/rustocop/src/cops/prism/style_metadata_completion.rs: 373
 crates/rustocop/src/cops/text/layout.rs: 960
-crates/rustocop/src/engine/fixture_tests.rs: 548

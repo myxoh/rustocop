@@ -1,3 +1,4 @@
 {
+  "77c39c64bd272713": "---\nAllCops:\n  TargetRubyVersion: '2.7'\n",
   "e9d7cc7495359bd1": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/WhenThen:\n  Description: Use when x then ... for one-line cases.\n  StyleGuide: \"#no-when-semicolons\"\n  Enabled: true\n  VersionAdded: '0.9'\n  AutoCorrect: always\n"
 }

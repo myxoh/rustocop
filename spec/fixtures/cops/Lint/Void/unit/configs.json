@@ -1,5 +1,6 @@
 {
   "1aec72157a74b95f": "---\nLint/Void:\n  CheckForMethodsWithNoSideEffects: true\n  Enabled: true\n",
   "4d526ef9f1448d72": "---\nLint/Void:\n  CheckForMethodsWithNoSideEffects: false\n  Enabled: true\n",
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
   "78909669e0ea6120": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/Void:\n  Description: Possible use of operator/literal/variable in void context.\n  Enabled: true\n  AutoCorrect: always\n  VersionAdded: '0.9'\n  VersionChanged: '1.61'\n  CheckForMethodsWithNoSideEffects: false\n"
 }

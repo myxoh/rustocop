@@ -1,3 +1,5 @@
 {
-  "2e6f18cbbcc76173": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/DuplicateElsifCondition:\n  Description: Do not repeat conditions used in if `elsif`.\n  Enabled: true\n  VersionAdded: '0.88'\n  AutoCorrect: always\n"
+  "2e6f18cbbcc76173": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/DuplicateElsifCondition:\n  Description: Do not repeat conditions used in if `elsif`.\n  Enabled: true\n  VersionAdded: '0.88'\n  AutoCorrect: always\n",
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
+  "77c39c64bd272713": "---\nAllCops:\n  TargetRubyVersion: '2.7'\n"
 }

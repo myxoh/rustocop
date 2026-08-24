@@ -1,5 +1,0 @@
-cop	line	column	last_line	last_column	correctable	corrected	message
-Layout/SpaceInsideBlockBraces	1	7	1	7	true	true	Space missing inside {.
-Layout/SpaceInsideBlockBraces	1	11	1	11	true	true	Space missing inside }.
-Layout/SpaceInsideBlockBraces	3	6	3	7	true	true	Space between { and | missing.
-Layout/SpaceInsideBlockBraces	6	7	6	7	true	true	Space inside empty braces detected.

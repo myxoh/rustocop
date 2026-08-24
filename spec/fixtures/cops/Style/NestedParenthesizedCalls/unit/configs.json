@@ -1,3 +1,4 @@
 {
+  "77c39c64bd272713": "---\nAllCops:\n  TargetRubyVersion: '2.7'\n",
   "8b3be08122effb3c": "---\nStyle/NestedParenthesizedCalls:\n  AllowedMethods:\n  - be\n  Enabled: true\n"
 }

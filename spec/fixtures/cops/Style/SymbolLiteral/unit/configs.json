@@ -1,3 +1,4 @@
 {
+  "77c39c64bd272713": "---\nAllCops:\n  TargetRubyVersion: '2.7'\n",
   "91e4fb12ebd794c3": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/SymbolLiteral:\n  Description: Use plain symbols instead of string symbols when possible.\n  Enabled: true\n  VersionAdded: '0.30'\n  AutoCorrect: always\n"
 }

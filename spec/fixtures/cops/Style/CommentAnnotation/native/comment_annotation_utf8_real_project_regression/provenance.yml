@@ -1,9 +1,0 @@
-repository: rubygems/rubygems.org
-revision: 3201f8831866f82eb9acd7f66287a978d0e59079
-sources:
-  - path: test/models/user_test.rb
-    source_line: 1180
-  - repository: discourse/discourse
-    revision: cec79c60b354e37e9a119544860123b122a995e0
-    path: script/import_scripts/mylittleforum.rb
-    source_line: 31

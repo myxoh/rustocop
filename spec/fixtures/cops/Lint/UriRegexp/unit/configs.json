@@ -1,4 +1,5 @@
 {
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
   "632876fbe3a57ae7": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/UriRegexp:\n  Description: Use `URI::DEFAULT_PARSER.make_regexp` instead of `URI.regexp`.\n  Enabled: true\n  VersionAdded: '0.50'\n  AutoCorrect: always\n",
   "7ae38363ca05a14d": "---\nAllCops:\n  TargetRubyVersion: 3.4\nLint/UriRegexp:\n  Description: Use `URI::DEFAULT_PARSER.make_regexp` instead of `URI.regexp`.\n  Enabled: true\n  VersionAdded: '0.50'\n  AutoCorrect: always\n",
   "af0ab964aad23d0d": "---\nAllCops:\n  TargetRubyVersion: 3.3\nLint/UriRegexp:\n  Description: Use `URI::DEFAULT_PARSER.make_regexp` instead of `URI.regexp`.\n  Enabled: true\n  VersionAdded: '0.50'\n  AutoCorrect: always\n"

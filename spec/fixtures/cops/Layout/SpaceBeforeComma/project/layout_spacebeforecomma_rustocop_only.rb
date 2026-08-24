@@ -1,1 +1,0 @@
-        cc_emails = ' test1@test.com , test2@test.com, test3@test.com'

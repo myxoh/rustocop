@@ -1,3 +1,0 @@
-cop	line	column	last_line	last_column	correctable	corrected	message
-Style/OptionalBooleanParameter	3	3	3	15	false	false	Prefer keyword arguments for arguments with a boolean default value; use `force: false` instead of `force = false`.
-Style/OptionalBooleanParameter	4	3	4	13	false	false	Prefer keyword arguments for arguments with a boolean default value; use `sign: true` instead of `sign = true`.

@@ -1,4 +1,5 @@
 {
   "4d99ef980b9025ef": "---\nAllCops:\n  TargetRubyVersion: 2.7\nBundler/GemVersion:\n  Description: Requires or forbids specifying gem versions.\n  Enabled: true\n  VersionAdded: '1.14'\n  EnforcedStyle: required\n  SupportedStyles:\n  - required\n  - forbidden\n  Include:\n  - \"**/*.gemfile\"\n  - \"**/Gemfile\"\n  - \"**/gems.rb\"\n  AllowedGems:\n  - rspec\n  AutoCorrect: always\n",
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
   "c1b06cd172a43dd5": "---\nAllCops:\n  TargetRubyVersion: 2.7\nBundler/GemVersion:\n  Description: Requires or forbids specifying gem versions.\n  Enabled: true\n  VersionAdded: '1.14'\n  EnforcedStyle: forbidden\n  SupportedStyles:\n  - required\n  - forbidden\n  Include:\n  - \"**/*.gemfile\"\n  - \"**/Gemfile\"\n  - \"**/gems.rb\"\n  AllowedGems:\n  - rspec\n  AutoCorrect: always\n"
 }

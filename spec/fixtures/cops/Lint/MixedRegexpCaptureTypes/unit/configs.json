@@ -1,3 +1,4 @@
 {
-  "137b3901a7238be6": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/MixedRegexpCaptureTypes:\n  Description: Do not mix named captures and numbered captures in a Regexp literal.\n  Enabled: true\n  VersionAdded: '0.85'\n  AutoCorrect: always\n"
+  "137b3901a7238be6": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/MixedRegexpCaptureTypes:\n  Description: Do not mix named captures and numbered captures in a Regexp literal.\n  Enabled: true\n  VersionAdded: '0.85'\n  AutoCorrect: always\n",
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n"
 }

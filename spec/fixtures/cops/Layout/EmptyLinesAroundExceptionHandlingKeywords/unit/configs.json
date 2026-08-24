@@ -1,4 +1,5 @@
 {
   "1539b24ec9272016": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/EmptyLinesAroundExceptionHandlingKeywords:\n  Description: Keeps track of empty lines around exception handling keywords.\n  StyleGuide: \"#empty-lines-around-bodies\"\n  Enabled: true\n  VersionAdded: '0.49'\n  AutoCorrect: always\n",
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
   "a1005a187b376ae4": "---\nAllCops:\n  TargetRubyVersion: 2.5\nLayout/EmptyLinesAroundExceptionHandlingKeywords:\n  Description: Keeps track of empty lines around exception handling keywords.\n  StyleGuide: \"#empty-lines-around-bodies\"\n  Enabled: true\n  VersionAdded: '0.49'\n  AutoCorrect: always\n"
 }

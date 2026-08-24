@@ -1,3 +1,4 @@
 {
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
   "8c286fa30122e229": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/InvertibleUnlessCondition:\n  Description: Favor `if` with inverted condition over `unless`.\n  Enabled: true\n  Safe: false\n  VersionAdded: '1.44'\n  VersionChanged: '1.50'\n  InverseMethods:\n    :!=: :==\n    :even?: :odd?\n    :odd?: :even?\n    :>=: :<\n    :<: :>=\n    :zero?: :nonzero?\n    :include?: :exclude?\n    :exclude?: :include?\n  AutoCorrect: always\n"
 }

@@ -1,4 +1,5 @@
 {
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
   "8c6b789df3d338df": "---\nLayout/EndAlignment:\n  Enabled: true\n  EnforcedStyleAlignWith: variable\nLayout/ElseAlignment:\n  Enabled: true\n",
   "a26ef71a4288cba1": "---\nLayout/EndAlignment:\n  Enabled: true\n  EnforcedStyleAlignWith: keyword\nLayout/ElseAlignment:\n  Enabled: true\n"
 }

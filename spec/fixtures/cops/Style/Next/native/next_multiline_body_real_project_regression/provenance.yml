@@ -1,7 +1,0 @@
-repository: rails/rails
-revision: ba4f96f085c04b3acc2c70c1a2571652e084a120
-path: activerecord/lib/active_record/connection_adapters/abstract/schema_statements.rb
-source_lines: 1707-1715
-additional_cases:
-  - rails/rails activemodel/lib/active_model/validations/length.rb:39-43
-  - rails/rails activesupport/lib/active_support/notifications/fanout.rb:230-234

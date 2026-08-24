@@ -1,3 +1,4 @@
 {
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
   "a70aaba5bfed58b7": "---\nAllCops:\n  TargetRubyVersion: 2.7\nNaming/HeredocDelimiterNaming:\n  Description: Use descriptive heredoc delimiters.\n  StyleGuide: \"#heredoc-delimiters\"\n  Enabled: true\n  VersionAdded: '0.50'\n  ForbiddenDelimiters:\n  - END\n  AutoCorrect: always\n"
 }

@@ -1,3 +1,0 @@
-def active?; 
-  true; 
-end

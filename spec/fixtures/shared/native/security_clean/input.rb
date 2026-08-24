@@ -1,5 +1,0 @@
-eval("1 + 1")
-JSON.parse(document)
-Marshal.dump(value)
-File.open(path)
-File.read(path)

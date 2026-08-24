@@ -5,14 +5,11 @@ RSpec.describe "cop authoring tools" do
     Open3.capture3(env, RbConfig.ruby, File.join(ROOT, "script", name), *arguments)
   end
 
-  it "previews any-node scaffolding and the complete fixture format" do
+  it "previews any-node scaffolding and the cached unit-contract destination" do
     stdout, stderr, status = run_script(
       "new_cop.rb",
       "Style/GeneratedExample",
       "any_node",
-      "--autocorrect",
-      "--fixture-path",
-      "/project/Gemfile",
       "--dry-run"
     )
 
@@ -21,10 +18,8 @@ RSpec.describe "cop authoring tools" do
     expect(stdout).to include(
       'GeneratedExample => "Style/GeneratedExample" => any_node(check)',
       "fn check(node: &Node<'_>",
-      "last_line\tlast_column\tcorrectable\tcorrected",
-      "checks_style_generated_example",
-      '"/project/Gemfile"',
-      "true"
+      "spec/fixtures/cops/Style/GeneratedExample/unit/cases.jsonl",
+      "generate_unit_fixtures.rb"
     )
     expect(File).not_to exist(File.join(ROOT, "crates/rustocop/src/cops/prism/style_generated_example.rs"))
   end
@@ -59,7 +54,7 @@ RSpec.describe "cop authoring tools" do
       "Append to the existing define_cops! block",
       'GeneratedFamilyExample => "Style/GeneratedFamilyExample" => call(generated_family_example)',
       "fn generated_family_example(node: &CallNode<'_>",
-      "checks_style_generated_family_example"
+      "spec/fixtures/cops/Style/GeneratedFamilyExample/unit/cases.jsonl"
     )
   end
 

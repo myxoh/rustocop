@@ -1,5 +1,6 @@
 {
   "51115f0d22523834": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/FetchEnvVar:\n  Description: Suggests `ENV.fetch` for the replacement of `ENV[]`.\n  References:\n  - https://rubystyle.guide/#hash-fetch-defaults\n  Enabled: true\n  VersionAdded: '1.28'\n  AllowedVars:\n  - X\n  DefaultToNil: true\n  AutoCorrect: always\n",
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
   "65bfffc5162b9661": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/FetchEnvVar:\n  Description: Suggests `ENV.fetch` for the replacement of `ENV[]`.\n  References:\n  - https://rubystyle.guide/#hash-fetch-defaults\n  Enabled: true\n  VersionAdded: '1.28'\n  AllowedVars: []\n  DefaultToNil: true\n  AutoCorrect: always\n",
   "a577b0f1f9e3a16c": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/FetchEnvVar:\n  Description: Suggests `ENV.fetch` for the replacement of `ENV[]`.\n  References:\n  - https://rubystyle.guide/#hash-fetch-defaults\n  Enabled: true\n  VersionAdded: '1.28'\n  AllowedVars: []\n  DefaultToNil: false\n  AutoCorrect: always\n"
 }

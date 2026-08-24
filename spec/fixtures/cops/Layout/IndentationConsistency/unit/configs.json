@@ -1,4 +1,5 @@
 {
   "1d0420b769c07880": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/IndentationConsistency:\n  Description: Keep indentation straight.\n  StyleGuide: \"#spaces-indentation\"\n  Enabled: true\n  VersionAdded: '0.49'\n  EnforcedStyle: normal\n  SupportedStyles:\n  - normal\n  - indented_internal_methods\n  References:\n  - https://edgeguides.rubyonrails.org/contributing_to_ruby_on_rails.html#follow-the-coding-conventions\n  AutoCorrect: always\n",
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
   "9ee8791188114e41": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/IndentationConsistency:\n  Description: Keep indentation straight.\n  StyleGuide: \"#spaces-indentation\"\n  Enabled: true\n  VersionAdded: '0.49'\n  EnforcedStyle: indented_internal_methods\n  SupportedStyles:\n  - normal\n  - indented_internal_methods\n  References:\n  - https://edgeguides.rubyonrails.org/contributing_to_ruby_on_rails.html#follow-the-coding-conventions\n  AutoCorrect: always\n"
 }

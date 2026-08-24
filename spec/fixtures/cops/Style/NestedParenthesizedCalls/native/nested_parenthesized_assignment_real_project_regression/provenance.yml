@@ -1,5 +1,0 @@
-repository: gitlabhq/gitlabhq
-revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
-path: lib/gitlab/usage/metrics/instrumentations/count_dashboards_with_enabled_alerts_metric.rb
-source_line: 23
-additional_case: Homebrew/brew Library/Homebrew/dependency.rb:196

@@ -34,7 +34,7 @@ audited real-project corpus contains 50 pinned repositories.
 The gold standard is executable behavior checked against RuboCop 1.87.0:
 
 1. RuboCop-derived upstream, adversarial, autocorrection, and minimized
-   real-project fixtures must pass with matching diagnostics and corrected
+   real-project unit contracts must pass with matching diagnostics and corrected
    source.
 2. Complete diagnostic signatures must match across all 50 pinned real
    projects: path, cop, severity, message, and complete source range.
@@ -44,16 +44,16 @@ output on every pinned project is **project-exact** for that corpus and
 configuration. Neither offense-count similarity, a captured-case label, nor an
 old manual review record is accepted as compatibility evidence.
 
-The minimized real-project corpus currently contains 609 provenance-backed
-mismatch cases, with no pending active-cop mismatch directions. These fixtures
-remain regression coverage, not a substitute for the complete project comparison.
-
 The upstream capture contains 28,606 cases. Five LSP-only cases are explicitly
 excluded. Auditing the remaining 28,601 inputs produced 28,049 controlled unit
 cases owned by all 606 cops and removed 552 exact duplicates while retaining
-their provenance. The stricter cached runner currently exposes 363 expectation
-differences across 32 cops: 153 exact-diagnostic differences and 210 `-a`/`-A`
-differences. The earlier 606/606 fixture-parity claim was therefore incorrect.
+their provenance. The completed legacy-fixture audit retained another 725
+unique project-derived, configuration, Prism, hardening, end-to-end, and native
+examples in the same schema, for 28,774 unit contracts total. Whole projects
+remain transient and are not a substitute for this focused coverage.
+The expanded strict run currently passes 28,442 cases and exposes 332 failing
+cases across 73 cops (484 diagnostic/`-a`/`-A` comparison failures); the cache
+is a truthful work queue, not a compatibility claim.
 
 ## Fifty-project output parity
 
@@ -253,9 +253,9 @@ Check the [compatibility evidence table](docs/compatibility.md) and the
 Every inspected file is parsed once with Prism. Enabled AST cops are registered
 with a shared visitor, receive typed nodes plus ancestor context, and report
 byte-accurate source ranges. Compatible edits are collected during the traversal
-and applied as one batch. Local fixtures are owned by their target cop under
-`spec/fixtures/cops/<Department>/<Cop>/`; whole-project artifacts have a
-separate `spec/fixtures/projects/` boundary.
+and applied as one batch. Every committed example is owned by its target cop
+under `spec/fixtures/cops/<Department>/<Cop>/unit/`; whole-project artifacts
+remain transient under ignored `tmp/` paths.
 
 The intentionally-pending manifest is currently empty. A cop remains registered
 only after a scalable implementation passes the fixture gate; registration by
@@ -272,10 +272,11 @@ is empty, so no built-in cop specs are excluded from the active fixture corpus.
 The capture harness executes RuboCop's test DSL and records the resulting
 source, configuration, path, Ruby version, parser, encodings, offenses, and
 correction. It does not infer expectations by scraping spec source. The
-28,049-case committed unit cache stores exact diagnostics plus distinct safe
-`-a` and all-cop `-A` results. These cases become compatibility evidence only
-when Rustocop matches the cache; currently 32 cops do not. Project-exact output
-is the broader guard against cases absent from upstream specs.
+28,774-case committed unit cache stores exact diagnostics plus distinct safe
+`-a` and all-cop `-A` results, including 725 unique cases imported from the
+retired fixture layouts. These cases become compatibility evidence only when
+Rustocop matches the cache. Project-exact output is the broader guard against
+cases absent from unit contracts.
 
 ```sh
 bundle exec ruby script/extract_upstream_cop_specs.rb
@@ -296,10 +297,9 @@ PROJECT_BENCHMARK_PREPARE_ONLY=1 \
 The immutable archives and filtered corpora are cached under
 `tmp/project-benchmarks/`; a repeated preparation reuses them.
 
-Project-derived regression and configuration-variation differentials are
-excluded from ordinary RSpec runs because they still start both linters. Run
-them explicitly with `PROJECT_AUDIT=1`; the controlled per-cop cache remains
-the normal development loop.
+Project-derived regressions and configuration variations are part of the same
+cached unit contracts. Only complete repository audits start the project-scale
+comparison workflow.
 
 ## Development
 
@@ -353,7 +353,7 @@ Run the cached controlled unit contract for only the cops being changed:
 bundle exec ruby script/verify_cop.rb Style/StringLiterals Layout/TrailingWhitespace
 ```
 
-Run all 28,049 controlled cases, or explicitly refresh the slow RuboCop cache:
+Run all 28,774 controlled cases, or explicitly refresh the slow RuboCop cache:
 
 ```sh
 bundle exec rake fixtures:unit
@@ -366,7 +366,7 @@ The ownership gate rejects orphaned and cross-cop fixture paths:
 bundle exec ruby script/check_fixture_ownership.rb
 ```
 
-See [`spec/fixtures/README.md`](spec/fixtures/README.md) for the fixture layers.
+See [`spec/fixtures/README.md`](spec/fixtures/README.md) for the unit corpus.
 Benchmarks use the separate pinned `benchmark/corpus.json`, so improving a
 correctness fixture does not silently redefine historical performance work.
 

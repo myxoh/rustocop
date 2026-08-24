@@ -1,3 +1,4 @@
 {
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
   "95f298845c673d08": "---\nAllCops:\n  TargetRubyVersion: 2.7\nGemspec/RequireMFA:\n  Description: Checks that the gemspec has metadata to require Multi-Factor Authentication\n    from RubyGems.\n  Enabled: true\n  Severity: warning\n  VersionAdded: '1.23'\n  VersionChanged: '1.40'\n  References:\n  - https://guides.rubygems.org/mfa-requirement-opt-in/\n  Include:\n  - \"**/*.gemspec\"\n  AutoCorrect: always\n"
 }

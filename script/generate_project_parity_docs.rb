@@ -9,8 +9,7 @@ LAYOUT = Rustocop::RepositoryLayout.default
 ROOT = LAYOUT.root
 SUPPORT_OUTPUT = LAYOUT.path("docs", "cop-support.md")
 REMAINING_OUTPUT = LAYOUT.path("docs", "remaining-cops.md")
-PASSING_MANIFEST = LAYOUT.project_regression_manifest
-PENDING_MANIFEST = LAYOUT.project_regression_manifest(pending: true)
+UNIT_MANIFEST = LAYOUT.path("spec", "fixtures", "unit_manifest.json")
 
 report_path = File.expand_path(
   ARGV.fetch(0) { abort "Usage: ruby script/generate_project_parity_docs.rb FULL_AUDIT.json" }
@@ -30,19 +29,21 @@ unless missing.empty?
 end
 results = all_results.slice(*registry)
 
-passing_fixture_cops = File.readlines(PASSING_MANIFEST, chomp: true).drop(1).to_h do |line|
-  [line.split("\t", 2).first, true]
-end
-pending_rows = File.readlines(PENDING_MANIFEST, chomp: true).drop(1)
-pending_fixture_cops = pending_rows.to_h do |line|
-  [line.split("\t", 2).first, true]
-end
+unit_manifest = JSON.parse(File.read(UNIT_MANIFEST))
+passing_fixture_cops = unit_manifest.fetch("cops").filter_map do |cop, entry|
+  project_derived = File.foreach(LAYOUT.path("spec", "fixtures", entry.fetch("cases"))).any? do |line|
+    JSON.parse(line).fetch("origins", []).any? { |origin| origin["kind"] == "legacy_project" }
+  end
+  [cop, true] if project_derived
+end.to_h
+pending_rows = []
+pending_fixture_cops = {}
 fixture_evidence = lambda do |cop|
   passing = passing_fixture_cops[cop]
   pending = pending_fixture_cops[cop]
-  next "Passing + pending" if passing && pending
-  next "Passing" if passing
-  next "Pending" if pending
+  next "Project-derived + pending" if passing && pending
+  next "Project-derived" if passing
+  next "Pending unit" if pending
 
   "No"
 end
@@ -93,9 +94,8 @@ support = <<~MARKDOWN
   - Active cops: #{registry.length}
   - Intentionally pending cops: #{Rustocop::CompatibilityStatus.load(root: ROOT).intentionally_pending_cops.length}
   - Pinned projects: #{report.fetch("projects").length}
-  - Minimized passing project regressions: #{passing_fixture_cops.length}
-  - Pending isolated mismatch directions and crashes: #{pending_rows.length}
-  - Cops with pending project regressions: #{pending_fixture_cops.length}
+  - Cops with project-derived unit contracts: #{passing_fixture_cops.length}
+  - Pending isolated mismatch directions: #{pending_rows.length}
 
   | Classification | Cops |
   | --- | ---: |
@@ -103,7 +103,7 @@ support = <<~MARKDOWN
 
   ## Complete matrix
 
-  | Cop | Project status | Rustocop | RuboCop | Exact | Project regression evidence |
+  | Cop | Project status | Rustocop | RuboCop | Exact | Project-derived unit evidence |
   | --- | --- | ---: | ---: | ---: | --- |
   #{cop_rows.join("\n")}
 MARKDOWN

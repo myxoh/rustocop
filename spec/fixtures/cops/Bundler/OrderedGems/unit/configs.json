@@ -1,5 +1,6 @@
 {
   "123f69cd00893324": "---\nAllCops:\n  TargetRubyVersion: 2.7\nBundler/OrderedGems:\n  Description: Gems within groups in the Gemfile should be alphabetically sorted.\n  Enabled: true\n  VersionAdded: '0.46'\n  VersionChanged: '0.47'\n  TreatCommentsAsGroupSeparators: false\n  ConsiderPunctuation: true\n  Include:\n  - \"**/*.gemfile\"\n  - \"**/Gemfile\"\n  - \"**/gems.rb\"\n  AutoCorrect: always\n",
   "41113e2d3512d233": "---\nAllCops:\n  TargetRubyVersion: 2.7\nBundler/OrderedGems:\n  Description: Gems within groups in the Gemfile should be alphabetically sorted.\n  Enabled: true\n  VersionAdded: '0.46'\n  VersionChanged: '0.47'\n  TreatCommentsAsGroupSeparators: true\n  ConsiderPunctuation: false\n  Include:\n  - \"**/*.gemfile\"\n  - \"**/Gemfile\"\n  - \"**/gems.rb\"\n  AutoCorrect: always\n",
+  "77c39c64bd272713": "---\nAllCops:\n  TargetRubyVersion: '2.7'\n",
   "c3e47ee4a91b79ab": "---\nAllCops:\n  TargetRubyVersion: 2.7\nBundler/OrderedGems:\n  Description: Gems within groups in the Gemfile should be alphabetically sorted.\n  Enabled: true\n  VersionAdded: '0.46'\n  VersionChanged: '0.47'\n  TreatCommentsAsGroupSeparators: false\n  ConsiderPunctuation: false\n  Include:\n  - \"**/*.gemfile\"\n  - \"**/Gemfile\"\n  - \"**/gems.rb\"\n  AutoCorrect: always\n"
 }

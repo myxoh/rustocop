@@ -1,3 +1,5 @@
 {
-  "495942332abfb20e": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/EmptyBlockParameter:\n  Description: Omit pipes for empty block parameters.\n  Enabled: true\n  VersionAdded: '0.52'\n  AutoCorrect: always\n"
+  "495942332abfb20e": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/EmptyBlockParameter:\n  Description: Omit pipes for empty block parameters.\n  Enabled: true\n  VersionAdded: '0.52'\n  AutoCorrect: always\n",
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
+  "77c39c64bd272713": "---\nAllCops:\n  TargetRubyVersion: '2.7'\n"
 }

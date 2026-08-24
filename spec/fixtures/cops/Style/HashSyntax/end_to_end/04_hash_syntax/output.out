@@ -1,5 +1,0 @@
-== input.rb ==
-C:  1: 10: [Correctable] Style/HashSyntax: Use the new Ruby 1.9 hash syntax.
-C:  1: 26: [Correctable] Style/HashSyntax: Use the new Ruby 1.9 hash syntax.
-
-1 file inspected, 2 offenses detected, 2 offenses autocorrectable

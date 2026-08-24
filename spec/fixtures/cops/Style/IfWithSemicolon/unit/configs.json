@@ -1,3 +1,4 @@
 {
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
   "68a89f65bb39be0b": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/IfWithSemicolon:\n  Description: Do not use if x; .... Use the ternary operator instead.\n  StyleGuide: \"#no-semicolon-ifs\"\n  Enabled: true\n  VersionAdded: '0.9'\n  VersionChanged: '0.83'\n  AutoCorrect: always\n"
 }

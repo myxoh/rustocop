@@ -5,6 +5,7 @@
   "424186183f8fb5b9": "---\nStyle/EmptyElse:\n  EnforcedStyle: nil\n  SupportedStyles:\n  - empty\n  - nil\n  - both\n  Enabled: true\nStyle/MissingElse:\n  Enabled: true\n  EnforcedStyle: case\n",
   "585e4a9cd13df689": "---\nStyle/EmptyElse:\n  EnforcedStyle: both\n  SupportedStyles:\n  - empty\n  - nil\n  - both\n  Enabled: true\nStyle/MissingElse:\n  Enabled: true\n  EnforcedStyle: if\n",
   "5921c289c7ce0d41": "---\nStyle/EmptyElse:\n  EnforcedStyle: both\n  SupportedStyles:\n  - empty\n  - nil\n  - both\n  Enabled: true\nStyle/MissingElse: {}\n",
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
   "68115f99126a78bf": "---\nStyle/EmptyElse:\n  EnforcedStyle: empty\n  SupportedStyles:\n  - empty\n  - nil\n  - both\n  Enabled: true\nStyle/MissingElse:\n  Enabled: true\n  EnforcedStyle: if\n",
   "71e22b1199b07c82": "---\nStyle/EmptyElse:\n  EnforcedStyle: nil\n  SupportedStyles:\n  - empty\n  - nil\n  - both\n  Enabled: true\nStyle/MissingElse:\n  Enabled: true\n  EnforcedStyle: if\n",
   "737245a778a429d6": "---\nStyle/EmptyElse:\n  EnforcedStyle: both\n  SupportedStyles:\n  - empty\n  - nil\n  - both\n  Enabled: true\nStyle/MissingElse:\n  Enabled: true\n  EnforcedStyle: case\n",

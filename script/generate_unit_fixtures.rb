@@ -18,14 +18,17 @@ DEFAULT_CAPTURE = File.join(ROOT, "tmp", "rubocop-1.87.0-cop-cases.jsonl")
 FORMAT_VERSION = 1
 MAX_CORRECTION_ITERATIONS = 200
 
-options = { check: false, capture: DEFAULT_CAPTURE }
+options = { check: false, capture: DEFAULT_CAPTURE, supplements: [] }
 OptionParser.new do |parser|
-  parser.banner = "Usage: ruby script/generate_unit_fixtures.rb [--check] [--capture PATH]"
+  parser.banner = "Usage: ruby script/generate_unit_fixtures.rb [--check] [--capture PATH] [--supplement PATH]"
   parser.on("--check", "validate the committed unit fixture cache without running RuboCop") do
     options[:check] = true
   end
   parser.on("--capture PATH", "captured upstream JSONL source") do |path|
     options[:capture] = File.expand_path(path)
+  end
+  parser.on("--supplement PATH", "additional controlled input JSONL to capture and retain") do |path|
+    options[:supplements] << File.expand_path(path)
   end
 end.parse!
 
@@ -63,8 +66,60 @@ def rubocop_config_value(value)
 end
 
 def rubocop_config(test_case)
-  config = RuboCop::Config.new(rubocop_config_value(test_case.fetch("config")))
+  values = rubocop_config_value(test_case.fetch("config"))
+  values = Marshal.load(Marshal.dump(values))
+  Array(test_case["selection"] || test_case.fetch("cop")).flat_map { |value| value.split(",") }.each do |cop|
+    values[cop] = (values[cop] || {}).merge("Enabled" => true)
+  end
+  config = RuboCop::Config.new(values)
   RuboCop::ConfigLoader.merge_with_default(config, test_case.fetch("path"))
+end
+
+def selected_cop_classes(test_case)
+  names = Array(test_case["selection"] || test_case.fetch("cop")).flat_map { |value| value.split(",") }
+  names.map do |name|
+    RuboCop::Cop::Registry.global.find_by_cop_name(name).tap do |cop_class|
+      raise "unknown RuboCop cop #{name}" unless cop_class
+    end
+  end
+end
+
+def rubocop_investigation(test_case, autocorrect: false, safe_autocorrect: false, source: nil)
+  source ||= decoded_source(test_case.fetch("source"))
+  config = rubocop_config(test_case)
+  cop_classes = selected_cop_classes(test_case)
+  registry = RuboCop::Cop::Registry.new(cop_classes)
+  options = {
+    autocorrect:, safe_autocorrect:, raise_error: true, stdin: source,
+    display_cop_names: false
+  }
+  processed = RuboCop::ProcessedSource.new(
+    source,
+    test_case.fetch("ruby_version").to_f,
+    test_case.fetch("path"),
+    parser_engine: test_case.fetch("parser_engine").to_sym
+  )
+  processed.registry = registry
+  processed.config = config
+  cops = cop_classes.map { |cop_class| cop_class.new(config, options) }
+  report = RuboCop::Cop::Team.new(cops, config, options).investigate(processed)
+  [report, source]
+end
+
+def captured_offenses(test_case)
+  report, = with_encodings(test_case) { rubocop_investigation(test_case) }
+  report.offenses.map do |offense|
+    location = offense.location
+    {
+      "message" => offense.message,
+      "severity" => offense.severity.name.to_s,
+      "correctable" => offense.correctable?,
+      "line" => location.line,
+      "column" => location.column + 1,
+      "last_line" => location.last_line,
+      "last_column" => location.last_line > location.line && location.last_column.zero? ? 1 : location.last_column
+    }
+  end
 end
 
 def normalized_offenses(test_case)
@@ -103,30 +158,14 @@ ensure
   Encoding.default_internal = previous_internal
 end
 
-def rubocop_correction(test_case)
+def rubocop_correction(test_case, safe: false)
   source = decoded_source(test_case.fetch("source"))
-  config = rubocop_config(test_case)
-  cop_class = RuboCop::Cop::Registry.global.find_by_cop_name(test_case.fetch("cop"))
-  raise "unknown RuboCop cop #{test_case.fetch('cop')}" unless cop_class
-
-  registry = RuboCop::Cop::Registry.new([cop_class])
-  path = test_case.fetch("path")
-  parser_engine = test_case.fetch("parser_engine").to_sym
-  ruby_version = test_case.fetch("ruby_version").to_f
-  options = { autocorrect: true, safe_autocorrect: false, raise_error: true, stdin: source }
   seen = { source => true }
 
   with_encodings(test_case) do
     MAX_CORRECTION_ITERATIONS.times do
-      options[:stdin] = source
-      processed = RuboCop::ProcessedSource.new(
-        source, ruby_version, path, parser_engine: parser_engine
-      )
-      processed.registry = registry
-      processed.config = config
-      cop = cop_class.new(config, options)
       $stderr = StringIO.new
-      report = RuboCop::Cop::Team.new([cop], config, options).investigate(processed)
+      report, = rubocop_investigation(test_case, autocorrect: true, safe_autocorrect: safe, source:)
       $stderr = STDERR
       corrector = report.correctors.first
       corrected = corrector ? corrector.rewrite : source
@@ -144,17 +183,26 @@ rescue SystemExit => error
   { "source" => source, "error" => "exit_#{error.status}" }
 end
 
-def safe_autocorrect?(test_case)
-  config = rubocop_config(test_case)
-  cop_class = RuboCop::Cop::Registry.global.find_by_cop_name(test_case.fetch("cop"))
-  cop_class.new(config).safe_autocorrect?
-end
-
 def input_key(test_case)
   JSON.generate(test_case.slice(
-    "cop", "source", "path", "ruby_version", "parser_engine",
+    "cop", "selection", "source", "path", "ruby_version", "parser_engine",
     "default_external_encoding", "default_internal_encoding", "config", "file_mode", "lsp"
   ))
+end
+
+def preserved_imported_contracts
+  return [] unless File.file?(MANIFEST_PATH)
+
+  manifest = JSON.parse(File.read(MANIFEST_PATH))
+  manifest.fetch("cops").values.flat_map do |entry|
+    configs = JSON.parse(File.read(File.join(FIXTURE_ROOT, entry.fetch("configs"))))
+    File.foreach(File.join(FIXTURE_ROOT, entry.fetch("cases"))).filter_map do |line|
+      item = JSON.parse(line)
+      next unless item.fetch("origins", []).any? { |origin| origin.key?("kind") }
+
+      item.merge("config_yaml" => configs.fetch(item.fetch("config")))
+    end
+  end
 end
 
 def validate_cache!
@@ -202,7 +250,15 @@ abort "loaded RuboCop #{RuboCop::Version::STRING}, expected 1.87.0" unless RuboC
 
 raw_sha256 = Digest::SHA256.file(options[:capture]).hexdigest
 raw_cases = File.foreach(options[:capture]).map { |line| JSON.parse(line) }
+base_raw_cases = raw_cases.length
+options.fetch(:supplements).each do |path|
+  abort "supplement not found: #{path}" unless File.file?(path)
+
+  raw_cases.concat(File.foreach(path).map { |line| JSON.parse(line) })
+end
+preserved = preserved_imported_contracts
 comparable = raw_cases.reject { |test_case| test_case.fetch("lsp", false) }
+base_comparable = raw_cases.first(base_raw_cases).reject { |test_case| test_case.fetch("lsp", false) }
 grouped = comparable.group_by { |test_case| input_key(test_case) }
 
 conflicts = grouped.values.filter_map do |cases|
@@ -214,20 +270,21 @@ abort "captured inputs have conflicting diagnostics: #{conflicts.inspect}" unles
 controlled = grouped.values.map.with_index do |cases, index|
   test_case = cases.first
   source = decoded_source(test_case.fetch("source"))
-  should_check_correction = cases.any? { |item| item.key?("correction") } ||
+  should_check_correction = cases.any? { |item| item.key?("correction") || item["check_autocorrect"] } ||
                             normalized_offenses(test_case).any? { |offense| offense.fetch("correctable") }
-  all_result = should_check_correction ? rubocop_correction(test_case) : { "source" => source }
+  all_result = should_check_correction ? rubocop_correction(test_case, safe: false) : { "source" => source }
+  safe_result = should_check_correction ? rubocop_correction(test_case, safe: true) : { "source" => source }
   all_output = all_result.fetch("source")
-  safe = safe_autocorrect?(test_case)
-  safe_output = safe ? all_output : source
+  safe_output = safe_result.fetch("source")
   config_yaml = Rustocop::ConfigSerialization.rubocop_yaml(test_case.fetch("config"))
   config_id = Digest::SHA256.hexdigest(config_yaml).slice(0, 16)
   stable_input = input_key(test_case)
   id = Digest::SHA256.hexdigest(stable_input).slice(0, 20)
   warn "prepared #{index + 1}/#{grouped.length}" if ((index + 1) % 2_000).zero?
-  {
+  controlled_case = {
     "id" => id,
     "cop" => test_case.fetch("cop"),
+    "selection" => test_case["selection"],
     "source" => encoded_source(test_case.fetch("source")),
     "path" => test_case.fetch("path"),
     "ruby_version" => test_case.fetch("ruby_version"),
@@ -248,9 +305,22 @@ controlled = grouped.values.map.with_index do |cases, index|
                           else
                             captured_value(safe_output)
                           end,
-    "autocorrect_safe_error" => safe ? all_result["error"] : nil,
+    "autocorrect_safe_error" => safe_result["error"],
     "origins" => cases.map { |item| item.fetch("example") }.uniq
   }
+  controlled_case.delete("selection") unless controlled_case["selection"]
+  controlled_case
+end
+
+controlled_by_id = controlled.to_h { |test_case| [test_case.fetch("id"), test_case] }
+preserved.each do |test_case|
+  existing = controlled_by_id[test_case.fetch("id")]
+  if existing
+    existing["origins"] = (existing.fetch("origins") + test_case.fetch("origins")).uniq
+  else
+    controlled << test_case
+    controlled_by_id[test_case.fetch("id")] = test_case
+  end
 end
 
 updated_at = Time.now.iso8601
@@ -275,15 +345,19 @@ controlled.group_by { |test_case| test_case.fetch("cop") }.sort.each do |cop, ca
 end
 
 counts = entries.values.map { |entry| entry.fetch("count") }
+imported_case_count = controlled.count do |test_case|
+  test_case.fetch("origins", []).any? { |origin| origin.key?("kind") }
+end
 manifest = {
   "version" => FORMAT_VERSION,
   "rubocop_version" => RuboCop::Version::STRING,
   "updated_at" => updated_at,
   "raw_capture_sha256" => raw_sha256,
-  "raw_cases" => raw_cases.length,
-  "lsp_exclusions" => raw_cases.length - comparable.length,
+  "raw_cases" => base_raw_cases,
+  "lsp_exclusions" => base_raw_cases - base_comparable.length,
   "controlled_cases" => controlled.length,
-  "exact_duplicates_removed" => comparable.length - controlled.length,
+  "imported_cases" => imported_case_count,
+  "exact_duplicates_removed" => base_comparable.length - base_comparable.group_by { |item| input_key(item) }.length,
   "distribution" => {
     "minimum" => counts.min,
     "median" => counts.sort.fetch(counts.length / 2),

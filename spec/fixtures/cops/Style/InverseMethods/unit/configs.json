@@ -1,3 +1,5 @@
 {
-  "3398f0db36eaab00": "---\nStyle/InverseMethods:\n  InverseMethods:\n    :any?: :none?\n    :even?: :odd?\n    :present?: :blank?\n    :include?: :exclude?\n    :==: :!=\n    :=~: :!~\n    :<: :>=\n    :>: :<=\n  InverseBlocks:\n    :select: :reject\n    :select!: :reject!\n  Enabled: true\n"
+  "3398f0db36eaab00": "---\nStyle/InverseMethods:\n  InverseMethods:\n    :any?: :none?\n    :even?: :odd?\n    :present?: :blank?\n    :include?: :exclude?\n    :==: :!=\n    :=~: :!~\n    :<: :>=\n    :>: :<=\n  InverseBlocks:\n    :select: :reject\n    :select!: :reject!\n  Enabled: true\n",
+  "43fe51825ceea5d0": "---\nAllCops:\n  DisabledByDefault: true\n  NewCops: disable\n  ParserEngine: parser_prism\n  TargetRubyVersion: 3.4\nStyle/InverseMethods:\n  InverseMethods:\n    :any?: :none?\n    :blank?: :present?\n    :==: :!=\n  InverseBlocks:\n    :select: :reject\nStyle/NegatedUnless:\n  EnforcedStyle: prefix\n",
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n"
 }

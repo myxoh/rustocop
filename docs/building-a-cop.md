@@ -92,9 +92,7 @@ ruby script/new_cop.rb Style/Example rubocop \
   --restrict-methods length,size
 
 # A path-sensitive, correctable cop
-ruby script/new_cop.rb Bundler/Example call \
-  --fixture-path /project/Gemfile \
-  --autocorrect
+ruby script/new_cop.rb Bundler/Example call
 
 # A genuinely file-level rule
 ruby script/new_cop.rb Layout/Example source
@@ -105,16 +103,15 @@ ruby script/new_cop.rb Style/Example call --family style_calls
 
 Prefer `--family` when a cohesive module already owns the same kind of rule.
 Create a focused module when the cop introduces a distinct capability. The
-generator always creates cop-specific fixtures regardless of module choice.
+generator always points to the cop-specific unit contract regardless of module
+choice.
 
 Without `--family`, the generator creates and wires:
 
 - a focused module under `crates/rustocop/src/cops/prism/`;
 - one `cop_modules!` entry in `prism/mod.rs`, which declares and registers it;
-- `input.rb` and `offenses.tsv` under
-  `spec/fixtures/cops/<Department>/<Cop>/native/`;
-- `corrected.rb` when `--autocorrect` is used;
-- a fixture test registration in `engine/fixture_tests.rs`.
+- a pointer to `spec/fixtures/cops/<Department>/<Cop>/unit/`, populated from
+  RuboCop's captured contract rather than a Rustocop-authored snapshot.
 
 With `--family`, it appends the declaration and callback to that module and
 leaves the composition root unchanged.

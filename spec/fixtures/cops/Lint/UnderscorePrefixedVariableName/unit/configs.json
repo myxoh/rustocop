@@ -1,4 +1,5 @@
 {
   "21e64f62cce4ee11": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/UnderscorePrefixedVariableName:\n  Description: Do not use prefix `_` for a variable that is used.\n  Enabled: true\n  VersionAdded: '0.21'\n  AllowKeywordBlockArguments: false\n  AutoCorrect: always\n",
-  "2e1e4e6ba1e9a1ba": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/UnderscorePrefixedVariableName:\n  Description: Do not use prefix `_` for a variable that is used.\n  Enabled: true\n  VersionAdded: '0.21'\n  AllowKeywordBlockArguments: true\n  AutoCorrect: always\n"
+  "2e1e4e6ba1e9a1ba": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/UnderscorePrefixedVariableName:\n  Description: Do not use prefix `_` for a variable that is used.\n  Enabled: true\n  VersionAdded: '0.21'\n  AllowKeywordBlockArguments: true\n  AutoCorrect: always\n",
+  "77c39c64bd272713": "---\nAllCops:\n  TargetRubyVersion: '2.7'\n"
 }

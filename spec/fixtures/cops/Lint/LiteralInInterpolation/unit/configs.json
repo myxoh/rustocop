@@ -1,3 +1,4 @@
 {
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
   "6a3c84819dd0019e": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/LiteralInInterpolation:\n  Description: Checks for literals used in interpolation.\n  Enabled: true\n  VersionAdded: '0.19'\n  VersionChanged: '0.32'\n  AutoCorrect: always\n"
 }

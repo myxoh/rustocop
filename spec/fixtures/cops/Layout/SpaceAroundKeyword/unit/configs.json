@@ -1,4 +1,5 @@
 {
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
   "7aeac5ef2f2a88fc": "---\nAllCops:\n  TargetRubyVersion: 3.2\nLayout/SpaceAroundKeyword:\n  Description: Use a space around keywords if appropriate.\n  Enabled: true\n  VersionAdded: '0.49'\n  AutoCorrect: always\n",
   "c5df6fa3eb835b12": "---\nAllCops:\n  TargetRubyVersion: 3.0\nLayout/SpaceAroundKeyword:\n  Description: Use a space around keywords if appropriate.\n  Enabled: true\n  VersionAdded: '0.49'\n  AutoCorrect: always\n",
   "c85233efa76d62c9": "---\nAllCops:\n  TargetRubyVersion: 3.4\nLayout/SpaceAroundKeyword:\n  Description: Use a space around keywords if appropriate.\n  Enabled: true\n  VersionAdded: '0.49'\n  AutoCorrect: always\n",

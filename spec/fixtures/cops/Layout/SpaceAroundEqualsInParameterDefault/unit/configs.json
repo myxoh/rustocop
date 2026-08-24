@@ -1,4 +1,5 @@
 {
   "064349b95a858e45": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/SpaceAroundEqualsInParameterDefault:\n  Description: Checks that the equals signs in parameter default assignments have\n    or don't have surrounding space depending on configuration.\n  StyleGuide: \"#spaces-around-equals\"\n  Enabled: true\n  VersionAdded: '0.49'\n  EnforcedStyle: no_space\n  SupportedStyles:\n  - space\n  - no_space\n  AutoCorrect: always\n",
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
   "a26e90c5c5604fb5": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/SpaceAroundEqualsInParameterDefault:\n  Description: Checks that the equals signs in parameter default assignments have\n    or don't have surrounding space depending on configuration.\n  StyleGuide: \"#spaces-around-equals\"\n  Enabled: true\n  VersionAdded: '0.49'\n  EnforcedStyle: space\n  SupportedStyles:\n  - space\n  - no_space\n  AutoCorrect: always\n"
 }

@@ -1,4 +1,5 @@
 {
   "1f7c309e17d72845": "---\nAllCops:\n  TargetRubyVersion: 2.7\nNaming/HeredocDelimiterCase:\n  Description: Use configured case for heredoc delimiters.\n  StyleGuide: \"#heredoc-delimiters\"\n  Enabled: true\n  VersionAdded: '0.50'\n  VersionChanged: '1.2'\n  EnforcedStyle: lowercase\n  SupportedStyles:\n  - uppercase\n  - lowercase\n  AutoCorrect: always\n",
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
   "f9c4971bb77dad4a": "---\nAllCops:\n  TargetRubyVersion: 2.7\nNaming/HeredocDelimiterCase:\n  Description: Use configured case for heredoc delimiters.\n  StyleGuide: \"#heredoc-delimiters\"\n  Enabled: true\n  VersionAdded: '0.50'\n  VersionChanged: '1.2'\n  EnforcedStyle: uppercase\n  SupportedStyles:\n  - uppercase\n  - lowercase\n  AutoCorrect: always\n"
 }

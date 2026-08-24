@@ -1,6 +1,0 @@
-defined?(Foo) && defined?(Foo::Bar)
-defined?(Foo::Bar) && defined?(Foo)
-defined?(Foo) && defined?(Foo::Bar::Baz)
-defined?(Foo) && defined?(Foo::Bar) && defined?(Foo::Bar::Baz)
-defined?(::Foo) and defined?(::Foo::Bar)
-defined?(Foo) && defined?(Bar)

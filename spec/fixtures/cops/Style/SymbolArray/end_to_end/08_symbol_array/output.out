@@ -1,4 +1,0 @@
-== input.rb ==
-C:  1: 10: [Correctable] Style/SymbolArray: Use %i or %I for an array of symbols.
-
-1 file inspected, 1 offense detected, 1 offense autocorrectable

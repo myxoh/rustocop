@@ -1,3 +1,5 @@
 {
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
+  "77c39c64bd272713": "---\nAllCops:\n  TargetRubyVersion: '2.7'\n",
   "b8902e63465d2dbb": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/EnvHome:\n  Description: Checks for consistent usage of `ENV['HOME']`.\n  Enabled: true\n  Safe: false\n  VersionAdded: '1.29'\n  AutoCorrect: always\n"
 }

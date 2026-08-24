@@ -1,4 +1,5 @@
 {
   "53642dbbf08ab474": "---\nAllCops:\n  TargetRubyVersion: 2.3\nStyle/FileEmpty:\n  Description: Prefer to use `File.empty?('path/to/file')` when checking if a file\n    is empty.\n  Enabled: true\n  Safe: false\n  VersionAdded: '1.48'\n  AutoCorrect: always\n",
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
   "fecdf12cfa1e9712": "---\nAllCops:\n  TargetRubyVersion: 2.4\nStyle/FileEmpty:\n  Description: Prefer to use `File.empty?('path/to/file')` when checking if a file\n    is empty.\n  Enabled: true\n  Safe: false\n  VersionAdded: '1.48'\n  AutoCorrect: always\n"
 }

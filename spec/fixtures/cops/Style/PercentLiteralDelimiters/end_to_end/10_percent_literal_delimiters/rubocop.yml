@@ -1,8 +1,0 @@
-AllCops:
-  DisabledByDefault: true
-  NewCops: disable
-  SuggestExtensions: false
-Style/PercentLiteralDelimiters:
-  Enabled: true
-  PreferredDelimiters:
-    "%w": "[]"

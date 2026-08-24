@@ -1,4 +1,5 @@
 {
   "383f890edf257c2f": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/EmptyClass:\n  Description: Checks for classes and metaclasses without a body.\n  Enabled: true\n  VersionAdded: '1.3'\n  AllowComments: true\n  AutoCorrect: always\n",
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
   "df78f79e5ae6479c": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/EmptyClass:\n  Description: Checks for classes and metaclasses without a body.\n  Enabled: true\n  VersionAdded: '1.3'\n  AllowComments: false\n  AutoCorrect: always\n"
 }

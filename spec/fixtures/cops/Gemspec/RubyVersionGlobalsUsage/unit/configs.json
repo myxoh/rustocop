@@ -1,3 +1,4 @@
 {
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
   "7b525ed693dc614f": "---\nAllCops:\n  TargetRubyVersion: 2.7\nGemspec/RubyVersionGlobalsUsage:\n  Description: Checks usage of RUBY_VERSION in gemspec.\n  StyleGuide: \"#no-ruby-version-in-the-gemspec\"\n  Enabled: true\n  Severity: warning\n  VersionAdded: '0.72'\n  VersionChanged: '1.40'\n  Include:\n  - \"**/*.gemspec\"\n  AutoCorrect: always\n"
 }

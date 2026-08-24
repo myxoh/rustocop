@@ -1,3 +1,5 @@
 {
-  "59bd9fc3cb7c787c": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/CombinableDefined:\n  Description: Checks successive `defined?` calls that can be combined into a single\n    call.\n  Enabled: true\n  VersionAdded: '1.68'\n  AutoCorrect: always\n"
+  "59bd9fc3cb7c787c": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/CombinableDefined:\n  Description: Checks successive `defined?` calls that can be combined into a single\n    call.\n  Enabled: true\n  VersionAdded: '1.68'\n  AutoCorrect: always\n",
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
+  "77c39c64bd272713": "---\nAllCops:\n  TargetRubyVersion: '2.7'\n"
 }

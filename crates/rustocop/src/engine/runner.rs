@@ -83,6 +83,30 @@ mod tests {
     use super::*;
     use crate::config::{AutocorrectMode, CopConfig, CopSelection, InspectionConfig, RubyVersion};
     use std::sync::Arc;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    fn temporary_ruby_files() -> (PathBuf, [String; 3]) {
+        let nonce = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let directory =
+            std::env::temp_dir().join(format!("rustocop-runner-{}-{nonce}", std::process::id()));
+        fs::create_dir_all(&directory).unwrap();
+        let files = [
+            "empty_expression_03.rb",
+            "empty_expression_01.rb",
+            "empty_expression_02.rb",
+        ]
+        .map(|name| directory.join(name));
+        for path in &files {
+            fs::write(path, ";\n").unwrap();
+        }
+        (
+            directory,
+            files.map(|path| path.to_string_lossy().into_owned()),
+        )
+    }
 
     fn options(parallelism: Parallelism) -> RunOptions {
         RunOptions {
@@ -110,16 +134,7 @@ mod tests {
 
     #[test]
     fn parallel_inspection_preserves_sequential_output_order() {
-        let fixture_root = format!(
-            "{}/../../spec/fixtures/shared/engine/parallel_order",
-            env!("CARGO_MANIFEST_DIR")
-        );
-        let files = [
-            "empty_expression_03.rb",
-            "empty_expression_01.rb",
-            "empty_expression_02.rb",
-        ]
-        .map(|name| format!("{fixture_root}/{name}"));
+        let (directory, files) = temporary_ruby_files();
 
         let sequential_options = options(Parallelism::Sequential);
         let parallel_options = options(Parallelism::Fixed(3));
@@ -143,15 +158,15 @@ mod tests {
                 .collect::<Vec<_>>()
         };
         assert_eq!(snapshot(&sequential), snapshot(&parallel));
+        fs::remove_dir_all(directory).unwrap();
     }
 
     #[test]
     fn recognizes_duplicate_correction_targets() {
-        let path = format!(
-            "{}/../../spec/fixtures/shared/engine/parallel_order/empty_expression_01.rb",
-            env!("CARGO_MANIFEST_DIR")
-        );
+        let (directory, files) = temporary_ruby_files();
+        let path = files[0].clone();
 
         assert!(contains_duplicate_files(&[path.clone(), path]));
+        fs::remove_dir_all(directory).unwrap();
     }
 }

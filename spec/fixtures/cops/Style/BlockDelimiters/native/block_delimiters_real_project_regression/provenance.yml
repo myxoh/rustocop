@@ -1,4 +1,0 @@
-repository: rails/rails
-revision: ba4f7369aee71f9f38d67bdbf0e8571fb372b535
-path: railties/lib/rails/application/bootstrap.rb
-source_line: 13

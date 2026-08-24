@@ -1,3 +1,4 @@
 {
-  "29f0d15da0aa3ed8": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/RequireOrder:\n  Description: Sort `require` and `require_relative` in alphabetical order.\n  Enabled: true\n  SafeAutoCorrect: false\n  VersionAdded: '1.40'\n  AutoCorrect: always\n"
+  "29f0d15da0aa3ed8": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/RequireOrder:\n  Description: Sort `require` and `require_relative` in alphabetical order.\n  Enabled: true\n  SafeAutoCorrect: false\n  VersionAdded: '1.40'\n  AutoCorrect: always\n",
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n"
 }

@@ -1,4 +1,0 @@
-cop	line	column	last_line	last_column	correctable	corrected	message
-Lint/ConstantDefinitionInBlock	2	3	2	9	false	false	Do not define constants this way within a block.
-Lint/ConstantDefinitionInBlock	3	3	3	16	false	false	Do not define constants this way within a block.
-Lint/ConstantDefinitionInBlock	4	3	4	17	false	false	Do not define constants this way within a block.

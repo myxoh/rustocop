@@ -1,6 +1,0 @@
-interval = /(?:a{1,}){,1}/
-extended = /(?: a ? ) + /x
-deep = /(?:(?:(?:(?:a)?))+)/
-leading = /(?:(?:a?)+)+/
-interspersed = /(?:(?:a+)?)+/
-trailing = /(?:(?:a+)+)?/

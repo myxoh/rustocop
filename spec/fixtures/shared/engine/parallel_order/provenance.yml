@@ -1,5 +1,0 @@
-purpose: parallel inspection ordering and duplicate-target engine contracts
-owner: shared engine
-source: generated minimal Ruby inputs
-cops:
-  - Lint/EmptyExpression

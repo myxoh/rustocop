@@ -1,4 +1,5 @@
 {
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
   "875a6449fbf2fd75": "---\nAllCops:\n  TargetRubyVersion: 3.1\nStyle/RedundantStructKeywordInit:\n  Description: Checks for redundant `keyword_init` option for `Struct.new`.\n  Enabled: true\n  SafeAutoCorrect: false\n  VersionAdded: '1.85'\n  VersionChanged: '1.86'\n  AutoCorrect: always\n",
   "91bf327f99ff5bbd": "---\nAllCops:\n  TargetRubyVersion: 3.2\nStyle/RedundantStructKeywordInit:\n  Description: Checks for redundant `keyword_init` option for `Struct.new`.\n  Enabled: true\n  SafeAutoCorrect: false\n  VersionAdded: '1.85'\n  VersionChanged: '1.86'\n  AutoCorrect: always\n"
 }

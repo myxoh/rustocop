@@ -36,15 +36,6 @@ module Rustocop
       path("spec", "fixtures")
     end
 
-    def project_regression_manifest(pending: false)
-      name = pending ? "cop_project_mismatches.tsv" : "cop_project_cases.tsv"
-      path("spec", "fixtures", name)
-    end
-
-    def project_regression_config
-      path("spec", "fixtures", "support", "project_regressions.yml")
-    end
-
     def project_corpus(project)
       path(
         "tmp", "project-benchmarks", "corpora",

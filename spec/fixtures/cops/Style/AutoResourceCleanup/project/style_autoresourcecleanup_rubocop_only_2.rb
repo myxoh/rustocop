@@ -1,1 +1,0 @@
-          tf = Tempfile.open "whatever"

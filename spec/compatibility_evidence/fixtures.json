@@ -1,11 +1,11 @@
 {
   "version": 1,
   "kind": "fixture_compatibility",
-  "updated_at": "2026-08-24T12:49:23-04:00",
+  "updated_at": "2026-08-24T13:19:17-04:00",
   "rust_commit": null,
   "cop_source_sha256": "2e3709df700621810859d14a60ab5f3e790e50e923007776c315858de6851ad3",
   "native_sha256": "53849fa84dcfe3583f5a7f71e14e27ba8ecc7d6c53e08d0d72681d280fbf2225",
-  "fixture_corpus_sha256": "f3e58bb0e76bea5addd416e070da1ac6d5d64c813c4a4587978630ad8895b03a",
+  "fixture_corpus_sha256": "3eacb8a93663d6bab18c0735345a7222dee33991aac60b8b4adc67a4ee70d383",
   "rubocop_version": "1.87.0",
   "results": {
     "Bundler/DuplicatedGem": {
@@ -29,8 +29,8 @@
       "status": "compatible"
     },
     "Bundler/GemVersion": {
-      "passed": 6,
-      "total": 6,
+      "passed": 7,
+      "total": 7,
       "status": "compatible"
     },
     "Bundler/InsecureProtocolSource": {
@@ -39,13 +39,13 @@
       "status": "compatible"
     },
     "Bundler/OrderedGems": {
-      "passed": 17,
-      "total": 17,
+      "passed": 19,
+      "total": 19,
       "status": "compatible"
     },
     "Gemspec/AddRuntimeDependency": {
-      "passed": 5,
-      "total": 5,
+      "passed": 7,
+      "total": 7,
       "status": "compatible"
     },
     "Gemspec/AttributeAssignment": {
@@ -59,8 +59,8 @@
       "status": "compatible"
     },
     "Gemspec/DeprecatedAttributeAssignment": {
-      "passed": 18,
-      "total": 18,
+      "passed": 19,
+      "total": 19,
       "status": "compatible"
     },
     "Gemspec/DevelopmentDependencies": {
@@ -69,63 +69,63 @@
       "status": "compatible"
     },
     "Gemspec/DuplicatedAssignment": {
-      "passed": 17,
-      "total": 17,
+      "passed": 18,
+      "total": 18,
       "status": "compatible"
     },
     "Gemspec/OrderedDependencies": {
-      "passed": 18,
-      "total": 18,
+      "passed": 19,
+      "total": 19,
       "status": "compatible"
     },
     "Gemspec/RequireMFA": {
-      "passed": 15,
-      "total": 15,
+      "passed": 16,
+      "total": 16,
       "status": "compatible"
     },
     "Gemspec/RequiredRubyVersion": {
-      "passed": 21,
-      "total": 21,
+      "passed": 22,
+      "total": 22,
       "status": "compatible"
     },
     "Gemspec/RubyVersionGlobalsUsage": {
-      "passed": 5,
-      "total": 5,
+      "passed": 6,
+      "total": 6,
       "status": "compatible"
     },
     "Layout/AccessModifierIndentation": {
-      "passed": 43,
-      "total": 43,
+      "passed": 44,
+      "total": 44,
       "status": "compatible"
     },
     "Layout/ArgumentAlignment": {
-      "passed": 52,
-      "total": 53,
+      "passed": 54,
+      "total": 55,
       "status": "mismatch"
     },
     "Layout/ArrayAlignment": {
-      "passed": 25,
-      "total": 25,
+      "passed": 27,
+      "total": 27,
       "status": "compatible"
     },
     "Layout/AssignmentIndentation": {
-      "passed": 10,
-      "total": 10,
-      "status": "compatible"
+      "passed": 11,
+      "total": 12,
+      "status": "mismatch"
     },
     "Layout/BeginEndAlignment": {
-      "passed": 7,
-      "total": 7,
+      "passed": 9,
+      "total": 9,
       "status": "compatible"
     },
     "Layout/BlockAlignment": {
-      "passed": 78,
-      "total": 78,
+      "passed": 79,
+      "total": 79,
       "status": "compatible"
     },
     "Layout/BlockEndNewline": {
-      "passed": 18,
-      "total": 18,
+      "passed": 19,
+      "total": 19,
       "status": "compatible"
     },
     "Layout/CaseIndentation": {
@@ -135,12 +135,12 @@
     },
     "Layout/ClassStructure": {
       "passed": 19,
-      "total": 21,
+      "total": 23,
       "status": "mismatch"
     },
     "Layout/ClosingHeredocIndentation": {
-      "passed": 11,
-      "total": 11,
+      "passed": 13,
+      "total": 13,
       "status": "compatible"
     },
     "Layout/ClosingParenthesisIndentation": {
@@ -149,19 +149,19 @@
       "status": "compatible"
     },
     "Layout/CommentIndentation": {
-      "passed": 29,
-      "total": 29,
+      "passed": 30,
+      "total": 30,
       "status": "compatible"
     },
     "Layout/ConditionPosition": {
-      "passed": 14,
-      "total": 14,
+      "passed": 15,
+      "total": 15,
       "status": "compatible"
     },
     "Layout/DefEndAlignment": {
       "passed": 18,
-      "total": 18,
-      "status": "compatible"
+      "total": 19,
+      "status": "mismatch"
     },
     "Layout/DotPosition": {
       "passed": 40,
@@ -169,28 +169,28 @@
       "status": "compatible"
     },
     "Layout/ElseAlignment": {
-      "passed": 52,
-      "total": 52,
+      "passed": 53,
+      "total": 53,
       "status": "compatible"
     },
     "Layout/EmptyComment": {
-      "passed": 14,
-      "total": 14,
+      "passed": 15,
+      "total": 15,
       "status": "compatible"
     },
     "Layout/EmptyLineAfterGuardClause": {
-      "passed": 60,
-      "total": 60,
-      "status": "compatible"
+      "passed": 69,
+      "total": 70,
+      "status": "mismatch"
     },
     "Layout/EmptyLineAfterMagicComment": {
-      "passed": 21,
-      "total": 21,
+      "passed": 22,
+      "total": 22,
       "status": "compatible"
     },
     "Layout/EmptyLineAfterMultilineCondition": {
-      "passed": 22,
-      "total": 22,
+      "passed": 23,
+      "total": 23,
       "status": "compatible"
     },
     "Layout/EmptyLineBetweenDefs": {
@@ -199,18 +199,18 @@
       "status": "compatible"
     },
     "Layout/EmptyLines": {
-      "passed": 5,
-      "total": 5,
+      "passed": 9,
+      "total": 9,
       "status": "compatible"
     },
     "Layout/EmptyLinesAfterModuleInclusion": {
-      "passed": 59,
-      "total": 59,
+      "passed": 61,
+      "total": 61,
       "status": "compatible"
     },
     "Layout/EmptyLinesAroundAccessModifier": {
-      "passed": 176,
-      "total": 176,
+      "passed": 178,
+      "total": 178,
       "status": "compatible"
     },
     "Layout/EmptyLinesAroundArguments": {
@@ -219,8 +219,8 @@
       "status": "compatible"
     },
     "Layout/EmptyLinesAroundAttributeAccessor": {
-      "passed": 20,
-      "total": 20,
+      "passed": 21,
+      "total": 21,
       "status": "compatible"
     },
     "Layout/EmptyLinesAroundBeginBody": {
@@ -239,8 +239,8 @@
       "status": "compatible"
     },
     "Layout/EmptyLinesAroundExceptionHandlingKeywords": {
-      "passed": 24,
-      "total": 24,
+      "passed": 25,
+      "total": 25,
       "status": "compatible"
     },
     "Layout/EmptyLinesAroundMethodBody": {
@@ -254,8 +254,8 @@
       "status": "compatible"
     },
     "Layout/EndAlignment": {
-      "passed": 216,
-      "total": 216,
+      "passed": 217,
+      "total": 217,
       "status": "compatible"
     },
     "Layout/EndOfLine": {
@@ -264,38 +264,38 @@
       "status": "compatible"
     },
     "Layout/ExtraSpacing": {
-      "passed": 80,
-      "total": 82,
+      "passed": 88,
+      "total": 90,
       "status": "mismatch"
     },
     "Layout/FirstArgumentIndentation": {
-      "passed": 138,
-      "total": 139,
+      "passed": 139,
+      "total": 140,
       "status": "mismatch"
     },
     "Layout/FirstArrayElementIndentation": {
-      "passed": 53,
-      "total": 53,
-      "status": "compatible"
+      "passed": 59,
+      "total": 60,
+      "status": "mismatch"
     },
     "Layout/FirstArrayElementLineBreak": {
-      "passed": 14,
-      "total": 14,
+      "passed": 17,
+      "total": 17,
       "status": "compatible"
     },
     "Layout/FirstHashElementIndentation": {
-      "passed": 60,
-      "total": 60,
+      "passed": 61,
+      "total": 61,
       "status": "compatible"
     },
     "Layout/FirstHashElementLineBreak": {
-      "passed": 11,
-      "total": 11,
+      "passed": 14,
+      "total": 14,
       "status": "compatible"
     },
     "Layout/FirstMethodArgumentLineBreak": {
-      "passed": 14,
-      "total": 14,
+      "passed": 21,
+      "total": 21,
       "status": "compatible"
     },
     "Layout/FirstMethodParameterLineBreak": {
@@ -309,33 +309,33 @@
       "status": "compatible"
     },
     "Layout/HashAlignment": {
-      "passed": 130,
-      "total": 130,
+      "passed": 132,
+      "total": 132,
       "status": "compatible"
     },
     "Layout/HeredocArgumentClosingParenthesis": {
-      "passed": 78,
-      "total": 80,
+      "passed": 79,
+      "total": 81,
       "status": "mismatch"
     },
     "Layout/HeredocIndentation": {
-      "passed": 98,
-      "total": 98,
-      "status": "compatible"
+      "passed": 109,
+      "total": 111,
+      "status": "mismatch"
     },
     "Layout/IndentationConsistency": {
-      "passed": 53,
-      "total": 53,
+      "passed": 60,
+      "total": 60,
       "status": "compatible"
     },
     "Layout/IndentationStyle": {
-      "passed": 25,
-      "total": 25,
+      "passed": 26,
+      "total": 26,
       "status": "compatible"
     },
     "Layout/IndentationWidth": {
-      "passed": 177,
-      "total": 179,
+      "passed": 184,
+      "total": 198,
       "status": "mismatch"
     },
     "Layout/InitialIndentation": {
@@ -344,8 +344,8 @@
       "status": "compatible"
     },
     "Layout/LeadingCommentSpace": {
-      "passed": 26,
-      "total": 26,
+      "passed": 29,
+      "total": 29,
       "status": "compatible"
     },
     "Layout/LeadingEmptyLines": {
@@ -359,8 +359,8 @@
       "status": "compatible"
     },
     "Layout/LineContinuationSpacing": {
-      "passed": 31,
-      "total": 31,
+      "passed": 32,
+      "total": 32,
       "status": "compatible"
     },
     "Layout/LineEndStringConcatenationIndentation": {
@@ -369,8 +369,8 @@
       "status": "compatible"
     },
     "Layout/LineLength": {
-      "passed": 185,
-      "total": 194,
+      "passed": 187,
+      "total": 197,
       "status": "mismatch"
     },
     "Layout/MultilineArrayBraceLayout": {
@@ -379,13 +379,13 @@
       "status": "compatible"
     },
     "Layout/MultilineArrayLineBreaks": {
-      "passed": 6,
-      "total": 6,
-      "status": "compatible"
+      "passed": 11,
+      "total": 12,
+      "status": "mismatch"
     },
     "Layout/MultilineAssignmentLayout": {
-      "passed": 34,
-      "total": 34,
+      "passed": 36,
+      "total": 36,
       "status": "compatible"
     },
     "Layout/MultilineBlockLayout": {
@@ -405,8 +405,8 @@
     },
     "Layout/MultilineMethodArgumentLineBreaks": {
       "passed": 18,
-      "total": 18,
-      "status": "compatible"
+      "total": 19,
+      "status": "mismatch"
     },
     "Layout/MultilineMethodCallBraceLayout": {
       "passed": 44,
@@ -414,28 +414,28 @@
       "status": "compatible"
     },
     "Layout/MultilineMethodCallIndentation": {
-      "passed": 273,
-      "total": 273,
+      "passed": 275,
+      "total": 275,
       "status": "compatible"
     },
     "Layout/MultilineMethodDefinitionBraceLayout": {
-      "passed": 26,
-      "total": 26,
+      "passed": 27,
+      "total": 27,
       "status": "compatible"
     },
     "Layout/MultilineMethodParameterLineBreaks": {
       "passed": 14,
-      "total": 14,
-      "status": "compatible"
+      "total": 15,
+      "status": "mismatch"
     },
     "Layout/MultilineOperationIndentation": {
-      "passed": 101,
-      "total": 101,
+      "passed": 103,
+      "total": 103,
       "status": "compatible"
     },
     "Layout/ParameterAlignment": {
-      "passed": 19,
-      "total": 19,
+      "passed": 20,
+      "total": 20,
       "status": "compatible"
     },
     "Layout/RedundantLineBreak": {
@@ -444,8 +444,8 @@
       "status": "compatible"
     },
     "Layout/RescueEnsureAlignment": {
-      "passed": 91,
-      "total": 99,
+      "passed": 97,
+      "total": 105,
       "status": "mismatch"
     },
     "Layout/SingleLineBlockChain": {
@@ -459,23 +459,23 @@
       "status": "compatible"
     },
     "Layout/SpaceAfterComma": {
-      "passed": 9,
-      "total": 9,
+      "passed": 21,
+      "total": 21,
       "status": "compatible"
     },
     "Layout/SpaceAfterMethodName": {
+      "passed": 9,
+      "total": 10,
+      "status": "mismatch"
+    },
+    "Layout/SpaceAfterNot": {
       "passed": 8,
       "total": 8,
       "status": "compatible"
     },
-    "Layout/SpaceAfterNot": {
-      "passed": 6,
-      "total": 6,
-      "status": "compatible"
-    },
     "Layout/SpaceAfterSemicolon": {
-      "passed": 9,
-      "total": 9,
+      "passed": 15,
+      "total": 15,
       "status": "compatible"
     },
     "Layout/SpaceAroundBlockParameters": {
@@ -484,38 +484,38 @@
       "status": "mismatch"
     },
     "Layout/SpaceAroundEqualsInParameterDefault": {
-      "passed": 11,
-      "total": 11,
+      "passed": 12,
+      "total": 12,
       "status": "compatible"
     },
     "Layout/SpaceAroundKeyword": {
-      "passed": 116,
-      "total": 116,
+      "passed": 122,
+      "total": 122,
       "status": "compatible"
     },
     "Layout/SpaceAroundMethodCallOperator": {
-      "passed": 51,
-      "total": 51,
+      "passed": 56,
+      "total": 56,
       "status": "compatible"
     },
     "Layout/SpaceAroundOperators": {
-      "passed": 99,
-      "total": 99,
-      "status": "compatible"
+      "passed": 101,
+      "total": 102,
+      "status": "mismatch"
     },
     "Layout/SpaceBeforeBlockBraces": {
-      "passed": 17,
-      "total": 17,
+      "passed": 19,
+      "total": 19,
       "status": "compatible"
     },
     "Layout/SpaceBeforeBrackets": {
-      "passed": 28,
-      "total": 28,
+      "passed": 29,
+      "total": 29,
       "status": "compatible"
     },
     "Layout/SpaceBeforeComma": {
-      "passed": 6,
-      "total": 6,
+      "passed": 9,
+      "total": 9,
       "status": "compatible"
     },
     "Layout/SpaceBeforeComment": {
@@ -524,33 +524,33 @@
       "status": "compatible"
     },
     "Layout/SpaceBeforeFirstArg": {
+      "passed": 13,
+      "total": 13,
+      "status": "compatible"
+    },
+    "Layout/SpaceBeforeSemicolon": {
       "passed": 12,
       "total": 12,
       "status": "compatible"
     },
-    "Layout/SpaceBeforeSemicolon": {
-      "passed": 9,
-      "total": 9,
-      "status": "compatible"
-    },
     "Layout/SpaceInLambdaLiteral": {
-      "passed": 15,
-      "total": 15,
+      "passed": 17,
+      "total": 17,
       "status": "compatible"
     },
     "Layout/SpaceInsideArrayLiteralBrackets": {
-      "passed": 99,
-      "total": 99,
+      "passed": 101,
+      "total": 101,
       "status": "compatible"
     },
     "Layout/SpaceInsideArrayPercentLiteral": {
-      "passed": 93,
-      "total": 93,
+      "passed": 94,
+      "total": 94,
       "status": "compatible"
     },
     "Layout/SpaceInsideBlockBraces": {
-      "passed": 42,
-      "total": 42,
+      "passed": 44,
+      "total": 44,
       "status": "compatible"
     },
     "Layout/SpaceInsideHashLiteralBraces": {
@@ -559,63 +559,63 @@
       "status": "compatible"
     },
     "Layout/SpaceInsideParens": {
-      "passed": 28,
-      "total": 28,
+      "passed": 31,
+      "total": 31,
       "status": "compatible"
     },
     "Layout/SpaceInsidePercentLiteralDelimiters": {
-      "passed": 217,
-      "total": 217,
+      "passed": 218,
+      "total": 218,
       "status": "compatible"
     },
     "Layout/SpaceInsideRangeLiteral": {
-      "passed": 7,
-      "total": 7,
+      "passed": 9,
+      "total": 9,
       "status": "compatible"
     },
     "Layout/SpaceInsideReferenceBrackets": {
-      "passed": 47,
-      "total": 47,
+      "passed": 49,
+      "total": 49,
       "status": "compatible"
     },
     "Layout/SpaceInsideStringInterpolation": {
-      "passed": 12,
-      "total": 12,
+      "passed": 14,
+      "total": 14,
       "status": "compatible"
     },
     "Layout/TrailingEmptyLines": {
-      "passed": 18,
-      "total": 20,
+      "passed": 19,
+      "total": 21,
       "status": "mismatch"
     },
     "Layout/TrailingWhitespace": {
-      "passed": 19,
-      "total": 19,
+      "passed": 20,
+      "total": 20,
       "status": "compatible"
     },
     "Lint/AmbiguousAssignment": {
-      "passed": 24,
-      "total": 24,
+      "passed": 26,
+      "total": 26,
       "status": "compatible"
     },
     "Lint/AmbiguousBlockAssociation": {
-      "passed": 36,
-      "total": 36,
+      "passed": 40,
+      "total": 40,
       "status": "compatible"
     },
     "Lint/AmbiguousOperator": {
-      "passed": 17,
-      "total": 17,
+      "passed": 21,
+      "total": 21,
       "status": "compatible"
     },
     "Lint/AmbiguousOperatorPrecedence": {
-      "passed": 12,
-      "total": 13,
+      "passed": 15,
+      "total": 17,
       "status": "mismatch"
     },
     "Lint/AmbiguousRange": {
-      "passed": 54,
-      "total": 54,
+      "passed": 60,
+      "total": 60,
       "status": "compatible"
     },
     "Lint/AmbiguousRegexpLiteral": {
@@ -635,12 +635,12 @@
     },
     "Lint/BigDecimalNew": {
       "passed": 3,
-      "total": 3,
-      "status": "compatible"
+      "total": 4,
+      "status": "mismatch"
     },
     "Lint/BinaryOperatorWithIdenticalOperands": {
-      "passed": 23,
-      "total": 23,
+      "passed": 24,
+      "total": 24,
       "status": "compatible"
     },
     "Lint/BooleanSymbol": {
@@ -654,18 +654,18 @@
       "status": "compatible"
     },
     "Lint/ConstantDefinitionInBlock": {
-      "passed": 27,
-      "total": 27,
+      "passed": 29,
+      "total": 29,
       "status": "compatible"
     },
     "Lint/ConstantOverwrittenInRescue": {
-      "passed": 8,
-      "total": 8,
+      "passed": 9,
+      "total": 9,
       "status": "compatible"
     },
     "Lint/ConstantReassignment": {
-      "passed": 57,
-      "total": 57,
+      "passed": 59,
+      "total": 59,
       "status": "compatible"
     },
     "Lint/ConstantResolution": {
@@ -674,8 +674,8 @@
       "status": "compatible"
     },
     "Lint/CopDirectiveSyntax": {
-      "passed": 16,
-      "total": 16,
+      "passed": 21,
+      "total": 21,
       "status": "compatible"
     },
     "Lint/DataDefineOverride": {
@@ -684,8 +684,8 @@
       "status": "compatible"
     },
     "Lint/Debugger": {
-      "passed": 97,
-      "total": 97,
+      "passed": 98,
+      "total": 98,
       "status": "compatible"
     },
     "Lint/DeprecatedClassMethods": {
@@ -694,23 +694,23 @@
       "status": "compatible"
     },
     "Lint/DeprecatedConstants": {
-      "passed": 20,
-      "total": 20,
+      "passed": 21,
+      "total": 21,
       "status": "compatible"
     },
     "Lint/DeprecatedOpenSSLConstant": {
-      "passed": 24,
-      "total": 24,
+      "passed": 25,
+      "total": 25,
       "status": "compatible"
     },
     "Lint/DisjunctiveAssignmentInConstructor": {
-      "passed": 7,
-      "total": 7,
+      "passed": 8,
+      "total": 8,
       "status": "compatible"
     },
     "Lint/DuplicateBranch": {
-      "passed": 131,
-      "total": 131,
+      "passed": 132,
+      "total": 132,
       "status": "compatible"
     },
     "Lint/DuplicateCaseCondition": {
@@ -719,8 +719,8 @@
       "status": "compatible"
     },
     "Lint/DuplicateElsifCondition": {
-      "passed": 5,
-      "total": 5,
+      "passed": 7,
+      "total": 7,
       "status": "compatible"
     },
     "Lint/DuplicateHashKey": {
@@ -734,13 +734,13 @@
       "status": "compatible"
     },
     "Lint/DuplicateMatchPattern": {
-      "passed": 19,
-      "total": 19,
+      "passed": 20,
+      "total": 20,
       "status": "compatible"
     },
     "Lint/DuplicateMethods": {
-      "passed": 475,
-      "total": 475,
+      "passed": 477,
+      "total": 477,
       "status": "compatible"
     },
     "Lint/DuplicateRegexpCharacterClassElement": {
@@ -749,8 +749,8 @@
       "status": "compatible"
     },
     "Lint/DuplicateRequire": {
-      "passed": 10,
-      "total": 10,
+      "passed": 11,
+      "total": 11,
       "status": "compatible"
     },
     "Lint/DuplicateRescueException": {
@@ -759,8 +759,8 @@
       "status": "compatible"
     },
     "Lint/DuplicateSetElement": {
-      "passed": 36,
-      "total": 36,
+      "passed": 38,
+      "total": 38,
       "status": "compatible"
     },
     "Lint/EachWithObjectArgument": {
@@ -769,28 +769,28 @@
       "status": "compatible"
     },
     "Lint/ElseLayout": {
-      "passed": 12,
-      "total": 12,
+      "passed": 13,
+      "total": 13,
       "status": "compatible"
     },
     "Lint/EmptyBlock": {
-      "passed": 17,
-      "total": 17,
+      "passed": 18,
+      "total": 18,
       "status": "compatible"
     },
     "Lint/EmptyClass": {
-      "passed": 9,
-      "total": 9,
+      "passed": 11,
+      "total": 11,
       "status": "compatible"
     },
     "Lint/EmptyConditionalBody": {
-      "passed": 39,
-      "total": 39,
+      "passed": 40,
+      "total": 40,
       "status": "compatible"
     },
     "Lint/EmptyEnsure": {
-      "passed": 2,
-      "total": 2,
+      "passed": 3,
+      "total": 3,
       "status": "compatible"
     },
     "Lint/EmptyExpression": {
@@ -799,8 +799,8 @@
       "status": "compatible"
     },
     "Lint/EmptyFile": {
-      "passed": 4,
-      "total": 4,
+      "passed": 5,
+      "total": 5,
       "status": "compatible"
     },
     "Lint/EmptyInPattern": {
@@ -809,8 +809,8 @@
       "status": "compatible"
     },
     "Lint/EmptyInterpolation": {
-      "passed": 12,
-      "total": 12,
+      "passed": 13,
+      "total": 13,
       "status": "compatible"
     },
     "Lint/EmptyWhen": {
@@ -819,8 +819,8 @@
       "status": "compatible"
     },
     "Lint/EnsureReturn": {
-      "passed": 5,
-      "total": 5,
+      "passed": 6,
+      "total": 6,
       "status": "compatible"
     },
     "Lint/ErbNewArguments": {
@@ -844,8 +844,8 @@
       "status": "compatible"
     },
     "Lint/FormatParameterMismatch": {
-      "passed": 75,
-      "total": 75,
+      "passed": 76,
+      "total": 76,
       "status": "compatible"
     },
     "Lint/HashCompareByIdentity": {
@@ -854,13 +854,13 @@
       "status": "compatible"
     },
     "Lint/HashNewWithKeywordArgumentsAsDefault": {
-      "passed": 10,
-      "total": 10,
+      "passed": 11,
+      "total": 11,
       "status": "compatible"
     },
     "Lint/HeredocMethodCallPosition": {
-      "passed": 11,
-      "total": 11,
+      "passed": 12,
+      "total": 12,
       "status": "compatible"
     },
     "Lint/IdentityComparison": {
@@ -879,8 +879,8 @@
       "status": "compatible"
     },
     "Lint/IneffectiveAccessModifier": {
-      "passed": 8,
-      "total": 8,
+      "passed": 10,
+      "total": 10,
       "status": "compatible"
     },
     "Lint/InheritException": {
@@ -914,9 +914,9 @@
       "status": "compatible"
     },
     "Lint/LiteralInInterpolation": {
-      "passed": 378,
-      "total": 378,
-      "status": "compatible"
+      "passed": 379,
+      "total": 380,
+      "status": "mismatch"
     },
     "Lint/Loop": {
       "passed": 4,
@@ -924,13 +924,13 @@
       "status": "compatible"
     },
     "Lint/MissingCopEnableDirective": {
-      "passed": 14,
-      "total": 14,
+      "passed": 19,
+      "total": 19,
       "status": "compatible"
     },
     "Lint/MissingSuper": {
-      "passed": 22,
-      "total": 22,
+      "passed": 23,
+      "total": 23,
       "status": "compatible"
     },
     "Lint/MixedCaseRange": {
@@ -939,8 +939,8 @@
       "status": "compatible"
     },
     "Lint/MixedRegexpCaptureTypes": {
-      "passed": 12,
-      "total": 12,
+      "passed": 13,
+      "total": 13,
       "status": "compatible"
     },
     "Lint/MultipleComparison": {
@@ -954,8 +954,8 @@
       "status": "compatible"
     },
     "Lint/NestedPercentLiteral": {
-      "passed": 11,
-      "total": 11,
+      "passed": 12,
+      "total": 12,
       "status": "compatible"
     },
     "Lint/NextWithoutAccumulator": {
@@ -969,8 +969,8 @@
       "status": "compatible"
     },
     "Lint/NonAtomicFileOperation": {
-      "passed": 43,
-      "total": 43,
+      "passed": 45,
+      "total": 45,
       "status": "compatible"
     },
     "Lint/NonDeterministicRequireOrder": {
@@ -984,8 +984,8 @@
       "status": "compatible"
     },
     "Lint/NumberConversion": {
-      "passed": 37,
-      "total": 37,
+      "passed": 38,
+      "total": 38,
       "status": "compatible"
     },
     "Lint/NumberedParameterAssignment": {
@@ -1004,23 +1004,23 @@
       "status": "compatible"
     },
     "Lint/OrderedMagicComments": {
-      "passed": 10,
-      "total": 10,
+      "passed": 11,
+      "total": 11,
       "status": "compatible"
     },
     "Lint/OutOfRangeRegexpRef": {
-      "passed": 122,
-      "total": 122,
+      "passed": 124,
+      "total": 124,
       "status": "compatible"
     },
     "Lint/ParenthesesAsGroupedExpression": {
-      "passed": 29,
-      "total": 29,
+      "passed": 30,
+      "total": 30,
       "status": "compatible"
     },
     "Lint/PercentStringArray": {
-      "passed": 21,
-      "total": 21,
+      "passed": 22,
+      "total": 22,
       "status": "compatible"
     },
     "Lint/PercentSymbolArray": {
@@ -1044,8 +1044,8 @@
       "status": "mismatch"
     },
     "Lint/RedundantCopEnableDirective": {
-      "passed": 22,
-      "total": 23,
+      "passed": 25,
+      "total": 28,
       "status": "mismatch"
     },
     "Lint/RedundantDirGlobSort": {
@@ -1054,8 +1054,8 @@
       "status": "compatible"
     },
     "Lint/RedundantRegexpQuantifiers": {
-      "passed": 25,
-      "total": 25,
+      "passed": 27,
+      "total": 27,
       "status": "compatible"
     },
     "Lint/RedundantRequireStatement": {
@@ -1069,8 +1069,8 @@
       "status": "compatible"
     },
     "Lint/RedundantSplatExpansion": {
-      "passed": 58,
-      "total": 58,
+      "passed": 60,
+      "total": 60,
       "status": "compatible"
     },
     "Lint/RedundantStringCoercion": {
@@ -1094,8 +1094,8 @@
       "status": "compatible"
     },
     "Lint/RefinementImportMethods": {
-      "passed": 7,
-      "total": 7,
+      "passed": 8,
+      "total": 8,
       "status": "compatible"
     },
     "Lint/RegexpAsCondition": {
@@ -1104,23 +1104,23 @@
       "status": "compatible"
     },
     "Lint/RequireParentheses": {
-      "passed": 16,
-      "total": 16,
+      "passed": 17,
+      "total": 17,
       "status": "compatible"
     },
     "Lint/RequireRangeParentheses": {
+      "passed": 10,
+      "total": 10,
+      "status": "compatible"
+    },
+    "Lint/RequireRelativeSelfPath": {
       "passed": 9,
       "total": 9,
       "status": "compatible"
     },
-    "Lint/RequireRelativeSelfPath": {
-      "passed": 8,
-      "total": 8,
-      "status": "compatible"
-    },
     "Lint/RescueException": {
-      "passed": 11,
-      "total": 11,
+      "passed": 13,
+      "total": 13,
       "status": "compatible"
     },
     "Lint/RescueType": {
@@ -1129,33 +1129,33 @@
       "status": "compatible"
     },
     "Lint/ReturnInVoidContext": {
-      "passed": 18,
-      "total": 18,
+      "passed": 19,
+      "total": 19,
       "status": "compatible"
     },
     "Lint/SafeNavigationChain": {
-      "passed": 65,
-      "total": 65,
+      "passed": 67,
+      "total": 67,
       "status": "compatible"
     },
     "Lint/SafeNavigationConsistency": {
-      "passed": 43,
-      "total": 43,
+      "passed": 45,
+      "total": 45,
       "status": "compatible"
     },
     "Lint/SafeNavigationWithEmpty": {
-      "passed": 3,
-      "total": 3,
+      "passed": 4,
+      "total": 4,
       "status": "compatible"
     },
     "Lint/ScriptPermission": {
-      "passed": 4,
-      "total": 6,
+      "passed": 5,
+      "total": 7,
       "status": "mismatch"
     },
     "Lint/SelfAssignment": {
-      "passed": 58,
-      "total": 58,
+      "passed": 60,
+      "total": 60,
       "status": "compatible"
     },
     "Lint/SendWithMixinArgument": {
@@ -1164,18 +1164,18 @@
       "status": "compatible"
     },
     "Lint/ShadowedArgument": {
-      "passed": 54,
-      "total": 54,
+      "passed": 56,
+      "total": 56,
       "status": "compatible"
     },
     "Lint/ShadowedException": {
-      "passed": 38,
-      "total": 38,
+      "passed": 41,
+      "total": 41,
       "status": "compatible"
     },
     "Lint/ShadowingOuterLocalVariable": {
-      "passed": 31,
-      "total": 31,
+      "passed": 33,
+      "total": 33,
       "status": "compatible"
     },
     "Lint/SharedMutableDefault": {
@@ -1189,28 +1189,28 @@
       "status": "compatible"
     },
     "Lint/SuppressedException": {
-      "passed": 24,
-      "total": 24,
+      "passed": 25,
+      "total": 25,
       "status": "compatible"
     },
     "Lint/SuppressedExceptionInNumberConversion": {
-      "passed": 26,
-      "total": 26,
+      "passed": 27,
+      "total": 27,
       "status": "compatible"
     },
     "Lint/SymbolConversion": {
-      "passed": 39,
-      "total": 39,
+      "passed": 46,
+      "total": 46,
       "status": "compatible"
     },
     "Lint/Syntax": {
-      "passed": 4,
-      "total": 4,
+      "passed": 5,
+      "total": 5,
       "status": "compatible"
     },
     "Lint/ToEnumArguments": {
-      "passed": 24,
-      "total": 24,
+      "passed": 25,
+      "total": 25,
       "status": "compatible"
     },
     "Lint/ToJSON": {
@@ -1224,23 +1224,23 @@
       "status": "compatible"
     },
     "Lint/TrailingCommaInAttributeDeclaration": {
-      "passed": 2,
-      "total": 2,
+      "passed": 3,
+      "total": 3,
       "status": "compatible"
     },
     "Lint/TripleQuotes": {
-      "passed": 9,
-      "total": 9,
+      "passed": 10,
+      "total": 10,
       "status": "compatible"
     },
     "Lint/UnderscorePrefixedVariableName": {
-      "passed": 18,
-      "total": 18,
+      "passed": 19,
+      "total": 19,
       "status": "compatible"
     },
     "Lint/UnescapedBracketInRegexp": {
-      "passed": 44,
-      "total": 44,
+      "passed": 46,
+      "total": 46,
       "status": "compatible"
     },
     "Lint/UnexpectedBlockArity": {
@@ -1254,28 +1254,28 @@
       "status": "compatible"
     },
     "Lint/UnmodifiedReduceAccumulator": {
-      "passed": 165,
-      "total": 165,
+      "passed": 166,
+      "total": 166,
       "status": "compatible"
     },
     "Lint/UnreachableCode": {
-      "passed": 266,
-      "total": 266,
+      "passed": 267,
+      "total": 267,
       "status": "compatible"
     },
     "Lint/UnreachableLoop": {
-      "passed": 28,
-      "total": 28,
+      "passed": 29,
+      "total": 29,
       "status": "compatible"
     },
     "Lint/UnreachablePatternBranch": {
-      "passed": 23,
-      "total": 23,
+      "passed": 24,
+      "total": 24,
       "status": "compatible"
     },
     "Lint/UnusedBlockArgument": {
-      "passed": 29,
-      "total": 30,
+      "passed": 30,
+      "total": 31,
       "status": "mismatch"
     },
     "Lint/UnusedMethodArgument": {
@@ -1284,18 +1284,18 @@
       "status": "compatible"
     },
     "Lint/UriEscapeUnescape": {
-      "passed": 9,
-      "total": 9,
-      "status": "compatible"
+      "passed": 10,
+      "total": 11,
+      "status": "mismatch"
     },
     "Lint/UriRegexp": {
-      "passed": 10,
-      "total": 10,
+      "passed": 11,
+      "total": 11,
       "status": "compatible"
     },
     "Lint/UselessAccessModifier": {
-      "passed": 192,
-      "total": 192,
+      "passed": 193,
+      "total": 193,
       "status": "compatible"
     },
     "Lint/UselessAssignment": {
@@ -1314,18 +1314,18 @@
       "status": "compatible"
     },
     "Lint/UselessDefined": {
-      "passed": 7,
-      "total": 7,
+      "passed": 8,
+      "total": 8,
       "status": "compatible"
     },
     "Lint/UselessElseWithoutRescue": {
-      "passed": 2,
-      "total": 2,
+      "passed": 3,
+      "total": 3,
       "status": "compatible"
     },
     "Lint/UselessMethodDefinition": {
-      "passed": 16,
-      "total": 16,
+      "passed": 18,
+      "total": 18,
       "status": "compatible"
     },
     "Lint/UselessNumericOperation": {
@@ -1359,8 +1359,8 @@
       "status": "compatible"
     },
     "Lint/Void": {
-      "passed": 269,
-      "total": 269,
+      "passed": 270,
+      "total": 270,
       "status": "compatible"
     },
     "Metrics/AbcSize": {
@@ -1384,9 +1384,9 @@
       "status": "compatible"
     },
     "Metrics/CollectionLiteralLength": {
-      "passed": 13,
-      "total": 13,
-      "status": "compatible"
+      "passed": 14,
+      "total": 15,
+      "status": "mismatch"
     },
     "Metrics/CyclomaticComplexity": {
       "passed": 36,
@@ -1399,14 +1399,14 @@
       "status": "compatible"
     },
     "Metrics/ModuleLength": {
-      "passed": 19,
-      "total": 19,
+      "passed": 21,
+      "total": 21,
       "status": "compatible"
     },
     "Metrics/ParameterLists": {
-      "passed": 16,
-      "total": 16,
-      "status": "compatible"
+      "passed": 17,
+      "total": 18,
+      "status": "mismatch"
     },
     "Metrics/PerceivedComplexity": {
       "passed": 31,
@@ -1419,13 +1419,13 @@
       "status": "compatible"
     },
     "Naming/AccessorMethodName": {
-      "passed": 23,
-      "total": 23,
+      "passed": 24,
+      "total": 24,
       "status": "compatible"
     },
     "Naming/AsciiIdentifiers": {
-      "passed": 12,
-      "total": 12,
+      "passed": 13,
+      "total": 13,
       "status": "compatible"
     },
     "Naming/BinaryOperatorParameterName": {
@@ -1434,8 +1434,8 @@
       "status": "compatible"
     },
     "Naming/BlockForwarding": {
-      "passed": 36,
-      "total": 36,
+      "passed": 37,
+      "total": 37,
       "status": "compatible"
     },
     "Naming/BlockParameterName": {
@@ -1444,63 +1444,63 @@
       "status": "compatible"
     },
     "Naming/ClassAndModuleCamelCase": {
-      "passed": 5,
-      "total": 5,
+      "passed": 7,
+      "total": 7,
       "status": "compatible"
     },
     "Naming/ConstantName": {
-      "passed": 24,
-      "total": 24,
+      "passed": 27,
+      "total": 27,
       "status": "compatible"
     },
     "Naming/FileName": {
-      "passed": 120,
-      "total": 120,
+      "passed": 122,
+      "total": 122,
       "status": "compatible"
     },
     "Naming/HeredocDelimiterCase": {
-      "passed": 26,
-      "total": 26,
+      "passed": 27,
+      "total": 27,
       "status": "compatible"
     },
     "Naming/HeredocDelimiterNaming": {
-      "passed": 18,
-      "total": 18,
+      "passed": 22,
+      "total": 22,
       "status": "compatible"
     },
     "Naming/InclusiveLanguage": {
-      "passed": 34,
-      "total": 34,
+      "passed": 36,
+      "total": 36,
       "status": "compatible"
     },
     "Naming/MemoizedInstanceVariableName": {
-      "passed": 72,
-      "total": 72,
+      "passed": 74,
+      "total": 74,
       "status": "compatible"
     },
     "Naming/MethodName": {
-      "passed": 201,
-      "total": 201,
+      "passed": 203,
+      "total": 203,
       "status": "compatible"
     },
     "Naming/MethodParameterName": {
-      "passed": 23,
-      "total": 23,
-      "status": "compatible"
-    },
-    "Naming/PredicateMethod": {
-      "passed": 1262,
-      "total": 1262,
-      "status": "compatible"
-    },
-    "Naming/PredicatePrefix": {
       "passed": 24,
       "total": 24,
       "status": "compatible"
     },
+    "Naming/PredicateMethod": {
+      "passed": 1264,
+      "total": 1264,
+      "status": "compatible"
+    },
+    "Naming/PredicatePrefix": {
+      "passed": 25,
+      "total": 25,
+      "status": "compatible"
+    },
     "Naming/RescuedExceptionsVariableName": {
-      "passed": 36,
-      "total": 36,
+      "passed": 37,
+      "total": 37,
       "status": "compatible"
     },
     "Naming/VariableName": {
@@ -1514,38 +1514,38 @@
       "status": "compatible"
     },
     "Security/CompoundHash": {
-      "passed": 21,
-      "total": 21,
+      "passed": 22,
+      "total": 22,
       "status": "compatible"
     },
     "Security/Eval": {
-      "passed": 15,
-      "total": 15,
-      "status": "compatible"
+      "passed": 23,
+      "total": 24,
+      "status": "mismatch"
     },
     "Security/IoMethods": {
-      "passed": 31,
-      "total": 31,
-      "status": "compatible"
+      "passed": 37,
+      "total": 38,
+      "status": "mismatch"
     },
     "Security/JSONLoad": {
-      "passed": 7,
-      "total": 7,
-      "status": "compatible"
+      "passed": 14,
+      "total": 16,
+      "status": "mismatch"
     },
     "Security/MarshalLoad": {
-      "passed": 5,
-      "total": 5,
+      "passed": 12,
+      "total": 12,
       "status": "compatible"
     },
     "Security/Open": {
-      "passed": 16,
-      "total": 16,
+      "passed": 22,
+      "total": 22,
       "status": "compatible"
     },
     "Security/YAMLLoad": {
-      "passed": 6,
-      "total": 6,
+      "passed": 8,
+      "total": 8,
       "status": "compatible"
     },
     "Style/AccessModifierDeclarations": {
@@ -1554,49 +1554,49 @@
       "status": "compatible"
     },
     "Style/AccessorGrouping": {
-      "passed": 26,
-      "total": 26,
-      "status": "compatible"
+      "passed": 35,
+      "total": 36,
+      "status": "mismatch"
     },
     "Style/Alias": {
-      "passed": 31,
-      "total": 31,
+      "passed": 32,
+      "total": 32,
       "status": "compatible"
     },
     "Style/AmbiguousEndlessMethodDefinition": {
-      "passed": 31,
-      "total": 31,
+      "passed": 32,
+      "total": 32,
       "status": "compatible"
     },
     "Style/AndOr": {
-      "passed": 78,
-      "total": 78,
+      "passed": 79,
+      "total": 79,
       "status": "compatible"
     },
     "Style/ArgumentsForwarding": {
-      "passed": 180,
-      "total": 184,
+      "passed": 181,
+      "total": 186,
       "status": "mismatch"
     },
     "Style/ArrayCoercion": {
-      "passed": 5,
-      "total": 5,
+      "passed": 7,
+      "total": 7,
       "status": "compatible"
     },
     "Style/ArrayFirstLast": {
-      "passed": 16,
-      "total": 16,
-      "status": "compatible"
+      "passed": 18,
+      "total": 19,
+      "status": "mismatch"
     },
     "Style/ArrayIntersect": {
-      "passed": 81,
-      "total": 81,
+      "passed": 83,
+      "total": 83,
       "status": "compatible"
     },
     "Style/ArrayIntersectWithSingleElement": {
       "passed": 4,
-      "total": 4,
-      "status": "compatible"
+      "total": 5,
+      "status": "mismatch"
     },
     "Style/ArrayJoin": {
       "passed": 5,
@@ -1604,8 +1604,8 @@
       "status": "compatible"
     },
     "Style/AsciiComments": {
-      "passed": 5,
-      "total": 5,
+      "passed": 6,
+      "total": 6,
       "status": "compatible"
     },
     "Style/Attr": {
@@ -1614,8 +1614,8 @@
       "status": "compatible"
     },
     "Style/AutoResourceCleanup": {
-      "passed": 7,
-      "total": 7,
+      "passed": 13,
+      "total": 13,
       "status": "compatible"
     },
     "Style/BarePercentLiterals": {
@@ -1634,68 +1634,68 @@
       "status": "compatible"
     },
     "Style/BitwisePredicate": {
-      "passed": 18,
-      "total": 18,
+      "passed": 19,
+      "total": 19,
       "status": "compatible"
     },
     "Style/BlockComments": {
-      "passed": 5,
-      "total": 5,
+      "passed": 6,
+      "total": 6,
       "status": "compatible"
     },
     "Style/BlockDelimiters": {
-      "passed": 171,
-      "total": 171,
+      "passed": 174,
+      "total": 174,
       "status": "compatible"
     },
     "Style/CaseEquality": {
-      "passed": 20,
-      "total": 20,
+      "passed": 21,
+      "total": 21,
       "status": "compatible"
     },
     "Style/CaseLikeIf": {
-      "passed": 38,
-      "total": 38,
+      "passed": 40,
+      "total": 40,
       "status": "compatible"
     },
     "Style/CharacterLiteral": {
-      "passed": 5,
-      "total": 5,
+      "passed": 6,
+      "total": 6,
       "status": "compatible"
     },
     "Style/ClassAndModuleChildren": {
-      "passed": 42,
-      "total": 42,
-      "status": "compatible"
+      "passed": 43,
+      "total": 44,
+      "status": "mismatch"
     },
     "Style/ClassCheck": {
-      "passed": 4,
-      "total": 4,
+      "passed": 5,
+      "total": 5,
       "status": "compatible"
     },
     "Style/ClassEqualityComparison": {
-      "passed": 22,
-      "total": 22,
+      "passed": 23,
+      "total": 23,
       "status": "compatible"
     },
     "Style/ClassMethods": {
-      "passed": 5,
-      "total": 5,
+      "passed": 6,
+      "total": 6,
       "status": "compatible"
     },
     "Style/ClassMethodsDefinitions": {
-      "passed": 16,
-      "total": 16,
+      "passed": 17,
+      "total": 17,
       "status": "compatible"
     },
     "Style/ClassVars": {
-      "passed": 5,
-      "total": 5,
+      "passed": 7,
+      "total": 7,
       "status": "compatible"
     },
     "Style/CollectionCompact": {
-      "passed": 35,
-      "total": 35,
+      "passed": 36,
+      "total": 36,
       "status": "compatible"
     },
     "Style/CollectionMethods": {
@@ -1714,19 +1714,19 @@
       "status": "compatible"
     },
     "Style/ColonMethodDefinition": {
-      "passed": 3,
-      "total": 3,
+      "passed": 4,
+      "total": 4,
       "status": "compatible"
     },
     "Style/CombinableDefined": {
-      "passed": 31,
-      "total": 39,
+      "passed": 32,
+      "total": 41,
       "status": "mismatch"
     },
     "Style/CombinableLoops": {
-      "passed": 20,
-      "total": 20,
-      "status": "compatible"
+      "passed": 22,
+      "total": 24,
+      "status": "mismatch"
     },
     "Style/CommandLiteral": {
       "passed": 35,
@@ -1734,13 +1734,13 @@
       "status": "compatible"
     },
     "Style/CommentAnnotation": {
-      "passed": 31,
-      "total": 31,
+      "passed": 32,
+      "total": 32,
       "status": "compatible"
     },
     "Style/CommentedKeyword": {
-      "passed": 47,
-      "total": 47,
+      "passed": 49,
+      "total": 49,
       "status": "compatible"
     },
     "Style/ComparableBetween": {
@@ -1759,8 +1759,8 @@
       "status": "compatible"
     },
     "Style/ConditionalAssignment": {
-      "passed": 1180,
-      "total": 1180,
+      "passed": 1182,
+      "total": 1182,
       "status": "compatible"
     },
     "Style/ConstantVisibility": {
@@ -1779,8 +1779,8 @@
       "status": "compatible"
     },
     "Style/DateTime": {
-      "passed": 12,
-      "total": 12,
+      "passed": 13,
+      "total": 13,
       "status": "compatible"
     },
     "Style/DefWithParentheses": {
@@ -1794,23 +1794,23 @@
       "status": "compatible"
     },
     "Style/Dir": {
-      "passed": 4,
-      "total": 4,
+      "passed": 5,
+      "total": 5,
       "status": "compatible"
     },
     "Style/DirEmpty": {
-      "passed": 16,
-      "total": 16,
+      "passed": 17,
+      "total": 17,
       "status": "compatible"
     },
     "Style/DisableCopsWithinSourceCodeDirective": {
-      "passed": 7,
-      "total": 7,
+      "passed": 9,
+      "total": 9,
       "status": "compatible"
     },
     "Style/DocumentDynamicEvalDefinition": {
-      "passed": 19,
-      "total": 19,
+      "passed": 20,
+      "total": 20,
       "status": "compatible"
     },
     "Style/Documentation": {
@@ -1829,29 +1829,29 @@
       "status": "compatible"
     },
     "Style/DoubleNegation": {
-      "passed": 47,
-      "total": 47,
+      "passed": 49,
+      "total": 49,
       "status": "compatible"
     },
     "Style/EachForSimpleLoop": {
-      "passed": 20,
-      "total": 20,
+      "passed": 21,
+      "total": 21,
       "status": "compatible"
     },
     "Style/EachWithObject": {
-      "passed": 16,
-      "total": 16,
+      "passed": 17,
+      "total": 17,
       "status": "compatible"
     },
     "Style/EmptyBlockParameter": {
-      "passed": 9,
-      "total": 9,
-      "status": "compatible"
+      "passed": 10,
+      "total": 11,
+      "status": "mismatch"
     },
     "Style/EmptyCaseCondition": {
       "passed": 29,
-      "total": 29,
-      "status": "compatible"
+      "total": 30,
+      "status": "mismatch"
     },
     "Style/EmptyClassDefinition": {
       "passed": 52,
@@ -1859,33 +1859,33 @@
       "status": "compatible"
     },
     "Style/EmptyElse": {
-      "passed": 124,
-      "total": 124,
+      "passed": 126,
+      "total": 126,
       "status": "compatible"
     },
     "Style/EmptyHeredoc": {
-      "passed": 7,
-      "total": 7,
+      "passed": 8,
+      "total": 8,
       "status": "compatible"
     },
     "Style/EmptyLambdaParameter": {
-      "passed": 3,
-      "total": 3,
+      "passed": 4,
+      "total": 4,
       "status": "compatible"
     },
     "Style/EmptyLiteral": {
-      "passed": 49,
-      "total": 49,
+      "passed": 50,
+      "total": 50,
       "status": "compatible"
     },
     "Style/EmptyMethod": {
-      "passed": 32,
-      "total": 32,
+      "passed": 34,
+      "total": 34,
       "status": "compatible"
     },
     "Style/EmptyStringInsideInterpolation": {
-      "passed": 22,
-      "total": 22,
+      "passed": 23,
+      "total": 23,
       "status": "compatible"
     },
     "Style/Encoding": {
@@ -1894,23 +1894,23 @@
       "status": "compatible"
     },
     "Style/EndBlock": {
-      "passed": 2,
-      "total": 2,
+      "passed": 3,
+      "total": 3,
       "status": "compatible"
     },
     "Style/EndlessMethod": {
       "passed": 63,
-      "total": 63,
-      "status": "compatible"
+      "total": 65,
+      "status": "mismatch"
     },
     "Style/EnvHome": {
-      "passed": 7,
-      "total": 7,
-      "status": "compatible"
+      "passed": 8,
+      "total": 9,
+      "status": "mismatch"
     },
     "Style/EvalWithLocation": {
-      "passed": 27,
-      "total": 27,
+      "passed": 37,
+      "total": 37,
       "status": "compatible"
     },
     "Style/EvenOdd": {
@@ -1924,14 +1924,14 @@
       "status": "compatible"
     },
     "Style/ExpandPathArguments": {
-      "passed": 16,
-      "total": 16,
+      "passed": 18,
+      "total": 18,
       "status": "compatible"
     },
     "Style/ExplicitBlockArgument": {
-      "passed": 21,
-      "total": 21,
-      "status": "compatible"
+      "passed": 27,
+      "total": 30,
+      "status": "mismatch"
     },
     "Style/ExponentialNotation": {
       "passed": 27,
@@ -1939,13 +1939,13 @@
       "status": "compatible"
     },
     "Style/FetchEnvVar": {
-      "passed": 43,
-      "total": 43,
+      "passed": 49,
+      "total": 49,
       "status": "compatible"
     },
     "Style/FileEmpty": {
-      "passed": 27,
-      "total": 27,
+      "passed": 28,
+      "total": 28,
       "status": "compatible"
     },
     "Style/FileNull": {
@@ -1954,13 +1954,13 @@
       "status": "compatible"
     },
     "Style/FileOpen": {
-      "passed": 21,
-      "total": 21,
+      "passed": 22,
+      "total": 22,
       "status": "compatible"
     },
     "Style/FileRead": {
-      "passed": 30,
-      "total": 30,
+      "passed": 31,
+      "total": 31,
       "status": "compatible"
     },
     "Style/FileTouch": {
@@ -1989,13 +1989,13 @@
       "status": "compatible"
     },
     "Style/FormatStringToken": {
-      "passed": 265,
-      "total": 265,
+      "passed": 267,
+      "total": 267,
       "status": "compatible"
     },
     "Style/FrozenStringLiteralComment": {
-      "passed": 107,
-      "total": 107,
+      "passed": 108,
+      "total": 108,
       "status": "compatible"
     },
     "Style/GlobalStdStream": {
@@ -2009,8 +2009,8 @@
       "status": "compatible"
     },
     "Style/GuardClause": {
-      "passed": 90,
-      "total": 90,
+      "passed": 93,
+      "total": 93,
       "status": "compatible"
     },
     "Style/HashAsLastArrayItem": {
@@ -2024,8 +2024,8 @@
       "status": "compatible"
     },
     "Style/HashEachMethods": {
-      "passed": 62,
-      "total": 62,
+      "passed": 64,
+      "total": 64,
       "status": "compatible"
     },
     "Style/HashExcept": {
@@ -2039,13 +2039,13 @@
       "status": "compatible"
     },
     "Style/HashLikeCase": {
-      "passed": 8,
-      "total": 8,
+      "passed": 9,
+      "total": 9,
       "status": "compatible"
     },
     "Style/HashLookupMethod": {
-      "passed": 17,
-      "total": 18,
+      "passed": 18,
+      "total": 19,
       "status": "mismatch"
     },
     "Style/HashSlice": {
@@ -2054,8 +2054,8 @@
       "status": "compatible"
     },
     "Style/HashSyntax": {
-      "passed": 189,
-      "total": 189,
+      "passed": 190,
+      "total": 190,
       "status": "compatible"
     },
     "Style/HashTransformKeys": {
@@ -2069,18 +2069,18 @@
       "status": "compatible"
     },
     "Style/IdenticalConditionalBranches": {
-      "passed": 48,
-      "total": 48,
+      "passed": 49,
+      "total": 49,
       "status": "compatible"
     },
     "Style/IfInsideElse": {
-      "passed": 20,
-      "total": 23,
+      "passed": 21,
+      "total": 24,
       "status": "mismatch"
     },
     "Style/IfUnlessModifier": {
-      "passed": 138,
-      "total": 138,
+      "passed": 148,
+      "total": 148,
       "status": "compatible"
     },
     "Style/IfUnlessModifierOfIfUnless": {
@@ -2089,13 +2089,13 @@
       "status": "compatible"
     },
     "Style/IfWithBooleanLiteralBranches": {
-      "passed": 88,
-      "total": 88,
+      "passed": 89,
+      "total": 89,
       "status": "compatible"
     },
     "Style/IfWithSemicolon": {
-      "passed": 29,
-      "total": 35,
+      "passed": 30,
+      "total": 36,
       "status": "mismatch"
     },
     "Style/ImplicitRuntimeError": {
@@ -2109,33 +2109,33 @@
       "status": "compatible"
     },
     "Style/InfiniteLoop": {
-      "passed": 28,
-      "total": 28,
+      "passed": 29,
+      "total": 29,
       "status": "compatible"
     },
     "Style/InlineComment": {
-      "passed": 3,
-      "total": 3,
-      "status": "compatible"
-    },
-    "Style/InverseMethods": {
-      "passed": 105,
-      "total": 109,
-      "status": "mismatch"
-    },
-    "Style/InvertibleUnlessCondition": {
-      "passed": 12,
-      "total": 15,
-      "status": "mismatch"
-    },
-    "Style/IpAddresses": {
       "passed": 14,
       "total": 14,
       "status": "compatible"
     },
+    "Style/InverseMethods": {
+      "passed": 106,
+      "total": 111,
+      "status": "mismatch"
+    },
+    "Style/InvertibleUnlessCondition": {
+      "passed": 14,
+      "total": 17,
+      "status": "mismatch"
+    },
+    "Style/IpAddresses": {
+      "passed": 15,
+      "total": 15,
+      "status": "compatible"
+    },
     "Style/ItAssignment": {
-      "passed": 23,
-      "total": 23,
+      "passed": 25,
+      "total": 25,
       "status": "compatible"
     },
     "Style/ItBlockParameter": {
@@ -2144,13 +2144,13 @@
       "status": "compatible"
     },
     "Style/KeywordArgumentsMerging": {
-      "passed": 9,
-      "total": 9,
+      "passed": 10,
+      "total": 10,
       "status": "compatible"
     },
     "Style/KeywordParametersOrder": {
-      "passed": 10,
-      "total": 10,
+      "passed": 11,
+      "total": 11,
       "status": "compatible"
     },
     "Style/Lambda": {
@@ -2164,8 +2164,8 @@
       "status": "mismatch"
     },
     "Style/LineEndConcatenation": {
-      "passed": 19,
-      "total": 19,
+      "passed": 20,
+      "total": 20,
       "status": "compatible"
     },
     "Style/MagicCommentFormat": {
@@ -2174,13 +2174,13 @@
       "status": "compatible"
     },
     "Style/MapCompactWithConditionalBlock": {
-      "passed": 33,
-      "total": 33,
+      "passed": 34,
+      "total": 34,
       "status": "compatible"
     },
     "Style/MapIntoArray": {
-      "passed": 62,
-      "total": 62,
+      "passed": 64,
+      "total": 64,
       "status": "compatible"
     },
     "Style/MapJoin": {
@@ -2189,13 +2189,13 @@
       "status": "compatible"
     },
     "Style/MapToHash": {
-      "passed": 38,
-      "total": 38,
+      "passed": 39,
+      "total": 39,
       "status": "compatible"
     },
     "Style/MapToSet": {
-      "passed": 30,
-      "total": 30,
+      "passed": 31,
+      "total": 31,
       "status": "compatible"
     },
     "Style/MethodCallWithArgsParentheses": {
@@ -2209,13 +2209,13 @@
       "status": "compatible"
     },
     "Style/MethodCalledOnDoEndBlock": {
-      "passed": 10,
-      "total": 10,
+      "passed": 11,
+      "total": 11,
       "status": "compatible"
     },
     "Style/MethodDefParentheses": {
-      "passed": 49,
-      "total": 49,
+      "passed": 50,
+      "total": 50,
       "status": "compatible"
     },
     "Style/MinMax": {
@@ -2234,8 +2234,8 @@
       "status": "compatible"
     },
     "Style/MissingRespondToMissing": {
-      "passed": 8,
-      "total": 8,
+      "passed": 9,
+      "total": 9,
       "status": "compatible"
     },
     "Style/MixinGrouping": {
@@ -2249,8 +2249,8 @@
       "status": "compatible"
     },
     "Style/ModuleFunction": {
-      "passed": 11,
-      "total": 11,
+      "passed": 12,
+      "total": 12,
       "status": "compatible"
     },
     "Style/ModuleMemberExistenceCheck": {
@@ -2260,17 +2260,17 @@
     },
     "Style/MultilineBlockChain": {
       "passed": 11,
-      "total": 11,
-      "status": "compatible"
+      "total": 13,
+      "status": "mismatch"
     },
     "Style/MultilineIfModifier": {
-      "passed": 10,
-      "total": 10,
+      "passed": 11,
+      "total": 11,
       "status": "compatible"
     },
     "Style/MultilineIfThen": {
-      "passed": 11,
-      "total": 11,
+      "passed": 13,
+      "total": 13,
       "status": "compatible"
     },
     "Style/MultilineInPatternThen": {
@@ -2279,19 +2279,19 @@
       "status": "compatible"
     },
     "Style/MultilineMemoization": {
-      "passed": 17,
-      "total": 17,
-      "status": "compatible"
-    },
-    "Style/MultilineMethodSignature": {
       "passed": 19,
       "total": 19,
       "status": "compatible"
     },
-    "Style/MultilineTernaryOperator": {
-      "passed": 17,
-      "total": 17,
+    "Style/MultilineMethodSignature": {
+      "passed": 20,
+      "total": 20,
       "status": "compatible"
+    },
+    "Style/MultilineTernaryOperator": {
+      "passed": 18,
+      "total": 19,
+      "status": "mismatch"
     },
     "Style/MultilineWhenThen": {
       "passed": 13,
@@ -2299,18 +2299,18 @@
       "status": "compatible"
     },
     "Style/MultipleComparison": {
-      "passed": 34,
-      "total": 34,
+      "passed": 36,
+      "total": 36,
       "status": "compatible"
     },
     "Style/MutableConstant": {
-      "passed": 354,
-      "total": 354,
+      "passed": 356,
+      "total": 356,
       "status": "compatible"
     },
     "Style/NegatedIf": {
-      "passed": 15,
-      "total": 15,
+      "passed": 16,
+      "total": 16,
       "status": "compatible"
     },
     "Style/NegatedIfElseCondition": {
@@ -2319,13 +2319,13 @@
       "status": "compatible"
     },
     "Style/NegatedUnless": {
-      "passed": 14,
-      "total": 14,
+      "passed": 16,
+      "total": 16,
       "status": "compatible"
     },
     "Style/NegatedWhile": {
-      "passed": 10,
-      "total": 10,
+      "passed": 11,
+      "total": 11,
       "status": "compatible"
     },
     "Style/NegativeArrayIndex": {
@@ -2344,18 +2344,18 @@
       "status": "compatible"
     },
     "Style/NestedParenthesizedCalls": {
-      "passed": 12,
-      "total": 12,
+      "passed": 13,
+      "total": 13,
       "status": "compatible"
     },
     "Style/NestedTernaryOperator": {
       "passed": 7,
-      "total": 7,
-      "status": "compatible"
+      "total": 8,
+      "status": "mismatch"
     },
     "Style/Next": {
-      "passed": 69,
-      "total": 69,
+      "passed": 70,
+      "total": 70,
       "status": "compatible"
     },
     "Style/NilComparison": {
@@ -2379,8 +2379,8 @@
       "status": "compatible"
     },
     "Style/NumberedParameters": {
-      "passed": 4,
-      "total": 4,
+      "passed": 5,
+      "total": 5,
       "status": "compatible"
     },
     "Style/NumberedParametersLimit": {
@@ -2389,18 +2389,18 @@
       "status": "compatible"
     },
     "Style/NumericLiteralPrefix": {
-      "passed": 10,
-      "total": 10,
+      "passed": 11,
+      "total": 11,
       "status": "compatible"
     },
     "Style/NumericLiterals": {
-      "passed": 28,
-      "total": 28,
+      "passed": 30,
+      "total": 30,
       "status": "compatible"
     },
     "Style/NumericPredicate": {
-      "passed": 42,
-      "total": 42,
+      "passed": 43,
+      "total": 43,
       "status": "compatible"
     },
     "Style/ObjectThen": {
@@ -2409,8 +2409,8 @@
       "status": "compatible"
     },
     "Style/OneClassPerFile": {
-      "passed": 21,
-      "total": 21,
+      "passed": 22,
+      "total": 22,
       "status": "compatible"
     },
     "Style/OneLineConditional": {
@@ -2419,33 +2419,33 @@
       "status": "mismatch"
     },
     "Style/OpenStructUse": {
-      "passed": 12,
-      "total": 12,
-      "status": "compatible"
+      "passed": 13,
+      "total": 14,
+      "status": "mismatch"
     },
     "Style/OperatorMethodCall": {
-      "passed": 202,
-      "total": 202,
+      "passed": 203,
+      "total": 203,
       "status": "compatible"
     },
     "Style/OptionHash": {
+      "passed": 10,
+      "total": 10,
+      "status": "compatible"
+    },
+    "Style/OptionalArguments": {
+      "passed": 13,
+      "total": 13,
+      "status": "compatible"
+    },
+    "Style/OptionalBooleanParameter": {
       "passed": 9,
       "total": 9,
       "status": "compatible"
     },
-    "Style/OptionalArguments": {
-      "passed": 12,
-      "total": 12,
-      "status": "compatible"
-    },
-    "Style/OptionalBooleanParameter": {
-      "passed": 8,
-      "total": 8,
-      "status": "compatible"
-    },
     "Style/OrAssignment": {
-      "passed": 24,
-      "total": 24,
+      "passed": 25,
+      "total": 25,
       "status": "compatible"
     },
     "Style/ParallelAssignment": {
@@ -2454,28 +2454,28 @@
       "status": "mismatch"
     },
     "Style/ParenthesesAroundCondition": {
-      "passed": 30,
-      "total": 30,
+      "passed": 31,
+      "total": 31,
       "status": "compatible"
     },
     "Style/PartitionInsteadOfDoubleSelect": {
-      "passed": 37,
-      "total": 37,
+      "passed": 38,
+      "total": 38,
       "status": "compatible"
     },
     "Style/PercentLiteralDelimiters": {
-      "passed": 59,
-      "total": 64,
+      "passed": 62,
+      "total": 67,
       "status": "mismatch"
     },
     "Style/PercentQLiterals": {
-      "passed": 17,
-      "total": 17,
+      "passed": 18,
+      "total": 18,
       "status": "compatible"
     },
     "Style/PerlBackrefs": {
-      "passed": 14,
-      "total": 14,
+      "passed": 15,
+      "total": 15,
       "status": "compatible"
     },
     "Style/PredicateWithKind": {
@@ -2484,13 +2484,13 @@
       "status": "compatible"
     },
     "Style/PreferredHashMethods": {
-      "passed": 9,
-      "total": 9,
-      "status": "compatible"
+      "passed": 10,
+      "total": 11,
+      "status": "mismatch"
     },
     "Style/Proc": {
-      "passed": 6,
-      "total": 6,
+      "passed": 7,
+      "total": 7,
       "status": "compatible"
     },
     "Style/QuotedSymbols": {
@@ -2525,22 +2525,22 @@
     },
     "Style/RedundantArrayFlatten": {
       "passed": 10,
-      "total": 10,
-      "status": "compatible"
+      "total": 11,
+      "status": "mismatch"
     },
     "Style/RedundantAssignment": {
-      "passed": 11,
-      "total": 11,
+      "passed": 21,
+      "total": 21,
       "status": "compatible"
     },
     "Style/RedundantBegin": {
-      "passed": 63,
-      "total": 63,
+      "passed": 64,
+      "total": 64,
       "status": "compatible"
     },
     "Style/RedundantCapitalW": {
-      "passed": 13,
-      "total": 13,
+      "passed": 14,
+      "total": 14,
       "status": "compatible"
     },
     "Style/RedundantCondition": {
@@ -2549,8 +2549,8 @@
       "status": "compatible"
     },
     "Style/RedundantConditional": {
-      "passed": 11,
-      "total": 11,
+      "passed": 12,
+      "total": 12,
       "status": "compatible"
     },
     "Style/RedundantConstantBase": {
@@ -2579,8 +2579,8 @@
       "status": "compatible"
     },
     "Style/RedundantFetchBlock": {
-      "passed": 15,
-      "total": 15,
+      "passed": 17,
+      "total": 17,
       "status": "compatible"
     },
     "Style/RedundantFileExtensionInRequire": {
@@ -2604,28 +2604,28 @@
       "status": "compatible"
     },
     "Style/RedundantHeredocDelimiterQuotes": {
-      "passed": 17,
-      "total": 17,
+      "passed": 18,
+      "total": 18,
       "status": "compatible"
     },
     "Style/RedundantInitialize": {
       "passed": 23,
-      "total": 23,
-      "status": "compatible"
+      "total": 24,
+      "status": "mismatch"
     },
     "Style/RedundantInterpolation": {
-      "passed": 29,
-      "total": 29,
+      "passed": 30,
+      "total": 30,
       "status": "compatible"
     },
     "Style/RedundantInterpolationUnfreeze": {
-      "passed": 17,
-      "total": 17,
+      "passed": 18,
+      "total": 18,
       "status": "compatible"
     },
     "Style/RedundantLineContinuation": {
-      "passed": 167,
-      "total": 167,
+      "passed": 169,
+      "total": 169,
       "status": "compatible"
     },
     "Style/RedundantMinMaxBy": {
@@ -2634,23 +2634,23 @@
       "status": "compatible"
     },
     "Style/RedundantParentheses": {
-      "passed": 348,
-      "total": 348,
+      "passed": 358,
+      "total": 358,
       "status": "compatible"
     },
     "Style/RedundantPercentQ": {
-      "passed": 27,
-      "total": 27,
+      "passed": 28,
+      "total": 28,
       "status": "compatible"
     },
     "Style/RedundantRegexpArgument": {
-      "passed": 50,
-      "total": 50,
+      "passed": 52,
+      "total": 52,
       "status": "compatible"
     },
     "Style/RedundantRegexpCharacterClass": {
-      "passed": 47,
-      "total": 47,
+      "passed": 48,
+      "total": 48,
       "status": "compatible"
     },
     "Style/RedundantRegexpConstructor": {
@@ -2664,23 +2664,23 @@
       "status": "compatible"
     },
     "Style/RedundantReturn": {
-      "passed": 39,
-      "total": 39,
+      "passed": 40,
+      "total": 40,
       "status": "compatible"
     },
     "Style/RedundantSelf": {
-      "passed": 63,
-      "total": 63,
+      "passed": 64,
+      "total": 64,
       "status": "compatible"
     },
     "Style/RedundantSelfAssignment": {
-      "passed": 14,
-      "total": 14,
+      "passed": 16,
+      "total": 16,
       "status": "compatible"
     },
     "Style/RedundantSelfAssignmentBranch": {
-      "passed": 22,
-      "total": 22,
+      "passed": 23,
+      "total": 23,
       "status": "compatible"
     },
     "Style/RedundantSort": {
@@ -2700,17 +2700,17 @@
     },
     "Style/RedundantStructKeywordInit": {
       "passed": 17,
-      "total": 17,
-      "status": "compatible"
+      "total": 18,
+      "status": "mismatch"
     },
     "Style/RegexpLiteral": {
-      "passed": 65,
-      "total": 65,
+      "passed": 66,
+      "total": 66,
       "status": "compatible"
     },
     "Style/RequireOrder": {
-      "passed": 24,
-      "total": 24,
+      "passed": 25,
+      "total": 25,
       "status": "compatible"
     },
     "Style/RescueModifier": {
@@ -2724,8 +2724,8 @@
       "status": "compatible"
     },
     "Style/ReturnNil": {
-      "passed": 5,
-      "total": 5,
+      "passed": 6,
+      "total": 6,
       "status": "compatible"
     },
     "Style/ReturnNilInPredicateMethodDefinition": {
@@ -2739,13 +2739,13 @@
       "status": "compatible"
     },
     "Style/SafeNavigation": {
-      "passed": 782,
-      "total": 782,
+      "passed": 784,
+      "total": 784,
       "status": "compatible"
     },
     "Style/SafeNavigationChainLength": {
-      "passed": 8,
-      "total": 8,
+      "passed": 9,
+      "total": 9,
       "status": "compatible"
     },
     "Style/Sample": {
@@ -2774,9 +2774,9 @@
       "status": "compatible"
     },
     "Style/Semicolon": {
-      "passed": 33,
-      "total": 33,
-      "status": "compatible"
+      "passed": 37,
+      "total": 38,
+      "status": "mismatch"
     },
     "Style/Send": {
       "passed": 13,
@@ -2809,8 +2809,8 @@
       "status": "compatible"
     },
     "Style/SingleLineMethods": {
-      "passed": 16,
-      "total": 147,
+      "passed": 17,
+      "total": 148,
       "status": "mismatch"
     },
     "Style/SlicingWithRange": {
@@ -2849,23 +2849,23 @@
       "status": "compatible"
     },
     "Style/StringConcatenation": {
-      "passed": 30,
-      "total": 30,
+      "passed": 32,
+      "total": 32,
       "status": "compatible"
     },
     "Style/StringHashKeys": {
       "passed": 10,
-      "total": 10,
-      "status": "compatible"
+      "total": 11,
+      "status": "mismatch"
     },
     "Style/StringLiterals": {
-      "passed": 57,
-      "total": 57,
+      "passed": 59,
+      "total": 59,
       "status": "compatible"
     },
     "Style/StringLiteralsInInterpolation": {
-      "passed": 12,
-      "total": 12,
+      "passed": 13,
+      "total": 13,
       "status": "compatible"
     },
     "Style/StringMethods": {
@@ -2899,18 +2899,18 @@
       "status": "compatible"
     },
     "Style/SymbolArray": {
-      "passed": 25,
-      "total": 33,
+      "passed": 26,
+      "total": 34,
       "status": "mismatch"
     },
     "Style/SymbolLiteral": {
       "passed": 4,
-      "total": 4,
-      "status": "compatible"
+      "total": 5,
+      "status": "mismatch"
     },
     "Style/SymbolProc": {
-      "passed": 81,
-      "total": 81,
+      "passed": 82,
+      "total": 82,
       "status": "compatible"
     },
     "Style/TallyMethod": {
@@ -2929,8 +2929,8 @@
       "status": "compatible"
     },
     "Style/TrailingBodyOnClass": {
-      "passed": 7,
-      "total": 7,
+      "passed": 9,
+      "total": 9,
       "status": "compatible"
     },
     "Style/TrailingBodyOnMethodDefinition": {
@@ -2949,13 +2949,13 @@
       "status": "compatible"
     },
     "Style/TrailingCommaInArrayLiteral": {
-      "passed": 48,
-      "total": 48,
-      "status": "compatible"
+      "passed": 51,
+      "total": 52,
+      "status": "mismatch"
     },
     "Style/TrailingCommaInBlockArgs": {
-      "passed": 20,
-      "total": 20,
+      "passed": 21,
+      "total": 21,
       "status": "compatible"
     },
     "Style/TrailingCommaInHashLiteral": {
@@ -2964,8 +2964,8 @@
       "status": "compatible"
     },
     "Style/TrailingMethodEndStatement": {
-      "passed": 11,
-      "total": 11,
+      "passed": 12,
+      "total": 12,
       "status": "compatible"
     },
     "Style/TrailingUnderscoreVariable": {
@@ -2984,8 +2984,8 @@
       "status": "compatible"
     },
     "Style/UnlessLogicalOperators": {
-      "passed": 28,
-      "total": 28,
+      "passed": 30,
+      "total": 30,
       "status": "compatible"
     },
     "Style/UnpackFirst": {
@@ -3000,8 +3000,8 @@
     },
     "Style/WhenThen": {
       "passed": 4,
-      "total": 4,
-      "status": "compatible"
+      "total": 5,
+      "status": "mismatch"
     },
     "Style/WhileUntilDo": {
       "passed": 6,
@@ -3014,8 +3014,8 @@
       "status": "compatible"
     },
     "Style/WordArray": {
-      "passed": 33,
-      "total": 59,
+      "passed": 35,
+      "total": 61,
       "status": "mismatch"
     },
     "Style/YAMLFileRead": {

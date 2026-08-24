@@ -1,3 +1,4 @@
 {
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
   "f813ce4175adb8cd": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/RedundantSelfAssignmentBranch:\n  Description: Checks for places where conditional branch makes redundant self-assignment.\n  Enabled: true\n  VersionAdded: '1.19'\n  AutoCorrect: always\n"
 }

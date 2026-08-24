@@ -1,4 +1,5 @@
 {
   "235bae7115ffde9e": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/DefEndAlignment:\n  Description: Align ends corresponding to defs correctly.\n  Enabled: true\n  VersionAdded: '0.53'\n  EnforcedStyleAlignWith: def\n  SupportedStylesAlignWith:\n  - start_of_line\n  - def\n  Severity: warning\n  AutoCorrect: true\n",
-  "26f14b3f1bb08e2d": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/DefEndAlignment:\n  Description: Align ends corresponding to defs correctly.\n  Enabled: true\n  VersionAdded: '0.53'\n  EnforcedStyleAlignWith: start_of_line\n  SupportedStylesAlignWith:\n  - start_of_line\n  - def\n  Severity: warning\n  AutoCorrect: true\n"
+  "26f14b3f1bb08e2d": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/DefEndAlignment:\n  Description: Align ends corresponding to defs correctly.\n  Enabled: true\n  VersionAdded: '0.53'\n  EnforcedStyleAlignWith: start_of_line\n  SupportedStylesAlignWith:\n  - start_of_line\n  - def\n  Severity: warning\n  AutoCorrect: true\n",
+  "77c39c64bd272713": "---\nAllCops:\n  TargetRubyVersion: '2.7'\n"
 }

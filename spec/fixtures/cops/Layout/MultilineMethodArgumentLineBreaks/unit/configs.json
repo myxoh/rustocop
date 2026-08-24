@@ -1,4 +1,5 @@
 {
   "38feec084eaabeb7": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/MultilineMethodArgumentLineBreaks:\n  Description: Checks that each argument in a multi-line method call starts on a separate\n    line.\n  Enabled: true\n  VersionAdded: '0.67'\n  AllowMultilineFinalElement: false\n  AutoCorrect: always\n",
-  "476524e5294aca7c": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/MultilineMethodArgumentLineBreaks:\n  Description: Checks that each argument in a multi-line method call starts on a separate\n    line.\n  Enabled: true\n  VersionAdded: '0.67'\n  AllowMultilineFinalElement: true\n  AutoCorrect: always\n"
+  "476524e5294aca7c": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/MultilineMethodArgumentLineBreaks:\n  Description: Checks that each argument in a multi-line method call starts on a separate\n    line.\n  Enabled: true\n  VersionAdded: '0.67'\n  AllowMultilineFinalElement: true\n  AutoCorrect: always\n",
+  "77c39c64bd272713": "---\nAllCops:\n  TargetRubyVersion: '2.7'\n"
 }

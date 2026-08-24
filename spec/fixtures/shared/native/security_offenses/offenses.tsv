@@ -1,4 +1,0 @@
-cop	line	column	last_line	last_column	correctable	corrected	message
-Security/Eval	1	1	1	4	false	false	The use of `eval` is a serious security risk.
-Security/JSONLoad	2	6	2	9	true	false	Prefer `JSON.parse` over `JSON.load`.
-Security/MarshalLoad	3	9	3	15	false	false	Avoid using `Marshal.restore`.

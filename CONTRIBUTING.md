@@ -103,17 +103,11 @@ configuration, Ruby version, warmup, and process model; report medians and
 disclose whether RuboCop's Prism parser was enabled.
 
 Every real-project discrepancy used to change a cop must become a minimized
-fixture. Cop-level parity cases belong in
-`spec/fixtures/cops/<Department>/<Cop>/project/` and are indexed in
-`spec/fixtures/cop_project_cases.tsv`; shared parser/engine regressions belong
-under `spec/fixtures/shared/`, and cross-cop real-project output belongs under
-`spec/fixtures/projects/<Project>/`, with a `provenance.yml`. Keep the
-repository, revision, path, and triggering line;
-include a nearby clean control and exact autocorrection when applicable.
-Unresolved minimized cases live in `spec/fixtures/cop_project_mismatches.tsv`
-and run as pending examples
-in `spec/project_parity_mismatches_spec.rb`. A fix must make its pending example
-unexpectedly pass, then move that row into `manifest.tsv`.
+unit contract under `spec/fixtures/cops/<Department>/<Cop>/unit/`. Preserve the
+repository, revision, original path, and triggering line in the case's origins;
+include a nearby clean control and cached diagnostics, `-a`, and `-A` outcomes.
+Do not commit a second fixture format or a whole project tree. A known mismatch
+remains a failing unit contract until the implementation matches RuboCop.
 
 After unit and upstream checks pass, run the 50-project gate against the exact
 source tree being evaluated:
@@ -123,15 +117,6 @@ bundle exec ruby script/audit_project_parity.rb \
   --cops Department/First,Department/Second \
   --report tmp/project-parity/current-head.json \
   --markdown tmp/project-parity/current-head.md
-```
-
-The older minimized project/configuration differential is also opt-in and does
-not run in the normal RSpec suite:
-
-```sh
-PROJECT_AUDIT=1 bundle exec rspec \
-  spec/project_parity_regressions_spec.rb \
-  spec/configuration_parity_regressions_spec.rb
 ```
 
 The gate records a clean-tree Git commit when available. For a dirty tree it
@@ -154,9 +139,9 @@ ruby script/generate_project_parity_docs.rb \
 
 The generator rejects focused or truncated reports.
 
-`quality:test_contracts` checks that every committed compatibility fixture is
-owned by a known cop, indexed files are complete, and all controlled cache
-digests are intact. Use `script/verify_cop.rb Department/CopName` for the fast
+`quality:test_contracts` checks that every committed compatibility example is
+a canonical cop-owned unit contract and that all cache digests are intact. Use
+`script/verify_cop.rb Department/CopName` for the fast
 focused contract. Add `--live-rubocop` only when deliberately validating the
 capture pipeline; refresh the complete cache with
 `bundle exec rake fixtures:refresh_unit`. Performance scripts consume the independent pinned

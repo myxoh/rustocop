@@ -1,3 +1,5 @@
 {
-  "485b3b5624abb063": "---\nAllCops:\n  TargetRubyVersion: 2.7\nSecurity/IoMethods:\n  Description: Checks for the first argument to `IO.read`, `IO.binread`, `IO.write`,\n    `IO.binwrite`, `IO.foreach`, and `IO.readlines`.\n  Enabled: true\n  Safe: false\n  VersionAdded: '1.22'\n  AutoCorrect: always\n"
+  "01f1a789e5b330de": "--- {}\n",
+  "485b3b5624abb063": "---\nAllCops:\n  TargetRubyVersion: 2.7\nSecurity/IoMethods:\n  Description: Checks for the first argument to `IO.read`, `IO.binread`, `IO.write`,\n    `IO.binwrite`, `IO.foreach`, and `IO.readlines`.\n  Enabled: true\n  Safe: false\n  VersionAdded: '1.22'\n  AutoCorrect: always\n",
+  "77c39c64bd272713": "---\nAllCops:\n  TargetRubyVersion: '2.7'\n"
 }

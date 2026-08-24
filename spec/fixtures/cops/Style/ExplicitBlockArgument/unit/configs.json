@@ -1,3 +1,5 @@
 {
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
+  "77c39c64bd272713": "---\nAllCops:\n  TargetRubyVersion: '2.7'\n",
   "ad20780e163c609a": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/ExplicitBlockArgument:\n  Description: Consider using explicit block argument to avoid writing block literal\n    that just passes its arguments to another block.\n  StyleGuide: \"#block-argument\"\n  Enabled: true\n  VersionAdded: '0.89'\n  VersionChanged: '1.8'\n  AutoCorrect: always\n"
 }

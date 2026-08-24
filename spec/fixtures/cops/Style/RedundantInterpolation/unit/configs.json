@@ -1,4 +1,5 @@
 {
   "195ecd7ed70c886b": "---\nAllCops:\n  TargetRubyVersion: 3.0\nStyle/RedundantInterpolation:\n  Description: Checks for strings that are just an interpolated expression.\n  Enabled: true\n  SafeAutoCorrect: false\n  VersionAdded: '0.76'\n  VersionChanged: '1.30'\n  AutoCorrect: always\n",
-  "379ffc3ba511e37c": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/RedundantInterpolation:\n  Description: Checks for strings that are just an interpolated expression.\n  Enabled: true\n  SafeAutoCorrect: false\n  VersionAdded: '0.76'\n  VersionChanged: '1.30'\n  AutoCorrect: always\n"
+  "379ffc3ba511e37c": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/RedundantInterpolation:\n  Description: Checks for strings that are just an interpolated expression.\n  Enabled: true\n  SafeAutoCorrect: false\n  VersionAdded: '0.76'\n  VersionChanged: '1.30'\n  AutoCorrect: always\n",
+  "d9309843fee8fb07": "---\nAllCops:\n  DisabledByDefault: true\n  NewCops: disable\n  SuggestExtensions: false\nStyle/RedundantInterpolation:\n  Enabled: true\n"
 }

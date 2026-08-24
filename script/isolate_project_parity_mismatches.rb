@@ -5,7 +5,9 @@ require "json"
 require "optparse"
 require "pathname"
 require "prism"
+require "rbconfig"
 require "tmpdir"
+require "yaml"
 
 require_relative "../lib/rustocop/diagnostic_signatures"
 require_relative "../lib/rustocop/process_runner"
@@ -15,18 +17,14 @@ require_relative "../lib/rustocop/repository_layout"
 LAYOUT = Rustocop::RepositoryLayout.default
 ROOT = Pathname.new(LAYOUT.root)
 FIXTURE_ROOT = Pathname.new(LAYOUT.fixture_root)
-MANIFEST = Pathname.new(LAYOUT.project_regression_manifest(pending: true))
-PASSING_MANIFEST = Pathname.new(LAYOUT.project_regression_manifest)
 CONFIG = Pathname.new(LAYOUT.benchmark_config)
 NATIVE = Pathname.new(LAYOUT.native_binary)
+SUPPLEMENT = ROOT.join("tmp", "project-parity", "isolated-unit-inputs.jsonl")
 
-options = { jobs: 8, refresh_invalid: false }
+options = { jobs: 8 }
 OptionParser.new do |parser|
   parser.banner = "Usage: ruby script/isolate_project_parity_mismatches.rb REPORT [options]"
   parser.on("--jobs COUNT", Integer) { |value| options[:jobs] = value }
-  parser.on("--refresh-invalid", "replace syntactically incomplete generated fixtures") do
-    options[:refresh_invalid] = true
-  end
 end.parse!
 report_path = ARGV.shift or abort "missing project-parity report"
 report = JSON.parse(File.read(report_path))
@@ -79,37 +77,15 @@ def source_windows(source, target_line)
   end.uniq << source
 end
 
-def slug(cop, kind, occupied)
-  stem = "#{cop.downcase.tr('/', '_').gsub(/[^a-z0-9_]+/, '_')}_#{kind}"
-  department, name = cop.split("/", 2)
-  sequence = 1
-  loop do
-    suffix = sequence == 1 ? "" : "_#{sequence}"
-    candidate = File.join("cops", department, name, "project", "#{stem}#{suffix}.rb")
-    return candidate unless occupied.include?(candidate)
-
-    sequence += 1
-  end
-end
-
 project_metadata = Rustocop::ProjectCorpus::PROJECTS.to_h { |project| [project.fetch("name"), project] }
-existing_rows = File.readlines(MANIFEST, chomp: true).drop(1).map { |line| line.split("\t", 7) }
-promoted_files = File.readlines(PASSING_MANIFEST, chomp: true)
-  .drop(1)
-  .map { |line| line.split("\t", 5).fetch(1) }
-if options[:refresh_invalid]
-  existing_rows.reject! do |row|
-    cop, file = row.values_at(0, 1)
-    next false if cop == "Lint/Syntax"
-
-    path = FIXTURE_ROOT.join(file)
-    invalid = path.file? && !Prism.parse(path.binread).success?
-    expected_root = FIXTURE_ROOT.join("cops", *cop.split("/"), "project")
-    FileUtils.rm_f(path) if invalid && path.to_s.start_with?(expected_root.to_s)
-    invalid
+unit_manifest = JSON.parse(FIXTURE_ROOT.join("unit_manifest.json").read)
+existing = unit_manifest.fetch("cops").flat_map do |cop, entry|
+  File.foreach(FIXTURE_ROOT.join(entry.fetch("cases"))).flat_map do |line|
+    JSON.parse(line).fetch("origins", []).filter_map do |origin|
+      [cop, origin["direction"]] if origin["kind"] == "project_isolation"
+    end
   end
-end
-existing = existing_rows.to_h { |row| [[row.fetch(0), row.fetch(5)], true] }
+end.to_h { |key| [key, true] }
 
 candidates = Hash.new { |hash, key| hash[key] = [] }
 report.fetch("projects").each do |project_name, project_result|
@@ -168,25 +144,60 @@ workers = Array.new([options.fetch(:jobs), candidates.length].min) do
 end
 workers.each(&:join)
 
-new_rows = []
-occupied = (promoted_files + existing_rows.map { |row| row.fetch(1) }).to_h { |file| [file, true] }
-results.sort.each do |(cop, kind), isolated|
+def captured_case(cop, kind, candidate, project, source_path, source, rubocop)
+  report = Dir.mktmpdir("rustocop-unit-capture-") do |directory|
+    path = File.join(directory, source_path)
+    FileUtils.mkdir_p(File.dirname(path))
+    File.write(path, source)
+    result = Rustocop::ProcessRunner.capture(
+      *rubocop, "--config", CONFIG.to_s, "--format", "json", "--only", cop, path
+    )
+    abort "RuboCop failed while capturing #{cop}" unless result.accepted?(0, 1) && result.stderr.empty?
+
+    JSON.parse(result.stdout)
+  end
+  offenses = report.fetch("files").flat_map { |file| file.fetch("offenses") }.filter_map do |offense|
+    next unless offense.fetch("cop_name") == cop
+
+    location = offense.fetch("location")
+    {
+      "message" => offense.fetch("message"), "severity" => offense.fetch("severity"),
+      "correctable" => offense.fetch("correctable"),
+      "line" => location.fetch("start_line"), "column" => location.fetch("start_column"),
+      "last_line" => location.fetch("last_line"), "last_column" => location.fetch("last_column")
+    }
+  end
+  config = YAML.safe_load_file(CONFIG, aliases: true)
+  {
+    "cop" => cop, "selection" => cop, "source" => source, "path" => source_path,
+    "ruby_version" => config.dig("AllCops", "TargetRubyVersion").to_s,
+    "parser_engine" => config.dig("AllCops", "ParserEngine"),
+    "default_external_encoding" => "UTF-8", "default_internal_encoding" => nil,
+    "config" => config, "offenses" => offenses, "lsp" => false, "check_autocorrect" => true,
+    "example" => {
+      "kind" => "project_isolation", "direction" => kind,
+      "repository" => project.fetch("repository"), "revision" => project.fetch("revision"),
+      "path" => source_path, "line" => candidate.example.fetch(4)
+    }
+  }
+end
+
+captured = results.sort.filter_map do |(cop, kind), isolated|
   next unless isolated
 
   candidate, project, source_path, source = isolated
-  file = slug(cop, kind, occupied)
-  occupied[file] = true
-  FileUtils.mkdir_p(FIXTURE_ROOT.join(file).dirname)
-  FIXTURE_ROOT.join(file).write(source)
-  new_rows << [
-    cop, file, project.fetch("repository"), project.fetch("revision"), source_path, kind
-  ]
+  captured_case(cop, kind, candidate, project, source_path, source, rubocop)
 end
 
-all_rows = (existing_rows + new_rows).sort_by { |row| [row.fetch(0), row.fetch(5)] }
-content = ["cop\tfile\trepository\trevision\tsource_path\tkind\tselection", *all_rows.map { |row| row.join("\t") }]
-MANIFEST.write("#{content.join("\n")}\n")
+unless captured.empty?
+  FileUtils.mkdir_p(SUPPLEMENT.dirname)
+  SUPPLEMENT.write(captured.map { |item| JSON.generate(item) }.join("\n") + "\n")
+  generator = ROOT.join("script", "generate_unit_fixtures.rb")
+  abort "unit-contract import failed" unless system(
+    RbConfig.ruby, generator.to_s, "--supplement", SUPPLEMENT.to_s, chdir: ROOT.to_s
+  )
+end
 
 unresolved = results.count { |_key, isolated| isolated.nil? }
-puts "Isolated #{new_rows.length} new mismatch directions; #{unresolved} unresolved."
-puts "Manifest: #{MANIFEST.relative_path_from(ROOT)}"
+puts "Added #{captured.length} minimized mismatch directions to cop-owned unit contracts; #{unresolved} unresolved."
+puts "Transient import: #{SUPPLEMENT.relative_path_from(ROOT)}" unless captured.empty?

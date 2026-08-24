@@ -1,1 +1,0 @@
-IO.read(path)

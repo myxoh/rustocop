@@ -1,7 +1,0 @@
-cop	config	file	repository	source_path
-Style/MutableConstant	cops/Style/MutableConstant/configuration/strict_mutable_constants/rubocop.yml	cops/Style/MutableConstant/configuration/strict_mutable_constants/input.rb	chatwoot/chatwoot	app/models/automation_rule.rb
-Style/UnlessLogicalOperators	cops/Style/UnlessLogicalOperators/configuration/nested_unless_logical_operator/rubocop.yml	cops/Style/UnlessLogicalOperators/configuration/nested_unless_logical_operator/input.rb	chatwoot/chatwoot	app/controllers/api/v1/accounts/data_imports_controller.rb
-Metrics/CollectionLiteralLength	cops/Metrics/CollectionLiteralLength/configuration/collection_length_threshold/rubocop.yml	cops/Metrics/CollectionLiteralLength/configuration/collection_length_threshold/input.rb	gitlabhq/gitlabhq	spec/models/application_setting_spec.rb
-Style/InverseMethods	cops/Style/InverseMethods/configuration/custom_inverse_methods/rubocop.yml	cops/Style/InverseMethods/configuration/custom_inverse_methods/input.rb	configuration mutation	custom inverse map
-Style/NegatedUnless	cops/Style/NegatedUnless/configuration/negated_unless_prefix/rubocop.yml	cops/Style/NegatedUnless/configuration/negated_unless_prefix/input.rb	configuration mutation	prefix-only style
-Lint/Debugger	cops/Lint/Debugger/configuration/debugger_disabled_pry/rubocop.yml	cops/Lint/Debugger/configuration/debugger_disabled_pry/input.rb	configuration mutation	disabled debugger method group

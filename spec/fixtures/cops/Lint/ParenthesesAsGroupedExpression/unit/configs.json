@@ -1,4 +1,5 @@
 {
   "4fb3f2b82e07d603": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/ParenthesesAsGroupedExpression:\n  Description: Checks for method calls with a space before the opening parenthesis.\n  StyleGuide: \"#parens-no-spaces\"\n  Enabled: true\n  VersionAdded: '0.12'\n  VersionChanged: '0.83'\n  AutoCorrect: always\n",
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
   "b15dbc5f5d65fcc5": "---\nAllCops:\n  TargetRubyVersion: 3.4\nLint/ParenthesesAsGroupedExpression:\n  Description: Checks for method calls with a space before the opening parenthesis.\n  StyleGuide: \"#parens-no-spaces\"\n  Enabled: true\n  VersionAdded: '0.12'\n  VersionChanged: '0.83'\n  AutoCorrect: always\n"
 }

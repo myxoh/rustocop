@@ -10,10 +10,10 @@ required_categories:
   - regexps
 cops:
   Lint/EmptyInterpolation:
-    fixture: spec/fixtures/cops/Lint/EmptyInterpolation/hardening/input.rb
+    fixture: spec/fixtures/cops/Lint/EmptyInterpolation/unit/cases.jsonl
     evidence:
-      - spec/hardening_spec.rb
-      - spec/fixtures/cops/Lint/EmptyInterpolation/hardening/input.rb
+      - crates/rustocop/src/engine/unit_contract_tests.rs
+      - spec/fixtures/cops/Lint/EmptyInterpolation/unit/cases.jsonl
     categories:
       - autocorrection
       - comments

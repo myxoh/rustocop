@@ -1,5 +1,6 @@
 {
   "0d9ff373b4219e77": "---\nLayout/SpaceInsideHashLiteralBraces: {}\nLayout/SpaceAfterComma:\n  Enabled: true\n",
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
   "95f098f0659dad9d": "---\nLayout/SpaceInsideHashLiteralBraces:\n  Enabled: true\n  EnforcedStyle: no_space\nLayout/SpaceAfterComma:\n  Enabled: true\n",
   "9c4b2ae956f4c906": "---\nLayout/SpaceInsideHashLiteralBraces:\n  Enabled: true\n  EnforcedStyle: space\nLayout/SpaceAfterComma:\n  Enabled: true\n"
 }

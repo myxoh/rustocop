@@ -1,3 +1,4 @@
 {
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
   "eb789fafbb1f4579": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/IdenticalConditionalBranches:\n  Description: Checks that conditional statements do not have an identical line at\n    the end of each branch, which can validly be moved out of the conditional.\n  Enabled: true\n  SafeAutoCorrect: false\n  VersionAdded: '0.36'\n  VersionChanged: '1.19'\n  AutoCorrect: always\n"
 }

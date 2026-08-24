@@ -1,5 +1,6 @@
 {
   "3ea351f1a47a2e15": "---\nStyle/NegatedIf:\n  SupportedStyles:\n  - both\n  - prefix\n  - postfix\n  EnforcedStyle: prefix\n  Enabled: true\n",
   "615548ddb3e88a1a": "---\nStyle/NegatedIf:\n  SupportedStyles:\n  - both\n  - prefix\n  - postfix\n  EnforcedStyle: both\n  Enabled: true\n",
-  "91aeebf572ce9766": "---\nStyle/NegatedIf:\n  SupportedStyles:\n  - both\n  - prefix\n  - postfix\n  EnforcedStyle: postfix\n  Enabled: true\n"
+  "91aeebf572ce9766": "---\nStyle/NegatedIf:\n  SupportedStyles:\n  - both\n  - prefix\n  - postfix\n  EnforcedStyle: postfix\n  Enabled: true\n",
+  "d76c79f5ac766ee2": "---\nAllCops:\n  DisabledByDefault: true\n  NewCops: disable\n  SuggestExtensions: false\nStyle/NegatedIf:\n  Enabled: true\n"
 }

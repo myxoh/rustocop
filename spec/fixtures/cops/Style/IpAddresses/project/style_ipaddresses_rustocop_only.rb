@@ -1,1 +1,0 @@
-    parts.map!(&:classify).join("::")

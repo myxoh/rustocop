@@ -8,10 +8,10 @@ use crate::cops::{prism, text};
 use crate::model::Offense;
 
 mod diagnostic;
-#[cfg(test)]
-mod fixture_tests;
 mod runner;
 pub(crate) mod source;
+#[cfg(test)]
+mod unit_contract_runner;
 #[cfg(test)]
 mod unit_contract_tests;
 

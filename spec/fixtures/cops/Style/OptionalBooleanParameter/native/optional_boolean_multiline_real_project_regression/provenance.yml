@@ -1,4 +1,0 @@
-repository: gitlabhq/gitlabhq
-revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
-path: lib/gitlab/gitaly_client/operation_service.rb
-source_lines: 49-56

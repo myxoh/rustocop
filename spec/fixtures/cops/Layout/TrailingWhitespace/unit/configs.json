@@ -1,4 +1,5 @@
 {
+  "23a7caa9cd115250": "---\nAllCops:\n  DisabledByDefault: true\n  NewCops: disable\n  SuggestExtensions: false\nLayout/TrailingWhitespace:\n  Enabled: true\n",
   "2d78a64e9f9e75b9": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/TrailingWhitespace:\n  Description: Avoid trailing whitespace.\n  StyleGuide: \"#no-trailing-whitespace\"\n  Enabled: true\n  VersionAdded: '0.49'\n  VersionChanged: '1.0'\n  AllowInHeredoc: false\n  AutoCorrect: always\n",
   "a11c12d514a70e0a": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/TrailingWhitespace:\n  Description: Avoid trailing whitespace.\n  StyleGuide: \"#no-trailing-whitespace\"\n  Enabled: true\n  VersionAdded: '0.49'\n  VersionChanged: '1.0'\n  AllowInHeredoc: true\n  AutoCorrect: always\n"
 }
