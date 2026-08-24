@@ -1,14 +1,14 @@
 ---
 rubocop_version: 1.87.0
 upstream_rspec:
-  examples: 26244
+  examples: 27077
   failures: 0
   pending: 5
-captured_cases: 26964
+captured_cases: 27181
 diagnostic_baseline:
-  passed_cases: 26963
-  passing_cops: 573
-  total_cops: 573
+  passed_cases: 27180
+  passing_cops: 578
+  total_cops: 578
 fully_compatible_cops:
 - Bundler/DuplicatedGem
 - Bundler/DuplicatedGroup
@@ -94,12 +94,15 @@ fully_compatible_cops:
 - Layout/MultilineMethodParameterLineBreaks
 - Layout/MultilineOperationIndentation
 - Layout/ParameterAlignment
+- Layout/RedundantLineBreak
 - Layout/RescueEnsureAlignment
+- Layout/SingleLineBlockChain
 - Layout/SpaceAfterColon
 - Layout/SpaceAfterComma
 - Layout/SpaceAfterMethodName
 - Layout/SpaceAfterNot
 - Layout/SpaceAfterSemicolon
+- Layout/SpaceAroundBlockParameters
 - Layout/SpaceAroundEqualsInParameterDefault
 - Layout/SpaceAroundKeyword
 - Layout/SpaceAroundMethodCallOperator
@@ -107,12 +110,14 @@ fully_compatible_cops:
 - Layout/SpaceBeforeBrackets
 - Layout/SpaceBeforeBlockBraces
 - Layout/SpaceBeforeComma
+- Layout/SpaceBeforeComment
 - Layout/SpaceBeforeFirstArg
 - Layout/SpaceBeforeSemicolon
 - Layout/SpaceInLambdaLiteral
 - Layout/SpaceInsideArrayLiteralBrackets
 - Layout/SpaceInsideArrayPercentLiteral
 - Layout/SpaceInsideBlockBraces
+- Layout/SpaceInsideHashLiteralBraces
 - Layout/SpaceInsideParens
 - Layout/SpaceInsidePercentLiteralDelimiters
 - Layout/SpaceInsideRangeLiteral

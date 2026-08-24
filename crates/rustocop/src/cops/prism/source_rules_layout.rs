@@ -1,4 +1,3 @@
-use super::source_helpers::source_lines;
 use super::*;
 
 declare_source_cops! {
@@ -40,18 +39,21 @@ fn empty_lines(source: &str, context: &mut Reporter<'_>) {
 }
 
 fn space_before_comment(source: &str, context: &mut Reporter<'_>) {
-    for (offset, line) in source_lines(source) {
-        let Some(hash) = line.find('#') else { continue };
-        if hash == 0
-            || line.as_bytes()[hash - 1].is_ascii_whitespace()
-            || line[..hash].contains(['"', '\''])
-        {
+    let parsed = ruby_prism::parse(source.as_bytes());
+    for comment in parsed.comments() {
+        if comment.type_() != ruby_prism::CommentType::InlineComment {
+            continue;
+        }
+        let location = comment.location();
+        let hash = location.start_offset();
+        let line_start = source[..hash].rfind('\n').map_or(0, |at| at + 1);
+        if hash == line_start || source.as_bytes()[hash - 1].is_ascii_whitespace() {
             continue;
         }
         context.insert(
             "Put a space before an end-of-line comment.",
-            offset + hash..offset + line.len(),
-            offset + hash,
+            hash..location.end_offset(),
+            hash,
             " ",
         );
     }

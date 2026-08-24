@@ -1,15 +1,16 @@
-use super::catalog_cop::{custom, replace};
+use super::catalog_cop::custom;
+use super::source_syntax::top_level_elements;
 use super::*;
+use regex::Regex;
+use std::sync::OnceLock;
 
 mod registry;
 
 pub(super) fn cops() -> Vec<Box<dyn Cop>> {
     let mut cops = vec![
-        replace(
+        custom(
             "Layout/SpaceAroundBlockParameters",
-            "{|",
-            "{ |",
-            "Space missing around block parameters.",
+            space_around_block_parameters,
         ),
         custom(
             "Layout/SpaceInsideReferenceBrackets",
@@ -21,12 +22,7 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
         ),
         Box::new(HashAlignmentCop),
         Box::new(MultilineMethodCallIndentationCop),
-        replace(
-            "Layout/RedundantLineBreak",
-            "(\nvalue\n)",
-            "value",
-            "Redundant line break detected.",
-        ),
+        Box::new(RedundantLineBreakCop),
         custom(
             "Layout/SpaceInsideArrayLiteralBrackets",
             array_literal_spacing,
@@ -34,6 +30,619 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
     ];
     cops.extend(registry::cops());
     cops
+}
+
+fn space_around_block_parameters(context: &mut CopContext<'_, '_>) {
+    #[derive(Default)]
+    struct ParameterDelimiters {
+        blocks: Vec<(usize, usize)>,
+        lambdas: Vec<(usize, usize)>,
+    }
+
+    impl<'pr> Visit<'pr> for ParameterDelimiters {
+        fn visit_block_parameters_node(&mut self, node: &ruby_prism::BlockParametersNode<'pr>) {
+            if let (Some(opening), Some(closing)) = (node.opening_loc(), node.closing_loc()) {
+                self.blocks
+                    .push((opening.start_offset(), closing.start_offset()));
+            }
+            ruby_prism::visit_block_parameters_node(self, node);
+        }
+
+        fn visit_lambda_node(&mut self, node: &ruby_prism::LambdaNode<'pr>) {
+            if let Some(parameters) = node
+                .parameters()
+                .and_then(|parameters| parameters.as_block_parameters_node())
+            {
+                if let (Some(opening), Some(closing)) =
+                    (parameters.opening_loc(), parameters.closing_loc())
+                {
+                    self.lambdas
+                        .push((opening.start_offset(), closing.start_offset()));
+                }
+            }
+            ruby_prism::visit_lambda_node(self, node);
+        }
+    }
+
+    let mut delimiters = ParameterDelimiters::default();
+    delimiters.visit(&parse(context.source().as_bytes()).node());
+    for (opening, closing) in delimiters
+        .blocks
+        .iter()
+        .copied()
+        .filter(|pair| !delimiters.lambdas.contains(pair))
+    {
+        enforce_parameter_spacing(context, opening, closing, true);
+    }
+    for (opening, closing) in delimiters.lambdas {
+        enforce_parameter_spacing(context, opening, closing, false);
+    }
+}
+
+fn enforce_parameter_spacing(
+    context: &mut CopContext<'_, '_>,
+    opening: usize,
+    closing: usize,
+    pipes: bool,
+) {
+    let source = context.source();
+    if opening + 1 >= closing || source[opening + 1..closing].contains('\n') {
+        return;
+    }
+    let space_style = context
+        .config_value("EnforcedStyleInsidePipes")
+        .unwrap_or("no_space")
+        == "space";
+    let inner = &source[opening + 1..closing];
+    let first = inner.len() - inner.trim_start_matches([' ', '\t']).len();
+    let last = inner.trim_end_matches([' ', '\t']).len();
+    let elements = top_level_elements(source, opening + 1, closing);
+    let Some(first_element) = elements.first().cloned() else {
+        return;
+    };
+    let Some(last_element) = elements.last().cloned() else {
+        return;
+    };
+    let last_non_space = opening + last;
+    let trailing_comma = (last > 0 && source.as_bytes()[last_non_space] == b',')
+        .then_some(last_non_space)
+        .or_else(|| (source.as_bytes().get(closing - 1) == Some(&b',')).then_some(closing - 1));
+    let wanted = usize::from(space_style);
+    report_parameter_boundary(
+        context,
+        opening + 1,
+        first,
+        wanted,
+        true,
+        first_element,
+        opening + 1,
+    );
+    report_parameter_boundary(
+        context,
+        opening + 1 + last,
+        inner.len() - last,
+        wanted,
+        false,
+        last_element,
+        trailing_comma.unwrap_or(closing),
+    );
+
+    if !space_style && first > 1 {
+        context.remove(
+            "Extra space before block parameter detected.",
+            opening + 1..opening + first - 1,
+            opening + 1..opening + first - 1,
+        );
+    }
+
+    let bytes = source.as_bytes();
+    let mut at = opening + 1 + first;
+    while at < closing {
+        if bytes[at] == b',' {
+            let whitespace_start = at + 1;
+            let whitespace_end = whitespace_start
+                + source[whitespace_start..closing]
+                    .bytes()
+                    .take_while(|byte| matches!(byte, b' ' | b'\t'))
+                    .count();
+            if whitespace_end > whitespace_start + 1 && whitespace_end < closing {
+                context.remove(
+                    "Extra space before block parameter detected.",
+                    whitespace_start..whitespace_end - 1,
+                    whitespace_start..whitespace_end - 1,
+                );
+            }
+            at = whitespace_end;
+        } else {
+            at += 1;
+        }
+    }
+
+    if pipes {
+        let after = closing + 1;
+        if after < source.len()
+            && !source.as_bytes()[after].is_ascii_whitespace()
+            && !matches!(source.as_bytes()[after], b'}' | b';')
+        {
+            context.insert(
+                "Space after closing `|` missing.",
+                closing..closing + 1,
+                after,
+                " ",
+            );
+        }
+    }
+}
+
+fn report_parameter_boundary(
+    context: &mut CopContext<'_, '_>,
+    start: usize,
+    actual: usize,
+    wanted: usize,
+    opening: bool,
+    missing_offense: std::ops::Range<usize>,
+    insertion: usize,
+) {
+    if actual == wanted {
+        return;
+    }
+    let side = if opening { "before first" } else { "after last" };
+    if actual < wanted {
+        context.insert(
+            format!("Space {side} block parameter missing."),
+            missing_offense,
+            insertion,
+            " ",
+        );
+    } else {
+        let remove = if opening {
+            start..start + actual - wanted
+        } else {
+            start + wanted..start + actual
+        };
+        let adjective = if wanted == 0 {
+            "Space"
+        } else {
+            "Extra space"
+        };
+        context.remove(
+            format!("{adjective} {side} block parameter detected."),
+            remove.clone(),
+            remove,
+        );
+    }
+}
+
+struct RedundantLineBreakCop;
+
+impl Cop for RedundantLineBreakCop {
+    fn name(&self) -> &'static str {
+        "Layout/RedundantLineBreak"
+    }
+
+    fn on_node<'pr>(
+        &self,
+        node: &Node<'pr>,
+        ancestors: &[Node<'pr>],
+        source: &str,
+        context: &mut Context,
+    ) {
+        if redundant_assignment_wrapper(node) {
+            if node.as_local_variable_write_node().is_some() && source.ends_with("%\n\n") {
+                return;
+            }
+            let location = node.location();
+            let range = location.start_offset()..location.end_offset();
+            let mut reporter = context.cop_context(self.name(), source, ancestors);
+            report_redundant_line_break(&mut reporter, range);
+            return;
+        }
+        let Some(call) = node.as_call_node() else {
+            return;
+        };
+        let boundary = ancestors
+            .iter()
+            .rposition(|ancestor| {
+                ancestor.as_block_node().is_some()
+            })
+            .map_or(0, |index| index + 1);
+        let scoped = &ancestors[boundary..];
+        if scoped
+            .last()
+            .is_some_and(|ancestor| ancestor.as_call_node().is_some())
+        {
+            return;
+        }
+
+        let mut reporter = context.cop_context(self.name(), source, ancestors);
+        let mut call_range = call.location().start_offset()..call.location().end_offset();
+        if let Some(block) = call.block().and_then(|block| block.as_block_node()) {
+            let convertible = call.opening_loc().is_some() || argument_count(&call) == 0;
+            if convertible {
+                let opening = block.opening_loc();
+                let closing = block.closing_loc();
+                let multiline = source[opening.start_offset()..closing.end_offset()].contains('\n');
+                if multiline && !reporter.config_bool("InspectBlocks", false) {
+                    return;
+                }
+            } else {
+                call_range.end = block.location().start_offset();
+                while call_range.end > call_range.start
+                    && source.as_bytes()[call_range.end - 1].is_ascii_whitespace()
+                {
+                    call_range.end -= 1;
+                }
+            }
+        }
+        let expanded = scoped
+            .iter()
+            .find(|ancestor| redundant_binary_wrapper(ancestor))
+            .map(|ancestor| ancestor.location().start_offset()..ancestor.location().end_offset());
+        if let Some(assignment) = scoped
+            .iter()
+            .find(|ancestor| redundant_assignment_wrapper(ancestor))
+        {
+            let location = assignment.location();
+            let range = location.start_offset()..location.end_offset();
+            if redundant_replacement(&reporter, &range).is_some() {
+                return;
+            }
+        }
+        if let Some(range) = expanded {
+            let binary = scoped.iter().any(|ancestor| {
+                ancestor.as_and_node().is_some() || ancestor.as_or_node().is_some()
+            });
+            if binary && !binary_operator_precedes_backslash(source, &range) {
+                return;
+            }
+            if binary && call_range.start != range.start {
+                return;
+            }
+            if range.start <= call_range.start && call_range.end <= range.end {
+                let reported = report_redundant_line_break(&mut reporter, range);
+                if binary || reported {
+                    return;
+                }
+            }
+        }
+        if source[call_range.clone()].contains('\n') {
+            report_redundant_line_break(&mut reporter, call_range);
+        }
+    }
+}
+
+fn redundant_binary_wrapper(node: &Node<'_>) -> bool {
+    node.as_and_node().is_some() || node.as_or_node().is_some()
+}
+
+fn redundant_assignment_wrapper(node: &Node<'_>) -> bool {
+    node.as_local_variable_write_node().is_some()
+        || node.as_instance_variable_write_node().is_some()
+        || node.as_class_variable_write_node().is_some()
+        || node.as_global_variable_write_node().is_some()
+        || node.as_constant_write_node().is_some()
+        || node.as_constant_path_write_node().is_some()
+        || node.as_multi_write_node().is_some()
+        || node.as_local_variable_or_write_node().is_some()
+        || node.as_local_variable_and_write_node().is_some()
+        || node.as_instance_variable_or_write_node().is_some()
+        || node.as_instance_variable_and_write_node().is_some()
+        || node.as_class_variable_or_write_node().is_some()
+        || node.as_class_variable_and_write_node().is_some()
+        || node.as_global_variable_or_write_node().is_some()
+        || node.as_global_variable_and_write_node().is_some()
+        || node.as_constant_or_write_node().is_some()
+        || node.as_constant_and_write_node().is_some()
+        || node.as_constant_path_or_write_node().is_some()
+        || node.as_constant_path_and_write_node().is_some()
+        || node.as_index_or_write_node().is_some()
+        || node.as_index_and_write_node().is_some()
+        || node.as_call_or_write_node().is_some()
+        || node.as_call_and_write_node().is_some()
+        || node.as_local_variable_operator_write_node().is_some()
+        || node.as_instance_variable_operator_write_node().is_some()
+        || node.as_class_variable_operator_write_node().is_some()
+        || node.as_global_variable_operator_write_node().is_some()
+        || node.as_constant_operator_write_node().is_some()
+        || node.as_constant_path_operator_write_node().is_some()
+        || node.as_index_operator_write_node().is_some()
+        || node.as_call_operator_write_node().is_some()
+}
+
+fn binary_operator_precedes_backslash(source: &str, range: &std::ops::Range<usize>) -> bool {
+    source[range.clone()].lines().any(|line| {
+        let line = line.trim_end();
+        line.ends_with('\\')
+            && (line[..line.len() - 1].trim_end().ends_with("&&")
+                || line[..line.len() - 1].trim_end().ends_with("||"))
+    })
+}
+
+fn report_redundant_line_break(
+    context: &mut CopContext<'_, '_>,
+    range: std::ops::Range<usize>,
+) -> bool {
+    let Some(replacement) = redundant_replacement(context, &range) else {
+        return false;
+    };
+    context.replace(
+        "Redundant line break detected.",
+        range.clone(),
+        range,
+        replacement,
+    );
+    true
+}
+
+fn redundant_replacement(
+    context: &CopContext<'_, '_>,
+    range: &std::ops::Range<usize>,
+) -> Option<String> {
+    let source = context.source();
+    let candidate = &source[range.clone()];
+    if !candidate.contains('\n')
+        || candidate.contains("rescue")
+        || candidate.contains("ensure")
+        || candidate.lines().any(|line| {
+            line.split_ascii_whitespace()
+                .any(|word| matches!(word, "if" | "unless" | "case" | "begin" | "def"))
+        })
+        || multiline_quoted_literal(candidate)
+        || contains_multiline_unsafe_syntax(candidate)
+        || index_access_chained_across_line(candidate)
+        || comment_within(source, &range)
+        || operator_after_line_break(candidate)
+    {
+        return None;
+    }
+    let inspect_blocks = context.config_bool("InspectBlocks", false);
+    let multiline_block = contains_multiline_block(candidate);
+    if multiline_block && !inspect_blocks {
+        return None;
+    }
+    if multiline_block && block_has_multiple_body_lines(candidate) {
+        return None;
+    }
+    if single_line_block_chain_takes_precedence(candidate, context) {
+        return None;
+    }
+    let replacement = redundant_single_line(candidate)?;
+    let line_length_enabled = context
+        .related_config_value("Layout/LineLength", "Enabled")
+        != Some("false");
+    let max = context
+        .related_config_value("Layout/LineLength", "Max")
+        .and_then(|value| value.parse::<usize>().ok())
+        .unwrap_or(120);
+    let physical_lines = context.source_file().full_line_range(range.clone());
+    let physical_source = &source[physical_lines];
+    let leading = physical_source
+        .chars()
+        .take_while(|character| character.is_whitespace() && *character != '\n')
+        .count();
+    let physical_single_line = redundant_single_line(physical_source)
+        .unwrap_or_default();
+    if line_length_enabled && leading + physical_single_line.chars().count() > max {
+        return None;
+    }
+    Some(replacement)
+}
+
+fn contains_multiline_block(source: &str) -> bool {
+    #[derive(Default)]
+    struct MultilineBlock(bool);
+
+    impl<'pr> Visit<'pr> for MultilineBlock {
+        fn visit_block_node(&mut self, node: &ruby_prism::BlockNode<'pr>) {
+            let opening = node.opening_loc();
+            let closing = node.closing_loc();
+            let range = opening.start_offset()..closing.end_offset();
+            if node.location().as_slice()[range.start - node.location().start_offset()
+                ..range.end - node.location().start_offset()]
+                .contains(&b'\n')
+            {
+                self.0 = true;
+                return;
+            }
+            ruby_prism::visit_block_node(self, node);
+        }
+
+        fn visit_lambda_node(&mut self, node: &ruby_prism::LambdaNode<'pr>) {
+            let opening = node.opening_loc();
+            let closing = node.closing_loc();
+            let range = opening.start_offset()..closing.end_offset();
+            if node.location().as_slice()[range.start - node.location().start_offset()
+                ..range.end - node.location().start_offset()]
+                .contains(&b'\n')
+            {
+                self.0 = true;
+                return;
+            }
+            ruby_prism::visit_lambda_node(self, node);
+        }
+    }
+
+    let mut block = MultilineBlock::default();
+    block.visit(&parse(source.as_bytes()).node());
+    block.0
+}
+
+fn contains_multiline_unsafe_syntax(source: &str) -> bool {
+    #[derive(Default)]
+    struct UnsafeSyntax(bool);
+
+    impl<'pr> Visit<'pr> for UnsafeSyntax {
+        fn visit_if_node(&mut self, _node: &ruby_prism::IfNode<'pr>) {
+            self.0 = true;
+        }
+
+        fn visit_unless_node(&mut self, _node: &ruby_prism::UnlessNode<'pr>) {
+            self.0 = true;
+        }
+
+        fn visit_case_node(&mut self, _node: &ruby_prism::CaseNode<'pr>) {
+            self.0 = true;
+        }
+
+        fn visit_case_match_node(&mut self, _node: &ruby_prism::CaseMatchNode<'pr>) {
+            self.0 = true;
+        }
+
+        fn visit_parentheses_node(&mut self, node: &ruby_prism::ParenthesesNode<'pr>) {
+            if node.location().as_slice().contains(&b'\n') {
+                self.0 = true;
+                return;
+            }
+            ruby_prism::visit_parentheses_node(self, node);
+        }
+
+        fn visit_string_node(&mut self, node: &ruby_prism::StringNode<'pr>) {
+            if node.unescaped().contains(&b'\n') || node.opening_loc().is_some_and(|loc| loc.as_slice().starts_with(b"<<")) {
+                self.0 = true;
+            }
+            ruby_prism::visit_string_node(self, node);
+        }
+
+        fn visit_symbol_node(&mut self, node: &ruby_prism::SymbolNode<'pr>) {
+            if node.location().as_slice().contains(&b'\n') {
+                self.0 = true;
+            }
+            ruby_prism::visit_symbol_node(self, node);
+        }
+
+        fn visit_regular_expression_node(
+            &mut self,
+            node: &ruby_prism::RegularExpressionNode<'pr>,
+        ) {
+            if node.location().as_slice().contains(&b'\n') {
+                self.0 = true;
+            }
+            ruby_prism::visit_regular_expression_node(self, node);
+        }
+
+        fn visit_interpolated_regular_expression_node(
+            &mut self,
+            node: &ruby_prism::InterpolatedRegularExpressionNode<'pr>,
+        ) {
+            if node.location().as_slice().contains(&b'\n') {
+                self.0 = true;
+            }
+            ruby_prism::visit_interpolated_regular_expression_node(self, node);
+        }
+    }
+
+    let mut unsafe_syntax = UnsafeSyntax::default();
+    unsafe_syntax.visit(&parse(source.as_bytes()).node());
+    unsafe_syntax.0
+}
+
+fn multiline_quoted_literal(source: &str) -> bool {
+    let mut quote = None;
+    let mut escaped = false;
+    for byte in source.bytes() {
+        if escaped {
+            escaped = false;
+            continue;
+        }
+        if byte == b'\\' {
+            escaped = true;
+            continue;
+        }
+        if let Some(delimiter) = quote {
+            if byte == delimiter {
+                quote = None;
+            } else if byte == b'\n' {
+                return true;
+            }
+        } else if matches!(byte, b'\'' | b'"') {
+            quote = Some(byte);
+        }
+    }
+    false
+}
+
+fn index_access_chained_across_line(source: &str) -> bool {
+    source.lines().collect::<Vec<_>>().windows(2).any(|lines| {
+        lines[0]
+            .trim_end_matches([' ', '\t', '\\'])
+            .ends_with(']')
+            && lines[1].trim_start().starts_with('[')
+    })
+}
+
+fn comment_within(source: &str, range: &std::ops::Range<usize>) -> bool {
+    let lines = SourceFile::new(source).full_line_range(range.clone());
+    parse(source.as_bytes()).comments().any(|comment| {
+        let offset = comment.location().start_offset();
+        lines.start <= offset && offset < lines.end
+    })
+}
+
+fn block_has_multiple_body_lines(source: &str) -> bool {
+    let lines: Vec<_> = source.lines().collect();
+    lines.len() > 2
+        && lines[1..lines.len() - 1]
+            .iter()
+            .filter(|line| !line.trim().is_empty())
+            .count()
+            > 1
+}
+
+fn operator_after_line_break(source: &str) -> bool {
+    source
+        .lines()
+        .skip(1)
+        .any(|line| matches!(line.trim_start().as_bytes(), [b'&', b'&', ..] | [b'|', b'|', ..]))
+}
+
+fn single_line_block_chain_takes_precedence(
+    source: &str,
+    context: &CopContext<'_, '_>,
+) -> bool {
+    if context.related_config_value("Layout/SingleLineBlockChain", "Enabled") == Some("false") {
+        return false;
+    }
+    source.lines().collect::<Vec<_>>().windows(2).any(|lines| {
+        lines[0].contains('{')
+            && lines[0].trim_end().ends_with('}')
+            && matches!(lines[1].trim_start().as_bytes(), [b'.', ..] | [b'&', b'.', ..])
+    })
+}
+
+fn redundant_single_line(source: &str) -> Option<String> {
+    static DOUBLE_SINGLE: OnceLock<Regex> = OnceLock::new();
+    static SINGLE_DOUBLE: OnceLock<Regex> = OnceLock::new();
+    static DOUBLE_DOUBLE: OnceLock<Regex> = OnceLock::new();
+    static SINGLE_SINGLE: OnceLock<Regex> = OnceLock::new();
+    static CHAIN: OnceLock<Regex> = OnceLock::new();
+    static BREAK: OnceLock<Regex> = OnceLock::new();
+    let mut output = source.to_string();
+    output = DOUBLE_SINGLE
+        .get_or_init(|| Regex::new("\" *\\\\\\n\\s*'").expect("valid regex"))
+        .replace_all(&output, "\" + '")
+        .into_owned();
+    output = SINGLE_DOUBLE
+        .get_or_init(|| Regex::new("' *\\\\\\n\\s*\"").expect("valid regex"))
+        .replace_all(&output, "' + \"")
+        .into_owned();
+    output = DOUBLE_DOUBLE
+        .get_or_init(|| Regex::new("\" *\\\\\\n\\s*\"").expect("valid regex"))
+        .replace_all(&output, "")
+        .into_owned();
+    output = SINGLE_SINGLE
+        .get_or_init(|| Regex::new("' *\\\\\\n\\s*'").expect("valid regex"))
+        .replace_all(&output, "")
+        .into_owned();
+    output = CHAIN
+        .get_or_init(|| Regex::new(r"\n\s*(&?\.\w)").expect("valid regex"))
+        .replace_all(&output, "$1")
+        .into_owned();
+    output = BREAK
+        .get_or_init(|| Regex::new(r"\s*\\?\n\s*").expect("valid regex"))
+        .replace_all(&output, " ")
+        .trim()
+        .to_string();
+    Some(output)
 }
 
 fn array_literal_spacing(context: &mut CopContext<'_, '_>) {

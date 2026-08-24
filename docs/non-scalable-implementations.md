@@ -1,17 +1,17 @@
 # Non-scalable cop implementations
 
-`updated_at: 2026-08-24T00:43:41-04:00`
+`updated_at: 2026-08-24T01:50:06-04:00`
 
 This is the catalog for category C: cops whose current implementation appears
 too narrow to generalize from the fixture corpus to arbitrary Ruby projects.
 It is an implementation-risk register, not a list of every cop that currently
 mismatches RuboCop.
 
-All 27 category-C cops in this catalog are intentionally pending. A further 4
-project-inexact cops and two RuboCop-reference blockers are also pending, for a
-total of 33; they are absent from
+All 16 category-C cops still in this catalog are intentionally pending. A
+further 10 incomplete or project-inexact cops and two RuboCop-reference
+blockers are also pending, for a total of 28; they are absent from
 the active registry, qualification corpus, compatibility evidence, and fixture
-suite. Seventy-one cops have now returned through structural rewrites and the full
+suite. Seventy-six cops have now returned through structural rewrites and the full
 fixture gate, with project status recorded separately. The machine-readable source of truth is
 [`intentionally_pending_cops.yml`](../spec/upstream/rubocop-1.87.0/intentionally_pending_cops.yml).
 Their old implementation source remains only as rewrite reference.
@@ -24,9 +24,9 @@ reference output. On that original ten-project corpus, the resulting 512-cop
 active set had 402 exercised project-exact cops, 110 dormant cops, and no
 mismatches or engine errors.
 
-The expanded 50-project audit at `2026-08-24T00:43:41-04:00` shows that this
+The expanded 50-project audit at `2026-08-24T01:50:06-04:00` shows that this
 withdrawal was not sufficient to make the retained implementations scalable:
-323 cops are project-exact, 53 are dormant, 196 mismatch, none crash, and one
+327 cops are project-exact, 53 are dormant, 197 mismatch, none crash, and one
 is blocked by a RuboCop error. Those newly exposed cops require review and
 minimized fixtures before this catalog can be treated as complete.
 
@@ -53,10 +53,10 @@ A cop is included when code review establishes at least one of these patterns:
 This deliberately excludes cops that have large project gaps but use a broad,
 structural implementation. For example, `Style/MethodCallWithArgsParentheses`
 is inaccurate, but it is not currently evidence of category C. A green fixture
-row also does not remove a cop from this catalog: 16 of the cops below pass all
-their fixtures while still mismatch real projects.
+row also does not remove a cop from this catalog: three of the cops below pass
+all their fixtures while still mismatching real projects.
 
-## Literal catalog reporters (7 cops)
+## Literal catalog reporters (3 cops)
 
 These are mechanically confirmed. The shared implementation in
 [`framework/catalog_cop.rs`](../crates/rustocop/src/cops/prism/framework/catalog_cop.rs)
@@ -67,9 +67,6 @@ the text.
 | Cop | Fixture result | Project result | Rustocop | RuboCop | Exact | Gap |
 | --- | --- | --- | ---: | ---: | ---: | ---: |
 | `Layout/LineContinuationLeadingSpace` | mismatch 11/32 | mismatch | 0 | 49 | 0 | 49 |
-| `Layout/RedundantLineBreak` | mismatch 72/118 | mismatch | 0 | 14,996 | 0 | 14,996 |
-| `Layout/SpaceAroundBlockParameters` | mismatch 19/45 | mismatch | 64 | 4 | 0 | 68 |
-| `Layout/SpaceInsideHashLiteralBraces` | mismatch 20/40 | mismatch | 130 | 1,420 | 0 | 1,550 |
 | `Lint/AmbiguousRegexpLiteral` | mismatch 6/30 | mismatch | 0 | 28 | 0 | 28 |
 | `Lint/AssignmentInCondition` | mismatch 16/69 | mismatch | 4 | 1,276 | 0 | 1,280 |
 
@@ -81,20 +78,17 @@ Registrations are in
 [`final_scope_batch_b.rs`](../crates/rustocop/src/cops/prism/final_scope_batch_b.rs), and
 [`final_control_flow_batch/registry.rs`](../crates/rustocop/src/cops/prism/final_control_flow_batch/registry.rs).
 
-## Source scanners standing in for syntax or scope (15 cops)
+## Source scanners standing in for syntax or scope (7 cops)
 
 These implementations scan delimiters, lines, assignments, identifiers, or
 keywords without enough parser or scope context. The strongest examples are
 `Lint/ConstantResolution`, which tests the trimmed entire file as if it were
-one constant reference, and `Style/InlineComment`, which treats the first `#`
-on a non-empty line as a comment.
+one constant reference.
 
 | Cop | Fixture result | Project result | Rustocop | RuboCop | Exact | Gap |
 | --- | --- | --- | ---: | ---: | ---: | ---: |
-| `Style/InlineComment` | compatible 3/3 | mismatch | 129,107 | 10,115 | 9,470 | 120,282 |
 | `Lint/ConstantResolution` | compatible 18/18 | mismatch | 111 | 544,649 | 29 | 544,702 |
 | `Lint/DuplicateRegexpCharacterClassElement` | mismatch 6/16 | mismatch | 329,911 | 99 | 0 | 330,010 |
-| `Layout/SingleLineBlockChain` | compatible 9/9 | mismatch | 40,204 | 25,643 | 25,335 | 15,177 |
 | `Lint/UnusedMethodArgument` | mismatch 14/46 | mismatch | 3,902 | 1,933 | 777 | 4,281 |
 | `Naming/VariableName` | mismatch 62/118 | mismatch | 73,576 | 123 | 42 | 73,615 |
 | `Naming/VariableNumber` | mismatch 62/115 | mismatch | 0 | 8,050 | 0 | 8,050 |
@@ -114,12 +108,10 @@ The relevant implementations are in
 [`source_rules_misc.rs`](../crates/rustocop/src/cops/prism/source_rules_misc.rs), and
 [`source_semantics/parameters.rs`](../crates/rustocop/src/cops/prism/source_semantics/parameters.rs).
 
-## Shared placeholder callbacks (6 cops)
+## Shared placeholder callbacks (1 cop)
 
-Three brace-layout cops share one two-line `brace_layout` check, and three
-unrelated alignment cops share one `align_continuation` check. Identical output
-counts within each alignment group are a direct symptom of the shared
-placeholder rather than coincidental behavior.
+This remaining alignment cop uses the shared `align_continuation` placeholder
+instead of modeling RuboCop's syntax and indentation context.
 
 | Cop | Fixture result | Project result | Rustocop | RuboCop | Exact | Gap |
 | --- | --- | --- | ---: | ---: | ---: | ---: |
@@ -148,25 +140,6 @@ from substring counts in the method body.
 Implementations are in
 [`final_metrics_batch.rs`](../crates/rustocop/src/cops/prism/final_metrics_batch.rs)
 and [`metrics_completion.rs`](../crates/rustocop/src/cops/prism/metrics_completion.rs).
-
-## Naive lexical spacing scanners (7 cops)
-
-These all operate directly over bytes or lines using an `inside_quoted_text`
-helper that only counts double quotes and checks for `<<-`. It cannot represent
-Ruby's single-quoted strings, percent literals, regexp literals, interpolation,
-comments, heredoc variants, or parser recovery.
-
-| Cop | Fixture result | Project result | Rustocop | RuboCop | Exact | Gap |
-| --- | --- | --- | ---: | ---: | ---: | ---: |
-| `Layout/SpaceBeforeComment` | compatible 5/5 | mismatch | 4,519 | 0 | 0 | 4,519 |
-| `Layout/SpaceAfterSemicolon` | compatible 9/9 | mismatch | 1,663 | 0 | 0 | 1,663 |
-| `Layout/SpaceAfterComma` | compatible 9/9 | mismatch | 6,153 | 58 | 53 | 6,105 |
-| `Layout/SpaceBeforeSemicolon` | compatible 9/9 | mismatch | 144 | 41 | 38 | 109 |
-| `Layout/SpaceAfterNot` | compatible 6/6 | mismatch | 30,572 | 3 | 2 | 30,571 |
-| `Layout/SpaceBeforeComma` | compatible 6/6 | mismatch | 193 | 0 | 0 | 193 |
-
-All seven are implemented together in
-[`source_rules_layout.rs`](../crates/rustocop/src/cops/prism/source_rules_layout.rs).
 
 ## Exit criteria
 

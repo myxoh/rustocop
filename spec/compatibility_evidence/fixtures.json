@@ -1,10 +1,10 @@
 {
   "version": 1,
   "kind": "fixture_compatibility",
-  "updated_at": "2026-08-24T00:37:10-04:00",
+  "updated_at": "2026-08-24T01:48:48-04:00",
   "rust_commit": null,
-  "native_sha256": "f58c04887943d65b7ffee3e99af11599e239891dcd4a6c1c16d99fb0e7b6e466",
-  "fixture_corpus_sha256": "937b85820e1392f9be784cad04270a7e50df7a0ac143b02e51e073903858b9b8",
+  "native_sha256": "1852c4f4df3660d6f5c341574126244eca13d8dd2c43e648ddfe34b304abd48e",
+  "fixture_corpus_sha256": "685f66ee2224eb9bc0bd715561ad3ffc0129a93b305ba16b444568981489e521",
   "rubocop_version": "1.87.0",
   "results": {
     "Bundler/DuplicatedGem": {
@@ -427,9 +427,19 @@
       "total": 19,
       "status": "compatible"
     },
+    "Layout/RedundantLineBreak": {
+      "passed": 118,
+      "total": 118,
+      "status": "compatible"
+    },
     "Layout/RescueEnsureAlignment": {
       "passed": 99,
       "total": 99,
+      "status": "compatible"
+    },
+    "Layout/SingleLineBlockChain": {
+      "passed": 9,
+      "total": 9,
       "status": "compatible"
     },
     "Layout/SpaceAfterColon": {
@@ -455,6 +465,11 @@
     "Layout/SpaceAfterSemicolon": {
       "passed": 9,
       "total": 9,
+      "status": "compatible"
+    },
+    "Layout/SpaceAroundBlockParameters": {
+      "passed": 45,
+      "total": 45,
       "status": "compatible"
     },
     "Layout/SpaceAroundEqualsInParameterDefault": {
@@ -492,6 +507,11 @@
       "total": 6,
       "status": "compatible"
     },
+    "Layout/SpaceBeforeComment": {
+      "passed": 5,
+      "total": 5,
+      "status": "compatible"
+    },
     "Layout/SpaceBeforeFirstArg": {
       "passed": 12,
       "total": 12,
@@ -520,6 +540,11 @@
     "Layout/SpaceInsideBlockBraces": {
       "passed": 42,
       "total": 42,
+      "status": "compatible"
+    },
+    "Layout/SpaceInsideHashLiteralBraces": {
+      "passed": 40,
+      "total": 40,
       "status": "compatible"
     },
     "Layout/SpaceInsideParens": {

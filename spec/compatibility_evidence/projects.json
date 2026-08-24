@@ -1,14 +1,14 @@
 {
   "version": 1,
   "kind": "project_compatibility",
-  "updated_at": "2026-08-24T00:43:41-04:00",
+  "updated_at": "2026-08-24T01:50:06-04:00",
   "rust_commit": null,
-  "native_sha256": "f58c04887943d65b7ffee3e99af11599e239891dcd4a6c1c16d99fb0e7b6e466",
+  "native_sha256": "1852c4f4df3660d6f5c341574126244eca13d8dd2c43e648ddfe34b304abd48e",
   "rubocop_version": "1.87.0",
   "rubocop_reference": {
     "path": "spec/compatibility_evidence/project_rubocop_reference.json.gz",
-    "sha256": "e3e1677ba0ac4c8dc8723e7a17a0fd8b0e89fdf29226bfc548f55dcd628c8576",
-    "generated_at": "2026-08-24T00:37:23-04:00",
+    "sha256": "6de32f13efd0a7041c16e8dfbd6bae3b89db66ac905cd9d0cd0d25735e8c9567",
+    "generated_at": "2026-08-24T01:51:05-04:00",
     "config_sha256": "0e505e2432b2af2d479bd48d335ae5c4c18b39edf328e500157ba57bf6f6726a",
     "source": "cached"
   },
@@ -519,11 +519,23 @@
       "exact": 20,
       "classification": "project_exact"
     },
+    "Layout/RedundantLineBreak": {
+      "rustocop": 31715,
+      "rubocop": 31577,
+      "exact": 31471,
+      "classification": "mismatch"
+    },
     "Layout/RescueEnsureAlignment": {
       "rustocop": 455,
       "rubocop": 372,
       "exact": 372,
       "classification": "mismatch"
+    },
+    "Layout/SingleLineBlockChain": {
+      "rustocop": 34783,
+      "rubocop": 34783,
+      "exact": 34783,
+      "classification": "project_exact"
     },
     "Layout/SpaceAfterColon": {
       "rustocop": 39,
@@ -553,6 +565,12 @@
       "rustocop": 13,
       "rubocop": 13,
       "exact": 13,
+      "classification": "project_exact"
+    },
+    "Layout/SpaceAroundBlockParameters": {
+      "rustocop": 98,
+      "rubocop": 98,
+      "exact": 98,
       "classification": "project_exact"
     },
     "Layout/SpaceAroundEqualsInParameterDefault": {
@@ -597,6 +615,12 @@
       "exact": 92,
       "classification": "project_exact"
     },
+    "Layout/SpaceBeforeComment": {
+      "rustocop": 5,
+      "rubocop": 5,
+      "exact": 5,
+      "classification": "project_exact"
+    },
     "Layout/SpaceBeforeFirstArg": {
       "rustocop": 61,
       "rubocop": 61,
@@ -631,6 +655,12 @@
       "rustocop": 4193,
       "rubocop": 4193,
       "exact": 4193,
+      "classification": "project_exact"
+    },
+    "Layout/SpaceInsideHashLiteralBraces": {
+      "rustocop": 23154,
+      "rubocop": 23154,
+      "exact": 23154,
       "classification": "project_exact"
     },
     "Layout/SpaceInsideParens": {

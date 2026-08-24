@@ -3,7 +3,7 @@ use super::*;
 
 define_cops! {
     MultilineHashKeyLineBreaks => "Layout/MultilineHashKeyLineBreaks" => any_node(multiline_hash_key_line_breaks),
-    SingleLineBlockChain => "Layout/SingleLineBlockChain" => source(single_line_block_chain),
+    SingleLineBlockChain => "Layout/SingleLineBlockChain" => any_node(single_line_block_chain),
     ConditionPosition => "Layout/ConditionPosition" => any_node(condition_position),
 }
 
@@ -300,43 +300,50 @@ fn multiline_hash_key_line_breaks(node: &Node<'_>, context: &mut CopContext<'_, 
     }
 }
 
-fn single_line_block_chain(context: &mut CopContext<'_, '_>) {
-    let source = context.source();
-    for (closing, _) in source.match_indices('}') {
-        let tail = &source[closing + 1..];
-        let whitespace = tail.len() - tail.trim_start_matches([' ', '\t']).len();
-        let start = closing + 1 + whitespace;
-        if source[closing + 1..start].contains('\n') {
-            continue;
-        }
-        let rest = &source[start..];
-        if rest.starts_with(".\n") {
-            continue;
-        }
-        let length = if let Some(after_operator) = rest.strip_prefix("&.") {
-            2 + after_operator
-                .bytes()
-                .take_while(|byte| byte.is_ascii_alphanumeric() || *byte == b'_')
-                .count()
-        } else if rest.starts_with(".(") {
-            2
-        } else if let Some(after_dot) = rest.strip_prefix('.') {
-            1 + after_dot
-                .bytes()
-                .take_while(|byte| byte.is_ascii_alphanumeric() || *byte == b'_' || *byte == b'?')
-                .count()
-        } else {
-            0
+fn single_line_block_chain(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
+    let Some(call) = node.as_call_node() else {
+        return;
+    };
+    let Some(operator) = call.call_operator_loc() else {
+        return;
+    };
+    let Some(receiver) = call.receiver() else {
+        return;
+    };
+    let block_location = if let Some(receiver) = receiver.as_call_node() {
+        let Some(block) = receiver.block().and_then(|block| block.as_block_node()) else {
+            return;
         };
-        if length > 0 {
-            context.insert(
-                "Put method call on a separate line if chained to a single line block.",
-                start..start + length,
-                start,
-                "\n",
-            );
-        }
+        block.location()
+    } else if let Some(lambda) = receiver.as_lambda_node() {
+        lambda.location()
+    } else {
+        return;
+    };
+    let file = context.source_file();
+    if !file.same_line(block_location.start_offset(), block_location.end_offset())
+        || !file.same_line(
+            block_location.end_offset().saturating_sub(1),
+            operator.start_offset(),
+        )
+    {
+        return;
     }
+    let end = call
+        .message_loc()
+        .map_or_else(|| call.opening_loc().map(|loc| loc.end_offset()), |loc| Some(loc.end_offset()));
+    let Some(end) = end else {
+        return;
+    };
+    if !file.same_line(operator.start_offset(), end.saturating_sub(1)) {
+        return;
+    }
+    context.insert(
+        "Put method call on a separate line if chained to a single line block.",
+        operator.start_offset()..end,
+        operator.start_offset(),
+        "\n",
+    );
 }
 
 fn condition_position(node: &Node<'_>, context: &mut CopContext<'_, '_>) {

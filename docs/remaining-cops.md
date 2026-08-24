@@ -1,7 +1,7 @@
 # Current project-parity gaps
 
 Generated from the same complete audit as [the evidence matrix](cop-support.md).
-Evidence updated at `2026-08-24T00:43:41-04:00`.
+Evidence updated at `2026-08-24T01:50:06-04:00`.
 This queue contains only failures from that 50-project audit; it does not use the old
 Verified/Heuristic qualification labels or captured-case pass counts.
 
@@ -9,7 +9,7 @@ The gap is unmatched complete diagnostic signatures, not the difference
 between aggregate offense counts. A cop can have equal counts and still have a
 nonzero gap because its message, severity, path, or source range differs.
 
-- Rust source: `uncommitted native f58c04887943`
+- Rust source: `uncommitted native 1852c4f4df36`
 - Unresolved cops: 197
 
 | Cop | Status | Rustocop | RuboCop | Exact | Signature gap | Project regression evidence |
@@ -25,6 +25,7 @@ nonzero gap because its message, severity, path, or source range differs.
 | `Style/IfUnlessModifier` | Mismatch | 11199 | 11656 | 11179 | 497 | Passing |
 | `Style/AutoResourceCleanup` | Mismatch | 548 | 86 | 86 | 462 | Passing |
 | `Lint/AmbiguousRange` | Mismatch | 456 | 164 | 98 | 424 | Passing |
+| `Layout/RedundantLineBreak` | Mismatch | 31715 | 31577 | 31471 | 350 | No |
 | `Style/RedundantParentheses` | Mismatch | 712 | 522 | 480 | 274 | Passing |
 | `Style/FetchEnvVar` | Mismatch | 1497 | 1386 | 1340 | 203 | Passing |
 | `Naming/HeredocDelimiterNaming` | Mismatch | 2369 | 2184 | 2184 | 185 | Passing |

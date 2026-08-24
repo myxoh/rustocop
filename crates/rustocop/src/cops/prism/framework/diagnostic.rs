@@ -200,6 +200,14 @@ impl Context {
         correction: Option<Vec<Edit>>,
         correctable: bool,
     ) {
+        if self.findings.iter().any(|finding| {
+            finding.cop_name == cop_name
+                && finding.message == message
+                && finding.start_offset == offense.start
+                && finding.end_offset == offense.end
+        }) {
+            return;
+        }
         let finding_index = self.findings.len();
         self.findings.push(Finding {
             cop_name,
