@@ -48,17 +48,18 @@ The minimized real-project corpus currently contains 609 provenance-backed
 mismatch cases, with no pending active-cop mismatch directions. These fixtures
 remain regression coverage, not a substitute for the complete project comparison.
 
-After restoring the remaining pending cops with structural implementations, the fixture
-review contains 28,606 captured cases. All 28,601 comparable cases match RuboCop 1.87.0
-diagnostics and corrected source; 606/606 built-in cops pass every retained fixture.
-One unsupported LSP case is explicitly excluded rather than counted as passing.
+After restoring the remaining pending cops with structural implementations, the
+fixture review contains 28,606 captured cases. All 28,601 comparable cases match
+RuboCop 1.87.0 diagnostics and corrected source; 606/606 built-in cops pass
+every retained fixture. Five LSP-only cases are explicitly excluded rather than
+counted as passing.
 
 ## Fifty-project output parity
 
 The real-project matrix asks whether each cop emits the same path, severity,
 message, and source range as RuboCop across 85,471 Ruby files in 50 projects.
 
-The complete audit updated at `2026-08-24T06:23:45-04:00` covers all 606 built-in
+The complete audit updated at `2026-08-24T07:29:34-04:00` covers all 606 built-in
 cops. It leaves 330 project-exact cops, 53 dormant cops, 220 mismatches, no
 native crashes, and three RuboCop gate errors.
 
@@ -71,9 +72,11 @@ native crashes, and three RuboCop gate errors.
 | RuboCop gate errors | 3 / 606 |
 
 The checkpoint is bound to worktree native binary SHA-256
-`e9de507f34548504b265f8a42ac3dc0d25d23c36d9e286f136aa9a5f754b09bc`.
+`d5952f01169f0a3cb155d456247ed72e2b08e6d65ccebbc9cc905cda46facd9c` and cop
+source SHA-256
+`531d7f98c244241ac073ca1e1ca7760587caf53910258b05483ed1c2ddd35b54`.
 Its RuboCop reference SHA-256 is
-`9afe02cd04e8243c09b960a8d0222d0a1de3593d11b7373d40140e8573814572`.
+`6fbcf83154ad05bab3c35cefef09b8d404a07037f47ef614c813649cb0cce7f8`.
 Project-exact status is the strongest current diagnostic evidence. Unexercised
 configuration and autocorrection branches still require RuboCop-derived
 fixtures.
@@ -90,7 +93,10 @@ tracks the cops whose present design appears too narrow to generalize.
 Complete project audits reuse a checked-in, input-validated RuboCop diagnostic
 reference, so routine compatibility refreshes run only Rustocop. The reference
 is regenerated explicitly when RuboCop, the audit configuration, selected cops,
-or pinned project revisions change.
+or pinned project revisions change. Evidence produced from a dirty worktree is
+bound to a deterministic SHA-256 of every native cop source file as well as the
+compiled binary, so unrelated edits do not invalidate it and cop changes cannot
+silently reuse stale results.
 
 ## Performance
 
@@ -306,8 +312,20 @@ The maintained documentation is intentionally small:
   backlog. Historical checkpoints and completed review notes live in Git
   history instead of permanent Markdown files.
 
-The default spec task enforces the documented module and function complexity
-ceilings.
+The canonical repository gate is:
+
+```sh
+bundle exec rake
+```
+
+It builds the release binary, rejects Clippy warnings, checks generated
+inventories and compatibility contracts, enforces architecture boundaries, and
+runs the complete spec suite. Existing oversized Rust modules are recorded with
+exact, non-increasing ceilings in
+[the architecture-debt manifest](spec/architecture_debt.yml): growth fails the
+gate, while reductions must lower or remove the corresponding ceiling. New
+modules receive no architecture-debt allowance. Run Rust formatting separately
+with `cargo fmt --manifest-path crates/rustocop/Cargo.toml --all -- --check`.
 
 Install dependencies:
 
@@ -315,7 +333,7 @@ Install dependencies:
 bundle install
 ```
 
-Run specs:
+The explicit spec task is equivalent to the default task:
 
 ```sh
 bundle exec rake spec

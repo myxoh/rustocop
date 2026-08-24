@@ -16,7 +16,7 @@ Use evidence labels precisely:
 - **fixture-validated** means the RuboCop-derived fixture corpus passes,
   including corrections where applicable;
 - **project-exact** means complete diagnostic signatures match on all 50 pinned
-  projects for one committed Rust binary.
+  projects for one source-identified Rust binary.
 
 Never turn a focused audit into a repository-wide claim. If the full 606-cop
 matrix is older than `HEAD`, report its commit and reconcile only cops that have
@@ -111,8 +111,8 @@ Unresolved minimized cases live in `mismatches.tsv` and run as pending examples
 in `spec/project_parity_mismatches_spec.rb`. A fix must make its pending example
 unexpectedly pass, then move that row into `manifest.tsv`.
 
-After unit and upstream checks pass, commit the Rust source before running the
-50-project gate:
+After unit and upstream checks pass, run the 50-project gate against the exact
+source tree being evaluated:
 
 ```sh
 bundle exec ruby script/audit_project_parity.rb \
@@ -121,13 +121,14 @@ bundle exec ruby script/audit_project_parity.rb \
   --markdown tmp/project-parity/current-head.md
 ```
 
-The gate rejects an uncommitted Rust tree and records the tested Rust commit and
-release-binary SHA-256. Compare paths, severities, messages, and full source
-ranges; equal offense counts are insufficient. If later work changes an audited
-cop or a shared helper it depends on, re-run that cop at the new commit before
-calling it current. Project-exact is a statement about the pinned corpus and
-configuration; fixture coverage remains required for autocorrection and
-unexercised branches.
+The gate records a clean-tree Git commit when available. For a dirty tree it
+records a deterministic SHA-256 over every native cop source file; both forms
+are paired with the release-binary SHA-256. Compare paths, severities, messages,
+and full source ranges; equal offense counts are insufficient. If later work
+changes an audited cop or a shared helper it depends on, re-run that cop at the
+new source identity before calling it current. Project-exact is a statement
+about the pinned corpus and configuration; fixture coverage remains required
+for autocorrection and unexercised branches.
 
 Use `--baseline spec/upstream/rubocop-1.87.0/status.yml` for the full captured
 diagnostic run. That gate accepts improvements while preserving its regression

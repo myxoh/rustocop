@@ -110,8 +110,8 @@ identity.
 
 ## P2: lifecycle and sustained validation
 
-- Record Rust source and native SHA-256 in every committed correctness or
-  performance claim.
+- Record the Git commit or deterministic cop-source SHA-256, plus the native
+  binary SHA-256, in every correctness or performance claim.
 - Keep project revisions and exclusion rules centralized in
   `lib/rustocop/project_corpus.rb`.
 - Run configuration-mutation profiles after cop/config changes.

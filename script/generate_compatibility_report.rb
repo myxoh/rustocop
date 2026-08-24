@@ -403,6 +403,12 @@ project_corpus_status = if projects.fetch("project_count") == configured_project
                             "#{projects.fetch('project_count')}-project checkpoint and must be refreshed " \
                             "before they are described as #{configured_project_count}-project parity."
                         end
+pending_count = Rustocop::CompatibilityStatus.load(root: ROOT).intentionally_pending_cops.length
+pending_status = if pending_count.zero?
+                   "The [`intentionally_pending_cops.yml`](../spec/upstream/rubocop-#{fixtures.fetch('rubocop_version')}/intentionally_pending_cops.yml) manifest is empty."
+                 else
+                   "The #{pending_count} cops in [`intentionally_pending_cops.yml`](../spec/upstream/rubocop-#{fixtures.fetch('rubocop_version')}/intentionally_pending_cops.yml) are deliberately unregistered and excluded from both evidence corpora."
+                 end
 report = <<~MARKDOWN
   # RuboCop compatibility evidence
 
@@ -411,10 +417,7 @@ report = <<~MARKDOWN
   and project output must have no false positives, false negatives, or signature
   differences. Partial overlap is not classified as compatible.
 
-  This table covers #{ACTIVE_COPS.length} active built-in cops. The
-  #{Rustocop::CompatibilityStatus.load(root: ROOT).intentionally_pending_cops.length} cops in
-  [`intentionally_pending_cops.yml`](../spec/upstream/rubocop-#{fixtures.fetch('rubocop_version')}/intentionally_pending_cops.yml)
-  are deliberately unregistered and excluded from both evidence corpora.
+  This table covers #{ACTIVE_COPS.length} active built-in cops. #{pending_status}
 
   Fixture evidence was updated at `#{fixture_timestamp}`. Project
   evidence was updated at `#{project_timestamp}` from
@@ -454,8 +457,8 @@ report = <<~MARKDOWN
   Without either refresh flag, the generator only renders the checked-in compact
   snapshots. Use `--check` in CI to verify that the table is current.
 
-  A stale marker means one of that cop's implementation files changed after the
-  relevant evidence commit. Stale rows remain visible but do not count as
+  A stale marker means one of that cop's implementation files differs from the
+  relevant evidence source identity. Stale rows remain visible but do not count as
   compatible in the overall totals.
 
   ## Per-cop evidence

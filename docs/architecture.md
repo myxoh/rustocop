@@ -105,8 +105,10 @@ coordinated edits without replacing an unnecessarily large source region.
   text or passes the captured upstream examples.
 
 `script/check_architecture.rb` enforces the root layout, dependency direction,
-module line ceilings, and the 50-line limit on `main.rs`. Clippy owns
-function-level complexity and argument limits.
+module line ceilings, and the 50-line limit on `main.rs`. Legacy oversized
+modules are listed in [`spec/architecture_debt.yml`](../spec/architecture_debt.yml)
+with exact ceilings: growth fails, and reductions must lower or remove the
+entry. Clippy owns function-level complexity and argument limits.
 
 ## Cop authoring and parallelism
 
@@ -152,12 +154,13 @@ benchmarks, and mismatch isolation on the same data model.
 
 ## Complexity limits
 
-Rust modules have an enforced 350-line ceiling, cop modules may declare at most
-16 cops, and the process entrypoint has a 50-line ceiling. There are no
-exceptions for cop-family or composition-root modules. Functions should
-normally remain below 60 lines, cognitive complexity 15, and five arguments.
-The enforced Clippy limits are 120 lines, cognitive complexity 25, and seven
-arguments. Do not raise a limit to land a feature.
+New Rust modules have an enforced 350-line ceiling, cop modules may declare at
+most 16 cops, and the process entrypoint has a 50-line ceiling. Existing modules
+above 350 lines are ratcheted at their exact current size in the architecture
+debt manifest; the ceiling may only move downward. Functions should normally
+remain below 60 lines, cognitive complexity 15, and five arguments. The enforced
+Clippy limits are 120 lines, cognitive complexity 25, and seven arguments. Do
+not raise a limit or debt ceiling to land a feature.
 
 Measured optimization opportunities and their invariants are tracked in
 [Known performance bottlenecks](bottlenecks.md).

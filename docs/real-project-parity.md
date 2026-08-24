@@ -13,8 +13,10 @@ cases, and configuration branches that the projects do not exercise.
 ## Latest realistic status
 
 The latest complete checkpoint was generated at
-`2026-08-24T06:23:45-04:00` from worktree native binary SHA-256
-`c8d088ddd9eece5ff9d38398f44b23c6cbf78bc06ba7f249333dff134530f0d8`.
+`2026-08-24T07:29:34-04:00` from native cop-source SHA-256
+`531d7f98c244241ac073ca1e1ca7760587caf53910258b05483ed1c2ddd35b54`
+and worktree native binary SHA-256
+`d5952f01169f0a3cb155d456247ed72e2b08e6d65ccebbc9cc905cda46facd9c`.
 The stored RuboCop reference has SHA-256
 `6fbcf83154ad05bab3c35cefef09b8d404a07037f47ef614c813649cb0cce7f8`.
 The intentionally-pending dataset is empty, so the active-cop slice covers all
@@ -121,11 +123,11 @@ PROJECT_BENCHMARK_PREPARE_ONLY=1 \
   bundle exec ruby script/benchmark_projects.rb
 ```
 
-The audit requires a clean committed Rust tree. It builds the release binary,
-records both the Rust commit and binary SHA-256, runs Rust crash gates, and
-then compares complete diagnostic signatures against the checked-in compressed
-RuboCop reference. The normal command reuses the complete cached 50-project
-reference and runs only Rustocop:
+The audit builds the release binary, records either the clean-tree Git commit or
+a deterministic native-cop source SHA-256 together with the binary SHA-256,
+runs Rust crash gates, and then compares complete diagnostic signatures against
+the checked-in compressed RuboCop reference. The normal command reuses the
+complete cached 50-project reference and runs only Rustocop:
 
 ```sh
 bundle exec ruby script/audit_project_parity.rb \

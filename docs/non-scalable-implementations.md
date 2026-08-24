@@ -1,6 +1,6 @@
 # Non-scalable cop implementation register
 
-`updated_at: 2026-08-24T05:33:57-04:00`
+`updated_at: 2026-08-24T07:46:27-04:00`
 
 The intentionally-pending dataset is empty. All 23 cops that were withdrawn in
 the final pending batch have been reimplemented, restored to the native registry,

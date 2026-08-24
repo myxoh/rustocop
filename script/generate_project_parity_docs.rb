@@ -54,8 +54,13 @@ classification_labels = {
   "rubocop_error" => "RuboCop gate error"
 }.freeze
 counts = results.values.map { |entry| entry.fetch("classification") }.tally
-rust_source = report["rust_commit"] ||
-              "uncommitted native #{report.fetch("native_sha256")[0, 12]}"
+rust_source = if report["rust_commit"]
+                "commit #{report.fetch("rust_commit")}"
+              elsif report["cop_source_sha256"]
+                "cop source #{report.fetch("cop_source_sha256")}"
+              else
+                "native #{report.fetch("native_sha256")}"
+              end
 
 summary_rows = classification_labels.filter_map do |classification, label|
   count = counts.fetch(classification, 0)

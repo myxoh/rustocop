@@ -355,11 +355,11 @@ claim.
 When a real-project mismatch drives an implementation change, copy the smallest
 triggering example into a provenance-backed inspection fixture and add a nearby
 clean control. For correctable cops, compare the complete corrected file with
-RuboCop. Once the implementation and full Rust suite pass, commit the Rust tree
-and re-run every changed cop together through the 50-project gate. The report's
-Rust commit and binary SHA-256 must describe the code being claimed; an older
-exact report is historical evidence after that cop or a shared dependency
-changes.
+RuboCop. Once the implementation and full Rust suite pass, re-run every changed
+cop together through the 50-project gate. The report's Git commit or native-cop
+source SHA-256, together with its binary SHA-256, must describe the code being
+claimed; an older exact report is historical evidence after that cop or a shared
+dependency changes.
 
 ## Final checklist
 
@@ -371,6 +371,6 @@ changes.
 - [ ] Ran the focused upstream verifier with corrections.
 - [ ] Added a minimized, provenance-backed real-project regression fixture.
 - [ ] Compared complete 50-project signatures, not just offense counts.
-- [ ] Bound the final audit to the committed Rust source and binary SHA-256.
+- [ ] Bound the final audit to a Git commit or cop-source SHA-256 and the binary SHA-256.
 - [ ] Ran Rust, Clippy, architecture, Ruby, and full-regression gates.
 - [ ] Regenerated public evidence docs only from a complete active-cop audit.
