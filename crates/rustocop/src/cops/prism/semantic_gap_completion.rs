@@ -1,6 +1,8 @@
 use super::*;
+use std::collections::HashSet;
 
 define_cops! {
+    UnusedMethodArgument => "Lint/UnusedMethodArgument" => node(as_def_node, unused_method_argument),
     UselessMethodDefinition => "Lint/UselessMethodDefinition" => node(as_def_node, useless_method_definition),
     ConstantOverwrittenInRescue => "Lint/ConstantOverwrittenInRescue" => source(constant_overwritten_in_rescue),
     RedundantAssignment => "Style/RedundantAssignment" => node(as_def_node, redundant_assignment),
@@ -9,6 +11,115 @@ define_cops! {
     AmbiguousEndlessMethodDefinition => "Style/AmbiguousEndlessMethodDefinition" => node(as_def_node, ambiguous_endless_method_definition),
     NestedMethodDefinition => "Lint/NestedMethodDefinition" => node(as_def_node, nested_method_definition),
     UselessConstantScoping => "Lint/UselessConstantScoping" => source(useless_constant_scoping),
+}
+
+struct MethodArgument<'pr> {
+    name: String,
+    location: ruby_prism::Location<'pr>,
+    keyword: bool,
+    block: bool,
+}
+
+fn unused_method_argument(node: &ruby_prism::DefNode<'_>, context: &mut CopContext<'_, '_>) {
+    let Some(parameters) = node.parameters() else { return };
+    let mut arguments = Vec::new();
+    for parameter in parameters.requireds().iter().chain(parameters.posts().iter()) {
+        if let Some(parameter) = parameter.as_required_parameter_node() {
+            arguments.push(MethodArgument { name: String::from_utf8_lossy(parameter.name().as_slice()).into_owned(), location: parameter.location(), keyword: false, block: false });
+        }
+    }
+    for parameter in parameters.optionals().iter() {
+        if let Some(parameter) = parameter.as_optional_parameter_node() {
+            arguments.push(MethodArgument { name: String::from_utf8_lossy(parameter.name().as_slice()).into_owned(), location: parameter.name_loc(), keyword: false, block: false });
+        }
+    }
+    if let Some(parameter) = parameters.rest().and_then(|parameter| parameter.as_rest_parameter_node()) {
+        if let (Some(name), Some(location)) = (parameter.name(), parameter.name_loc()) {
+            arguments.push(MethodArgument { name: String::from_utf8_lossy(name.as_slice()).into_owned(), location, keyword: false, block: false });
+        }
+    }
+    for parameter in parameters.keywords().iter() {
+        if let Some(parameter) = parameter.as_required_keyword_parameter_node() {
+            arguments.push(MethodArgument { name: String::from_utf8_lossy(parameter.name().as_slice()).into_owned(), location: parameter.name_loc(), keyword: true, block: false });
+        } else if let Some(parameter) = parameter.as_optional_keyword_parameter_node() {
+            arguments.push(MethodArgument { name: String::from_utf8_lossy(parameter.name().as_slice()).into_owned(), location: parameter.name_loc(), keyword: true, block: false });
+        }
+    }
+    if let Some(parameter) = parameters.keyword_rest().and_then(|parameter| parameter.as_keyword_rest_parameter_node()) {
+        if let (Some(name), Some(location)) = (parameter.name(), parameter.name_loc()) {
+            arguments.push(MethodArgument { name: String::from_utf8_lossy(name.as_slice()).into_owned(), location, keyword: true, block: false });
+        }
+    }
+    if let Some(parameter) = parameters.block() {
+        if let (Some(name), Some(location)) = (parameter.name(), parameter.name_loc()) {
+            arguments.push(MethodArgument { name: String::from_utf8_lossy(name.as_slice()).into_owned(), location, keyword: false, block: true });
+        }
+    }
+    if arguments.is_empty() { return; }
+
+    if node.body().is_none() && context.config_bool("IgnoreEmptyMethods", false) { return; }
+    let body_source = node.body().map_or("", |body| context.source_file().node(&body));
+    if context.config_bool("IgnoreNotImplementedMethods", false) {
+        let exceptions = context.config_values("NotImplementedExceptions");
+        let not_implemented = body_source.contains("fail") || if exceptions.is_empty() {
+            body_source.contains("NotImplementedError")
+        } else {
+            exceptions.iter().any(|exception| body_source.contains(exception))
+        };
+        if not_implemented { return; }
+    }
+    let mut usage = MethodArgumentUsage { reads: HashSet::new(), forwarding_super: false, binding: false, yield_seen: false };
+    if let Some(body) = node.body() { usage.visit(&body); }
+    if usage.forwarding_super || usage.binding { return; }
+    let allow_keywords = context.config_bool("AllowUnusedKeywordArguments", false);
+    let unused = arguments.iter().filter(|argument| {
+        !argument.name.starts_with('_')
+            && !(argument.keyword && allow_keywords)
+            && !usage.reads.contains(&argument.name)
+            && !(argument.block && usage.yield_seen)
+    }).collect::<Vec<_>>();
+    let relevant = arguments.iter().filter(|argument| !argument.name.starts_with('_') && !(argument.keyword && allow_keywords)).count();
+    let all_unused = unused.len() == relevant;
+    for argument in unused {
+        let location = argument.location.start_offset()..argument.location.start_offset() + argument.name.len();
+        if argument.keyword {
+            context.report(format!("Unused method argument - `{}`.", argument.name), location);
+            continue;
+        }
+        let mut message = format!("Unused method argument - `{0}`. If it's necessary, use `_` or `_{0}` as an argument name to indicate that it won't be used. If it's unnecessary, remove it.", argument.name);
+        if all_unused {
+            let method = String::from_utf8_lossy(node.name().as_slice());
+            message.push_str(&format!(" You can also write as `{method}(*)` if you want the method to accept any arguments but don't care about them."));
+        }
+        if argument.block {
+            let parameter_source = context.source_file().at(&parameters.location());
+            let relative = argument.location.start_offset() - parameters.location().start_offset();
+            let edit_start = parameter_source[..relative].rfind(',').map_or(argument.location.start_offset().saturating_sub(1), |comma| parameters.location().start_offset() + comma);
+            context.remove(message, location, edit_start..argument.location.end_offset());
+        } else {
+            context.replace(message, location.clone(), location, format!("_{}", argument.name));
+        }
+    }
+}
+
+struct MethodArgumentUsage {
+    reads: HashSet<String>,
+    forwarding_super: bool,
+    binding: bool,
+    yield_seen: bool,
+}
+
+impl<'pr> Visit<'pr> for MethodArgumentUsage {
+    fn visit_local_variable_read_node(&mut self, node: &ruby_prism::LocalVariableReadNode<'pr>) {
+        self.reads.insert(String::from_utf8_lossy(node.name().as_slice()).into_owned());
+    }
+    fn visit_forwarding_super_node(&mut self, _node: &ruby_prism::ForwardingSuperNode<'pr>) { self.forwarding_super = true; }
+    fn visit_yield_node(&mut self, node: &ruby_prism::YieldNode<'pr>) { self.yield_seen = true; ruby_prism::visit_yield_node(self, node); }
+    fn visit_call_node(&mut self, node: &ruby_prism::CallNode<'pr>) {
+        if node.receiver().is_none() && node.name().as_slice() == b"binding" && node.arguments().is_none() { self.binding = true; }
+        ruby_prism::visit_call_node(self, node);
+    }
+    fn visit_def_node(&mut self, _node: &ruby_prism::DefNode<'pr>) {}
 }
 
 fn useless_method_definition(node: &ruby_prism::DefNode<'_>, context: &mut CopContext<'_, '_>) {

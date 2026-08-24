@@ -1,10 +1,10 @@
 {
   "version": 1,
   "kind": "fixture_compatibility",
-  "updated_at": "2026-08-24T02:50:37-04:00",
+  "updated_at": "2026-08-24T06:27:05-04:00",
   "rust_commit": null,
-  "native_sha256": "e9de507f34548504b265f8a42ac3dc0d25d23c36d9e286f136aa9a5f754b09bc",
-  "fixture_corpus_sha256": "2de0bc8103190cba3f503662ff5f45a46e43a8ac422ba93fa3629e6e16014b70",
+  "native_sha256": "c8d088ddd9eece5ff9d38398f44b23c6cbf78bc06ba7f249333dff134530f0d8",
+  "fixture_corpus_sha256": "4d68aea48d45476538eb87561445ee59d8e4a7ded4be7b71d8f56f3e63ba7327",
   "rubocop_version": "1.87.0",
   "results": {
     "Bundler/DuplicatedGem": {
@@ -352,9 +352,19 @@
       "total": 9,
       "status": "compatible"
     },
+    "Layout/LineContinuationLeadingSpace": {
+      "passed": 32,
+      "total": 32,
+      "status": "compatible"
+    },
     "Layout/LineContinuationSpacing": {
       "passed": 31,
       "total": 31,
+      "status": "compatible"
+    },
+    "Layout/LineEndStringConcatenationIndentation": {
+      "passed": 59,
+      "total": 59,
       "status": "compatible"
     },
     "Layout/LineLength": {
@@ -607,9 +617,19 @@
       "total": 54,
       "status": "compatible"
     },
+    "Lint/AmbiguousRegexpLiteral": {
+      "passed": 30,
+      "total": 30,
+      "status": "compatible"
+    },
     "Lint/ArrayLiteralInRegexp": {
       "passed": 32,
       "total": 32,
+      "status": "compatible"
+    },
+    "Lint/AssignmentInCondition": {
+      "passed": 69,
+      "total": 69,
       "status": "compatible"
     },
     "Lint/BigDecimalNew": {
@@ -645,6 +665,11 @@
     "Lint/ConstantReassignment": {
       "passed": 57,
       "total": 57,
+      "status": "compatible"
+    },
+    "Lint/ConstantResolution": {
+      "passed": 18,
+      "total": 18,
       "status": "compatible"
     },
     "Lint/CopDirectiveSyntax": {
@@ -715,6 +740,11 @@
     "Lint/DuplicateMethods": {
       "passed": 475,
       "total": 475,
+      "status": "compatible"
+    },
+    "Lint/DuplicateRegexpCharacterClassElement": {
+      "passed": 16,
+      "total": 16,
       "status": "compatible"
     },
     "Lint/DuplicateRequire": {
@@ -1007,6 +1037,11 @@
       "total": 16,
       "status": "compatible"
     },
+    "Lint/RedundantCopDisableDirective": {
+      "passed": 26,
+      "total": 26,
+      "status": "compatible"
+    },
     "Lint/RedundantCopEnableDirective": {
       "passed": 23,
       "total": 23,
@@ -1242,6 +1277,11 @@
       "total": 30,
       "status": "compatible"
     },
+    "Lint/UnusedMethodArgument": {
+      "passed": 46,
+      "total": 46,
+      "status": "compatible"
+    },
     "Lint/UriEscapeUnescape": {
       "passed": 9,
       "total": 9,
@@ -1255,6 +1295,16 @@
     "Lint/UselessAccessModifier": {
       "passed": 198,
       "total": 198,
+      "status": "compatible"
+    },
+    "Lint/UselessAssignment": {
+      "passed": 149,
+      "total": 149,
+      "status": "compatible"
+    },
+    "Lint/UselessConstantScoping": {
+      "passed": 15,
+      "total": 15,
       "status": "compatible"
     },
     "Lint/UselessDefaultValueArgument": {
@@ -1312,9 +1362,39 @@
       "total": 270,
       "status": "compatible"
     },
+    "Metrics/AbcSize": {
+      "passed": 24,
+      "total": 24,
+      "status": "compatible"
+    },
+    "Metrics/BlockLength": {
+      "passed": 36,
+      "total": 36,
+      "status": "compatible"
+    },
+    "Metrics/BlockNesting": {
+      "passed": 26,
+      "total": 26,
+      "status": "compatible"
+    },
+    "Metrics/ClassLength": {
+      "passed": 33,
+      "total": 33,
+      "status": "compatible"
+    },
     "Metrics/CollectionLiteralLength": {
       "passed": 13,
       "total": 13,
+      "status": "compatible"
+    },
+    "Metrics/CyclomaticComplexity": {
+      "passed": 36,
+      "total": 36,
+      "status": "compatible"
+    },
+    "Metrics/MethodLength": {
+      "passed": 31,
+      "total": 31,
       "status": "compatible"
     },
     "Metrics/ModuleLength": {
@@ -1325,6 +1405,11 @@
     "Metrics/ParameterLists": {
       "passed": 16,
       "total": 16,
+      "status": "compatible"
+    },
+    "Metrics/PerceivedComplexity": {
+      "passed": 31,
+      "total": 31,
       "status": "compatible"
     },
     "Migration/DepartmentName": {
@@ -1350,6 +1435,11 @@
     "Naming/BlockForwarding": {
       "passed": 36,
       "total": 36,
+      "status": "compatible"
+    },
+    "Naming/BlockParameterName": {
+      "passed": 13,
+      "total": 13,
       "status": "compatible"
     },
     "Naming/ClassAndModuleCamelCase": {
@@ -1410,6 +1500,16 @@
     "Naming/RescuedExceptionsVariableName": {
       "passed": 36,
       "total": 36,
+      "status": "compatible"
+    },
+    "Naming/VariableName": {
+      "passed": 118,
+      "total": 118,
+      "status": "compatible"
+    },
+    "Naming/VariableNumber": {
+      "passed": 115,
+      "total": 115,
       "status": "compatible"
     },
     "Security/CompoundHash": {
@@ -1667,6 +1767,11 @@
       "total": 15,
       "status": "compatible"
     },
+    "Style/Copyright": {
+      "passed": 21,
+      "total": 21,
+      "status": "compatible"
+    },
     "Style/DataInheritance": {
       "passed": 24,
       "total": 24,
@@ -1860,6 +1965,11 @@
     "Style/FileTouch": {
       "passed": 4,
       "total": 4,
+      "status": "compatible"
+    },
+    "Style/FileWrite": {
+      "passed": 38,
+      "total": 38,
       "status": "compatible"
     },
     "Style/FloatDivision": {
@@ -2115,6 +2225,11 @@
     "Style/MinMaxComparison": {
       "passed": 17,
       "total": 17,
+      "status": "compatible"
+    },
+    "Style/MissingElse": {
+      "passed": 84,
+      "total": 84,
       "status": "compatible"
     },
     "Style/MissingRespondToMissing": {

@@ -1,159 +1,33 @@
-# Non-scalable cop implementations
+# Non-scalable cop implementation register
 
-`updated_at: 2026-08-24T02:47:59-04:00`
+`updated_at: 2026-08-24T05:33:57-04:00`
 
-This is the catalog for category C: cops whose current implementation appears
-too narrow to generalize from the fixture corpus to arbitrary Ruby projects.
-It is an implementation-risk register, not a list of every cop that currently
-mismatches RuboCop.
+The intentionally-pending dataset is empty. All 23 cops that were withdrawn in
+the final pending batch have been reimplemented, restored to the native registry,
+and validated against every captured RuboCop 1.87.0 diagnostic and correction
+case.
 
-All 16 category-C cops still in this catalog are intentionally pending. A
-further 5 incomplete or project-inexact cops and two RuboCop-reference
-blockers are also pending, for a total of 23; they are absent from
-the active registry, qualification corpus, compatibility evidence, and fixture
-suite. Eighty-one cops have now returned through structural rewrites and the full
-fixture gate, with project status recorded separately. The machine-readable source of truth is
-[`intentionally_pending_cops.yml`](../spec/upstream/rubocop-1.87.0/intentionally_pending_cops.yml).
-Their old implementation source remains only as rewrite reference.
+The former entries in this register are no longer current: literal catalog
+rules, shared placeholder callbacks, line-count metrics, and the narrow
+assignment scanner were replaced with syntax-aware implementations. The retired
+`catalog_cop::report`, `catalog_cop::replace`, and shared continuation placeholder
+APIs were removed so future cops cannot accidentally reuse those shortcuts.
 
-The additional withdrawals were established by the complete audit generated at
-`2026-08-23T09:13:26-04:00`. They comprise every cop classified as mismatch in
-the preceding 558-cop audit, plus `Lint/RedundantCopDisableDirective` and
-`Style/FileWrite`, for which RuboCop 1.87 cannot produce stable isolated project
-reference output. On that original ten-project corpus, the resulting 512-cop
-active set had 402 exercised project-exact cops, 110 dormant cops, and no
-mismatches or engine errors.
+This does not claim real-project parity. The complete 50-project audit remains
+the broader negative-case and configuration gate, and its mismatch queue is
+published separately in [Real-project output parity](real-project-parity.md) and
+[Current project-parity gaps](remaining-cops.md).
 
-The expanded 50-project audit at `2026-08-24T02:47:59-04:00` shows that this
-withdrawal was not sufficient to make the retained implementations scalable:
-329 cops are project-exact, 53 are dormant, 200 mismatch, none crash, and one
-is blocked by a RuboCop error. Those newly exposed cops require review and
-minimized fixtures before this catalog can be treated as complete.
+## Reopening this register
 
-The current evidence snapshots are
-`spec/compatibility_evidence/projects.json` and
-`spec/compatibility_evidence/fixtures.json`. The project corpus contains 85,471
-Ruby files. “Gap” is Rustocop-only plus RuboCop-only diagnostic signatures.
+Add a cop here only when review finds an implementation technique that cannot
+reasonably generalize, such as literal source matching for a syntax rule,
+line-oriented scope inference, or project-specific hardcoding. Each entry must
+record:
 
-## Inclusion criteria
+1. the implementation mechanism that fails to scale;
+2. fixture and project evidence demonstrating the limitation;
+3. the structural capability required for a replacement; and
+4. a complete ISO 8601 `updated_at` timestamp with UTC offset.
 
-A cop is included when code review establishes at least one of these patterns:
-
-1. It is registered through `catalog_cop::report` or `catalog_cop::replace`,
-   which performs a literal search or replacement at code-masked offsets but
-   does not verify the Ruby construct represented by the text.
-2. It substitutes whole-source or line-oriented string matching for Ruby AST,
-   lexical-state, scope, or regexp semantics, and the project audit confirms a
-   mismatch.
-3. Several distinct cops are wired to the same placeholder callback even
-   though RuboCop gives them different syntax and configuration semantics.
-4. A metric is approximated by counting lines or substrings instead of walking
-   the relevant AST and maintaining RuboCop-compatible scope.
-
-This deliberately excludes cops that have large project gaps but use a broad,
-structural implementation. For example, `Style/MethodCallWithArgsParentheses`
-is inaccurate, but it is not currently evidence of category C. A green fixture
-row also does not remove a cop from this catalog: three of the cops below pass
-all their fixtures while still mismatching real projects.
-
-## Literal catalog reporters (3 cops)
-
-These are mechanically confirmed. The shared implementation in
-[`framework/catalog_cop.rs`](../crates/rustocop/src/cops/prism/framework/catalog_cop.rs)
-calls `report_code(needle, ...)` or `replace_code(old, new, ...)` at every
-code-masked literal match without checking the Ruby construct represented by
-the text.
-
-| Cop | Fixture result | Project result | Rustocop | RuboCop | Exact | Gap |
-| --- | --- | --- | ---: | ---: | ---: | ---: |
-| `Layout/LineContinuationLeadingSpace` | mismatch 11/32 | mismatch | 0 | 49 | 0 | 49 |
-| `Lint/AmbiguousRegexpLiteral` | mismatch 6/30 | mismatch | 0 | 28 | 0 | 28 |
-| `Lint/AssignmentInCondition` | mismatch 16/69 | mismatch | 4 | 1,276 | 0 | 1,280 |
-
-Registrations are in
-[`final_layout_batch_a/registry.rs`](../crates/rustocop/src/cops/prism/final_layout_batch_a/registry.rs),
-[`final_layout_batch_b.rs`](../crates/rustocop/src/cops/prism/final_layout_batch_b.rs),
-[`final_regexp_batch.rs`](../crates/rustocop/src/cops/prism/final_regexp_batch.rs),
-[`final_scope_batch_a.rs`](../crates/rustocop/src/cops/prism/final_scope_batch_a.rs),
-[`final_scope_batch_b.rs`](../crates/rustocop/src/cops/prism/final_scope_batch_b.rs), and
-[`final_control_flow_batch/registry.rs`](../crates/rustocop/src/cops/prism/final_control_flow_batch/registry.rs).
-
-## Source scanners standing in for syntax or scope (7 cops)
-
-These implementations scan delimiters, lines, assignments, identifiers, or
-keywords without enough parser or scope context. The strongest examples are
-`Lint/ConstantResolution`, which tests the trimmed entire file as if it were
-one constant reference.
-
-| Cop | Fixture result | Project result | Rustocop | RuboCop | Exact | Gap |
-| --- | --- | --- | ---: | ---: | ---: | ---: |
-| `Lint/ConstantResolution` | compatible 18/18 | mismatch | 111 | 544,649 | 29 | 544,702 |
-| `Lint/DuplicateRegexpCharacterClassElement` | mismatch 6/16 | mismatch | 329,911 | 99 | 0 | 330,010 |
-| `Lint/UnusedMethodArgument` | mismatch 14/46 | mismatch | 3,902 | 1,933 | 777 | 4,281 |
-| `Naming/VariableName` | mismatch 62/118 | mismatch | 73,576 | 123 | 42 | 73,615 |
-| `Naming/VariableNumber` | mismatch 62/115 | mismatch | 0 | 8,050 | 0 | 8,050 |
-| `Lint/UselessAssignment` | mismatch 82/149 | mismatch | 31,904 | 543 | 183 | 32,081 |
-| `Style/Copyright` | compatible 21/21 | mismatch | 54,127 | 0 | 0 | 54,127 |
-
-The relevant implementations are in
-[`text/lint.rs`](../crates/rustocop/src/cops/text/lint.rs),
-[`text/layout.rs`](../crates/rustocop/src/cops/text/layout.rs),
-[`text/lint_semantic.rs`](../crates/rustocop/src/cops/text/lint_semantic.rs),
-[`semantic_gap_completion.rs`](../crates/rustocop/src/cops/prism/semantic_gap_completion.rs),
-[`literal_integrity_completion.rs`](../crates/rustocop/src/cops/prism/literal_integrity_completion.rs),
-[`final_regexp_batch.rs`](../crates/rustocop/src/cops/prism/final_regexp_batch.rs),
-[`layout_line_break_completion.rs`](../crates/rustocop/src/cops/prism/layout_line_break_completion.rs),
-[`final_scope_batch_b.rs`](../crates/rustocop/src/cops/prism/final_scope_batch_b.rs),
-[`style_metadata_completion.rs`](../crates/rustocop/src/cops/prism/style_metadata_completion.rs),
-[`source_rules_misc.rs`](../crates/rustocop/src/cops/prism/source_rules_misc.rs), and
-[`source_semantics/parameters.rs`](../crates/rustocop/src/cops/prism/source_semantics/parameters.rs).
-
-## Shared placeholder callbacks (1 cop)
-
-This remaining alignment cop uses the shared `align_continuation` placeholder
-instead of modeling RuboCop's syntax and indentation context.
-
-| Cop | Fixture result | Project result | Rustocop | RuboCop | Exact | Gap |
-| --- | --- | --- | ---: | ---: | ---: | ---: |
-| `Layout/LineEndStringConcatenationIndentation` | mismatch 39/59 | mismatch | 583 | 2,497 | 0 | 3,080 |
-
-Both callbacks are in
-[`final_layout_batch_a.rs`](../crates/rustocop/src/cops/prism/final_layout_batch_a.rs),
-with registrations in its
-[`registry.rs`](../crates/rustocop/src/cops/prism/final_layout_batch_a/registry.rs).
-
-## Approximate metrics (5 cops)
-
-These implementations count source lines or textual tokens and do not model
-RuboCop's AST-based metric scopes and discount rules. `Metrics/AbcSize` starts
-from an AST method node, but calculates assignments, branches, and conditions
-from substring counts in the method body.
-
-| Cop | Fixture result | Project result | Rustocop | RuboCop | Exact | Gap |
-| --- | --- | --- | ---: | ---: | ---: | ---: |
-| `Metrics/BlockNesting` | mismatch 7/26 | mismatch | 175 | 176 | 0 | 351 |
-| `Metrics/PerceivedComplexity` | mismatch 15/31 | mismatch | 79 | 4,068 | 0 | 4,147 |
-| `Metrics/CyclomaticComplexity` | mismatch 15/36 | mismatch | 105 | 4,982 | 0 | 5,087 |
-| `Metrics/ClassLength` | mismatch 11/33 | mismatch | 121 | 3,148 | 0 | 3,269 |
-| `Metrics/AbcSize` | compatible 24/24 | mismatch | 36,741 | 33,180 | 890 | 68,141 |
-
-Implementations are in
-[`final_metrics_batch.rs`](../crates/rustocop/src/cops/prism/final_metrics_batch.rs)
-and [`metrics_completion.rs`](../crates/rustocop/src/cops/prism/metrics_completion.rs).
-
-## Exit criteria
-
-A cop stays in this catalog until its implementation no longer matches the
-reason recorded above. Replacing a literal needle with a larger regexp or
-adding project-specific exclusions is not sufficient. Removal requires:
-
-1. syntax-aware or lexical-state-aware implementation appropriate to the cop;
-2. positive, negative, configuration, and source-range fixtures derived from
-   more than one real project;
-3. all fixtures passing for the target and affected shared infrastructure; and
-4. a focused 50-project run showing the target project-exact, or documenting
-   a smaller residual gap whose cause is no longer a narrow implementation.
-
-The project numbers are a snapshot, not manually maintained truth. Refresh
-them from the cached RuboCop reference after each focused project run, and
-always update this file's `updated_at` with a complete ISO 8601 timestamp.
+Ordinary project mismatches belong in the generated parity queue, not here.

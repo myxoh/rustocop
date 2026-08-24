@@ -1,20 +1,13 @@
-use super::catalog_cop::{custom, report};
+use super::catalog_cop::custom;
 use super::*;
 use std::collections::HashSet;
 
 pub(super) fn cops() -> Vec<Box<dyn Cop>> {
     vec![
-        custom(
-            "Lint/DuplicateRegexpCharacterClassElement",
-            duplicate_character_class,
-        ),
+        Box::new(DuplicateRegexpCharacterClassElement),
         Box::new(RedundantRegexpQuantifiers),
         Box::new(UnescapedBracketInRegexp),
-        report(
-            "Lint/AmbiguousRegexpLiteral",
-            "puts /",
-            "Ambiguous regexp literal. Parenthesize the method arguments.",
-        ),
+        Box::new(AmbiguousRegexpLiteral),
         custom("Lint/OutOfRangeRegexpRef", out_of_range_ref),
         Box::new(SelectByRegexp),
     ]
@@ -567,39 +560,116 @@ fn hash_like_receiver(node: &Node<'_>) -> bool {
     })
 }
 
-fn regexp_ranges(source: &str) -> impl Iterator<Item = (usize, usize)> + '_ {
-    source.match_indices('/').filter_map(|(start, _)| {
-        source[start + 1..]
-            .find('/')
-            .map(|relative| (start, start + 1 + relative))
-    })
+struct AmbiguousRegexpLiteral;
+
+impl Cop for AmbiguousRegexpLiteral {
+    fn name(&self) -> &'static str { "Lint/AmbiguousRegexpLiteral" }
+
+    fn on_node<'pr>(&self, node: &Node<'pr>, ancestors: &[Node<'pr>], source: &str, context: &mut Context) {
+        let Some(call) = node.as_call_node() else { return };
+        if call.opening_loc().is_some() { return; }
+        let Some(arguments) = call.arguments() else { return };
+        let Some(first) = arguments.arguments().iter().next() else { return };
+        let Some(opening) = leading_regexp_opening(&first) else { return };
+        let mut cop_context = context.cop_context(self.name(), source, ancestors);
+        let message = "Ambiguous regexp literal. Parenthesize the method arguments if it's surely a regexp literal, or add a whitespace to the right of the `/` if it should be a division.";
+        let start = arguments.location().start_offset();
+        let end = arguments.location().end_offset();
+        cop_context.add_offense(opening, message, |corrector| {
+            let grouped_match = first.as_call_node().is_some_and(|operator| matches!(operator.name().as_slice(), b"=~" | b"!~"));
+            let opening_edit = if grouped_match {
+                start..start
+            } else {
+                call.message_loc().map_or(start..start, |message| message.end_offset()..start)
+            };
+            corrector.replace(opening_edit, "(");
+            corrector.replace(end..end, ")");
+        });
+    }
 }
 
-fn duplicate_character_class(context: &mut CopContext<'_, '_>) {
-    let source = context.source().to_string();
-    for (regexp_start, regexp_end) in regexp_ranges(&source) {
-        let regexp = &source[regexp_start + 1..regexp_end];
-        if regexp.contains('\\') || regexp.contains("&&") || regexp.contains("#{") {
-            continue;
-        }
-        let Some(open) = regexp.find('[') else {
-            continue;
-        };
-        let Some(close) = regexp[open + 1..].find(']').map(|at| open + 1 + at) else {
-            continue;
-        };
-        let mut seen = HashSet::new();
-        for (relative, character) in regexp[open + 1..close].char_indices() {
-            if !seen.insert(character) {
-                let start = regexp_start + 1 + open + 1 + relative;
-                context.remove(
-                    "Duplicate element inside regexp character class.",
-                    start..start + character.len_utf8(),
-                    start..start + character.len_utf8(),
-                );
-            }
+fn leading_regexp_opening<'pr>(node: &Node<'pr>) -> Option<ruby_prism::Location<'pr>> {
+    if let Some(regexp) = node.as_regular_expression_node() { return Some(regexp.opening_loc()); }
+    if let Some(regexp) = node.as_interpolated_regular_expression_node() { return Some(regexp.opening_loc()); }
+    node.as_call_node().and_then(|call| call.receiver()).and_then(|receiver| leading_regexp_opening(&receiver))
+}
+
+struct DuplicateRegexpCharacterClassElement;
+
+impl Cop for DuplicateRegexpCharacterClassElement {
+    fn name(&self) -> &'static str { "Lint/DuplicateRegexpCharacterClassElement" }
+
+    fn on_node<'pr>(&self, node: &Node<'pr>, ancestors: &[Node<'pr>], source: &str, context: &mut Context) {
+        let location = if let Some(regexp) = node.as_regular_expression_node() {
+            regexp.location()
+        } else if let Some(regexp) = node.as_interpolated_regular_expression_node() {
+            regexp.location()
+        } else { return };
+        let literal = &source[location.start_offset()..location.end_offset()];
+        let mut cop_context = context.cop_context(self.name(), source, ancestors);
+        for duplicate in duplicate_regexp_class_tokens(literal) {
+            let range = location.start_offset() + duplicate.start..location.start_offset() + duplicate.end;
+            cop_context.remove("Duplicate element inside regexp character class", range.clone(), range);
         }
     }
+}
+
+fn duplicate_regexp_class_tokens(literal: &str) -> Vec<std::ops::Range<usize>> {
+    let bytes = literal.as_bytes();
+    let mut duplicates = Vec::new();
+    let mut index = 0;
+    while index < bytes.len() {
+        if bytes[index] != b'[' || index > 0 && bytes[index - 1] == b'\\' { index += 1; continue; }
+        let class_start = index + 1;
+        let mut end = class_start;
+        let mut interpolation = 0usize;
+        while end < bytes.len() {
+            if bytes.get(end..end + 2) == Some(b"#{") { interpolation += 1; end += 2; continue; }
+            if interpolation > 0 {
+                if bytes[end] == b'}' { interpolation -= 1; }
+                end += 1;
+                continue;
+            }
+            if bytes.get(end..end + 2) == Some(b"[:") {
+                if let Some(close) = literal[end + 2..].find(":]") { end += close + 4; continue; }
+            }
+            if bytes[end] == b']' { break; }
+            end += 1;
+        }
+        if end >= bytes.len() { break; }
+        let body = &literal[class_start..end];
+        if body.contains("&&") { index = end + 1; continue; }
+        let mut seen = HashSet::<String>::new();
+        let mut at = class_start;
+        while at < end {
+            if bytes.get(at..at + 2) == Some(b"#{") {
+                let mut depth = 1usize; at += 2;
+                while at < end && depth > 0 { if bytes[at] == b'{' { depth += 1; } else if bytes[at] == b'}' { depth -= 1; } at += 1; }
+                continue;
+            }
+            let token_start = at;
+            if bytes.get(at..at + 2) == Some(b"[:") {
+                if let Some(close) = literal[at + 2..end].find(":]") { at += close + 4; } else { at += 1; }
+            } else if bytes[at] == b'\\' {
+                at += 1;
+                if at < end && matches!(bytes[at], b'0'..=b'7') {
+                    let mut digits = 0; while at < end && digits < 3 && matches!(bytes[at], b'0'..=b'7') { at += 1; digits += 1; }
+                } else { at = (at + 1).min(end); }
+            } else {
+                let char_len = literal[at..].chars().next().map_or(1, char::len_utf8);
+                at = (at + char_len).min(end);
+                if at < end && bytes[at] == b'-' && at + 1 < end {
+                    at += 1;
+                    if bytes[at] == b'\\' { at = (at + 2).min(end); }
+                    else { at += literal[at..].chars().next().map_or(1, char::len_utf8); }
+                }
+            }
+            let token = literal[token_start..at].to_string();
+            if !seen.insert(token) { duplicates.push(token_start..at); }
+        }
+        index = end + 1;
+    }
+    duplicates
 }
 
 fn out_of_range_ref(context: &mut CopContext<'_, '_>) {

@@ -173,23 +173,6 @@ fn closes_immediately_after_heredoc(source: &str, closing: usize) -> bool {
         .any(|line| line.contains("<<") && line.contains(preceding))
 }
 
-fn align_continuation(context: &mut CopContext<'_, '_>) {
-    let lines = context.source_file().lines().collect::<Vec<_>>();
-    for window in lines.windows(2) {
-        if window[0].1.trim_end().ends_with([',', '+', '\\'])
-            && !window[1].1.trim().is_empty()
-            && window[1].1.len() - window[1].1.trim_start().len() == 0
-        {
-            context.insert(
-                "Use configured indentation for a continuation line.",
-                window[1].0..window[1].0,
-                window[1].0,
-                "  ",
-            );
-        }
-    }
-}
-
 fn line_continuation_spacing(context: &mut CopContext<'_, '_>) {
     let trimmed_source = context.source().trim_start();
     if ["%i", "%I", "%q", "%Q", "%r", "%x", "%W", "%w", "/", "`"]

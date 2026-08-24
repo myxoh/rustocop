@@ -1,7 +1,7 @@
 # Current project-parity gaps
 
 Generated from the same complete audit as [the evidence matrix](cop-support.md).
-Evidence updated at `2026-08-24T02:47:59-04:00`.
+Evidence updated at `2026-08-24T06:23:45-04:00`.
 This queue contains only failures from that 50-project audit; it does not use the old
 Verified/Heuristic qualification labels or captured-case pass counts.
 
@@ -9,29 +9,48 @@ The gap is unmatched complete diagnostic signatures, not the difference
 between aggregate offense counts. A cop can have equal counts and still have a
 nonzero gap because its message, severity, path, or source range differs.
 
-- Rust source: `uncommitted native e9de507f3454`
-- Unresolved cops: 200
+- Rust source: `uncommitted native c8d088ddd9ee`
+- Unresolved cops: 223
 
 | Cop | Status | Rustocop | RuboCop | Exact | Signature gap | Project regression evidence |
 | --- | --- | ---: | ---: | ---: | ---: | --- |
+| `Lint/ConstantResolution` | Mismatch | 464 | 849583 | 83 | 849881 | No |
 | `Style/InlineComment` | Mismatch | 229984 | 18651 | 18651 | 211333 | Passing |
+| `Metrics/AbcSize` | Mismatch | 60535 | 55118 | 1448 | 112757 | No |
 | `Layout/MultilineMethodCallIndentation` | Mismatch | 21838 | 15130 | 9318 | 18332 | Passing |
 | `Style/DocumentationMethod` | Mismatch | 184728 | 186456 | 176574 | 18036 | No |
 | `Layout/LineLength` | Mismatch | 187509 | 181525 | 178339 | 12356 | Passing |
+| `Style/Copyright` | Mismatch | 74188 | 85417 | 74171 | 11263 | No |
 | `Layout/MultilineArrayLineBreaks` | Mismatch | 13345 | 22550 | 13010 | 9875 | Passing |
+| `Style/MissingElse` | Mismatch | 32260 | 40883 | 32220 | 8703 | No |
+| `Metrics/MethodLength` | Mismatch | 36595 | 36690 | 32344 | 8597 | No |
+| `Lint/UnusedMethodArgument` | Mismatch | 11152 | 3598 | 3284 | 8182 | No |
 | `Style/MethodCallWithArgsParentheses` | Mismatch | 844894 | 838160 | 837975 | 7104 | No |
 | `Style/Documentation` | Mismatch | 54391 | 49775 | 48846 | 6474 | No |
+| `Naming/BlockParameterName` | Mismatch | 5996 | 14 | 7 | 5996 | No |
+| `Metrics/PerceivedComplexity` | Mismatch | 6007 | 6450 | 3380 | 5697 | No |
+| `Metrics/CyclomaticComplexity` | Mismatch | 7295 | 8047 | 5292 | 4758 | No |
+| `Naming/VariableNumber` | Mismatch | 13082 | 9963 | 9545 | 3955 | No |
+| `Lint/DuplicateRegexpCharacterClassElement` | Mismatch | 3770 | 103 | 99 | 3675 | No |
 | `Layout/MultilineOperationIndentation` | Mismatch | 4362 | 2263 | 1629 | 3367 | Passing |
-| `Lint/UnderscorePrefixedVariableName` | Mismatch | 2109 | 2109 | 897 | 2424 | No |
+| `Lint/AmbiguousRegexpLiteral` | Mismatch | 3450 | 722 | 722 | 2728 | No |
+| `Metrics/BlockLength` | Mismatch | 86051 | 86297 | 84997 | 2354 | No |
 | `Layout/ExtraSpacing` | Mismatch | 1329 | 1905 | 471 | 2292 | Passing |
-| `Lint/MissingCopEnableDirective` | Mismatch | 2024 | 75 | 75 | 1949 | Passing |
+| `Lint/MissingCopEnableDirective` | Mismatch | 2024 | 98 | 75 | 1972 | Passing |
+| `Metrics/ClassLength` | Mismatch | 4999 | 5020 | 4038 | 1943 | No |
+| `Layout/LineEndStringConcatenationIndentation` | Mismatch | 3171 | 2646 | 1979 | 1859 | No |
+| `Lint/UnderscorePrefixedVariableName` | Mismatch | 1036 | 2109 | 897 | 1351 | No |
+| `Lint/UselessAssignment` | Mismatch | 1349 | 1313 | 696 | 1270 | No |
+| `Naming/VariableName` | Mismatch | 1513 | 530 | 530 | 983 | No |
+| `Lint/UselessConstantScoping` | Mismatch | 958 | 529 | 318 | 851 | No |
 | `Style/IfUnlessModifier` | Mismatch | 11199 | 11656 | 11179 | 497 | Passing |
 | `Style/AutoResourceCleanup` | Mismatch | 548 | 86 | 86 | 462 | Passing |
 | `Lint/AmbiguousRange` | Mismatch | 456 | 164 | 98 | 424 | Passing |
 | `Layout/RedundantLineBreak` | Mismatch | 31715 | 31577 | 31471 | 350 | No |
 | `Style/RedundantParentheses` | Mismatch | 712 | 522 | 480 | 274 | Passing |
+| `Metrics/BlockNesting` | Mismatch | 631 | 663 | 538 | 218 | No |
 | `Style/FetchEnvVar` | Mismatch | 1497 | 1386 | 1340 | 203 | Passing |
-| `Naming/HeredocDelimiterNaming` | Mismatch | 2369 | 2184 | 2184 | 185 | Passing |
+| `Naming/HeredocDelimiterNaming` | Mismatch | 2356 | 2184 | 2184 | 172 | Passing |
 | `Layout/MultilineAssignmentLayout` | Mismatch | 17262 | 17367 | 17234 | 161 | Passing |
 | `Lint/RedundantCopEnableDirective` | Mismatch | 176 | 20 | 20 | 156 | Passing |
 | `Style/ExplicitBlockArgument` | Mismatch | 282 | 357 | 248 | 143 | Passing |
@@ -137,6 +156,7 @@ nonzero gap because its message, severity, path, or source range differs.
 | `Style/SuperArguments` | Mismatch | 447 | 443 | 443 | 4 | No |
 | `Bundler/InsecureProtocolSource` | Mismatch | 3 | 0 | 0 | 3 | No |
 | `Layout/EmptyLinesAroundAccessModifier` | Mismatch | 1767 | 1764 | 1764 | 3 | Passing |
+| `Layout/LineContinuationLeadingSpace` | Mismatch | 114 | 117 | 114 | 3 | No |
 | `Layout/SpaceInsideArrayLiteralBrackets` | Mismatch | 3115 | 3118 | 3115 | 3 | Passing |
 | `Lint/DisjunctiveAssignmentInConstructor` | Mismatch | 8 | 5 | 5 | 3 | Passing |
 | `Lint/DuplicateBranch` | Mismatch | 396 | 397 | 395 | 3 | Passing |
@@ -178,9 +198,9 @@ nonzero gap because its message, severity, path, or source range differs.
 | `Style/RedundantSelf` | Mismatch | 3581 | 3583 | 3581 | 2 | Passing |
 | `Layout/ClassStructure` | Mismatch | 2879 | 2878 | 2878 | 1 | Passing |
 | `Layout/CommentIndentation` | Mismatch | 171 | 170 | 170 | 1 | Passing |
-| `Layout/EmptyLinesAroundModuleBody` | Mismatch | 348 | 347 | 347 | 1 | No |
 | `Layout/LineContinuationSpacing` | Mismatch | 350 | 349 | 349 | 1 | Passing |
 | `Lint/AmbiguousAssignment` | Mismatch | 1 | 0 | 0 | 1 | Passing |
+| `Lint/AssignmentInCondition` | Mismatch | 1944 | 1945 | 1944 | 1 | No |
 | `Lint/ConstantReassignment` | Mismatch | 2 | 1 | 1 | 1 | Passing |
 | `Lint/CopDirectiveSyntax` | Mismatch | 224 | 225 | 224 | 1 | Passing |
 | `Lint/EmptyExpression` | Mismatch | 0 | 1 | 0 | 1 | No |
@@ -214,4 +234,6 @@ nonzero gap because its message, severity, path, or source range differs.
 | `Style/RedundantSortBy` | Mismatch | 1 | 2 | 1 | 1 | No |
 | `Style/SoleNestedConditional` | Mismatch | 574 | 573 | 573 | 1 | No |
 | `Style/UnlessLogicalOperators` | Mismatch | 93 | 94 | 93 | 1 | Passing |
+| `Lint/RedundantCopDisableDirective` | RuboCop gate error | — | — | — | — | No |
 | `Style/ClassAndModuleChildren` | RuboCop gate error | — | — | — | — | Passing |
+| `Style/FileWrite` | RuboCop gate error | — | — | — | — | No |

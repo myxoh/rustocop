@@ -63,8 +63,8 @@ Preview everything the generator would create:
 ruby script/new_cop.rb Style/Example call --dry-run
 ```
 
-The active registry contains 583 RuboCop 1.87 built-ins. Another 23 are listed
-in the intentionally-pending manifest and require scalable reimplementation.
+The active registry contains all 606 RuboCop 1.87 built-ins. The
+intentionally-pending manifest is empty.
 Use the generator for a genuinely new cop; when improving an active cop, start
 from its current family module and fixture instead:
 

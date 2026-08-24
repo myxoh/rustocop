@@ -23,6 +23,10 @@ Metrics/MethodLength:
 Style/Documentation:
   Enabled: true
 
+Style/Copyright:
+  Notice: '^Copyright (\(c\) )?2[0-9]{3} .+'
+  AutocorrectNotice: '# Copyright (c) 2026 Rustocop project parity corpus.'
+
 Style/HashSyntax:
   Enabled: true
 

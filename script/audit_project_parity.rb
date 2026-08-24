@@ -143,7 +143,8 @@ def accepted?(result)
 end
 
 def cop_inspection_error?(result)
-  result.fetch("stderr").include?("An error occurred while")
+  stderr = result.fetch("stderr")
+  stderr.include?("An error occurred while") || stderr.include?("cannot be used with --only")
 end
 
 def native_command(native, jobs, common, corpus, cops)

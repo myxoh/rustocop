@@ -1,29 +1,6 @@
 ---
 version: 1
 rubocop_version: 1.87.0
-updated_at: '2026-08-24T02:15:31-04:00'
-reason: Existing implementations are intentionally withdrawn because source-pattern, placeholder, or incomplete structural behavior does not match the pinned real-project corpus.
-cops:
-  - Layout/LineContinuationLeadingSpace
-  - Layout/LineEndStringConcatenationIndentation
-  - Lint/AmbiguousRegexpLiteral
-  - Lint/AssignmentInCondition
-  - Lint/ConstantResolution
-  - Lint/DuplicateRegexpCharacterClassElement
-  - Lint/RedundantCopDisableDirective
-  - Lint/UnusedMethodArgument
-  - Lint/UselessAssignment
-  - Lint/UselessConstantScoping
-  - Metrics/AbcSize
-  - Metrics/BlockLength
-  - Metrics/BlockNesting
-  - Metrics/ClassLength
-  - Metrics/CyclomaticComplexity
-  - Metrics/MethodLength
-  - Metrics/PerceivedComplexity
-  - Naming/BlockParameterName
-  - Naming/VariableName
-  - Naming/VariableNumber
-  - Style/Copyright
-  - Style/FileWrite
-  - Style/MissingElse
+updated_at: '2026-08-24T06:23:45-04:00'
+reason: All built-in cops are currently registered; future withdrawals must document a scalable reimplementation requirement.
+cops: []
