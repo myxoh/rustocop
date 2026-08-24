@@ -32,8 +32,24 @@ Run the complete cached corpus:
 bundle exec rake fixtures:unit
 ```
 
-The warm release run checks all 28,774 cases in about 1.4 seconds on the audit
-machine. Focused cop runs remain millisecond-scale.
+The warm release run checks all 28,774 cases in about 1.4-1.6 seconds on the
+audit machine. A sequential audit of all 606 cops measured a 3.4 ms median:
+448 cops completed within 5 ms, 543 within 10 ms, and the 95th percentile was
+16.1 ms. A few size-sensitive contracts intentionally exercise source files as
+large as 100-400 KB, so they cannot have single-digit-millisecond isolated
+runtimes without weakening or first minimizing those cases. Cargo process
+startup is separate from these in-run measurements.
+
+Reproduce the per-cop timing audit without cross-cop parallelism:
+
+```sh
+bundle exec rake fixtures:benchmark
+bundle exec rake fixtures:benchmark REPORT=tmp/unit-timings.json
+```
+
+The optional JSON report records `duration_ms` beside every cop's passing and
+total case counts. The benchmark retains all parity assertions: it still exits
+nonzero when any cached contract differs.
 
 Validate cache integrity and the unit-only layout:
 

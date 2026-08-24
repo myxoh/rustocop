@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 use serde::Deserialize;
 use serde_json::Value;
@@ -50,7 +51,8 @@ pub(super) fn check_cop(
     root: &Path,
     cop: &str,
     entry: &UnitManifestEntry,
-) -> (String, Vec<ContractFailure>, usize, usize) {
+) -> (String, Vec<ContractFailure>, usize, usize, Duration) {
+    let started = Instant::now();
     if std::env::var_os("RUSTOCOP_UNIT_TRACE").is_some() {
         eprintln!("checking {cop}");
     }
@@ -128,7 +130,7 @@ pub(super) fn check_cop(
             passed += 1;
         }
     }
-    (cop.to_string(), failures, passed, total)
+    (cop.to_string(), failures, passed, total, started.elapsed())
 }
 
 #[allow(clippy::too_many_arguments)]

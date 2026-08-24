@@ -38,6 +38,15 @@ namespace :fixtures do
        "--release", "cached_unit_contracts_match", "--", "--ignored", "--nocapture"
   end
 
+  desc "Audit sequential per-cop cached-contract timings (set REPORT=path for JSON)"
+  task :benchmark do
+    environment = { "RUSTOCOP_UNIT_BENCHMARK" => "1" }
+    environment["RUSTOCOP_UNIT_REPORT"] = ENV.fetch("REPORT") if ENV["REPORT"]
+    sh environment,
+       "cargo", "test", "--manifest-path", "crates/rustocop/Cargo.toml",
+       "--release", "cached_unit_contracts_match", "--", "--ignored", "--nocapture"
+  end
+
   desc "Recapture RuboCop 1.87 specs and regenerate the committed unit cache"
   task :refresh_unit do
     ruby "script/extract_upstream_cop_specs.rb"

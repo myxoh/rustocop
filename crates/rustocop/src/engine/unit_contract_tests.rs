@@ -4,7 +4,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::thread;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use super::unit_contract_runner::{check_cop, inspection_options};
 use super::InspectionPlan;
@@ -73,10 +73,14 @@ fn cached_unit_contracts_match() {
     let selected = selected_cops(&manifest);
     let mut failures = Vec::new();
     let mut case_count = 0;
-    let mut results = BTreeMap::<String, (usize, usize)>::new();
-    let worker_count = thread::available_parallelism()
-        .map_or(1, usize::from)
-        .min(selected.len().max(1));
+    let mut results = BTreeMap::<String, (usize, usize, Duration)>::new();
+    let worker_count = if std::env::var_os("RUSTOCOP_UNIT_BENCHMARK").is_some() {
+        1
+    } else {
+        thread::available_parallelism()
+            .map_or(1, usize::from)
+            .min(selected.len().max(1))
+    };
     let chunk_size = selected.len().div_ceil(worker_count);
     let batches = thread::scope(|scope| {
         selected
@@ -94,13 +98,14 @@ fn cached_unit_contracts_match() {
             .flat_map(|handle| handle.join().unwrap())
             .collect::<Vec<_>>()
     });
-    for (cop, mut cop_failures, passed, total) in batches {
+    for (cop, mut cop_failures, passed, total, duration) in batches {
         failures.append(&mut cop_failures);
         case_count += total;
-        results.insert(cop, (passed, total));
+        results.insert(cop, (passed, total, duration));
     }
 
     write_report(&manifest.rubocop_version, &results);
+    print_timings(&results);
 
     let mut failure_summary = BTreeMap::new();
     for failure in &failures {
@@ -132,16 +137,20 @@ fn cached_unit_contracts_match() {
     );
 }
 
-fn write_report(rubocop_version: &str, results: &BTreeMap<String, (usize, usize)>) {
+fn write_report(rubocop_version: &str, results: &BTreeMap<String, (usize, usize, Duration)>) {
     let Ok(path) = std::env::var("RUSTOCOP_UNIT_REPORT") else {
         return;
     };
     let results = results
         .iter()
-        .map(|(cop, (passed, total))| {
+        .map(|(cop, (passed, total, duration))| {
             (
                 cop.clone(),
-                serde_json::json!({ "passed": passed, "total": total }),
+                serde_json::json!({
+                    "passed": passed,
+                    "total": total,
+                    "duration_ms": duration.as_secs_f64() * 1_000.0,
+                }),
             )
         })
         .collect::<serde_json::Map<_, _>>();
@@ -150,6 +159,32 @@ fn write_report(rubocop_version: &str, results: &BTreeMap<String, (usize, usize)
         "results": results,
     });
     fs::write(path, serde_json::to_vec_pretty(&report).unwrap()).unwrap();
+}
+
+fn print_timings(results: &BTreeMap<String, (usize, usize, Duration)>) {
+    if std::env::var_os("RUSTOCOP_UNIT_BENCHMARK").is_none() {
+        return;
+    }
+    let mut timings = results
+        .iter()
+        .map(|(cop, (_, cases, duration))| (duration.as_secs_f64() * 1_000.0, *cases, cop))
+        .collect::<Vec<_>>();
+    timings.sort_by(|left, right| left.0.total_cmp(&right.0));
+    let percentile = |fraction: f64| {
+        let index = ((timings.len() - 1) as f64 * fraction).round() as usize;
+        timings[index].0
+    };
+    let total_ms = timings.iter().map(|(ms, _, _)| ms).sum::<f64>();
+    eprintln!(
+        "per-cop sequential timings: median {:.3}ms, p95 {:.3}ms, p99 {:.3}ms, mean {:.3}ms",
+        percentile(0.5),
+        percentile(0.95),
+        percentile(0.99),
+        total_ms / timings.len() as f64,
+    );
+    for (milliseconds, cases, cop) in timings.iter().rev().take(10) {
+        eprintln!("  {cop}: {milliseconds:.3}ms ({cases} cases)");
+    }
 }
 
 fn selected_cops(manifest: &UnitManifest) -> Vec<String> {
