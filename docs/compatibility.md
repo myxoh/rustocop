@@ -1,6 +1,6 @@
 # RuboCop compatibility evidence
 
-Generated at `2026-08-24T06:27:05-04:00` for RuboCop 1.87.0.
+Generated at `2026-08-24T07:31:54-04:00` for RuboCop 1.87.0.
 Compatibility is binary at the cop level: every exercised fixture must match,
 and project output must have no false positives, false negatives, or signature
 differences. Partial overlap is not classified as compatible.
@@ -10,11 +10,11 @@ This table covers 606 active built-in cops. The
 [`intentionally_pending_cops.yml`](../spec/upstream/rubocop-1.87.0/intentionally_pending_cops.yml)
 are deliberately unregistered and excluded from both evidence corpora.
 
-Fixture evidence was updated at `2026-08-24T06:27:05-04:00`. Project
-evidence was updated at `2026-08-24T06:23:45-04:00` from
+Fixture evidence was updated at `2026-08-24T07:31:54-04:00`. Project
+evidence was updated at `2026-08-24T07:29:34-04:00` from
 50 projects and 85471 Ruby files.
-Fixture source: `48bd3ce1dbce49f8e191a789c86bda6960a78c5d`. Project source:
-`48bd3ce1dbce49f8e191a789c86bda6960a78c5d`.
+Fixture source: `cop source 531d7f98c244, native d5952f01169f`. Project source:
+`cop source 531d7f98c244, native d5952f01169f`.
 
 This evidence covers the complete configured 50-project corpus.
 
@@ -61,7 +61,7 @@ compatible in the overall totals.
 
 ## Per-cop evidence
 
-| Cop | Implementation file | Implementation updated | Fixture tests<br>(as of 2026-08-24T06:27:05-04:00) | Fixture matching<br>(as of 2026-08-24T06:27:05-04:00) | Project hits<br>(as of 2026-08-24T06:23:45-04:00) | Project matching<br>(as of 2026-08-24T06:23:45-04:00) |
+| Cop | Implementation file | Implementation updated | Fixture tests<br>(as of 2026-08-24T07:31:54-04:00) | Fixture matching<br>(as of 2026-08-24T07:31:54-04:00) | Project hits<br>(as of 2026-08-24T07:29:34-04:00) | Project matching<br>(as of 2026-08-24T07:29:34-04:00) |
 | --- | --- | --- | ---: | ---: | ---: | ---: |
 | `Bundler/DuplicatedGem` | [`crates/rustocop/src/cops/prism/source_rules.rs`](../crates/rustocop/src/cops/prism/source_rules.rs) | 2026-08-23 | 10 | 10/10 (100.0%) | 0 | — (unexercised) |
 | `Bundler/DuplicatedGroup` | [`crates/rustocop/src/cops/prism/project_scope_completion.rs`](../crates/rustocop/src/cops/prism/project_scope_completion.rs) | 2026-08-24 | 21 | 21/21 (100.0%) | 0 | — (unexercised) |

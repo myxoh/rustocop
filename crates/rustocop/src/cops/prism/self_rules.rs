@@ -30,6 +30,7 @@ fn redundant_self(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     );
 }
 
+#[allow(clippy::too_many_lines)]
 fn excluded_method(name: &[u8]) -> bool {
     name.ends_with(b"=")
         || matches!(

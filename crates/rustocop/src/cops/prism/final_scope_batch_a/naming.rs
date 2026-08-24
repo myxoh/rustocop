@@ -421,7 +421,7 @@ impl ArgumentEvents {
         }
     }
 
-    fn with_conditional<'pr>(&mut self, visit: impl FnOnce(&mut Self)) {
+    fn with_conditional(&mut self, visit: impl FnOnce(&mut Self)) {
         self.conditional_depth += 1;
         visit(self);
         self.conditional_depth -= 1;
@@ -439,6 +439,7 @@ impl<'pr> ruby_prism::Visit<'pr> for LocalReadNames {
     }
 }
 
+#[allow(clippy::too_many_lines)]
 fn inclusive_language(context: &mut CopContext<'_, '_>) {
     let terms = context
         .config_map("FlaggedTerms")

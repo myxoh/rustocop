@@ -183,6 +183,7 @@ fn empty_lines_after_module_inclusion(node: &CallNode<'_>, context: &mut CopCont
     );
 }
 
+#[allow(clippy::too_many_lines)]
 fn empty_lines_around_access_modifier(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     if node.receiver().is_some()
         || node.arguments().is_some()
@@ -662,6 +663,7 @@ fn check_definition_pair(
     }
 }
 
+#[allow(clippy::too_many_lines)]
 fn first_argument_indentation(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
     let (first, call_start, special_eligible, call_node) = if let Some(call) = node.as_call_node() {
         let Some(first) = call

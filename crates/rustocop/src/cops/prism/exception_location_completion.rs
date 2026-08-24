@@ -167,6 +167,7 @@ fn correct_existing_eval_location(context: &mut CopContext<'_, '_>) -> bool {
     false
 }
 
+#[allow(clippy::cognitive_complexity, clippy::too_many_lines)]
 fn check_eval_calls(context: &mut CopContext<'_, '_>) {
     let multiline_starts = check_multiline_eval_locations(context);
     let excluded = context

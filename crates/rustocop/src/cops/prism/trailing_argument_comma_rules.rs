@@ -129,7 +129,7 @@ fn call_is_multiline(
     let closing_begins_line = file.as_str()[file.line_start(closing.start_offset())..closing.start_offset()]
         .trim()
         .is_empty();
-    syntactically_multiline && !(elements.len() == 1 && !closing_begins_line)
+    (closing_begins_line || elements.len() != 1) && syntactically_multiline
 }
 
 fn elements_on_separate_lines(
@@ -165,8 +165,7 @@ fn method_name_and_arguments_on_same_line(
 }
 
 fn leading_comma_offset(source: &str, heredoc: bool) -> Option<usize> {
-    let mut offset = 0;
-    for byte in source.bytes() {
+    for (offset, byte) in source.bytes().enumerate() {
         if byte == b',' {
             return Some(offset);
         }
@@ -178,7 +177,6 @@ fn leading_comma_offset(source: &str, heredoc: bool) -> Option<usize> {
         if !whitespace {
             return None;
         }
-        offset += 1;
     }
     None
 }

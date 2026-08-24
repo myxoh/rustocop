@@ -29,8 +29,7 @@ define_any_node_cop!(ConstantDefinitionInBlock => "Lint/ConstantDefinitionInBloc
 fn ambiguous_assignment(context: &mut CopContext<'_, '_>) {
     for (needle, operator) in [("=-", "-"), ("=+", "+"), ("=*", "*"), ("=!", "!")] {
         for start in context.source_file().code_offsets(needle) {
-            if !context.source()[..start]
-                .as_bytes()
+            if !context.source().as_bytes()[..start]
                 .last()
                 .is_some_and(|byte| byte.is_ascii_whitespace())
             {
@@ -629,11 +628,7 @@ fn shadowing_parameters(
     for parameter in parameters.keywords().iter() {
         let extracted = if let Some(parameter) = parameter.as_required_keyword_parameter_node() {
             Some((parameter.name().as_slice(), parameter.name_loc()))
-        } else if let Some(parameter) = parameter.as_optional_keyword_parameter_node() {
-            Some((parameter.name().as_slice(), parameter.name_loc()))
-        } else {
-            None
-        };
+        } else { parameter.as_optional_keyword_parameter_node().map(|parameter| (parameter.name().as_slice(), parameter.name_loc())) };
         if let Some((name, location)) = extracted {
             result.push((
                 String::from_utf8_lossy(name).into_owned(),
@@ -759,6 +754,7 @@ fn heredoc_case(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
     );
 }
 
+#[allow(clippy::too_many_lines)]
 fn rescued_exception_name(node: &ruby_prism::RescueNode<'_>, context: &mut CopContext<'_, '_>) {
     let preferred = context
         .config_value("PreferredName")
@@ -1198,7 +1194,7 @@ fn constant_reassignment(context: &mut CopContext<'_, '_>) {
                 Scope::Namespace(name) => Some(name.as_str()),
                 Scope::Opaque => None,
             })
-            .last()
+            .next_back()
             .unwrap_or("")
             .to_string();
         let opaque = scopes.iter().any(|scope| matches!(scope, Scope::Opaque));

@@ -119,9 +119,8 @@ fn single_negative_location<'pr>(
     let call = predicate.as_call_node()?;
     (call.name().as_slice() == b"!"
         && call.receiver().is_some_and(|receiver| {
-            !receiver
-                .as_call_node()
-                .is_some_and(|inner| inner.name().as_slice() == b"!")
+            receiver
+                .as_call_node().is_none_or(|inner| inner.name().as_slice() != b"!")
         }))
     .then(|| predicate.location())
 }

@@ -159,9 +159,7 @@ fn method_with_argument(line: &str, next: &str) -> bool {
         return false;
     }
     let last = previous
-        .split(|character: char| character.is_whitespace() || "()[]{}.,;".contains(character))
-        .filter(|part| !part.is_empty())
-        .next_back()
+        .split(|character: char| character.is_whitespace() || "()[]{}.,;".contains(character)).rfind(|part| !part.is_empty())
         .unwrap_or_default();
     let flow = matches!(last, "break" | "next" | "return" | "super" | "yield" | "defined?");
     let identifier = last

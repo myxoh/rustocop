@@ -86,6 +86,7 @@ fn version_matches(version: &str, target_major: u16, target_minor: u16) -> bool 
     major == Some(target_major) && minor == Some(target_minor)
 }
 
+#[allow(clippy::cognitive_complexity, clippy::too_many_lines)]
 fn class_structure(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
     let (body, class_end) = if let Some(class) = node.as_class_node() {
         (class.body(), class.end_keyword_loc().start_offset())
@@ -371,6 +372,7 @@ fn structural_call_arguments<'pr>(call: &CallNode<'pr>) -> Vec<Node<'pr>> {
         .unwrap_or_default()
 }
 
+#[allow(clippy::too_many_lines)]
 fn module_length(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
     let (container, body, offense, classlike) = if let Some(module) = node.as_module_node() {
         (

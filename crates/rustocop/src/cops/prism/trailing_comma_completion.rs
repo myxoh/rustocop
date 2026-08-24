@@ -89,7 +89,7 @@ fn check_trailing_comma(
         [context.source_file().line_start(close)..close]
         .trim()
         .is_empty();
-    let multiline = source.contains('\n') && !(elements.len() == 1 && !close_begins_line);
+    let multiline = (close_begins_line || elements.len() != 1) && source.contains('\n');
     let style = context
         .config_value("EnforcedStyleForMultiline")
         .unwrap_or("no_comma");

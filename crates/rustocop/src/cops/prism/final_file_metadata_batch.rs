@@ -130,7 +130,7 @@ fn parse_cop_directive(line: &str) -> Option<CopDirective<'_>> {
         .split(',')
         .scan(cursor, |part_start, raw| {
             let leading = raw.len() - raw.trim_start().len();
-            let name = raw.trim().split_whitespace().next().unwrap_or_default();
+            let name = raw.split_whitespace().next().unwrap_or_default();
             let _at = *part_start + leading;
             *part_start += raw.len() + 1;
             (!name.is_empty()).then_some(name.to_string())

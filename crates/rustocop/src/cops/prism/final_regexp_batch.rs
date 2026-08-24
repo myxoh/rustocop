@@ -614,6 +614,7 @@ impl Cop for DuplicateRegexpCharacterClassElement {
     }
 }
 
+#[allow(clippy::cognitive_complexity)]
 fn duplicate_regexp_class_tokens(literal: &str) -> Vec<std::ops::Range<usize>> {
     let bytes = literal.as_bytes();
     let mut duplicates = Vec::new();

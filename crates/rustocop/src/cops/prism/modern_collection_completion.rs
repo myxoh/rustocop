@@ -158,10 +158,9 @@ fn each_with_object_tally(node: &CallNode<'_>, context: &CopContext<'_, '_>) -> 
         return false;
     };
     if write.binary_operator().as_slice() != b"+"
-        || !write
+        || write
             .value()
-            .as_integer_node()
-            .is_some_and(|integer| TryInto::<i32>::try_into(integer.value()).ok() == Some(1))
+            .as_integer_node().is_none_or(|integer| TryInto::<i32>::try_into(integer.value()).ok() != Some(1))
         || write
             .arguments()
             .is_none_or(|arguments| arguments.arguments().len() != 1)

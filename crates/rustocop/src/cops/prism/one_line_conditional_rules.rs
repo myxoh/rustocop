@@ -78,7 +78,7 @@ struct ConditionalParts<'pr> {
 
 fn conditional_parts_for_one_line<'pr>(node: &Node<'pr>) -> Option<ConditionalParts<'pr>> {
     if let Some(condition) = node.as_if_node() {
-        if condition.if_keyword_loc().is_none() { return None; }
+        condition.if_keyword_loc()?;
         let subsequent = condition.subsequent()?;
         let has_elsif = subsequent.as_if_node().is_some();
         let elsif = condition.if_keyword_loc().is_some_and(|keyword| keyword.as_slice() == b"elsif");

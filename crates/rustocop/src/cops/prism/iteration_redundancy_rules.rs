@@ -131,9 +131,7 @@ fn useless_times(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
                 }
             }
         }
-        (!body.is_empty())
-            .then(|| format!("{indentation}{body}\n"))
-            .unwrap_or_default()
+        if !body.is_empty() { format!("{indentation}{body}\n") } else { Default::default() }
     } else if let Some(header_end) = source.find('\n') {
         let header = &source[..header_end];
         let parameter = header
@@ -172,9 +170,7 @@ fn useless_times(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
         if let Some(parameter) = parameter {
             body = replace_identifier(&body, parameter, "0");
         }
-        (!body.trim().is_empty())
-            .then(|| format!("{body}\n"))
-            .unwrap_or_default()
+        if !body.trim().is_empty() { format!("{body}\n") } else { Default::default() }
     } else {
         String::new()
     };

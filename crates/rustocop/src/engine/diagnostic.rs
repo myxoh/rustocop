@@ -40,33 +40,34 @@ fn prism_offense(source: &str, index: &SourceIndex, finding: prism::Finding) -> 
     while last_offset > finding.start_offset && !source.is_char_boundary(last_offset) {
         last_offset -= 1;
     }
-    let (last_line, last_column) =
-        if reversed_empty && finding.start_offset == source.len() && source.ends_with('\n') {
-            (line, 0)
-        } else if reversed_empty {
-            index.position(source, finding.end_offset)
-        } else if empty_location {
-            // Parser represents an empty source range as ending immediately
-            // before its start. RuboCop's public JSON formatter renders that
-            // point at the start column, except for an insertion at the end
-            // of a non-newline-terminated source.
-            if finding.start_offset == source.len() && !source.is_empty() && !source.ends_with('\n')
-            {
-                (line, column.saturating_sub(1))
-            } else if finding.cop_name == "Layout/IndentationWidth" && column > 3 {
-                (line, column.saturating_sub(1))
-            } else {
-                (line, column)
-            }
-        } else if ends_at_newline {
-            let (line, _) = index.position(source, finding.end_offset);
-            // RuboCop's JSON formatter reports the beginning of the following
-            // line as column one even though Parser's internal range column is
-            // zero for a range ending exactly at a newline.
-            (line, 1)
+    let (last_line, last_column) = if reversed_empty
+        && finding.start_offset == source.len()
+        && source.ends_with('\n')
+    {
+        (line, 0)
+    } else if reversed_empty {
+        index.position(source, finding.end_offset)
+    } else if empty_location {
+        // Parser represents an empty source range as ending immediately
+        // before its start. RuboCop's public JSON formatter renders that
+        // point at the start column, except for an insertion at the end
+        // of a non-newline-terminated source.
+        if (finding.start_offset == source.len() && !source.is_empty() && !source.ends_with('\n'))
+            || finding.cop_name == "Layout/IndentationWidth" && column > 3
+        {
+            (line, column.saturating_sub(1))
         } else {
-            index.position(source, last_offset)
-        };
+            (line, column)
+        }
+    } else if ends_at_newline {
+        let (line, _) = index.position(source, finding.end_offset);
+        // RuboCop's JSON formatter reports the beginning of the following
+        // line as column one even though Parser's internal range column is
+        // zero for a range ending exactly at a newline.
+        (line, 1)
+    } else {
+        index.position(source, last_offset)
+    };
     Offense {
         cop_name: finding.cop_name.to_string(),
         message: finding.message,

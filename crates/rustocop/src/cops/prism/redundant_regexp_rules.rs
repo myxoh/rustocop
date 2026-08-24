@@ -139,10 +139,9 @@ impl RedundantRegexpArgumentRule<'_, '_, '_> {
         } else if replacement.contains("\\'") || replacement.contains('\'') {
             replacement = escape_single_quotes(&replacement);
             quote = '\'';
-        } else if replacement.contains('\\') {
-            quote = '"';
-        } else if self.related_config_value("Style/StringLiterals", "EnforcedStyle")
-            == Some("double_quotes")
+        } else if replacement.contains('\\')
+            || self.related_config_value("Style/StringLiterals", "EnforcedStyle")
+                == Some("double_quotes")
         {
             quote = '"';
         } else {
@@ -166,7 +165,7 @@ impl RegexpView {
             (
                 regexp.opening_loc(),
                 regexp.closing_loc(),
-                vec![content.start_offset()..content.end_offset()],
+                std::iter::once(content.start_offset()..content.end_offset()).collect(),
             )
         } else {
             let regexp = node.as_interpolated_regular_expression_node()?;
@@ -423,7 +422,7 @@ fn escape_single_quotes(source: &str) -> String {
             slash_run += 1;
             continue;
         }
-        if character == '\'' && slash_run % 2 == 0 {
+        if character == '\'' && slash_run.is_multiple_of(2) {
             output.push('\\');
         }
         output.push(character);

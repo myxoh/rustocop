@@ -27,7 +27,7 @@ impl Cop for BlockNesting {
 
 fn nesting_offense(node: &Node<'_>, context: &CopContext<'_, '_>) -> Option<std::ops::Range<usize>> {
     if let Some(value) = node.as_if_node() {
-        if value.if_keyword_loc().is_none() { return None; }
+        value.if_keyword_loc()?;
         let keyword=value.if_keyword_loc().unwrap();if keyword.as_slice()==b"elsif"{return None;}let modifier=value.end_keyword_loc().is_none();
         if modifier&&!context.config_bool("CountModifierForms",false){return None;}
         return Some(value.location().start_offset()..value.location().end_offset());
@@ -91,7 +91,7 @@ impl<'pr> Visit<'pr> for ComplexityCounter {
     fn visit_call_node(&mut self,node:&CallNode<'pr>){
         if node.call_operator_loc().is_some_and(|location| location.as_slice()==b"&.") {
             let local=node.receiver().and_then(|value|value.as_local_variable_read_node());
-            if local.is_none(){self.score+=1;}else{let receiver=String::from_utf8_lossy(local.unwrap().name().as_slice()).into_owned();if self.safe_navigation.insert(receiver){self.score+=1;}}
+            if let Some(local) = local {let receiver=String::from_utf8_lossy(local.name().as_slice()).into_owned();if self.safe_navigation.insert(receiver){self.score+=1;}} else {self.score+=1;}
         }
         if node.block().is_some() && matches!(node.name().as_slice(),b"each"|b"each_with_index"|b"with_index"|b"map"|b"collect"|b"select"|b"find"|b"detect"|b"reduce"|b"inject"|b"times"|b"upto"|b"downto") { self.score+=1; }
         ruby_prism::visit_call_node(self,node)

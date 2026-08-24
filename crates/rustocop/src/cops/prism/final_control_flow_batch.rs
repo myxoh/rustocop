@@ -117,6 +117,7 @@ impl Cop for LiteralAsCondition {
         "Lint/LiteralAsCondition"
     }
 
+    #[allow(clippy::cognitive_complexity, clippy::too_many_lines)]
     fn on_node<'pr>(
         &self,
         node: &Node<'pr>,
@@ -754,6 +755,7 @@ impl Cop for DuplicateBranchCop {
         "Lint/DuplicateBranch"
     }
 
+    #[allow(clippy::too_many_lines)]
     fn on_node<'pr>(
         &self,
         node: &Node<'pr>,

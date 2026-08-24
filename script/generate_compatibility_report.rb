@@ -11,6 +11,7 @@ require_relative "../lib/rustocop/compatibility_status"
 require_relative "../lib/rustocop/process_runner"
 require_relative "../lib/rustocop/project_corpus"
 require_relative "../lib/rustocop/repository_layout"
+require_relative "../lib/rustocop/source_fingerprint"
 
 LAYOUT = Rustocop::RepositoryLayout.default
 ROOT = LAYOUT.root
@@ -143,6 +144,7 @@ def fixture_snapshot(report, path)
     "kind" => "fixture_compatibility",
     "updated_at" => evidence_time(report, path),
     "rust_commit" => report["rust_commit"],
+    "cop_source_sha256" => report["cop_source_sha256"],
     "native_sha256" => report["native_sha256"],
     "fixture_corpus_sha256" => report["fixture_corpus_sha256"],
     "rubocop_version" => report.fetch("rubocop_version"),
@@ -159,6 +161,7 @@ def project_snapshot(report, path)
     "kind" => "project_compatibility",
     "updated_at" => evidence_time(report, path),
     "rust_commit" => report["rust_commit"],
+    "cop_source_sha256" => report["cop_source_sha256"],
     "native_sha256" => report["native_sha256"],
     "rubocop_version" => report.fetch("rubocop_version"),
     "rubocop_reference" => report["rubocop_reference"],
@@ -254,15 +257,11 @@ implementation_paths.values.flatten.uniq.each do |path|
   git_dates[path] = result.stdout.strip
 end
 
-def changed_implementation_paths(commit, native_sha256:, native_path:)
+def changed_implementation_paths(commit, cop_source_sha256:, native_sha256:, native_path:)
   if commit.nil? || commit.empty?
     return nil unless File.executable?(native_path)
     return nil unless Digest::SHA256.file(native_path).hexdigest == native_sha256
-
-    latest_source = Dir[File.join(ROOT, "crates", "rustocop", "src", "**", "*.rs")]
-                    .map { |path| File.mtime(path) }
-                    .max
-    return nil if latest_source && latest_source > File.mtime(native_path)
+    return nil unless cop_source_sha256 == Rustocop::SourceFingerprint.cops(root: ROOT)
 
     return {}
   end
@@ -276,11 +275,13 @@ end
 
 fixture_changes = changed_implementation_paths(
   fixtures["rust_commit"],
+  cop_source_sha256: fixtures["cop_source_sha256"],
   native_sha256: fixtures["native_sha256"],
   native_path: options[:native]
 )
 project_changes = changed_implementation_paths(
   projects["rust_commit"],
+  cop_source_sha256: projects["cop_source_sha256"],
   native_sha256: projects["native_sha256"],
   native_path: options[:native]
 )
@@ -374,7 +375,9 @@ evidence_source = lambda do |snapshot|
   if commit && !commit.empty?
     "`#{commit}`"
   else
-    "`uncommitted native #{snapshot.fetch("native_sha256")[0, 12]}`"
+    source = snapshot.fetch("cop_source_sha256")[0, 12]
+    native = snapshot.fetch("native_sha256")[0, 12]
+    "`cop source #{source}, native #{native}`"
   end
 end
 summary_rows = [

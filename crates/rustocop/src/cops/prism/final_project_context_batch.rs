@@ -157,7 +157,7 @@ fn quoted_values(source: &str) -> Vec<&str> {
 }
 
 fn has_positional_version(call: &str) -> bool {
-    after_first_quoted(call).is_some_and(|rest| quoted_values(rest).first().is_some())
+    after_first_quoted(call).is_some_and(|rest| !quoted_values(rest).is_empty())
 }
 
 fn has_restrictive_version(call: &str) -> bool {

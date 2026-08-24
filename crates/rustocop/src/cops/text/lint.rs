@@ -64,6 +64,7 @@ fn check_empty_ensure(
     }
 }
 
+#[allow(clippy::too_many_lines)]
 fn check_small_line_cops(
     lines: &mut [SourceLine],
     options: &InspectionConfig,

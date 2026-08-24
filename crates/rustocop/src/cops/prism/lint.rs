@@ -322,11 +322,7 @@ impl Cop for SelfAssignment {
             Some((write.name_loc(), write.value(), write.location()))
         } else if let Some(write) = node.as_global_variable_write_node() {
             Some((write.name_loc(), write.value(), write.location()))
-        } else if let Some(write) = node.as_constant_write_node() {
-            Some((write.name_loc(), write.value(), write.location()))
-        } else {
-            None
-        };
+        } else { node.as_constant_write_node().map(|write| (write.name_loc(), write.value(), write.location())) };
         if let Some((name, value, location)) = simple {
             if source_at(source, &name) == source_at(source, &value.location()) {
                 context.report(self.name(), "Self-assignment detected.", location);

@@ -102,7 +102,7 @@ fn safe_navigation_consistency(node: &Node<'_>, context: &mut CopContext<'_, '_>
             let appropriate = if desired == "&." {
                 safe
             } else {
-                safe == false && (dot.is_some() || navigation_operator_method(&operand.call))
+                !safe && (dot.is_some() || navigation_operator_method(&operand.call))
             };
             if appropriate {
                 continue;
@@ -433,6 +433,7 @@ fn for_collection_needs_parentheses(node: &Node<'_>, source: &str) -> bool {
             .is_some_and(|call| matches!(call.name().as_slice(), b"+" | b"-" | b"*" | b"|" | b"&"))
 }
 
+#[allow(clippy::cognitive_complexity, clippy::too_many_lines)]
 fn class_module_children(context: &mut CopContext<'_, '_>) {
     let lines = context.source_file().lines().collect::<Vec<_>>();
     let definitions = definition_offsets(context.source());
@@ -476,8 +477,8 @@ fn class_module_children(context: &mut CopContext<'_, '_>) {
             let parts = path.split("::").collect::<Vec<_>>();
             let mut depth = 0usize;
             let mut end_index = None;
-            for child_index in index + 1..lines.len() {
-                let child = lines[child_index].1.trim_start();
+            for (child_index, (_, child)) in lines.iter().enumerate().skip(index + 1) {
+                let child = child.trim_start();
                 if child.starts_with("class ")
                     || child.starts_with("module ")
                     || child.starts_with("def ")
@@ -567,8 +568,8 @@ fn class_module_children(context: &mut CopContext<'_, '_>) {
         let mut end = lines.len();
         let mut direct_children = Vec::new();
         let mut depth = 0usize;
-        for child_index in index + 1..lines.len() {
-            let child = lines[child_index].1;
+        for (child_index, (_, child)) in lines.iter().enumerate().skip(index + 1) {
+            let child = *child;
             let child_trimmed = child.trim_start();
             if child_trimmed.starts_with("class ") || child_trimmed.starts_with("module ") {
                 if depth == 0 {
@@ -685,8 +686,8 @@ fn compact_namespace_replacement(lines: &[(usize, &str)], start: usize) -> Optio
         let end = declaration_end(lines, current)?;
         let mut depth = 0usize;
         let mut children = Vec::new();
-        for index in current + 1..end {
-            let trimmed = lines[index].1.trim_start();
+        for (index, (_, line)) in lines.iter().enumerate().take(end).skip(current + 1) {
+            let trimmed = line.trim_start();
             if depth == 0 && (trimmed.starts_with("class ") || trimmed.starts_with("module ")) {
                 children.push(index);
             }
@@ -771,8 +772,8 @@ fn declaration_end(lines: &[(usize, &str)], start: usize) -> Option<usize> {
         return Some(start);
     }
     let mut depth = 0usize;
-    for index in start + 1..lines.len() {
-        let trimmed = lines[index].1.trim_start();
+    for (index, (_, line)) in lines.iter().enumerate().skip(start + 1) {
+        let trimmed = line.trim_start();
         if line_opens_block(trimmed) {
             depth += 1;
         } else if trimmed == "end" || trimmed.starts_with("end #") {
@@ -822,6 +823,7 @@ fn prior_namespace_kind<'a>(source: &'a str, before: usize, namespace: &str) -> 
     })
 }
 
+#[allow(clippy::too_many_lines)]
 fn safe_navigation_chain(node: &ruby_prism::CallNode<'_>, context: &mut CopContext<'_, '_>) {
     if node
         .call_operator_loc()
@@ -835,9 +837,8 @@ fn safe_navigation_chain(node: &ruby_prism::CallNode<'_>, context: &mut CopConte
     let Some(safe_call) = receiver.as_call_node() else {
         return;
     };
-    if !safe_call
-        .call_operator_loc()
-        .is_some_and(|operator| operator.as_slice() == b"&.")
+    if safe_call
+        .call_operator_loc().is_none_or(|operator| operator.as_slice() != b"&.")
     {
         return;
     }
@@ -1070,6 +1071,7 @@ fn safe_navigation_chain(node: &ruby_prism::CallNode<'_>, context: &mut CopConte
     }
 }
 
+#[allow(clippy::too_many_lines)]
 fn block_delimiters(node: &BlockNode<'_>, context: &mut CopContext<'_, '_>) {
     let opening = node.opening_loc();
     let closing = node.closing_loc();
@@ -1123,7 +1125,7 @@ fn block_delimiters(node: &BlockNode<'_>, context: &mut CopContext<'_, '_>) {
                         || !multiline
                             && context.config_bool("AllowBracesOnProceduralOneLiners", false)
                 } else {
-                    !(procedural_method || !value_used)
+                    !procedural_method && value_used
                 }
             }
             "braces_for_chaining" => chained || !multiline,
@@ -1464,6 +1466,7 @@ fn block_precedes_improper_chained_block(
     })
 }
 
+#[allow(clippy::too_many_lines)]
 fn redundant_safe_navigation(node: &ruby_prism::CallNode<'_>, context: &mut CopContext<'_, '_>) {
     let Some(operator) = node.call_operator_loc() else {
         return;
@@ -1705,9 +1708,8 @@ fn statically_non_nil(node: &Node<'_>) -> bool {
         return true;
     }
     if node.as_call_node().is_some_and(|call| {
-        !call
-            .call_operator_loc()
-            .is_some_and(|operator| operator.as_slice() == b"&.")
+        call
+            .call_operator_loc().is_none_or(|operator| operator.as_slice() != b"&.")
             && matches!(
                 call_name(&call),
                 b"to_s" | b"to_i" | b"to_f" | b"to_a" | b"to_h"

@@ -32,7 +32,7 @@ fn top_level_method_definition(node: &Node<'_>, context: &mut CopContext<'_, '_>
     }
     context.report(
         "Do not define methods at the top-level.",
-        &node.location(),
+        node.location(),
     );
 }
 
@@ -433,7 +433,7 @@ fn inspect_constant_visibility_scope(
         }
         context.report(
             format!("Explicitly make `{name}` public or private using either `#public_constant` or `#private_constant`."),
-            &statement.location(),
+            statement.location(),
         );
     }
 }

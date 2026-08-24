@@ -269,10 +269,10 @@ fn space_inside_parens(context: &mut CopContext<'_, '_>) {
                 whitespace.clone(),
                 whitespace,
             );
-        } else if !no_space
-            && whitespace.is_empty()
-            && !matches!(next, Some(b')'))
-            && !(compact && next == Some(b'('))
+        } else if !(no_space
+            || !whitespace.is_empty()
+            || matches!(next, Some(b')'))
+            || compact && next == Some(b'('))
         {
             context.insert(
                 "No space inside parentheses detected.",
@@ -1144,11 +1144,10 @@ impl Cop for EmptyLineAfterGuardClause {
         if branch_source.contains('\n') && guard_heredoc_marker(branch_source).is_none() {
             return;
         }
-        if guard.1.is_some() {
-            if branch_source.contains('\n') && guard_heredoc_marker(branch_source).is_none() {
+        if guard.1.is_some()
+            && branch_source.contains('\n') && guard_heredoc_marker(branch_source).is_none() {
                 return;
             }
-        }
         let Some(next) = right_sibling(node, ancestors) else {
             return;
         };
@@ -1396,7 +1395,7 @@ fn allowed_guard_directive(line: &str) -> bool {
         return false;
     };
     matches!(
-        rest.trim_start().split_whitespace().next(),
+        rest.split_whitespace().next(),
         Some("disable" | "enable")
     )
 }

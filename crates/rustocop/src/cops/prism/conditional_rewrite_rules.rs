@@ -134,7 +134,7 @@ impl RedundantConditionRule<'_, '_, '_> {
 
         let redundant = else_branch.is_none();
         let message = if redundant { "This condition is not needed." } else { "Use double pipes `||` instead." };
-        let comments = self.source_file().node(&node).contains('#');
+        let comments = self.source_file().node(node).contains('#');
         let offense = redundant_condition_offense(&condition, ternary, method.is_some());
         if comments {
             self.report(message, offense);

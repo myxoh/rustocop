@@ -47,6 +47,7 @@ struct GemDeclaration {
     section: usize,
 }
 
+#[allow(clippy::too_many_lines)]
 fn ordered_gems(context: &mut CopContext<'_, '_>) {
     let filename = context.path().rsplit('/').next().unwrap_or(context.path());
     if filename != "(string)"

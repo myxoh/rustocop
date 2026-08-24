@@ -117,6 +117,7 @@ fn endless_range_ending_at(root: &Node<'_>, offset: usize) -> Option<std::ops::R
     finder.found
 }
 
+#[allow(clippy::too_many_lines)]
 fn semicolon_offsets(root: &Node<'_>, source: &str, allow_separators: bool) -> Vec<usize> {
     #[derive(Default)]
     struct LiteralContent {

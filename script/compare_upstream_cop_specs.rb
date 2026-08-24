@@ -12,6 +12,8 @@ require "yaml"
 require_relative "../lib/rustocop/compatibility_baseline"
 require_relative "../lib/rustocop/compatibility_status"
 require_relative "../lib/rustocop/config_serialization"
+require_relative "../lib/rustocop/repository_layout"
+require_relative "../lib/rustocop/source_fingerprint"
 
 root = File.expand_path("..", __dir__)
 release_native = File.join(root, "crates/rustocop/target/release/rustocop")
@@ -295,6 +297,7 @@ summary = {
   "rust_commit" => if dirty_status.success? && dirty_output.empty? && git_status.success?
                      rust_commit.strip
                    end,
+  "cop_source_sha256" => Rustocop::SourceFingerprint.cops(root: root),
   "native_sha256" => Digest::SHA256.file(native).hexdigest,
   "fixture_corpus_sha256" => Digest::SHA256.file(options[:corpus]).hexdigest,
   "rubocop_version" => "1.87.0",

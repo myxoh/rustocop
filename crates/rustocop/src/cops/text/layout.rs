@@ -162,6 +162,7 @@ fn escape_whitespace_beyond_indentation(line: &mut String, indentation: usize) {
     line.replace_range(split.., &format!("#{{'{whitespace}'}}"));
 }
 
+#[allow(clippy::too_many_lines)]
 fn check_line_length(
     lines: &mut [SourceLine],
     options: &InspectionConfig,
@@ -415,12 +416,7 @@ fn correct_line_length(line: &str, max: usize, split_strings: bool) -> String {
     let commas = commas_outside_strings(line);
     if !commas.is_empty() {
         if let Some(heredoc) = line.find("<<") {
-            if let Some(at) = commas
-                .iter()
-                .map(|(at, _)| *at)
-                .filter(|at| *at < heredoc)
-                .next_back()
-            {
+            if let Some(at) = commas.iter().map(|(at, _)| *at).rfind(|at| *at < heredoc) {
                 let split = consume_spaces(line, at + 1);
                 return format!("{}\n{}", &line[..split], &line[split..]);
             }

@@ -8,6 +8,7 @@ define_cops! {
     FirstHashElementIndentation => "Layout/FirstHashElementIndentation" => node(as_hash_node, first_hash_element_indentation),
 }
 
+#[allow(clippy::cognitive_complexity, clippy::too_many_lines)]
 fn multiline_assignment_layout(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
     let value = if let Some(write) = node.as_local_variable_write_node() {
         Some(write.value())
@@ -197,6 +198,7 @@ fn array_alignment(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
     }
 }
 
+#[allow(clippy::too_many_lines)]
 fn align_array_elements(
     elements: &[Node<'_>],
     opening: Option<ruby_prism::Location<'_>>,
@@ -372,11 +374,7 @@ fn end_alignment(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
         Some((value.keyword_loc(), closing, true))
     } else if let Some(value) = node.as_case_node() {
         Some((value.case_keyword_loc(), value.end_keyword_loc(), true))
-    } else if let Some(value) = node.as_case_match_node() {
-        Some((value.case_keyword_loc(), value.end_keyword_loc(), true))
-    } else {
-        None
-    };
+    } else { node.as_case_match_node().map(|value| (value.case_keyword_loc(), value.end_keyword_loc(), true)) };
     let Some((keyword, closing, variable_may_use_outer_expression)) = candidate else {
         return;
     };
@@ -482,6 +480,7 @@ enum SpacingTokenKind {
     Punctuation,
 }
 
+#[allow(clippy::too_many_lines)]
 fn extra_spacing(_context: &mut CopContext<'_, '_>) {
     let context = _context;
     let source = context.source();
@@ -568,7 +567,7 @@ fn extra_spacing(_context: &mut CopContext<'_, '_>) {
         }
         let call_name = lines
             .get(right.line)
-            .and_then(|line| line.trim_start().split_whitespace().next());
+            .and_then(|line| line.split_whitespace().next());
         let aligned_call_group = call_name.is_some_and(|call_name| {
             [right.line.checked_sub(1), Some(right.line + 1)]
                 .into_iter()

@@ -156,11 +156,15 @@ fn outside_simple_quotes(line: &str, end: usize) -> bool {
             escaped = true;
         } else if quote == Some(byte) {
             quote = None;
-        } else if quote.is_none() && matches!(byte, b'\'' | b'"' | b'`') {
-            quote = Some(byte);
         } else if quote.is_none()
-            && byte == b'/'
-            && previous_significant.is_none_or(|previous| matches!(previous, b'(' | b'[' | b'{' | b',' | b'=' | b'!' | b'~' | b'?' | b':' | b';'))
+            && (matches!(byte, b'\'' | b'"' | b'`')
+                || byte == b'/'
+                    && previous_significant.is_none_or(|previous| {
+                        matches!(
+                            previous,
+                            b'(' | b'[' | b'{' | b',' | b'=' | b'!' | b'~' | b'?' | b':' | b';'
+                        )
+                    }))
         {
             quote = Some(byte);
         }

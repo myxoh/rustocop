@@ -1,16 +1,17 @@
 {
   "version": 1,
   "kind": "project_compatibility",
-  "updated_at": "2026-08-24T06:23:45-04:00",
-  "rust_commit": "48bd3ce1dbce49f8e191a789c86bda6960a78c5d",
-  "native_sha256": "c8d088ddd9eece5ff9d38398f44b23c6cbf78bc06ba7f249333dff134530f0d8",
+  "updated_at": "2026-08-24T07:29:34-04:00",
+  "rust_commit": null,
+  "cop_source_sha256": "531d7f98c244241ac073ca1e1ca7760587caf53910258b05483ed1c2ddd35b54",
+  "native_sha256": "d5952f01169f0a3cb155d456247ed72e2b08e6d65ccebbc9cc905cda46facd9c",
   "rubocop_version": "1.87.0",
   "rubocop_reference": {
     "path": "spec/compatibility_evidence/project_rubocop_reference.json.gz",
     "sha256": "6fbcf83154ad05bab3c35cefef09b8d404a07037f47ef614c813649cb0cce7f8",
     "generated_at": "2026-08-24T06:18:04-04:00",
     "config_sha256": "491636fd99be60455d844915f9bd177f96234a1e95b9d0ccd029c021775bacdc",
-    "source": "refreshed"
+    "source": "cached"
   },
   "project_count": 50,
   "ruby_files": 85471,

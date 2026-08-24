@@ -43,9 +43,10 @@ fn report_duplicate_percent_symbol_sets(source: &str, context: &mut CopContext<'
         let after = &source[close + 1..];
         let name = if before.ends_with("SortedSet.new(") {
             "SortedSet"
-        } else if before.ends_with("Set.new(") {
-            "Set"
-        } else if after.starts_with(".to_set") || after.starts_with("&.to_set") {
+        } else if before.ends_with("Set.new(")
+            || after.starts_with(".to_set")
+            || after.starts_with("&.to_set")
+        {
             "Set"
         } else {
             search = close + 1;
@@ -296,7 +297,7 @@ fn symbol_conversion(context: &mut CopContext<'_, '_>) {
         } else {
             range.clone()
         };
-        if &source[correction_range.clone()] == correction
+        if source[correction_range.clone()] == correction
             || (!hash_label && !raw.starts_with(":\'") && !raw.starts_with(":\"")) {
             continue;
         }
@@ -709,6 +710,7 @@ fn line_at(source: &str, offset: usize) -> usize {
     source[..offset].bytes().filter(|byte| *byte == b'\n').count()
 }
 
+#[allow(clippy::too_many_lines)]
 fn empty_literal(context: &mut CopContext<'_, '_>) {
     let source = context.source();
     let string_literal = if context.related_config_value("Style/StringLiterals", "EnforcedStyle")

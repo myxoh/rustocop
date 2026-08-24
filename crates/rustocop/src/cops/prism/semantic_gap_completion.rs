@@ -73,12 +73,17 @@ fn unused_method_argument(node: &ruby_prism::DefNode<'_>, context: &mut CopConte
     if usage.forwarding_super || usage.binding { return; }
     let allow_keywords = context.config_bool("AllowUnusedKeywordArguments", false);
     let unused = arguments.iter().filter(|argument| {
-        !argument.name.starts_with('_')
-            && !(argument.keyword && allow_keywords)
-            && !usage.reads.contains(&argument.name)
-            && !(argument.block && usage.yield_seen)
+        !(argument.name.starts_with('_')
+            || usage.reads.contains(&argument.name)
+            || argument.keyword && allow_keywords
+            || argument.block && usage.yield_seen)
     }).collect::<Vec<_>>();
-    let relevant = arguments.iter().filter(|argument| !argument.name.starts_with('_') && !(argument.keyword && allow_keywords)).count();
+    let relevant = arguments
+        .iter()
+        .filter(|argument| {
+            !(argument.name.starts_with('_') || argument.keyword && allow_keywords)
+        })
+        .count();
     let all_unused = unused.len() == relevant;
     for argument in unused {
         let location = argument.location.start_offset()..argument.location.start_offset() + argument.name.len();
@@ -221,6 +226,7 @@ fn constant_overwritten_in_rescue(context: &mut CopContext<'_, '_>) {
     }
 }
 
+#[allow(clippy::too_many_lines)]
 fn redundant_assignment(node: &ruby_prism::DefNode<'_>, context: &mut CopContext<'_, '_>) {
     let location = node.location();
     let ensure_start = context

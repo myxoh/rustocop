@@ -15,11 +15,7 @@ fn it_assignment(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
         Some((write.name(), write.name_loc()))
     } else if let Some(write) = node.as_local_variable_or_write_node() {
         Some((write.name(), write.name_loc()))
-    } else if let Some(write) = node.as_local_variable_operator_write_node() {
-        Some((write.name(), write.name_loc()))
-    } else {
-        None
-    };
+    } else { node.as_local_variable_operator_write_node().map(|write| (write.name(), write.name_loc())) };
     if let Some((name, location)) = candidate {
         report_it_name(name.as_slice(), location, context);
     }

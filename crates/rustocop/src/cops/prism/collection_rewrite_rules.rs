@@ -162,9 +162,16 @@ fn contains_nested_reduce(source: &str) -> bool {
 #[derive(Default)]
 struct PartitionState {
     previous: Option<PartitionCandidate>,
-    statement_positions:
-        Option<HashMap<(usize, usize), (std::ops::Range<usize>, usize)>>,
+    statement_positions: Option<StatementPositions>,
 }
+
+type StatementPositions = HashMap<(usize, usize), (std::ops::Range<usize>, usize)>;
+type StatementContainer = (
+    std::ops::Range<usize>,
+    Option<String>,
+    std::ops::Range<usize>,
+    usize,
+);
 
 struct PartitionCandidate {
     method: String,
@@ -250,7 +257,7 @@ impl PartitionRule<'_, '_, '_> {
 fn partition_candidate(
     node: &CallNode<'_>,
     context: &CopContext<'_, '_>,
-    positions: &HashMap<(usize, usize), (std::ops::Range<usize>, usize)>,
+    positions: &StatementPositions,
 ) -> Option<PartitionCandidate> {
     let receiver = context.source_file().node(&node.receiver()?).to_string();
     let method = String::from_utf8_lossy(node.name().as_slice()).into_owned();
@@ -311,13 +318,8 @@ fn block_parameter_source(block: &BlockNode<'_>, file: SourceFile<'_>) -> Option
 fn statement_container(
     call_range: std::ops::Range<usize>,
     context: &CopContext<'_, '_>,
-    positions: &HashMap<(usize, usize), (std::ops::Range<usize>, usize)>,
-) -> Option<(
-    std::ops::Range<usize>,
-    Option<String>,
-    std::ops::Range<usize>,
-    usize,
-)> {
+    positions: &StatementPositions,
+) -> Option<StatementContainer> {
     if let Some((group, index)) = positions.get(&(call_range.start, call_range.end)) {
         let container = call_range;
         return Some((container, None, group.clone(), *index));

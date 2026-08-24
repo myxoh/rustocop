@@ -138,13 +138,10 @@ fn report_multiline_combinable_loops(
         let first = &loops[index];
         let mut group = vec![index];
         let mut current = index;
-        loop {
-            let Some(next) = (current + 1..loops.len()).find(|candidate| {
+        while let Some(next) = (current + 1..loops.len()).find(|candidate| {
                 loops[*candidate].indent == first.indent
                     && loops[*candidate].start >= loops[current].end
-            }) else {
-                break;
-            };
+            }) {
             let previous = &loops[current];
             let candidate = &loops[next];
             if candidate.identity != first.identity

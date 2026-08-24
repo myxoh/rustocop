@@ -179,6 +179,7 @@ fn kernel_receiver(node: &Node<'_>) -> bool {
 
 /// Returns the number of arguments consumed by a Ruby format string, or
 /// `None` when numbered/named/unnumbered sequences are mixed.
+#[allow(clippy::cognitive_complexity, clippy::too_many_lines)]
 fn count_format_fields(source: &str) -> Option<usize> {
     #[derive(Clone, Copy, PartialEq, Eq)]
     enum Mode {
@@ -826,14 +827,13 @@ fn has_top_level_range_operator(source: &str) -> bool {
             b']' => depths.1 = depths.1.saturating_sub(1),
             b'{' => depths.2 += 1,
             b'}' => depths.2 = depths.2.saturating_sub(1),
-            _ if depths == (0, 0, 0) => {
-                if [" || ", " && ", " + ", " - ", " * ", " % "]
+            _ if depths == (0, 0, 0)
+                && [" || ", " && ", " + ", " - ", " * ", " % "]
                     .iter()
                     .any(|operator| bytes[index..].starts_with(operator.as_bytes()))
-                {
+                => {
                     return true;
                 }
-            }
             _ => {}
         }
         index += 1;
@@ -1501,6 +1501,7 @@ fn reduce_element_modified(body: &Node<'_>, element: &[u8], accumulator: &[u8]) 
     modified.found
 }
 
+#[allow(clippy::too_many_lines)]
 fn documentation_method(context: &mut CopContext<'_, '_>) {
     #[derive(Default)]
     struct DefinitionRanges {
@@ -1640,6 +1641,7 @@ fn documentation_comment(line: &str) -> bool {
             .any(|marker| comment.starts_with(marker))
 }
 
+#[allow(clippy::too_many_lines)]
 fn redundant_splat_expansion(node: &ruby_prism::SplatNode<'_>, context: &mut CopContext<'_, '_>) {
     let Some(expression) = node.expression() else {
         return;

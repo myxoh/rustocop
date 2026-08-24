@@ -39,6 +39,7 @@ impl RedundantParenthesesRule<'_, '_, '_> {
         self.offense(node, message);
     }
 
+    #[allow(clippy::too_many_lines)]
     fn parens_allowed(&self, node: &ParenthesesNode<'_>, expressions: &[Node<'_>]) -> bool {
         let parent = semantic_parent(self.ancestors());
         let first = &expressions[0];
@@ -117,7 +118,7 @@ impl RedundantParenthesesRule<'_, '_, '_> {
         }
         if parent.is_some_and(|ancestor| {
             (ancestor.as_splat_node().is_some() || ancestor.as_assoc_splat_node().is_some())
-                && !first.as_call_node().is_some_and(|call| call.block().is_some())
+                && first.as_call_node().is_none_or(|call| call.block().is_none())
         }) {
             return true;
         }
@@ -447,11 +448,10 @@ impl RedundantParenthesesRule<'_, '_, '_> {
         if constant_node(first) {
             return Some("a constant");
         }
-        if parent.is_some_and(|ancestor| ancestor.as_block_node().is_some()) {
-            if self.parentheses_are_only_statement(node) || first.as_range_node().is_some() {
+        if parent.is_some_and(|ancestor| ancestor.as_block_node().is_some())
+            && (self.parentheses_are_only_statement(node) || first.as_range_node().is_some()) {
                 return Some("block body");
             }
-        }
         if assignment_node(first)
             && parent.is_none_or(|ancestor| ancestor.as_parentheses_node().is_some())
         {

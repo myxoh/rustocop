@@ -439,7 +439,7 @@ fn escape_regexp_slashes(value: &str) -> String {
     let mut escaped = String::new();
     let mut backslashes = 0usize;
     for character in value.chars() {
-        if character == '/' && backslashes % 2 == 0 {
+        if character == '/' && backslashes.is_multiple_of(2) {
             escaped.push('\\');
         }
         escaped.push(character);
@@ -508,9 +508,11 @@ impl LiteralInspectParser<'_> {
             let saved = self.position;
             let identifier = self.identifier();
             self.whitespace();
-            let key = if identifier.is_some() && self.source.get(self.position) == Some(&b':') {
+            let key = if let (Some(identifier), Some(b':')) =
+                (identifier, self.source.get(self.position))
+            {
                 self.position += 1;
-                format!(":{}", identifier.unwrap())
+                format!(":{identifier}")
             } else {
                 self.position = saved;
                 let key = self.value()?;
@@ -924,6 +926,7 @@ fn void_setter_name(name: &[u8]) -> bool {
     name.ends_with(b"=") && !matches!(name, b"==" | b"===" | b"!=" | b"<=" | b">=")
 }
 
+#[allow(clippy::cognitive_complexity, clippy::too_many_lines)]
 fn check_void_expression(
     node: &Node<'_>,
     ancestors: &[Node<'_>],
@@ -1260,6 +1263,7 @@ impl Cop for ConditionalAssignment {
         "Style/ConditionalAssignment"
     }
 
+    #[allow(clippy::too_many_lines)]
     fn on_node<'pr>(
         &self,
         node: &Node<'pr>,
@@ -1560,6 +1564,7 @@ fn conditional_ternary(node: &Node<'_>) -> bool {
         .is_some_and(|conditional| conditional.if_keyword_loc().is_none())
 }
 
+#[allow(clippy::cognitive_complexity)]
 fn conditional_assignment_parts<'pr>(
     node: &Node<'pr>,
     source: &str,
@@ -2361,6 +2366,7 @@ impl Cop for AccessModifierDeclarations {
         "Style/AccessModifierDeclarations"
     }
 
+    #[allow(clippy::cognitive_complexity, clippy::too_many_lines)]
     fn on_node<'pr>(
         &self,
         node: &Node<'pr>,
@@ -3061,6 +3067,7 @@ impl Cop for ArgumentsForwarding {
     }
 }
 
+#[allow(clippy::too_many_lines)]
 fn check_arguments_forwarding(
     definition: &ruby_prism::DefNode<'_>,
     context: &mut CopContext<'_, '_>,
@@ -3197,7 +3204,7 @@ fn check_arguments_forwarding(
             .collect::<Vec<_>>()
             .join(", ");
         if normalize_forwarding_sequence(signature) == normalized {
-            let mut ranges = vec![signature_start..signature_end];
+            let mut ranges = std::iter::once(signature_start..signature_end).collect::<Vec<_>>();
             let matches = body.match_indices(signature).collect::<Vec<_>>();
             if !context.target_ruby_version().at_least(3, 0)
                 && matches
@@ -3268,11 +3275,10 @@ fn report_anonymous_full_forwarding(
             return false;
         };
         let sequence = raw[star..=ampersand].trim();
-        if context.target_ruby_version().at_least(3, 2) {
-            if sequence.starts_with("**") || !sequence.contains("**") {
+        if context.target_ruby_version().at_least(3, 2)
+            && (sequence.starts_with("**") || !sequence.contains("**")) {
                 return false;
             }
-        }
         let signature_start = range.start_offset() + star;
         let signature_end = signature_start + sequence.len();
         let body_start = range.end_offset();
@@ -3700,12 +3706,9 @@ fn rubocop_parent_module_name(ancestors: &[Node<'_>], source: &str) -> Option<St
                 );
             }
         } else if ancestor.as_block_node().is_some() {
-            let Some(call) = index
+            let call = index
                 .checked_sub(1)
-                .and_then(|parent| ancestors[parent].as_call_node())
-            else {
-                return None;
-            };
+                .and_then(|parent| ancestors[parent].as_call_node())?;
             if call_name(&call) == b"class_eval" {
                 if let Some(receiver) = call.receiver() {
                     if receiver.as_constant_read_node().is_none()
@@ -3813,18 +3816,18 @@ fn anonymous_class_scope(ancestors: &[Node<'_>], source: &str) -> Option<(String
             ancestor.as_block_node().is_none() && ancestor.as_begin_node().is_none()
         })
         .find_map(Node::as_call_node)
-        .and_then(|parent| {
+        .map(|parent| {
             if let Some(receiver) = parent.receiver() {
                 if class_or_module_new_call(&receiver) {
-                    return Some(format!("outer-call: {}", parent.location().start_offset()));
+                    return format!("outer-call: {}", parent.location().start_offset());
                 }
-                Some(format!(
+                format!(
                     "{}.{}",
                     node_text(&receiver, source),
                     String::from_utf8_lossy(parent.name().as_slice())
-                ))
+                )
             } else {
-                Some(format!("outer-call: {}", parent.location().start_offset()))
+                format!("outer-call: {}", parent.location().start_offset())
             }
         });
     if named_scope_id.is_none()
@@ -3889,6 +3892,7 @@ fn nested_method_key(method: &str, ancestors: &[Node<'_>]) -> String {
         )
 }
 
+#[allow(clippy::too_many_lines)]
 fn register_attribute_methods(
     call: &CallNode<'_>,
     ancestors: &[Node<'_>],

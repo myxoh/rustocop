@@ -69,12 +69,12 @@ impl Cop for PredicateMethod {
         let mut values = Vec::new();
         for value in &collector.returns {
             if let Some(value) = value {
-                collect_implicit_predicate_returns(value, &wayward, &mut values);
+                collect_implicit_predicate_returns(value, wayward, &mut values);
             } else {
                 values.push(PredicateReturn::NonBoolean);
             }
         }
-        collect_implicit_predicate_returns(&body, &wayward, &mut values);
+        collect_implicit_predicate_returns(&body, wayward, &mut values);
 
         let conservative =
             cop_context.config_value("Mode").unwrap_or("conservative") == "conservative";
@@ -765,6 +765,7 @@ fn check_defined_memoization(
     }
 }
 
+#[allow(clippy::too_many_lines)]
 fn file_name(context: &mut CopContext<'_, '_>) {
     if context.source().starts_with("#!") && context.config_bool("IgnoreExecutableScripts", true) {
         return;
@@ -1034,9 +1035,7 @@ fn assignment_is_in_condition(node: &Node<'_>, ancestors: &[Node<'_>]) -> bool {
             Some(condition.predicate())
         } else if let Some(condition) = ancestor.as_while_node() {
             Some(condition.predicate())
-        } else if let Some(condition) = ancestor.as_until_node() {
-            Some(condition.predicate())
-        } else { None };
+        } else { ancestor.as_until_node().map(|condition| condition.predicate()) };
         if let Some(predicate) = predicate {
             let predicate = predicate.location();
             return predicate.start_offset() <= location.start_offset() && location.end_offset() <= predicate.end_offset();
@@ -1074,7 +1073,7 @@ fn check_variable_name(name: String, location: ruby_prism::Location<'_>, cop_con
         let bare = name.trim_start_matches(['@', '$']);
         if bare.is_empty()
             || name.starts_with('$') && bare.bytes().all(|byte| byte.is_ascii_uppercase() || byte == b'_' || byte.is_ascii_digit())
-            || identifier_allowed(bare, &cop_context) { return; }
+            || identifier_allowed(bare, cop_context) { return; }
 
         let offense = location.start_offset()..location.start_offset() + name.len();
         let forbidden = cop_context.config_values("ForbiddenIdentifiers").iter().any(|item| item == bare)
@@ -1202,6 +1201,7 @@ impl Cop for UselessAssignment {
     fn name(&self) -> &'static str { "Lint/UselessAssignment" }
     fn phase(&self) -> CopPhase { CopPhase::Source }
 
+    #[allow(clippy::cognitive_complexity)]
     fn on_source(&self, source: &str, context: &mut Context) {
         let parsed = parse(source.as_bytes());
         let mut collector = AssignmentEventCollector { source, scope: 0, next_scope: 1, events: Vec::new(), candidates: Vec::new(), branches: Vec::new(), next_branch: 0, modifier_branches:std::collections::HashSet::new(), loops: Vec::new(), next_loop: 0, retry_loops:std::collections::HashSet::new(), interrupts:Vec::new(), next_interrupt:0, block_depth: 0, target: AssignmentTarget::Normal, ignore_targets: 0, shadowed:Vec::new(), parameter_stack:Vec::new() };
@@ -1354,7 +1354,8 @@ impl<'s,'pr> Visit<'pr> for AssignmentEventCollector<'s> {
     fn visit_def_node(&mut self, node: &ruby_prism::DefNode<'pr>) {
         if let Some(receiver) = node.receiver() { self.visit(&receiver); }
         let names=node.parameters().map(|parameters|{let slice=&self.source[parameters.location().start_offset()..parameters.location().end_offset()];slice.split(|character:char|!character.is_ascii_alphanumeric()&&character!='_').filter(|name|!name.is_empty()&&!matches!(*name,"nil"|"true"|"false")).map(str::to_string).collect()}).unwrap_or_default();
-        self.nested_scope(|this| {this.parameter_stack.push(names);if let Some(parameters) = node.parameters() { this.visit(&parameters.as_node()); } if let Some(body) = node.body() { this.visit(&body); }this.parameter_stack.pop();});
+        self.nested_scope(|this| {this.parameter_stack.push(names);if let Some(parameters) = node.parameters() { this.visit(&parameters.as_node()); }
+            if let Some(body) = node.body() { this.visit(&body); }this.parameter_stack.pop();});
     }
     fn visit_class_node(&mut self, node: &ruby_prism::ClassNode<'pr>) {
         if let Some(superclass) = node.superclass() { self.visit(&superclass); }
@@ -1426,7 +1427,8 @@ impl<'s,'pr> Visit<'pr> for AssignmentEventCollector<'s> {
         let group=self.next_branch;self.next_branch+=1;let interrupt=self.next_interrupt;self.next_interrupt+=1;
         if let Some(statements)=node.statements(){self.with_branch(group,0,|this|{this.interrupts.push(interrupt);this.visit(&statements.as_node());this.interrupts.pop();});}
         let mut rescue=node.rescue_clause();let mut arm=1;
-        while let Some(clause)=rescue{self.with_branch(group,arm,|this|this.with_loop(|this|{for exception in clause.exceptions().iter(){this.visit(&exception);}if let Some(reference)=clause.reference(){if let Some(target)=reference.as_local_variable_target_node(){let old=this.target;this.target=AssignmentTarget::Rescue;let start=clause.operator_loc().map_or(target.location().start_offset(),|operator|operator.start_offset().saturating_sub(1));this.write(target.name().as_slice(),target.location(),Some(AssignmentCorrection{range:start..target.location().end_offset(),replacement:""}),false);this.target=old;}else{this.visit(&reference);}}if let Some(statements)=clause.statements(){this.visit(&statements.as_node());}}));rescue=clause.subsequent();arm+=1;}
+        while let Some(clause)=rescue{self.with_branch(group,arm,|this|this.with_loop(|this|{for exception in clause.exceptions().iter(){this.visit(&exception);}if let Some(reference)=clause.reference(){if let Some(target)=reference.as_local_variable_target_node(){let old=this.target;this.target=AssignmentTarget::Rescue;let start=clause.operator_loc().map_or(target.location().start_offset(),|operator|operator.start_offset().saturating_sub(1));this.write(target.name().as_slice(),target.location(),Some(AssignmentCorrection{range:start..target.location().end_offset(),replacement:""}),false);this.target=old;}else{this.visit(&reference);}}
+            if let Some(statements)=clause.statements(){this.visit(&statements.as_node());}}));rescue=clause.subsequent();arm+=1;}
         if let Some(otherwise)=node.else_clause(){self.with_branch(group,0,|this|this.visit(&otherwise.as_node()));}
         if let Some(ensure)=node.ensure_clause(){self.visit(&ensure.as_node());}
     }
@@ -1452,7 +1454,8 @@ impl<'s,'pr> Visit<'pr> for AssignmentEventCollector<'s> {
     }
     fn visit_local_variable_target_node(&mut self, node: &ruby_prism::LocalVariableTargetNode<'pr>) { if self.ignore_targets==0{self.write(node.name().as_slice(), node.location(), None, false);}else{self.read(node.name().as_slice(),node.location());} }
     fn visit_forwarding_super_node(&mut self,node:&ruby_prism::ForwardingSuperNode<'pr>){if let Some(names)=self.parameter_stack.last().cloned(){for name in names{self.read(name.as_bytes(),node.location());}}}
-    fn visit_match_write_node(&mut self,node:&ruby_prism::MatchWriteNode<'pr>){let call=node.call();if let Some(arguments)=call.arguments(){self.visit(&arguments.as_node());}if let Some(receiver)=call.receiver(){let offense=receiver.location().start_offset()..receiver.location().end_offset();let receiver_source=&self.source[offense.clone()];for target in node.targets().iter(){if let Some(local)=target.as_local_variable_target_node(){let name=String::from_utf8_lossy(local.name().as_slice());let needle=format!("(?<{name}>");if let Some(position)=receiver_source.find(&needle){let start=offense.start+position+1;let end=start+needle.len()-1;let correction=AssignmentCorrection{range:start..end,replacement:"?:"};let saved=self.target;self.target=AssignmentTarget::Normal;self.write(local.name().as_slice(),receiver.location(),Some(correction),false);if let Some(event)=self.events.last_mut(){event.offense=offense.clone();}self.target=saved;}}}}}
+    fn visit_match_write_node(&mut self,node:&ruby_prism::MatchWriteNode<'pr>){let call=node.call();if let Some(arguments)=call.arguments(){self.visit(&arguments.as_node());}
+        if let Some(receiver)=call.receiver(){let offense=receiver.location().start_offset()..receiver.location().end_offset();let receiver_source=&self.source[offense.clone()];for target in node.targets().iter(){if let Some(local)=target.as_local_variable_target_node(){let name=String::from_utf8_lossy(local.name().as_slice());let needle=format!("(?<{name}>");if let Some(position)=receiver_source.find(&needle){let start=offense.start+position+1;let end=start+needle.len()-1;let correction=AssignmentCorrection{range:start..end,replacement:"?:"};let saved=self.target;self.target=AssignmentTarget::Normal;self.write(local.name().as_slice(),receiver.location(),Some(correction),false);if let Some(event)=self.events.last_mut(){event.offense=offense.clone();}self.target=saved;}}}}}
     fn visit_retry_node(&mut self,_node:&ruby_prism::RetryNode<'pr>){for id in &self.loops{self.retry_loops.insert(*id);}}
 }
 

@@ -390,7 +390,7 @@ fn redundant_replacement(
         || multiline_quoted_literal(candidate)
         || contains_multiline_unsafe_syntax(candidate)
         || index_access_chained_across_line(candidate)
-        || comment_within(source, &range)
+        || comment_within(source, range)
         || operator_after_line_break(candidate)
     {
         return None;
@@ -825,6 +825,7 @@ fn enforce_bracket_spacing(
     }
 }
 
+#[allow(clippy::too_many_lines)]
 fn end_alignment(context: &mut CopContext<'_, '_>) {
     #[derive(Clone)]
     struct Opening {
@@ -955,7 +956,7 @@ fn end_alignment(context: &mut CopContext<'_, '_>) {
             Some((indentation, trimmed.to_string()))
         } else if trimmed.starts_with("class ") || trimmed.starts_with("module ") {
             let end = code[indentation..]
-                .find(|character: char| character == '<' || character == ';')
+                .find(['<', ';'])
                 .map_or(code.len(), |at| indentation + at);
             Some((indentation, code[indentation..end].trim_end().to_string()))
         } else if code.ends_with(" do") || code.contains(" do |")
@@ -1120,6 +1121,7 @@ fn multiline_call_rhs(
     }
 }
 
+#[allow(clippy::cognitive_complexity, clippy::too_many_lines)]
 fn check_multiline_method_call(
     call: &ruby_prism::CallNode<'_>,
     receiver: Node<'_>,
@@ -2103,6 +2105,7 @@ struct HashAlignmentDelta {
     value: isize,
 }
 
+#[allow(clippy::too_many_lines)]
 fn check_hash_alignment(
     elements: &[Node<'_>],
     explicit: bool,
@@ -2510,6 +2513,7 @@ fn report_hash_alignment(
     );
 }
 
+#[allow(clippy::cognitive_complexity, clippy::too_many_lines)]
 fn operator_spacing(context: &mut CopContext<'_, '_>) {
     let source = context.source().to_owned();
     let exponent_space = context
@@ -2518,9 +2522,8 @@ fn operator_spacing(context: &mut CopContext<'_, '_>) {
     let rational_space = context
         .config_value("EnforcedStyleForRationalLiterals")
         .is_some_and(|style| style == "space");
-    let allow_alignment = !context
-        .config_value("AllowForAlignment")
-        .is_some_and(|value| value == "false");
+    let allow_alignment = context
+        .config_value("AllowForAlignment").is_none_or(|value| value != "false");
     let force_equal_alignment = context
         .related_config_value("Layout/ExtraSpacing", "ForceEqualSignAlignment")
         .is_some_and(|value| value == "true");
@@ -2937,9 +2940,10 @@ fn ruby_comment_start(line: &str) -> Option<usize> {
             escaped = true;
         } else if quote == Some(byte) {
             quote = None;
-        } else if quote.is_none() && matches!(byte, b'\'' | b'"' | b'`') {
-            quote = Some(byte);
-        } else if quote.is_none() && byte == b'/' && slash_starts_regexp(line, index) {
+        } else if quote.is_none()
+            && (matches!(byte, b'\'' | b'"' | b'`')
+                || byte == b'/' && slash_starts_regexp(line, index))
+        {
             quote = Some(byte);
         } else if quote.is_none() && byte == b'#' && line.as_bytes().get(index + 1) != Some(&b'{') {
             return Some(index);
@@ -3136,6 +3140,7 @@ fn rational_rhs(source: &str) -> bool {
     token > 0 && source.trim_start().as_bytes().get(token) == Some(&b'r')
 }
 
+#[allow(clippy::too_many_arguments)]
 fn operator_alignment_is_allowed(
     source: &str,
     line_offset: usize,

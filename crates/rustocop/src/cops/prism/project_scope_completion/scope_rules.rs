@@ -35,11 +35,7 @@ pub(super) fn redundant_self_assignment(node: &Node<'_>, context: &mut CopContex
         Some((write.name_loc(), write.value(), write.location()))
     } else if let Some(write) = node.as_class_variable_write_node() {
         Some((write.name_loc(), write.value(), write.location()))
-    } else if let Some(write) = node.as_global_variable_write_node() {
-        Some((write.name_loc(), write.value(), write.location()))
-    } else {
-        None
-    };
+    } else { node.as_global_variable_write_node().map(|write| (write.name_loc(), write.value(), write.location())) };
     let (lhs, rhs, assignment, equals) = if let Some((name, value, assignment)) = variable {
         let between = &source[name.end_offset()..value.location().start_offset()];
         let Some(relative_equals) = between.find('=') else {

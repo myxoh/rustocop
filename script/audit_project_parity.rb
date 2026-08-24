@@ -11,6 +11,7 @@ require_relative "../lib/rustocop/artifact_store"
 require_relative "../lib/rustocop/diagnostic_signatures"
 require_relative "../lib/rustocop/process_runner"
 require_relative "../lib/rustocop/repository_layout"
+require_relative "../lib/rustocop/source_fingerprint"
 require_relative "../lib/rustocop/project_corpus"
 require_relative "../lib/rustocop/compatibility_status"
 
@@ -473,6 +474,7 @@ end
 report = {
   "generated_at" => Time.now.iso8601,
   "rust_commit" => rust_commit,
+  "cop_source_sha256" => Rustocop::SourceFingerprint.cops(root: ROOT),
   "native_sha256" => Digest::SHA256.file(options[:native]).hexdigest,
   "rubocop_version" => rubocop_version,
   "rubocop_reference" => {

@@ -183,11 +183,7 @@ fn condition_contains_assignment(node: &Node<'_>, context: &CopContext<'_, '_>) 
             Some(condition.predicate())
         } else if let Some(condition) = ancestor.as_while_node() {
             Some(condition.predicate())
-        } else if let Some(condition) = ancestor.as_until_node() {
-            Some(condition.predicate())
-        } else {
-            None
-        };
+        } else { ancestor.as_until_node().map(|condition| condition.predicate()) };
         if let Some(predicate) = predicate {
             let predicate = predicate.location();
             return predicate.start_offset() <= location.start_offset()

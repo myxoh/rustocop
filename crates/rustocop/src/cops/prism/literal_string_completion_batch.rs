@@ -538,9 +538,8 @@ fn string_concatenation(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
         return;
     }
     if context.config_value("Mode").unwrap_or("aggressive") == "conservative"
-        && !parts
-            .first()
-            .is_some_and(|part| part.as_string_node().is_some())
+        && parts
+            .first().is_none_or(|part| part.as_string_node().is_none())
     {
         return;
     }

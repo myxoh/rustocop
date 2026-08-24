@@ -138,7 +138,7 @@ impl<'pr> Visit<'pr> for IfInsideElseCollector {
                         && self.comments.iter().any(|comment| {
                             else_end < comment.start && comment.start < keyword.start_offset()
                         });
-                    if !(modifier && self.allow_modifier) && !commented {
+                    if !(commented || modifier && self.allow_modifier) {
                         self.offsets.insert(keyword.start_offset());
                     }
                 }

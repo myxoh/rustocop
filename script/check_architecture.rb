@@ -1,11 +1,14 @@
 # frozen_string_literal: true
 
+require "yaml"
+
 # Keep these limits deliberately mechanical. Clippy owns function-level
 # complexity; this script prevents modules from becoming dumping grounds.
 LIMITS = {
   "crates/rustocop/src/main.rs" => 50
 }.freeze
 DEFAULT_RUST_LIMIT = 350
+DEBT_PATH = "spec/architecture_debt.yml"
 MAX_COPS_PER_MODULE = 16
 SOURCE_ROOT = "crates/rustocop/src"
 ROOT_MODULES = %w[config.rs main.rs model.rs].freeze
@@ -20,12 +23,25 @@ DEPENDENCY_RULES = {
 }.freeze
 
 rust_files = Dir.glob("#{SOURCE_ROOT}/**/*.rs").sort
+module_debt = YAML.safe_load_file(DEBT_PATH, aliases: false) || {}
 failures = rust_files.filter_map do |path|
   lines = File.foreach(path).count
   limit = LIMITS.fetch(path, DEFAULT_RUST_LIMIT)
-  next if lines <= limit
+  debt_limit = module_debt[path]
+  if lines <= limit
+    next unless debt_limit
 
-  "#{path}: #{lines} lines (maximum #{limit})"
+    next "#{path}: now #{lines} lines; remove its obsolete architecture debt entry"
+  end
+  next "#{path}: #{lines} lines (maximum #{limit}); add no new architecture debt" unless debt_limit
+  next "#{path}: grew to #{lines} lines (debt ceiling #{debt_limit})" if lines > debt_limit
+  next "#{path}: reduced to #{lines} lines; lower its debt ceiling from #{debt_limit}" if lines < debt_limit
+
+  nil
+end
+
+(module_debt.keys - rust_files).each do |path|
+  failures << "#{path}: architecture debt entry does not name a Rust source file"
 end
 
 cop_declaration = /=>\s*"[A-Z][^"]+\/[^"]+"|(?:replace|report|custom)\(\s*"[A-Z][^"]+\/[^"]+"/m
@@ -61,6 +77,6 @@ if failures.empty?
 else
   warn "Architecture limits failed:"
   failures.each { |failure| warn "  - #{failure}" }
-  warn "Split by responsibility; do not raise a limit to land a feature."
+  warn "Split by responsibility; never raise a debt ceiling to land a feature."
   exit 1
 end

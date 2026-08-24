@@ -111,7 +111,7 @@ fn ambiguous_operator_precedence(node: &Node<'_>, context: &mut CopContext<'_, '
     if parent_node.as_parentheses_node().is_some() {
         return;
     }
-    let parent = precedence(&parent_node).or_else(|| {
+    let parent = precedence(parent_node).or_else(|| {
         if current != 7 {
             return None;
         }

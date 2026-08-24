@@ -110,6 +110,7 @@ impl CopConfig {
         }
     }
 
+    #[allow(clippy::cognitive_complexity, clippy::too_many_lines)]
     fn parse_values(source: &str) -> HashMap<String, HashMap<String, ConfigValue>> {
         let mut values = HashMap::<String, HashMap<String, ConfigValue>>::new();
         let mut section = None;

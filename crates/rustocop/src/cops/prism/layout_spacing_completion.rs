@@ -121,11 +121,7 @@ fn assignment_value<'pr>(node: &Node<'pr>) -> Option<Node<'pr>> {
         Some(write.value())
     } else if let Some(write) = node.as_call_operator_write_node() {
         Some(write.value())
-    } else if let Some(write) = node.as_index_operator_write_node() {
-        Some(write.value())
-    } else {
-        None
-    }
+    } else { node.as_index_operator_write_node().map(|write| write.value()) }
 }
 
 fn begin_end_alignment(node: &ruby_prism::BeginNode<'_>, context: &mut CopContext<'_, '_>) {

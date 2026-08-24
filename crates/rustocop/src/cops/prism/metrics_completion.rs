@@ -66,8 +66,8 @@ fn method_length(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
 fn block_length(node: &ruby_prism::BlockNode<'_>, context: &mut CopContext<'_, '_>) {
     let owning_call = context.nearest_call();
     if owning_call.as_ref().is_some_and(|call| {
-        matches!(call_name(&call), b"define_method" | b"new")
-            && (call_name(&call) != b"new"
+        matches!(call_name(call), b"define_method" | b"new")
+            && (call_name(call) != b"new"
                 || root_constant(call.receiver(), b"Class")
                 || root_constant(call.receiver(), b"Module")
                 || root_constant(call.receiver(), b"Struct")

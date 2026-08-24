@@ -212,7 +212,7 @@ fn configured_omit_exception(
     method: &str,
     arguments: &[Node<'_>],
 ) -> bool {
-    if operator_or_setter(&method) || node.message_loc().is_none() || method == "call" {
+    if operator_or_setter(method) || node.message_loc().is_none() || method == "call" {
         return true;
     }
     if method.as_bytes().first().is_some_and(u8::is_ascii_uppercase)
