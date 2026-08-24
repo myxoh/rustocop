@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use regex::Regex;
@@ -35,7 +35,8 @@ pub(crate) struct InspectionConfig {
 #[derive(Clone, Debug)]
 pub(crate) struct CopConfig {
     values: HashMap<String, HashMap<String, ConfigValue>>,
-    explicit_values: std::collections::HashSet<(String, String)>,
+    explicit_sections: HashSet<String>,
+    explicit_values: HashSet<(String, String)>,
     // Precompiled once per run for the authoring policy API.
     #[allow(dead_code)]
     patterns: HashMap<String, HashMap<String, Vec<Regex>>>,
@@ -58,6 +59,7 @@ impl CopConfig {
     pub(crate) fn from_source(source: &str) -> Self {
         let mut values = Self::parse_values(RUBOCOP_DEFAULT_CONFIG);
         let overrides = Self::parse_values(source);
+        let explicit_sections = overrides.keys().cloned().collect();
         let explicit_values = overrides
             .iter()
             .flat_map(|(cop, entries)| entries.keys().map(|key| (cop.clone(), key.clone())))
@@ -66,6 +68,7 @@ impl CopConfig {
         let patterns = Self::compile_patterns(&values);
         Self {
             values,
+            explicit_sections,
             explicit_values,
             patterns,
         }
@@ -119,6 +122,9 @@ impl CopConfig {
             line_index += 1;
             if !line.starts_with(char::is_whitespace) {
                 section = config_section(line);
+                if let Some(section) = section.as_ref() {
+                    values.entry(section.clone()).or_default();
+                }
                 container_key = None;
                 nested_key = None;
                 continue;
@@ -337,6 +343,10 @@ impl CopConfig {
             .contains(&(cop.to_string(), key.to_string()))
     }
 
+    pub(crate) fn explicitly_configures(&self, cop: &str) -> bool {
+        self.explicit_sections.contains(cop)
+    }
+
     #[allow(dead_code)]
     pub(crate) fn patterns(&self, cop: &str, key: &str) -> &[Regex] {
         self.patterns
@@ -435,7 +445,7 @@ fn clean_config_scalar(value: &str) -> String {
 
 impl InspectionConfig {
     pub(crate) fn cop_enabled(&self, cop: &str) -> bool {
-        self.cops.enabled(cop)
+        self.cops.enabled(cop, &self.cop_config)
     }
 }
 

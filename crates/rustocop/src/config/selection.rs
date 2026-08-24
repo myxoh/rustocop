@@ -1,11 +1,12 @@
-const DEFAULT_DISABLED_COPS: &[&str] = &[
+use super::CopConfig;
+
+// Extension cops are not present in RuboCop's built-in configuration. Preserve
+// their established defaults until extension configuration is loaded directly.
+const DEFAULT_DISABLED_EXTENSION_COPS: &[&str] = &[
     "RSpec/MessageChain",
     "RSpec/MultipleExpectations",
     "RSpec/MultipleMemoizedHelpers",
     "RSpec/PendingWithoutReason",
-    "Security/IoMethods",
-    "Style/Copyright",
-    "Style/Documentation",
 ];
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -61,12 +62,12 @@ impl CopSelection {
         Self::from_only(Some(&requested))
     }
 
-    pub(crate) fn enabled(&self, cop: &str) -> bool {
+    pub(crate) fn enabled(&self, cop: &str, config: &CopConfig) -> bool {
         match &self.requested {
-            None => !DEFAULT_DISABLED_COPS.contains(&cop),
+            None => normally_enabled(cop, config),
             Some(requested) => requested.iter().any(|selection| {
                 selection == cop
-                    || (!DEFAULT_DISABLED_COPS.contains(&cop)
+                    || (normally_enabled(cop, config)
                         && cop
                             .strip_prefix(selection)
                             .is_some_and(|suffix| suffix.starts_with('/')))
@@ -83,5 +84,25 @@ impl CopSelection {
             requested: requested
                 .map(|values| values.iter().map(|value| (*value).to_string()).collect()),
         }
+    }
+}
+
+fn normally_enabled(cop: &str, config: &CopConfig) -> bool {
+    if config.explicitly_contains(cop, "Enabled") {
+        return config.bool(cop, "Enabled").unwrap_or(false);
+    }
+
+    if config.bool("AllCops", "DisabledByDefault") == Some(true) {
+        return config.explicitly_configures(cop);
+    }
+
+    if config.bool("AllCops", "EnabledByDefault") == Some(true) {
+        return true;
+    }
+
+    match config.value(cop, "Enabled") {
+        Some("false") => false,
+        Some("pending") => config.value("AllCops", "NewCops") == Some("enable"),
+        _ => !DEFAULT_DISABLED_EXTENSION_COPS.contains(&cop),
     }
 }
