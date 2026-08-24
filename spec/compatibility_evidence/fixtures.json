@@ -1,10 +1,10 @@
 {
   "version": 1,
   "kind": "fixture_compatibility",
-  "updated_at": "2026-08-24T01:48:48-04:00",
+  "updated_at": "2026-08-24T02:50:37-04:00",
   "rust_commit": null,
-  "native_sha256": "1852c4f4df3660d6f5c341574126244eca13d8dd2c43e648ddfe34b304abd48e",
-  "fixture_corpus_sha256": "685f66ee2224eb9bc0bd715561ad3ffc0129a93b305ba16b444568981489e521",
+  "native_sha256": "e9de507f34548504b265f8a42ac3dc0d25d23c36d9e286f136aa9a5f754b09bc",
+  "fixture_corpus_sha256": "2de0bc8103190cba3f503662ff5f45a46e43a8ac422ba93fa3629e6e16014b70",
   "rubocop_version": "1.87.0",
   "results": {
     "Bundler/DuplicatedGem": {
@@ -1662,6 +1662,11 @@
       "total": 1199,
       "status": "compatible"
     },
+    "Style/ConstantVisibility": {
+      "passed": 15,
+      "total": 15,
+      "status": "compatible"
+    },
     "Style/DataInheritance": {
       "passed": 24,
       "total": 24,
@@ -1700,6 +1705,16 @@
     "Style/DocumentDynamicEvalDefinition": {
       "passed": 20,
       "total": 20,
+      "status": "compatible"
+    },
+    "Style/Documentation": {
+      "passed": 55,
+      "total": 55,
+      "status": "compatible"
+    },
+    "Style/DocumentationMethod": {
+      "passed": 77,
+      "total": 77,
       "status": "compatible"
     },
     "Style/DoubleCopDisableDirective": {
@@ -2070,6 +2085,16 @@
     "Style/MapToSet": {
       "passed": 32,
       "total": 32,
+      "status": "compatible"
+    },
+    "Style/MethodCallWithArgsParentheses": {
+      "passed": 174,
+      "total": 174,
+      "status": "compatible"
+    },
+    "Style/MethodCallWithoutArgsParentheses": {
+      "passed": 34,
+      "total": 34,
       "status": "compatible"
     },
     "Style/MethodCalledOnDoEndBlock": {

@@ -1,14 +1,14 @@
 ---
 rubocop_version: 1.87.0
 upstream_rspec:
-  examples: 27077
+  examples: 27407
   failures: 0
   pending: 5
-captured_cases: 27181
+captured_cases: 27536
 diagnostic_baseline:
-  passed_cases: 27180
-  passing_cops: 578
-  total_cops: 578
+  passed_cases: 27535
+  passing_cops: 583
+  total_cops: 583
 fully_compatible_cops:
 - Bundler/DuplicatedGem
 - Bundler/DuplicatedGroup
@@ -341,6 +341,7 @@ fully_compatible_cops:
 - Style/ComparableClamp
 - Style/ConcatArrayLiterals
 - Style/ConditionalAssignment
+- Style/ConstantVisibility
 - Style/DataInheritance
 - Style/DateTime
 - Style/DefWithParentheses
@@ -349,6 +350,8 @@ fully_compatible_cops:
 - Style/DirEmpty
 - Style/DisableCopsWithinSourceCodeDirective
 - Style/DocumentDynamicEvalDefinition
+- Style/Documentation
+- Style/DocumentationMethod
 - Style/DoubleCopDisableDirective
 - Style/DoubleNegation
 - Style/EachForSimpleLoop
@@ -423,6 +426,8 @@ fully_compatible_cops:
 - Style/MapJoin
 - Style/MapToHash
 - Style/MapToSet
+- Style/MethodCallWithArgsParentheses
+- Style/MethodCallWithoutArgsParentheses
 - Style/MethodCalledOnDoEndBlock
 - Style/MethodDefParentheses
 - Style/MinMax

@@ -1,4 +1,5 @@
 use super::*;
+use std::collections::HashMap;
 
 define_cops! {
     Syntax => "Lint/Syntax" => parse_error_and_source(syntax, invalid_byte_syntax),
@@ -1501,6 +1502,48 @@ fn reduce_element_modified(body: &Node<'_>, element: &[u8], accumulator: &[u8]) 
 }
 
 fn documentation_method(context: &mut CopContext<'_, '_>) {
+    #[derive(Default)]
+    struct DefinitionRanges {
+        definitions: HashMap<usize, std::ops::Range<usize>>,
+        modifiers: HashMap<usize, std::ops::Range<usize>>,
+    }
+
+    impl<'pr> Visit<'pr> for DefinitionRanges {
+        fn visit_def_node(&mut self, node: &ruby_prism::DefNode<'pr>) {
+            let location = node.location();
+            self.definitions.insert(
+                location.start_offset(),
+                location.start_offset()..location.end_offset(),
+            );
+            ruby_prism::visit_def_node(self, node);
+        }
+
+        fn visit_call_node(&mut self, node: &CallNode<'pr>) {
+            if matches!(call_name(node), b"module_function" | b"ruby2_keywords") {
+                if let Some(definition) = node
+                    .arguments()
+                    .and_then(|arguments| {
+                        arguments
+                            .arguments()
+                            .iter()
+                            .find_map(|argument| argument.as_def_node())
+                    })
+                {
+                    let definition_location = definition.location();
+                    let call_location = node.location();
+                    self.modifiers.insert(
+                        definition_location.start_offset(),
+                        call_location.start_offset()..call_location.end_offset(),
+                    );
+                }
+            }
+            ruby_prism::visit_call_node(self, node);
+        }
+    }
+
+    let parsed = parse(context.source().as_bytes());
+    let mut definition_ranges = DefinitionRanges::default();
+    definition_ranges.visit(&parsed.node());
     let lines = context.source_file().lines().collect::<Vec<_>>();
     let require_non_public = context.config_bool("RequireForNonPublicMethods", false);
     let allowed_methods = context.config_values("AllowedMethods").to_vec();
@@ -1556,22 +1599,30 @@ fn documentation_method(context: &mut CopContext<'_, '_>) {
             } else {
                 line_indent + def_at
             };
-            let end = if trimmed[def_at..].contains("; end") {
-                offset + line.len()
-            } else {
-                lines[index + 1..]
-                    .iter()
-                    .find(|(_, candidate)| {
-                        candidate.trim() == "end"
-                            && candidate.len() - candidate.trim_start().len() <= line_indent
-                    })
-                    .map_or(offset + line.len(), |(end, candidate)| {
-                        end + candidate.len()
-                    })
-            };
+            let definition_start = offset + line_indent + def_at;
+            let structural_range = definition_ranges
+                .modifiers
+                .get(&definition_start)
+                .or_else(|| definition_ranges.definitions.get(&definition_start));
+            let offense = structural_range.cloned().unwrap_or_else(|| {
+                let end = if trimmed[def_at..].contains("; end") {
+                    offset + line.len()
+                } else {
+                    lines[index + 1..]
+                        .iter()
+                        .find(|(_, candidate)| {
+                            candidate.trim() == "end"
+                                && candidate.len() - candidate.trim_start().len() <= line_indent
+                        })
+                        .map_or(offset + line.len(), |(end, candidate)| {
+                            end + candidate.len()
+                        })
+                };
+                offset + offense_indent..end
+            });
             context.report(
                 "Missing method documentation comment.",
-                offset + offense_indent..end,
+                offense,
             );
         }
     }

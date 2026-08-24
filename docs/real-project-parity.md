@@ -13,23 +13,26 @@ cases, and configuration branches that the projects do not exercise.
 ## Latest realistic status
 
 The latest complete checkpoint was generated at
-`2026-08-24T01:50:06-04:00` from worktree native binary SHA-256
-`1852c4f4df3660d6f5c341574126244eca13d8dd2c43e648ddfe34b304abd48e`.
+`2026-08-24T02:47:59-04:00` from worktree native binary SHA-256
+`e9de507f34548504b265f8a42ac3dc0d25d23c36d9e286f136aa9a5f754b09bc`.
 The stored RuboCop reference has SHA-256
-`6de32f13efd0a7041c16e8dfbd6bae3b89db66ac905cd9d0cd0d25735e8c9567`.
-After excluding the 28 intentionally pending cops, its active-cop slice reports:
+`9afe02cd04e8243c09b960a8d0222d0a1de3593d11b7373d40140e8573814572`.
+After excluding the 23 intentionally pending cops, its active-cop slice reports:
 
 | Classification | Complete checkpoint |
 | --- | ---: |
-| Project-exact | 327 |
+| Project-exact | 329 |
 | Exact but dormant | 53 |
-| Mismatching | 197 |
+| Mismatching | 200 |
 | Rust crash | 0 |
 | RuboCop gate error | 1 |
 
-Among the 524 exercised cops, 327 are exact (62.4%). The five cops restored in
-this iteration pass every captured fixture. Four are project-exact;
-`Layout/RedundantLineBreak` retains complete-matrix gaps for future isolation.
+Among the 529 exercised cops, 329 are exact (62.2%). The five cops restored in
+this iteration pass every captured fixture. `Style/ConstantVisibility` and
+`Style/MethodCallWithoutArgsParentheses` are project-exact;
+`Style/Documentation`, `Style/DocumentationMethod`, and
+`Style/MethodCallWithArgsParentheses` retain complete-matrix gaps for future
+isolation.
 `Style/ClassAndModuleChildren` still triggers a RuboCop 1.87 error on Puppet.
 
 The minimized project-regression corpus contains 609 passing cases and no

@@ -356,64 +356,115 @@ fn literal_node(node: &Node<'_>) -> bool {
 }
 
 fn constant_visibility(context: &mut CopContext<'_, '_>) {
-    let source = context.source();
-    let mut scope_depth = 0usize;
-    for (offset, line) in context.source_file().lines() {
-        let trimmed = line.trim();
-        if trimmed.starts_with("class ") || trimmed.starts_with("module ") {
-            scope_depth += 1;
-            continue;
+    #[derive(Default)]
+    struct ClassOrModuleBodies<'pr>(Vec<ruby_prism::StatementsNode<'pr>>);
+
+    impl<'pr> Visit<'pr> for ClassOrModuleBodies<'pr> {
+        fn visit_class_node(&mut self, node: &ruby_prism::ClassNode<'pr>) {
+            if let Some(body) = node.body().and_then(|body| body.as_statements_node()) {
+                self.0.push(body);
+            }
+            ruby_prism::visit_class_node(self, node);
         }
-        if trimmed == "end" {
-            scope_depth = scope_depth.saturating_sub(1);
-            continue;
+
+        fn visit_module_node(&mut self, node: &ruby_prism::ModuleNode<'pr>) {
+            if let Some(body) = node.body().and_then(|body| body.as_statements_node()) {
+                self.0.push(body);
+            }
+            ruby_prism::visit_module_node(self, node);
         }
-        if scope_depth == 0 {
-            continue;
-        }
-        let Some((name, value)) = trimmed.split_once(" = ") else {
+    }
+
+    let parsed = parse(context.source().as_bytes());
+    let mut bodies = ClassOrModuleBodies::default();
+    bodies.visit(&parsed.node());
+    for statements in bodies.0 {
+        inspect_constant_visibility_scope(&statements, context);
+    }
+}
+
+fn inspect_constant_visibility_scope(
+    statements: &ruby_prism::StatementsNode<'_>,
+    context: &mut CopContext<'_, '_>,
+) {
+    let mut declared = HashSet::<String>::new();
+    for statement in statements.body().iter() {
+        let Some(call) = statement.as_call_node() else {
             continue;
         };
-        if context.config_bool("IgnoreModules", false)
-            && ["Class.new", "Module.new", "Struct.new"]
-                .iter()
-                .any(|constructor| value.starts_with(constructor))
+        if !matches!(call_name(&call), b"private_constant" | b"public_constant")
+            || call.receiver().is_some()
         {
             continue;
         }
-        if !name
-            .bytes()
-            .next()
-            .is_some_and(|byte| byte.is_ascii_uppercase())
-            || ["private_constant", "public_constant"]
-                .into_iter()
-                .any(|visibility| {
-                    source.lines().any(|line| {
-                        let line = line.trim();
-                        line.starts_with(visibility)
-                            && line[visibility.len()..].split(',').any(|argument| {
-                                argument
-                                    .trim()
-                                    .trim_start_matches(':')
-                                    .trim_matches(['\'', '"'])
-                                    == name
-                            })
-                    }) || source.contains(&format!("{visibility} :{name}"))
-                        || source.contains(&format!("{visibility} '{name}'"))
-                        || source.contains(&format!("{visibility} \"{name}\""))
-                })
-            || source.lines().any(|visibility| {
-                let visibility = visibility.trim();
-                visibility.starts_with("private_constant *")
-                    || visibility.starts_with("public_constant *")
-            })
+        for argument in call
+            .arguments()
+            .into_iter()
+            .flat_map(|arguments| arguments.arguments().iter())
+        {
+            collect_constant_visibility_names(&argument, &mut declared);
+        }
+    }
+
+    for statement in statements.body().iter() {
+        let assignment = if let Some(write) = statement.as_constant_write_node() {
+            Some((
+                String::from_utf8_lossy(write.name().as_slice()).into_owned(),
+                write.value(),
+            ))
+        } else if let Some(write) = statement.as_constant_path_write_node() {
+            let target_location = write.target().location();
+            let target = context.source_file().at(&target_location);
+            Some((
+                target.rsplit("::").next().unwrap_or(target).to_string(),
+                write.value(),
+            ))
+        } else {
+            None
+        };
+        let Some((name, value)) = assignment else {
+            continue;
+        };
+        if declared.contains(&name)
+            || context.config_bool("IgnoreModules", false)
+                && constant_class_constructor(&value, context.source_file())
         {
             continue;
         }
-        let indent = line.len() - line.trim_start().len();
         context.report(
             format!("Explicitly make `{name}` public or private using either `#public_constant` or `#private_constant`."),
-            offset + indent..offset + line.len(),
+            &statement.location(),
         );
     }
+}
+
+fn collect_constant_visibility_names(node: &Node<'_>, names: &mut HashSet<String>) {
+    if let Some(symbol) = node.as_symbol_node() {
+        names.insert(String::from_utf8_lossy(symbol.unescaped()).into_owned());
+    } else if let Some(string) = node.as_string_node() {
+        names.insert(String::from_utf8_lossy(string.unescaped()).into_owned());
+    } else if let Some(splat) = node.as_splat_node() {
+        if let Some(expression) = splat.expression() {
+            if let Some(array) = expression.as_array_node() {
+                for element in array.elements().iter() {
+                    collect_constant_visibility_names(&element, names);
+                }
+            }
+        }
+    }
+}
+
+fn constant_class_constructor(node: &Node<'_>, source_file: SourceFile<'_>) -> bool {
+    let Some(call) = node.as_call_node() else {
+        return false;
+    };
+    if call_name(&call) != b"new" {
+        return false;
+    }
+    call.receiver().is_some_and(|receiver| {
+        matches!(
+            source_file.node(&receiver),
+            "Class" | "Module" | "Struct" | "Data"
+        )
+    })
 }

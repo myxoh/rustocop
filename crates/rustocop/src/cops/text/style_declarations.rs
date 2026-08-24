@@ -25,6 +25,9 @@ fn check_documentation(
         let indent = leading_spaces(&line.body);
         namespaces.retain(|(namespace_indent, _, _)| *namespace_indent < indent);
         let (kind, rest) = trimmed.split_once(' ').expect("declaration has keyword");
+        if kind == "class" && rest.trim_start().starts_with("<<") {
+            continue;
+        }
         let name = rest
             .split(|character: char| {
                 character.is_whitespace() || matches!(character, '<' | ';' | '#')
@@ -132,6 +135,9 @@ fn declaration_substantial(lines: &[SourceLine], index: usize) -> bool {
         let direct_indent = *child_indent.get_or_insert(indent);
         if indent > direct_indent || trimmed.starts_with("end") {
             continue;
+        }
+        if trimmed.starts_with("class <<") {
+            return true;
         }
         if trimmed.starts_with("class ")
             || trimmed.starts_with("module ")

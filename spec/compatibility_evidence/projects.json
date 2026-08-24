@@ -1,14 +1,14 @@
 {
   "version": 1,
   "kind": "project_compatibility",
-  "updated_at": "2026-08-24T01:50:06-04:00",
+  "updated_at": "2026-08-24T02:47:59-04:00",
   "rust_commit": null,
-  "native_sha256": "1852c4f4df3660d6f5c341574126244eca13d8dd2c43e648ddfe34b304abd48e",
+  "native_sha256": "e9de507f34548504b265f8a42ac3dc0d25d23c36d9e286f136aa9a5f754b09bc",
   "rubocop_version": "1.87.0",
   "rubocop_reference": {
     "path": "spec/compatibility_evidence/project_rubocop_reference.json.gz",
-    "sha256": "6de32f13efd0a7041c16e8dfbd6bae3b89db66ac905cd9d0cd0d25735e8c9567",
-    "generated_at": "2026-08-24T01:51:05-04:00",
+    "sha256": "9afe02cd04e8243c09b960a8d0222d0a1de3593d11b7373d40140e8573814572",
+    "generated_at": "2026-08-24T02:45:55-04:00",
     "config_sha256": "0e505e2432b2af2d479bd48d335ae5c4c18b39edf328e500157ba57bf6f6726a",
     "source": "cached"
   },
@@ -2001,6 +2001,12 @@
       "exact": 804,
       "classification": "project_exact"
     },
+    "Style/ConstantVisibility": {
+      "rustocop": 29907,
+      "rubocop": 29907,
+      "exact": 29907,
+      "classification": "project_exact"
+    },
     "Style/DataInheritance": {
       "rustocop": 3,
       "rubocop": 3,
@@ -2048,6 +2054,18 @@
       "rubocop": 138,
       "exact": 138,
       "classification": "project_exact"
+    },
+    "Style/Documentation": {
+      "rustocop": 54391,
+      "rubocop": 49775,
+      "exact": 48846,
+      "classification": "mismatch"
+    },
+    "Style/DocumentationMethod": {
+      "rustocop": 184728,
+      "rubocop": 186456,
+      "exact": 176574,
+      "classification": "mismatch"
     },
     "Style/DoubleCopDisableDirective": {
       "rustocop": 5,
@@ -2491,6 +2509,18 @@
       "rustocop": 125,
       "rubocop": 125,
       "exact": 125,
+      "classification": "project_exact"
+    },
+    "Style/MethodCallWithArgsParentheses": {
+      "rustocop": 844894,
+      "rubocop": 838160,
+      "exact": 837975,
+      "classification": "mismatch"
+    },
+    "Style/MethodCallWithoutArgsParentheses": {
+      "rustocop": 1262,
+      "rubocop": 1262,
+      "exact": 1262,
       "classification": "project_exact"
     },
     "Style/MethodCalledOnDoEndBlock": {

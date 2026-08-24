@@ -1,7 +1,7 @@
 # Current project-parity gaps
 
 Generated from the same complete audit as [the evidence matrix](cop-support.md).
-Evidence updated at `2026-08-24T01:50:06-04:00`.
+Evidence updated at `2026-08-24T02:47:59-04:00`.
 This queue contains only failures from that 50-project audit; it does not use the old
 Verified/Heuristic qualification labels or captured-case pass counts.
 
@@ -9,15 +9,18 @@ The gap is unmatched complete diagnostic signatures, not the difference
 between aggregate offense counts. A cop can have equal counts and still have a
 nonzero gap because its message, severity, path, or source range differs.
 
-- Rust source: `uncommitted native 1852c4f4df36`
-- Unresolved cops: 197
+- Rust source: `uncommitted native e9de507f3454`
+- Unresolved cops: 200
 
 | Cop | Status | Rustocop | RuboCop | Exact | Signature gap | Project regression evidence |
 | --- | --- | ---: | ---: | ---: | ---: | --- |
 | `Style/InlineComment` | Mismatch | 229984 | 18651 | 18651 | 211333 | Passing |
 | `Layout/MultilineMethodCallIndentation` | Mismatch | 21838 | 15130 | 9318 | 18332 | Passing |
+| `Style/DocumentationMethod` | Mismatch | 184728 | 186456 | 176574 | 18036 | No |
 | `Layout/LineLength` | Mismatch | 187509 | 181525 | 178339 | 12356 | Passing |
 | `Layout/MultilineArrayLineBreaks` | Mismatch | 13345 | 22550 | 13010 | 9875 | Passing |
+| `Style/MethodCallWithArgsParentheses` | Mismatch | 844894 | 838160 | 837975 | 7104 | No |
+| `Style/Documentation` | Mismatch | 54391 | 49775 | 48846 | 6474 | No |
 | `Layout/MultilineOperationIndentation` | Mismatch | 4362 | 2263 | 1629 | 3367 | Passing |
 | `Lint/UnderscorePrefixedVariableName` | Mismatch | 2109 | 2109 | 897 | 2424 | No |
 | `Layout/ExtraSpacing` | Mismatch | 1329 | 1905 | 471 | 2292 | Passing |

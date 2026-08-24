@@ -47,7 +47,11 @@ impl MethodCallWithArgsParenthesesRule<'_, '_, '_> {
         return_if!(ignored_macro(self, node, &method));
         let args = arguments.location();
         let Some(selector) = node.message_loc() else { return };
-        let offense = node.location();
+        // Parser represents a block as the send's parent, while Prism stores it
+        // on the call node. RuboCop's offense therefore ends at the arguments,
+        // not at the end of an attached block.
+        let call = node.location();
+        let offense = call.start_offset()..arguments.location().end_offset();
         let only_parenthesized_argument = match arguments.arguments().iter().collect::<Vec<_>>().as_slice() {
             [argument] => argument.as_parentheses_node().is_some(),
             _ => false,
@@ -101,8 +105,11 @@ fn operator_or_setter(method: &str) -> bool {
         || method.ends_with('=')
 }
 
-fn ignored_macro(context: &CopContext<'_, '_>, _node: &CallNode<'_>, method: &str) -> bool {
-    if !context.config_bool("IgnoreMacros", true) || !macro_context(context.ancestors()) {
+fn ignored_macro(context: &CopContext<'_, '_>, node: &CallNode<'_>, method: &str) -> bool {
+    if !context.config_bool("IgnoreMacros", true)
+        || node.receiver().is_some()
+        || !macro_context(context.ancestors())
+    {
         return false;
     }
     let included = context.config_values("IncludedMacros").iter().any(|name| name == method)
@@ -111,15 +118,31 @@ fn ignored_macro(context: &CopContext<'_, '_>, _node: &CallNode<'_>, method: &st
 }
 
 fn macro_context(ancestors: &[Node<'_>]) -> bool {
+    let mut block_owner = false;
     for ancestor in ancestors.iter().rev() {
-        if ancestor.as_def_node().is_some() || ancestor.as_block_node().is_some() {
+        if ancestor.as_statements_node().is_some() || ancestor.as_program_node().is_some() {
+            continue;
+        }
+        if ancestor.as_block_node().is_some() {
+            block_owner = true;
+            continue;
+        }
+        if block_owner && ancestor.as_call_node().is_some() {
+            block_owner = false;
+            continue;
+        }
+        if ancestor.as_def_node().is_some() {
             return false;
         }
-        if ancestor.as_class_node().is_some() || ancestor.as_module_node().is_some() {
+        if ancestor.as_class_node().is_some()
+            || ancestor.as_module_node().is_some()
+            || ancestor.as_singleton_class_node().is_some()
+        {
             return true;
         }
+        return false;
     }
-    false
+    true
 }
 
 fn omit_parentheses_is_unsafe(context: &CopContext<'_, '_>, node: &CallNode<'_>) -> bool {
