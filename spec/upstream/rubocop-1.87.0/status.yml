@@ -4,11 +4,11 @@ upstream_rspec:
   examples: 26244
   failures: 0
   pending: 5
-captured_cases: 26345
+captured_cases: 26964
 diagnostic_baseline:
-  passed_cases: 26344
-  passing_cops: 568
-  total_cops: 568
+  passed_cases: 26963
+  passing_cops: 573
+  total_cops: 573
 fully_compatible_cops:
 - Bundler/DuplicatedGem
 - Bundler/DuplicatedGroup
@@ -80,15 +80,19 @@ fully_compatible_cops:
 - Layout/LeadingCommentSpace
 - Layout/LeadingEmptyLines
 - Layout/LineContinuationSpacing
+- Layout/LineLength
+- Layout/MultilineAssignmentLayout
 - Layout/MultilineArrayBraceLayout
 - Layout/MultilineArrayLineBreaks
 - Layout/MultilineBlockLayout
 - Layout/MultilineHashBraceLayout
 - Layout/MultilineHashKeyLineBreaks
 - Layout/MultilineMethodCallBraceLayout
+- Layout/MultilineMethodCallIndentation
 - Layout/MultilineMethodArgumentLineBreaks
 - Layout/MultilineMethodDefinitionBraceLayout
 - Layout/MultilineMethodParameterLineBreaks
+- Layout/MultilineOperationIndentation
 - Layout/ParameterAlignment
 - Layout/RescueEnsureAlignment
 - Layout/SpaceAfterColon
@@ -101,6 +105,7 @@ fully_compatible_cops:
 - Layout/SpaceAroundMethodCallOperator
 - Layout/SpaceAroundOperators
 - Layout/SpaceBeforeBrackets
+- Layout/SpaceBeforeBlockBraces
 - Layout/SpaceBeforeComma
 - Layout/SpaceBeforeFirstArg
 - Layout/SpaceBeforeSemicolon

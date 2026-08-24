@@ -440,6 +440,27 @@ impl Cop for MultilineMethodCallIndentationCop {
         {
             return;
         }
+        let call_location = call.location();
+        let hash_pair = ancestors.iter().any(|ancestor| ancestor.as_assoc_node().is_some());
+        if !hash_pair && ancestors.iter().any(|ancestor| {
+            ancestor.as_parentheses_node().is_some_and(|group| {
+                let group = group.location();
+                group.start_offset() < call_location.start_offset()
+                    && call_location.end_offset() < group.end_offset()
+            }) || ancestor.as_call_node().is_some_and(|parent| {
+                    parent.opening_loc().is_some()
+                    && parent.arguments().is_some_and(|arguments| {
+                        let arguments = arguments.location();
+                        (arguments.start_offset() < call_location.start_offset()
+                            && call_location.end_offset() < arguments.end_offset())
+                            || (parent.call_operator_loc().is_some()
+                                && arguments.start_offset() <= call_location.start_offset()
+                                && call_location.end_offset() <= arguments.end_offset())
+                    })
+            })
+        }) {
+            return;
+        }
         let mut reporter = context.cop_context(self.name(), source, ancestors);
         check_multiline_method_call(&call, receiver, rhs, &mut reporter);
     }
@@ -542,6 +563,14 @@ fn check_multiline_method_call(
     }
     if (style == "aligned" || style == "indented")
         && prior_continuation_at_column(call, rhs.start, actual, file)
+        && (call
+            .call_operator_loc()
+            .zip(call.message_loc())
+            .is_none_or(|(operator, selector)| {
+                file.same_line(operator.start_offset(), selector.start_offset())
+                    || alignment_context_before(base_receiver.location().start_offset(), file)
+                    || actual == expression_indent + width
+            }))
         && pair_key_column.is_none()
         && !multiline_method_assignment_context(call, file)
         && !base_receiver_source.starts_with('(')
@@ -578,7 +607,13 @@ fn check_multiline_method_call(
         .then(|| {
             pair_alignment_base
                 .or_else(|| first_trailing_chain_base(call, file))
-                .or_else(|| trailing_dot_alignment_base(rhs.start, file))
+                .or_else(|| {
+                    trailing_dot_alignment_base(
+                        rhs.start,
+                        base_receiver.location().start_offset(),
+                        file,
+                    )
+                })
                 .or_else(|| multiline_operation_alignment_base(receiver_range.clone(), file))
                 .or_else(|| multiline_call_syntactic_base(&base_receiver, context.source_file()))
         })
@@ -861,7 +896,11 @@ fn follows_assignment_continuation(node: &Node<'_>, file: SourceFile<'_>) -> boo
         .any(|operator| prior.ends_with(operator))
 }
 
-fn trailing_dot_alignment_base(rhs_start: usize, file: SourceFile<'_>) -> Option<(usize, usize)> {
+fn trailing_dot_alignment_base(
+    rhs_start: usize,
+    context_start: usize,
+    file: SourceFile<'_>,
+) -> Option<(usize, usize)> {
     let rhs_line = file.line_start(rhs_start);
     if rhs_line == 0 {
         return None;
@@ -880,19 +919,7 @@ fn trailing_dot_alignment_base(rhs_start: usize, file: SourceFile<'_>) -> Option
             character.is_ascii_whitespace() || matches!(character, '=' | ',' | '(' | '[' | '{')
         })
         .map_or(previous_start, |at| previous_start + at + 1);
-    let prefix = file.as_str()[previous_start..expression_start].trim_start();
-    let has_context = prefix.starts_with("return ")
-        || ["if ", "unless ", "while ", "until ", "for "]
-            .iter()
-            .any(|keyword| prefix.starts_with(keyword))
-        || hash_pair_prefix(prefix)
-        || prefix.rfind('=').is_some_and(|at| {
-            !matches!(
-                prefix.as_bytes().get(at.wrapping_sub(1)),
-                Some(b'=' | b'!' | b'<' | b'>')
-            ) && prefix.as_bytes().get(at + 1) != Some(&b'=')
-        });
-    if !has_context {
+    if !alignment_context_before(context_start, file) {
         return None;
     }
     Some((expression_start, expression_end))
@@ -1174,6 +1201,11 @@ fn inside_hash_argument_of_multiline_chain(
 
 fn multiline_operation_indentation(context: &mut CopContext<'_, '_>) {
     let lines = context.source_file().lines().collect::<Vec<_>>();
+    let mut operations = MultilineOperationRanges {
+        source: context.source().as_bytes(),
+        ranges: std::collections::HashMap::new(),
+    };
+    operations.visit(&parse(context.source().as_bytes()).node());
     let style = context.policy().enforced_style("aligned").to_string();
     let width = context.config_usize("IndentationWidth", 2);
     let normal_width = context
@@ -1199,9 +1231,12 @@ fn multiline_operation_indentation(context: &mut CopContext<'_, '_>) {
         if method_argument_operation(trimmed_first) {
             continue;
         }
-        let condition = ["if", "unless", "while", "until"]
+        let condition = ["if", "elsif", "unless", "while", "until"]
             .into_iter()
             .find(|keyword| trimmed_first.starts_with(&format!("{keyword} ")));
+        let modifier_condition = ["if", "unless", "while", "until"]
+            .into_iter()
+            .find(|keyword| trimmed_first.contains(&format!(" {keyword} ")));
         let collection = trimmed_first.starts_with("for ").then_some("for");
         let mut assignment = operation_assignment_rhs_column(first_line);
         if first > 0 && lines[first - 1].1.trim_end().ends_with('=') {
@@ -1241,11 +1276,15 @@ fn multiline_operation_indentation(context: &mut CopContext<'_, '_>) {
                 .unwrap_or(base + width)
         };
         let actual = current.len() - current.trim_start().len();
+        let offense_start = lines[index].0 + actual;
+        let Some(offense_end) = operations.ranges.get(&offense_start).copied() else {
+            continue;
+        };
         if actual == desired {
             continue;
         }
 
-        let noun = if let Some(keyword) = condition {
+        let noun = if let Some(keyword) = condition.or(modifier_condition) {
             format!(
                 "a condition in {} `{keyword}` statement",
                 if matches!(keyword, "if" | "unless" | "until") {
@@ -1272,15 +1311,61 @@ fn multiline_operation_indentation(context: &mut CopContext<'_, '_>) {
                 actual.saturating_sub(base)
             )
         };
-        let trimmed = current.trim_start();
-        let operand_len = operation_operand_len(trimmed);
-        let offense_start = lines[index].0 + actual;
         context.replace(
             message,
-            offense_start..offense_start + operand_len,
+            offense_start..offense_end,
             lines[index].0..offense_start,
             " ".repeat(desired),
         );
+    }
+}
+
+struct MultilineOperationRanges<'a> {
+    source: &'a [u8],
+    ranges: std::collections::HashMap<usize, usize>,
+}
+
+impl MultilineOperationRanges<'_> {
+    fn record(&mut self, left: Node<'_>, right: Node<'_>) {
+        let right_location = right.location();
+        let start = right_location.start_offset();
+        let line_start = self.source[..start]
+            .iter()
+            .rposition(|byte| *byte == b'\n')
+            .map_or(0, |newline| newline + 1);
+        if left.location().end_offset() <= line_start
+            && self.source[line_start..start]
+                .iter()
+                .all(|byte| byte.is_ascii_whitespace())
+        {
+            self.ranges.insert(start, right_location.end_offset());
+        }
+    }
+}
+
+impl<'pr> Visit<'pr> for MultilineOperationRanges<'_> {
+    fn visit_call_node(&mut self, node: &ruby_prism::CallNode<'pr>) {
+        if node.call_operator_loc().is_none()
+            && matches!(
+                node.name().as_slice(),
+                b"+" | b"-" | b"*" | b"/" | b"%" | b"<<" | b">>" | b"&" | b"|" | b"^"
+            )
+        {
+            if let (Some(left), Some(right)) = (node.receiver(), node.first_argument()) {
+                self.record(left, right);
+            }
+        }
+        ruby_prism::visit_call_node(self, node);
+    }
+
+    fn visit_and_node(&mut self, node: &ruby_prism::AndNode<'pr>) {
+        self.record(node.left(), node.right());
+        ruby_prism::visit_and_node(self, node);
+    }
+
+    fn visit_or_node(&mut self, node: &ruby_prism::OrNode<'pr>) {
+        self.record(node.left(), node.right());
+        ruby_prism::visit_or_node(self, node);
     }
 }
 
@@ -1327,31 +1412,10 @@ fn operation_argument_column(line: &str) -> Option<usize> {
     if trimmed.starts_with('(') {
         return Some(line.len() - trimmed.len() + 1);
     }
-    let quote = trimmed.find(['\'', '"']);
-    quote.map(|at| line.len() - trimmed.len() + at)
-}
-
-fn operation_operand_len(line: &str) -> usize {
-    let code = line.split('#').next().unwrap_or(line).trim_end();
-    if matches!(code.as_bytes().first(), Some(b'\'' | b'"')) {
-        let quote = code.as_bytes()[0];
-        if let Some(closing) = code.as_bytes()[1..].iter().position(|byte| *byte == quote) {
-            return closing + 2;
-        }
-    }
-    for operator in [
-        " &&", " ||", " and", " or", " +", " -", " *", " /", " <<", " >>",
-    ] {
-        if let Some(at) = code.rfind(operator) {
-            return at.max(1);
-        }
-    }
-    if let Some(at) = code.find(|character: char| character.is_ascii_whitespace()) {
-        if code[at..].trim_start().starts_with(['<', '>', '=']) {
-            return at.max(1);
-        }
-    }
-    code.len().max(1)
+    trimmed
+        .find(['\'', '"'])
+        .filter(|at| *at > 0)
+        .map(|at| line.len() - trimmed.len() + at)
 }
 
 fn method_argument_operation(line: &str) -> bool {

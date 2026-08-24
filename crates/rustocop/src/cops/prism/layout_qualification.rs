@@ -23,6 +23,54 @@ fn multiline_assignment_layout(node: &Node<'_>, context: &mut CopContext<'_, '_>
         Some(write.value())
     } else if let Some(write) = node.as_multi_write_node() {
         Some(write.value())
+    } else if let Some(write) = node.as_local_variable_or_write_node() {
+        Some(write.value())
+    } else if let Some(write) = node.as_local_variable_and_write_node() {
+        Some(write.value())
+    } else if let Some(write) = node.as_instance_variable_or_write_node() {
+        Some(write.value())
+    } else if let Some(write) = node.as_instance_variable_and_write_node() {
+        Some(write.value())
+    } else if let Some(write) = node.as_class_variable_or_write_node() {
+        Some(write.value())
+    } else if let Some(write) = node.as_class_variable_and_write_node() {
+        Some(write.value())
+    } else if let Some(write) = node.as_global_variable_or_write_node() {
+        Some(write.value())
+    } else if let Some(write) = node.as_global_variable_and_write_node() {
+        Some(write.value())
+    } else if let Some(write) = node.as_constant_or_write_node() {
+        Some(write.value())
+    } else if let Some(write) = node.as_constant_and_write_node() {
+        Some(write.value())
+    } else if let Some(write) = node.as_constant_path_or_write_node() {
+        Some(write.value())
+    } else if let Some(write) = node.as_constant_path_and_write_node() {
+        Some(write.value())
+    } else if let Some(write) = node.as_index_or_write_node() {
+        Some(write.value())
+    } else if let Some(write) = node.as_index_and_write_node() {
+        Some(write.value())
+    } else if let Some(write) = node.as_call_or_write_node() {
+        Some(write.value())
+    } else if let Some(write) = node.as_call_and_write_node() {
+        Some(write.value())
+    } else if let Some(write) = node.as_local_variable_operator_write_node() {
+        Some(write.value())
+    } else if let Some(write) = node.as_instance_variable_operator_write_node() {
+        Some(write.value())
+    } else if let Some(write) = node.as_class_variable_operator_write_node() {
+        Some(write.value())
+    } else if let Some(write) = node.as_global_variable_operator_write_node() {
+        Some(write.value())
+    } else if let Some(write) = node.as_constant_operator_write_node() {
+        Some(write.value())
+    } else if let Some(write) = node.as_constant_path_operator_write_node() {
+        Some(write.value())
+    } else if let Some(write) = node.as_index_operator_write_node() {
+        Some(write.value())
+    } else if let Some(write) = node.as_call_operator_write_node() {
+        Some(write.value())
     } else if let Some(call) = node.as_call_node() {
         let name = call_name(&call);
         if !name.ends_with(b"=") {
@@ -36,6 +84,7 @@ fn multiline_assignment_layout(node: &Node<'_>, context: &mut CopContext<'_, '_>
     let Some(value) = value else {
         return;
     };
+    let file = context.source_file();
     let supported = context.config_values("SupportedTypes");
     let kind = if value.as_if_node().is_some() || value.as_unless_node().is_some() {
         "if"
@@ -43,11 +92,30 @@ fn multiline_assignment_layout(node: &Node<'_>, context: &mut CopContext<'_, '_>
         "array"
     } else if value.as_lambda_node().is_some()
         || value
-            .as_call_node()
-            .is_some_and(|call| call.block().is_some())
+            .as_super_node()
+            .is_some_and(|call| call.block().and_then(|block| block.as_block_node()).is_some())
+        || value.as_forwarding_super_node().is_some_and(|call| {
+            call.block().is_some()
+        })
+        || value.as_call_node().is_some_and(|call| {
+            call.block()
+                .and_then(|block| block.as_block_node())
+                .is_some()
+                && !call
+                    .receiver()
+                    .and_then(|receiver| receiver.as_call_node())
+                    .and_then(|receiver| receiver.block())
+                    .and_then(|block| block.as_block_node())
+                    .is_some_and(|block| {
+                        file.same_line(
+                            block.opening_loc().start_offset(),
+                            block.closing_loc().start_offset(),
+                        )
+                    })
+        })
     {
         "block"
-    } else if value.as_case_node().is_some() || value.as_case_match_node().is_some() {
+    } else if value.as_case_node().is_some() {
         "case"
     } else if value.as_class_node().is_some() {
         "class"
@@ -63,7 +131,6 @@ fn multiline_assignment_layout(node: &Node<'_>, context: &mut CopContext<'_, '_>
     }
     let location = node.location();
     let value_location = value.location();
-    let file = context.source_file();
     if file.same_line(location.start_offset(), location.end_offset()) {
         return;
     }

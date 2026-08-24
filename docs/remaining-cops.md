@@ -1,7 +1,7 @@
 # Current project-parity gaps
 
 Generated from the same complete audit as [the evidence matrix](cop-support.md).
-Evidence updated at `2026-08-23T23:47:05-04:00`.
+Evidence updated at `2026-08-24T00:43:41-04:00`.
 This queue contains only failures from that 50-project audit; it does not use the old
 Verified/Heuristic qualification labels or captured-case pass counts.
 
@@ -9,13 +9,16 @@ The gap is unmatched complete diagnostic signatures, not the difference
 between aggregate offense counts. A cop can have equal counts and still have a
 nonzero gap because its message, severity, path, or source range differs.
 
-- Rust source: `uncommitted native 20c89920eb40`
-- Unresolved cops: 193
+- Rust source: `uncommitted native f58c04887943`
+- Unresolved cops: 197
 
 | Cop | Status | Rustocop | RuboCop | Exact | Signature gap | Project regression evidence |
 | --- | --- | ---: | ---: | ---: | ---: | --- |
 | `Style/InlineComment` | Mismatch | 229984 | 18651 | 18651 | 211333 | Passing |
+| `Layout/MultilineMethodCallIndentation` | Mismatch | 21838 | 15130 | 9318 | 18332 | Passing |
+| `Layout/LineLength` | Mismatch | 187509 | 181525 | 178339 | 12356 | Passing |
 | `Layout/MultilineArrayLineBreaks` | Mismatch | 13345 | 22550 | 13010 | 9875 | Passing |
+| `Layout/MultilineOperationIndentation` | Mismatch | 4362 | 2263 | 1629 | 3367 | Passing |
 | `Lint/UnderscorePrefixedVariableName` | Mismatch | 2109 | 2109 | 897 | 2424 | No |
 | `Layout/ExtraSpacing` | Mismatch | 1329 | 1905 | 471 | 2292 | Passing |
 | `Lint/MissingCopEnableDirective` | Mismatch | 2024 | 75 | 75 | 1949 | Passing |
@@ -25,6 +28,7 @@ nonzero gap because its message, severity, path, or source range differs.
 | `Style/RedundantParentheses` | Mismatch | 712 | 522 | 480 | 274 | Passing |
 | `Style/FetchEnvVar` | Mismatch | 1497 | 1386 | 1340 | 203 | Passing |
 | `Naming/HeredocDelimiterNaming` | Mismatch | 2369 | 2184 | 2184 | 185 | Passing |
+| `Layout/MultilineAssignmentLayout` | Mismatch | 17262 | 17367 | 17234 | 161 | Passing |
 | `Lint/RedundantCopEnableDirective` | Mismatch | 176 | 20 | 20 | 156 | Passing |
 | `Style/ExplicitBlockArgument` | Mismatch | 282 | 357 | 248 | 143 | Passing |
 | `Style/EmptyLiteral` | Mismatch | 240 | 118 | 116 | 126 | Passing |

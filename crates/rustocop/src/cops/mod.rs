@@ -4,14 +4,9 @@ pub(crate) mod text;
 pub(crate) const INTENTIONALLY_PENDING_COP_NAMES: &[&str] = &[
     "Layout/LineContinuationLeadingSpace",
     "Layout/LineEndStringConcatenationIndentation",
-    "Layout/LineLength",
-    "Layout/MultilineAssignmentLayout",
-    "Layout/MultilineMethodCallIndentation",
-    "Layout/MultilineOperationIndentation",
     "Layout/RedundantLineBreak",
     "Layout/SingleLineBlockChain",
     "Layout/SpaceAroundBlockParameters",
-    "Layout/SpaceBeforeBlockBraces",
     "Layout/SpaceBeforeComment",
     "Layout/SpaceInsideHashLiteralBraces",
     "Lint/AmbiguousRegexpLiteral",
@@ -62,7 +57,7 @@ mod tests {
     #[test]
     fn public_inventory_is_sorted_unique_and_complete() {
         let names = cop_names();
-        assert_eq!(names.len(), 584);
+        assert_eq!(names.len(), 589);
         assert!(names.windows(2).all(|pair| pair[0] < pair[1]));
         assert!(INTENTIONALLY_PENDING_COP_NAMES
             .windows(2)

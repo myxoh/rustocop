@@ -1,10 +1,10 @@
 {
   "version": 1,
   "kind": "fixture_compatibility",
-  "updated_at": "2026-08-23T23:43:29-04:00",
+  "updated_at": "2026-08-24T00:37:10-04:00",
   "rust_commit": null,
-  "native_sha256": "20c89920eb40516eeabd285def50104cf443c3e7ae9f8e3cd7d39f0128dc73d4",
-  "fixture_corpus_sha256": "97fa95a81324dd719403e264cc33ff0e931f2fda8a1fc37f18045718f450362a",
+  "native_sha256": "f58c04887943d65b7ffee3e99af11599e239891dcd4a6c1c16d99fb0e7b6e466",
+  "fixture_corpus_sha256": "937b85820e1392f9be784cad04270a7e50df7a0ac143b02e51e073903858b9b8",
   "rubocop_version": "1.87.0",
   "results": {
     "Bundler/DuplicatedGem": {
@@ -357,6 +357,11 @@
       "total": 31,
       "status": "compatible"
     },
+    "Layout/LineLength": {
+      "passed": 194,
+      "total": 194,
+      "status": "compatible"
+    },
     "Layout/MultilineArrayBraceLayout": {
       "passed": 35,
       "total": 35,
@@ -365,6 +370,11 @@
     "Layout/MultilineArrayLineBreaks": {
       "passed": 6,
       "total": 6,
+      "status": "compatible"
+    },
+    "Layout/MultilineAssignmentLayout": {
+      "passed": 34,
+      "total": 34,
       "status": "compatible"
     },
     "Layout/MultilineBlockLayout": {
@@ -392,6 +402,11 @@
       "total": 44,
       "status": "compatible"
     },
+    "Layout/MultilineMethodCallIndentation": {
+      "passed": 273,
+      "total": 273,
+      "status": "compatible"
+    },
     "Layout/MultilineMethodDefinitionBraceLayout": {
       "passed": 26,
       "total": 26,
@@ -400,6 +415,11 @@
     "Layout/MultilineMethodParameterLineBreaks": {
       "passed": 14,
       "total": 14,
+      "status": "compatible"
+    },
+    "Layout/MultilineOperationIndentation": {
+      "passed": 101,
+      "total": 101,
       "status": "compatible"
     },
     "Layout/ParameterAlignment": {
@@ -455,6 +475,11 @@
     "Layout/SpaceAroundOperators": {
       "passed": 99,
       "total": 99,
+      "status": "compatible"
+    },
+    "Layout/SpaceBeforeBlockBraces": {
+      "passed": 17,
+      "total": 17,
       "status": "compatible"
     },
     "Layout/SpaceBeforeBrackets": {

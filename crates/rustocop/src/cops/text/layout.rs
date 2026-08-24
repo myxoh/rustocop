@@ -185,9 +185,14 @@ fn check_line_length(
         .value("Layout/IndentationStyle", "IndentationWidth")
         .and_then(|value| value.parse::<usize>().ok())
         .unwrap_or(2);
-    let allow_qualified = options
+    let complete_default_config = options
+        .cop_config
+        .bool("AllCops", "DisabledByDefault")
+        .unwrap_or(false);
+    let allow_qualified = (options
         .cop_config
         .explicitly_contains(cop, "AllowQualifiedName")
+        || complete_default_config)
         && options
             .cop_config
             .bool(cop, "AllowQualifiedName")
@@ -200,10 +205,13 @@ fn check_line_length(
         .cop_config
         .bool(cop, "AllowRBSInlineAnnotation")
         .unwrap_or(false);
-    let heredoc_configured = options.cop_config.explicitly_contains(cop, "AllowHeredoc");
-    let allow_heredoc = heredoc_configured
-        .then(|| options.cop_config.value(cop, "AllowHeredoc"))
-        .flatten();
+    let heredoc_configured =
+        options.cop_config.explicitly_contains(cop, "AllowHeredoc") || complete_default_config;
+    let allow_heredoc = if options.cop_config.explicitly_contains(cop, "AllowHeredoc") {
+        options.cop_config.value(cop, "AllowHeredoc")
+    } else {
+        complete_default_config.then_some("true")
+    };
     let allowed_heredocs = if heredoc_configured {
         options.cop_config.values(cop, "AllowHeredoc")
     } else {
@@ -217,6 +225,7 @@ fn check_line_length(
     let mut heredoc_stack = Vec::<(String, bool)>::new();
     let mut heredoc: Option<(String, bool)> = None;
     let mut nesting = 0isize;
+    let mut directive_disabled = false;
     for (index, line) in lines.iter_mut().enumerate() {
         if line.body == "__END__" && heredoc.is_none() {
             break;
@@ -225,6 +234,7 @@ fn check_line_length(
             .as_ref()
             .is_some_and(|(delimiter, _)| line.body.trim() == delimiter);
         let in_allowed_heredoc = heredoc.as_ref().is_some_and(|(_, allowed)| *allowed);
+        let line_disabled = update_line_length_directive(&line.body, &mut directive_disabled);
         let length = visual_length(&line.body, tab_width);
         let directive_at = line.body.find("rubocop:");
         let length_without_directive = directive_at
@@ -243,6 +253,7 @@ fn check_line_length(
             || allow_rbs && (line.body.contains("#:") || line.body.contains("# @rbs"))
             || allow_uri
                 && allowed_excess_token(&line.body, max, ExcessToken::Uri, uri_schemes, tab_width)
+            || allow_qualified && line.body.trim_start().starts_with("::")
             || allow_qualified
                 && allowed_excess_token(
                     &line.body,
@@ -251,7 +262,7 @@ fn check_line_length(
                     &[],
                     tab_width,
                 );
-        if effective_length > max && !exempt {
+        if effective_length > max && !exempt && !line_disabled {
             let breakable = (heredoc.is_none() || line.body.contains("#{"))
                 && line_length_breakable(&line.body, max, split_strings, nesting);
             let indentation_difference = line
@@ -334,6 +345,37 @@ fn check_line_length(
             nesting += delimiter_delta(&line.body);
             nesting = nesting.max(0);
         }
+    }
+}
+
+fn update_line_length_directive(line: &str, disabled: &mut bool) -> bool {
+    let Some(comment) = line.find("# rubocop:") else {
+        return *disabled;
+    };
+    let directive = line[comment + "# rubocop:".len()..].trim_start();
+    let (turn_off, rest) = if let Some(rest) = directive.strip_prefix("disable") {
+        (true, rest)
+    } else if let Some(rest) = directive.strip_prefix("todo") {
+        (true, rest)
+    } else if let Some(rest) = directive.strip_prefix("enable") {
+        (false, rest)
+    } else {
+        return *disabled;
+    };
+    let applies = rest
+        .split_once(" --")
+        .map_or(rest, |(names, _)| names)
+        .split(',')
+        .map(str::trim)
+        .any(|name| matches!(name, "all" | "Layout" | "Layout/LineLength"));
+    if !applies {
+        return *disabled;
+    }
+    if line[..comment].trim().is_empty() {
+        *disabled = turn_off;
+        *disabled
+    } else {
+        turn_off || *disabled
     }
 }
 
@@ -669,11 +711,16 @@ fn excessive_token_end(
                 let start = offset + leading + raw.find(token).unwrap_or(0);
                 offset += piece.len();
                 let end = start + token.len();
-                let wrapper = line[end..].chars().next();
-                (token.contains("::") && start < max && end > max).then_some(
-                    (end + usize::from(wrapper.is_some_and(|c| !c.is_whitespace())))
-                        .min(line.len()),
-                )
+                let effective_end = end
+                    + line[end..]
+                        .bytes()
+                        .take_while(|byte| matches!(byte, b')' | b']' | b'}' | b'\'' | b'"'))
+                        .count();
+                (qualified_name_token(token)
+                    && !token.starts_with("::")
+                    && start < max
+                    && effective_end > max)
+                    .then_some(effective_end)
             })
         }
     }
@@ -755,7 +802,7 @@ fn allowed_excess_token(
             ExcessToken::Uri => uri_schemes
                 .iter()
                 .any(|scheme| token.starts_with(&format!("{scheme}://"))),
-            ExcessToken::QualifiedName => token.split("::").count() >= 2,
+            ExcessToken::QualifiedName => qualified_name_token(token),
         };
         let token_length = token.chars().count();
         applicable
@@ -765,6 +812,24 @@ fn allowed_excess_token(
             && piece == piece.trim_end()
             && line.chars().count().saturating_sub(token_length) <= max
     })
+}
+
+fn qualified_name_token(token: &str) -> bool {
+    let Some(at) = token.find("::") else {
+        return false;
+    };
+    let before = &token[..at];
+    let root = before
+        .rsplit(|character: char| !character.is_ascii_alphanumeric() && character != '_')
+        .next()
+        .filter(|root| !root.is_empty())
+        .or_else(|| {
+            token[at + 2..]
+                .split(|character: char| !character.is_ascii_alphanumeric() && character != '_')
+                .next()
+        })
+        .unwrap_or_default();
+    root.chars().next().is_some_and(char::is_uppercase)
 }
 
 fn visual_length(source: &str, tab_width: usize) -> usize {

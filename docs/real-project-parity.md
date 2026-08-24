@@ -13,26 +13,26 @@ cases, and configuration branches that the projects do not exercise.
 ## Latest realistic status
 
 The latest complete checkpoint was generated at
-`2026-08-23T23:47:05-04:00` from worktree native binary SHA-256
-`20c89920eb40516eeabd285def50104cf443c3e7ae9f8e3cd7d39f0128dc73d4`.
+`2026-08-24T00:43:41-04:00` from worktree native binary SHA-256
+`f58c04887943d65b7ffee3e99af11599e239891dcd4a6c1c16d99fb0e7b6e466`.
 The stored RuboCop reference has SHA-256
-`e4a929416f04cd6ef9c249cbeae65e89af41fa40cf3c0201fab47083e1825d07`.
-After excluding the 38 intentionally pending cops, its active-cop slice reports:
+`e3e1677ba0ac4c8dc8723e7a17a0fd8b0e89fdf29226bfc548f55dcd628c8576`.
+After excluding the 33 intentionally pending cops, its active-cop slice reports:
 
 | Classification | Complete checkpoint |
 | --- | ---: |
-| Project-exact | 322 |
+| Project-exact | 323 |
 | Exact but dormant | 53 |
-| Mismatching | 192 |
+| Mismatching | 196 |
 | Rust crash | 0 |
 | RuboCop gate error | 1 |
 
-Among the 514 exercised cops, 322 are exact (62.6%). The five cops restored in
-this iteration pass every captured fixture and are project-exact across all 50
-pinned repositories.
+Among the 519 exercised cops, 323 are exact (62.2%). The five cops restored in
+this iteration pass every captured fixture. `Layout/SpaceBeforeBlockBraces` is
+project-exact; the other four retain complete-matrix gaps for future isolation.
 `Style/ClassAndModuleChildren` still triggers a RuboCop 1.87 error on Puppet.
 
-The minimized project-regression corpus contains 599 passing cases and no
+The minimized project-regression corpus contains 609 passing cases and no
 pending active-cop mismatch directions. The
 configuration-mutation corpus contains six. They preserve fixed pathological
 examples, while the complete matrix catches interactions and unrepresented

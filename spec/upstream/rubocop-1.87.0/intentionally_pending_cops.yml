@@ -1,19 +1,14 @@
 ---
 version: 1
 rubocop_version: 1.87.0
-updated_at: '2026-08-23T23:24:35-04:00'
+updated_at: '2026-08-24T00:36:00-04:00'
 reason: Existing implementations are intentionally withdrawn because source-pattern, placeholder, or incomplete structural behavior does not match the pinned real-project corpus.
 cops:
   - Layout/LineContinuationLeadingSpace
   - Layout/LineEndStringConcatenationIndentation
-  - Layout/LineLength
-  - Layout/MultilineAssignmentLayout
-  - Layout/MultilineMethodCallIndentation
-  - Layout/MultilineOperationIndentation
   - Layout/RedundantLineBreak
   - Layout/SingleLineBlockChain
   - Layout/SpaceAroundBlockParameters
-  - Layout/SpaceBeforeBlockBraces
   - Layout/SpaceBeforeComment
   - Layout/SpaceInsideHashLiteralBraces
   - Lint/AmbiguousRegexpLiteral

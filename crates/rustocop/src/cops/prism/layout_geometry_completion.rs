@@ -4,7 +4,7 @@ define_rule!(BlockEndNewlineRule);
 
 define_cops! {
     MultilineMethodParameterLineBreaks => "Layout/MultilineMethodParameterLineBreaks" => node(as_def_node, parameter_line_breaks),
-    SpaceBeforeBlockBraces => "Layout/SpaceBeforeBlockBraces" => source(space_before_block_braces),
+    SpaceBeforeBlockBraces => "Layout/SpaceBeforeBlockBraces" => any_node(space_before_block_braces),
     BlockEndNewline => "Layout/BlockEndNewline" => node_rule_aliases(
         BlockEndNewlineRule,
         on_block => [as_block_node, as_lambda_node]
@@ -100,37 +100,50 @@ fn check_multiline_element_line_breaks(
     }
 }
 
-fn space_before_block_braces(context: &mut CopContext<'_, '_>) {
+fn space_before_block_braces(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
+    let opening = if let Some(block) = node.as_block_node() {
+        block.opening_loc()
+    } else if let Some(lambda) = node.as_lambda_node() {
+        lambda.opening_loc()
+    } else {
+        return;
+    };
+    if opening.as_slice() != b"{" {
+        return;
+    }
+    let empty = node
+        .as_block_node()
+        .is_some_and(|block| block.body().is_none())
+        || node
+            .as_lambda_node()
+            .is_some_and(|lambda| lambda.body().is_none());
+    check_space_before_block_brace(opening.start_offset(), empty, context);
+}
+
+fn check_space_before_block_brace(offset: usize, empty: bool, context: &mut CopContext<'_, '_>) {
     let default_no_space = context.policy().enforced_style("space") == "no_space";
-    for offset in context.source_file().code_offsets("{") {
-        let empty = context.source().as_bytes().get(offset + 1) == Some(&b'}');
-        let no_space = if empty {
-            context
-                .config_value("EnforcedStyleForEmptyBraces")
-                .unwrap_or("no_space")
-                == "no_space"
-        } else {
-            default_no_space
-        };
-        let before = context.source().as_bytes().get(offset.wrapping_sub(1));
-        if no_space && before == Some(&b' ') {
-            context.remove(
-                "Space detected to the left of {.",
-                offset - 1..offset,
-                offset - 1..offset,
-            );
-        } else if !no_space
-            && before.is_some_and(|byte| {
-                !byte.is_ascii_whitespace() && !matches!(byte, b'{' | b'(' | b'[')
-            })
-        {
-            context.insert(
-                "Space missing to the left of {.",
-                offset..offset + 1,
-                offset,
-                " ",
-            );
-        }
+    let no_space = if empty {
+        context
+            .config_value("EnforcedStyleForEmptyBraces")
+            .unwrap_or("space")
+            == "no_space"
+    } else {
+        default_no_space
+    };
+    let before = context.source().as_bytes().get(offset.wrapping_sub(1));
+    if no_space && before == Some(&b' ') {
+        context.remove(
+            "Space detected to the left of {.",
+            offset - 1..offset,
+            offset - 1..offset,
+        );
+    } else if !no_space && before.is_some_and(|byte| !byte.is_ascii_whitespace()) {
+        context.insert(
+            "Space missing to the left of {.",
+            offset..offset + 1,
+            offset,
+            " ",
+        );
     }
 }
 

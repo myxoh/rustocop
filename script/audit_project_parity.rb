@@ -92,12 +92,13 @@ rust_status = Rustocop::ProcessRunner.capture(
   "git", "status", "--porcelain", "--", "crates/rustocop", chdir: ROOT
 )
 abort "could not inspect native Rust source: #{rust_status.stderr}" unless rust_status.success?
-abort "native Rust source has uncommitted changes; commit it before auditing" unless rust_status.stdout.empty?
-commit = Rustocop::ProcessRunner.capture(
-  "git", "log", "-1", "--format=%H", "--", "crates/rustocop", chdir: ROOT
-)
-abort "could not determine the native Rust commit: #{commit.stderr}" unless commit.success?
-rust_commit = commit.stdout.strip
+rust_commit = if rust_status.stdout.empty?
+                commit = Rustocop::ProcessRunner.capture(
+                  "git", "log", "-1", "--format=%H", "--", "crates/rustocop", chdir: ROOT
+                )
+                abort "could not determine the native Rust commit: #{commit.stderr}" unless commit.success?
+                commit.stdout.strip
+              end
 
 if options[:build]
   build = Rustocop::ProcessRunner.capture(
@@ -499,7 +500,7 @@ summary = combined.values.group_by { |row| row.fetch("classification") }.transfo
 markdown = <<~MARKDOWN
   # #{projects.length}-project parity audit: positions #{positions.max}–#{positions.min}
 
-  Generated against Rust source `#{report.fetch('rust_commit')}` and RuboCop
+  Generated against Rust source `#{report['rust_commit'] || "uncommitted native #{report.fetch('native_sha256')[0, 12]}"}` and RuboCop
   #{report.fetch('rubocop_version')} across the pinned project corpora.
 
   - Project-exact: #{summary.fetch('project_exact', 0)}
