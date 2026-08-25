@@ -1,3 +1,4 @@
 {
+  "176215945b31ba9a": "---\nAllCops:\n  DisabledByDefault: true\n  ParserEngine: parser_prism\n  TargetRubyVersion: 3.4\nLint/LambdaWithoutLiteralBlock:\n  Enabled: true\n",
   "88d4c8cf71490716": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/LambdaWithoutLiteralBlock:\n  Description: Checks uses of lambda without a literal block.\n  Enabled: true\n  VersionAdded: '1.8'\n  AutoCorrect: always\n"
 }

@@ -1,4 +1,5 @@
 {
   "2f26ede632485465": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/EnsureReturn:\n  Description: Do not use return in an ensure block.\n  StyleGuide: \"#no-return-ensure\"\n  Enabled: true\n  VersionAdded: '0.9'\n  VersionChanged: '0.83'\n  AutoCorrect: always\n",
+  "516fbec59e6ee3b9": "---\nAllCops:\n  DisabledByDefault: true\n  ParserEngine: parser_prism\n  TargetRubyVersion: 3.4\nLint/EnsureReturn:\n  Enabled: true\n",
   "77c39c64bd272713": "---\nAllCops:\n  TargetRubyVersion: '2.7'\n"
 }

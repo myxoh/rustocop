@@ -144,9 +144,16 @@ fn empty_lines_after_module_inclusion(node: &CallNode<'_>, context: &mut CopCont
 
     let source = context.source();
     let current_line = line_index(source, node.location().end_offset());
-    if line(source, current_line + 1).is_empty()
+    let line_end = line_start(source, current_line + 1).min(source.len());
+    if source[node.location().end_offset()..line_end]
+        .split([';', ' '])
+        .any(|token| token.trim() == "end")
+    {
+        return;
+    }
+    if line(source, current_line + 1).trim().is_empty()
         || is_enable_directive(line(source, current_line + 1))
-            && line(source, current_line + 2).is_empty()
+            && line(source, current_line + 2).trim().is_empty()
     {
         return;
     }
@@ -161,7 +168,20 @@ fn empty_lines_after_module_inclusion(node: &CallNode<'_>, context: &mut CopCont
             .is_none_or(|character| !character.is_alphanumeric() && character != '_')
     }) || follower.starts_with('}');
     if closes_scope
-        || matches!(follower, "else" | "ensure" | "rescue")
+        || matches!(follower, "when" | "else" | "ensure" | "rescue")
+        || [")", "]", "elsif ", "when "]
+            .iter()
+            .any(|prefix| follower.starts_with(prefix))
+        || follower.starts_with("rescue ")
+            && (0..current_line)
+                .rev()
+                .map(|line_number| line(source, line_number))
+                .find(|candidate| !candidate.trim().is_empty() && !candidate.trim_start().starts_with('#'))
+                .is_some_and(|previous| {
+                    previous.len() - previous.trim_start().len()
+                        == line(source, current_line).len()
+                            - line(source, current_line).trim_start().len()
+                })
         || ["include", "extend", "prepend"].iter().any(|method| {
             follower_call == *method
                 || follower_call.ends_with(&format!(".{method}"))

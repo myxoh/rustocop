@@ -25,6 +25,11 @@ pub(super) fn optional_arguments(
     node: &ruby_prism::DefNode<'_>,
     context: &mut CopContext<'_, '_>,
 ) {
+    // RuboCop implements only `on_def`; singleton definitions (`defs`) are
+    // intentionally outside this cop's callback surface.
+    if node.receiver().is_some() {
+        return;
+    }
     let Some(parameters) = node.parameters() else {
         return;
     };

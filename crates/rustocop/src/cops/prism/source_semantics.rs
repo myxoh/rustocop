@@ -12,7 +12,7 @@ define_cops! {
     MultilineArrayLineBreaks => "Layout/MultilineArrayLineBreaks" => any_node(multiline_array_line_breaks),
     ErbNewArguments => "Lint/ErbNewArguments" => source(erb_new_arguments),
     HashNewWithKeywordArgumentsAsDefault => "Lint/HashNewWithKeywordArgumentsAsDefault" => source(hash_new_with_keyword_arguments_as_default),
-    LambdaWithoutLiteralBlock => "Lint/LambdaWithoutLiteralBlock" => source(lambda_without_literal_block),
+    LambdaWithoutLiteralBlock => "Lint/LambdaWithoutLiteralBlock" => call(lambda_without_literal_block),
     RequireRelativeSelfPath => "Lint/RequireRelativeSelfPath" => source(require_relative_self_path),
     SharedMutableDefault => "Lint/SharedMutableDefault" => source(shared_mutable_default),
     OptionalArguments => "Style/OptionalArguments" => node(as_def_node, optional_arguments),
@@ -228,17 +228,23 @@ fn hash_new_with_keyword_arguments_as_default(context: &mut CopContext<'_, '_>) 
     }
 }
 
-fn lambda_without_literal_block(context: &mut CopContext<'_, '_>) {
+fn lambda_without_literal_block(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     const MESSAGE: &str =
         "lambda without a literal block is deprecated; use the proc without lambda instead.";
-    let source = context.source();
-    for call in call_ranges(source, "lambda(") {
-        let argument = source[call.start + 7..call.end - 1].trim();
-        if !argument.starts_with('&') || argument.starts_with("&:") {
-            continue;
-        }
-        context.replace(MESSAGE, call.clone(), call, argument[1..].to_string());
+    if node.receiver().is_some() || node.name().as_slice() != b"lambda" {
+        return;
     }
+    let Some(argument) = node.block().and_then(|block| block.as_block_argument_node()) else {
+        return;
+    };
+    let Some(expression) = argument.expression() else {
+        return;
+    };
+    if expression.as_symbol_node().is_some() {
+        return;
+    }
+    let replacement = context.source_file().node(&expression).to_string();
+    context.replace(MESSAGE, node.location(), node.location(), replacement);
 }
 
 fn require_relative_self_path(context: &mut CopContext<'_, '_>) {

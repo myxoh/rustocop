@@ -1,4 +1,5 @@
 {
+  "314d8a47c86982d8": "---\nAllCops:\n  DisabledByDefault: true\n  ParserEngine: parser_prism\n  TargetRubyVersion: 3.4\nLint/BigDecimalNew:\n  Enabled: true\n",
   "77c39c64bd272713": "---\nAllCops:\n  TargetRubyVersion: '2.7'\n",
   "992fca2f633943dc": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/BigDecimalNew:\n  Description: \"`BigDecimal.new()` is deprecated. Use `BigDecimal()` instead.\"\n  Enabled: true\n  VersionAdded: '0.53'\n  AutoCorrect: always\n"
 }

@@ -123,15 +123,23 @@ fn missing_respond_to_missing(node: &ruby_prism::DefNode<'_>, context: &mut CopC
     if node.name().as_slice() != b"method_missing" {
         return;
     }
-    let scope = context.ancestors().iter().rev().find(|ancestor| {
+    let mut scopes = context.ancestors().iter().rev().filter(|ancestor| {
         ancestor.as_class_node().is_some()
             || ancestor.as_module_node().is_some()
             || ancestor.as_singleton_class_node().is_some()
             || ancestor.as_block_node().is_some()
     });
-    let Some(scope) = scope else {
+    let Some(mut scope) = scopes.next() else {
         return;
     };
+    // Parser AST collapses a class/module body containing one definition, so
+    // RuboCop's `node.parent.parent` search lands in the surrounding statement
+    // container rather than the one-member nested class itself.
+    if scope_has_only_definition(scope, node) {
+        if let Some(outer_scope) = scopes.next() {
+            scope = outer_scope;
+        }
+    }
     let body = if let Some(class) = scope.as_class_node() {
         class.body()
     } else if let Some(module) = scope.as_module_node() {
@@ -155,6 +163,27 @@ fn missing_respond_to_missing(node: &ruby_prism::DefNode<'_>, context: &mut CopC
             node.location(),
         );
     }
+}
+
+fn scope_has_only_definition(scope: &Node<'_>, definition: &ruby_prism::DefNode<'_>) -> bool {
+    let body = if let Some(class) = scope.as_class_node() {
+        class.body()
+    } else if let Some(module) = scope.as_module_node() {
+        module.body()
+    } else if let Some(singleton) = scope.as_singleton_class_node() {
+        singleton.body()
+    } else {
+        return false;
+    };
+    let Some(statements) = body.and_then(|body| body.as_statements_node()) else {
+        return false;
+    };
+    let members = statements.body();
+    members.len() == 1
+        && members.first().is_some_and(|member| {
+            member.location().start_offset() == definition.location().start_offset()
+                && member.location().end_offset() == definition.location().end_offset()
+        })
 }
 
 #[derive(Default)]

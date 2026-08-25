@@ -188,7 +188,7 @@ fn source_directives_suppress_findings_and_corrections() {
 }
 
 #[test]
-fn disable_next_applies_to_one_physical_source_line() {
+fn unrecognized_disable_next_does_not_suppress_findings() {
     let source = concat!(
         "# rubocop:disable-next Style/Semicolon\n",
         "first; value\n",
@@ -208,9 +208,10 @@ fn disable_next_applies_to_one_physical_source_line() {
 
     let inspection = context.finish(source);
 
-    assert_eq!(inspection.findings.len(), 1);
-    assert_eq!(inspection.findings[0].start_offset, second);
-    assert!(inspection.corrected_source.contains("first; value"));
+    assert_eq!(inspection.findings.len(), 2);
+    assert_eq!(inspection.findings[0].start_offset, first);
+    assert_eq!(inspection.findings[1].start_offset, second);
+    assert!(inspection.corrected_source.contains("first value"));
     assert!(inspection.corrected_source.contains("second value"));
 }
 

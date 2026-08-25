@@ -392,28 +392,16 @@ fn disabled_findings(source: &str, findings: &[Finding]) -> Vec<bool> {
         .collect::<HashSet<_>>();
     let mut state = DisabledState::default();
     let mut line_starts = Vec::new();
-    let mut line_ends = Vec::new();
     let mut states = Vec::new();
-    let mut next_states = Vec::new();
-    let mut disable_next = None::<Vec<String>>;
     let mut offset = 0;
     for physical_line in source.split_inclusive('\n') {
         line_starts.push(offset);
         let line = physical_line.strip_suffix('\n').unwrap_or(physical_line);
-        line_ends.push(offset + line.len());
         let mut line_state = state.clone();
-        let mut next_state = DisabledState::default();
-        if let Some(names) = disable_next.take() {
-            let names = names.iter().map(String::as_str).collect::<Vec<_>>();
-            next_state.update(&names, true);
-        }
         if let Some((comment_at, action, names)) = cop_directive(line)
             .filter(|(comment_at, _, _)| directive_comments.contains(&(offset + comment_at)))
         {
             match action {
-                DirectiveAction::DisableNext => {
-                    disable_next = Some(names.into_iter().map(str::to_string).collect());
-                }
                 DirectiveAction::Disable | DirectiveAction::Enable => {
                     let disabled = action == DirectiveAction::Disable;
                     if line[..comment_at].trim().is_empty() {
@@ -431,14 +419,11 @@ fn disabled_findings(source: &str, findings: &[Finding]) -> Vec<bool> {
             }
         }
         states.push(line_state);
-        next_states.push(next_state);
         offset += physical_line.len();
     }
     if states.is_empty() {
         line_starts.push(0);
-        line_ends.push(0);
         states.push(state);
-        next_states.push(DisabledState::default());
     }
 
     findings
@@ -448,8 +433,6 @@ fn disabled_findings(source: &str, findings: &[Finding]) -> Vec<bool> {
                 .partition_point(|start| *start <= finding.start_offset)
                 .saturating_sub(1);
             states[line].contains(finding.cop_name)
-                || next_states[line].contains(finding.cop_name)
-                    && finding.end_offset <= line_ends[line]
         })
         .collect()
 }
@@ -457,22 +440,17 @@ fn disabled_findings(source: &str, findings: &[Finding]) -> Vec<bool> {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum DirectiveAction {
     Disable,
-    DisableNext,
     Enable,
 }
 
 fn cop_directive(line: &str) -> Option<(usize, DirectiveAction, Vec<&str>)> {
     let comment_at = line.find("# rubocop:")?;
     let directive = line[comment_at + "# rubocop:".len()..].trim_start();
-    let (action, names) = if let Some(names) = directive.strip_prefix("disable-next") {
-        (DirectiveAction::DisableNext, names)
-    } else if let Some(names) = directive.strip_prefix("todo-next") {
-        (DirectiveAction::DisableNext, names)
-    } else if let Some(names) = directive.strip_prefix("disable") {
+    let (action, names) = if let Some(names) = directive_action_names(directive, "disable") {
         (DirectiveAction::Disable, names)
-    } else if let Some(names) = directive.strip_prefix("todo") {
+    } else if let Some(names) = directive_action_names(directive, "todo") {
         (DirectiveAction::Disable, names)
-    } else if let Some(names) = directive.strip_prefix("enable") {
+    } else if let Some(names) = directive_action_names(directive, "enable") {
         (DirectiveAction::Enable, names)
     } else {
         return None;
@@ -485,6 +463,15 @@ fn cop_directive(line: &str) -> Option<(usize, DirectiveAction, Vec<&str>)> {
         .filter(|name| !name.is_empty())
         .collect::<Vec<_>>();
     Some((comment_at, action, names))
+}
+
+fn directive_action_names<'a>(directive: &'a str, action: &str) -> Option<&'a str> {
+    let names = directive.strip_prefix(action)?;
+    names
+        .chars()
+        .next()
+        .is_none_or(char::is_whitespace)
+        .then_some(names)
 }
 
 #[cfg(test)]

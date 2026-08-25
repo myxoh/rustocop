@@ -1,4 +1,5 @@
 {
+  "14fdf6078e031325": "---\nAllCops:\n  DisabledByDefault: true\n  ParserEngine: parser_prism\n  TargetRubyVersion: 3.4\nStyle/ColonMethodDefinition:\n  Enabled: true\n",
   "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
   "9511e4e9735ebb48": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/ColonMethodDefinition:\n  Description: 'Do not use :: for defining class methods.'\n  StyleGuide: \"#colon-method-definition\"\n  Enabled: true\n  VersionAdded: '0.52'\n  AutoCorrect: always\n"
 }

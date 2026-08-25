@@ -1,4 +1,5 @@
 {
   "49236161c963533f": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/MissingRespondToMissing:\n  Description: Checks if `method_missing` is implemented without implementing `respond_to_missing`.\n  StyleGuide: \"#no-method-missing\"\n  Enabled: true\n  VersionAdded: '0.56'\n  AutoCorrect: always\n",
-  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n"
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
+  "cae2ee393dcb1079": "---\nAllCops:\n  DisabledByDefault: true\n  ParserEngine: parser_prism\n  TargetRubyVersion: 3.4\nStyle/MissingRespondToMissing:\n  Enabled: true\n"
 }

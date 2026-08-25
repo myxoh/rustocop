@@ -1,3 +1,4 @@
 {
-  "708f14311c54da7e": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/EachWithObjectArgument:\n  Description: Checks for immutable argument given to each_with_object.\n  Enabled: true\n  VersionAdded: '0.31'\n  AutoCorrect: always\n"
+  "708f14311c54da7e": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/EachWithObjectArgument:\n  Description: Checks for immutable argument given to each_with_object.\n  Enabled: true\n  VersionAdded: '0.31'\n  AutoCorrect: always\n",
+  "fbde7bff930110bb": "---\nAllCops:\n  DisabledByDefault: true\n  ParserEngine: parser_prism\n  TargetRubyVersion: 3.4\nLint/EachWithObjectArgument:\n  Enabled: true\n"
 }

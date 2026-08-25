@@ -1,5 +1,6 @@
 {
   "1e3676ea8caa2522": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/SlicingWithRange:\n  Description: Checks array slicing is done with redundant, endless, and beginless\n    ranges when suitable.\n  StyleGuide: \"#slicing-with-ranges\"\n  Enabled: true\n  VersionAdded: '0.83'\n  Safe: false\n  AutoCorrect: always\n",
+  "3158d2f109b874ac": "---\nAllCops:\n  DisabledByDefault: true\n  ParserEngine: parser_prism\n  TargetRubyVersion: 3.4\nStyle/SlicingWithRange:\n  Enabled: true\n",
   "a75dfde1300b0d7b": "---\nAllCops:\n  TargetRubyVersion: 2.5\nStyle/SlicingWithRange:\n  Description: Checks array slicing is done with redundant, endless, and beginless\n    ranges when suitable.\n  StyleGuide: \"#slicing-with-ranges\"\n  Enabled: true\n  VersionAdded: '0.83'\n  Safe: false\n  AutoCorrect: always\n",
   "daf18c0d34e14f2f": "---\nAllCops:\n  TargetRubyVersion: 2.6\nStyle/SlicingWithRange:\n  Description: Checks array slicing is done with redundant, endless, and beginless\n    ranges when suitable.\n  StyleGuide: \"#slicing-with-ranges\"\n  Enabled: true\n  VersionAdded: '0.83'\n  Safe: false\n  AutoCorrect: always\n"
 }

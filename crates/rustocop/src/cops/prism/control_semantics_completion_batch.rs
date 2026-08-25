@@ -218,9 +218,20 @@ fn navigation_operator_method(call: &ruby_prism::CallNode<'_>) -> bool {
 
 fn combinable_defined(context: &mut CopContext<'_, '_>) {
     let source = context.source();
+    let file = context.source_file();
+    let literals = file.literal_ranges();
+    let comments = file.comment_ranges();
     let mut search = 0;
     while let Some(relative) = source[search..].find("defined?(") {
         let chain_start = search + relative;
+        if literals
+            .iter()
+            .chain(&comments)
+            .any(|range| range.start <= chain_start && chain_start < range.end)
+        {
+            search = chain_start + "defined?".len();
+            continue;
+        }
         let Some(first) = defined_call_at(source, chain_start) else {
             search = chain_start + "defined?".len();
             continue;

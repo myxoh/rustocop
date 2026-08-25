@@ -641,7 +641,11 @@ pub(crate) enum FrozenStringLiteral {
     Unspecified,
 }
 pub(crate) fn frozen_string_literal(source: &str) -> FrozenStringLiteral {
-    for line in source.lines().take(3) {
+    for line in source.lines() {
+        let trimmed = line.trim();
+        if !trimmed.is_empty() && !trimmed.starts_with('#') {
+            break;
+        }
         let normalized = line.trim().trim_start_matches('#').trim();
         if let Some(value) = normalized.strip_prefix("frozen_string_literal:") {
             return match value.trim() {

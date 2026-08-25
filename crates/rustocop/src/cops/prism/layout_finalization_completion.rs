@@ -244,16 +244,19 @@ fn empty_comment(context: &mut CopContext<'_, '_>) {
 
 fn comment_block_has_content(lines: &[(usize, &str)], index: usize) -> bool {
     let has_content = |line: &str| {
-        let line = line.trim_start();
-        line.starts_with('#') && !line.trim_start_matches('#').trim().is_empty()
+        let comment = line.trim_start();
+        comment.starts_with('#') && !matches!(comment.trim_end(), "#" | "# ")
     };
-    let is_comment = |line: &str| line.trim_start().starts_with('#');
+    let column = lines[index].1.len() - lines[index].1.trim_start().len();
+    let is_same_column_comment = |line: &str| {
+        line.trim_start().starts_with('#') && line.len() - line.trim_start().len() == column
+    };
     let mut before = index;
-    while before > 0 && is_comment(lines[before - 1].1) {
+    while before > 0 && is_same_column_comment(lines[before - 1].1) {
         before -= 1;
     }
     let mut after = index + 1;
-    while after < lines.len() && is_comment(lines[after].1) {
+    while after < lines.len() && is_same_column_comment(lines[after].1) {
         after += 1;
     }
     lines[before..after]

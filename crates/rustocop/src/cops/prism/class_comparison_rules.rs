@@ -11,6 +11,9 @@ fn class_equality_comparison(node: &CallNode<'_>, context: &mut CopContext<'_, '
     let (Some(left), Some(right)) = (node.receiver(), only_argument(node)) else {
         return;
     };
+    if context.source_file().node(&left).contains("&.") {
+        return;
+    }
     let Some((class_call, representation)) = class_representation(&left) else {
         return;
     };
@@ -95,14 +98,7 @@ fn comparison_target(
     if let Some(call) = node.as_call_node() {
         if call_name(&call) == method && argument_count(&call) == 0 {
             let receiver = call.receiver()?;
-            if constant_path(&receiver).is_some() {
-                return Some(context.source_file().node(&receiver).to_string());
-            }
-            if let Some(class_call) = receiver.as_call_node() {
-                if call_name(&class_call) == b"class" && argument_count(&class_call) == 0 {
-                    return Some(context.source_file().node(&class_call.as_node()).to_string());
-                }
-            }
+            return Some(context.source_file().node(&receiver).to_string());
         }
         return None;
     }

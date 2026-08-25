@@ -4,7 +4,7 @@ use std::collections::HashSet;
 define_cops! {
     UnusedMethodArgument => "Lint/UnusedMethodArgument" => node(as_def_node, unused_method_argument),
     UselessMethodDefinition => "Lint/UselessMethodDefinition" => node(as_def_node, useless_method_definition),
-    ConstantOverwrittenInRescue => "Lint/ConstantOverwrittenInRescue" => source(constant_overwritten_in_rescue),
+    ConstantOverwrittenInRescue => "Lint/ConstantOverwrittenInRescue" => node(as_rescue_node, constant_overwritten_in_rescue),
     RedundantAssignment => "Style/RedundantAssignment" => node(as_def_node, redundant_assignment),
     ConstantResolution => "Lint/ConstantResolution" => any_node(constant_resolution),
     ReturnInVoidContext => "Lint/ReturnInVoidContext" => node(as_return_node, return_in_void_context),
@@ -196,34 +196,41 @@ fn useless_method_definition(node: &ruby_prism::DefNode<'_>, context: &mut CopCo
     );
 }
 
-fn constant_overwritten_in_rescue(context: &mut CopContext<'_, '_>) {
-    for (offset, line) in context.source_file().lines() {
-        let Some(marker) = line.find("rescue => ") else {
-            continue;
-        };
-        let value = line[marker + 10..]
-            .split('#')
-            .next()
-            .unwrap_or_default()
-            .trim();
-        let constant = value.trim_start_matches("::");
-        let final_name = constant.rsplit("::").next().unwrap_or_default();
-        if constant.is_empty()
-            || !final_name
-                .as_bytes()
-                .first()
-                .is_some_and(u8::is_ascii_uppercase)
-        {
-            continue;
-        }
-        let arrow = offset + marker + 7;
-        context.replace(
-            format!("`{value}` is overwritten by `rescue =>`."),
-            arrow..arrow + 2,
-            arrow..arrow + 3,
-            "",
-        );
+fn constant_overwritten_in_rescue(
+    node: &ruby_prism::RescueNode<'_>,
+    context: &mut CopContext<'_, '_>,
+) {
+    // RuboCop's resbody matcher accepts only an implicit exception list whose
+    // assignment target is a constant. Prism exposes that target as reference.
+    if !node.exceptions().is_empty() || node.statements().is_some() {
+        return;
     }
+    let Some(reference) = node.reference() else {
+        return;
+    };
+    if reference.as_constant_target_node().is_none()
+        && reference.as_constant_path_target_node().is_none()
+    {
+        return;
+    }
+
+    let keyword = node.keyword_loc();
+    let between = keyword.end_offset()..reference.location().start_offset();
+    let Some(relative_arrow) = context
+        .source_file()
+        .slice(between.clone())
+        .and_then(|source| source.find("=>"))
+    else {
+        return;
+    };
+    let arrow_start = between.start + relative_arrow;
+    let constant = context.source_file().node(&reference);
+    context.replace(
+        format!("`{constant}` is overwritten by `rescue =>`."),
+        arrow_start..arrow_start + 2,
+        keyword.end_offset()..arrow_start + 2,
+        "",
+    );
 }
 
 #[allow(clippy::too_many_lines)]

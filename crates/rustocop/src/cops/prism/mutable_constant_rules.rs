@@ -1,5 +1,10 @@
 use ruby_prism::Node;
 
+use crate::rubocop::cop::mixin::advanced::{
+    frozen_string_literal as frozen_string_literal_magic_comment,
+    FrozenStringLiteral as FrozenStringLiteralSetting,
+};
+
 use super::*;
 
 define_cops! {
@@ -171,15 +176,7 @@ fn frozen_string_literal(node: &Node<'_>, source: &str, ruby_version: RubyVersio
         || node
             .as_interpolated_string_node()
             .is_some_and(|string| string.is_frozen() || !ruby_version.at_least(3, 0)))
-        && source
-            .lines()
-            .take(3)
-            .any(|line| {
-                matches!(
-                    line.trim(),
-                    "# frozen_string_literal: true" | "#frozen_string_literal: true"
-                )
-            })
+        && frozen_string_literal_magic_comment(source) == FrozenStringLiteralSetting::Enabled
 }
 
 fn shareable_constant_value(node: &Node<'_>, source: &str, ruby_version: RubyVersion) -> bool {

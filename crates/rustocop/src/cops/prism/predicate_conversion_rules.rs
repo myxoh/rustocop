@@ -3,7 +3,7 @@ use super::*;
 define_cops! {
     BitwisePredicate => "Style/BitwisePredicate" => call(bitwise_predicate),
     ComparableBetween => "Style/ComparableBetween" => node(as_and_node, comparable_between),
-    DirEmpty => "Style/DirEmpty" => source(dir_empty),
+    DirEmpty => "Style/DirEmpty" => call(dir_empty),
     EvenOdd => "Style/EvenOdd" => call(even_odd),
     MinMaxComparison => "Style/MinMaxComparison" => node(as_if_node, min_max_comparison),
 }
@@ -248,59 +248,71 @@ fn bitwise_predicate(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     );
 }
 
-fn dir_empty(context: &mut CopContext<'_, '_>) {
+fn dir_empty(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     if !context.target_ruby_version().at_least(2, 4) {
         return;
     }
-    let source = context.source();
-    let trimmed = source.trim();
-    if trimmed.starts_with("Dir.\n") {
-        let normalized = trimmed.replace(".\n", ".").replace("  entries", "entries");
-        if let Some((argument, negative)) = dir_conversion(&normalized) {
-            let replacement = format!("{}Dir.empty?({argument})", if negative { "!" } else { "" });
-            context.replace(
-                format!("Use `{replacement}` instead."),
-                0..trimmed.len(),
-                0..trimmed.len(),
-                replacement,
-            );
+    let (enumeration, argument, negative) = match call_name(node) {
+        b"empty?" | b"none?" if argument_count(node) == 0 => {
+            let Some(enumeration) = node.receiver().and_then(|receiver| receiver.as_call_node())
+            else {
+                return;
+            };
+            let expected = if call_name(node) == b"empty?" {
+                b"children".as_slice()
+            } else {
+                b"each_child".as_slice()
+            };
+            if call_name(&enumeration) != expected {
+                return;
+            }
+            let Some(argument) = only_argument(&enumeration) else {
+                return;
+            };
+            (enumeration, argument, false)
         }
+        b"==" | b"!=" | b">" if argument_count(node) == 1 => {
+            let Some(size) = node.receiver().and_then(|receiver| receiver.as_call_node()) else {
+                return;
+            };
+            if call_name(&size) != b"size" || argument_count(&size) != 0 {
+                return;
+            }
+            let Some(enumeration) = size.receiver().and_then(|receiver| receiver.as_call_node())
+            else {
+                return;
+            };
+            let Some(expected_size) = only_argument(node).as_ref().and_then(integer_value) else {
+                return;
+            };
+            let eligible = call_name(&enumeration) == b"entries" && expected_size == 2
+                || call_name(&enumeration) == b"children" && expected_size == 0;
+            if !eligible {
+                return;
+            }
+            let Some(argument) = only_argument(&enumeration) else {
+                return;
+            };
+            (
+                enumeration,
+                argument,
+                matches!(call_name(node), b"!=" | b">"),
+            )
+        }
+        _ => return,
+    };
+    let Some(dir) = enumeration.receiver() else {
+        return;
+    };
+    if !node_is_root_constant(&dir, b"Dir") {
         return;
     }
-    for (line_start, line) in context.source_file().lines() {
-        let Some(candidate_start) = line.find("Dir.") else {
-            continue;
-        };
-        let expression = line[candidate_start..].trim_end();
-        let leading_not = expression.starts_with('!');
-        let candidate = expression.strip_prefix('!').unwrap_or(expression);
-        let Some((argument, negative)) = dir_conversion(candidate) else {
-            continue;
-        };
-        let replacement = format!("{}Dir.empty?({argument})", if negative { "!" } else { "" });
-        let start = line_start + candidate_start + usize::from(leading_not);
-        let end = line_start + candidate_start + expression.len();
-        context.replace(
-            format!("Use `{replacement}` instead."),
-            start..end,
-            start..end,
-            replacement,
-        );
-    }
-}
-
-fn dir_conversion(expression: &str) -> Option<(&str, bool)> {
-    let open = expression.find('(')?;
-    let close = super::source_syntax::matching_delimiter(expression, open, b'(', b')')?;
-    let argument = &expression[open + 1..close];
-    let prefix = &expression[..open];
-    let tail = &expression[close + 1..];
-    match (prefix, tail) {
-        ("Dir.entries", ".size == 2")
-        | ("Dir.children", ".empty?")
-        | ("Dir.children", ".size == 0")
-        | ("Dir.each_child", ".none?") => Some((argument, false)),
-        ("Dir.entries", ".size != 2" | ".size > 2") => Some((argument, true)),
-        _ => None,
-    }
+    let file = context.source_file();
+    let replacement = format!(
+        "{}{}.empty?({})",
+        if negative { "!" } else { "" },
+        file.node(&dir),
+        file.node(&argument)
+    );
+    context.replace_call(node, format!("Use `{replacement}` instead."), replacement);
 }

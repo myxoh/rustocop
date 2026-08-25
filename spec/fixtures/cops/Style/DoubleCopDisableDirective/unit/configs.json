@@ -1,3 +1,4 @@
 {
-  "3ccb04cd59156033": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/DoubleCopDisableDirective:\n  Description: Checks for double rubocop:disable comments on a single line.\n  Enabled: true\n  VersionAdded: '0.73'\n  AutoCorrect: always\n"
+  "3ccb04cd59156033": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/DoubleCopDisableDirective:\n  Description: Checks for double rubocop:disable comments on a single line.\n  Enabled: true\n  VersionAdded: '0.73'\n  AutoCorrect: always\n",
+  "c0e6a785c31446a9": "---\nAllCops:\n  DisabledByDefault: true\n  ParserEngine: parser_prism\n  TargetRubyVersion: 3.4\nStyle/DoubleCopDisableDirective:\n  Enabled: true\n"
 }

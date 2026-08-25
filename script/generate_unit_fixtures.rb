@@ -120,7 +120,14 @@ def captured_offenses(test_case)
       "line" => location.line,
       "column" => location.column + 1,
       "last_line" => location.last_line,
-      "last_column" => location.last_line > location.line && location.last_column.zero? ? 1 : location.last_column
+      "last_column" => if offense.cop_name == "Layout/SpaceBeforeFirstArg" &&
+                          location.begin_pos == location.end_pos
+                         location.column
+                       elsif location.last_line > location.line && location.last_column.zero?
+                         1
+                       else
+                         location.last_column
+                       end
     }
   end.sort_by do |offense|
     offense.values_at("line", "column", "last_line", "last_column", "message", "severity")
@@ -138,7 +145,7 @@ def normalized_offenses(test_case)
     insertion_at_nonterminated_eof = !source.empty? && !source.end_with?("\n") &&
                                       captured["line"] == eof_line &&
                                       captured["column"] == eof_column
-    formatter_zero_width = %w[Lint/EmptyFile Layout/TrailingEmptyLines].include?(test_case.fetch("cop")) ||
+    formatter_zero_width = %w[Layout/SpaceBeforeFirstArg Lint/EmptyFile Layout/TrailingEmptyLines].include?(test_case.fetch("cop")) ||
                            test_case.fetch("cop") == "Layout/IndentationWidth" &&
                              captured.fetch("message").end_with?(" spaces for indentation.")
     if !insertion_at_nonterminated_eof && !formatter_zero_width &&

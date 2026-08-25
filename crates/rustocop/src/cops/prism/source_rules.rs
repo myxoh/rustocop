@@ -11,7 +11,6 @@ declare_source_cops! {
     ClassMethods => "Style/ClassMethods" => class_methods,
     RedundantCapitalW => "Style/RedundantCapitalW" => redundant_capital_w,
     DuplicateElsifCondition => "Lint/DuplicateElsifCondition" => duplicate_elsif,
-    EnsureReturn => "Lint/EnsureReturn" => ensure_return,
     DuplicatedGem => "Bundler/DuplicatedGem" => duplicated_gem,
 }
 
@@ -203,27 +202,6 @@ fn duplicate_elsif(source: &str, context: &mut Reporter<'_>) {
 
 fn multiline_condition(condition: &str) -> bool {
     condition.trim_end().ends_with("&&") || condition.trim_end().ends_with("||")
-}
-
-fn ensure_return(source: &str, context: &mut Reporter<'_>) {
-    let mut in_ensure = false;
-    for (offset, line) in source_lines(source) {
-        let trimmed = line.trim();
-        if trimmed == "ensure" {
-            in_ensure = true;
-            continue;
-        }
-        if trimmed == "end" {
-            in_ensure = false;
-        }
-        if in_ensure && (trimmed == "return" || trimmed.starts_with("return ")) {
-            let start = offset + line.len() - line.trim_start().len();
-            context.report(
-                "Do not return from an `ensure` block.",
-                start..offset + line.len(),
-            );
-        }
-    }
 }
 
 fn find_all(source: &str, needle: &str) -> Vec<usize> {

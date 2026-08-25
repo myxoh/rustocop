@@ -9,12 +9,150 @@ use interpolation::*;
 define_cops! {
     InitialIndentation => "Layout/InitialIndentation" => source(initial_indentation),
     DuplicateMagicComment => "Lint/DuplicateMagicComment" => source(duplicate_magic_comment),
+    DoubleCopDisableDirective => "Style/DoubleCopDisableDirective" => source(double_cop_disable_directive),
     EmptyInterpolation => "Lint/EmptyInterpolation" => any_node(empty_interpolation),
-    RequireRangeParentheses => "Lint/RequireRangeParentheses" => source(require_range_parentheses),
+    RequireRangeParentheses => "Lint/RequireRangeParentheses" => node(as_range_node, require_range_parentheses),
     AsciiIdentifiers => "Naming/AsciiIdentifiers" => source(ascii_identifiers),
     MultilineIfThen => "Style/MultilineIfThen" => any_node(multiline_if_then),
     ReturnNil => "Style/ReturnNil" => node(as_return_node, return_nil),
+    InPatternThen => "Style/InPatternThen" => node(as_in_node, in_pattern_then),
+    EmptyEnsure => "Lint/EmptyEnsure" => node(as_begin_node, empty_ensure),
+    BigDecimalNew => "Lint/BigDecimalNew" => call(big_decimal_new),
+    ColonMethodDefinition => "Style/ColonMethodDefinition" => node(as_def_node, colon_method_definition),
+    EnsureReturn => "Lint/EnsureReturn" => node(as_begin_node, ensure_return),
     VariableInterpolation => "Style/VariableInterpolation" => node(as_embedded_variable_node, variable_interpolation),
+}
+
+fn ensure_return(node: &ruby_prism::BeginNode<'_>, context: &mut CopContext<'_, '_>) {
+    let Some(ensure) = node.ensure_clause() else {
+        return;
+    };
+    #[derive(Default)]
+    struct Returns(Vec<std::ops::Range<usize>>);
+    impl<'pr> Visit<'pr> for Returns {
+        fn visit_return_node(&mut self, node: &ruby_prism::ReturnNode<'pr>) {
+            self.0
+                .push(node.location().start_offset()..node.location().end_offset());
+            ruby_prism::visit_return_node(self, node);
+        }
+    }
+    let mut returns = Returns::default();
+    if let Some(statements) = ensure.statements() {
+        returns.visit(&statements.as_node());
+    }
+    for offense in returns.0 {
+        context.report("Do not return from an `ensure` block.", offense);
+    }
+}
+
+fn colon_method_definition(node: &ruby_prism::DefNode<'_>, context: &mut CopContext<'_, '_>) {
+    let Some(operator) = node.operator_loc().filter(|operator| operator.as_slice() == b"::") else {
+        return;
+    };
+    let range = operator.start_offset()..operator.end_offset();
+    context.replace(
+        "Do not use `::` for defining class methods.",
+        range.clone(),
+        range,
+        ".",
+    );
+}
+
+fn big_decimal_new(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
+    if node.name().as_slice() != b"new" {
+        return;
+    }
+    let Some(receiver) = node.receiver() else {
+        return;
+    };
+    let receiver_source = context.source_file().node(&receiver);
+    if !matches!(receiver_source, "BigDecimal" | "::BigDecimal") {
+        return;
+    }
+    let (Some(selector), Some(dot)) = (node.message_loc(), node.call_operator_loc()) else {
+        return;
+    };
+    let mut edits = vec![(dot.start_offset()..selector.end_offset(), String::new())];
+    if receiver_source.starts_with("::") {
+        edits.push((receiver.location().start_offset()..receiver.location().start_offset() + 2, String::new()));
+    }
+    context.replace_many(
+        "`BigDecimal.new()` is deprecated. Use `BigDecimal()` instead.",
+        selector,
+        edits,
+    );
+}
+
+fn empty_ensure(node: &ruby_prism::BeginNode<'_>, context: &mut CopContext<'_, '_>) {
+    let Some(ensure) = node.ensure_clause() else {
+        return;
+    };
+    if ensure
+        .statements()
+        .is_none_or(|statements| statements.body().is_empty())
+    {
+        let keyword = ensure.ensure_keyword_loc();
+        let range = keyword.start_offset()..keyword.end_offset();
+        context.remove("Empty `ensure` block detected.", range.clone(), range);
+    }
+}
+
+fn in_pattern_then(node: &ruby_prism::InNode<'_>, context: &mut CopContext<'_, '_>) {
+    let Some(body) = node.statements().and_then(|statements| statements.body().first()) else {
+        return;
+    };
+    let pattern_node = node.pattern();
+    let pattern_location = pattern_node.location();
+    if !context
+        .source_file()
+        .same_line(pattern_location.start_offset(), body.location().start_offset())
+    {
+        return;
+    }
+    let gap = pattern_location.end_offset()..body.location().start_offset();
+    let Some(relative_separator) = context.source()[gap.clone()].find(';') else {
+        return;
+    };
+    let separator = gap.start + relative_separator;
+    let pattern = context.source_file().node(&pattern_node);
+    context.replace(
+        format!("Do not use `in {pattern};`. Use `in {pattern} then` instead."),
+        separator..separator + 1,
+        separator..separator + 1,
+        " then",
+    );
+}
+
+fn double_cop_disable_directive(context: &mut CopContext<'_, '_>) {
+    let source = context.source();
+    for comment in ruby_prism::parse(source.as_bytes()).comments() {
+        let location = comment.location();
+        let text = &source[location.start_offset()..location.end_offset()];
+        let (marker, directive) = if text.matches("# rubocop:disable ").count() > 1 {
+            ("# rubocop:disable ", "disable")
+        } else if text.matches("# rubocop:todo ").count() > 1 {
+            ("# rubocop:todo ", "todo")
+        } else {
+            continue;
+        };
+        let relative = text.find(marker).expect("duplicate directive marker");
+        if relative != 0 {
+            continue;
+        }
+        let start = location.start_offset() + relative;
+        let names = text[relative..]
+            .split(marker)
+            .filter(|name| !name.is_empty())
+            .map(str::trim)
+            .collect::<Vec<_>>()
+            .join(", ");
+        context.replace(
+            "More than one disable comment on one line.",
+            start..location.end_offset(),
+            start..location.end_offset(),
+            format!("# rubocop:{directive} {names}"),
+        );
+    }
 }
 
 fn initial_indentation(context: &mut CopContext<'_, '_>) {
@@ -91,55 +229,37 @@ fn inside_percent_word_array(context: &CopContext<'_, '_>) -> bool {
     })
 }
 
-fn require_range_parentheses(context: &mut CopContext<'_, '_>) {
-    let source = context.source();
-    let lines = source_lines(source).collect::<Vec<_>>();
-    let excluded = context
-        .source_file()
-        .literal_ranges()
-        .into_iter()
-        .chain(context.source_file().comment_ranges())
-        .collect::<Vec<_>>();
-    for (index, (start, line)) in lines.iter().enumerate() {
-        let trimmed = line.trim_end();
-        let operator_len = if trimmed.ends_with("...") {
-            3
-        } else if trimmed.ends_with("..") {
-            2
-        } else {
-            continue;
-        };
-        let operator_start = *start + trimmed.len() - operator_len;
-        if excluded
-            .iter()
-            .any(|range| range.start <= operator_start && operator_start < range.end)
-        {
-            continue;
-        }
-        if index + 1 >= lines.len() || lines[index + 1].1.trim().is_empty() {
-            continue;
-        }
-        if lines[index + 1]
-            .1
-            .trim_start()
-            .starts_with([')', ']', '}'])
-        {
-            continue;
-        }
-        let expression_start = *start + line.len() - line.trim_start().len();
-        if source[..expression_start].trim_end().ends_with('(') || trimmed.starts_with('(') {
-            continue;
-        }
-        let expression = &trimmed[..trimmed.len() - operator_len];
-        if expression.is_empty() {
-            continue;
-        }
-        let end = lines[index + 1].0 + lines[index + 1].1.len();
-        context.report(
-            format!("Wrap the endless range literal `{trimmed}` to avoid precedence ambiguity."),
-            expression_start..end,
-        );
+fn require_range_parentheses(
+    node: &ruby_prism::RangeNode<'_>,
+    context: &mut CopContext<'_, '_>,
+) {
+    if context
+        .ancestors()
+        .iter()
+        .rev()
+        .find(|parent| parent.as_statements_node().is_none())
+        .is_some_and(|parent| parent.as_parentheses_node().is_some())
+    {
+        return;
     }
+    let (Some(left), Some(right)) = (node.left(), node.right()) else {
+        return;
+    };
+    let operator = node.operator_loc();
+    let operator_line = context.source()[..operator.start_offset()].rfind('\n');
+    let right_line = context.source()[..right.location().start_offset()].rfind('\n');
+    if operator_line == right_line {
+        return;
+    }
+    let prefix = format!(
+        "{}{}",
+        context.source_file().node(&left),
+        context.source_file().at(&operator)
+    );
+    context.report(
+        format!("Wrap the endless range literal `{prefix}` to avoid precedence ambiguity."),
+        node.location(),
+    );
 }
 
 fn ascii_identifiers(context: &mut CopContext<'_, '_>) {
@@ -254,6 +374,32 @@ fn multiline_if_then(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
 }
 
 fn return_nil(node: &ruby_prism::ReturnNode<'_>, context: &mut CopContext<'_, '_>) {
+    // Parser represents a send-with-block as `(block (send ...arguments...) ...)`, so
+    // a return inside one of those arguments still has the outer block as an
+    // ancestor. Prism stores the arguments and block as siblings on the call.
+    // Restore Parser's ancestry here before applying RuboCop's block-scope test.
+    for ancestor in context.ancestors().iter().rev() {
+        if ancestor.as_def_node().is_some() || ancestor.as_lambda_node().is_some() {
+            break;
+        }
+        let Some(call) = ancestor.as_call_node() else {
+            continue;
+        };
+        if matches!(
+            call.name().as_slice(),
+            b"define_method" | b"define_singleton_method"
+        ) {
+            break;
+        }
+        if call.receiver().is_some()
+            && call
+                .block()
+                .and_then(|block| block.as_block_node())
+                .is_some_and(|block| block.parameters().is_some())
+        {
+            return;
+        }
+    }
     for ancestor in context.ancestors().iter().rev() {
         if ancestor.as_def_node().is_some() || ancestor.as_lambda_node().is_some() {
             break;

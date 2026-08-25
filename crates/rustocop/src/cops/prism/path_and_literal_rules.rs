@@ -69,13 +69,19 @@ fn slicing_with_range(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     } else {
         left.location()
     };
-    let relative_start = removed.start_offset() - range_location.start_offset();
-    let relative_end = removed.end_offset() - range_location.start_offset();
-    let preferred_range = format!(
-        "{}{}",
-        &range_source[..relative_start],
-        &range_source[relative_end..]
-    );
+    let preferred_range = if remove_right {
+        format!(
+            "{}{}",
+            context.source_file().node(&left),
+            context.source_file().at(&range.operator_loc())
+        )
+    } else {
+        format!(
+            "{}{}",
+            context.source_file().at(&range.operator_loc()),
+            context.source_file().node(&right)
+        )
+    };
     let (preferred, original) = if bracket {
         (format!("[{preferred_range}]"), format!("[{range_source}]"))
     } else {
@@ -245,11 +251,20 @@ fn percent_q_literals(node: &ruby_prism::StringNode<'_>, context: &mut CopContex
     // `dstr` made up of line-sized `str` children. PercentQLiterals only
     // implements `on_str`, and none of those children owns the `%Q` opening,
     // so the cop deliberately leaves the whole multiline literal alone.
-    if upper == wants_upper
-        || content.contains('\n')
-        || content.contains('\\')
-        || wants_upper && content.contains("#{")
-    {
+    if upper == wants_upper || content.contains('\n') || wants_upper && content.contains("#{") {
+        return;
+    }
+    let literal = context.source_file().node(&node.as_node());
+    let mut corrected = literal.to_string();
+    corrected.replace_range(1..2, if wants_upper { "Q" } else { "q" });
+    let parsed = ruby_prism::parse(corrected.as_bytes());
+    let corrected_value = parsed
+        .node()
+        .as_program_node()
+        .and_then(|program| program.statements().body().first())
+        .and_then(|value| value.as_string_node())
+        .map(|value| value.unescaped().to_vec());
+    if corrected_value.as_deref() != Some(node.unescaped()) {
         return;
     }
     let (message, replacement) = if wants_upper {
