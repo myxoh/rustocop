@@ -104,13 +104,14 @@ coordinated edits without replacing an unnecessarily large source region.
   behavior.
 - `engine` may depend on cops and shared leaf modules. It owns ordering,
   concurrency, file writes, and the one-parse-per-file invariant.
-- `cops` may depend only on `config`, `model`, and sibling cop
-  modules. A cop cannot discover files, format reports, or invoke the engine.
+- `cops` may depend on `config`, `model`, sibling cop modules, and reviewed
+  RuboCop compatibility APIs. A cop cannot discover files, format reports, or
+  invoke the engine.
 - `config` and `model` are leaf modules. They cannot depend on the
   application, engine, or cop implementations.
 - `rubocop` mirrors the shared RuboCop 1.87.0 and rubocop-ast 1.49.1 source
-  boundaries. It remains isolated from existing cops until a separately
-  reviewed migration adopts its APIs.
+  boundaries. Production cops reach it only through separately reviewed,
+  fixture-then-project-validated adapters.
 - Differential fixtures and complete project signatures are the compatibility
   contract. A cop is not compatible merely because it recognizes representative
   text or passes the captured upstream examples.

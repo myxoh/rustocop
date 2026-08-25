@@ -1,5 +1,5 @@
 use ruby_prism::{BlockNode, ForNode, Location, Node, StatementsNode, UntilNode, WhileNode};
-
+use crate::rubocop::cop::mixin::policies::meets_min_body_length;
 use super::*;
 
 define_cops! {
@@ -53,7 +53,7 @@ impl NextRule<'_, '_, '_> {
                 .filter(|byte| *byte == b'\n')
                 .count()
         });
-        return_if!(!modifier && conditional_lines <= minimum);
+        return_if!(!modifier && !meets_min_body_length(0, conditional_lines, minimum));
         if self.config_bool("AllowConsecutiveConditionals", false) && statements.len() >= 2 {
             return_if!(next_condition(&statements[statements.len() - 2]).is_some());
         }

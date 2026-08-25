@@ -7,6 +7,7 @@ fn context(autocorrect: bool) -> Context {
         } else {
             AutocorrectMode::None
         },
+        false,
         "example.rb",
         RubyVersion::default(),
         SourceEncoding::Utf8,
@@ -184,6 +185,92 @@ fn source_directives_suppress_findings_and_corrections() {
     assert!(inspection.corrected_source.contains("first; value"));
     assert!(inspection.corrected_source.contains("second value"));
     assert!(inspection.corrected_source.contains("third; value"));
+}
+
+#[test]
+fn disable_next_applies_to_one_physical_source_line() {
+    let source = concat!(
+        "# rubocop:disable-next Style/Semicolon\n",
+        "first; value\n",
+        "second; value\n",
+    );
+    let first = source.find("first;").unwrap() + "first".len();
+    let second = source.find("second;").unwrap() + "second".len();
+    let mut context = context(true);
+    for offset in [first, second] {
+        context.remove(
+            "Style/Semicolon",
+            "Remove semicolon.",
+            offset..offset + 1,
+            offset..offset + 1,
+        );
+    }
+
+    let inspection = context.finish(source);
+
+    assert_eq!(inspection.findings.len(), 1);
+    assert_eq!(inspection.findings[0].start_offset, second);
+    assert!(inspection.corrected_source.contains("first; value"));
+    assert!(inspection.corrected_source.contains("second value"));
+}
+
+#[test]
+fn disable_next_does_not_suppress_a_multiline_offense_starting_on_the_next_line() {
+    let source = concat!(
+        "# rubocop:disable-next Style/HashLikeCase\n",
+        "case value\n",
+        "when :one then 1\n",
+        "when :two then 2\n",
+        "when :three then 3\n",
+        "end\n",
+    );
+    let start = source.find("case value").unwrap();
+    let end = source.rfind("end").unwrap() + "end".len();
+    let mut context = context(false);
+    context.report("Style/HashLikeCase", "Use a hash lookup.", start..end);
+
+    let inspection = context.finish(source);
+
+    assert_eq!(inspection.findings.len(), 1);
+}
+
+#[test]
+fn inline_disable_suppresses_a_multiline_offense_and_its_correction() {
+    let source =
+        "class Example < Struct.new( # rubocop:disable Style/StructInheritance\n  :value)\nend\n";
+    let start = source.find("Struct.new").unwrap();
+    let end = source.find(":value)").unwrap() + ":value)".len();
+    let mut context = context(true);
+    context.replace(
+        "Style/StructInheritance",
+        "Avoid inheritance.",
+        start..end,
+        start..end,
+        "Struct.new(:value) do",
+    );
+
+    let inspection = context.finish(source);
+
+    assert!(inspection.findings.is_empty());
+    assert_eq!(inspection.corrected_source, source);
+}
+
+#[test]
+fn ignored_disable_comments_expose_raw_investigation_offenses() {
+    let source = "value # rubocop:disable Style/Example\n";
+    let mut context = Context::new(
+        AutocorrectMode::None,
+        true,
+        "example.rb",
+        RubyVersion::default(),
+        SourceEncoding::Utf8,
+        Arc::new(CopConfig::default()),
+    );
+    context.report("Style/Example", "Visible.", 0..5);
+
+    let inspection = context.finish(source);
+
+    assert_eq!(inspection.findings.len(), 1);
 }
 
 #[test]

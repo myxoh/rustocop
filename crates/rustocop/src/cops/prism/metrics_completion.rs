@@ -47,12 +47,6 @@ fn method_length(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
     if context.policy().allows_method(&name) {
         return;
     }
-    let definition_line = &context.source()[context.source_file().line_range(location.start_offset())];
-    if (definition_line.contains("rubocop:disable") || definition_line.contains("rubocop:todo"))
-        && definition_line.contains("Metrics/MethodLength")
-    {
-        return;
-    }
     let maximum = context.config_usize("Max", 10);
     let count = body.map_or(0, |body| {
         let body_location = body.location();
@@ -106,10 +100,18 @@ fn method_length(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
         count
     });
     if count > maximum {
-        context.report(
-            format!("Method has too many lines. [{count}/{maximum}]"),
-            location,
-        );
+        let message = format!("Method has too many lines. [{count}/{maximum}]");
+        let definition_line =
+            &context.source()[context.source_file().line_range(location.start_offset())];
+        if (definition_line.contains("rubocop:disable")
+            || definition_line.contains("rubocop:todo"))
+            && definition_line.contains("Metrics/MethodLength")
+        {
+            let end = location.end_offset();
+            context.replace(message, location, end..end, "");
+        } else {
+            context.report(message, location);
+        }
     }
 }
 
@@ -244,12 +246,6 @@ fn abc_size(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
     if context.policy().allows_method(&name) {
         return;
     }
-    let definition_line = &context.source()[context.source_file().line_range(location.start_offset())];
-    if (definition_line.contains("rubocop:disable") || definition_line.contains("rubocop:todo"))
-        && definition_line.contains("Metrics/AbcSize")
-    {
-        return;
-    }
     let Some(body) = body else {
         return;
     };
@@ -274,12 +270,20 @@ fn abc_size(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
     let name = String::from_utf8_lossy(&name);
     let score = metric_number(score);
     let maximum = metric_number(maximum);
-    context.report(
-        format!(
-            "Assignment Branch Condition size for `{name}` is too high. [<{assignments}, {branches}, {conditions}> {score}/{maximum}]"
-        ),
-        location,
+    let message = format!(
+        "Assignment Branch Condition size for `{name}` is too high. [<{assignments}, {branches}, {conditions}> {score}/{maximum}]"
     );
+    let definition_line =
+        &context.source()[context.source_file().line_range(location.start_offset())];
+    if (definition_line.contains("rubocop:disable")
+        || definition_line.contains("rubocop:todo"))
+        && definition_line.contains("Metrics/AbcSize")
+    {
+        let end = location.end_offset();
+        context.replace(message, location, end..end, "");
+    } else {
+        context.report(message, location);
+    }
 }
 
 fn metric_number(value: f64) -> String {

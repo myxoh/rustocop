@@ -33,7 +33,7 @@ fn useless_default_value_argument(node: &CallNode<'_>, context: &mut CopContext<
     let (Some(first), Some(default)) = (arguments.first(), arguments.iter().nth(1)) else {
         return;
     };
-    if default.as_keyword_hash_node().is_some() || default.as_splat_node().is_some() {
+    if default.as_keyword_hash_node().is_some() {
         return;
     }
     context.remove_list_element(

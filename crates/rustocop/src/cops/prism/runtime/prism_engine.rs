@@ -21,6 +21,7 @@ impl Engine {
         path: &str,
         source: &str,
         autocorrect: AutocorrectMode,
+        ignore_disable_comments: bool,
         target_ruby_version: RubyVersion,
         source_encoding: SourceEncoding,
         cop_config: Arc<CopConfig>,
@@ -28,6 +29,7 @@ impl Engine {
         let parsed = parse(source.as_bytes());
         let mut context = Context::new(
             autocorrect,
+            ignore_disable_comments,
             path,
             target_ruby_version,
             source_encoding,
@@ -54,7 +56,9 @@ impl Engine {
             .iter()
             .map(|index| &self.registry.cops[*index])
         {
-            if has_unrecoverable_parse_errors && cop.name() != "Lint/Syntax" {
+            if has_unrecoverable_parse_errors
+                && !matches!(cop.name(), "Lint/Syntax" | "Naming/HeredocDelimiterNaming")
+            {
                 continue;
             }
             cop.on_source(source, &mut context);

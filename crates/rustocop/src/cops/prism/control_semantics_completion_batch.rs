@@ -1462,6 +1462,8 @@ fn block_precedes_improper_chained_block(
 
 #[allow(clippy::too_many_lines)]
 fn redundant_safe_navigation(node: &ruby_prism::CallNode<'_>, context: &mut CopContext<'_, '_>) {
+    use crate::rubocop::cop::mixin::allowed_methods::AllowedMethods;
+
     let Some(operator) = node.call_operator_loc() else {
         return;
     };
@@ -1516,19 +1518,13 @@ fn redundant_safe_navigation(node: &ruby_prism::CallNode<'_>, context: &mut CopC
     let line_start = context.source()[..operator.start_offset()]
         .rfind('\n')
         .map_or(0, |at| at + 1);
-    let line_end = context.source()[operator.end_offset()..]
-        .find('\n')
-        .map_or(context.source().len(), |at| operator.end_offset() + at);
-    let line = &context.source()[line_start..line_end];
-    let operator_in_line = operator.start_offset() - line_start;
-    let conditional = ["if ", "unless ", "while ", "until "]
-        .iter()
-        .filter_map(|keyword| line.find(keyword).map(|at| (at, keyword.len())))
-        .any(|(at, length)| operator_in_line >= at + length);
-    let allowed = context
-        .config_values("AllowedMethods")
-        .iter()
-        .any(|method| method.as_bytes() == call_name(node));
+    let allowed_methods = AllowedMethods::new(
+        context.config_values("AllowedMethods").to_vec(),
+        Vec::new(),
+        Vec::new(),
+    );
+    let allowed = std::str::from_utf8(call_name(node))
+        .is_ok_and(|method| allowed_methods.allowed_method(method));
     let nil_responds = call_name(node) == b"respond_to?"
         && node.arguments().is_some_and(|arguments| {
             arguments.arguments().iter().next().is_some_and(|argument| {
@@ -1541,7 +1537,7 @@ fn redundant_safe_navigation(node: &ruby_prism::CallNode<'_>, context: &mut CopC
                 )
             })
         });
-    if conditional && allowed && !nil_responds {
+    if allowed && safe_navigation_condition_context(node, context) && !nil_responds {
         context.replace(
             "Redundant safe navigation detected, use `.` instead.",
             operator.start_offset()..operator.end_offset(),
@@ -1598,6 +1594,40 @@ fn redundant_safe_navigation(node: &ruby_prism::CallNode<'_>, context: &mut CopC
             operator.start_offset()..operator.end_offset(), ".",
         );
     }
+}
+
+fn safe_navigation_condition_context(
+    node: &ruby_prism::CallNode<'_>,
+    context: &CopContext<'_, '_>,
+) -> bool {
+    let same_location = |candidate: &Node<'_>| {
+        candidate.location().start_offset() == node.location().start_offset()
+            && candidate.location().end_offset() == node.location().end_offset()
+    };
+    let Some(parent) = context.parent() else {
+        return false;
+    };
+    if parent.as_and_node().is_some() || parent.as_or_node().is_some() {
+        return true;
+    }
+    if parent.as_call_node().is_some_and(|call| {
+        call.name().as_slice() == b"!"
+            && call.receiver().as_ref().is_some_and(&same_location)
+    }) {
+        return true;
+    }
+    parent
+        .as_if_node()
+        .is_some_and(|conditional| same_location(&conditional.predicate()))
+        || parent
+            .as_unless_node()
+            .is_some_and(|conditional| same_location(&conditional.predicate()))
+        || parent
+            .as_while_node()
+            .is_some_and(|conditional| same_location(&conditional.predicate()))
+        || parent
+            .as_until_node()
+            .is_some_and(|conditional| same_location(&conditional.predicate()))
 }
 
 fn inferred_non_nil_from_source(

@@ -5,11 +5,11 @@ define_cops! {
 }
 
 fn numeric_predicate(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
-    if context.policy().allows_method(call_name(node))
+    if allowed_method_name(context, call_name(node))
         || context.ancestors().iter().rev().any(|ancestor| {
             ancestor
                 .as_call_node()
-                .is_some_and(|call| context.policy().allows_method(call_name(&call)))
+                .is_some_and(|call| allowed_method_name(context, call_name(&call)))
         })
     {
         return;
@@ -19,6 +19,32 @@ fn numeric_predicate(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     } else {
         predicate_style(node, context);
     }
+}
+
+fn allowed_method_name(context: &CopContext<'_, '_>, name: &[u8]) -> bool {
+    use crate::rubocop::cop::mixin::allowed_methods::AllowedMethods;
+    use crate::rubocop::cop::mixin::allowed_pattern::{AllowedPattern, PatternValue};
+
+    let Ok(name) = std::str::from_utf8(name) else {
+        return false;
+    };
+    let methods = AllowedMethods::new(
+        context.config_values("AllowedMethods").to_vec(),
+        Vec::new(),
+        Vec::new(),
+    );
+    let patterns = AllowedPattern::new(
+        context
+            .config_values("AllowedPatterns")
+            .iter()
+            .cloned()
+            .map(PatternValue::Source)
+            .collect(),
+        Vec::new(),
+        Vec::new(),
+        Vec::new(),
+    );
+    methods.allowed_method(name) || patterns.matches_allowed_pattern(name)
 }
 
 fn predicate_style(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {

@@ -1,3 +1,4 @@
 {
+  "4bc219e4f57dee64": "---\nAllCops:\n  DisabledByDefault: true\n  NewCops: disable\n  ParserEngine: parser_prism\n  TargetRubyVersion: 3.4\n",
   "d18fe25c24936207": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/LiteralAsCondition:\n  Description: Checks of literals used in conditions.\n  Enabled: true\n  AutoCorrect: always\n  VersionAdded: '0.51'\n"
 }

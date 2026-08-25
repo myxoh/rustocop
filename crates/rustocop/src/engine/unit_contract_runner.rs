@@ -347,6 +347,10 @@ pub(super) fn inspection_options(
 ) -> InspectionConfig {
     InspectionConfig {
         autocorrect,
+        // RuboCop::Cop::Team exposes raw offenses during investigation, while
+        // its correction pass still honors inline disable comments. The unit
+        // cache records those two upstream contracts independently.
+        ignore_disable_comments: autocorrect == AutocorrectMode::None,
         cops: CopSelection::only(cop),
         target_ruby_version: RubyVersion::parse(ruby_version).unwrap(),
         source_encoding: SourceEncoding::parse(external_encoding),

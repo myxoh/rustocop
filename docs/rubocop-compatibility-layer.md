@@ -6,7 +6,8 @@ boundaries into Rust while preserving names, control flow, and source
 provenance closely enough for static review.
 
 The layer is deliberately separate from existing cops. Adding or testing a
-translation does not authorize migrating a cop to use it.
+translation does not by itself authorize migrating a cop to use it; each
+migration has its own fixture and project-parity gates.
 
 ## Completion status
 
@@ -43,9 +44,25 @@ The pinned source-shaped implementation audit is complete:
   `crates/rustocop/rubocop-translation.json`.
 
 These figures describe the shared compatibility layer only. They do not claim
-that the existing 606 cop implementations consume the layer, or that those cops
-have full fixture or real-project parity. Cop migration is a separate phase and
-was explicitly excluded from this implementation.
+that all 606 cop implementations consume the layer, or that those cops have
+full fixture or real-project parity. Cop migration is a separate phase.
+
+## Production adoption
+
+As of `2026-08-25T07:41:06-04:00`, ten cops use translated shared behavior:
+
+- `Layout/SpaceAfterComma` and `Layout/SpaceAfterSemicolon` use
+  `SpaceAfterPunctuation`;
+- `Style/TrailingCommaInArguments`, `Style/TrailingCommaInArrayLiteral`, and
+  `Style/TrailingCommaInHashLiteral` use `TrailingComma`;
+- `Style/HashSlice` and `Style/HashExcept` use `HashSubset`;
+- `Style/Next` uses the minimum-body-length policy;
+- `Style/OptionalBooleanParameter` uses `AllowedMethods`;
+- `Style/NumericPredicate` uses `AllowedMethods` and `AllowedPattern`.
+
+Their 649 cached RuboCop unit contracts pass. A scoped comparison against all
+50 pinned projects classified all ten as `project_exact`, with 70,667 exact
+offense signatures, zero mismatch signatures, and zero unmatched offenses.
 
 The generated [progress report](rubocop-compatibility-progress.md) is the
 current component-level ledger. Its `updated_at` value is always an ISO 8601

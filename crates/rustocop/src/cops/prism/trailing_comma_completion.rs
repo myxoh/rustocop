@@ -93,31 +93,14 @@ fn check_trailing_comma(
     let style = context
         .config_value("EnforcedStyleForMultiline")
         .unwrap_or("no_comma");
-    let elements_on_separate_lines = elements
-        .windows(2)
-        .all(|pair| {
-            !context.source_file().same_line(
-                pair[0].1.saturating_sub(1),
-                pair[1].0,
-            )
-        })
-        && !context
-            .source_file()
-            .same_line(last_end.saturating_sub(1), close);
-    let required = match style {
-        "comma" => multiline && elements_on_separate_lines,
-        "consistent_comma" => multiline,
-        "diff_comma" => {
-            let after_item = if comma {
-                &tail[leading + 1..]
-            } else {
-                &tail[leading..]
-            };
-            let rest_of_line = after_item.split('\n').next().unwrap_or(after_item).trim();
-            after_item.contains('\n') && (rest_of_line.is_empty() || rest_of_line.starts_with('#'))
-        }
-        _ => false,
-    };
+    let required = compatibility_requires_trailing_comma(
+        style,
+        location.start_offset()..location.end_offset(),
+        elements,
+        close,
+        multiline,
+        context.source(),
+    );
     if comma && !required {
         let at = comma_at;
         let message = if style == "comma" {
@@ -147,4 +130,76 @@ fn check_trailing_comma(
             ",",
         );
     }
+}
+
+fn compatibility_requires_trailing_comma(
+    style: &str,
+    location: std::ops::Range<usize>,
+    elements: &[(usize, usize)],
+    close: usize,
+    multiline: bool,
+    source: &str,
+) -> bool {
+    use crate::rubocop::cop::mixin::trailing_comma::{
+        Item, Location, TrailingComma, TrailingCommaStyle,
+    };
+
+    fn line_number(source: &str, offset: usize) -> usize {
+        source.as_bytes()[..offset.min(source.len())]
+            .iter()
+            .filter(|byte| **byte == b'\n')
+            .count()
+            + 1
+    }
+
+    fn item_location(source: &str, range: std::ops::Range<usize>) -> Location {
+        Location {
+            line: line_number(source, range.start),
+            last_line: line_number(source, range.end.saturating_sub(1)),
+            source: source.get(range.clone()).unwrap_or_default().to_string(),
+            begins_its_line: source[source[..range.start].rfind('\n').map_or(0, |at| at + 1)
+                ..range.start]
+                .trim()
+                .is_empty(),
+            bytes: range,
+        }
+    }
+
+    let children = elements
+        .iter()
+        .map(|&(start, end)| Item {
+            kind: "element".to_string(),
+            source_range: item_location(source, start..end),
+            children: Vec::new(),
+            arguments: Vec::new(),
+            call_type: false,
+            multiline: source[start..end].contains('\n'),
+            braces: false,
+            block_pass: false,
+            heredoc_body: false,
+            end_location: None,
+            selector_line: None,
+        })
+        .collect();
+    let end_location = item_location(source, close..close + 1);
+    let node = Item {
+        kind: "literal".to_string(),
+        source_range: item_location(source, location),
+        children,
+        arguments: Vec::new(),
+        call_type: false,
+        multiline,
+        braces: true,
+        block_pass: false,
+        heredoc_body: false,
+        end_location: Some(end_location),
+        selector_line: None,
+    };
+    let style = match style {
+        "comma" => TrailingCommaStyle::Comma,
+        "consistent_comma" => TrailingCommaStyle::ConsistentComma,
+        "diff_comma" => TrailingCommaStyle::DiffComma,
+        _ => TrailingCommaStyle::NoComma,
+    };
+    TrailingComma { style }.should_have_comma(style, &node)
 }

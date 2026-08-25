@@ -27,6 +27,7 @@ pub(crate) struct RunOptions {
 #[derive(Clone, Debug)]
 pub(crate) struct InspectionConfig {
     pub(crate) autocorrect: AutocorrectMode,
+    pub(crate) ignore_disable_comments: bool,
     pub(crate) cops: CopSelection,
     pub(crate) target_ruby_version: RubyVersion,
     pub(crate) source_encoding: SourceEncoding,

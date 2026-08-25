@@ -544,6 +544,8 @@ fn report_literal_range(
 fn condition_literal(node: &Node<'_>) -> bool {
     node.as_string_node().is_some()
         || node.as_interpolated_string_node().is_some()
+        || node.as_x_string_node().is_some()
+        || node.as_interpolated_x_string_node().is_some()
         || node.as_symbol_node().is_some()
         || node.as_interpolated_symbol_node().is_some()
         || node.as_integer_node().is_some()

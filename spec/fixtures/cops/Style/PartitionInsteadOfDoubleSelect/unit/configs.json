@@ -1,4 +1,5 @@
 {
+  "4bc219e4f57dee64": "---\nAllCops:\n  DisabledByDefault: true\n  NewCops: disable\n  ParserEngine: parser_prism\n  TargetRubyVersion: 3.4\n",
   "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
   "a75570cd3037c26a": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/PartitionInsteadOfDoubleSelect:\n  Description: Checks for consecutive `select`/`filter`/`find_all` and `reject` calls\n    on the same receiver with the same block body.\n  Enabled: true\n  Safe: false\n  VersionAdded: '1.85'\n  AutoCorrect: always\n",
   "cf3b6cd7ae93de12": "---\nAllCops:\n  TargetRubyVersion: 3.4\nStyle/PartitionInsteadOfDoubleSelect:\n  Description: Checks for consecutive `select`/`filter`/`find_all` and `reject` calls\n    on the same receiver with the same block body.\n  Enabled: true\n  Safe: false\n  VersionAdded: '1.85'\n  AutoCorrect: always\n"

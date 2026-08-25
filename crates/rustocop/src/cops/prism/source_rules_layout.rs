@@ -68,9 +68,18 @@ fn space_after_comma(source: &str, context: &mut Reporter<'_>) {
 }
 
 fn spacing_after(source: &str, context: &mut Reporter<'_>, token: u8, message: &'static str) {
+    use crate::rubocop::ast::processed_source::SourceToken;
+    use crate::rubocop::cop::mixin::space_after_punctuation::SpaceAfterPunctuation;
+
     let bytes = source.as_bytes();
     let ignored = ignored_syntax_ranges(source);
     let interpolation_closings = interpolation_closing_offsets(source);
+    let punctuation_with_space = SpaceAfterPunctuation {
+        space_style_before_rcurly: "space".to_string(),
+    };
+    let punctuation_without_space = SpaceAfterPunctuation {
+        space_style_before_rcurly: "no_space".to_string(),
+    };
     for index in 0..bytes.len() {
         if bytes[index] != token {
             continue;
@@ -94,12 +103,38 @@ fn spacing_after(source: &str, context: &mut Reporter<'_>, token: u8, message: &
                             "Layout/SpaceInsideBlockBraces",
                             "EnforcedStyle",
                         ) == Some("space"))));
+        let punctuation = if closing_brace_requires_space {
+            &punctuation_with_space
+        } else {
+            &punctuation_without_space
+        };
+        let current_token = SourceToken {
+            kind: if token == b',' { "tCOMMA" } else { "tSEMI" },
+            text: String::new(),
+            range: index..index + 1,
+            line: 1,
+            column: index,
+        };
+        let next_token = SourceToken {
+            kind: match next {
+                b')' => "tRPAREN",
+                b']' => "tRBRACK",
+                b'}' => "tRCURLY",
+                b'|' => "tPIPE",
+                _ => "tIDENTIFIER",
+            },
+            text: String::new(),
+            range: index + 1..index + 2,
+            line: 1,
+            column: index + 1,
+        };
         if next == b'\n'
             || next == b' '
             || next == token
             || (token == b';' && next == b'}' && interpolation_closings.contains(&(index + 1)))
             || no_space_inside_braces
-            || (matches!(next, b')' | b']' | b'}' | b'|') && !closing_brace_requires_space)
+            || !punctuation.space_missing(&current_token, &next_token)
+            || !punctuation.space_required_before(&next_token)
             || ignored.iter().any(|range| range.start <= index && index < range.end)
         {
             continue;

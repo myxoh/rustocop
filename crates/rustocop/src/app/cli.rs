@@ -24,6 +24,7 @@ pub(super) fn parse_args(mut args: Vec<String>) -> Result<Command, String> {
         config_path: None,
         inspection: InspectionConfig {
             autocorrect: AutocorrectMode::None,
+            ignore_disable_comments: false,
             cops: CopSelection::default_enabled(),
             target_ruby_version: RubyVersion::default(),
             source_encoding: SourceEncoding::Utf8,

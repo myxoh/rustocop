@@ -40,28 +40,14 @@ fn trailing_comma_in_arguments(node: &CallNode<'_>, context: &mut CopContext<'_,
     let style = context
         .config_value("EnforcedStyleForMultiline")
         .unwrap_or("no_comma");
-    let multiline = call_is_multiline(node, &elements, &closing, context.source_file());
-    let required = match style {
-        "comma" => multiline && elements_on_separate_lines(&elements, close, context.source_file()),
-        "consistent_comma" => {
-            multiline
-                && !method_name_and_arguments_on_same_line(
-                    node,
-                    &last_location,
-                    last_item.as_hash_node().is_some(),
-                    &closing,
-                    context.source_file(),
-                )
-        }
-        "diff_comma" => {
-            let after_item = comma_offset.map_or(tail, |offset| &tail[offset + 1..]);
-            let rest_of_line = after_item.split('\n').next().unwrap_or(after_item).trim();
-            multiline
-                && after_item.contains('\n')
-                && (rest_of_line.is_empty() || rest_of_line.starts_with('#'))
-        }
-        _ => false,
-    };
+    let required = compatibility_requires_trailing_comma(
+        style,
+        node,
+        &elements,
+        &closing,
+        last_item.as_hash_node().is_some(),
+        context.source(),
+    );
 
     if let Some(comma) = comma.filter(|_| !required) {
         let extra = match style {
@@ -93,6 +79,98 @@ fn trailing_comma_in_arguments(node: &CallNode<'_>, context: &mut CopContext<'_,
     }
 }
 
+fn compatibility_requires_trailing_comma(
+    style: &str,
+    node: &CallNode<'_>,
+    elements: &[(usize, usize)],
+    closing: &ruby_prism::Location<'_>,
+    last_item_is_hash: bool,
+    source: &str,
+) -> bool {
+    use crate::rubocop::cop::mixin::trailing_comma::{
+        Item, Location, TrailingComma, TrailingCommaStyle,
+    };
+
+    fn line_number(source: &str, offset: usize) -> usize {
+        source.as_bytes()[..offset.min(source.len())]
+            .iter()
+            .filter(|byte| **byte == b'\n')
+            .count()
+            + 1
+    }
+
+    fn item_location(source: &str, range: std::ops::Range<usize>) -> Location {
+        Location {
+            line: line_number(source, range.start),
+            last_line: line_number(source, range.end.saturating_sub(1)),
+            source: source.get(range.clone()).unwrap_or_default().to_string(),
+            begins_its_line: source[source[..range.start].rfind('\n').map_or(0, |at| at + 1)
+                ..range.start]
+                .trim()
+                .is_empty(),
+            bytes: range,
+        }
+    }
+
+    fn item(source: &str, start: usize, end: usize, braces: bool) -> Item {
+        Item {
+            kind: if braces { "hash" } else { "argument" }.to_string(),
+            source_range: item_location(source, start..end),
+            children: Vec::new(),
+            arguments: Vec::new(),
+            call_type: false,
+            multiline: source[start..end].contains('\n'),
+            braces,
+            block_pass: false,
+            heredoc_body: false,
+            end_location: None,
+            selector_line: None,
+        }
+    }
+
+    let mut arguments = elements
+        .iter()
+        .enumerate()
+        .map(|(index, &(start, end))| {
+            item(
+                source,
+                start,
+                end,
+                last_item_is_hash && index + 1 == elements.len(),
+            )
+        })
+        .collect::<Vec<_>>();
+    let children = arguments.clone();
+    let location = node.location();
+    let end_location = item_location(
+        source,
+        closing.start_offset()..closing.end_offset(),
+    );
+    let selector_line = node
+        .message_loc()
+        .map(|selector| line_number(source, selector.start_offset()));
+    let node = Item {
+        kind: "send".to_string(),
+        source_range: item_location(source, location.start_offset()..location.end_offset()),
+        children,
+        arguments: std::mem::take(&mut arguments),
+        call_type: true,
+        multiline: source[location.start_offset()..closing.end_offset()].contains('\n'),
+        braces: false,
+        block_pass: false,
+        heredoc_body: false,
+        end_location: Some(end_location),
+        selector_line,
+    };
+    let style = match style {
+        "comma" => TrailingCommaStyle::Comma,
+        "consistent_comma" => TrailingCommaStyle::ConsistentComma,
+        "diff_comma" => TrailingCommaStyle::DiffComma,
+        _ => TrailingCommaStyle::NoComma,
+    };
+    TrailingComma { style }.should_have_comma(style, &node)
+}
+
 fn flattened_elements<'pr>(items: &[Node<'pr>], file: SourceFile<'_>) -> Vec<(usize, usize)> {
     let mut elements = Vec::new();
     for item in items {
@@ -113,55 +191,6 @@ fn flattened_elements<'pr>(items: &[Node<'pr>], file: SourceFile<'_>) -> Vec<(us
         }
     }
     elements
-}
-
-fn call_is_multiline(
-    node: &CallNode<'_>,
-    elements: &[(usize, usize)],
-    closing: &ruby_prism::Location<'_>,
-    file: SourceFile<'_>,
-) -> bool {
-    let location = node.location();
-    let syntactically_multiline = !file.same_line(
-        location.start_offset(),
-        closing.end_offset().saturating_sub(1),
-    );
-    let closing_begins_line = file.as_str()[file.line_start(closing.start_offset())..closing.start_offset()]
-        .trim()
-        .is_empty();
-    (closing_begins_line || elements.len() != 1) && syntactically_multiline
-}
-
-fn elements_on_separate_lines(
-    elements: &[(usize, usize)],
-    close: usize,
-    file: SourceFile<'_>,
-) -> bool {
-    elements.windows(2).all(|pair| {
-        !file.same_line(pair[0].1.saturating_sub(1), pair[1].0)
-    }) && elements
-        .last()
-        .is_some_and(|last| !file.same_line(last.1.saturating_sub(1), close))
-}
-
-fn method_name_and_arguments_on_same_line(
-    node: &CallNode<'_>,
-    last_item: &ruby_prism::Location<'_>,
-    last_item_is_hash: bool,
-    closing: &ruby_prism::Location<'_>,
-    file: SourceFile<'_>,
-) -> bool {
-    let last_line_offset = last_item.end_offset().saturating_sub(1);
-    if !file.same_line(closing.start_offset(), last_line_offset) {
-        return false;
-    }
-    if last_item_is_hash {
-        return true;
-    }
-    let selector = node
-        .message_loc()
-        .map_or(node.location().start_offset(), |location| location.start_offset());
-    file.same_line(selector, last_line_offset)
 }
 
 fn leading_comma_offset(source: &str, heredoc: bool) -> Option<usize> {

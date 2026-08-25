@@ -1,11 +1,11 @@
 {
   "version": 1,
   "kind": "fixture_compatibility",
-  "updated_at": "2026-08-24T15:35:04-04:00",
-  "rust_commit": "ddb32ffcc4aaa97d560add1482e3c33863409004",
-  "cop_source_sha256": "348986c92ae63ac7897532663e79779a24959af4a354e6ce9c57974ff2a7221f",
-  "native_sha256": "c06a23caf252ee2e7002dd30c13bff0f1b54dca89cba8b99b370d03083cdad76",
-  "fixture_corpus_sha256": "817bbaab7404eb326e8160035ce2d8cf543b661c1377abb5e58ee3760e355cd8",
+  "updated_at": "2026-08-25T07:41:42-04:00",
+  "rust_commit": null,
+  "cop_source_sha256": "4ae97b9b3b9c6095543a6e30dc09e39729808fe2364e2ed16d68efdaebd65967",
+  "native_sha256": "acb139b49821cb9d314866972aa5974ff13f3c436509a35d4e224190bd5576cc",
+  "fixture_corpus_sha256": "d862eb76a6bd229b9319e3714e16c728117baea7f363ba1458a160efd12d6b89",
   "rubocop_version": "1.87.0",
   "results": {
     "Bundler/DuplicatedGem": {
@@ -369,9 +369,9 @@
       "status": "compatible"
     },
     "Layout/LineLength": {
-      "passed": 197,
-      "total": 199,
-      "status": "mismatch"
+      "passed": 205,
+      "total": 205,
+      "status": "compatible"
     },
     "Layout/MultilineArrayBraceLayout": {
       "passed": 35,
@@ -379,9 +379,9 @@
       "status": "compatible"
     },
     "Layout/MultilineArrayLineBreaks": {
-      "passed": 12,
-      "total": 14,
-      "status": "mismatch"
+      "passed": 19,
+      "total": 19,
+      "status": "compatible"
     },
     "Layout/MultilineAssignmentLayout": {
       "passed": 36,
@@ -414,9 +414,9 @@
       "status": "compatible"
     },
     "Layout/MultilineMethodCallIndentation": {
-      "passed": 275,
-      "total": 277,
-      "status": "mismatch"
+      "passed": 283,
+      "total": 283,
+      "status": "compatible"
     },
     "Layout/MultilineMethodDefinitionBraceLayout": {
       "passed": 27,
@@ -669,9 +669,9 @@
       "status": "compatible"
     },
     "Lint/ConstantResolution": {
-      "passed": 18,
-      "total": 20,
-      "status": "mismatch"
+      "passed": 24,
+      "total": 24,
+      "status": "compatible"
     },
     "Lint/CopDirectiveSyntax": {
       "passed": 21,
@@ -1364,9 +1364,9 @@
       "status": "compatible"
     },
     "Metrics/AbcSize": {
-      "passed": 24,
-      "total": 26,
-      "status": "mismatch"
+      "passed": 33,
+      "total": 33,
+      "status": "compatible"
     },
     "Metrics/BlockLength": {
       "passed": 33,
@@ -1394,9 +1394,9 @@
       "status": "compatible"
     },
     "Metrics/MethodLength": {
-      "passed": 31,
-      "total": 32,
-      "status": "mismatch"
+      "passed": 38,
+      "total": 38,
+      "status": "compatible"
     },
     "Metrics/ModuleLength": {
       "passed": 21,
@@ -1464,9 +1464,9 @@
       "status": "compatible"
     },
     "Naming/HeredocDelimiterNaming": {
-      "passed": 22,
+      "passed": 21,
       "total": 22,
-      "status": "compatible"
+      "status": "mismatch"
     },
     "Naming/InclusiveLanguage": {
       "passed": 36,
@@ -1769,9 +1769,9 @@
       "status": "compatible"
     },
     "Style/Copyright": {
-      "passed": 21,
-      "total": 23,
-      "status": "mismatch"
+      "passed": 27,
+      "total": 27,
+      "status": "compatible"
     },
     "Style/DataInheritance": {
       "passed": 24,
@@ -1819,9 +1819,9 @@
       "status": "compatible"
     },
     "Style/DocumentationMethod": {
-      "passed": 77,
-      "total": 79,
-      "status": "mismatch"
+      "passed": 86,
+      "total": 86,
+      "status": "compatible"
     },
     "Style/DoubleCopDisableDirective": {
       "passed": 3,
@@ -2199,9 +2199,9 @@
       "status": "compatible"
     },
     "Style/MethodCallWithArgsParentheses": {
-      "passed": 174,
-      "total": 176,
-      "status": "mismatch"
+      "passed": 184,
+      "total": 184,
+      "status": "compatible"
     },
     "Style/MethodCallWithoutArgsParentheses": {
       "passed": 34,
@@ -2229,9 +2229,9 @@
       "status": "compatible"
     },
     "Style/MissingElse": {
-      "passed": 84,
-      "total": 86,
-      "status": "mismatch"
+      "passed": 91,
+      "total": 91,
+      "status": "compatible"
     },
     "Style/MissingRespondToMissing": {
       "passed": 9,

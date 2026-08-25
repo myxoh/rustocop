@@ -120,6 +120,7 @@ mod tests {
             config_path: None,
             inspection: InspectionConfig {
                 autocorrect: AutocorrectMode::None,
+                ignore_disable_comments: false,
                 cops: CopSelection::only("Lint/EmptyExpression"),
                 target_ruby_version: RubyVersion::default(),
                 source_encoding: SourceEncoding::Utf8,

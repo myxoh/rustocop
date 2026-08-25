@@ -179,6 +179,7 @@ struct PartitionCandidate {
     predicate: String,
     symbol_method: Option<String>,
     negated: bool,
+    negated_predicate: Option<String>,
     call_source: String,
     selector: std::ops::Range<usize>,
     container: std::ops::Range<usize>,
@@ -262,23 +263,52 @@ fn partition_candidate(
     let receiver = context.source_file().node(&node.receiver()?).to_string();
     let method = String::from_utf8_lossy(node.name().as_slice()).into_owned();
     let selector = node.message_loc()?;
-    let (predicate, symbol_method, negated, call_end) = if let Some(block) = node.block().and_then(|block| block.as_block_node()) {
-        let body = block.body().and_then(single_expression)?;
-        let mut body_source = context.source_file().node(&body).trim().to_string();
-        let negated = body_source.starts_with('!');
-        if negated { body_source = body_source[1..].trim().to_string(); }
-        let parameter = block_parameter_source(&block, context.source_file());
-        let symbol_method = parameter.as_ref().and_then(|parameter| {
-            body_source.strip_prefix(&format!("{parameter}.")).filter(|method| method.ends_with('?') || method.bytes().all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')).map(str::to_string)
-        });
-        let parameter_key = parameter.clone().unwrap_or_default();
-        (format!("{parameter_key}|{body_source}"), symbol_method, negated, block.closing_loc().end_offset())
-    } else {
-        let argument = node.block().or_else(|| node.arguments().and_then(|arguments| arguments.arguments().iter().last()))?;
-        let source = context.source_file().node(&argument);
-        let method_name = source.strip_prefix("&:")?.to_string();
-        (format!("symbol:{method_name}"), Some(method_name), false, node.location().end_offset())
-    };
+    let (predicate, symbol_method, negated, negated_predicate, call_end) =
+        if let Some(block) = node.block().and_then(|block| block.as_block_node()) {
+            let body = block.body().and_then(single_expression)?;
+            let body_source = context.source_file().node(&body).trim().to_string();
+            let negated_predicate = body.as_call_node().and_then(|call| {
+                (call.name().as_slice() == b"!")
+                    .then(|| call.receiver())
+                    .flatten()
+                    .map(|receiver| context.source_file().node(&receiver).trim().to_string())
+            });
+            let negated = negated_predicate.is_some();
+            let parameter = block_parameter_source(&block, context.source_file());
+            let symbol_method = parameter.as_ref().and_then(|parameter| {
+                body_source
+                    .strip_prefix(&format!("{parameter}."))
+                    .filter(|method| {
+                        method.ends_with('?')
+                            || method
+                                .bytes()
+                                .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
+                    })
+                    .map(str::to_string)
+            });
+            let parameter_key = parameter.clone().unwrap_or_default();
+            (
+                format!("{parameter_key}|{body_source}"),
+                symbol_method,
+                negated,
+                negated_predicate.map(|predicate| format!("{parameter_key}|{predicate}")),
+                block.closing_loc().end_offset(),
+            )
+        } else {
+            let argument = node.block().or_else(|| {
+                node.arguments()
+                    .and_then(|arguments| arguments.arguments().iter().last())
+            })?;
+            let source = context.source_file().node(&argument);
+            let method_name = source.strip_prefix("&:")?.to_string();
+            (
+                format!("symbol:{method_name}"),
+                Some(method_name),
+                false,
+                None,
+                node.location().end_offset(),
+            )
+        };
     let call_start = node.location().start_offset();
     let call_range = call_start..call_end;
     let (container, local_variable, sibling_group, sibling_index) =
@@ -291,6 +321,7 @@ fn partition_candidate(
         predicate,
         symbol_method,
         negated,
+        negated_predicate,
         selector: selector.start_offset() - call_start..selector.end_offset() - call_start,
         call_source,
         container,
@@ -375,8 +406,9 @@ fn statement_positions(
 fn partition_pair_matches(left: &PartitionCandidate, right: &PartitionCandidate) -> bool {
     let complementary = is_select_method(&left.method) != is_select_method(&right.method)
         && predicates_equivalent(left, right);
-    let negated = left.method == right.method && left.negated != right.negated
-        && left.predicate == right.predicate;
+    let negated = left.method == right.method
+        && (left.negated_predicate.as_ref() == Some(&right.predicate)
+            || right.negated_predicate.as_ref() == Some(&left.predicate));
     complementary || negated
 }
 

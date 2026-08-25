@@ -377,6 +377,7 @@ fn inspect(
         } else {
             crate::config::AutocorrectMode::None
         },
+        false,
         target_ruby_version,
         crate::config::SourceEncoding::Utf8,
         Arc::new(CopConfig::default()),

@@ -57,6 +57,7 @@ impl ByteRange for &Location<'_> {
 
 pub(crate) struct Context {
     autocorrect: AutocorrectMode,
+    ignore_disable_comments: bool,
     path: Arc<str>,
     target_ruby_version: RubyVersion,
     source_encoding: SourceEncoding,
@@ -68,6 +69,7 @@ pub(crate) struct Context {
 impl Context {
     pub(super) fn new(
         autocorrect: AutocorrectMode,
+        ignore_disable_comments: bool,
         path: impl Into<Arc<str>>,
         target_ruby_version: RubyVersion,
         source_encoding: SourceEncoding,
@@ -75,6 +77,7 @@ impl Context {
     ) -> Self {
         Self {
             autocorrect,
+            ignore_disable_comments,
             path: path.into(),
             target_ruby_version,
             source_encoding,
@@ -277,7 +280,11 @@ impl Context {
     }
 
     pub(super) fn finish(mut self, source: &str) -> Inspection {
-        let disabled = disabled_findings(source, &self.findings);
+        let disabled = if self.ignore_disable_comments {
+            vec![false; self.findings.len()]
+        } else {
+            disabled_findings(source, &self.findings)
+        };
         self.corrections
             .retain(|correction| !disabled[correction.finding_index]);
         let correction_findings = self
@@ -387,37 +394,46 @@ fn disabled_findings(source: &str, findings: &[Finding]) -> Vec<bool> {
     let mut line_starts = Vec::new();
     let mut line_ends = Vec::new();
     let mut states = Vec::new();
-    let mut base_states = Vec::new();
-    let mut inline_comments = Vec::new();
+    let mut next_states = Vec::new();
+    let mut disable_next = None::<Vec<String>>;
     let mut offset = 0;
     for physical_line in source.split_inclusive('\n') {
         line_starts.push(offset);
         let line = physical_line.strip_suffix('\n').unwrap_or(physical_line);
         line_ends.push(offset + line.len());
-        base_states.push(state.clone());
         let mut line_state = state.clone();
-        let mut inline_comment = None;
-        if let Some((comment_at, disabled, names)) = cop_directive(line)
+        let mut next_state = DisabledState::default();
+        if let Some(names) = disable_next.take() {
+            let names = names.iter().map(String::as_str).collect::<Vec<_>>();
+            next_state.update(&names, true);
+        }
+        if let Some((comment_at, action, names)) = cop_directive(line)
             .filter(|(comment_at, _, _)| directive_comments.contains(&(offset + comment_at)))
         {
-            if line[..comment_at].trim().is_empty() {
-                state.update(&names, disabled);
-                line_state = state.clone();
-            } else {
-                line_state.update(&names, disabled);
-                inline_comment = Some(offset + comment_at);
+            match action {
+                DirectiveAction::DisableNext => {
+                    disable_next = Some(names.into_iter().map(str::to_string).collect());
+                }
+                DirectiveAction::Disable | DirectiveAction::Enable => {
+                    let disabled = action == DirectiveAction::Disable;
+                    if line[..comment_at].trim().is_empty() {
+                        state.update(&names, disabled);
+                        line_state = state.clone();
+                    } else {
+                        line_state.update(&names, disabled);
+                    }
+                }
             }
         }
         states.push(line_state);
-        inline_comments.push(inline_comment);
+        next_states.push(next_state);
         offset += physical_line.len();
     }
     if states.is_empty() {
         line_starts.push(0);
         line_ends.push(0);
         states.push(state);
-        base_states.push(DisabledState::default());
-        inline_comments.push(None);
+        next_states.push(DisabledState::default());
     }
 
     findings
@@ -426,26 +442,33 @@ fn disabled_findings(source: &str, findings: &[Finding]) -> Vec<bool> {
             let line = line_starts
                 .partition_point(|start| *start <= finding.start_offset)
                 .saturating_sub(1);
-            if inline_comments[line].is_some_and(|comment| {
-                finding.start_offset < comment && finding.end_offset > line_ends[line]
-            }) {
-                base_states[line].contains(finding.cop_name)
-            } else {
-                states[line].contains(finding.cop_name)
-            }
+            states[line].contains(finding.cop_name)
+                || next_states[line].contains(finding.cop_name)
+                    && finding.end_offset <= line_ends[line]
         })
         .collect()
 }
 
-fn cop_directive(line: &str) -> Option<(usize, bool, Vec<&str>)> {
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum DirectiveAction {
+    Disable,
+    DisableNext,
+    Enable,
+}
+
+fn cop_directive(line: &str) -> Option<(usize, DirectiveAction, Vec<&str>)> {
     let comment_at = line.find("# rubocop:")?;
     let directive = line[comment_at + "# rubocop:".len()..].trim_start();
-    let (disabled, names) = if let Some(names) = directive.strip_prefix("disable") {
-        (true, names)
+    let (action, names) = if let Some(names) = directive.strip_prefix("disable-next") {
+        (DirectiveAction::DisableNext, names)
+    } else if let Some(names) = directive.strip_prefix("todo-next") {
+        (DirectiveAction::DisableNext, names)
+    } else if let Some(names) = directive.strip_prefix("disable") {
+        (DirectiveAction::Disable, names)
     } else if let Some(names) = directive.strip_prefix("todo") {
-        (true, names)
+        (DirectiveAction::Disable, names)
     } else if let Some(names) = directive.strip_prefix("enable") {
-        (false, names)
+        (DirectiveAction::Enable, names)
     } else {
         return None;
     };
@@ -456,7 +479,7 @@ fn cop_directive(line: &str) -> Option<(usize, bool, Vec<&str>)> {
         .flat_map(str::split_whitespace)
         .filter(|name| !name.is_empty())
         .collect::<Vec<_>>();
-    Some((comment_at, disabled, names))
+    Some((comment_at, action, names))
 }
 
 #[cfg(test)]

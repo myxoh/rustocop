@@ -1246,16 +1246,19 @@ fn constant_reassignment(context: &mut CopContext<'_, '_>) {
         let Some(equal) = assignment_equal(line) else {
             continue;
         };
+        let begins_opaque_assignment = line[equal + 1..].trim_start().starts_with("begin");
         if line[equal + 1..].contains(" unless ") || line[equal + 1..].contains(" if ") {
             continue;
         }
         let before_equal = &line[..equal];
         let multiple = before_equal.contains(',');
+        let mut saw_constant_assignment = false;
         for raw in before_equal.split(',') {
             let candidate = raw.trim();
             if !constant_path(candidate) {
                 continue;
             }
+            saw_constant_assignment = true;
             let full_name = resolve_constant_path(candidate, &namespace);
             if assigned.insert(full_name) {
                 continue;
@@ -1274,6 +1277,12 @@ fn constant_reassignment(context: &mut CopContext<'_, '_>) {
                 format!("Constant `{display}` is already assigned in this namespace."),
                 offset + start_in_line..offset + end_in_line,
             );
+        }
+        // RuboCop's `simple_assignment?` rejects assignments below a rescue
+        // node. Keep the complete `constant = begin ... rescue ... end`
+        // expression opaque instead of merging mutually exclusive branches.
+        if begins_opaque_assignment && saw_constant_assignment {
+            scopes.push(Scope::Opaque);
         }
     }
 }

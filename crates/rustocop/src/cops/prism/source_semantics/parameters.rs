@@ -43,7 +43,15 @@ pub(super) fn optional_boolean_parameter(
     node: &ruby_prism::DefNode<'_>,
     context: &mut CopContext<'_, '_>,
 ) {
-    if context.policy().allows_method(node.name().as_slice()) {
+    use crate::rubocop::cop::mixin::allowed_methods::AllowedMethods;
+
+    let method_name = String::from_utf8_lossy(node.name().as_slice());
+    let allowed_methods = AllowedMethods::new(
+        context.config_values("AllowedMethods").to_vec(),
+        Vec::new(),
+        Vec::new(),
+    );
+    if allowed_methods.allowed_method(&method_name) {
         return;
     }
     let Some(parameters) = node.parameters() else {

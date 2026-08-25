@@ -187,15 +187,14 @@ impl Cop for EmptyExpression {
         _source: &str,
         context: &mut Context,
     ) {
-        let Some(parentheses) = node.as_parentheses_node() else {
-            return;
-        };
-        if parentheses.body().is_none() {
-            context.report(
-                self.name(),
-                "Avoid empty expressions.",
-                parentheses.location(),
-            );
+        let empty = node
+            .as_parentheses_node()
+            .is_some_and(|parentheses| parentheses.body().is_none())
+            || node
+                .as_embedded_statements_node()
+                .is_some_and(|interpolation| interpolation.statements().is_none());
+        if empty {
+            context.report(self.name(), "Avoid empty expressions.", node.location());
         }
     }
 }

@@ -239,7 +239,9 @@ fn identity_block(block: &ruby_prism::BlockNode<'_>) -> Option<IdentityBlock> {
     let parameters = block_parameters.parameters()?;
     if parameters.requireds().len() != 1
         || !parameters.optionals().is_empty()
-        || parameters.rest().is_some()
+        || parameters
+            .rest()
+            .is_some_and(|rest| rest.as_implicit_rest_node().is_none())
         || !parameters.posts().is_empty()
         || !parameters.keywords().is_empty()
         || parameters.keyword_rest().is_some()

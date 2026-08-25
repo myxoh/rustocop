@@ -302,11 +302,21 @@ fn exponential_notation(node: &ruby_prism::FloatNode<'_>, context: &mut CopConte
 }
 
 fn hash_like_case(node: &ruby_prism::CaseNode<'_>, context: &mut CopContext<'_, '_>) {
+    use crate::rubocop::cop::mixin::policies::{
+        meets_min_branches_count, min_branches_count,
+    };
+
     if node.else_clause().is_some() || node.predicate().is_none() {
         return;
     }
     let branches = node.conditions().iter().collect::<Vec<_>>();
-    if branches.len() < context.config_usize("MinBranchesCount", 3) {
+    let configured = context
+        .config_value("MinBranchesCount")
+        .and_then(|value| value.parse::<i64>().ok());
+    let Ok(minimum) = min_branches_count(configured) else {
+        return;
+    };
+    if !meets_min_branches_count(branches.len(), minimum) {
         return;
     }
     let mut condition_kind = None;
@@ -364,6 +374,16 @@ fn string_or_symbol_kind(node: &Node<'_>) -> Option<u8> {
 
 fn literal_kind(node: &Node<'_>) -> Option<u8> {
     string_or_symbol_kind(node)
+        .or_else(|| {
+            node.as_interpolated_string_node()
+                .filter(|string| {
+                    string
+                        .parts()
+                        .iter()
+                        .all(|part| part.as_string_node().is_some())
+                })
+                .map(|_| 1)
+        })
         .or_else(|| node.as_integer_node().map(|_| 3))
         .or_else(|| node.as_float_node().map(|_| 4))
         .or_else(|| node.as_true_node().map(|_| 5))
