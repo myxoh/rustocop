@@ -405,6 +405,7 @@ impl AbcCounter<'_> {
         }
     }
 
+    #[allow(clippy::too_many_lines)] // Exhaustive Prism node dispatch is clearer in one source-shaped match.
     fn count_node(&mut self, node: &Node<'_>) {
         if let Some(call) = node.as_call_node() {
             self.call(&call);

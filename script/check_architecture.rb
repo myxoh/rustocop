@@ -11,20 +11,27 @@ DEFAULT_RUST_LIMIT = 350
 DEBT_PATH = "spec/architecture_debt.yml"
 MAX_COPS_PER_MODULE = 16
 SOURCE_ROOT = "crates/rustocop/src"
+COMPATIBILITY_ROOT = "#{SOURCE_ROOT}/rubocop/"
 ROOT_MODULES = %w[config.rs main.rs model.rs].freeze
-PACKAGE_DIRECTORIES = %w[app config cops engine].freeze
+PACKAGE_DIRECTORIES = %w[app config cops engine rubocop].freeze
 
 DEPENDENCY_RULES = {
   "#{SOURCE_ROOT}/cops/" => %w[app engine],
   "#{SOURCE_ROOT}/engine/" => %w[app],
   "#{SOURCE_ROOT}/config/" => %w[app cops engine model],
   "#{SOURCE_ROOT}/config.rs" => %w[app cops engine model],
-  "#{SOURCE_ROOT}/model.rs" => %w[app config cops engine]
+  "#{SOURCE_ROOT}/model.rs" => %w[app config cops engine],
+  COMPATIBILITY_ROOT => %w[app config cops engine model]
 }.freeze
 
 rust_files = Dir.glob("#{SOURCE_ROOT}/**/*.rs").sort
 module_debt = YAML.safe_load_file(DEBT_PATH, aliases: false) || {}
 failures = rust_files.filter_map do |path|
+  # The compatibility tree intentionally mirrors upstream file and module
+  # boundaries. Its generated manifest and focused tests, rather than the
+  # application module-size budget, prevent it from becoming untracked debt.
+  next if path.start_with?(COMPATIBILITY_ROOT)
+
   lines = File.foreach(path).count
   limit = LIMITS.fetch(path, DEFAULT_RUST_LIMIT)
   debt_limit = module_debt[path]

@@ -29,6 +29,27 @@ RuboCop-derived fixtures and complete project signatures; the old
 Verified/Heuristic qualification scoreboard is not used. The configured and
 audited real-project corpus contains 50 pinned repositories.
 
+The separate [RuboCop compatibility layer](docs/rubocop-compatibility-layer.md)
+tracks all 228 shared components from RuboCop 1.87.0 and rubocop-ast
+1.49.1. The strict generated ledger accounts for all of them: 191 translated,
+30 native equivalents, and 7 facilities that do not apply in Rust, with no
+partial or pending components. It is also the authority for all 2,586 APIs
+discovered from both Ruby syntax and the pinned gems' runtime-defined method
+surface, including `attr_*`, `Struct`, delegation, `define_method`, and
+`class_eval` generation. Source-shaped Rust functions, explicit ownership for
+ambiguous operations in consolidated files, and source-reviewed,
+destination-checked equivalences are counted. A public translated function is
+also rejected as incomplete until it is exercised outside its own definition;
+the ledger currently has zero unexercised public targets. All 3,139
+expanded examples from the 83 shared upstream RSpec suites are recorded in a
+cached inventory. Each individual RSpec ID is bound to a named executable Rust
+test, its upstream description hash, and reviewable semantic terms or an
+explicit source rule; the complete binding is digest-checked. Its
+[generated progress ledger](docs/rubocop-compatibility-progress.md) tracks the
+source hashes and upstream spec ports. Existing cops do not consume that layer
+yet, so work on this layer does not change the fixture or real-project parity
+figures below.
+
 ## Validation standard
 
 The gold standard is executable behavior checked against RuboCop 1.87.0:

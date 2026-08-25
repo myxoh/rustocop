@@ -47,7 +47,15 @@ src/
       tests/       cross-family Prism integration tests
       *.rs         cohesive cop-family implementations
     text/          textual compatibility cops grouped by department
+  rubocop/         pinned shared RuboCop/rubocop-ast compatibility layer
 ```
+
+The compatibility layer's strict ledger accounts for all 228 pinned shared
+components and all 2,586 syntax- and runtime-discovered APIs. Its executable
+coverage gate also rejects public translations that appear only at their own
+definition; no such targets remain. It remains deliberately separate from the
+production cop registry: completing the translation layer does not imply that
+existing cops have been migrated to consume it.
 
 ## Inspection pipeline
 
@@ -100,6 +108,9 @@ coordinated edits without replacing an unnecessarily large source region.
   modules. A cop cannot discover files, format reports, or invoke the engine.
 - `config` and `model` are leaf modules. They cannot depend on the
   application, engine, or cop implementations.
+- `rubocop` mirrors the shared RuboCop 1.87.0 and rubocop-ast 1.49.1 source
+  boundaries. It remains isolated from existing cops until a separately
+  reviewed migration adopts its APIs.
 - Differential fixtures and complete project signatures are the compatibility
   contract. A cop is not compatible merely because it recognizes representative
   text or passes the captured upstream examples.
