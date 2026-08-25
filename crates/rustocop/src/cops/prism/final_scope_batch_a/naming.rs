@@ -459,6 +459,25 @@ fn inclusive_language(context: &mut CopContext<'_, '_>) {
     let comments = file.comment_ranges();
     let literals = file.literal_ranges();
     let heredocs = file.heredoc_ranges();
+    #[derive(Default)]
+    struct SymbolRanges(Vec<std::ops::Range<usize>>);
+    impl<'pr> ruby_prism::Visit<'pr> for SymbolRanges {
+        fn visit_symbol_node(&mut self, node: &ruby_prism::SymbolNode<'pr>) {
+            // Prism also represents hash labels as SymbolNode. RuboCop's
+            // token policy checks `tSYMBOL`, not `tLABEL`.
+            let slice = node.location().as_slice();
+            if slice.starts_with(b":")
+                && !matches!(slice.get(1), Some(b'\'' | b'"'))
+            {
+                self.0
+                    .push(node.location().start_offset()..node.location().end_offset());
+            }
+            ruby_prism::visit_symbol_node(self, node);
+        }
+    }
+    let parsed = ruby_prism::parse(context.source().as_bytes());
+    let mut symbols = SymbolRanges::default();
+    ruby_prism::Visit::visit(&mut symbols, &parsed.node());
     for (term, config) in configured {
         let pattern = config.regex.clone().unwrap_or_else(|| regex::escape(&term));
         let pattern = if config.whole_word {
@@ -474,6 +493,7 @@ fn inclusive_language(context: &mut CopContext<'_, '_>) {
         let Ok(matcher) = regex::Regex::new(&pattern) else {
             continue;
         };
+        let mut reported_comment_tokens = std::collections::HashSet::new();
         for matched in matcher.find_iter(context.source()) {
             let start = matched.start();
             let end = matched.end();
@@ -497,9 +517,25 @@ fn inclusive_language(context: &mut CopContext<'_, '_>) {
             }) {
                 continue;
             }
-            let in_comment = comments
+            let containing_comment = comments
                 .iter()
-                .any(|range| range.start <= start && end <= range.end);
+                .find(|range| range.start <= start && end <= range.end);
+            let in_comment = containing_comment.is_some();
+            if in_comment
+                && file.line(start).contains("# rubocop:disable")
+                && (file.line(start).contains("Naming/InclusiveLanguage")
+                    || file.line(start).contains("rubocop:disable all"))
+            {
+                continue;
+            }
+            if let Some(comment) = containing_comment {
+                // RuboCop scans each comment token, then derives the range
+                // with `token.text.index(word)`. Repeated occurrences of the
+                // same term therefore collapse onto the first range.
+                if !reported_comment_tokens.insert(comment.start) {
+                    continue;
+                }
+            }
             let containing_heredoc = heredocs
                 .iter()
                 .find(|range| range.start <= start && end <= range.end);
@@ -530,8 +566,12 @@ fn inclusive_language(context: &mut CopContext<'_, '_>) {
                 .find(|character: char| !character.is_alphanumeric() && character != '_')
                 .map_or(context.source().len(), |offset| end + offset);
             let previous = context.source()[..token_start].chars().next_back();
-            let symbol = previous == Some(':')
-                && context.source().as_bytes().get(token_start.saturating_sub(2)) != Some(&b':');
+            let symbol = symbols
+                .0
+                .iter()
+                .any(|range| range.start <= start && end <= range.end)
+                || previous == Some(':')
+                    && context.source().as_bytes().get(token_start.saturating_sub(2)) != Some(&b':');
             let variable = matches!(previous, Some('@' | '$'));
             let token = &context.source()[token_start..token_end];
             let predicate_suffix = context.source()[token_end..].chars().next();

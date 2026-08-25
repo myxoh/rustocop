@@ -338,6 +338,9 @@ fn parse_combinable_loop(offset: usize, line: &str) -> Option<CombinableLoop<'_>
 }
 
 fn each_for_simple_loop(context: &mut CopContext<'_, '_>) {
+    let mut non_code_ranges = context.source_file().literal_ranges();
+    non_code_ranges.extend(context.source_file().heredoc_ranges());
+    non_code_ranges.extend(context.source_file().comment_ranges());
     for (offset, line) in context.source_file().lines() {
         let Some(each) = line.find(".each") else { continue };
         if line
@@ -350,6 +353,13 @@ fn each_for_simple_loop(context: &mut CopContext<'_, '_>) {
         let safe_navigation = line.as_bytes().get(each.saturating_sub(1)) == Some(&b'&');
         let receiver_end = each - usize::from(safe_navigation);
         let Some(open) = line[..receiver_end].rfind('(') else { continue };
+        let absolute_open = offset + open;
+        if non_code_ranges
+            .iter()
+            .any(|range| range.start <= absolute_open && absolute_open < range.end)
+        {
+            continue;
+        }
         if line[..open]
             .trim_end()
             .as_bytes()
@@ -378,8 +388,8 @@ fn each_for_simple_loop(context: &mut CopContext<'_, '_>) {
         let iterations = end_number.saturating_sub(start_number) + usize::from(inclusive);
         context.replace(
             "Use `Integer#times` for a simple loop which iterates a fixed number of times.",
-            offset + open..offset + offense_end,
-            offset + open..offset + offense_end,
+            absolute_open..offset + offense_end,
+            absolute_open..offset + offense_end,
             format!("{iterations}.times"),
         );
     }

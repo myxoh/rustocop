@@ -16,9 +16,15 @@ define_cops! {
 fn duplicate_set_element(context: &mut CopContext<'_, '_>) {
     let source = context.source();
     report_duplicate_percent_symbol_sets(source, context);
+    let comments = context.source_file().comment_ranges();
+    let literals = context.source_file().literal_ranges();
     let mut inspected = HashSet::new();
     for (open, _) in source.match_indices('[') {
-        if source[..open].ends_with("%i") || !inspected.insert(open) {
+        if source[..open].ends_with("%i")
+            || !inspected.insert(open)
+            || ranges_contain(&comments, open)
+            || ranges_contain(&literals, open)
+        {
             continue;
         }
         let Some(close) = super::source_syntax::matching_delimiter(source, open, b'[', b']') else {
@@ -32,8 +38,19 @@ fn duplicate_set_element(context: &mut CopContext<'_, '_>) {
 }
 
 fn report_duplicate_percent_symbol_sets(source: &str, context: &mut CopContext<'_, '_>) {
+    let comments = context.source_file().comment_ranges();
+    let literals = context.source_file().literal_ranges();
     let mut search = 0;
     while let Some(relative) = source[search..].find("%i[") {
+        let literal_start = search + relative;
+        if ranges_contain(&comments, literal_start)
+            || literals
+                .iter()
+                .any(|range| range.start < literal_start && literal_start < range.end)
+        {
+            search = literal_start + 3;
+            continue;
+        }
         let open = search + relative + 2;
         let Some(close_relative) = source[open + 1..].find(']') else {
             break;
@@ -74,6 +91,12 @@ fn report_duplicate_percent_symbol_sets(source: &str, context: &mut CopContext<'
         }
         search = close + 1;
     }
+}
+
+fn ranges_contain(ranges: &[std::ops::Range<usize>], offset: usize) -> bool {
+    ranges
+        .iter()
+        .any(|range| range.start <= offset && offset < range.end)
 }
 
 fn set_constructor_name(source: &str, open: usize, close: usize) -> Option<&'static str> {
@@ -153,8 +176,13 @@ fn stable_set_element(value: &str, preceding_source: &str) -> bool {
 }
 
 fn numeric_constant_result(context: &mut CopContext<'_, '_>) {
+    let literal_ranges = context.source_file().literal_ranges();
     for (offset, line) in context.source_file().lines() {
         let code = line.split('#').next().unwrap_or(line).trim();
+        let start = offset + line.find(code).unwrap_or(0);
+        if ranges_contain(&literal_ranges, start) {
+            continue;
+        }
         let replacement = if let Some(left) = code.strip_suffix(" * 0") {
             (!left.trim().bytes().all(|b| b.is_ascii_digit())).then(|| "0".to_string())
         } else if let Some(right) = code.strip_prefix("0 * ") {
@@ -181,7 +209,6 @@ fn numeric_constant_result(context: &mut CopContext<'_, '_>) {
             None
         };
         if let Some(replacement) = replacement {
-            let start = offset + line.find(code).unwrap_or(0);
             context.replace(
                 "Numeric operation with a constant result detected.",
                 start..start + code.len(),

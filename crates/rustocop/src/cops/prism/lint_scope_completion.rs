@@ -18,6 +18,23 @@ fn empty_node(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
     let Some(node) = node.as_block_node() else {
         return;
     };
+    let node_location = node.location();
+    if context.ancestors().iter().rev().any(|ancestor| {
+        ancestor.as_call_node().is_some_and(|call| {
+            let nested_receiver = call.receiver().is_some_and(|receiver| {
+                receiver.location().start_offset() <= node_location.start_offset()
+                    && node_location.end_offset() <= receiver.location().end_offset()
+            });
+            nested_receiver
+                && call.block().and_then(|block| block.as_block_node()).is_some_and(|outer| {
+                    outer.body().is_none()
+                        && (outer.location().start_offset() != node_location.start_offset()
+                            || outer.location().end_offset() != node_location.end_offset())
+                })
+        })
+    }) {
+        return;
+    }
     if node.body().is_some_and(|body| {
         body.as_statements_node()
             .is_none_or(|statements| !statements.body().is_empty())
@@ -43,17 +60,27 @@ fn empty_node(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
         return;
     }
     let location = parent.map_or_else(|| node.location(), Node::location);
-    let line_start = context.source_file().line_start(location.start_offset());
+    let file = context.source_file();
+    let line_start = file.line_start(location.start_offset());
     let line_end = context.source()[line_start..]
         .find('\n')
         .map_or(context.source().len(), |at| line_start + at);
-    let line = &context.source()[line_start..line_end];
-    let block_source = context.source_file().at(&node.location());
-    let inline_comment = node.location().end_offset() <= line_end
-        && line[node.location().end_offset().saturating_sub(line_start)..].contains('#');
-    if context.config_bool("AllowComments", true) && (block_source.contains('#') || inline_comment)
-    {
-        return;
+    if context.config_bool("AllowComments", true) {
+        let block_location = node.location();
+        let comment = file.comment_ranges().into_iter().find(|comment| {
+            block_location.start_offset() <= comment.start
+                && comment.end <= block_location.end_offset()
+                || block_location.end_offset() <= comment.start && comment.start < line_end
+        });
+        if comment.is_some_and(|comment| {
+            let text = file.slice(comment).unwrap_or_default();
+            !text.contains("rubocop:disable Lint/EmptyBlock")
+                && !text.contains("rubocop:todo Lint/EmptyBlock")
+                && !text.contains("rubocop:disable all")
+                && !text.contains("rubocop:todo all")
+        }) {
+            return;
+        }
     }
     let start = location.start_offset();
     let end = location.end_offset();

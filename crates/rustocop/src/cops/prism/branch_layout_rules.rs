@@ -113,8 +113,7 @@ fn multiline_if_modifier(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
     };
     let nested_in_same_modifier = context.ancestors().iter().rev().any(|ancestor| {
         conditional_parts(ancestor).is_some_and(|(outer_keyword, _, _, _, outer_location)| {
-            outer_location.start_offset() == location.start_offset()
-                && outer_keyword.start_offset() != outer_location.start_offset()
+            outer_keyword.start_offset() != outer_location.start_offset()
         })
     });
     let file = context.source_file();

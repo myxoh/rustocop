@@ -14,21 +14,7 @@ fn block_alignment_node(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
     if let Some(block) = node.as_block_node() {
         block_alignment(&block, context);
     } else if let Some(lambda) = node.as_lambda_node() {
-        let lambda_start = lambda.location().start_offset();
-        if !context.source()[..lambda_start].trim_end().ends_with('(') {
-            return;
-        }
-        let opening = lambda.opening_loc();
-        let block_start = lambda_start;
-        let block_column = context.source_file().column(block_start);
-        block_alignment_locations(
-            lambda.closing_loc(),
-            opening,
-            block_start,
-            block_column,
-            true,
-            context,
-        );
+        lambda_alignment(&lambda, context);
     }
 }
 
@@ -394,6 +380,98 @@ fn empty_lines_around_access_modifier(node: &CallNode<'_>, context: &mut CopCont
     }
 }
 
+fn lambda_alignment(node: &ruby_prism::LambdaNode<'_>, context: &mut CopContext<'_, '_>) {
+    let source = context.source();
+    let file = context.source_file();
+    let closing = node.closing_loc();
+    let closing_line = line_index(source, closing.start_offset());
+    let closing_start = line_start(source, closing_line);
+    if !source[closing_start..closing.start_offset()]
+        .chars()
+        .all(char::is_whitespace)
+    {
+        return;
+    }
+
+    let lambda_start = node.location().start_offset();
+    let lambda_line = line_index(source, lambda_start);
+    let line_begin = line_start(source, lambda_line);
+    let before_lambda = &source[line_begin..lambda_start];
+    let assigned = before_lambda
+        .rfind('=')
+        .is_some_and(|equal| before_lambda.as_bytes().get(equal + 1) != Some(&b'>'));
+    let start_offset = if assigned {
+        line_begin + before_lambda.len() - before_lambda.trim_start().len()
+    } else {
+        lambda_start
+    };
+    let start_column = file.column(start_offset);
+
+    let body_start = node
+        .body()
+        .map_or(closing.start_offset(), |body| body.location().start_offset());
+    let brace = source[lambda_start..body_start]
+        .rfind('{')
+        .map_or(lambda_start, |relative| lambda_start + relative);
+    let brace_line = line_index(source, brace);
+    let brace_line_start = line_start(source, brace_line);
+    let brace_column = source[brace_line_start..brace]
+        .chars()
+        .take_while(|character| character.is_whitespace())
+        .count();
+    let current_column = file.column(closing.start_offset());
+    let style = context
+        .config_value("EnforcedStyleAlignWith")
+        .unwrap_or("either");
+    let aligned = match style {
+        "start_of_block" => current_column == brace_column,
+        "start_of_line" => current_column == start_column,
+        _ => current_column == start_column || current_column == brace_column,
+    };
+    if aligned {
+        return;
+    }
+
+    let current = format!("`}}` at {}, {current_column}", closing_line + 1);
+    let start = source_line_column(source, lambda_line, start_column, start_offset);
+    let block = source_line_column(
+        source,
+        brace_line,
+        brace_column,
+        brace_line_start + brace_column,
+    );
+    let preferred = if style == "start_of_block" { &block } else { &start };
+    let alternate = if style == "either"
+        && (lambda_line != brace_line || start_column != brace_column)
+    {
+        format!(" or {block}")
+    } else {
+        String::new()
+    };
+    let parenthesized_argument = before_lambda.trim_end().ends_with('(');
+    if !assigned && !parenthesized_argument {
+        context.report(
+            format!("{current} is not aligned with {preferred}{alternate}."),
+            &closing,
+        );
+        return;
+    }
+    let target = if style == "start_of_block" {
+        brace_column
+    } else if parenthesized_argument {
+        source[line_begin..lambda_start].len()
+            - source[line_begin..lambda_start].trim_start().len()
+    } else {
+        start_column
+    };
+    context.replace(
+        format!("{current} is not aligned with {preferred}{alternate}."),
+        &closing,
+        closing_start..closing.start_offset(),
+        " ".repeat(target),
+    );
+}
+
 fn block_alignment(node: &ruby_prism::BlockNode<'_>, context: &mut CopContext<'_, '_>) {
     let opening = node.opening_loc();
     let opening_line = line_index(context.source(), opening.start_offset());
@@ -468,7 +546,7 @@ fn block_alignment_locations(
             || mass_assignment
             || parent.as_and_node().is_some()
             || parent.as_or_node().is_some()
-            || prefix.contains('=');
+            || prefix.contains('=') && !prefix.contains("=>");
         if absorbs_receiver || absorbs_expression {
             target = parent.location();
         } else {

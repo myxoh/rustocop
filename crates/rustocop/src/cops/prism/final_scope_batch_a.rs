@@ -537,7 +537,7 @@ impl<'pr> ruby_prism::Visit<'pr> for OuterTargetNames {
 
 fn declaration_in_same_conditional_branch(
     declaration: usize,
-    _target: usize,
+    target: usize,
     context: &CopContext<'_, '_>,
 ) -> bool {
     let Some(root) = context
@@ -561,31 +561,162 @@ fn declaration_in_same_conditional_branch(
     };
     let mut conditionals = ConditionalRegions::default();
     ruby_prism::Visit::visit(&mut conditionals, &root);
-    let Some(outer) = conditionals
+    let nearest_conditional = conditionals
         .regions
         .iter()
         .filter(|region| region.range.contains(&declaration))
         .min_by_key(|region| region.range.end - region.range.start)
-    else {
-        return true;
-    };
-    let Some(variable_node) = shadowing_variable_node(context) else {
-        return true;
-    };
+        .map(|region| region.range.clone());
+    let lambda_scope = context.parent().and_then(Node::as_call_node).is_none();
 
-    // This is RuboCop's same_conditions_node_different_branch? contract:
-    // compare the block's semantic parent with the nearest conditional around
-    // the outer declaration, not merely the branches containing both offsets.
-    if variable_node == outer.range {
-        return false;
-    }
-    if outer.if_type
-        && outer
-            .else_branch
-            .as_ref()
-            .is_some_and(|branch| *branch == variable_node)
-    {
-        return false;
+    for ancestor in context.ancestors() {
+        let (selected, declaration_branch, predicate, outer_range, selected_single_expression) =
+            if let Some(conditional) = ancestor.as_if_node() {
+                let branches = [
+                    conditional
+                        .statements()
+                        .map(|statements| location_offsets(statements.location())),
+                    conditional
+                        .subsequent()
+                        .map(|branch| location_offsets(branch.location())),
+                ];
+                (
+                    branches
+                        .iter()
+                        .flatten()
+                        .find(|branch| branch.contains(&target))
+                        .cloned(),
+                    branches
+                        .iter()
+                        .flatten()
+                        .find(|branch| branch.contains(&declaration))
+                        .cloned(),
+                    Some(location_offsets(conditional.predicate().location())),
+                    location_offsets(conditional.location()),
+                    conditional
+                        .statements()
+                        .is_some_and(|statements| statements.body().len() == 1),
+                )
+            } else if let Some(conditional) = ancestor.as_unless_node() {
+                let branches = [
+                    conditional
+                        .statements()
+                        .map(|statements| location_offsets(statements.location())),
+                    conditional
+                        .else_clause()
+                        .map(|branch| location_offsets(branch.location())),
+                ];
+                (
+                    branches
+                        .iter()
+                        .flatten()
+                        .find(|branch| branch.contains(&target))
+                        .cloned(),
+                    branches
+                        .iter()
+                        .flatten()
+                        .find(|branch| branch.contains(&declaration))
+                        .cloned(),
+                    Some(location_offsets(conditional.predicate().location())),
+                    location_offsets(conditional.location()),
+                    conditional
+                        .statements()
+                        .is_some_and(|statements| statements.body().len() == 1),
+                )
+            } else if let Some(conditional) = ancestor.as_while_node() {
+                let branch = conditional
+                    .statements()
+                    .map(|statements| location_offsets(statements.location()));
+                (
+                    branch.as_ref().filter(|range| range.contains(&target)).cloned(),
+                    branch
+                        .as_ref()
+                        .filter(|range| range.contains(&declaration))
+                        .cloned(),
+                    Some(location_offsets(conditional.predicate().location())),
+                    location_offsets(conditional.location()),
+                    conditional
+                        .statements()
+                        .is_some_and(|statements| statements.body().len() == 1),
+                )
+            } else if let Some(conditional) = ancestor.as_until_node() {
+                let branch = conditional
+                    .statements()
+                    .map(|statements| location_offsets(statements.location()));
+                (
+                    branch.as_ref().filter(|range| range.contains(&target)).cloned(),
+                    branch
+                        .as_ref()
+                        .filter(|range| range.contains(&declaration))
+                        .cloned(),
+                    Some(location_offsets(conditional.predicate().location())),
+                    location_offsets(conditional.location()),
+                    conditional
+                        .statements()
+                        .is_some_and(|statements| statements.body().len() == 1),
+                )
+            } else if let Some(case) = ancestor.as_case_node() {
+                let branches = case
+                    .conditions()
+                    .iter()
+                    .map(|branch| location_offsets(branch.location()))
+                    .chain(
+                        case.else_clause()
+                            .map(|branch| location_offsets(branch.location())),
+                    )
+                    .collect::<Vec<_>>();
+                let predicate = case.predicate().map(|node| location_offsets(node.location()));
+                if predicate
+                    .as_ref()
+                    .is_some_and(|range| range.contains(&declaration))
+                    && branches.iter().any(|branch| branch.contains(&target))
+                {
+                    return false;
+                }
+                let declaration_branch = branches
+                    .iter()
+                    .find(|branch| branch.contains(&declaration))
+                    .cloned();
+                if context.related_config_value("AllCops", "ParserEngine")
+                    == Some("parser_prism")
+                    && declaration_branch.is_some()
+                    && case.conditions().iter().any(|branch| {
+                        branch.as_when_node().is_some_and(|branch| {
+                            branch.conditions().len() == 1
+                                && location_offsets(branch.location()).contains(&declaration)
+                        })
+                    })
+                {
+                    continue;
+                }
+                (
+                    branches.iter().find(|branch| branch.contains(&target)).cloned(),
+                    declaration_branch,
+                    predicate,
+                    location_offsets(case.location()),
+                    false,
+                )
+            } else {
+                continue;
+            };
+
+        if predicate.as_ref().is_some_and(|range| {
+            range.contains(&declaration)
+                && (range.contains(&target)
+                    || selected_single_expression
+                        && selected
+                            .as_ref()
+                            .is_some_and(|branch| branch.contains(&target)))
+        }) {
+            return false;
+        }
+        let Some(selected) = selected else { continue };
+        if declaration_branch.is_some_and(|branch| branch != selected) {
+            if lambda_scope || nearest_conditional.as_ref().is_some_and(|nearest| *nearest != outer_range) {
+                continue;
+            }
+            return false;
+        }
     }
     true
 }
@@ -597,16 +728,12 @@ struct ConditionalRegions {
 
 struct ConditionalRegion {
     range: std::ops::Range<usize>,
-    else_branch: Option<std::ops::Range<usize>>,
-    if_type: bool,
 }
 
 impl<'pr> ruby_prism::Visit<'pr> for ConditionalRegions {
     fn visit_if_node(&mut self, node: &ruby_prism::IfNode<'pr>) {
         self.regions.push(ConditionalRegion {
             range: location_offsets(node.location()),
-            else_branch: node.subsequent().map(|branch| location_offsets(branch.location())),
-            if_type: true,
         });
         ruby_prism::visit_if_node(self, node);
     }
@@ -614,8 +741,6 @@ impl<'pr> ruby_prism::Visit<'pr> for ConditionalRegions {
     fn visit_unless_node(&mut self, node: &ruby_prism::UnlessNode<'pr>) {
         self.regions.push(ConditionalRegion {
             range: location_offsets(node.location()),
-            else_branch: node.else_clause().map(|branch| location_offsets(branch.location())),
-            if_type: true,
         });
         ruby_prism::visit_unless_node(self, node);
     }
@@ -623,8 +748,6 @@ impl<'pr> ruby_prism::Visit<'pr> for ConditionalRegions {
     fn visit_while_node(&mut self, node: &ruby_prism::WhileNode<'pr>) {
         self.regions.push(ConditionalRegion {
             range: location_offsets(node.location()),
-            else_branch: None,
-            if_type: false,
         });
         ruby_prism::visit_while_node(self, node);
     }
@@ -632,8 +755,6 @@ impl<'pr> ruby_prism::Visit<'pr> for ConditionalRegions {
     fn visit_until_node(&mut self, node: &ruby_prism::UntilNode<'pr>) {
         self.regions.push(ConditionalRegion {
             range: location_offsets(node.location()),
-            else_branch: None,
-            if_type: false,
         });
         ruby_prism::visit_until_node(self, node);
     }
@@ -641,8 +762,6 @@ impl<'pr> ruby_prism::Visit<'pr> for ConditionalRegions {
     fn visit_case_node(&mut self, node: &ruby_prism::CaseNode<'pr>) {
         self.regions.push(ConditionalRegion {
             range: location_offsets(node.location()),
-            else_branch: None,
-            if_type: false,
         });
         ruby_prism::visit_case_node(self, node);
     }
@@ -650,32 +769,8 @@ impl<'pr> ruby_prism::Visit<'pr> for ConditionalRegions {
     fn visit_case_match_node(&mut self, node: &ruby_prism::CaseMatchNode<'pr>) {
         self.regions.push(ConditionalRegion {
             range: location_offsets(node.location()),
-            else_branch: None,
-            if_type: false,
         });
         ruby_prism::visit_case_match_node(self, node);
-    }
-}
-
-fn shadowing_variable_node(context: &CopContext<'_, '_>) -> Option<std::ops::Range<usize>> {
-    let ancestors = context.ancestors();
-    let mut index = ancestors.len().checked_sub(1)?;
-    if ancestors[index].as_call_node().is_some() {
-        index = index.checked_sub(1)?;
-    }
-    loop {
-        let node = ancestors.get(index)?;
-        if let Some(statements) = node.as_statements_node() {
-            if statements.body().len() == 1 {
-                index = index.checked_sub(1)?;
-                continue;
-            }
-        }
-        if node.as_when_node().is_some() {
-            index = index.checked_sub(1)?;
-            continue;
-        }
-        return Some(location_offsets(node.location()));
     }
 }
 

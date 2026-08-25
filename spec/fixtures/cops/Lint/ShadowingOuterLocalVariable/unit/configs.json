@@ -1,5 +1,6 @@
 {
   "0b0a9344d3f99d25": "---\nAllCops:\n  TargetRubyVersion: 3.4\nLint/ShadowingOuterLocalVariable:\n  Description: Do not use the same name as outer local variable for block arguments\n    or block local variables.\n  Enabled: true\n  VersionAdded: '0.9'\n  VersionChanged: '1.76'\n  AutoCorrect: always\n",
+  "2743a9c7b9573170": "---\nAllCops:\n  DisabledByDefault: true\n  ParserEngine: parser_prism\n  TargetRubyVersion: 3.4\nLint/ShadowingOuterLocalVariable:\n  Enabled: true\n",
   "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
   "7f57659a04bf8d96": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/ShadowingOuterLocalVariable:\n  Description: Do not use the same name as outer local variable for block arguments\n    or block local variables.\n  Enabled: true\n  VersionAdded: '0.9'\n  VersionChanged: '1.76'\n  AutoCorrect: always\n"
 }

@@ -1354,7 +1354,27 @@ fn block_is_ambiguous_argument(context: &CopContext<'_, '_>) -> bool {
     let Some(call) = context.parent().and_then(Node::as_call_node) else {
         return false;
     };
+    // Parenthesized and collection-contained calls keep their own block binding.
+    // Check these barriers independently of the ancestor storage order before
+    // considering an outer command-form call.
+    if context.ancestors().iter().any(|ancestor| {
+        ancestor.as_parentheses_node().is_some()
+            || ancestor.as_array_node().is_some()
+            || ancestor.as_hash_node().is_some()
+            || ancestor.as_splat_node().is_some()
+    }) {
+        return false;
+    }
     for ancestor in context.ancestors().iter().rev().skip(1) {
+        if ancestor.as_def_node().is_some()
+            || ancestor.as_class_node().is_some()
+            || ancestor.as_module_node().is_some()
+            || ancestor.as_singleton_class_node().is_some()
+            || ancestor.as_block_node().is_some()
+            || ancestor.as_lambda_node().is_some()
+        {
+            return false;
+        }
         if ancestor.as_parentheses_node().is_some() {
             return false;
         }
@@ -1399,7 +1419,10 @@ fn block_is_ambiguous_argument(context: &CopContext<'_, '_>) -> bool {
             if single_argument_operator && contains_as_argument && block_is_chained(context) {
                 return true;
             }
-            if outer.opening_loc().is_none()
+            let chained_bracket_argument = outer.opening_loc().is_some_and(|opening| {
+                opening.as_slice() == b"[" && block_is_chained(context)
+            });
+            if (outer.opening_loc().is_none() || chained_bracket_argument)
                 && !call_name(&outer).ends_with(b"=")
                 && !single_argument_operator
                 && contains_as_argument
@@ -1449,13 +1472,16 @@ fn block_precedes_improper_chained_block(
         let Some(call) = ancestor.as_call_node() else {
             return false;
         };
-        let Some(receiver) = call.receiver() else {
-            return false;
-        };
-        if receiver.location().start_offset() > current.start_offset()
-            || receiver.location().end_offset() < current.end_offset()
-            || context.policy().allows_method(call_name(&call))
-        {
+        let contains_current = call.receiver().is_some_and(|receiver| {
+            receiver.location().start_offset() <= current.start_offset()
+                && current.end_offset() <= receiver.location().end_offset()
+        }) || call.arguments().is_some_and(|arguments| {
+            arguments.arguments().iter().any(|argument| {
+                argument.location().start_offset() <= current.start_offset()
+                    && current.end_offset() <= argument.location().end_offset()
+            })
+        });
+        if !contains_current || context.policy().allows_method(call_name(&call)) {
             return false;
         }
         let Some(block) = call.block().and_then(|block| block.as_block_node()) else {

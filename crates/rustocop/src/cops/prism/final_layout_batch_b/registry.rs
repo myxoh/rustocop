@@ -21,13 +21,24 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
 fn array_percent_literal_spacing(context: &mut CopContext<'_, '_>) {
     let source = context.source();
     let bytes = source.as_bytes();
-    let literal_starts = ["%i", "%I", "%w", "%W"]
-        .into_iter()
-        .flat_map(|prefix| context.source_file().code_offsets(prefix))
-        .collect::<std::collections::HashSet<_>>();
+    #[derive(Default)]
+    struct ArrayPercentLiteralStarts(std::collections::HashSet<usize>);
+    impl<'pr> Visit<'pr> for ArrayPercentLiteralStarts {
+        fn visit_array_node(&mut self, node: &ruby_prism::ArrayNode<'pr>) {
+            if node.opening_loc().is_some_and(|opening| {
+                matches!(opening.as_slice(), bytes if bytes.starts_with(b"%i") || bytes.starts_with(b"%I") || bytes.starts_with(b"%w") || bytes.starts_with(b"%W"))
+            }) {
+                self.0.insert(node.location().start_offset());
+            }
+            ruby_prism::visit_array_node(self, node);
+        }
+    }
+    let parsed = ruby_prism::parse(source.as_bytes());
+    let mut literal_starts = ArrayPercentLiteralStarts::default();
+    literal_starts.visit(&parsed.node());
     let mut start = 0;
     while start + 2 < bytes.len() {
-        if !literal_starts.contains(&start) {
+        if !literal_starts.0.contains(&start) {
             start += 1;
             continue;
         }
@@ -81,8 +92,9 @@ fn array_percent_literal_spacing(context: &mut CopContext<'_, '_>) {
             if offset == closing_at || bytes[offset].is_ascii_whitespace() {
                 continue;
             }
-            let escaped_first = run_start > opening_at + 1
-                && bytes[run_start - 1] == b'\\'
+            let preceded_by_backslash = run_start > opening_at + 1
+                && bytes[run_start - 1] == b'\\';
+            let escaped_first = preceded_by_backslash
                 && source[opening_at + 1..run_start - 1]
                     .bytes()
                     .rev()
@@ -90,6 +102,9 @@ fn array_percent_literal_spacing(context: &mut CopContext<'_, '_>) {
                     .count()
                     % 2
                     == 0;
+            if preceded_by_backslash && !escaped_first {
+                continue;
+            }
             let offense_start = run_start + usize::from(escaped_first);
             if offset.saturating_sub(offense_start) >= 2
                 && run_start > opening_at + 1
@@ -241,8 +256,28 @@ fn space_around_keyword(context: &mut CopContext<'_, '_>) {
     let literal_ranges = file.literal_ranges();
     let comment_ranges = file.comment_ranges();
     let data_section_start = file.data_section_start();
+    #[derive(Default)]
+    struct DoKeywordOffsets(std::collections::HashSet<usize>);
+    impl<'pr> Visit<'pr> for DoKeywordOffsets {
+        fn visit_block_node(&mut self, node: &ruby_prism::BlockNode<'pr>) {
+            let opening = node.opening_loc();
+            if opening.as_slice() == b"do" {
+                self.0.insert(opening.start_offset());
+            }
+            ruby_prism::visit_block_node(self, node);
+        }
+    }
+    let parsed = ruby_prism::parse(source.as_bytes());
+    let mut do_keyword_offsets = DoKeywordOffsets::default();
+    do_keyword_offsets.visit(&parsed.node());
     for keyword in KEYWORDS {
-        for start in context.source_file().code_offsets(keyword) {
+        let mut offsets = context.source_file().code_offsets(keyword);
+        if *keyword == "do" {
+            offsets.extend(do_keyword_offsets.0.iter().copied());
+            offsets.sort_unstable();
+            offsets.dedup();
+        }
+        for start in offsets {
             if data_section_start.is_some_and(|data| data <= start)
                 || comment_ranges
                     .iter()
@@ -257,9 +292,15 @@ fn space_around_keyword(context: &mut CopContext<'_, '_>) {
             let before = source.as_bytes().get(start.wrapping_sub(1)).copied();
             let after = source.as_bytes().get(end).copied();
             let line = file.line(start).trim_start();
+            let continued_selector = matches!(*keyword, "and" | "or")
+                && source[..start]
+                    .bytes()
+                    .rfind(|byte| !byte.is_ascii_whitespace())
+                    .is_some_and(|byte| byte == b'.');
             if matches!(after, Some(b'?' | b'!'))
                 || line.starts_with(&format!("def {keyword}"))
                 || *keyword == "then" && line.starts_with("when ")
+                || continued_selector
                 || matches!(before, Some(b'.' | b':'))
                 || before.is_some_and(|byte| byte.is_ascii_alphabetic() || byte == b'_')
                 || *keyword != "defined?"
@@ -269,7 +310,8 @@ fn space_around_keyword(context: &mut CopContext<'_, '_>) {
             }
 
             let missing_before = before.is_some_and(|byte| {
-                byte.is_ascii_digit() || matches!(byte, b'\'' | b'"' | b')' | b']' | b'}')
+                byte.is_ascii_digit()
+                    || matches!(byte, b'\'' | b'"' | b')' | b']' | b'}' | b'?')
             });
             if missing_before {
                 context.insert(
@@ -286,7 +328,10 @@ fn space_around_keyword(context: &mut CopContext<'_, '_>) {
                 Some(b'|') => *keyword == "do",
                 Some(b'+') => *keyword == "begin",
                 Some(b'{') => matches!(*keyword, "BEGIN" | "END" | "super"),
-                Some(b'(') => matches!(*keyword, "and" | "or" | "return"),
+                Some(b'(') => !matches!(
+                    *keyword,
+                    "break" | "defined?" | "next" | "not" | "rescue" | "super" | "yield"
+                ),
                 Some(byte) => {
                     !byte.is_ascii_whitespace()
                         && !matches!(

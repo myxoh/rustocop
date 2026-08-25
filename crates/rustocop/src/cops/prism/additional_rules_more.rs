@@ -30,7 +30,23 @@ fn leading_empty_lines(source: &str, reporter: &mut Reporter<'_>) {
 }
 
 fn empty_block_parameter(source: &str, reporter: &mut Reporter<'_>) {
-    for start in SourceFile::new(source).code_offsets("||") {
+    let file = SourceFile::new(source);
+    let heredocs = file.heredoc_ranges();
+    let pipe_offsets = file.code_offsets("|");
+    for (index, start) in pipe_offsets.iter().copied().enumerate() {
+        if heredocs
+            .iter()
+            .any(|range| range.start <= start && start < range.end)
+        {
+            continue;
+        }
+        let Some(end) = pipe_offsets[index + 1..].iter().copied().find(|end| {
+            source[start + 1..*end]
+                .bytes()
+                .all(|byte| matches!(byte, b' ' | b'\t'))
+        }) else {
+            continue;
+        };
         let before = source[..start].trim_end();
         let do_block = before.strip_suffix("do").is_some_and(|prefix| {
             prefix
@@ -40,13 +56,13 @@ fn empty_block_parameter(source: &str, reporter: &mut Reporter<'_>) {
         });
         if do_block || before.ends_with('{') {
             let edit = if do_block {
-                start.saturating_sub(1)..start + 2
+                start.saturating_sub(1)..end + 1
             } else {
-                start..start + 2 + usize::from(source.as_bytes().get(start + 2) == Some(&b' '))
+                start..end + 1 + usize::from(source.as_bytes().get(end + 1) == Some(&b' '))
             };
             reporter.remove(
                 "Omit pipes for the empty block parameters.",
-                start..start + 2,
+                start..end + 1,
                 edit,
             );
         }

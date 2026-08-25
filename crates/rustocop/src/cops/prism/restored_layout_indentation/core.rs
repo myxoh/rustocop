@@ -107,17 +107,7 @@ fn first_array_element_indentation(
         .policy()
         .enforced_style("special_inside_parentheses")
         .to_string();
-    let parenthesis = enclosing_argument_parenthesis(context, opening.start_offset()).or_else(|| {
-        if style != "special_inside_parentheses" {
-            return None;
-        }
-        let line_start = file.line_start(opening.start_offset());
-        let prefix = &context.source()[line_start..opening.start_offset()];
-        let relative = prefix.rfind('(')?;
-        let nested = &prefix[relative + 1..];
-        (!nested.contains(')') && nested.contains('{') && !nested.contains(','))
-            .then_some(line_start + relative)
-    });
+    let parenthesis = enclosing_argument_parenthesis(context, opening.start_offset());
     let parent_hash_column = parent_hash_key_column(context, opening.start_offset());
     let base_kind;
     let base_column = if let Some(column) = parent_hash_column {
@@ -212,8 +202,10 @@ fn enclosing_argument_parenthesis(
     opening_bracket: usize,
 ) -> Option<usize> {
     let file = context.source_file();
-    context.ancestors().iter().rev().find_map(|ancestor| {
-        let call = ancestor.as_call_node()?;
+    for ancestor in context.ancestors().iter().rev() {
+        let Some(call) = ancestor.as_call_node() else {
+            continue;
+        };
         let opening = call.opening_loc()?;
         if file.at(&opening) != "(" {
             return None;
@@ -238,11 +230,12 @@ fn enclosing_argument_parenthesis(
                     && !nested_call
             })
         });
-        (direct_argument
+        return (direct_argument
             && file.same_line(opening.start_offset(), opening_bracket)
             && opening.start_offset() < opening_bracket)
-            .then_some(opening.start_offset())
-    })
+            .then_some(opening.start_offset());
+    }
+    None
 }
 
 fn parent_hash_key_column(

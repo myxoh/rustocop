@@ -168,18 +168,7 @@ fn assigned_local_names(source: &str) -> Vec<String> {
         if right.starts_with('=') || left.trim_end().ends_with(['!', '<', '>', '=']) {
             continue;
         }
-        names.extend(
-            left.split(',')
-                .map(str::trim)
-                .filter(|name| {
-                    !name.is_empty()
-                        && !name.starts_with(['@', '$'])
-                        && name
-                            .bytes()
-                            .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
-                })
-                .map(str::to_string),
-        );
+        names.extend(left.split(',').filter_map(assignment_name));
     }
     names
 }
@@ -187,13 +176,35 @@ fn assigned_local_names(source: &str) -> Vec<String> {
 fn contains_assignment(source: &str, name: &str) -> bool {
     source.lines().any(|line| {
         line.split_once('=').is_some_and(|(left, right)| {
-            !right.starts_with('=') && left.split(',').any(|candidate| candidate.trim() == name)
+            !right.starts_with('=')
+                && (left.split(',').filter_map(assignment_name).any(|candidate| candidate == name)
+                    || right
+                        .split_once('=')
+                        .and_then(|(nested, _)| assignment_name(nested))
+                        .is_some_and(|candidate| candidate == name))
         })
     })
 }
 
 fn contains_word(source: &str, name: &str) -> bool {
-    source
-        .split(|character: char| !character.is_ascii_alphanumeric() && character != '_')
-        .any(|word| word == name)
+    source.match_indices(name).any(|(offset, _)| {
+        let before = source[..offset].chars().next_back();
+        let after = source[offset + name.len()..].chars().next();
+        !before.is_some_and(|character| {
+            character.is_ascii_alphanumeric() || matches!(character, '_' | '.' | ':')
+        }) && !after.is_some_and(|character| character.is_ascii_alphanumeric() || character == '_')
+    })
+}
+
+fn assignment_name(source: &str) -> Option<String> {
+    let source = source.trim_end();
+    let name = source
+        .rsplit(|character: char| !character.is_ascii_alphanumeric() && character != '_')
+        .find(|part| !part.is_empty())?;
+    let prefix = &source[..source.len().saturating_sub(name.len())];
+    (!prefix.ends_with(['@', '$'])
+        && name
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_'))
+    .then(|| name.to_string())
 }

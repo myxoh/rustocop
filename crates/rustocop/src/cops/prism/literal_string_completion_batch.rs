@@ -744,10 +744,9 @@ impl WordArrayRule<'_, '_, '_> {
         };
         let opening_source = self.source_file().at(&opening);
         let elements = node.elements().iter().collect::<Vec<_>>();
-        let minimum = self.config_usize("MinSize", 0);
-        return_unless!(elements.len() >= minimum);
-
         if opening_source == "[" {
+            let minimum = self.config_usize("MinSize", 0);
+            return_unless!(elements.len() >= minimum);
             return_if!(
                 elements.iter().any(|element| element.as_string_node().is_none())
                     || complex_content(&elements, self)
@@ -787,7 +786,7 @@ impl WordArrayRule<'_, '_, '_> {
     ) {
         return_if!(
             self.policy().enforced_style("percent") == "percent"
-                && !invalid_percent_array_contents(elements)
+                && !invalid_percent_array_contents(elements, self)
         );
         let replacement = build_bracketed_array(node, elements, self);
         let message = bracketed_word_array_message(&replacement);
@@ -820,10 +819,18 @@ fn complex_content(elements: &[Node<'_>], context: &CopContext<'_, '_>) -> bool 
         .any(|element| !simple_word(element, context))
 }
 
-fn invalid_percent_array_contents(elements: &[Node<'_>]) -> bool {
+fn invalid_percent_array_contents(
+    elements: &[Node<'_>],
+    context: &CopContext<'_, '_>,
+) -> bool {
     elements.iter().any(|element| {
         element.as_string_node().is_some_and(|string| {
-            !valid_utf8(string.unescaped()) || string.unescaped().contains(&b' ')
+            !valid_utf8(string.unescaped())
+                || string.unescaped().contains(&b' ')
+                // Prism preserves the escape marker for whitespace in a `%w`
+                // element. RuboCop asks whether the semantic string contains
+                // whitespace, so inspect that spelling as well.
+                || context.source_file().node(element).contains("\\ ")
         })
     })
 }
@@ -908,11 +915,12 @@ fn bracket_array_has_comment(
     node: &ruby_prism::ArrayNode<'_>,
     context: &CopContext<'_, '_>,
 ) -> bool {
+    let location = node.location();
     context
         .source_file()
-        .node(&node.as_node())
-        .lines()
-        .any(|line| line.trim_start().starts_with('#') || line.contains(" #"))
+        .comment_ranges()
+        .iter()
+        .any(|comment| comment.start < location.end_offset() && comment.end > location.start_offset())
 }
 
 fn matrix_of_complex_content(

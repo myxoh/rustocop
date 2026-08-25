@@ -145,16 +145,31 @@ impl GuardClauseRule<'_, '_, '_> {
         let shown = if too_long { format!("{inverse_keyword} {condition_source}; return; end") } else { example };
         let message = MESSAGE.replace("{example}", &shown);
         let header = keyword.start_offset()..condition.location().end_offset();
-        let heredoc = statements.as_ref().is_some_and(|statements| self.source_file().at(&statements.location()).contains("<<"));
-        let end_edit = if heredoc {
+        let heredoc = statements.as_ref().is_some_and(|statements| {
+            let location = statements.location();
+            let body = location.start_offset()..location.end_offset();
+            self.source_file()
+                .heredoc_ranges()
+                .iter()
+                .any(|range| range.start < body.end && body.start < range.end)
+        });
+        let (end_edit, end_replacement) = if heredoc {
             let start = self.source_file().line_start(end_keyword.start_offset());
             let mut end = self.source_file().line_end(end_keyword.end_offset());
             if self.source().as_bytes().get(end) == Some(&b'\n') { end += 1; }
-            start..end
-        } else { end_keyword.start_offset()..end_keyword.end_offset() };
+            (start..end, String::new())
+        } else {
+            let raw = end_keyword.start_offset()..end_keyword.end_offset();
+            let offset = self
+                .source_file()
+                .slice(raw.clone())
+                .and_then(|source| source.find("end"))
+                .unwrap_or(0);
+            (raw.start + offset..raw.start + offset + 3, String::new())
+        };
         add_offense!(self, keyword, message: message, |corrector| {
             corrector.replace(header, replacement);
-            corrector.remove(end_edit);
+            corrector.replace(end_edit, end_replacement);
         });
     }
 
@@ -175,9 +190,9 @@ impl GuardClauseRule<'_, '_, '_> {
         return_if!(condition_source.contains('\n') || assignment_parent(self.ancestors()));
         return_if!(assigned_local_used(&condition, if_statements.as_ref()));
         let if_guard = guard_clause(if_statements.as_ref(), self.source_file())
-            .filter(|guard| !guard.source.contains('\n'));
+            .filter(|guard| guard.logical || !guard.source.contains('\n'));
         let else_guard = guard_clause(else_statements.as_ref(), self.source_file())
-            .filter(|guard| !guard.source.contains('\n'));
+            .filter(|guard| guard.logical || !guard.source.contains('\n'));
         let (guard, guard_keyword, branch_range, keep_statements) = if let Some(guard) = if_guard {
             (guard, conditional_keyword, if_statements.as_ref().map(|statements| statements.location()), else_statements.as_ref())
         } else if let Some(guard) = else_guard {
@@ -283,7 +298,9 @@ fn branch_trivial(statements: Option<&StatementsNode<'_>>) -> bool {
     let Some(statements) = statements else { return true };
     if statements.body().len() != 1 { return false }
     statements.body().first().is_some_and(|node| {
-        node.as_if_node().is_none() && node.as_unless_node().is_none() && node.as_begin_node().is_none()
+        // Prism's explicit BeginNode maps to Parser's `kwbegin`, not its
+        // implicit `begin` container. RuboCop treats `kwbegin` as trivial.
+        node.as_if_node().is_none() && node.as_unless_node().is_none()
     })
 }
 
@@ -358,12 +375,34 @@ fn assigned_local_used(condition: &Node<'_>, statements: Option<&StatementsNode<
             self.read.push(node.name().as_slice().to_vec());
             ruby_prism::visit_local_variable_read_node(self, node);
         }
+        fn visit_multi_write_node(&mut self, node: &ruby_prism::MultiWriteNode<'pr>) {
+            for target in node
+                .lefts()
+                .iter()
+                .chain(node.rest())
+                .chain(node.rights().iter())
+            {
+                if let Some(target) = target.as_local_variable_target_node() {
+                    self.assigned.push(target.name().as_slice().to_vec());
+                }
+            }
+            ruby_prism::visit_multi_write_node(self, node);
+        }
     }
     let mut names = LocalNames::default();
     names.visit(condition);
     let Some(statements) = statements else { return false };
     let mut branch = LocalNames::default();
     branch.visit(&statements.as_node());
+    if statements.body().len() == 1 {
+        if let Some(read) = statements
+            .body()
+            .first()
+            .and_then(|node| node.as_local_variable_read_node())
+        {
+            branch.read.retain(|name| name.as_slice() != read.name().as_slice());
+        }
+    }
     names
         .assigned
         .iter()

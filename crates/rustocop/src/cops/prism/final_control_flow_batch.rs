@@ -594,7 +594,7 @@ impl Cop for UnreachableLoop {
     ) {
         let statements = if let Some(call) = node.as_call_node() {
             let name = call.name().as_slice();
-            if !matches!(name, b"each" | b"map" | b"times" | b"loop") {
+            if !unreachable_loop_method(name) {
                 return;
             }
             let cop_context = context.cop_context(self.name(), source, ancestors);
@@ -679,9 +679,9 @@ fn terminating_loop_statement(node: &Node<'_>) -> bool {
                 .enumerate()
                 .find(|(_, statement)| terminating_loop_statement(statement))
                 .is_some_and(|(index, _)| {
-                    !statements[..index].iter().any(|statement| {
-                        statement.as_next_node().is_some() || statement.as_redo_node().is_some()
-                    })
+                    !statements[..index]
+                        .iter()
+                        .any(|statement| contains_loop_continue(statement))
                 })
         });
     }
@@ -741,6 +741,110 @@ fn terminating_loop_statement(node: &Node<'_>) -> bool {
             });
     }
     false
+}
+
+fn unreachable_loop_method(name: &[u8]) -> bool {
+    name.starts_with(b"each_")
+        || matches!(
+            name,
+            b"all?"
+                | b"any?"
+                | b"chain"
+                | b"chunk"
+                | b"chunk_while"
+                | b"collect"
+                | b"collect_concat"
+                | b"compact"
+                | b"count"
+                | b"cycle"
+                | b"detect"
+                | b"downto"
+                | b"drop"
+                | b"drop_while"
+                | b"each"
+                | b"entries"
+                | b"filter"
+                | b"filter_map"
+                | b"find"
+                | b"find_all"
+                | b"find_index"
+                | b"first"
+                | b"flat_map"
+                | b"grep"
+                | b"grep_v"
+                | b"group_by"
+                | b"include?"
+                | b"inject"
+                | b"lazy"
+                | b"loop"
+                | b"map"
+                | b"map!"
+                | b"max"
+                | b"max_by"
+                | b"member?"
+                | b"min"
+                | b"min_by"
+                | b"minmax"
+                | b"minmax_by"
+                | b"none?"
+                | b"one?"
+                | b"partition"
+                | b"reduce"
+                | b"reject"
+                | b"reject!"
+                | b"reverse_each"
+                | b"select"
+                | b"select!"
+                | b"slice_after"
+                | b"slice_before"
+                | b"slice_when"
+                | b"sort"
+                | b"sort_by"
+                | b"sum"
+                | b"take"
+                | b"take_while"
+                | b"tally"
+                | b"times"
+                | b"to_a"
+                | b"to_h"
+                | b"to_set"
+                | b"uniq"
+                | b"upto"
+                | b"zip"
+        )
+}
+
+fn contains_loop_continue(node: &Node<'_>) -> bool {
+    #[derive(Default)]
+    struct ContinueFinder {
+        found: bool,
+    }
+    impl<'pr> Visit<'pr> for ContinueFinder {
+        fn visit_next_node(&mut self, _node: &ruby_prism::NextNode<'pr>) {
+            self.found = true;
+        }
+
+        fn visit_redo_node(&mut self, _node: &ruby_prism::RedoNode<'pr>) {
+            self.found = true;
+        }
+
+        fn visit_while_node(&mut self, _node: &ruby_prism::WhileNode<'pr>) {}
+
+        fn visit_until_node(&mut self, _node: &ruby_prism::UntilNode<'pr>) {}
+
+        fn visit_for_node(&mut self, _node: &ruby_prism::ForNode<'pr>) {}
+
+        fn visit_call_node(&mut self, node: &ruby_prism::CallNode<'pr>) {
+            if node.block().is_some() && unreachable_loop_method(node.name().as_slice()) {
+                return;
+            }
+            ruby_prism::visit_call_node(self, node);
+        }
+    }
+
+    let mut finder = ContinueFinder::default();
+    finder.visit(node);
+    finder.found
 }
 
 struct DuplicateBranchCop;

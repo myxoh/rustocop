@@ -5,7 +5,7 @@ define_cops! {
 }
 
 fn trivial_accessors(node: &ruby_prism::DefNode<'_>, context: &mut CopContext<'_, '_>) {
-    if !inside_class_scope(context.ancestors()) || allowed_method(node.name().as_slice(), context) {
+    if !eligible_scope(context.ancestors()) || allowed_method(node.name().as_slice(), context) {
         return;
     }
     let class_method = node.receiver().is_some();
@@ -113,16 +113,23 @@ struct AccessorCandidate<'pr> {
     conventional: bool,
 }
 
-fn inside_class_scope(ancestors: &[Node<'_>]) -> bool {
-    ancestors.iter().rev().find_map(|ancestor| {
+fn eligible_scope(ancestors: &[Node<'_>]) -> bool {
+    let mut nested_definition = false;
+    for ancestor in ancestors.iter().rev() {
         if ancestor.as_class_node().is_some() || ancestor.as_singleton_class_node().is_some() {
-            Some(true)
+            return true;
         } else if ancestor.as_module_node().is_some() {
-            Some(false)
-        } else {
-            None
+            return false;
+        } else if ancestor
+            .as_call_node()
+            .is_some_and(|call| call_name(&call) == b"instance_eval")
+        {
+            return false;
+        } else if ancestor.as_block_node().is_some() || ancestor.as_def_node().is_some() {
+            nested_definition = true;
         }
-    }) == Some(true)
+    }
+    nested_definition
 }
 
 fn empty_parameters(parameters: Option<ruby_prism::ParametersNode<'_>>) -> bool {

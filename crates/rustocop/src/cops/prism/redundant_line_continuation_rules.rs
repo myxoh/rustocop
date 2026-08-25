@@ -44,14 +44,23 @@ impl RedundantLineContinuationRule<'_, '_, '_> {
             .map_or(source.len(), |at| next_start + at);
         let next = &source[next_start..next_end];
         let before = line.trim_end();
-        let interpolation_boundary = inside_literal(source, slash)
+        let inside_literal = self
+            .source_file()
+            .literal_ranges()
+            .iter()
+            .any(|literal| literal.start <= slash && slash < literal.end);
+        let interpolation_boundary = inside_literal
             && interpolation_begins_next_line(source, slash)
             && line.contains('(');
-        if line_has_comment(line)
+        let has_comment = self
+            .source_file()
+            .comment_ranges()
+            .iter()
+            .any(|comment| line_start <= comment.start && comment.start < slash);
+        if has_comment
             || string_concatenation(line)
             || inside_heredoc(source, slash)
-            || (inside_literal(source, slash) && !interpolation_boundary)
-            || inside_regexp(source, slash)
+            || (inside_literal && !interpolation_boundary)
         {
             return true;
         }
@@ -61,7 +70,10 @@ impl RedundantLineContinuationRule<'_, '_, '_> {
         {
             return false;
         }
-        if before.ends_with('=') && next.contains('.') && next.contains('{') {
+        if before.ends_with('=')
+            && next.contains('{')
+            && next.trim_end().ends_with(['+', '-'])
+        {
             return true;
         }
         starts_with_arithmetic_operator(next)
@@ -178,34 +190,6 @@ fn leading_dot_method_chain_with_blank_line(line: &str, next: &str) -> bool {
         || line.trim_start().starts_with("&.") && next.trim().is_empty()
 }
 
-fn inside_literal(source: &str, offset: usize) -> bool {
-    let mut quote = None;
-    let mut escaped = false;
-    let mut comment = false;
-    for character in source[..offset].chars() {
-        if comment {
-            if character == '\n' {
-                comment = false;
-            }
-            continue;
-        }
-        if escaped {
-            escaped = false;
-        } else if character == '\\' {
-            escaped = true;
-        } else if quote == Some(character) {
-            quote = None;
-        } else if quote.is_none() && matches!(character, '\'' | '"' | '`') {
-            quote = Some(character);
-        } else if quote.is_none() && character == '#' {
-            comment = true;
-        } else if character == '\n' && quote == Some('\'') {
-            quote = None;
-        }
-    }
-    quote.is_some()
-}
-
 fn inside_heredoc(source: &str, offset: usize) -> bool {
     let mut markers = std::collections::VecDeque::<String>::new();
     let mut line_start = 0;
@@ -249,43 +233,6 @@ fn heredoc_markers(line: &str) -> Vec<String> {
             Some(tail[..end].to_string())
         })
         .collect()
-}
-
-fn inside_regexp(source: &str, offset: usize) -> bool {
-    let line_start = source[..offset].rfind('\n').map_or(0, |at| at + 1);
-    let line = &source[line_start..offset];
-    let mut in_regexp = false;
-    let mut escaped = false;
-    let mut quote = None;
-    let characters = line.char_indices().collect::<Vec<_>>();
-    for (position, character) in characters {
-        if escaped {
-            escaped = false;
-            continue;
-        }
-        if character == '\\' {
-            escaped = true;
-            continue;
-        }
-        if quote == Some(character) {
-            quote = None;
-            continue;
-        }
-        if quote.is_none() && matches!(character, '\'' | '"' | '`') {
-            quote = Some(character);
-            continue;
-        }
-        if quote.is_none() && character == '#' {
-            break;
-        }
-        if quote.is_none() && character == '/' {
-            let previous = line[..position].trim_end().chars().last();
-            if in_regexp || previous.is_none_or(|value| "=([{!,:;".contains(value)) {
-                in_regexp = !in_regexp;
-            }
-        }
-    }
-    in_regexp
 }
 
 #[cfg(test)]

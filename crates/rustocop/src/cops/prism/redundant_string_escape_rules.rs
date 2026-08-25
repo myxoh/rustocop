@@ -58,7 +58,7 @@ impl RedundantStringEscapeRule<'_, '_, '_> {
         if escaped == '\n' || escaped == '\\' || escaped.is_alphanumeric() {
             return true;
         }
-        if escaped == ' ' && (literal.percent_array || literal.heredoc) {
+        if escaped == ' ' && (literal.percent_array || literal.direct_heredoc) {
             return true;
         }
         if disabling_interpolation(self.source(), start, end, escaped) {
@@ -75,6 +75,7 @@ struct StringLiteral {
     interpolation_enabled: bool,
     percent_array: bool,
     heredoc: bool,
+    direct_heredoc: bool,
     character_literal: bool,
     opening_delimiter: Option<char>,
     closing_delimiter: Option<char>,
@@ -83,6 +84,13 @@ struct StringLiteral {
 impl StringLiteral {
     fn new(node: &StringNode<'_>, context: &CopContext<'_, '_>) -> Option<Self> {
         let content = node.content_loc();
+        let direct_heredoc = node
+            .opening_loc()
+            .is_some_and(|opening| opening.as_slice().starts_with(b"<<"))
+            && context
+                .source()
+                .get(content.start_offset()..content.end_offset())
+                .is_some_and(|body| body.matches('\n').count() <= 1);
         let (opening, closing) = if let Some(opening) = node.opening_loc() {
             (
                 context.source_file().at(&opening).to_string(),
@@ -130,6 +138,7 @@ impl StringLiteral {
             interpolation_enabled,
             percent_array,
             heredoc,
+            direct_heredoc,
             character_literal: opening == "?",
             opening_delimiter: (!heredoc).then(|| opening.chars().last()).flatten(),
             closing_delimiter: (!heredoc).then(|| closing.chars().next()).flatten(),

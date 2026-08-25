@@ -11,12 +11,21 @@ define_cops! {
 
 impl IdenticalConditionalBranchesRule<'_, '_, '_> {
     fn on_if(&mut self, node: &IfNode<'_>) {
-        return_if!(node.if_keyword_loc().is_some_and(|keyword| keyword.as_slice() == b"elsif") || self.elsif_like(node));
+        return_if!(node.if_keyword_loc().is_some_and(|keyword| keyword.as_slice() == b"elsif"));
         let Some(subsequent) = node.subsequent() else { return };
         let mut branches = Vec::new();
         branches.push(statement_nodes(node.statements()));
         expand_subsequent(Some(subsequent), &mut branches);
-        self.check(node.location(), branches, node.then_keyword_loc().is_some(), Some(self.source_file().node(&node.predicate()).to_string()));
+        let noncorrectable_if_form = node.if_keyword_loc().is_none()
+            || node
+                .then_keyword_loc()
+                .is_some_and(|keyword| keyword.as_slice() == b"then");
+        self.check(
+            node.location(),
+            branches,
+            noncorrectable_if_form,
+            Some(self.source_file().node(&node.predicate()).to_string()),
+        );
     }
 
     fn on_case(&mut self, node: &CaseNode<'_>) {
@@ -37,7 +46,28 @@ impl IdenticalConditionalBranchesRule<'_, '_, '_> {
         let conditional = (conditional.start_offset(), conditional.end_offset());
         return_if!(branches.len() < 2 || branches.iter().any(Vec::is_empty));
         let tails = branches.iter().map(|branch| branch.last()).collect::<Option<Vec<_>>>();
-        if let Some(expressions) = tails.filter(|expressions| same_sources(expressions, self.source_file()) && !assignment_conflict(expressions[0], condition.as_deref(), self.source_file(), false)) {
+        if let Some(expressions) = tails.filter(|expressions| {
+            same_sources(expressions, self.source_file())
+                && !assignment_conflict(
+                    expressions[0],
+                    condition.as_deref(),
+                    self.source_file(),
+                    false,
+                )
+                && !defined_assignment_conflict(
+                    &branches,
+                    expressions[0],
+                    condition.as_deref(),
+                    self.source_file(),
+                )
+                && !uninitialized_local_conflict(
+                    &branches,
+                    expressions[0],
+                    condition.as_deref(),
+                    conditional.0,
+                    self.source_file(),
+                )
+        }) {
             self.register(expressions, conditional, false, then_form);
         }
         return_if!(branches.iter().any(|branch| branch.len() == 1) && self.last_child(conditional));
@@ -49,13 +79,16 @@ impl IdenticalConditionalBranchesRule<'_, '_, '_> {
 
     fn register(&mut self, expressions: Vec<&Node<'_>>, conditional: (usize, usize), before: bool, then_form: bool) {
         let expression_source = self.source_file().node(expressions[0]).to_string();
-        let correctable = !then_form && !self.source_file().slice(conditional.0..conditional.1).unwrap_or_default().contains('?');
+        let correctable = !then_form;
         let parent_prefix = self.parent().and_then(|parent| {
             (parent.location().start_offset() < conditional.0 && parent.location().end_offset() == conditional.1)
                 .then(|| (parent.location().start_offset()..conditional.0, self.source_file().slice(parent.location().start_offset()..conditional.0).unwrap_or_default().to_string()))
         });
         for (index, expression) in expressions.into_iter().enumerate() {
-            let message = format!("Move `{expression_source}` out of the conditional.");
+            let message = format!(
+                "Move `{}` out of the conditional.",
+                self.source_file().node(expression)
+            );
             if !correctable {
                 self.report(message, expression.location());
                 continue;
@@ -82,19 +115,6 @@ impl IdenticalConditionalBranchesRule<'_, '_, '_> {
         self.parent().is_none_or(|parent| parent.location().end_offset() == conditional.1)
     }
 
-    fn elsif_like(&self, node: &IfNode<'_>) -> bool {
-        let mut ancestors = self.ancestors().iter().rev();
-        let parent = ancestors
-            .find(|ancestor| ancestor.as_statements_node().is_none());
-        parent
-            .and_then(Node::as_else_node)
-            .is_some_and(|else_node| {
-                only_statement(else_node.statements()).is_some_and(|statement| {
-                    statement.location().start_offset() == node.location().start_offset()
-                        && statement.location().end_offset() == node.location().end_offset()
-                })
-            })
-    }
 }
 
 fn assignment_conflict(node: &Node<'_>, condition: Option<&str>, file: SourceFile<'_>, head: bool) -> bool {
@@ -164,13 +184,141 @@ fn expand_subsequent<'pr>(subsequent: Option<Node<'pr>>, branches: &mut Vec<Vec<
 
 fn same_sources(nodes: &[&Node<'_>], file: SourceFile<'_>) -> bool {
     nodes.first().is_some_and(|first| {
-        let source = file.node(first);
-        let structure = format!("{first:?}");
+        let semantic_source = |node: &Node<'_>| {
+            let source = file.node(node).to_string();
+            let mut heredoc_content = None;
+            if source.contains("<<") {
+                if let Some(range) = file
+                    .heredoc_ranges()
+                    .into_iter()
+                    .find(|range| range.start >= node.location().start_offset())
+                {
+                    heredoc_content = file.slice(range);
+                }
+            }
+            let mut normalized = String::with_capacity(source.len());
+            let mut quote = None;
+            let mut escaped = false;
+            for character in source.chars() {
+                if let Some(delimiter) = quote {
+                    normalized.push(character);
+                    if escaped {
+                        escaped = false;
+                    } else if character == '\\' {
+                        escaped = true;
+                    } else if character == delimiter {
+                        quote = None;
+                    }
+                } else if matches!(character, '\'' | '"') {
+                    quote = Some(character);
+                    normalized.push(character);
+                } else if !character.is_whitespace() {
+                    normalized.push(character);
+                }
+            }
+            if let Some(open) = normalized.find('(') {
+                let callable = &normalized[..open];
+                if normalized.ends_with(')')
+                    && !callable.is_empty()
+                    && callable.bytes().all(|byte| {
+                        byte.is_ascii_alphanumeric()
+                            || matches!(byte, b'_' | b':' | b'.' | b'?' | b'!')
+                    })
+                {
+                    normalized.remove(open);
+                    normalized.pop();
+                }
+            }
+            if normalized.contains("__LINE__") {
+                normalized.push('@');
+                normalized.push_str(
+                    &(file.as_str()[..node.location().start_offset()]
+                        .bytes()
+                        .filter(|byte| *byte == b'\n')
+                        .count()
+                        + 1)
+                        .to_string(),
+                );
+            }
+            if let Some(content) = heredoc_content {
+                normalized.push('\0');
+                normalized.push_str(content);
+            }
+            normalized
+        };
+        let source = semantic_source(first);
         source != "()"
             && nodes.iter().skip(1).all(|node| {
-                file.node(node) == source && format!("{node:?}") == structure
+                semantic_source(node) == source
             })
     })
+}
+
+fn defined_assignment_conflict(
+    branches: &[Vec<Node<'_>>],
+    expression: &Node<'_>,
+    condition: Option<&str>,
+    file: SourceFile<'_>,
+) -> bool {
+    let Some(condition) = condition else { return false };
+    let Some(start) = condition.find("defined?(") else { return false };
+    let remainder = &condition[start + "defined?(".len()..];
+    let Some(end) = remainder.find(')') else { return false };
+    let name = remainder[..end].trim();
+    if name.is_empty()
+        || !name
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
+    {
+        return false;
+    }
+    let expression_source = file.node(expression);
+    expression_source
+        .split(|character: char| !character.is_ascii_alphanumeric() && character != '_')
+        .any(|word| word == name)
+        && branches
+        .iter()
+        .flat_map(|branch| branch.iter().take(branch.len().saturating_sub(1)))
+        .flat_map(|node| file.node(node).lines())
+        .any(|line| {
+            line.trim_start()
+                .starts_with(&format!("{name} = "))
+        })
+}
+
+fn uninitialized_local_conflict(
+    branches: &[Vec<Node<'_>>],
+    expression: &Node<'_>,
+    condition: Option<&str>,
+    conditional_start: usize,
+    file: SourceFile<'_>,
+) -> bool {
+    let name = file.node(expression).trim();
+    if name.is_empty()
+        || !name
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
+    {
+        return false;
+    }
+    let assignment = format!("{name} = ");
+    let assigned_branches = branches
+        .iter()
+        .filter(|branch| {
+            branch
+                .iter()
+                .take(branch.len().saturating_sub(1))
+                .flat_map(|node| file.node(node).lines())
+                .any(|line| line.trim_start().starts_with(&assignment))
+        })
+        .count();
+    let mentioned_before = file.as_str()[..conditional_start]
+        .split(|character: char| !character.is_ascii_alphanumeric() && character != '_')
+        .any(|word| word == name);
+    assigned_branches > 0
+        && assigned_branches < branches.len()
+        && !condition.is_some_and(|condition| condition.contains(&assignment))
+        && !mentioned_before
 }
 
 fn whole_line(location: ruby_prism::Location<'_>, file: SourceFile<'_>) -> std::ops::Range<usize> {

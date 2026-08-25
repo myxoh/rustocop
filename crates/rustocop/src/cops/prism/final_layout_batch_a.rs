@@ -1207,9 +1207,6 @@ impl Cop for EmptyLineAfterGuardClause {
             );
             return;
         }
-        if source[node.location().end_offset()..next.location().start_offset()].contains("\n\n") {
-            return;
-        }
         let heredoc = full_conditional_end.as_ref().map(|_| None).unwrap_or_else(|| {
             guard
             .1
@@ -1240,19 +1237,14 @@ impl Cop for EmptyLineAfterGuardClause {
         } else {
             effective_end
         };
-        let offense = full_conditional_end.unwrap_or_else(|| heredoc.map(|(range, _)| range).unwrap_or_else(|| {
-            let node_source = &source[node.location().start_offset()..node.location().end_offset()];
-            if node_source.contains('\n') {
-                if let Some(end_relative) = node_source.rfind("end") {
-                    return node.location().start_offset() + end_relative
-                        ..node.location().start_offset() + end_relative + 3;
-                }
-            }
-            guard.1.map_or_else(
-                || node.location().start_offset()..node.location().end_offset(),
-                |location| location.start_offset()..location.end_offset(),
-            )
-        }));
+        let offense = full_conditional_end.unwrap_or_else(|| {
+            heredoc.map(|(range, _)| range).unwrap_or_else(|| {
+                guard.1.map_or_else(
+                    || node.location().start_offset()..node.location().end_offset(),
+                    |location| location.start_offset()..location.end_offset(),
+                )
+            })
+        });
         let mut reporter = context.cop_context(self.name(), source, ancestors);
         reporter.insert(
             "Add empty line after guard clause.",

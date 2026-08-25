@@ -464,13 +464,24 @@ fn unreachable_pattern(context: &mut CopContext<'_, '_>) {
         }
         let pattern = pattern.trim();
         let guarded = pattern.contains(" if ") || pattern.contains(" unless ");
-        let first = pattern.trim_start_matches('(').as_bytes().first().copied();
         let has_wildcard = pattern
             .split(|character: char| {
                 character.is_ascii_whitespace() || "()|=>,".contains(character)
             })
             .any(|part| part == "_");
-        if !guarded && (has_wildcard || first.is_some_and(|byte| byte.is_ascii_lowercase())) {
+        let capture_pattern = pattern.split_once("=>").map_or(pattern, |(left, _)| left.trim());
+        let bare_capture = capture_pattern
+            .trim_start_matches('(')
+            .trim_end_matches(')')
+            .as_bytes();
+        let bare_capture = bare_capture
+            .first()
+            .is_some_and(u8::is_ascii_lowercase)
+            && bare_capture
+                .iter()
+                .all(|byte| byte.is_ascii_alphanumeric() || *byte == b'_')
+            && !matches!(bare_capture, b"nil" | b"true" | b"false" | b"self");
+        if !guarded && (has_wildcard || bare_capture) {
             *catch_all_indent = Some(indentation);
         }
     }

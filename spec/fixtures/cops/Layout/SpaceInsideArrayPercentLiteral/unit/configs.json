@@ -1,4 +1,5 @@
 {
   "062955eb7434165b": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/SpaceInsideArrayPercentLiteral:\n  Description: No unnecessary additional spaces between elements in %i/%w literals.\n  Enabled: true\n  VersionAdded: '0.49'\n  AutoCorrect: always\n",
-  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n"
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
+  "de67f79cb973403d": "---\nAllCops:\n  DisabledByDefault: true\n  ParserEngine: parser_prism\n  TargetRubyVersion: 3.4\nLayout/SpaceInsideArrayPercentLiteral:\n  Enabled: true\n"
 }

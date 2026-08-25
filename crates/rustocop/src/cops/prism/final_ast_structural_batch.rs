@@ -3280,14 +3280,6 @@ fn check_arguments_forwarding(
                 reads
                     .iter()
                     .any(|offset| !use_collector.forwarded_reads.contains(offset))
-            }) || body.lines().any(|line| {
-                line.match_indices(&token.name).any(|(at, _)| {
-                    let before = line[..at].chars().next_back();
-                    let after = &line[at + token.name.len()..];
-                    !before.is_some_and(|character| {
-                        character.is_ascii_alphanumeric() || character == '_'
-                    }) && (after.trim_start().starts_with('=') || after.starts_with('.'))
-                })
             })
         })
         .collect::<Vec<_>>();
@@ -4469,7 +4461,7 @@ fn safe_navigation_if(node: &ruby_prism::IfNode<'_>, context: &mut CopContext<'_
                 .then(|| body.body().first())
                 .flatten()
         });
-    let (checked, body) = if ternary {
+    let (checked, body, truthy_guard) = if ternary {
         let Some(then_branch) = then_branch else {
             return;
         };
@@ -4478,17 +4470,17 @@ fn safe_navigation_if(node: &ruby_prism::IfNode<'_>, context: &mut CopContext<'_
         };
         if else_branch.as_nil_node().is_some() {
             if let Some(checked) = non_nil_checked_receiver(&node.predicate()) {
-                (checked, then_branch)
+                (checked, then_branch, false)
             } else if simple_truthy_check(&node.predicate()) {
-                (node.predicate(), then_branch)
+                (node.predicate(), then_branch, true)
             } else {
                 return;
             }
         } else if then_branch.as_nil_node().is_some() {
             if let Some(checked) = nil_checked_receiver(&node.predicate()) {
-                (checked, else_branch)
+                (checked, else_branch, false)
             } else if let Some(checked) = negated_receiver(&node.predicate()) {
-                (checked, else_branch)
+                (checked, else_branch, true)
             } else {
                 return;
             }
@@ -4501,14 +4493,21 @@ fn safe_navigation_if(node: &ruby_prism::IfNode<'_>, context: &mut CopContext<'_
         }
         let Some(body) = then_branch else { return };
         if let Some(checked) = non_nil_checked_receiver(&node.predicate()) {
-            (checked, body)
+            (checked, body, false)
         } else if simple_truthy_check(&node.predicate()) {
-            (node.predicate(), body)
+            (node.predicate(), body, true)
         } else {
             return;
         }
     };
-    safe_navigation_conditional(node.location(), &checked, &body, ternary, context);
+    safe_navigation_conditional(
+        node.location(),
+        &checked,
+        &body,
+        ternary,
+        truthy_guard,
+        context,
+    );
 }
 
 fn safe_navigation_unless(node: &ruby_prism::UnlessNode<'_>, context: &mut CopContext<'_, '_>) {
@@ -4522,16 +4521,23 @@ fn safe_navigation_unless(node: &ruby_prism::UnlessNode<'_>, context: &mut CopCo
     }) else {
         return;
     };
-    let checked = if let Some(checked) = nil_checked_receiver(&node.predicate()) {
-        checked
+    let (checked, truthy_guard) = if let Some(checked) = nil_checked_receiver(&node.predicate()) {
+        (checked, false)
     } else if let Some(checked) = negated_receiver(&node.predicate()) {
-        checked
+        (checked, true)
     } else {
         return;
     };
     // `obj.do_something unless obj` uses the variable only as a negative
     // condition, rather than as the positive existence guard this cop targets.
-    safe_navigation_conditional(node.location(), &checked, &body, false, context);
+    safe_navigation_conditional(
+        node.location(),
+        &checked,
+        &body,
+        false,
+        truthy_guard,
+        context,
+    );
 }
 
 fn safe_navigation_conditional(
@@ -4539,15 +4545,23 @@ fn safe_navigation_conditional(
     checked: &Node<'_>,
     body: &Node<'_>,
     ternary: bool,
+    truthy_guard: bool,
     context: &mut CopContext<'_, '_>,
 ) {
+    if !safe_navigation_chain_cop_enabled(context)
+        && safe_navigation_inside_outer_call(&offense, context.ancestors())
+    {
+        return;
+    }
     let strict_project_config =
         context.related_config_value("AllCops", "DisabledByDefault") == Some("true");
     if strict_project_config && safe_navigation_in_chained_block(context.ancestors()) {
         return;
     }
     let checked_source = context.source_file().node(checked).to_string();
-    let Some(chain) = safe_navigation_chain(body, &checked_source, ternary, context) else {
+    let Some(chain) =
+        safe_navigation_chain(body, &checked_source, ternary, truthy_guard, context)
+    else {
         return;
     };
     let mut replacement = corrected_safe_navigation_chain(body, &checked_source, &chain, context);
@@ -4571,6 +4585,29 @@ fn safe_navigation_conditional(
     );
 }
 
+fn safe_navigation_inside_outer_call(
+    offense: &ruby_prism::Location<'_>,
+    ancestors: &[Node<'_>],
+) -> bool {
+    ancestors.iter().rev().any(|ancestor| {
+        ancestor.as_call_node().is_some_and(|call| {
+            call.receiver().is_some_and(|receiver| {
+                receiver.location().start_offset() <= offense.start_offset()
+                    && offense.end_offset() <= receiver.location().end_offset()
+            })
+        })
+    })
+}
+
+fn safe_navigation_chain_cop_enabled(context: &CopContext<'_, '_>) -> bool {
+    if context.related_config_value("AllCops", "DisabledByDefault") == Some("true")
+        && !context.related_config_explicit("Lint/SafeNavigationChain", "Enabled")
+    {
+        return false;
+    }
+    context.related_config_value("Lint/SafeNavigationChain", "Enabled") == Some("true")
+}
+
 fn safe_navigation_and(node: &ruby_prism::AndNode<'_>, context: &mut CopContext<'_, '_>) {
     let mut clauses = Vec::new();
     flatten_safe_navigation_and(node.as_node(), &mut clauses);
@@ -4578,6 +4615,7 @@ fn safe_navigation_and(node: &ruby_prism::AndNode<'_>, context: &mut CopContext<
         index: usize,
         offense: std::ops::Range<usize>,
         checked_source: String,
+        truthy_guard: bool,
     }
     let mut candidates = Vec::new();
     for (index, pair) in clauses.windows(2).enumerate() {
@@ -4593,7 +4631,8 @@ fn safe_navigation_and(node: &ruby_prism::AndNode<'_>, context: &mut CopContext<
         if non_nil && !context.config_bool("ConvertCodeThatCanStartToReturnNil", false) {
             continue;
         }
-        let Some(chain) = safe_navigation_chain(rhs, &checked_source, false, context) else {
+        let Some(chain) = safe_navigation_chain(rhs, &checked_source, false, !non_nil, context)
+        else {
             continue;
         };
         let _ = chain;
@@ -4611,6 +4650,7 @@ fn safe_navigation_and(node: &ruby_prism::AndNode<'_>, context: &mut CopContext<
             index,
             offense: lhs.location().start_offset()..end,
             checked_source,
+            truthy_guard: !non_nil,
         });
     }
     if candidates.is_empty() {
@@ -4647,7 +4687,13 @@ fn safe_navigation_and(node: &ruby_prism::AndNode<'_>, context: &mut CopContext<
         let lhs = &clauses[candidate.index];
         let final_rhs = &clauses[candidates[last].index + 1];
         let Some(chain) =
-            safe_navigation_chain(final_rhs, &candidate.checked_source, false, context)
+            safe_navigation_chain(
+                final_rhs,
+                &candidate.checked_source,
+                false,
+                candidate.truthy_guard,
+                context,
+            )
         else {
             continue;
         };
@@ -4716,7 +4762,7 @@ fn safe_navigation_and_with_or(node: &ruby_prism::AndNode<'_>, context: &mut Cop
     let Some(candidate) = first_safe_navigation_and_left(or_node.right()) else {
         return;
     };
-    if safe_navigation_chain(&candidate, &checked_source, false, context).is_none() {
+    if safe_navigation_chain(&candidate, &checked_source, false, true, context).is_none() {
         return;
     }
     context.report(
@@ -4766,6 +4812,7 @@ fn safe_navigation_chain<'pr>(
     body: &Node<'pr>,
     checked_source: &str,
     ternary: bool,
+    _truthy_guard: bool,
     context: &CopContext<'_, '_>,
 ) -> Option<Vec<CallNode<'pr>>> {
     let mut calls = Vec::new();
@@ -4798,15 +4845,15 @@ fn safe_navigation_chain<'pr>(
     if unsafe_chain_length > 1 {
         let disabled_by_default =
             context.related_config_value("AllCops", "DisabledByDefault") == Some("true");
-        if disabled_by_default
-            || context.related_config_value("Lint/SafeNavigationChain", "Enabled") != Some("true")
-        {
+        if disabled_by_default || !safe_navigation_chain_cop_enabled(context) {
             return None;
         }
     }
     let first = calls.first()?;
     let first_operator = first.call_operator_loc()?;
-    if first_operator.as_slice() == b"::" || (!ternary && unsafe_safe_navigation_call(first)) {
+    if first_operator.as_slice() == b"::"
+        || (!ternary && unsafe_safe_navigation_call(first))
+    {
         return None;
     }
     if body

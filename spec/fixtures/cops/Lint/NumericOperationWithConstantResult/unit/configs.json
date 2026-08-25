@@ -1,3 +1,4 @@
 {
+  "66645a988fdd9ecb": "---\nAllCops:\n  DisabledByDefault: true\n  ParserEngine: parser_prism\n  TargetRubyVersion: 3.4\nLint/NumericOperationWithConstantResult:\n  Enabled: true\n",
   "95b2de31322f2549": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/NumericOperationWithConstantResult:\n  Description: Checks for numeric operations with constant results.\n  Enabled: true\n  VersionAdded: '1.69'\n  AutoCorrect: always\n"
 }

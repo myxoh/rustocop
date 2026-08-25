@@ -1,5 +1,6 @@
 {
   "1e81a9c3badf9657": "---\nAllCops:\n  TargetRubyVersion: 3.0\nLint/UnreachablePatternBranch:\n  Description: Checks for unreachable `in` pattern branches after an unconditional\n    catch-all pattern.\n  Enabled: true\n  VersionAdded: '1.85'\n  AutoCorrect: always\n",
+  "5583c4b47c7da013": "---\nAllCops:\n  DisabledByDefault: true\n  ParserEngine: parser_prism\n  TargetRubyVersion: 3.4\nLint/UnreachablePatternBranch:\n  Enabled: true\n",
   "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
   "aa22f6d46716f371": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/UnreachablePatternBranch:\n  Description: Checks for unreachable `in` pattern branches after an unconditional\n    catch-all pattern.\n  Enabled: true\n  VersionAdded: '1.85'\n  AutoCorrect: always\n"
 }
