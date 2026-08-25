@@ -13,10 +13,10 @@ cases, and configuration branches that the projects do not exercise.
 ## Latest realistic status
 
 The latest complete checkpoint was generated at
-`2026-08-24T07:29:34-04:00` from native cop-source SHA-256
-`531d7f98c244241ac073ca1e1ca7760587caf53910258b05483ed1c2ddd35b54`
+`2026-08-24T15:25:53-04:00` from commit
+`ddb32ffcc4aaa97d560add1482e3c33863409004`
 and worktree native binary SHA-256
-`d5952f01169f0a3cb155d456247ed72e2b08e6d65ccebbc9cc905cda46facd9c`.
+`c06a23caf252ee2e7002dd30c13bff0f1b54dca89cba8b99b370d03083cdad76`.
 The stored RuboCop reference has SHA-256
 `6fbcf83154ad05bab3c35cefef09b8d404a07037f47ef614c813649cb0cce7f8`.
 The intentionally-pending dataset is empty, so the active-cop slice covers all
@@ -24,20 +24,20 @@ The intentionally-pending dataset is empty, so the active-cop slice covers all
 
 | Classification | Complete checkpoint |
 | --- | ---: |
-| Project-exact | 330 |
+| Project-exact | 317 |
 | Exact but dormant | 53 |
-| Mismatching | 220 |
+| Mismatching | 233 |
 | Rust crash | 0 |
 | RuboCop gate error | 3 |
 
-Among the 550 exercised cops, 330 are exact (60.0%). All 23 cops restored in
-this iteration pass every captured fixture, and the complete native project run
-has no crashes. `Lint/RedundantCopDisableDirective` cannot be selected with
+Among the 550 exercised cops, 317 are exact (57.6%), and the complete native
+project run has no crashes. `Lint/RedundantCopDisableDirective` cannot be selected with
 RuboCop's `--only`; `Style/FileWrite` triggers RuboCop 1.87 errors on GitLab;
 and `Style/ClassAndModuleChildren` triggers RuboCop 1.87 errors on Puppet.
 
-The minimized project-regression corpus contains 609 passing cases and no
-pending active-cop mismatch directions. The
+The audited legacy project corpus retains 597 provenance entries. The current
+audit adds 20 pending mismatch directions across 19 minimized cases for 10
+cops. The
 configuration-mutation corpus contains six. They preserve fixed pathological
 examples, while the complete matrix catches interactions and unrepresented
 syntax across the full 85,471-file corpus.
@@ -126,8 +126,11 @@ PROJECT_BENCHMARK_PREPARE_ONLY=1 \
 The audit builds the release binary, records either the clean-tree Git commit or
 a deterministic native-cop source SHA-256 together with the binary SHA-256,
 runs Rust crash gates, and then compares complete diagnostic signatures against
-the checked-in compressed RuboCop reference. The normal command reuses the
-complete cached 50-project reference and runs only Rustocop:
+the checked-in compressed RuboCop reference. Alongside the concise JSON report,
+it writes a `.mismatches.json.gz` sidecar containing every distinct unmatched
+signature, its multiplicity, project revision, and source-file digest. The
+normal command reuses the complete cached 50-project reference and runs only
+Rustocop:
 
 ```sh
 bundle exec ruby script/audit_project_parity.rb \
@@ -137,12 +140,19 @@ bundle exec ruby script/audit_project_parity.rb \
 ```
 
 Turn newly observed signature differences into minimized, provenance-backed
-cop-owned unit contracts before changing implementations:
+cop-owned unit contracts before changing implementations. The isolator consumes
+the exhaustive sidecar rather than the three-example report previews, and tracks
+individual signature fingerprints instead of treating one mismatch direction as
+complete coverage:
 
 ```sh
 bundle exec ruby script/isolate_project_parity_mismatches.rb \
   tmp/project-parity/all-cops-current.json
 ```
+
+Use `--dry-run` to inspect candidate counts without invoking either engine, and
+`--cop` or `--limit-per-cop` to process the stored inventory in focused batches.
+These batches do not require another project comparison.
 
 The reference stores RuboCop's normalized diagnostic signatures and is accepted
 only when its RuboCop version, strict-config SHA-256, complete cop selection,

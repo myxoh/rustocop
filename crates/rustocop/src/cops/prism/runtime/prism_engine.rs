@@ -54,6 +54,9 @@ impl Engine {
             .iter()
             .map(|index| &self.registry.cops[*index])
         {
+            if has_unrecoverable_parse_errors && cop.name() != "Lint/Syntax" {
+                continue;
+            }
             cop.on_source(source, &mut context);
         }
         if has_unrecoverable_parse_errors && self.registry.phases.recovered_nodes.is_empty() {

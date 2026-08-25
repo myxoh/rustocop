@@ -133,6 +133,19 @@ def normalized_offenses(test_case)
     captured = offense.slice(
       "message", "severity", "correctable", "line", "column", "last_line", "last_column"
     )
+    eof_line = source.count("\n") + 1
+    eof_column = source.rpartition("\n").last.each_char.count + 1
+    insertion_at_nonterminated_eof = !source.empty? && !source.end_with?("\n") &&
+                                      captured["line"] == eof_line &&
+                                      captured["column"] == eof_column
+    formatter_zero_width = %w[Lint/EmptyFile Layout/TrailingEmptyLines].include?(test_case.fetch("cop")) ||
+                           test_case.fetch("cop") == "Layout/IndentationWidth" &&
+                             captured.fetch("message").end_with?(" spaces for indentation.")
+    if !insertion_at_nonterminated_eof && !formatter_zero_width &&
+       captured["last_line"] == captured["line"] &&
+       captured["last_column"] + 1 == captured["column"]
+      captured["last_column"] = captured["column"]
+    end
     captured["last_column"] = 1 if captured["last_line"] > captured["line"] && captured["last_column"].zero?
     captured
   end.sort_by do |offense|
@@ -144,7 +157,8 @@ def controlled_diagnostics(cases)
   captured = cases.find { |test_case| !test_case["offenses"].nil? }
   return normalized_offenses(captured) if captured
 
-  captured_offenses(cases.first)
+  investigated = cases.first.merge("offenses" => captured_offenses(cases.first))
+  normalized_offenses(investigated)
 end
 
 def with_encodings(test_case)

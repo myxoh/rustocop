@@ -1,6 +1,7 @@
 {
   "05a9350bb49734e0": "---\nLayout/LineLength:\n  URISchemes:\n  - http\n  - https\n  Max: 40\n  AllowedPatterns:\n  AutoCorrect: true\n  SplitStrings: true\n  Enabled: true\nLayout/IndentationStyle:\n  IndentationWidth: 2\n",
   "0a5898c26dcfb506": "---\nLayout/LineLength:\n  URISchemes:\n  - http\n  - https\n  Max: 80\n  SplitStrings: true\n  Enabled: true\nLayout/IndentationStyle:\n  IndentationWidth: 2\n",
+  "0f158c99aec69294": "---\nAllCops:\n  DisabledByDefault: true\n  ParserEngine: parser_prism\n  TargetRubyVersion: 3.4\nLayout/LineLength:\n  Enabled: true\n  Max: 50\n  AllowURI: true\n  AllowQualifiedName: true\n",
   "13fbe09f0c353b28": "---\nLayout/LineLength:\n  URISchemes:\n  - http\n  - https\n  Max: 30\n  AllowURI: true\n  Enabled: true\nLayout/IndentationStyle:\n  IndentationWidth: 2\n",
   "1478c9824ae2d19d": "---\nLayout/LineLength:\n  URISchemes:\n  - http\n  - https\n  Max: 80\n  AllowURI: false\n  Enabled: true\nLayout/IndentationStyle:\n  IndentationWidth: 2\n",
   "252c7534b569974b": "---\nLayout/IndentationWidth:\n  Width: 1\nLayout/IndentationStyle:\n  Enabled: false\n  IndentationWidth: 2\nLayout/LineLength:\n  Max: 30\n  AllowURI: true\n  Enabled: true\n",
@@ -13,6 +14,8 @@
   "5440616a027cf47d": "---\nLayout/LineLength:\n  URISchemes:\n  - http\n  - https\n  Max: 80\n  AllowCopDirectives: true\n  Enabled: true\nLayout/IndentationStyle:\n  IndentationWidth: 2\n",
   "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
   "6175c1e1ba99e8f8": "---\nLayout/LineLength:\n  URISchemes:\n  - http\n  - https\n  Max: 80\n  AllowQualifiedName: true\n  Enabled: true\nLayout/IndentationStyle:\n  IndentationWidth: 2\n",
+  "655aaa6db2321150": "---\nAllCops:\n  DisabledByDefault: true\n  ParserEngine: parser_prism\n  TargetRubyVersion: 3.4\nLayout/LineLength:\n  Enabled: true\n  Max: 80\n  AllowURI: true\n  AllowQualifiedName: true\n",
+  "6f1616c5ef015896": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nLayout/LineLength:\n  Enabled: true\n  Max: 100\nMetrics/AbcSize:\n  Enabled: true\n  Max: 10\nMetrics/MethodLength:\n  Enabled: true\n  Max: 10\nStyle/Documentation:\n  Enabled: true\nStyle/Copyright:\n  Notice: \"^Copyright (\\\\(c\\\\) )?2[0-9]{3} .+\"\n  AutocorrectNotice: \"# Copyright (c) 2026 Rustocop project parity corpus.\"\nStyle/HashSyntax:\n  Enabled: true\nStyle/RedundantReturn:\n  Enabled: true\nStyle/Semicolon:\n  Enabled: true\nStyle/StringLiterals:\n  Enabled: true\n  EnforcedStyle: double_quotes\n",
   "77c39c64bd272713": "---\nAllCops:\n  TargetRubyVersion: '2.7'\n",
   "943b1e09889b9ee9": "---\nLayout/LineLength:\n  URISchemes:\n  - http\n  - https\n  Max: 30\n  AllowedPatterns:\n  AutoCorrect: true\n  SplitStrings: true\n  Enabled: true\nLayout/IndentationStyle:\n  IndentationWidth: 2\n",
   "946bce8d8b54882b": "---\nLayout/LineLength:\n  URISchemes:\n  - LDAP\n  Max: 80\n  AllowURI: true\n  Enabled: true\nLayout/IndentationStyle:\n  IndentationWidth: 2\n",

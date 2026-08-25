@@ -1,12 +1,12 @@
 {
   "version": 1,
   "rubocop_version": "1.87.0",
-  "updated_at": "2026-08-24T18:54:42Z",
+  "updated_at": "2026-08-24T18:42:21-04:00",
   "raw_capture_sha256": "aec260b35238542dafa044aad90dfe5c873b6c91019d3708f870fdc8b2453666",
   "raw_cases": 28606,
   "lsp_exclusions": 5,
-  "controlled_cases": 28769,
-  "imported_cases": 720,
+  "controlled_cases": 28846,
+  "imported_cases": 797,
   "exact_duplicates_removed": 552,
   "distribution": {
     "minimum": 1,
@@ -229,7 +229,7 @@
       "configs": "cops/Layout/DefEndAlignment/unit/configs.json",
       "count": 18,
       "sha256": "4a577626da93dcaef11c8e8927811487b8e0e565def3bdea8626eaee515887c7",
-      "configs_sha256": "46175574c644f82c19fa6e03e0d24fdfdffadf8d2cb4c76ba865a46630c095c6"
+      "configs_sha256": "7d0187fad9f268d695b2100aad9ffd854fe4029393df95adb64c4063e9c62551"
     },
     "Layout/DotPosition": {
       "cases": "cops/Layout/DotPosition/unit/cases.jsonl",
@@ -521,9 +521,9 @@
     "Layout/LineLength": {
       "cases": "cops/Layout/LineLength/unit/cases.jsonl",
       "configs": "cops/Layout/LineLength/unit/configs.json",
-      "count": 197,
-      "sha256": "7bb16f15ce2d1300658de768abf880cb8941bcc70f3a5748aa3ad424ac3dd0ef",
-      "configs_sha256": "3ce3f4869600e31b326a821b95162ae0ac3376b7e6aafe3ca857efeea838374b"
+      "count": 205,
+      "sha256": "22b0d0ac3100a7698954a99d6a44eedc01958f17637832cd3717f01d6f5fb992",
+      "configs_sha256": "287b2e883467b7f305693f9ef67e8d66fddc4bc968c6bfcea06d7694c37a910a"
     },
     "Layout/MultilineArrayBraceLayout": {
       "cases": "cops/Layout/MultilineArrayBraceLayout/unit/cases.jsonl",
@@ -535,9 +535,9 @@
     "Layout/MultilineArrayLineBreaks": {
       "cases": "cops/Layout/MultilineArrayLineBreaks/unit/cases.jsonl",
       "configs": "cops/Layout/MultilineArrayLineBreaks/unit/configs.json",
-      "count": 12,
-      "sha256": "26dfbb97f4d1bf2d895868885c6b8c49ae56230f7cc7e373c476865a9ea79a2c",
-      "configs_sha256": "189bfd7352096fc30b7143fa859b9032259c4fe2a558e57a9294138746cca213"
+      "count": 19,
+      "sha256": "6c94819a2f38e514b2ed40bb15178e7fcf5d1cc95ee57ece60b6d032ed048207",
+      "configs_sha256": "381f4c2fbd8c7dcdb09260476acfc563fc1073ffe462a0b9fa424cd8c77c63c2"
     },
     "Layout/MultilineAssignmentLayout": {
       "cases": "cops/Layout/MultilineAssignmentLayout/unit/cases.jsonl",
@@ -572,7 +572,7 @@
       "configs": "cops/Layout/MultilineMethodArgumentLineBreaks/unit/configs.json",
       "count": 18,
       "sha256": "f9f16e743c325c1d01f390210fa76778ee59f0818380ce410efadd5ac77c8e7a",
-      "configs_sha256": "204228c1e4867e76857c7abd7b759f12e43e97116881756a317746c85cb4680a"
+      "configs_sha256": "ec1ec36ebd0b1fbd750254bcc67d67095354d16c32bd16e064458aab897d5c6c"
     },
     "Layout/MultilineMethodCallBraceLayout": {
       "cases": "cops/Layout/MultilineMethodCallBraceLayout/unit/cases.jsonl",
@@ -584,9 +584,9 @@
     "Layout/MultilineMethodCallIndentation": {
       "cases": "cops/Layout/MultilineMethodCallIndentation/unit/cases.jsonl",
       "configs": "cops/Layout/MultilineMethodCallIndentation/unit/configs.json",
-      "count": 275,
-      "sha256": "78e646d68686c42695d92f6e97ea00ee8f8f7c59043b3b205474ade5091b95b8",
-      "configs_sha256": "b9d66ebba52f7d72482b141d497684daeb2df31f91bd3d18b638382c25879c12"
+      "count": 283,
+      "sha256": "4af3b0675a8ce83dc437ba5e99a349ccdad69d3029a9152da588488742f2802e",
+      "configs_sha256": "02012df069df01e559e4cca72ec8354db62235875c2c6da00da65998cd1cd6a2"
     },
     "Layout/MultilineMethodDefinitionBraceLayout": {
       "cases": "cops/Layout/MultilineMethodDefinitionBraceLayout/unit/cases.jsonl",
@@ -600,7 +600,7 @@
       "configs": "cops/Layout/MultilineMethodParameterLineBreaks/unit/configs.json",
       "count": 14,
       "sha256": "dd926bf86454cb151f8d14a3c0e608ea404db8fab48b0c60bb4dcfd7128025ab",
-      "configs_sha256": "b45b9a250b81a94cef30f75f8cbaae1f132be0a8e4c8fef4e29b91af10ee58b4"
+      "configs_sha256": "af2d39d2285f5487d432f062433f38e1852a3cef6bea53d2d85192747f25bb56"
     },
     "Layout/MultilineOperationIndentation": {
       "cases": "cops/Layout/MultilineOperationIndentation/unit/cases.jsonl",
@@ -941,9 +941,9 @@
     "Lint/ConstantResolution": {
       "cases": "cops/Lint/ConstantResolution/unit/cases.jsonl",
       "configs": "cops/Lint/ConstantResolution/unit/configs.json",
-      "count": 18,
-      "sha256": "47d9194b41c8347c9d0d4c866e266ae6d7fdebdccff034e5e573a42de54f98a5",
-      "configs_sha256": "37e906036fb10e5cdde0e168efaa90c879a446bbfd4b233e8ce35ea81590dccd"
+      "count": 24,
+      "sha256": "c8e8664d58afe3a0bf6e01ce3964c9fed2b11365c17b63e43e30f7132a5423ad",
+      "configs_sha256": "d76ebea7adcf8891942323c3ad721f6540d96ea56e6a481a8745b140337ef540"
     },
     "Lint/CopDirectiveSyntax": {
       "cases": "cops/Lint/CopDirectiveSyntax/unit/cases.jsonl",
@@ -1914,9 +1914,9 @@
     "Metrics/AbcSize": {
       "cases": "cops/Metrics/AbcSize/unit/cases.jsonl",
       "configs": "cops/Metrics/AbcSize/unit/configs.json",
-      "count": 24,
-      "sha256": "fd07ce23f947e08fea92351b00c2f31011dfe9bb7703472ac6ed6db12e272a53",
-      "configs_sha256": "12246d83f5437f6a13cb8d0e390243c47131e47b050d4cff9d5a18cb8de0f560"
+      "count": 33,
+      "sha256": "bec9fb95c5590af698bd7865ab26dafdd090a12be21829750e4758e977e363dc",
+      "configs_sha256": "e6be80c10693a43f32daa129afb2026fcf760faa205766fc22aaef990398fa71"
     },
     "Metrics/BlockLength": {
       "cases": "cops/Metrics/BlockLength/unit/cases.jsonl",
@@ -1956,9 +1956,9 @@
     "Metrics/MethodLength": {
       "cases": "cops/Metrics/MethodLength/unit/cases.jsonl",
       "configs": "cops/Metrics/MethodLength/unit/configs.json",
-      "count": 31,
-      "sha256": "4307b7aa539835b2c5c1110532f50327d052d9d79610edfcebd60692048f6dc3",
-      "configs_sha256": "7570e8e0a82f181daaf431a5df4c7f46dfe07b651a61ec1a96b50bd470da9d5a"
+      "count": 38,
+      "sha256": "59b0195bf7ded359a9b94cb3586da2d51e618a70792c85ea7a0dfcef273adccf",
+      "configs_sha256": "7c177ec411d73b80d9311e57e0352c50ee1481417ed755f328990621289a87d8"
     },
     "Metrics/ModuleLength": {
       "cases": "cops/Metrics/ModuleLength/unit/cases.jsonl",
@@ -2041,7 +2041,7 @@
       "cases": "cops/Naming/FileName/unit/cases.jsonl",
       "configs": "cops/Naming/FileName/unit/configs.json",
       "count": 122,
-      "sha256": "707e0ffca5f1fafe09103ae49d743490bbec140925c9e9e6604f4bfbbba9c46b",
+      "sha256": "cac5bff78cb7adfc7076a2b544dac0b9b3c20c783e43f09b4b30be008d5be77f",
       "configs_sha256": "22b94cdd520e71e983a45bbcc05521319118f67369808113549237fe42c757cb"
     },
     "Naming/HeredocDelimiterCase": {
@@ -2481,9 +2481,9 @@
     "Style/Copyright": {
       "cases": "cops/Style/Copyright/unit/cases.jsonl",
       "configs": "cops/Style/Copyright/unit/configs.json",
-      "count": 21,
-      "sha256": "3adbb7786083b14b5a3c20d8263e3fee84f7f47fcd4fdc2bddf4c8a733b3f4ea",
-      "configs_sha256": "6bfe2501ef6757f2e71946da17ebbf191164640f91739cecd4052327f44468a0"
+      "count": 27,
+      "sha256": "cbb81e253eeb9da76b39fbfd974132c9d3719f506d232f3ef2a50728151e568d",
+      "configs_sha256": "aa4784983a2676df308428143186c0e18b16a0efd59f9f027b40dd7b7c50fa38"
     },
     "Style/DataInheritance": {
       "cases": "cops/Style/DataInheritance/unit/cases.jsonl",
@@ -2551,9 +2551,9 @@
     "Style/DocumentationMethod": {
       "cases": "cops/Style/DocumentationMethod/unit/cases.jsonl",
       "configs": "cops/Style/DocumentationMethod/unit/configs.json",
-      "count": 77,
-      "sha256": "80ce89c0485a19b9062478048c933d0e6f7709e38ab35b95d452871bb9109e3a",
-      "configs_sha256": "f6f26f5128ac7af39eab947798b46a6bff3704875c6dab8fd9054e7e6301738d"
+      "count": 86,
+      "sha256": "bb1fa4d431b861c3e855f16b33a85c573634c1c5b295ddef928f941dbb722565",
+      "configs_sha256": "2fd86dff4af2d495a7040c7c27dd66e83976e8d4d277696633f1dc26fd86cd02"
     },
     "Style/DoubleCopDisableDirective": {
       "cases": "cops/Style/DoubleCopDisableDirective/unit/cases.jsonl",
@@ -3083,9 +3083,9 @@
     "Style/MethodCallWithArgsParentheses": {
       "cases": "cops/Style/MethodCallWithArgsParentheses/unit/cases.jsonl",
       "configs": "cops/Style/MethodCallWithArgsParentheses/unit/configs.json",
-      "count": 174,
-      "sha256": "80859d6587926ea8598292bd584b9bdbec0eda32260b7277a8ff4ee9c320d5ec",
-      "configs_sha256": "58ae8a8eafbf7491f827fd753e493d25597b0c44935576db89cef4985b8cc5a5"
+      "count": 184,
+      "sha256": "58f50352ee70d1014d5079740fa8d73a643832c069218fd7a6ce63eef9a28f3c",
+      "configs_sha256": "0d047b663d7280db008812c92f5b75e459b20a33cbd3907cb0136a9024745749"
     },
     "Style/MethodCallWithoutArgsParentheses": {
       "cases": "cops/Style/MethodCallWithoutArgsParentheses/unit/cases.jsonl",
@@ -3125,9 +3125,9 @@
     "Style/MissingElse": {
       "cases": "cops/Style/MissingElse/unit/cases.jsonl",
       "configs": "cops/Style/MissingElse/unit/configs.json",
-      "count": 84,
-      "sha256": "5f437f58d28b0be1d727a6bdcb8b03f0c5f528120910ce6e1ed4758360d4b691",
-      "configs_sha256": "61d01e6baa78039ecc9027578a58da6e33178e6d9919e145e0b822006e184e9f"
+      "count": 91,
+      "sha256": "0326f3ec566f8cf4b403679772ade5df35d4fe894b1dd045e4c8efec412c9daf",
+      "configs_sha256": "ec779d33bf1a5d9415314f40c12a558df55ea7ddb6b6e68dcca18352dc9c8480"
     },
     "Style/MissingRespondToMissing": {
       "cases": "cops/Style/MissingRespondToMissing/unit/cases.jsonl",

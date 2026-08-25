@@ -10,6 +10,7 @@ require "time"
 require_relative "../lib/rustocop/artifact_store"
 require_relative "../lib/rustocop/diagnostic_signatures"
 require_relative "../lib/rustocop/process_runner"
+require_relative "../lib/rustocop/project_mismatch_inventory"
 require_relative "../lib/rustocop/repository_layout"
 require_relative "../lib/rustocop/source_fingerprint"
 require_relative "../lib/rustocop/project_corpus"
@@ -36,6 +37,7 @@ options = {
   build: true,
   report: nil,
   markdown: nil,
+  mismatch_inventory: nil,
   rubocop_reference: DEFAULT_RUBOCOP_REFERENCE,
   refresh_rubocop_reference: false,
   dry_run: false
@@ -53,6 +55,9 @@ OptionParser.new do |parser|
   parser.on("--[no-]build", "build the release binary before auditing (default: true)") { |value| options[:build] = value }
   parser.on("--report PATH") { |value| options[:report] = File.expand_path(value) }
   parser.on("--markdown PATH") { |value| options[:markdown] = File.expand_path(value) }
+  parser.on("--mismatch-inventory PATH", "compressed exhaustive mismatch artifact") do |value|
+    options[:mismatch_inventory] = File.expand_path(value)
+  end
   parser.on("--rubocop-reference PATH", "compressed RuboCop result snapshot") do |value|
     options[:rubocop_reference] = File.expand_path(value)
   end
@@ -115,6 +120,11 @@ abort "configuration not found: #{options[:config]}" unless File.file?(options[:
 positions = cops.map { |cop| matrix.index(cop) + 1 }
 options[:report] ||= File.join(ROOT, "tmp/project-parity/project-gate-#{positions.max}-#{positions.min}.json")
 options[:markdown] ||= options[:report].sub(/\.json\z/, ".md")
+options[:mismatch_inventory] ||= if options[:report].end_with?(".json")
+                                   options[:report].sub(/\.json\z/, ".mismatches.json.gz")
+                                 else
+                                   "#{options[:report]}.mismatches.json.gz"
+                                 end
 
 projects = Rustocop::ProjectCorpus::PROJECTS.map do |project|
   corpus = LAYOUT.project_corpus(project)
@@ -373,42 +383,7 @@ end
 survivors = rust_survivors - rubocop_errors.map { |error| error.fetch("cop") }
 survivor_lookup = survivors.to_h { |cop| [cop, true] }
 
-def signature(offense)
-  offense.values_at(
-    "path", "cop", "severity", "message",
-    "start_line", "start_column", "last_line", "last_column"
-  )
-end
-
-def compare(rust, ruby, cops)
-  rust_by_cop = rust.group_by { |item| item.fetch("cop") }
-  ruby_by_cop = ruby.group_by { |item| item.fetch("cop") }
-  cops.to_h do |cop|
-    rust_rows = rust_by_cop.fetch(cop, [])
-    ruby_rows = ruby_by_cop.fetch(cop, [])
-    rust_tally = rust_rows.map { |item| signature(item) }.tally
-    ruby_tally = ruby_rows.map { |item| signature(item) }.tally
-    exact = rust_tally.sum { |key, count| [count, ruby_tally.fetch(key, 0)].min }
-    rust_only = unmatched_examples(rust_tally, ruby_tally)
-    ruby_only = unmatched_examples(ruby_tally, rust_tally)
-    [cop, {
-      "rustocop" => rust_rows.length,
-      "rubocop" => ruby_rows.length,
-      "exact" => exact,
-      "rustocop_only_examples" => rust_only,
-      "rubocop_only_examples" => ruby_only
-    }]
-  end
-end
-
-def unmatched_examples(left, right, limit = 3)
-  left.each_with_object([]) do |(key, count), examples|
-    missing = [count - right.fetch(key, 0), 0].max
-    [missing, limit - examples.length].min.times { examples << key }
-    break examples if examples.length == limit
-  end
-end
-
+mismatch_projects = {}
 project_results = projects.to_h do |project|
   corpus = project.fetch("corpus")
   warn "Exact comparison: #{project.fetch('name')} (#{survivors.length} cops)"
@@ -421,6 +396,22 @@ project_results = projects.to_h do |project|
   ruby_offenses = decode_offenses(ruby_result, rubocop_reference.fetch("cops")).select do |offense|
     survivor_lookup.key?(offense.fetch("cop"))
   end
+  comparison = Rustocop::ProjectMismatchInventory.compare(rust_offenses, ruby_offenses, survivors)
+  mismatch_paths = comparison.entries.map { |entry| entry.fetch(1) }.uniq.sort
+  mismatch_projects[project.fetch("name")] = {
+    "repository" => project.fetch("repository"),
+    "revision" => project.fetch("revision"),
+    "files" => mismatch_paths.to_h do |path|
+      source_path = File.join(corpus, path)
+      abort "mismatch source not found: #{source_path}" unless File.file?(source_path)
+
+      [path, {
+        "sha256" => Digest::SHA256.file(source_path).hexdigest,
+        "bytes" => File.size(source_path)
+      }]
+    end,
+    "entries" => comparison.entries
+  }
   [project.fetch("name"), {
     "repository" => project.fetch("repository"),
     "revision" => project.fetch("revision"),
@@ -433,7 +424,7 @@ project_results = projects.to_h do |project|
       "rustocop" => rust_result.fetch("stderr").lines.count { |line| !line.strip.empty? },
       "rubocop" => ruby_result.fetch("warning_count")
     },
-    "by_cop" => compare(rust_offenses, ruby_offenses, survivors)
+    "by_cop" => comparison.by_cop
   }]
 end
 
@@ -471,8 +462,33 @@ rubocop_errors.each do |error|
   }
 end
 
+generated_at = Time.now.iso8601
+inventory = {
+  "format_version" => Rustocop::ProjectMismatchInventory::FORMAT_VERSION,
+  "generated_at" => generated_at,
+  "report" => Pathname(options[:report]).relative_path_from(Pathname(ROOT)).to_s,
+  "config" => {
+    "path" => Pathname(options[:config]).relative_path_from(Pathname(ROOT)).to_s,
+    "sha256" => config_sha256
+  },
+  "fields" => Rustocop::ProjectMismatchInventory::ENTRY_FIELDS,
+  "distinct_mismatches" => mismatch_projects.values.sum { |project| project.fetch("entries").length },
+  "unmatched_offenses" => mismatch_projects.values.sum do |project|
+    project.fetch("entries").sum { |entry| entry.fetch(-1) }
+  end,
+  "projects" => mismatch_projects
+}
+Rustocop::ArtifactStore.write_gzip_json(options[:mismatch_inventory], inventory)
+inventory_metadata = {
+  "path" => Pathname(options[:mismatch_inventory]).relative_path_from(Pathname(ROOT)).to_s,
+  "sha256" => Digest::SHA256.file(options[:mismatch_inventory]).hexdigest,
+  "format_version" => inventory.fetch("format_version"),
+  "distinct_mismatches" => inventory.fetch("distinct_mismatches"),
+  "unmatched_offenses" => inventory.fetch("unmatched_offenses")
+}
+
 report = {
-  "generated_at" => Time.now.iso8601,
+  "generated_at" => generated_at,
   "rust_commit" => rust_commit,
   "cop_source_sha256" => Rustocop::SourceFingerprint.cops(root: ROOT),
   "native_sha256" => Digest::SHA256.file(options[:native]).hexdigest,
@@ -484,6 +500,7 @@ report = {
     "config_sha256" => config_sha256,
     "source" => reference_source
   },
+  "mismatch_inventory" => inventory_metadata,
   "matrix_start" => positions.min,
   "matrix_end" => positions.max,
   "cops" => cops,
@@ -511,6 +528,8 @@ markdown = <<~MARKDOWN
   - Mismatching: #{summary.fetch('mismatch', 0)}
   - Crashing: #{summary.fetch('crash', 0)}
   - RuboCop gate errors: #{summary.fetch('rubocop_error', 0)}
+  - Exhaustive mismatch signatures: #{inventory.fetch('distinct_mismatches')}
+  - Unmatched offense instances: #{inventory.fetch('unmatched_offenses')}
 
   | Cop | Rustocop | RuboCop | Exact | Classification |
   | --- | ---: | ---: | ---: | --- |
@@ -525,4 +544,7 @@ File.write(options[:markdown], markdown)
 
 puts "Project gate: #{summary.sort.map { |key, value| "#{key}=#{value}" }.join(', ')}"
 puts "Report: #{options[:report]}"
+puts "Mismatch inventory: #{options[:mismatch_inventory]} " \
+     "(#{inventory.fetch('distinct_mismatches')} signatures, " \
+     "#{inventory.fetch('unmatched_offenses')} unmatched offenses)"
 puts "Summary: #{options[:markdown]}"

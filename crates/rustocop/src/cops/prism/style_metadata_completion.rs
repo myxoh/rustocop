@@ -1,4 +1,5 @@
 use super::*;
+use regex::RegexBuilder;
 
 mod literals;
 use literals::*;
@@ -22,15 +23,40 @@ fn copyright(context: &mut CopContext<'_, '_>) {
             !line.is_empty() && !line.starts_with('#')
         })
         .map_or(context.source().len(), |(offset, _)| offset);
-    if context.source()[..first_code].contains("Copyright")
-        || context.source().starts_with("=begin") && context.source().contains("Copyright")
+    let mut comments = context.source_file().comment_ranges().into_iter().fold(
+        String::new(),
+        |mut text, range| {
+            if range.start >= first_code {
+                return text;
+            }
+            let comment = &context.source()[range];
+            text.push_str(comment.strip_prefix('#').unwrap_or(comment).trim_start());
+            text.push('\n');
+            text
+        },
+    );
+    if context.source().starts_with("=begin") {
+        if let Some(end) = context.source().find("\n=end") {
+            comments.push_str(&context.source()["=begin".len()..end]);
+        }
+    }
+    let pattern = copyright_notice_pattern(&visible_notice);
+    if RegexBuilder::new(pattern)
+        .multi_line(true)
+        .build()
+        .is_ok_and(|pattern| pattern.is_match(&comments))
     {
         return;
     }
     let message =
         format!("Include a copyright notice matching /{visible_notice}/ before any code.");
+    let offense = if context.source().starts_with('\n') && !context.source().trim().is_empty() {
+        0..1
+    } else {
+        0..0
+    };
     if context.source().is_empty() {
-        context.report(message, 0..0);
+        context.report(message, offense);
         return;
     }
     let correction = context
@@ -38,7 +64,7 @@ fn copyright(context: &mut CopContext<'_, '_>) {
         .map(unescape_config)
         .unwrap_or_default();
     if correction.is_empty() {
-        context.report(message, 0..1);
+        context.report(message, offense);
         return;
     }
     let correction = if correction.starts_with('#') {
@@ -75,10 +101,28 @@ fn copyright(context: &mut CopContext<'_, '_>) {
     };
     context.replace(
         message,
-        0..1,
+        offense,
         insertion..insertion,
         format!("{}\n{suffix}", correction.trim_end_matches('\n')),
     );
+}
+
+fn copyright_notice_pattern(notice: &str) -> &str {
+    let anchored = notice
+        .strip_prefix(r"\A")
+        .or_else(|| notice.strip_prefix('^'))
+        .unwrap_or(notice);
+    let Some(without_comment) = anchored.strip_prefix('#') else {
+        return notice;
+    };
+    let mut pattern = without_comment.trim_start();
+    for whitespace in [r"\s+", r"\s*", r"\s?", r"\s"] {
+        if let Some(rest) = pattern.strip_prefix(whitespace) {
+            pattern = rest.trim_start();
+            break;
+        }
+    }
+    pattern
 }
 
 fn unescape_config(value: &str) -> String {

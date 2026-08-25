@@ -49,32 +49,33 @@ excluded. Auditing the remaining 28,601 inputs produced 28,049 controlled unit
 cases owned by all 606 cops and removed 552 exact duplicates while retaining
 their provenance. The completed legacy-fixture audit retained another 720
 unique project-derived, configuration, Prism, hardening, end-to-end, and native
-examples in the same schema, for 28,769 unit contracts total. Whole projects
-remain transient and are not a substitute for this focused coverage.
-The expanded strict run currently passes all 28,769 cases across all 606 cops,
-including exact diagnostics and distinct safe `-a` and full `-A` corrections.
+examples in the same schema. The current project audit added 19 minimized cases
+covering 20 mismatch directions across 10 cops, for 28,788 unit contracts total.
+Whole projects remain transient and are not a substitute for this focused
+coverage. The strict run passes the original 28,769 contracts; the 19 newly
+isolated cases intentionally expose 25 diagnostic/`-a`/`-A` comparison failures
+across those 10 cops.
 
 ## Fifty-project output parity
 
 The real-project matrix asks whether each cop emits the same path, severity,
 message, and source range as RuboCop across 85,471 Ruby files in 50 projects.
 
-The complete audit updated at `2026-08-24T07:29:34-04:00` covers all 606 built-in
-cops. It leaves 330 project-exact cops, 53 dormant cops, 220 mismatches, no
+The complete audit updated at `2026-08-24T15:25:53-04:00` covers all 606 built-in
+cops. It leaves 317 project-exact cops, 53 dormant cops, 233 mismatches, no
 native crashes, and three RuboCop gate errors.
 
 | Real-project classification | Complete checkpoint |
 | --- | ---: |
-| Project-exact | 330 / 606 (60.0% of 550 exercised cops) |
+| Project-exact | 317 / 606 (57.6% of 550 exercised cops) |
 | Exact but dormant | 53 / 606 |
-| Mismatching | 220 / 606 |
+| Mismatching | 233 / 606 |
 | Rust crashes | 0 / 606 |
 | RuboCop gate errors | 3 / 606 |
 
 The checkpoint is bound to worktree native binary SHA-256
-`d5952f01169f0a3cb155d456247ed72e2b08e6d65ccebbc9cc905cda46facd9c` and cop
-source SHA-256
-`531d7f98c244241ac073ca1e1ca7760587caf53910258b05483ed1c2ddd35b54`.
+`c06a23caf252ee2e7002dd30c13bff0f1b54dca89cba8b99b370d03083cdad76` and
+commit `ddb32ffcc4aaa97d560add1482e3c33863409004`.
 Its RuboCop reference SHA-256 is
 `6fbcf83154ad05bab3c35cefef09b8d404a07037f47ef614c813649cb0cce7f8`.
 Project-exact status is the strongest current diagnostic evidence. Unexercised
@@ -271,11 +272,12 @@ is empty, so no built-in cop specs are excluded from the active fixture corpus.
 The capture harness executes RuboCop's test DSL and records the resulting
 source, configuration, path, Ruby version, parser, encodings, offenses, and
 correction. It does not infer expectations by scraping spec source. The
-28,769-case committed unit cache stores exact diagnostics plus distinct safe
+28,788-case committed unit cache stores exact diagnostics plus distinct safe
 `-a` and all-cop `-A` results, including 720 unique cases imported from the
-retired fixture layouts. These cases become compatibility evidence only when
-Rustocop matches the cache. Project-exact output is the broader guard against
-cases absent from unit contracts.
+retired fixture layouts and 19 current project-isolation cases. These cases
+become compatibility evidence only when Rustocop matches the cache.
+Project-exact output is the broader guard against cases absent from unit
+contracts.
 
 ```sh
 bundle exec ruby script/extract_upstream_cop_specs.rb
@@ -352,7 +354,7 @@ Run the cached controlled unit contract for only the cops being changed:
 ruby script/verify_cop.rb Style/StringLiterals Layout/TrailingWhitespace
 ```
 
-Run all 28,769 controlled cases, or explicitly refresh the slow RuboCop cache:
+Run all 28,788 controlled cases, or explicitly refresh the slow RuboCop cache:
 
 ```sh
 bundle exec rake fixtures:unit

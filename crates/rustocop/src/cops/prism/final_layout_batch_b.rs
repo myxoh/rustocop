@@ -1080,12 +1080,12 @@ impl Cop for MultilineMethodCallIndentationCop {
                 group.start_offset() < call_location.start_offset()
                     && call_location.end_offset() < group.end_offset()
             }) || ancestor.as_call_node().is_some_and(|parent| {
-                    parent.opening_loc().is_some()
-                    && parent.arguments().is_some_and(|arguments| {
+                    parent.arguments().is_some_and(|arguments| {
                         let arguments = arguments.location();
                         (arguments.start_offset() < call_location.start_offset()
                             && call_location.end_offset() < arguments.end_offset())
                             || (parent.call_operator_loc().is_some()
+                                && parent.opening_loc().is_some()
                                 && arguments.start_offset() <= call_location.start_offset()
                                 && call_location.end_offset() <= arguments.end_offset())
                     })
@@ -1157,13 +1157,46 @@ fn check_multiline_method_call(
     let receiver_range = receiver.location().start_offset()..receiver.location().end_offset();
     let receiver_has_block = receiver
         .as_call_node()
-        .is_some_and(|receiver_call| receiver_call.block().is_some());
+        .is_some_and(|receiver_call| {
+            receiver_call
+                .block()
+                .and_then(|block| block.as_block_node())
+                .is_some()
+        });
+    let call_has_literal_block = call
+        .block()
+        .and_then(|block| block.as_block_node())
+        .is_some();
+    let multiline_block_dot = multiline_block_chain_dot_column(&receiver, file);
     let expression_indent = continuation_expression_indent(receiver_range.start, file);
     let base_receiver = base_call_receiver(receiver);
+    let multiline_block_dot = multiline_block_dot.or_else(|| {
+        prior_block_end_chain_dot_column(0, rhs.start, file)
+    });
     let pair_key = multiline_method_pair_key(context, file);
     let pair_key_column = pair_key.map(|(column, _)| column);
     let base_prefix = &context.source()[file.line_start(base_receiver.location().start_offset())
         ..base_receiver.location().start_offset()];
+    if style == "aligned"
+        && (multiline_block_dot == Some(actual)
+            || (base_prefix.trim_start().starts_with('.')
+                && base_receiver
+                    .as_call_node()
+                    .is_some_and(|base| base.receiver().is_none() && base.opening_loc().is_some()))
+            || (actual
+                == file
+                    .indentation(base_receiver.location().start_offset())
+                    .len()
+                    + width
+                && pair_key_column.is_none()
+                && !multiline_method_assignment_context(call, file)
+                && !alignment_context_before(base_receiver.location().start_offset(), file)
+                && base_receiver
+                    .as_call_node()
+                    .is_some_and(|base| base.receiver().is_none() && base.opening_loc().is_some())))
+    {
+        return;
+    }
     if (base_prefix.trim_end().ends_with('(')
         && !context.source()[base_receiver.location().end_offset()..rhs.start].contains(')'))
         || inside_hash_argument_of_multiline_chain(context, file)
@@ -1178,7 +1211,7 @@ fn check_multiline_method_call(
         [base_receiver.location().start_offset()..base_receiver.location().end_offset()];
     let generic_parenthesized = base_receiver_source.starts_with('(')
         && (base_receiver_source.contains('\n') || base_receiver_source.contains(" + "));
-    if call.block().is_some()
+    if call_has_literal_block
         && receiver_has_block
         && first_same_line_chain_rhs(call, file).is_none()
         && actual == expression_indent + width
@@ -1186,15 +1219,15 @@ fn check_multiline_method_call(
         return;
     }
     if pair_key_column.is_none()
-        && call.block().is_some()
+        && call_has_literal_block
         && immediately_follows_continuation_at_column(rhs.start, actual, file)
     {
         return;
     }
-    if call.block().is_some() && immediately_follows_block_end(rhs.start, file) {
+    if call_has_literal_block && immediately_follows_block_end(rhs.start, file) {
         return;
     }
-    if (style == "aligned" || style == "indented")
+    if style == "aligned"
         && prior_continuation_at_column(call, rhs.start, actual, file)
         && (call
             .call_operator_loc()
@@ -1247,8 +1280,8 @@ fn check_multiline_method_call(
                         file,
                     )
                 })
-                .or_else(|| multiline_operation_alignment_base(receiver_range.clone(), file))
                 .or_else(|| multiline_call_syntactic_base(&base_receiver, context.source_file()))
+                .or_else(|| multiline_operation_alignment_base(receiver_range.clone(), file))
         })
         .flatten();
     let semantic_base = (style == "aligned"
@@ -1319,7 +1352,12 @@ fn check_multiline_method_call(
         } else if let Some(base) = semantic_base.or(syntactic_base) {
             (file.column(base.0), Some(base), false)
         } else if follows_assignment_continuation(&base_receiver, file) {
-            (expression_indent, None, false)
+            let location = base_receiver.location();
+            (
+                expression_indent,
+                Some((location.start_offset(), location.end_offset())),
+                false,
+            )
         } else {
             (expression_indent + width, None, false)
         }
@@ -1493,6 +1531,39 @@ fn base_call_receiver(mut node: Node<'_>) -> Node<'_> {
         };
         node = receiver;
     }
+}
+
+fn multiline_block_chain_dot_column(node: &Node<'_>, file: SourceFile<'_>) -> Option<usize> {
+    let mut current = node.as_call_node();
+    while let Some(call) = current {
+        if let Some(block) = call.block().filter(|block| {
+            !file.same_line(block.location().start_offset(), block.location().end_offset())
+        }) {
+            let end = block.location().end_offset();
+            let line_end = file.line_end(end.saturating_sub(1));
+            if let Some(dot) = file.as_str()[end..line_end].find('.') {
+                return Some(file.column(end + dot));
+            }
+        }
+        current = call.receiver().and_then(|receiver| receiver.as_call_node());
+    }
+    None
+}
+
+fn prior_block_end_chain_dot_column(
+    call_start: usize,
+    rhs_start: usize,
+    file: SourceFile<'_>,
+) -> Option<usize> {
+    file.lines()
+        .filter(|(offset, _)| *offset >= file.line_start(call_start) && *offset < rhs_start)
+        .filter_map(|(offset, line)| {
+            let trimmed = line.trim_start();
+            let after_end = trimmed.strip_prefix("end")?;
+            let dot = after_end.find('.')?;
+            Some(file.column(offset + (line.len() - trimmed.len()) + 3 + dot))
+        })
+        .last()
 }
 
 fn multiline_call_syntactic_base(node: &Node<'_>, file: SourceFile<'_>) -> Option<(usize, usize)> {

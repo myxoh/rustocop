@@ -30,17 +30,25 @@ end
 results = all_results.slice(*registry)
 
 unit_manifest = JSON.parse(File.read(UNIT_MANIFEST))
-passing_fixture_cops = unit_manifest.fetch("cops").filter_map do |cop, entry|
-  project_derived = File.foreach(LAYOUT.path("spec", "fixtures", entry.fetch("cases"))).any? do |line|
-    JSON.parse(line).fetch("origins", []).any? { |origin| origin["kind"] == "legacy_project" }
+passing_fixture_cops = {}
+pending_fixture_cops = Hash.new { |hash, cop| hash[cop] = [] }
+unit_manifest.fetch("cops").each do |cop, entry|
+  File.foreach(LAYOUT.path("spec", "fixtures", entry.fetch("cases"))) do |line|
+    JSON.parse(line).fetch("origins", []).each do |origin|
+      passing_fixture_cops[cop] = true if origin["kind"] == "legacy_project"
+      if origin["kind"] == "project_isolation"
+        pending_fixture_cops[cop] << origin.fetch("direction")
+      end
+    end
   end
-  [cop, true] if project_derived
-end.to_h
-pending_rows = []
-pending_fixture_cops = {}
+end
+pending_fixture_cops.each_value(&:uniq!)
+pending_rows = pending_fixture_cops.flat_map do |cop, directions|
+  directions.map { |direction| [cop, direction] }
+end
 fixture_evidence = lambda do |cop|
   passing = passing_fixture_cops[cop]
-  pending = pending_fixture_cops[cop]
+  pending = pending_fixture_cops.key?(cop)
   next "Project-derived + pending" if passing && pending
   next "Project-derived" if passing
   next "Pending unit" if pending
@@ -96,6 +104,7 @@ support = <<~MARKDOWN
   - Pinned projects: #{report.fetch("projects").length}
   - Cops with project-derived unit contracts: #{passing_fixture_cops.length}
   - Pending isolated mismatch directions: #{pending_rows.length}
+  - Cops with pending isolated mismatches: #{pending_fixture_cops.length}
 
   | Classification | Cops |
   | --- | ---: |

@@ -1511,13 +1511,85 @@ fn reduce_element_modified(body: &Node<'_>, element: &[u8], accumulator: &[u8]) 
 
 #[allow(clippy::too_many_lines)]
 fn documentation_method(context: &mut CopContext<'_, '_>) {
+    fn visibility(name: &[u8]) -> Option<bool> {
+        match name {
+            b"public" => Some(true),
+            b"private" | b"protected" | b"private_class_method" => Some(false),
+            _ => None,
+        }
+    }
+
     #[derive(Default)]
     struct DefinitionRanges {
         definitions: HashMap<usize, std::ops::Range<usize>>,
         modifiers: HashMap<usize, std::ops::Range<usize>>,
+        public: HashMap<usize, bool>,
     }
 
     impl<'pr> Visit<'pr> for DefinitionRanges {
+        fn visit_statements_node(&mut self, node: &ruby_prism::StatementsNode<'pr>) {
+            // Parser's visibility lookup is deliberately limited to siblings.
+            // Every statement list starts public, including lists owned by
+            // blocks such as `class_methods`, `Struct.new`, and `Module.new`.
+            let mut current_public = true;
+            let mut definitions_by_name: HashMap<Vec<u8>, Vec<usize>> = HashMap::new();
+            for statement in node.body().iter() {
+                if let Some(definition) = statement.as_def_node() {
+                    let start = definition.location().start_offset();
+                    self.public.insert(start, current_public);
+                    definitions_by_name
+                        .entry(definition.name().as_slice().to_vec())
+                        .or_default()
+                        .push(start);
+                    continue;
+                }
+                let Some(call) = statement.as_call_node() else {
+                    continue;
+                };
+                if call.receiver().is_some() {
+                    continue;
+                }
+                let arguments = call
+                    .arguments()
+                    .map(|arguments| arguments.arguments().iter().collect::<Vec<_>>())
+                    .unwrap_or_default();
+                if let Some(call_public) = visibility(call_name(&call)) {
+                    if arguments.is_empty() {
+                        current_public = call_public;
+                    }
+                    for argument in arguments {
+                        if let Some(definition) = argument.as_def_node() {
+                            let start = definition.location().start_offset();
+                            self.public.insert(start, call_public);
+                            definitions_by_name
+                                .entry(definition.name().as_slice().to_vec())
+                                .or_default()
+                                .push(start);
+                        } else if let Some(symbol) = argument.as_symbol_node() {
+                            if let Some(starts) = definitions_by_name.get(symbol.unescaped()) {
+                                for start in starts {
+                                    self.public.insert(*start, call_public);
+                                }
+                            }
+                        }
+                    }
+                } else if matches!(call_name(&call), b"module_function" | b"ruby2_keywords") {
+                    for definition in arguments
+                        .iter()
+                        .filter_map(|argument| argument.as_def_node())
+                    {
+                        let start = definition.location().start_offset();
+                        self.public.insert(start, current_public);
+                        definitions_by_name
+                            .entry(definition.name().as_slice().to_vec())
+                            .or_default()
+                            .push(start);
+                    }
+                }
+            }
+            ruby_prism::visit_statements_node(self, node);
+        }
+
         fn visit_def_node(&mut self, node: &ruby_prism::DefNode<'pr>) {
             let location = node.location();
             self.definitions.insert(
@@ -1556,17 +1628,8 @@ fn documentation_method(context: &mut CopContext<'_, '_>) {
     let lines = context.source_file().lines().collect::<Vec<_>>();
     let require_non_public = context.config_bool("RequireForNonPublicMethods", false);
     let allowed_methods = context.config_values("AllowedMethods").to_vec();
-    let mut public = true;
     for (index, (offset, line)) in lines.iter().copied().enumerate() {
         let trimmed = line.trim_start();
-        if matches!(trimmed.trim(), "private" | "protected") {
-            public = false;
-            continue;
-        }
-        if trimmed.trim() == "public" {
-            public = true;
-            continue;
-        }
         let Some(def_at) = trimmed.find("def ") else {
             continue;
         };
@@ -1583,8 +1646,25 @@ fn documentation_method(context: &mut CopContext<'_, '_>) {
         {
             continue;
         }
-        let effective_public =
-            public && !matches!(prefix, "private" | "protected" | "private_class_method");
+        let line_indent = line.len() - trimmed.len();
+        let definition_start = offset + line_indent + def_at;
+        let Some(structural_range) = definition_ranges
+            .modifiers
+            .get(&definition_start)
+            .or_else(|| definition_ranges.definitions.get(&definition_start))
+        else {
+            // Text that looks like a definition inside a heredoc or string is
+            // not a Ruby definition. Prism deliberately has no DefNode for it.
+            continue;
+        };
+        let effective_public = definition_ranges
+            .public
+            .get(&definition_start)
+            .copied()
+            .unwrap_or(!matches!(
+                prefix,
+                "private" | "protected" | "private_class_method"
+            ));
         if !effective_public && !require_non_public {
             continue;
         }
@@ -1594,44 +1674,18 @@ fn documentation_method(context: &mut CopContext<'_, '_>) {
             .next()
             .unwrap_or_default();
         let bare_name = name.rsplit('.').next().unwrap_or(name);
-        if bare_name == "initialize"
-            || bare_name.starts_with('_')
-            || allowed_methods.iter().any(|allowed| allowed == bare_name)
-        {
+        if bare_name == "initialize" || allowed_methods.iter().any(|allowed| allowed == bare_name) {
             continue;
         }
-        let documented = index > 0 && documentation_comment(lines[index - 1].1);
+        let documented = lines[..index]
+            .iter()
+            .rev()
+            .take_while(|(_, previous)| previous.trim_start().starts_with('#'))
+            .any(|(_, previous)| documentation_comment(previous));
         if !documented {
-            let line_indent = line.len() - trimmed.len();
-            let offense_indent = if matches!(prefix, "module_function" | "ruby2_keywords") {
-                line_indent
-            } else {
-                line_indent + def_at
-            };
-            let definition_start = offset + line_indent + def_at;
-            let structural_range = definition_ranges
-                .modifiers
-                .get(&definition_start)
-                .or_else(|| definition_ranges.definitions.get(&definition_start));
-            let offense = structural_range.cloned().unwrap_or_else(|| {
-                let end = if trimmed[def_at..].contains("; end") {
-                    offset + line.len()
-                } else {
-                    lines[index + 1..]
-                        .iter()
-                        .find(|(_, candidate)| {
-                            candidate.trim() == "end"
-                                && candidate.len() - candidate.trim_start().len() <= line_indent
-                        })
-                        .map_or(offset + line.len(), |(end, candidate)| {
-                            end + candidate.len()
-                        })
-                };
-                offset + offense_indent..end
-            });
             context.report(
                 "Missing method documentation comment.",
-                offense,
+                structural_range.clone(),
             );
         }
     }
@@ -1644,7 +1698,7 @@ fn documentation_comment(line: &str) -> bool {
         .map(str::trim)
         .unwrap_or_default();
     !comment.is_empty()
-        && !["TODO", "FIXME", "OPTIMIZE", "HACK", "rubocop:"]
+        && !["TODO", "FIXME", "OPTIMIZE", "HACK", "NOTE", "rubocop:"]
             .iter()
             .any(|marker| comment.starts_with(marker))
 }

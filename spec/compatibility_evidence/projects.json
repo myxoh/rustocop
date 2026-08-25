@@ -1,10 +1,10 @@
 {
   "version": 1,
   "kind": "project_compatibility",
-  "updated_at": "2026-08-24T07:29:34-04:00",
-  "rust_commit": null,
-  "cop_source_sha256": "531d7f98c244241ac073ca1e1ca7760587caf53910258b05483ed1c2ddd35b54",
-  "native_sha256": "d5952f01169f0a3cb155d456247ed72e2b08e6d65ccebbc9cc905cda46facd9c",
+  "updated_at": "2026-08-24T15:25:53-04:00",
+  "rust_commit": "ddb32ffcc4aaa97d560add1482e3c33863409004",
+  "cop_source_sha256": "348986c92ae63ac7897532663e79779a24959af4a354e6ce9c57974ff2a7221f",
+  "native_sha256": "c06a23caf252ee2e7002dd30c13bff0f1b54dca89cba8b99b370d03083cdad76",
   "rubocop_version": "1.87.0",
   "rubocop_reference": {
     "path": "spec/compatibility_evidence/project_rubocop_reference.json.gz",
@@ -167,7 +167,7 @@
       "classification": "project_exact"
     },
     "Layout/ClassStructure": {
-      "rustocop": 2879,
+      "rustocop": 2880,
       "rubocop": 2878,
       "exact": 2878,
       "classification": "mismatch"
@@ -335,10 +335,10 @@
       "classification": "mismatch"
     },
     "Layout/FirstArrayElementIndentation": {
-      "rustocop": 3431,
+      "rustocop": 3443,
       "rubocop": 3431,
       "exact": 3431,
-      "classification": "project_exact"
+      "classification": "mismatch"
     },
     "Layout/FirstArrayElementLineBreak": {
       "rustocop": 3665,
@@ -409,8 +409,8 @@
     "Layout/IndentationWidth": {
       "rustocop": 8652,
       "rubocop": 8652,
-      "exact": 8652,
-      "classification": "project_exact"
+      "exact": 7902,
+      "classification": "mismatch"
     },
     "Layout/InitialIndentation": {
       "rustocop": 2,
@@ -605,9 +605,9 @@
       "classification": "project_exact"
     },
     "Layout/SpaceAroundOperators": {
-      "rustocop": 7109,
+      "rustocop": 7021,
       "rubocop": 7084,
-      "exact": 7076,
+      "exact": 6988,
       "classification": "mismatch"
     },
     "Layout/SpaceBeforeBlockBraces": {
@@ -737,9 +737,9 @@
       "classification": "mismatch"
     },
     "Lint/AmbiguousOperatorPrecedence": {
-      "rustocop": 964,
+      "rustocop": 1011,
       "rubocop": 1007,
-      "exact": 962,
+      "exact": 1007,
       "classification": "mismatch"
     },
     "Lint/AmbiguousRange": {
@@ -791,10 +791,10 @@
       "classification": "dormant"
     },
     "Lint/ConstantDefinitionInBlock": {
-      "rustocop": 883,
+      "rustocop": 886,
       "rubocop": 883,
       "exact": 883,
-      "classification": "project_exact"
+      "classification": "mismatch"
     },
     "Lint/ConstantOverwrittenInRescue": {
       "rustocop": 10,
@@ -941,10 +941,10 @@
       "classification": "mismatch"
     },
     "Lint/EmptyClass": {
-      "rustocop": 77,
+      "rustocop": 78,
       "rubocop": 77,
       "exact": 77,
-      "classification": "project_exact"
+      "classification": "mismatch"
     },
     "Lint/EmptyConditionalBody": {
       "rustocop": 9,
@@ -1121,10 +1121,10 @@
       "classification": "mismatch"
     },
     "Lint/MissingSuper": {
-      "rustocop": 839,
+      "rustocop": 842,
       "rubocop": 839,
       "exact": 839,
-      "classification": "project_exact"
+      "classification": "mismatch"
     },
     "Lint/MixedCaseRange": {
       "rustocop": 15,
@@ -1145,10 +1145,10 @@
       "classification": "dormant"
     },
     "Lint/NestedMethodDefinition": {
-      "rustocop": 113,
+      "rustocop": 117,
       "rubocop": 113,
       "exact": 113,
-      "classification": "project_exact"
+      "classification": "mismatch"
     },
     "Lint/NestedPercentLiteral": {
       "rustocop": 6,
@@ -1349,10 +1349,10 @@
       "classification": "dormant"
     },
     "Lint/RescueException": {
-      "rustocop": 191,
+      "rustocop": 240,
       "rubocop": 191,
       "exact": 191,
-      "classification": "project_exact"
+      "classification": "mismatch"
     },
     "Lint/RescueType": {
       "rustocop": 0,
@@ -1499,10 +1499,10 @@
       "classification": "dormant"
     },
     "Lint/UnexpectedBlockArity": {
-      "rustocop": 11,
+      "rustocop": 13,
       "rubocop": 11,
       "exact": 11,
-      "classification": "project_exact"
+      "classification": "mismatch"
     },
     "Lint/UnifiedInteger": {
       "rustocop": 7,
@@ -1523,7 +1523,7 @@
       "classification": "project_exact"
     },
     "Lint/UnreachableLoop": {
-      "rustocop": 619,
+      "rustocop": 622,
       "rubocop": 629,
       "exact": 618,
       "classification": "mismatch"
@@ -1595,7 +1595,7 @@
       "classification": "dormant"
     },
     "Lint/UselessMethodDefinition": {
-      "rustocop": 74,
+      "rustocop": 77,
       "rubocop": 76,
       "exact": 74,
       "classification": "mismatch"
@@ -1643,13 +1643,13 @@
       "classification": "mismatch"
     },
     "Metrics/AbcSize": {
-      "rustocop": 60535,
+      "rustocop": 60904,
       "rubocop": 55118,
       "exact": 1448,
       "classification": "mismatch"
     },
     "Metrics/BlockLength": {
-      "rustocop": 86051,
+      "rustocop": 86055,
       "rubocop": 86297,
       "exact": 84997,
       "classification": "mismatch"
@@ -1661,7 +1661,7 @@
       "classification": "mismatch"
     },
     "Metrics/ClassLength": {
-      "rustocop": 4999,
+      "rustocop": 5030,
       "rubocop": 5020,
       "exact": 4038,
       "classification": "mismatch"
@@ -1673,31 +1673,31 @@
       "classification": "project_exact"
     },
     "Metrics/CyclomaticComplexity": {
-      "rustocop": 7295,
+      "rustocop": 7318,
       "rubocop": 8047,
       "exact": 5292,
       "classification": "mismatch"
     },
     "Metrics/MethodLength": {
-      "rustocop": 36595,
+      "rustocop": 36630,
       "rubocop": 36690,
       "exact": 32344,
       "classification": "mismatch"
     },
     "Metrics/ModuleLength": {
-      "rustocop": 1195,
+      "rustocop": 1210,
       "rubocop": 1201,
       "exact": 1195,
       "classification": "mismatch"
     },
     "Metrics/ParameterLists": {
-      "rustocop": 1551,
+      "rustocop": 1569,
       "rubocop": 1558,
       "exact": 1551,
       "classification": "mismatch"
     },
     "Metrics/PerceivedComplexity": {
-      "rustocop": 6007,
+      "rustocop": 6079,
       "rubocop": 6450,
       "exact": 3380,
       "classification": "mismatch"
@@ -1753,8 +1753,8 @@
     "Naming/FileName": {
       "rustocop": 469,
       "rubocop": 469,
-      "exact": 469,
-      "classification": "project_exact"
+      "exact": 369,
+      "classification": "mismatch"
     },
     "Naming/HeredocDelimiterCase": {
       "rustocop": 154,
@@ -1895,10 +1895,10 @@
       "classification": "project_exact"
     },
     "Style/ArgumentsForwarding": {
-      "rustocop": 7614,
+      "rustocop": 7602,
       "rubocop": 7614,
-      "exact": 7614,
-      "classification": "project_exact"
+      "exact": 7602,
+      "classification": "mismatch"
     },
     "Style/ArrayCoercion": {
       "rustocop": 130,
@@ -2075,7 +2075,7 @@
       "classification": "mismatch"
     },
     "Style/CombinableLoops": {
-      "rustocop": 111,
+      "rustocop": 118,
       "rubocop": 94,
       "exact": 91,
       "classification": "mismatch"
@@ -2519,10 +2519,10 @@
       "classification": "mismatch"
     },
     "Style/IfWithSemicolon": {
-      "rustocop": 1,
+      "rustocop": 3,
       "rubocop": 3,
-      "exact": 1,
-      "classification": "mismatch"
+      "exact": 3,
+      "classification": "project_exact"
     },
     "Style/ImplicitRuntimeError": {
       "rustocop": 3265,
@@ -2687,7 +2687,7 @@
       "classification": "mismatch"
     },
     "Style/MissingRespondToMissing": {
-      "rustocop": 94,
+      "rustocop": 99,
       "rubocop": 93,
       "exact": 93,
       "classification": "mismatch"
@@ -2717,13 +2717,13 @@
       "classification": "project_exact"
     },
     "Style/MultilineBlockChain": {
-      "rustocop": 275,
+      "rustocop": 296,
       "rubocop": 275,
       "exact": 275,
-      "classification": "project_exact"
+      "classification": "mismatch"
     },
     "Style/MultilineIfModifier": {
-      "rustocop": 418,
+      "rustocop": 419,
       "rubocop": 406,
       "exact": 406,
       "classification": "mismatch"
@@ -2771,7 +2771,7 @@
       "classification": "mismatch"
     },
     "Style/MutableConstant": {
-      "rustocop": 2204,
+      "rustocop": 2214,
       "rubocop": 2202,
       "exact": 2202,
       "classification": "mismatch"
@@ -2783,10 +2783,10 @@
       "classification": "project_exact"
     },
     "Style/NegatedIfElseCondition": {
-      "rustocop": 279,
+      "rustocop": 280,
       "rubocop": 279,
       "exact": 279,
-      "classification": "project_exact"
+      "classification": "mismatch"
     },
     "Style/NegatedUnless": {
       "rustocop": 1,
@@ -2861,7 +2861,7 @@
       "classification": "project_exact"
     },
     "Style/NumberedParameters": {
-      "rustocop": 5,
+      "rustocop": 6,
       "rubocop": 8,
       "exact": 5,
       "classification": "mismatch"
@@ -3293,7 +3293,7 @@
       "classification": "dormant"
     },
     "Style/SafeNavigation": {
-      "rustocop": 1174,
+      "rustocop": 1176,
       "rubocop": 1167,
       "exact": 1167,
       "classification": "mismatch"
@@ -3461,10 +3461,10 @@
       "classification": "dormant"
     },
     "Style/StructInheritance": {
-      "rustocop": 35,
+      "rustocop": 36,
       "rubocop": 35,
       "exact": 35,
-      "classification": "project_exact"
+      "classification": "mismatch"
     },
     "Style/SuperArguments": {
       "rustocop": 447,
@@ -3497,10 +3497,10 @@
       "classification": "project_exact"
     },
     "Style/SymbolProc": {
-      "rustocop": 1413,
+      "rustocop": 1420,
       "rubocop": 1413,
       "exact": 1413,
-      "classification": "project_exact"
+      "classification": "mismatch"
     },
     "Style/TallyMethod": {
       "rustocop": 3,

@@ -51,7 +51,13 @@ impl MethodCallWithArgsParenthesesRule<'_, '_, '_> {
         // on the call node. RuboCop's offense therefore ends at the arguments,
         // not at the end of an attached block.
         let call = node.location();
-        let offense = call.start_offset()..arguments.location().end_offset();
+        let argument_end = node
+            .block()
+            .and_then(|block| block.as_block_argument_node())
+            .map_or(arguments.location().end_offset(), |block| {
+                block.location().end_offset()
+            });
+        let offense = call.start_offset()..argument_end;
         let only_parenthesized_argument = match arguments.arguments().iter().collect::<Vec<_>>().as_slice() {
             [argument] => argument.as_parentheses_node().is_some(),
             _ => false,
@@ -61,7 +67,7 @@ impl MethodCallWithArgsParenthesesRule<'_, '_, '_> {
                 corrector.remove(selector.end_offset()..args.start_offset());
             } else {
                 corrector.replace(selector.end_offset()..args.start_offset(), "(");
-                corrector.replace(args.end_offset()..args.end_offset(), ")");
+                corrector.replace(argument_end..argument_end, ")");
             }
         });
     }
@@ -108,7 +114,7 @@ fn operator_or_setter(method: &str) -> bool {
 fn ignored_macro(context: &CopContext<'_, '_>, node: &CallNode<'_>, method: &str) -> bool {
     if !context.config_bool("IgnoreMacros", true)
         || node.receiver().is_some()
-        || !macro_context(context.ancestors())
+        || !macro_context(context, context.ancestors())
     {
         return false;
     }
@@ -117,7 +123,7 @@ fn ignored_macro(context: &CopContext<'_, '_>, node: &CallNode<'_>, method: &str
     !included
 }
 
-fn macro_context(ancestors: &[Node<'_>]) -> bool {
+fn macro_context(context: &CopContext<'_, '_>, ancestors: &[Node<'_>]) -> bool {
     let mut block_owner = false;
     for ancestor in ancestors.iter().rev() {
         if ancestor.as_statements_node().is_some() || ancestor.as_program_node().is_some() {
@@ -127,12 +133,29 @@ fn macro_context(ancestors: &[Node<'_>]) -> bool {
             block_owner = true;
             continue;
         }
-        if block_owner && ancestor.as_call_node().is_some() {
-            block_owner = false;
-            continue;
+        if block_owner {
+            if let Some(call) = ancestor.as_call_node() {
+                if class_constructor_call(context, &call) {
+                    return true;
+                }
+                block_owner = false;
+                continue;
+            }
         }
         if ancestor.as_def_node().is_some() {
             return false;
+        }
+        if ancestor.as_begin_node().is_some_and(|begin| {
+            begin.rescue_clause().is_some() || begin.ensure_clause().is_some()
+        }) {
+            return false;
+        }
+        if ancestor.as_if_node().is_some()
+            || ancestor.as_unless_node().is_some()
+            || ancestor.as_else_node().is_some()
+            || ancestor.as_begin_node().is_some()
+        {
+            continue;
         }
         if ancestor.as_class_node().is_some()
             || ancestor.as_module_node().is_some()
@@ -143,6 +166,20 @@ fn macro_context(ancestors: &[Node<'_>]) -> bool {
         return false;
     }
     true
+}
+
+fn class_constructor_call(context: &CopContext<'_, '_>, call: &CallNode<'_>) -> bool {
+    let method = call.name().as_slice();
+    if method != b"new" && method != b"define" {
+        return false;
+    }
+    let Some(receiver) = call.receiver() else {
+        return false;
+    };
+    let receiver = context.source_file().node(&receiver);
+    let receiver = receiver.strip_prefix("::").unwrap_or(receiver);
+    (method == b"new" && matches!(receiver, "Class" | "Module" | "Struct"))
+        || (method == b"define" && receiver == "Data")
 }
 
 fn omit_parentheses_is_unsafe(context: &CopContext<'_, '_>, node: &CallNode<'_>) -> bool {

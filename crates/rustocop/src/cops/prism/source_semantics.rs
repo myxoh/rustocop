@@ -9,7 +9,7 @@ use parameters::*;
 
 define_cops! {
     GemVersion => "Bundler/GemVersion" => source(gem_version),
-    MultilineArrayLineBreaks => "Layout/MultilineArrayLineBreaks" => source(multiline_array_line_breaks),
+    MultilineArrayLineBreaks => "Layout/MultilineArrayLineBreaks" => any_node(multiline_array_line_breaks),
     ErbNewArguments => "Lint/ErbNewArguments" => source(erb_new_arguments),
     HashNewWithKeywordArgumentsAsDefault => "Lint/HashNewWithKeywordArgumentsAsDefault" => source(hash_new_with_keyword_arguments_as_default),
     LambdaWithoutLiteralBlock => "Lint/LambdaWithoutLiteralBlock" => source(lambda_without_literal_block),
@@ -90,131 +90,38 @@ fn gem_version(context: &mut CopContext<'_, '_>) {
     }
 }
 
-fn multiline_array_line_breaks(context: &mut CopContext<'_, '_>) {
+fn multiline_array_line_breaks(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
     const MESSAGE: &str = "Each item in a multi-line array must start on a separate line.";
-    report_percent_array_line_breaks(context, MESSAGE);
-    let source = context.source();
-    let bytes = source.as_bytes();
-    let mut stack = Vec::new();
-    let mut arrays = Vec::new();
-    let mut quote = None;
-    let mut comment = false;
-    for (index, byte) in bytes.iter().copied().enumerate() {
-        if comment {
-            if byte == b'\n' {
-                comment = false;
-            }
-            continue;
-        }
-        if let Some(delimiter) = quote {
-            if byte == delimiter && bytes.get(index.wrapping_sub(1)) != Some(&b'\\') {
-                quote = None;
-            }
-            continue;
-        }
-        if byte == b'#' {
-            comment = true;
-        } else if matches!(byte, b'\'' | b'"') {
-            quote = Some(byte);
-        } else if byte == b'[' {
-            stack.push(index);
-        } else if byte == b']' {
-            if let Some(open) = stack.pop() {
-                arrays.push(open..index + 1);
-            }
-        }
+    let elements = if let Some(array) = node.as_array_node() {
+        array.elements().iter().collect::<Vec<_>>()
+    } else if let Some(rescue) = node.as_rescue_node() {
+        rescue.exceptions().iter().collect::<Vec<_>>()
+    } else {
+        return;
+    };
+    let Some((first, last)) = elements.first().zip(elements.last()) else {
+        return;
+    };
+    let file = context.source_file();
+    let ignore_last = context.config_bool("AllowMultilineFinalElement", false);
+    let all_on_same_line = if ignore_last {
+        file.same_line(first.location().start_offset(), last.location().start_offset())
+    } else {
+        file.same_line(first.location().start_offset(), last.location().end_offset())
+    };
+    if all_on_same_line {
+        return;
     }
-    for array in arrays {
-        if !source[array.clone()].contains('\n') {
-            continue;
-        }
-        let elements = top_level_elements(source, array.start + 1, array.end - 1);
-        if context.config_bool("AllowMultilineFinalElement", false)
-            && elements
-                .last()
-                .is_some_and(|element| source[element.clone()].contains('\n'))
-        {
-            continue;
-        }
-        if elements
-            .first()
-            .is_some_and(|element| source[array.start + 1..element.start].contains('\n'))
-        {
-            continue;
-        }
-        for (index, pair) in elements.windows(2).enumerate() {
-            let previous = &pair[0];
-            let element = &pair[1];
-            if !context.config_bool("AllowMultilineFinalElement", false)
-                && source[previous.clone()].contains('\n')
-            {
-                continue;
-            }
-            if context.config_bool("AllowMultilineFinalElement", false)
-                && index + 2 == elements.len()
-            {
-                continue;
-            }
-            if source[previous.end..element.start].contains('\n') {
-                continue;
-            }
-            let comma = source[previous.end..element.start]
-                .find(',')
-                .map_or(previous.end, |at| previous.end + at);
-            let expands_final_element = index + 3 == elements.len()
-                && source[element.clone()].contains('\n');
-            let edit = if expands_final_element {
-                comma + 1..elements[index + 2].start
-            } else {
-                comma + 1..element.start
-            };
-            let replacement = if expands_final_element {
-                format!(" \n{}, \n", &source[element.clone()])
-            } else {
-                " \n".to_string()
-            };
-            context.replace(MESSAGE, element.clone(), edit, replacement);
-        }
-    }
-}
-
-fn report_percent_array_line_breaks(context: &mut CopContext<'_, '_>, message: &str) {
-    let source = context.source();
-    for marker in ["%w[", "%W[", "%i[", "%I["] {
-        for (start, _) in source.match_indices(marker) {
-            let opening = start + marker.len() - 1;
-            let Some(closing) = matching_delimiter(source, opening, b'[', b']') else {
-                continue;
-            };
-            if !source[opening..=closing].contains('\n') {
-                continue;
-            }
-            let content_lines = source[opening + 1..closing]
-                .lines()
-                .filter(|line| !line.trim().is_empty())
-                .count();
-            if content_lines <= 1 {
-                continue;
-            }
-            for (line_offset, line) in context.source_file().lines() {
-                let segment_start = (opening + 1).max(line_offset);
-                let segment_end = closing.min(line_offset + line.len());
-                if segment_start >= segment_end {
-                    continue;
-                }
-                let segment = &source[segment_start..segment_end];
-                let words = segment
-                    .split_whitespace()
-                    .scan(0usize, |search, word| {
-                        let relative = segment[*search..].find(word)? + *search;
-                        *search = relative + word.len();
-                        Some(segment_start + relative..segment_start + relative + word.len())
-                    })
-                    .collect::<Vec<_>>();
-                for word in words.into_iter().skip(1) {
-                    context.insert(message, word.clone(), word.start, "\n");
-                }
-            }
+    let mut last_seen_line = None;
+    for element in elements {
+        let location = element.location();
+        let first_line = file.line_start(location.start_offset());
+        let last_line = file.line_start(location.end_offset().saturating_sub(1));
+        if last_seen_line.is_some_and(|seen| seen >= first_line) {
+            let start = location.start_offset();
+            context.insert(MESSAGE, location, start, "\n");
+        } else {
+            last_seen_line = Some(last_line);
         }
     }
 }

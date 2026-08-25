@@ -249,49 +249,51 @@ fn check_line_length(
         } else {
             length
         };
+        let indentation_difference = line
+            .body
+            .chars()
+            .take_while(|character| *character == '\t')
+            .count()
+            * tab_width.saturating_sub(1);
+        let applicable_token_range = |range: (usize, usize)| {
+            let adjusted = (
+                range.0 + indentation_difference,
+                range.1 + indentation_difference,
+            );
+            (!(adjusted.0 < max && adjusted.1 < max)).then_some(adjusted)
+        };
+        let uri_range = allow_uri
+            .then(|| last_excess_token_range(&line.body, ExcessToken::Uri, uri_schemes))
+            .flatten()
+            .and_then(applicable_token_range);
+        let qualified_range = allow_qualified
+            .then(|| last_excess_token_range(&line.body, ExcessToken::QualifiedName, &[]))
+            .flatten()
+            .and_then(applicable_token_range);
+        let token_position_allowed = |range: (usize, usize)| range.0 < max && range.1 == length;
+        let excess_tokens_allowed = match (uri_range, qualified_range) {
+            (Some(uri), Some(qualified)) => {
+                token_position_allowed(uri) && token_position_allowed(qualified)
+            }
+            (Some(uri), None) => token_position_allowed(uri),
+            (None, Some(qualified)) => token_position_allowed(qualified),
+            (None, None) => false,
+        };
         let exempt = index == 0 && line.body.starts_with("#!")
             || in_allowed_heredoc
             || allowed_patterns
                 .iter()
                 .any(|pattern| pattern.is_match(&line.body))
             || allow_rbs && (line.body.contains("#:") || line.body.contains("# @rbs"))
-            || allow_uri
-                && allowed_excess_token(&line.body, max, ExcessToken::Uri, uri_schemes, tab_width)
-            || allow_qualified && line.body.trim_start().starts_with("::")
-            || allow_qualified
-                && allowed_excess_token(
-                    &line.body,
-                    max,
-                    ExcessToken::QualifiedName,
-                    &[],
-                    tab_width,
-                );
+            || excess_tokens_allowed;
         if effective_length > max && !exempt && !line_disabled {
             let breakable = !follows_autocorrect_split
                 && (heredoc.is_none() || line.body.contains("#{"))
                 && line_length_breakable(&line.body, max, split_strings, nesting);
-            let indentation_difference = line
-                .body
-                .chars()
-                .take_while(|character| *character == '\t')
-                .count()
-                * tab_width.saturating_sub(1);
             let raw_limit = max.saturating_sub(indentation_difference);
-            let token_end = allow_uri
-                .then(|| excessive_token_end(&line.body, raw_limit, ExcessToken::Uri, uri_schemes))
-                .flatten()
-                .or_else(|| {
-                    allow_qualified
-                        .then(|| {
-                            excessive_token_end(
-                                &line.body,
-                                raw_limit,
-                                ExcessToken::QualifiedName,
-                                &[],
-                            )
-                        })
-                        .flatten()
-                });
+            let token_end = uri_range
+                .or(qualified_range)
+                .and_then(|(start, end)| (start < raw_limit).then_some(end));
             let column = token_end
                 .map(|end| end + 1)
                 .unwrap_or_else(|| max.saturating_sub(indentation_difference) + 1);
@@ -677,160 +679,91 @@ fn interpolation_end(content: &str, start: usize) -> Option<usize> {
     None
 }
 
-fn excessive_token_end(
+fn last_excess_token_range(
     line: &str,
-    max: usize,
     kind: ExcessToken,
     uri_schemes: &[String],
-) -> Option<usize> {
+) -> Option<(usize, usize)> {
     match kind {
-        ExcessToken::Uri if line.matches("://").count() > 1 => None,
-        ExcessToken::Uri => uri_schemes.iter().find_map(|scheme| {
-            let start = line.find(&format!("{scheme}://"))?;
-            (start < max)
-                .then(|| {
-                    let end = line[start..]
+        ExcessToken::Uri => {
+            let mut result = None;
+            for scheme in uri_schemes {
+                let needle = format!("{scheme}://");
+                for (start, _) in line.match_indices(&needle) {
+                    let uri_end = line[start..]
                         .find(|character: char| {
                             character.is_ascii_whitespace()
                                 || matches!(character, '\'' | '"' | ')' | ']' | '}')
                         })
                         .map_or(line.len(), |at| start + at);
-                    let wrapper = line[end..].chars().next();
-                    (end > max).then_some(
-                        (end + usize::from(wrapper.is_some_and(|c| !c.is_whitespace())))
-                            .min(line.len()),
-                    )
-                })
-                .flatten()
-        }),
+                    let extended_end =
+                        if line[..start].rfind('{').is_some() && line.trim_end().ends_with('}') {
+                            line.trim_end().len()
+                        } else {
+                            extend_non_whitespace(line, uri_end)
+                        };
+                    let range = (start, extended_end);
+                    if result.is_none_or(|(previous, _)| start > previous) {
+                        result = Some(range);
+                    }
+                }
+            }
+            result
+        }
         ExcessToken::QualifiedName => {
-            let mut offset = 0usize;
-            line.split_inclusive(char::is_whitespace).find_map(|piece| {
-                let leading = piece.len() - piece.trim_start().len();
-                let raw = piece.trim();
-                let token = raw.trim_matches(['\'', '"', '(', ')', '[', ']', '{', '}', ',']);
-                let start = offset + leading + raw.find(token).unwrap_or(0);
-                offset += piece.len();
-                let end = start + token.len();
-                let effective_end = end
-                    + line[end..]
-                        .bytes()
-                        .take_while(|byte| matches!(byte, b')' | b']' | b'}' | b'\'' | b'"'))
-                        .count();
-                (qualified_name_token(token)
-                    && !token.starts_with("::")
-                    && start < max
-                    && effective_end > max)
-                    .then_some(effective_end)
-            })
+            let mut result = None;
+            let mut start = None;
+            for (offset, character) in line
+                .char_indices()
+                .chain(std::iter::once((line.len(), ' ')))
+            {
+                if character.is_ascii_alphanumeric() || matches!(character, '_' | ':') {
+                    start.get_or_insert(offset);
+                    continue;
+                }
+                if let Some(token_start) = start.take() {
+                    let token = &line[token_start..offset];
+                    if strict_qualified_name(token) {
+                        result = Some((token_start, extend_non_whitespace(line, offset)));
+                    }
+                }
+            }
+            result
         }
     }
+}
+
+fn extend_non_whitespace(line: &str, start: usize) -> usize {
+    start
+        + line[start..]
+            .chars()
+            .take_while(|character| !character.is_whitespace())
+            .map(char::len_utf8)
+            .sum::<usize>()
+}
+
+fn strict_qualified_name(token: &str) -> bool {
+    let parts = token.split("::").collect::<Vec<_>>();
+    if parts.len() < 2 || parts.iter().any(|part| part.is_empty()) {
+        return false;
+    }
+    parts[..parts.len() - 1].iter().all(|part| {
+        part.starts_with(|character: char| character.is_ascii_uppercase())
+            && part
+                .chars()
+                .all(|character| character.is_ascii_alphanumeric() || character == '_')
+    }) && parts.last().is_some_and(|part| {
+        part.starts_with(|character: char| character.is_ascii_alphabetic() || character == '_')
+            && part
+                .chars()
+                .all(|character| character.is_ascii_alphanumeric() || character == '_')
+    })
 }
 
 #[derive(Clone, Copy)]
 enum ExcessToken {
     Uri,
     QualifiedName,
-}
-
-fn allowed_excess_token(
-    line: &str,
-    max: usize,
-    kind: ExcessToken,
-    uri_schemes: &[String],
-    tab_width: usize,
-) -> bool {
-    if matches!(kind, ExcessToken::Uri) {
-        if let Some(open) = line.find('{') {
-            let close = line[open + 1..]
-                .rfind('}')
-                .map(|relative| open + 1 + relative);
-            if let Some(close) = close {
-                let candidate = &line[open + 1..close];
-                if uri_schemes
-                    .iter()
-                    .any(|scheme| candidate.starts_with(&format!("{scheme}://")))
-                    && line
-                        .chars()
-                        .count()
-                        .saturating_sub(candidate.chars().count())
-                        <= max
-                    && line[close + 1..].trim().is_empty()
-                {
-                    return true;
-                }
-            }
-        }
-        for scheme in uri_schemes {
-            let needle = format!("{scheme}://");
-            let Some(start) = line.find(&needle) else {
-                continue;
-            };
-            let end = line[start..]
-                .find(|character: char| {
-                    character.is_ascii_whitespace()
-                        || matches!(character, '\'' | '"' | ')' | ']' | '}')
-                })
-                .map_or(line.len(), |at| start + at);
-            if end < line.len() && line[end..].chars().next().is_some_and(char::is_whitespace) {
-                continue;
-            }
-            if !line[end..]
-                .trim()
-                .chars()
-                .all(|character| matches!(character, '\'' | '"' | ')' | ']' | '}'))
-            {
-                continue;
-            }
-            let non_uri_length =
-                visual_length(&line[..start], tab_width) + visual_length(&line[end..], tab_width);
-            let visual_start = visual_length(&line[..start], tab_width);
-            let visual_end = visual_length(&line[..end], tab_width);
-            if visual_start <= max && visual_end >= max && non_uri_length <= max {
-                return true;
-            }
-        }
-        return false;
-    }
-    let mut column = 0usize;
-    line.split_inclusive(char::is_whitespace).any(|piece| {
-        let start = column;
-        column += piece.chars().count();
-        let token = piece
-            .trim()
-            .trim_matches(['\'', '"', '(', ')', '[', ']', '{', '}', '<', '>', ',']);
-        let applicable = match kind {
-            ExcessToken::Uri => uri_schemes
-                .iter()
-                .any(|scheme| token.starts_with(&format!("{scheme}://"))),
-            ExcessToken::QualifiedName => qualified_name_token(token),
-        };
-        let token_length = token.chars().count();
-        applicable
-            && start <= max
-            && column >= max
-            && column == line.chars().count()
-            && piece == piece.trim_end()
-            && line.chars().count().saturating_sub(token_length) <= max
-    })
-}
-
-fn qualified_name_token(token: &str) -> bool {
-    let Some(at) = token.find("::") else {
-        return false;
-    };
-    let before = &token[..at];
-    let root = before
-        .rsplit(|character: char| !character.is_ascii_alphanumeric() && character != '_')
-        .next()
-        .filter(|root| !root.is_empty())
-        .or_else(|| {
-            token[at + 2..]
-                .split(|character: char| !character.is_ascii_alphanumeric() && character != '_')
-                .next()
-        })
-        .unwrap_or_default();
-    root.chars().next().is_some_and(char::is_uppercase)
 }
 
 fn visual_length(source: &str, tab_width: usize) -> usize {

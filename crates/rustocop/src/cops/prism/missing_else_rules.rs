@@ -14,13 +14,12 @@ impl MissingElseRule<'_, '_, '_> {
         let keyword = node.if_keyword_loc().expect("normal if has keyword");
         let offense = if self.source_file().at(&keyword) == "elsif" {
             let start = node.location().start_offset();
-            let mut finish = end.start_offset();
-            while finish > start && self.source().as_bytes()[finish - 1].is_ascii_whitespace() {
-                finish -= 1;
-            }
-            if finish > start && self.source().as_bytes()[finish - 1] == b';' {
-                finish -= 1;
-            }
+            let finish = node
+                .statements()
+                .and_then(|statements| statements.body().last())
+                .map_or(start + keyword.as_slice().len(), |statement| {
+                    parser_compatible_expression_end(&statement, self.source_file())
+                });
             start..finish
         } else {
             node.location().start_offset()..node.location().end_offset()
@@ -30,7 +29,10 @@ impl MissingElseRule<'_, '_, '_> {
 
     fn on_unless(&mut self, node: &UnlessNode<'_>) {
         return_if!(self.policy().enforced_style("both") == "case");
-        return_if!(self.related_config_value("Style/UnlessElse", "Enabled") != Some("false"));
+        let unless_else_enabled = self.related_config_value("Style/UnlessElse", "Enabled") == Some("true")
+            && (self.related_config_value("AllCops", "DisabledByDefault") != Some("true")
+                || self.related_config_explicit("Style/UnlessElse", "Enabled"));
+        return_if!(unless_else_enabled);
         return_if!(node.end_keyword_loc().is_none() || node.else_clause().is_some());
         let location = node.location();
         self.add_missing_else(location.start_offset()..location.end_offset(), node.end_keyword_loc().expect("checked end"), "if");
@@ -57,4 +59,29 @@ impl MissingElseRule<'_, '_, '_> {
             self.report(message, offense);
         }
     }
+}
+
+fn parser_compatible_expression_end(node: &ruby_prism::Node<'_>, file: SourceFile<'_>) -> usize {
+    let location = node.location();
+    for (line_start, line) in file.lines() {
+        if line_start < location.start_offset() || line_start >= location.end_offset() {
+            continue;
+        }
+        if contains_heredoc_opener(line) {
+            return line_start + line.trim_end().len();
+        }
+    }
+    location.end_offset()
+}
+
+fn contains_heredoc_opener(line: &str) -> bool {
+    line.match_indices("<<").any(|(offset, _)| {
+        let after = &line[offset + 2..];
+        let candidate = after.strip_prefix(['-', '~']).unwrap_or(after);
+        candidate.starts_with(['\'', '"'])
+            || candidate
+                .as_bytes()
+                .first()
+                .is_some_and(u8::is_ascii_uppercase)
+    })
 }

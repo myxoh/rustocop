@@ -1,5 +1,4 @@
 {
   "7387823706845f14": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/MultilineMethodParameterLineBreaks:\n  Description: Checks that each parameter in a multi-line method definition starts\n    on a separate line.\n  Enabled: true\n  VersionAdded: '1.32'\n  AllowMultilineFinalElement: false\n  AutoCorrect: always\n",
-  "77c39c64bd272713": "---\nAllCops:\n  TargetRubyVersion: '2.7'\n",
   "e67b5e0ffefe5437": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/MultilineMethodParameterLineBreaks:\n  Description: Checks that each parameter in a multi-line method definition starts\n    on a separate line.\n  Enabled: true\n  VersionAdded: '1.32'\n  AllowMultilineFinalElement: true\n  AutoCorrect: always\n"
 }

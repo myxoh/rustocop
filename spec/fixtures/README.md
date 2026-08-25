@@ -12,9 +12,10 @@ Each `cops/<Department>/<Cop>/unit/` directory contains:
 
 `unit_manifest.json` maps all 606 built-in cops to their unit files and records
 counts, SHA-256 digests, the RuboCop version, and an ISO 8601 `updated_at`
-timestamp. The current corpus has 28,769 controlled cases: 28,049 unique
-upstream-spec inputs plus 720 unique cases retained from the audited legacy
-project, configuration, Prism, hardening, end-to-end, and native collections.
+timestamp. The current corpus has 28,788 controlled cases: 28,049 unique
+upstream-spec inputs, 720 unique cases retained from the audited legacy
+collections, and 19 minimized current-project cases covering 20 pending
+mismatch directions across 10 cops.
 
 Exact duplicate inputs share one case and retain all provenance entries. A
 normal refresh rebuilds upstream expectations with RuboCop and preserves the
@@ -42,7 +43,7 @@ Run the complete cached corpus:
 bundle exec rake fixtures:unit
 ```
 
-The warm release run checks all 28,769 cases in about 2.3 seconds on the
+The warm release run checks all 28,788 cases in about 1.9-2.3 seconds on the
 audit machine. A sequential audit of all 606 cops measured a 3.4 ms median:
 448 cops completed within 5 ms, 543 within 10 ms, and the 95th percentile was
 16.1 ms. A few size-sensitive contracts intentionally exercise source files as

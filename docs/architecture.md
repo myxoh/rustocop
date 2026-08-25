@@ -138,7 +138,7 @@ to the same file.
 
 ## Ruby tooling infrastructure
 
-Compatibility and benchmark scripts share four small library boundaries:
+Compatibility and benchmark scripts share five small library boundaries:
 
 - `RepositoryLayout` owns paths to binaries, evidence, pinned projects, and
   regression fixtures.
@@ -147,6 +147,8 @@ Compatibility and benchmark scripts share four small library boundaries:
 - `ProcessRunner` owns subprocess result shape, timing, and exit-status checks.
 - `DiagnosticSignatures` owns complete RuboCop path/message/location
   normalization.
+- `ProjectMismatchInventory` owns exhaustive unmatched-signature accounting,
+  compact storage rows, and bounded human-report previews.
 
 Scripts remain orchestration entrypoints; they should not independently rebuild
 these conventions. This keeps cached reference generation, full audits,

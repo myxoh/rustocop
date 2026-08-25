@@ -11,8 +11,8 @@ regression layer, not the prioritization scoreboard.
   native built-in corpus. The intentionally-pending dataset is empty.
 - The executable trust standard is differential: minimized fixtures plus
   complete diagnostic signatures across 50 pinned projects.
-- The complete 50-project audit currently classifies 330 cops as project-exact,
-  53 as dormant, 220 as mismatching, none as crashing, and three as blocked by
+- The complete 50-project audit currently classifies 317 cops as project-exact,
+  53 as dormant, 233 as mismatching, none as crashing, and three as blocked by
   RuboCop reference errors.
 - Atomic multi-edit correction transactions and deterministic file-level
   parallelism are implemented.

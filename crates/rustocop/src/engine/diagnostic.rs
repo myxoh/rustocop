@@ -58,11 +58,9 @@ fn prism_offense(source: &str, index: &SourceIndex, finding: prism::Finding) -> 
                     && (source.is_empty() || source.ends_with('\n'))
             {
                 (line, 0)
-            } else if finding.cop_name == "Naming/FileName"
-                && source.starts_with("# frozen_string_literal:")
-                || (finding.start_offset == source.len()
-                    && !source.is_empty()
-                    && !source.ends_with('\n'))
+            } else if (finding.start_offset == source.len()
+                && !source.is_empty()
+                && !source.ends_with('\n'))
                 || finding.cop_name == "Layout/IndentationWidth"
                     && finding.message.ends_with(" spaces for indentation.")
             {

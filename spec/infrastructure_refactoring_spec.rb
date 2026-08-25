@@ -70,4 +70,35 @@ RSpec.describe "shared infrastructure" do
       expect(signature.to_h).to include("path" => "app/model.rb", "last_column" => 7)
     end
   end
+
+  describe Rustocop::ProjectMismatchInventory do
+    def offense(path, message: "Mismatch")
+      {
+        "path" => path, "cop" => "Style/Example", "severity" => "convention",
+        "message" => message, "start_line" => 1, "start_column" => 1,
+        "last_line" => 1, "last_column" => 3
+      }
+    end
+
+    it "retains every unmatched signature and multiplicity while limiting report previews" do
+      shared = offense("shared.rb", message: "Shared")
+      rust_only = 4.times.map { |index| offense("rust-#{index}.rb") }
+      ruby_only = 2.times.map { |index| offense("ruby-#{index}.rb") }
+      rustocop = [shared, *rust_only, rust_only.first]
+      rubocop = [shared, *ruby_only]
+
+      comparison = described_class.compare(rustocop, rubocop, ["Style/Example"])
+      summary = comparison.by_cop.fetch("Style/Example")
+      entries = comparison.entries.map { |entry| described_class.entry_hash(entry) }
+
+      expect(summary).to include("rustocop" => 6, "rubocop" => 3, "exact" => 1)
+      expect(summary.fetch("rustocop_only_examples").length).to eq(3)
+      expect(entries.length).to eq(6)
+      expect(entries.sum { |entry| entry.fetch("count") }).to eq(7)
+      expect(entries).to include(
+        include("direction" => "rustocop_only", "path" => "rust-0.rb", "count" => 2),
+        include("direction" => "rubocop_only", "path" => "ruby-1.rb", "count" => 1)
+      )
+    end
+  end
 end

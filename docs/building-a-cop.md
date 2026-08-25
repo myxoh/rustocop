@@ -344,18 +344,22 @@ bundle exec ruby script/audit_project_parity.rb \
   --markdown tmp/project-parity/current-head.md
 ```
 
-Project parity compares complete diagnostic signatures. A dormant result is not
-validation: add or locate an exercising fixture before making a compatibility
-claim.
+Project parity compares complete diagnostic signatures and writes an exhaustive
+compressed mismatch inventory next to the report. The report retains three
+examples per direction for readability; isolation reads the complete inventory,
+so one expensive project run can drive every subsequent focused fixture cycle.
+A dormant result is not validation: add or locate an exercising fixture before
+making a compatibility claim.
 
-When a real-project mismatch drives an implementation change, copy the smallest
-triggering example into a provenance-backed inspection fixture and add a nearby
-clean control. For correctable cops, compare the complete corrected file with
-RuboCop. Once the implementation and full Rust suite pass, re-run every changed
-cop together through the 50-project gate. The report's Git commit or native-cop
-source SHA-256, together with its binary SHA-256, must describe the code being
-claimed; an older exact report is historical evidence after that cop or a shared
-dependency changes.
+When a real-project mismatch drives an implementation change, use
+`isolate_project_parity_mismatches.rb` to minimize the stored signatures into
+provenance-backed fixtures and add nearby clean controls. For correctable cops,
+compare the complete corrected file with RuboCop. Iterate on only the affected
+cop fixtures; run the complete fixture corpus and the 50-project gate once at the
+integration boundary. The report's Git commit or native-cop source SHA-256,
+together with its binary SHA-256, must describe the code being claimed; an older
+exact report is historical evidence after that cop or a shared dependency
+changes.
 
 ## Final checklist
 

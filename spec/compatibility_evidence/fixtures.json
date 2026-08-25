@@ -1,11 +1,11 @@
 {
   "version": 1,
   "kind": "fixture_compatibility",
-  "updated_at": "2026-08-24T14:58:01-04:00",
-  "rust_commit": null,
+  "updated_at": "2026-08-24T15:35:04-04:00",
+  "rust_commit": "ddb32ffcc4aaa97d560add1482e3c33863409004",
   "cop_source_sha256": "348986c92ae63ac7897532663e79779a24959af4a354e6ce9c57974ff2a7221f",
   "native_sha256": "c06a23caf252ee2e7002dd30c13bff0f1b54dca89cba8b99b370d03083cdad76",
-  "fixture_corpus_sha256": "f3d4a4498ed476b2392b4cef863d03f4741a2105fb6e17bbfe0eb5dd5bbde238",
+  "fixture_corpus_sha256": "817bbaab7404eb326e8160035ce2d8cf543b661c1377abb5e58ee3760e355cd8",
   "rubocop_version": "1.87.0",
   "results": {
     "Bundler/DuplicatedGem": {
@@ -370,8 +370,8 @@
     },
     "Layout/LineLength": {
       "passed": 197,
-      "total": 197,
-      "status": "compatible"
+      "total": 199,
+      "status": "mismatch"
     },
     "Layout/MultilineArrayBraceLayout": {
       "passed": 35,
@@ -380,8 +380,8 @@
     },
     "Layout/MultilineArrayLineBreaks": {
       "passed": 12,
-      "total": 12,
-      "status": "compatible"
+      "total": 14,
+      "status": "mismatch"
     },
     "Layout/MultilineAssignmentLayout": {
       "passed": 36,
@@ -415,8 +415,8 @@
     },
     "Layout/MultilineMethodCallIndentation": {
       "passed": 275,
-      "total": 275,
-      "status": "compatible"
+      "total": 277,
+      "status": "mismatch"
     },
     "Layout/MultilineMethodDefinitionBraceLayout": {
       "passed": 27,
@@ -670,8 +670,8 @@
     },
     "Lint/ConstantResolution": {
       "passed": 18,
-      "total": 18,
-      "status": "compatible"
+      "total": 20,
+      "status": "mismatch"
     },
     "Lint/CopDirectiveSyntax": {
       "passed": 21,
@@ -1365,8 +1365,8 @@
     },
     "Metrics/AbcSize": {
       "passed": 24,
-      "total": 24,
-      "status": "compatible"
+      "total": 26,
+      "status": "mismatch"
     },
     "Metrics/BlockLength": {
       "passed": 33,
@@ -1395,8 +1395,8 @@
     },
     "Metrics/MethodLength": {
       "passed": 31,
-      "total": 31,
-      "status": "compatible"
+      "total": 32,
+      "status": "mismatch"
     },
     "Metrics/ModuleLength": {
       "passed": 21,
@@ -1770,8 +1770,8 @@
     },
     "Style/Copyright": {
       "passed": 21,
-      "total": 21,
-      "status": "compatible"
+      "total": 23,
+      "status": "mismatch"
     },
     "Style/DataInheritance": {
       "passed": 24,
@@ -1820,8 +1820,8 @@
     },
     "Style/DocumentationMethod": {
       "passed": 77,
-      "total": 77,
-      "status": "compatible"
+      "total": 79,
+      "status": "mismatch"
     },
     "Style/DoubleCopDisableDirective": {
       "passed": 3,
@@ -2200,8 +2200,8 @@
     },
     "Style/MethodCallWithArgsParentheses": {
       "passed": 174,
-      "total": 174,
-      "status": "compatible"
+      "total": 176,
+      "status": "mismatch"
     },
     "Style/MethodCallWithoutArgsParentheses": {
       "passed": 34,
@@ -2230,8 +2230,8 @@
     },
     "Style/MissingElse": {
       "passed": 84,
-      "total": 84,
-      "status": "compatible"
+      "total": 86,
+      "status": "mismatch"
     },
     "Style/MissingRespondToMissing": {
       "passed": 9,

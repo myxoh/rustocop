@@ -6,7 +6,7 @@ define_cops! {
     UselessMethodDefinition => "Lint/UselessMethodDefinition" => node(as_def_node, useless_method_definition),
     ConstantOverwrittenInRescue => "Lint/ConstantOverwrittenInRescue" => source(constant_overwritten_in_rescue),
     RedundantAssignment => "Style/RedundantAssignment" => node(as_def_node, redundant_assignment),
-    ConstantResolution => "Lint/ConstantResolution" => source(constant_resolution),
+    ConstantResolution => "Lint/ConstantResolution" => any_node(constant_resolution),
     ReturnInVoidContext => "Lint/ReturnInVoidContext" => node(as_return_node, return_in_void_context),
     AmbiguousEndlessMethodDefinition => "Style/AmbiguousEndlessMethodDefinition" => node(as_def_node, ambiguous_endless_method_definition),
     NestedMethodDefinition => "Lint/NestedMethodDefinition" => node(as_def_node, nested_method_definition),
@@ -410,34 +410,42 @@ fn delimiter_balance(source: &str) -> isize {
     })
 }
 
-fn constant_resolution(context: &mut CopContext<'_, '_>) {
-    let source = context.source().trim();
-    if source.is_empty()
-        || source.starts_with("::")
-        || source.starts_with("module ")
-        || source.starts_with("class ")
-        || source == "__ENCODING__"
-    {
+fn constant_resolution(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
+    let Some(constant) = node.as_constant_read_node() else {
+        return;
+    };
+    let location = constant.location();
+    let direct_defined_module = context
+        .parent()
+        .is_some_and(|parent| {
+            parent.as_class_node().is_some()
+                || parent.as_module_node().is_some()
+                || parent.as_constant_path_write_node().is_some()
+        });
+    let ancestors = context.ancestors();
+    let prism_single_body_defined_module = ancestors.last().is_some_and(|parent| {
+        parent
+            .as_statements_node()
+            .is_some_and(|statements| statements.body().len() == 1)
+    }) && ancestors
+        .get(ancestors.len().saturating_sub(2))
+        .is_some_and(|grandparent| {
+            grandparent.as_class_node().is_some() || grandparent.as_module_node().is_some()
+        });
+    if direct_defined_module || prism_single_body_defined_module {
         return;
     }
-    let root = source.split("::").next().unwrap_or(source);
-    if !root
-        .bytes()
-        .next()
-        .is_some_and(|byte| byte.is_ascii_uppercase())
-    {
-        return;
-    }
+    let name = String::from_utf8_lossy(constant.name().as_slice());
     let only = context.config_values("Only");
     let ignore = context.config_values("Ignore");
-    if !only.is_empty() && !only.iter().any(|name| name == root)
-        || ignore.iter().any(|name| name == root)
+    if !only.is_empty() && !only.iter().any(|allowed| allowed == name.as_ref())
+        || ignore.iter().any(|ignored| ignored == name.as_ref())
     {
         return;
     }
     context.report(
         "Fully qualify this constant to avoid possibly ambiguous resolution.",
-        0..root.len(),
+        location,
     );
 }
 

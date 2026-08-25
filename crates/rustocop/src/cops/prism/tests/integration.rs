@@ -59,6 +59,18 @@ fn ordinary_cops_do_not_investigate_recovered_syntax_trees() {
 }
 
 #[test]
+fn ordinary_source_cops_do_not_investigate_syntax_errors() {
+    let inspection = inspect(
+        "def broken(; end\n",
+        false,
+        RubyVersion::default(),
+        &|cop| cop == "Style/Copyright",
+    );
+
+    assert!(inspection.findings.is_empty());
+}
+
+#[test]
 fn ordinary_cops_investigate_trees_with_context_only_parse_errors() {
     let ternary = inspect(
         "foo = (yield) ? a : b\n",
