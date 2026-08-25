@@ -269,6 +269,9 @@ fn empty_line_after_magic_comment(context: &mut CopContext<'_, '_>) {
         if index == 0 && trimmed.starts_with("#!") {
             continue;
         }
+        if trimmed.is_empty() && last_magic.is_none() {
+            continue;
+        }
         if is_magic_comment(trimmed)
         {
             last_magic = Some(index);
@@ -295,6 +298,7 @@ fn empty_line_after_magic_comment(context: &mut CopContext<'_, '_>) {
 }
 
 fn is_magic_comment(line: &str) -> bool {
+    let line = line.to_ascii_lowercase();
     line.starts_with("# frozen_string_literal:")
         || line.starts_with("# encoding:")
         || line.starts_with("# coding:")
@@ -303,7 +307,7 @@ fn is_magic_comment(line: &str) -> bool {
         || line.starts_with("# warn_indent:")
         || line.starts_with("# shareable_constant_value:")
         || line.starts_with("# typed:")
-        || matches!(line, "# rbs_inline: enabled" | "# rbs_inline: disabled")
+        || matches!(line.as_str(), "# rbs_inline: enabled" | "# rbs_inline: disabled")
 }
 
 fn space_in_lambda_literal(

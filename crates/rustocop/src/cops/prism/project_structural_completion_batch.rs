@@ -131,10 +131,10 @@ fn class_structure(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
         let mut correctable = true;
         if let Some(definition) = statement.as_def_node() {
             let name = definition.name().as_slice();
-            category = Some(if name == b"initialize" {
-                "initializer".to_string()
-            } else if definition.receiver().is_some() {
+            category = Some(if definition.receiver().is_some() {
                 "public_class_methods".to_string()
+            } else if name == b"initialize" {
+                "initializer".to_string()
             } else {
                 format!("{visibility}_methods")
             });

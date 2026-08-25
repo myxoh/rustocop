@@ -156,7 +156,7 @@ fn empty_around_accessor(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) 
     let Some(next_code_line) = next_code_line(source, current_line + 1) else {
         return;
     };
-    if next_code_line > current_line + 1 && line(source, current_line + 1).is_empty() {
+    if next_code_line > current_line + 1 && line(source, current_line + 1).trim().is_empty() {
         return;
     }
 

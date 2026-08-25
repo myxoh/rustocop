@@ -205,6 +205,25 @@ fn empty_lines_around_access_modifier(node: &CallNode<'_>, context: &mut CopCont
     {
         return;
     }
+    let inside_block = context
+        .ancestors()
+        .iter()
+        .any(|ancestor| ancestor.as_block_node().is_some());
+    let inside_class_like = context.ancestors().iter().any(|ancestor| {
+        ancestor.as_class_node().is_some()
+            || ancestor.as_module_node().is_some()
+            || ancestor.as_singleton_class_node().is_some()
+    });
+    let inside_class_constructor = context.ancestors().iter().any(|ancestor| {
+        ancestor.as_call_node().is_some_and(|call| {
+            call.name().as_slice() == b"new"
+                && (root_constant(call.receiver(), b"Class")
+                    || root_constant(call.receiver(), b"Module"))
+        })
+    });
+    if inside_block && !inside_class_like && !inside_class_constructor {
+        return;
+    }
     for ancestor in context.ancestors().iter().rev() {
         if ancestor.as_def_node().is_some()
             || ancestor.as_class_node().is_some()

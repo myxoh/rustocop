@@ -169,6 +169,9 @@ fn local_name_conflicts(name: &[u8], offense_start: usize, context: &CopContext<
         bindings.visit(&branch.pattern());
         return bindings.names.iter().any(|binding| binding == name);
     }
+    if conditional_assignment_conflict(name, offense_start, context.ancestors()) {
+        return true;
+    }
     context.ancestors().iter().rev().any(|scope| {
         if let Some(block) = scope.as_block_node() {
             block.locals().iter().any(|local| local.as_slice() == name)
@@ -184,15 +187,11 @@ fn local_name_conflicts(name: &[u8], offense_start: usize, context: &CopContext<
                     explicit_block_parameters_include(&parameters, name, context)
                 })
         } else if let Some(definition) = scope.as_def_node() {
-            definition
-                .locals()
-                .iter()
-                .any(|local| local.as_slice() == name)
-                || definition
-                    .body()
-                    .is_some_and(|body| {
-                        subtree_binds_name(&body, name, false, Some(offense_start))
-                    })
+            definition.parameters().is_some_and(|parameters| {
+                subtree_binds_name(&parameters.as_node(), name, true, None)
+            }) || definition.body().is_some_and(|body| {
+                subtree_binds_name(&body, name, true, Some(offense_start))
+            })
         } else if let Some(program) = scope.as_program_node() {
             program
                 .locals()
@@ -201,6 +200,32 @@ fn local_name_conflicts(name: &[u8], offense_start: usize, context: &CopContext<
         } else {
             false
         }
+    })
+}
+
+fn conditional_assignment_conflict(
+    name: &[u8],
+    offense_start: usize,
+    ancestors: &[Node<'_>],
+) -> bool {
+    ancestors.iter().rev().any(|ancestor| {
+        let (predicate, statements) = if let Some(condition) = ancestor.as_if_node() {
+            (condition.predicate(), condition.statements())
+        } else if let Some(condition) = ancestor.as_unless_node() {
+            (condition.predicate(), condition.statements())
+        } else if let Some(condition) = ancestor.as_while_node() {
+            (condition.predicate(), condition.statements())
+        } else if let Some(condition) = ancestor.as_until_node() {
+            (condition.predicate(), condition.statements())
+        } else {
+            return false;
+        };
+        let predicate = predicate.location();
+        predicate.start_offset() <= offense_start
+            && offense_start < predicate.end_offset()
+            && statements.is_some_and(|body| {
+                subtree_binds_name(&body.as_node(), name, true, None)
+            })
     })
 }
 
@@ -234,6 +259,10 @@ fn subtree_binds_name(
         fn check(&mut self, candidate: &[u8]) {
             self.found |= candidate == self.name;
         }
+
+        fn before_cutoff(&self, at: usize) -> bool {
+            self.parameter_before.is_none_or(|cutoff| at < cutoff)
+        }
     }
 
     impl<'pr> Visit<'pr> for BindingFinder<'_> {
@@ -252,11 +281,71 @@ fn subtree_binds_name(
             ruby_prism::visit_required_parameter_node(self, node);
         }
 
+        fn visit_optional_parameter_node(
+            &mut self,
+            node: &ruby_prism::OptionalParameterNode<'pr>,
+        ) {
+            if self.before_cutoff(node.location().start_offset()) {
+                self.check(node.name().as_slice());
+            }
+            ruby_prism::visit_optional_parameter_node(self, node);
+        }
+
+        fn visit_rest_parameter_node(&mut self, node: &ruby_prism::RestParameterNode<'pr>) {
+            if self.before_cutoff(node.location().start_offset()) {
+                if let Some(name) = node.name() {
+                    self.check(name.as_slice());
+                }
+            }
+            ruby_prism::visit_rest_parameter_node(self, node);
+        }
+
+        fn visit_required_keyword_parameter_node(
+            &mut self,
+            node: &ruby_prism::RequiredKeywordParameterNode<'pr>,
+        ) {
+            if self.before_cutoff(node.location().start_offset()) {
+                self.check(node.name().as_slice());
+            }
+            ruby_prism::visit_required_keyword_parameter_node(self, node);
+        }
+
+        fn visit_optional_keyword_parameter_node(
+            &mut self,
+            node: &ruby_prism::OptionalKeywordParameterNode<'pr>,
+        ) {
+            if self.before_cutoff(node.location().start_offset()) {
+                self.check(node.name().as_slice());
+            }
+            ruby_prism::visit_optional_keyword_parameter_node(self, node);
+        }
+
+        fn visit_keyword_rest_parameter_node(
+            &mut self,
+            node: &ruby_prism::KeywordRestParameterNode<'pr>,
+        ) {
+            if self.before_cutoff(node.location().start_offset()) {
+                if let Some(name) = node.name() {
+                    self.check(name.as_slice());
+                }
+            }
+            ruby_prism::visit_keyword_rest_parameter_node(self, node);
+        }
+
+        fn visit_block_parameter_node(&mut self, node: &ruby_prism::BlockParameterNode<'pr>) {
+            if self.before_cutoff(node.location().start_offset()) {
+                if let Some(name) = node.name() {
+                    self.check(name.as_slice());
+                }
+            }
+            ruby_prism::visit_block_parameter_node(self, node);
+        }
+
         fn visit_local_variable_target_node(
             &mut self,
             node: &ruby_prism::LocalVariableTargetNode<'pr>,
         ) {
-            if self.include_writes {
+            if self.include_writes && self.before_cutoff(node.location().start_offset()) {
                 self.check(node.name().as_slice());
             }
             ruby_prism::visit_local_variable_target_node(self, node);
@@ -266,7 +355,7 @@ fn subtree_binds_name(
             &mut self,
             node: &ruby_prism::LocalVariableWriteNode<'pr>,
         ) {
-            if self.include_writes {
+            if self.include_writes && self.before_cutoff(node.location().start_offset()) {
                 self.check(node.name().as_slice());
             }
             ruby_prism::visit_local_variable_write_node(self, node);
@@ -276,7 +365,7 @@ fn subtree_binds_name(
             &mut self,
             node: &ruby_prism::LocalVariableOrWriteNode<'pr>,
         ) {
-            if self.include_writes {
+            if self.include_writes && self.before_cutoff(node.location().start_offset()) {
                 self.check(node.name().as_slice());
             }
             ruby_prism::visit_local_variable_or_write_node(self, node);
@@ -286,7 +375,7 @@ fn subtree_binds_name(
             &mut self,
             node: &ruby_prism::LocalVariableAndWriteNode<'pr>,
         ) {
-            if self.include_writes {
+            if self.include_writes && self.before_cutoff(node.location().start_offset()) {
                 self.check(node.name().as_slice());
             }
             ruby_prism::visit_local_variable_and_write_node(self, node);
@@ -296,7 +385,7 @@ fn subtree_binds_name(
             &mut self,
             node: &ruby_prism::LocalVariableOperatorWriteNode<'pr>,
         ) {
-            if self.include_writes {
+            if self.include_writes && self.before_cutoff(node.location().start_offset()) {
                 self.check(node.name().as_slice());
             }
             ruby_prism::visit_local_variable_operator_write_node(self, node);

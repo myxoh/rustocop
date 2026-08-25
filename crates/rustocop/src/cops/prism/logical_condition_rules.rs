@@ -59,7 +59,10 @@ fn unless_logical_operators(node: &ruby_prism::UnlessNode<'_>, context: &mut Cop
     let root_logical = predicate.as_and_node().is_some() || predicate.as_or_node().is_some();
     let message = if style == "forbid_logical_operators" && root_logical {
         "Do not use any logical operator in an `unless`."
-    } else if style == "forbid_mixed_logical_operators" && operators.tokens.len() > 1 {
+    } else if style == "forbid_mixed_logical_operators"
+        && root_logical
+        && operators.tokens.len() > 1
+    {
         "Do not use mixed logical operators in an `unless`."
     } else {
         return;
@@ -73,8 +76,6 @@ struct LogicalOperatorVisitor {
 }
 
 impl<'pr> Visit<'pr> for LogicalOperatorVisitor {
-    fn visit_block_node(&mut self, _node: &ruby_prism::BlockNode<'pr>) {}
-
     fn visit_and_node(&mut self, node: &ruby_prism::AndNode<'pr>) {
         self.tokens.insert(node.operator_loc().as_slice().to_vec());
         ruby_prism::visit_and_node(self, node);

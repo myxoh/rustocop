@@ -76,6 +76,11 @@ impl IfWithBooleanLiteralBranchesRule<'_, '_, '_> {
             return self.boolean_condition(&and.right());
         }
         let Some(call) = condition.as_call_node() else { return false };
+        return_if!(
+            call.call_operator_loc()
+                .is_some_and(|operator| operator.as_slice() == b"&."),
+            false
+        );
         let method = call.name().as_slice();
         return_if!(self.config_values("AllowedMethods").iter().any(|allowed| allowed.as_bytes() == method), false);
         matches!(method, b"==" | b"!=" | b"===" | b"<" | b"<=" | b">" | b">=" | b"eql?" | b"equal?")

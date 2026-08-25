@@ -1231,6 +1231,13 @@ fn check_void_if_body(
         && body[0].as_unless_node().is_none()
         && body[0].as_case_node().is_none()
         && body[0].as_case_match_node().is_none()
+        && !body[0].as_call_node().is_some_and(|call| {
+            matches!(
+                call.name().as_slice(),
+                b"*" | b"/" | b"%" | b"+" | b"-" | b"==" | b"===" | b"!=" | b"<" | b">"
+                    | b"<=" | b">=" | b"<=>" | b"+@" | b"-@" | b"~" | b"!"
+            )
+        })
     {
         check_void_expression(&body[0], ancestors, source, context, cop, false);
     }
@@ -2469,7 +2476,14 @@ impl Cop for AccessModifierDeclarations {
         }
         if ancestors
             .iter()
-            .any(|ancestor| ancestor.as_if_node().is_some())
+            .any(|ancestor| {
+                ancestor.as_if_node().is_some()
+                    || ancestor.as_rescue_node().is_some()
+                    || ancestor.as_ensure_node().is_some()
+                    || ancestor.as_begin_node().is_some_and(|begin| {
+                        begin.rescue_clause().is_some() || begin.ensure_clause().is_some()
+                    })
+            })
         {
             return;
         }
@@ -3841,6 +3855,15 @@ fn anonymous_class_scope(ancestors: &[Node<'_>], source: &str) -> Option<(String
         Some(enclosing) => format!("{enclosing}::Object"),
         None => "::Object".to_string(),
     };
+    if ancestors
+        .get(call_index.wrapping_sub(1))
+        .is_some_and(|parent| parent.as_instance_variable_write_node().is_some())
+    {
+        // RuboCop's anonymous-class identity is deliberately absent when the
+        // Class.new block is assigned through an ivar. Such blocks therefore
+        // share the Object-qualified identity.
+        return Some((base, None));
+    }
     let named_scope_id = ancestors[..call_index]
         .iter()
         .rev()

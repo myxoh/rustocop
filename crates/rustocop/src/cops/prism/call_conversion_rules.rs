@@ -67,7 +67,20 @@ fn lambda_call(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     } else {
         format!("{receiver_source}{operator}({arguments})")
     };
-    let current = context.source_file().node(&node.as_node());
+    let invocation = node.location().start_offset()
+        ..node
+            .closing_loc()
+            .map(|closing| closing.end_offset())
+            .or_else(|| {
+                node.arguments()
+                    .map(|arguments| arguments.location().end_offset())
+            })
+            .or_else(|| node.message_loc().map(|message| message.end_offset()))
+            .unwrap_or_else(|| node.location().end_offset());
+    let current = context
+        .source_file()
+        .slice(invocation.clone())
+        .unwrap_or_default();
     let message = format!("Prefer the use of `{preferred}` over `{current}`.");
     let nested_anonymous_receiver = context.ancestors().iter().rev().any(|ancestor| {
         ancestor.as_call_node().is_some_and(|call| {
@@ -81,10 +94,10 @@ fn lambda_call(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     });
     if nested_anonymous_receiver {
         if !context.autocorrect_enabled() {
-            context.report_call(node, message);
+            context.report(message, invocation);
         }
     } else {
-        context.replace_call(node, message, preferred);
+        context.replace(message, invocation.clone(), invocation, preferred);
     }
 }
 

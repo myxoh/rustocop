@@ -227,10 +227,10 @@ fn historic_date(node: &CallNode<'_>) -> bool {
     let Some(arguments) = node.arguments() else {
         return false;
     };
-    arguments.arguments().iter().skip(1).any(|argument| {
-        constant_path(&argument)
+    let arguments = arguments.arguments().iter().collect::<Vec<_>>();
+    arguments.len() == 2
+        && constant_path(&arguments[1])
             .is_some_and(|path| path.first() == Some(&b"Date".as_slice()) && path.len() >= 2)
-    })
 }
 
 impl YamlFileReadRule<'_, '_, '_> {

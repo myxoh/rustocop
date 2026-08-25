@@ -15,11 +15,11 @@ fn on_new_investigation(context: &mut CopContext<'_, '_>) {
 impl MagicCommentFormatRule<'_, '_, '_> {
     fn on_new_investigation(&mut self) {
         let directive = Regex::new(
-            r"(?i)(coding|encoding|frozen[-_]string[-_]literal|warn[-_]indent|shareable[-_]constant[-_]value|typed)\s*:",
+            r"(?i)(coding|encoding|frozen[-_]string[-_]literal|rbs_inline|shareable[-_]constant[-_]value|typed)\s*:",
         )
         .expect("static magic-comment regex");
         let value = Regex::new(
-            r"(?i)(?:coding|encoding|frozen[-_]string[-_]literal|warn[-_]indent|shareable[-_]constant[-_]value|typed)\s*:\s*([^;\r\n]*)",
+            r"(?i)(?:coding|encoding|frozen[-_]string[-_]literal|rbs_inline|shareable[-_]constant[-_]value|typed)\s*:\s*([^;\r\n]*)",
         )
         .expect("static magic-comment value regex");
         let style = self.policy().enforced_style("snake_case").to_string();
@@ -32,6 +32,9 @@ impl MagicCommentFormatRule<'_, '_, '_> {
                 break;
             }
             if !trimmed.starts_with('#') || !line.contains(':') {
+                continue;
+            }
+            if !valid_magic_comment(trimmed) {
                 continue;
             }
             for captures in directive.captures_iter(line) {
@@ -82,6 +85,26 @@ impl MagicCommentFormatRule<'_, '_, '_> {
             }
         }
     }
+}
+
+fn valid_magic_comment(comment: &str) -> bool {
+    let simple = Regex::new(
+        r"(?ix)^\#\s*(?:
+            (?:en)?coding:\s+[[:alnum:]_-]+ |
+            (?:frozen[-_]string[-_]literal|rbs_inline|shareable[-_]constant[-_]value|typed):\s*[[:alnum:]_-]+\s*$
+        )",
+    )
+    .expect("static simple magic-comment regex");
+    if simple.is_match(comment) {
+        return true;
+    }
+    let editor_token = Regex::new(
+        r"(?i)(?:coding|encoding|frozen[-_]string[-_]literal|shareable[-_]constant[-_]value|typed)\s*[:=]\s*[[:alnum:]_-]+",
+    )
+    .expect("static editor magic-comment regex");
+    (comment.contains("-*-")) && editor_token.is_match(comment)
+        || comment.to_ascii_lowercase().starts_with("# vim:")
+            && editor_token.is_match(comment)
 }
 
 fn wrong_capitalization(source: &str, expected: Option<&str>) -> bool {

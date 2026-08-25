@@ -116,15 +116,30 @@ fn file_expand_path(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) -> bo
         return false;
     }
     let path = String::from_utf8_lossy(path.unescaped());
-    let Some(relative) = relative_to_directory(&path) else {
-        return false;
-    };
-    let preferred = if path == "." {
-        "expand_path(__FILE__)".to_string()
-    } else if relative.is_empty() {
-        "expand_path(__dir__)".to_string()
+    let components = if path.is_empty() {
+        Vec::new()
     } else {
-        format!("expand_path('{relative}', __dir__)")
+        path.split('/').collect::<Vec<_>>()
+    };
+    let depth = components.iter().filter(|part| **part != ".").count();
+    let mut parent_parts = components
+        .into_iter()
+        .filter(|part| *part != ".")
+        .collect::<Vec<_>>();
+    if let Some(index) = parent_parts.iter().position(|part| *part == "..") {
+        parent_parts.remove(index);
+    }
+    let parent_path = parent_parts.join("/");
+    let preferred_default = if depth == 0 { "__FILE__" } else { "__dir__" };
+    let preferred = if parent_path.is_empty() {
+        format!("expand_path({preferred_default})")
+    } else {
+        format!("expand_path('{parent_path}', {preferred_default})")
+    };
+    let correction = match depth {
+        0 => "expand_path(__FILE__)".to_string(),
+        1 => "expand_path(__dir__)".to_string(),
+        _ => format!("expand_path('{parent_path}', __dir__)"),
     };
     let Some(selector) = node.message_loc() else {
         return false;
@@ -134,26 +149,9 @@ fn file_expand_path(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) -> bo
         format!("Use `{preferred}` instead of `{current}`."),
         &selector,
         selector.start_offset()..node.location().end_offset(),
-        preferred,
+        correction,
     );
     true
-}
-
-fn relative_to_directory(path: &str) -> Option<String> {
-    if path == "." {
-        return Some(String::new());
-    }
-    let mut parts = Vec::new();
-    for part in path.split('/') {
-        match part {
-            "" | "." => {}
-            ".." if parts.last().is_some_and(|part| *part != "..") => {
-                parts.pop();
-            }
-            _ => parts.push(part),
-        }
-    }
-    (parts.first() == Some(&"..")).then(|| parts[1..].join("/"))
 }
 
 fn pathname_expand_path(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) -> bool {

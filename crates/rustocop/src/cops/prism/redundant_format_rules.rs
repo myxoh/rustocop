@@ -18,18 +18,21 @@ define_cops! {
 
 impl RedundantFormatRule<'_, '_, '_> {
     fn on_send(&mut self, node: &CallNode<'_>) {
-        return_unless!(node.receiver().is_none() || root_constant(node.receiver(), b"Kernel"));
         let arguments = node
             .arguments()
             .map(|arguments| arguments.arguments().iter().collect::<Vec<_>>())
             .unwrap_or_default();
         return_if!(arguments.is_empty());
 
-        if arguments.len() == 1 && single_redundant_argument(&arguments[0]) {
+        if arguments.len() == 1
+            && (node.receiver().is_none() || root_constant(node.receiver(), b"Kernel"))
+            && single_redundant_argument(&arguments[0])
+        {
             let replacement = escape_control_chars(self.source_file().node(&arguments[0]));
             self.register_offense(node, replacement);
             return;
         }
+        return_if!(arguments.len() == 1);
 
         let Some(format_node) = arguments[0].as_string_node() else {
             return;

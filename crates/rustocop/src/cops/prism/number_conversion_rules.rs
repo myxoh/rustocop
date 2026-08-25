@@ -93,15 +93,13 @@ fn block_conversion(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) -> bo
         node,
         context,
         parser,
+        argument.location(),
         format!("&:{}", String::from_utf8_lossy(symbol.unescaped())),
     );
     true
 }
 
 fn symbol_argument_conversion(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) -> bool {
-    if node.receiver().is_none() {
-        return false;
-    }
     let Some(symbol) = only_argument(node).and_then(|argument| argument.as_symbol_node()) else {
         return false;
     };
@@ -112,6 +110,7 @@ fn symbol_argument_conversion(node: &CallNode<'_>, context: &mut CopContext<'_, 
         node,
         context,
         parser,
+        symbol.location(),
         format!(":{}", String::from_utf8_lossy(symbol.unescaped())),
     );
     true
@@ -121,21 +120,28 @@ fn rewrite_symbol_conversion(
     node: &CallNode<'_>,
     context: &mut CopContext<'_, '_>,
     parser: NumberParser,
+    symbol: ruby_prism::Location<'_>,
     original: String,
 ) {
-    let selector = node.message_loc().expect("conversion host has selector");
-    let callee = context
-        .source_file()
-        .slice(node.location().start_offset()..selector.end_offset())
-        .unwrap_or_default();
     let block = parser.render("i");
     let preferred = format!("{{ |i| {block} }}");
-    context.replace_call(
-        node,
-        format!(
-            "Replace unsafe number conversion with number class parsing, instead of using `{original}`, use stricter `{preferred}`."
-        ),
-        format!("{callee} {preferred}"),
+    let message = format!(
+        "Replace unsafe number conversion with number class parsing, instead of using `{original}`, use stricter `{preferred}`."
+    );
+    let location = node.location();
+    let offense_end = node
+        .closing_loc()
+        .map_or_else(|| symbol.end_offset(), |closing| closing.end_offset());
+    context.add_offense(
+        location.start_offset()..offense_end,
+        message,
+        |corrector| {
+            if let (Some(opening), Some(closing)) = (node.opening_loc(), node.closing_loc()) {
+                corrector.replace(opening, " ");
+                corrector.remove(closing);
+            }
+            corrector.replace(symbol, preferred);
+        },
     );
 }
 

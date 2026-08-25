@@ -196,8 +196,21 @@ fn trailing_greedy_quantifier(
     } else {
         return None;
     };
+    if regexp_character_is_escaped(source, quantifier_start) {
+        return None;
+    }
     let quantifier = greedy_quantifier(source, quantifier_start)?;
     (quantifier.end == significant_end).then_some(quantifier)
+}
+
+fn regexp_character_is_escaped(source: &str, at: usize) -> bool {
+    let mut slashes = 0;
+    let mut cursor = at;
+    while cursor > 0 && source.as_bytes().get(cursor - 1) == Some(&b'\\') {
+        slashes += 1;
+        cursor -= 1;
+    }
+    slashes % 2 == 1
 }
 
 fn quantifier_chain<'a>(

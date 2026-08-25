@@ -7,18 +7,29 @@ use super::*;
 mod literal_layout;
 use literal_layout::*;
 
-declare_source_cops! {
-    RubyVersionGlobalsUsage => "Gemspec/RubyVersionGlobalsUsage" => ruby_version_globals,
-    InsecureProtocolSource => "Bundler/InsecureProtocolSource" => insecure_protocol_source,
-    DisjunctiveAssignmentInConstructor => "Lint/DisjunctiveAssignmentInConstructor" => disjunctive_assignment,
-    RefinementImportMethods => "Lint/RefinementImportMethods" => refinement_import_methods,
-    AttributeAssignment => "Gemspec/AttributeAssignment" => attribute_assignment,
-    EachWithObjectArgument => "Lint/EachWithObjectArgument" => each_with_object_argument,
-    UselessDefined => "Lint/UselessDefined" => useless_defined,
-    AutoResourceCleanup => "Style/AutoResourceCleanup" => auto_resource_cleanup,
-    InPatternThen => "Style/InPatternThen" => in_pattern_then,
-    EmptyHeredoc => "Style/EmptyHeredoc" => empty_heredoc,
-    SpaceAfterMethodName => "Layout/SpaceAfterMethodName" => space_after_method_name,
+mod source_registry {
+    use super::*;
+
+    declare_source_cops! {
+        RubyVersionGlobalsUsage => "Gemspec/RubyVersionGlobalsUsage" => super::ruby_version_globals,
+        DisjunctiveAssignmentInConstructor => "Lint/DisjunctiveAssignmentInConstructor" => super::disjunctive_assignment,
+        RefinementImportMethods => "Lint/RefinementImportMethods" => super::refinement_import_methods,
+        AttributeAssignment => "Gemspec/AttributeAssignment" => super::attribute_assignment,
+        EachWithObjectArgument => "Lint/EachWithObjectArgument" => super::each_with_object_argument,
+        UselessDefined => "Lint/UselessDefined" => super::useless_defined,
+        AutoResourceCleanup => "Style/AutoResourceCleanup" => super::auto_resource_cleanup,
+        InPatternThen => "Style/InPatternThen" => super::in_pattern_then,
+        EmptyHeredoc => "Style/EmptyHeredoc" => super::empty_heredoc,
+        SpaceAfterMethodName => "Layout/SpaceAfterMethodName" => super::space_after_method_name,
+    }
+}
+
+define_call_cop!(InsecureProtocolSource => "Bundler/InsecureProtocolSource" => insecure_protocol_source);
+
+pub(super) fn cops() -> Vec<Box<dyn Cop>> {
+    let mut cops = source_registry::cops();
+    cops.push(Box::new(InsecureProtocolSource));
+    cops
 }
 
 fn ruby_version_globals(source: &str, reporter: &mut Reporter<'_>) {
@@ -77,44 +88,40 @@ fn code_offsets(source: &str, needle: &str) -> Vec<usize> {
     offsets
 }
 
-fn insecure_protocol_source(source: &str, reporter: &mut Reporter<'_>) {
-    for (offset, line) in source_lines(source) {
-        let trimmed = line.trim_start();
-        let Some(argument) = trimmed
-            .strip_prefix("source ")
-            .or_else(|| trimmed.strip_prefix("source("))
-        else {
-            continue;
-        };
-        let leading = line.len() - trimmed.len();
-        for symbol in [":gemcutter", ":rubygems", ":rubyforge"] {
-            if !argument.starts_with(symbol) {
-                continue;
-            }
-            let start = offset + leading + trimmed.find(symbol).unwrap_or(0);
-            let end = start + symbol.len();
-            reporter.replace(
-                format!("The source `{symbol}` is deprecated because HTTP requests are insecure. Please change your source to 'https://rubygems.org' if possible, or 'http://rubygems.org' if not."),
-                start..end,
-                start..end,
-                "'https://rubygems.org'",
-            );
+fn insecure_protocol_source(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
+    if node.receiver().is_some() || call_name(node) != b"source" || argument_count(node) != 1 {
+        return;
+    }
+    let Some(argument) = only_argument(node) else {
+        return;
+    };
+    let (message, insecure) = if let Some(symbol) = argument.as_symbol_node() {
+        let source = symbol.unescaped();
+        if !matches!(source, b"gemcutter" | b"rubygems" | b"rubyforge") {
+            return;
         }
-        if !reporter.config_bool("AllowHttpProtocol", true) {
-            for literal in ["'http://rubygems.org'", "\"http://rubygems.org\""] {
-                if !argument.starts_with(literal) {
-                    continue;
-                }
-                let start = offset + leading + trimmed.find(literal).unwrap_or(0);
-                let end = start + literal.len();
-                reporter.replace(
-                    "Use `https://rubygems.org` instead of `http://rubygems.org`.",
-                    start..end,
-                    start..end,
-                    "'https://rubygems.org'",
-                );
-            }
-        }
+        let source = String::from_utf8_lossy(source);
+        (
+            format!("The source `:{source}` is deprecated because HTTP requests are insecure. Please change your source to 'https://rubygems.org' if possible, or 'http://rubygems.org' if not."),
+            true,
+        )
+    } else if argument.as_string_node().is_some_and(|string| {
+        string.unescaped() == b"http://rubygems.org"
+    }) {
+        (
+            "Use `https://rubygems.org` instead of `http://rubygems.org`.".to_string(),
+            !context.config_bool("AllowHttpProtocol", true),
+        )
+    } else {
+        return;
+    };
+    if insecure {
+        context.replace(
+            message,
+            argument.location(),
+            argument.location(),
+            "'https://rubygems.org'",
+        );
     }
 }
 
