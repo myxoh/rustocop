@@ -104,8 +104,6 @@ fn check_small_line_cops(
             offenses,
         );
 
-        check_end_block(index, line, trimmed, indentation, options, offenses);
-
         if options.cop_enabled("Style/ColonMethodDefinition") && trimmed.starts_with("def ") {
             let autocorrect = options.autocorrect_for("Style/ColonMethodDefinition");
             let signature = &trimmed[4..];
@@ -203,36 +201,6 @@ fn check_small_line_cops(
                 }
             }
         }
-    }
-}
-
-fn check_end_block(
-    index: usize,
-    line: &mut SourceLine,
-    trimmed: &str,
-    indentation: usize,
-    options: &InspectionConfig,
-    offenses: &mut Vec<Offense>,
-) {
-    if !options.cop_enabled("Style/EndBlock")
-        || !trimmed
-            .strip_prefix("END")
-            .is_some_and(|tail| tail.trim_start().starts_with('{'))
-    {
-        return;
-    }
-    push_offense(
-        offenses,
-        "Style/EndBlock",
-        "Avoid the use of `END` blocks. Use `Kernel#at_exit` instead.",
-        index + 1,
-        indentation + 1,
-        3,
-        CorrectionStatus::correctable(options.autocorrect_for("Style/EndBlock")),
-    );
-    if options.autocorrect_for("Style/EndBlock") {
-        line.body
-            .replace_range(indentation..indentation + 3, "at_exit");
     }
 }
 

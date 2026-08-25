@@ -32,11 +32,12 @@ fn parentheses_as_grouped_expression(node: &CallNode<'_>, context: &mut CopConte
     }
     if grouped_expression_chained_call(node, context)
         || context.ancestors().iter().rev().any(|ancestor| {
-            ancestor.as_and_node().is_some()
-            || ancestor.as_or_node().is_some()
-            || ancestor.as_if_node().is_some()
-            || ancestor.as_range_node().is_some()
-            || ancestor.as_assoc_node().is_some()
+            ancestor.location().start_offset() == node.location().start_offset()
+                && (ancestor.as_and_node().is_some()
+                    || ancestor.as_or_node().is_some()
+                    || ancestor.as_if_node().is_some()
+                    || ancestor.as_range_node().is_some()
+                    || ancestor.as_assoc_node().is_some())
         })
     {
         return;

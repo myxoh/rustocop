@@ -1,4 +1,5 @@
 {
   "01edd4c8411503ea": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/FormatParameterMismatch:\n  Description: The number of parameters to format/sprint must match the fields.\n  Enabled: true\n  VersionAdded: '0.33'\n  AutoCorrect: always\n",
+  "065a12b5031200c1": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\n",
   "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n"
 }

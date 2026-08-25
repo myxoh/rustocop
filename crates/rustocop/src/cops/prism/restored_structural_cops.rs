@@ -20,6 +20,20 @@ define_cops! {
     NoReturnInBeginEndBlocks => "Lint/NoReturnInBeginEndBlocks" => node(as_return_node, no_return_in_begin_end_blocks),
     RescueType => "Lint/RescueType" => node(as_rescue_node, rescue_type),
     FirstMethodParameterLineBreak => "Layout/FirstMethodParameterLineBreak" => node(as_def_node, first_method_parameter_line_break),
+    EndBlock => "Style/EndBlock" => node(as_post_execution_node, end_block),
+}
+
+fn end_block(
+    node: &ruby_prism::PostExecutionNode<'_>,
+    context: &mut CopContext<'_, '_>,
+) {
+    let keyword = node.keyword_loc();
+    context.replace(
+        "Avoid the use of `END` blocks. Use `Kernel#at_exit` instead.",
+        &keyword,
+        &keyword,
+        "at_exit",
+    );
 }
 
 fn array_literal_in_regexp(

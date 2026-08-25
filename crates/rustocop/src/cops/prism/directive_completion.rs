@@ -32,6 +32,7 @@ fn cop_directive_syntax(context: &mut CopContext<'_, '_>) {
         } else if rest[mode.len()..].contains("# rubocop:")
             || rest[mode.len()..].contains(" == ")
             || names.split(',').any(|name| name.trim().ends_with(':'))
+            || names.split(',').any(|name| name.trim().ends_with('/'))
             || names.ends_with(',')
             || names.split(',').any(|name| {
                 name.trim().bytes().any(|byte| {

@@ -151,8 +151,27 @@ fn call_arguments_for_reduce<'pr>(node: &CallNode<'pr>) -> Vec<Node<'pr>> {
     node.arguments().map(|arguments| arguments.arguments().iter().collect()).unwrap_or_default()
 }
 
-fn references_name(node: &Node<'_>, name: &str, file: SourceFile<'_>) -> bool {
-    file.node(node).split(|character: char| !character.is_ascii_alphanumeric() && character != '_').any(|part| part == name)
+fn references_name(node: &Node<'_>, name: &str, _file: SourceFile<'_>) -> bool {
+    struct LocalReadFinder<'a> {
+        name: &'a [u8],
+        found: bool,
+    }
+
+    impl<'pr> ruby_prism::Visit<'pr> for LocalReadFinder<'_> {
+        fn visit_local_variable_read_node(
+            &mut self,
+            node: &ruby_prism::LocalVariableReadNode<'pr>,
+        ) {
+            self.found |= node.name().as_slice() == self.name;
+        }
+    }
+
+    let mut finder = LocalReadFinder {
+        name: name.as_bytes(),
+        found: false,
+    };
+    finder.visit(node);
+    finder.found
 }
 
 fn contains_nested_reduce(source: &str) -> bool {

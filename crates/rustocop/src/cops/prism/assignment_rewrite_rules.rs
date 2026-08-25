@@ -95,6 +95,7 @@ impl ParallelAssignmentRule<'_, '_, '_> {
     fn on_masgn(&mut self, node: &MultiWriteNode<'_>) {
         return_if!(self.ancestors().iter().any(|ancestor| ancestor.as_multi_write_node().is_some()));
         let mut left = node.lefts().iter().collect::<Vec<_>>();
+        return_if!(left.iter().any(|target| target.as_multi_target_node().is_some()));
         if node.rest().is_some_and(|rest| rest.as_implicit_rest_node().is_none()) { return; }
         left.extend(node.rights().iter());
         return_if!(left.len() <= 1);

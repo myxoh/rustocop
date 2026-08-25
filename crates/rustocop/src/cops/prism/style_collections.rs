@@ -22,35 +22,42 @@ impl Cop for ArrayFirstLast {
         _source: &str,
         context: &mut Context,
     ) {
-        if let Some(write) = node.as_index_operator_write_node() {
-            let Some(arguments) = write.arguments() else {
-                return;
+        macro_rules! check_index_write {
+            ($cast:ident) => {
+                if let Some(write) = node.$cast() {
+                    let Some(arguments) = write.arguments() else {
+                        return;
+                    };
+                    let arguments = arguments.arguments();
+                    if arguments.len() != 1 {
+                        return;
+                    }
+                    let argument = arguments.iter().next().expect("one index argument");
+                    let Some(value) = integer_value(&argument) else {
+                        return;
+                    };
+                    let preferred = match value {
+                        0 => "first",
+                        -1 => "last",
+                        _ => return,
+                    };
+                    let opening = write.opening_loc();
+                    let closing = write.closing_loc();
+                    let offense = opening.start_offset()..closing.end_offset();
+                    context.replace(
+                        self.name(),
+                        format!("Use `{preferred}`."),
+                        offense.clone(),
+                        offense,
+                        format!(".{preferred}"),
+                    );
+                    return;
+                }
             };
-            let arguments = arguments.arguments();
-            if arguments.len() != 1 {
-                return;
-            }
-            let argument = arguments.iter().next().expect("one index argument");
-            let Some(value) = integer_value(&argument) else {
-                return;
-            };
-            let preferred = match value {
-                0 => "first",
-                -1 => "last",
-                _ => return,
-            };
-            let opening = write.opening_loc();
-            let closing = write.closing_loc();
-            let offense = opening.start_offset()..closing.end_offset();
-            context.replace(
-                self.name(),
-                format!("Use `{preferred}`."),
-                offense.clone(),
-                offense,
-                format!(".{preferred}"),
-            );
-            return;
         }
+        check_index_write!(as_index_operator_write_node);
+        check_index_write!(as_index_or_write_node);
+        check_index_write!(as_index_and_write_node);
 
         let Some(call) = node.as_call_node() else {
             return;

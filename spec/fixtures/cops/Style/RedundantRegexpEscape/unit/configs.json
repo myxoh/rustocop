@@ -1,3 +1,4 @@
 {
+  "065a12b5031200c1": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\n",
   "52883d67a0b73f82": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/RedundantRegexpEscape:\n  Description: Checks for redundant escapes in Regexps.\n  Enabled: true\n  VersionAdded: '0.85'\n  AutoCorrect: always\n"
 }

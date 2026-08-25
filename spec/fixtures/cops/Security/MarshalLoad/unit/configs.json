@@ -1,5 +1,6 @@
 {
   "01f1a789e5b330de": "--- {}\n",
+  "065a12b5031200c1": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\n",
   "77c39c64bd272713": "---\nAllCops:\n  TargetRubyVersion: '2.7'\n",
   "efe7614dc3acd51f": "---\nAllCops:\n  TargetRubyVersion: 2.7\nSecurity/MarshalLoad:\n  Description: Avoid using of `Marshal.load` or `Marshal.restore` due to potential\n    security issues. See reference for more information.\n  References:\n  - https://ruby-doc.org/core-2.7.0/Marshal.html#module-Marshal-label-Security+considerations\n  Enabled: true\n  VersionAdded: '0.47'\n  AutoCorrect: always\n"
 }

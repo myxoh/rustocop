@@ -1,3 +1,4 @@
 {
+  "065a12b5031200c1": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\n",
   "a716ca658b7befec": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/MultilineWhenThen:\n  Description: Do not use then for multi-line when statement.\n  StyleGuide: \"#no-then\"\n  Enabled: true\n  VersionAdded: '0.73'\n  AutoCorrect: always\n"
 }

@@ -27,20 +27,65 @@ define_node_cop!(ShadowedException => "Lint/ShadowedException" => as_rescue_node
 define_any_node_cop!(ConstantDefinitionInBlock => "Lint/ConstantDefinitionInBlock" => constant_in_block);
 
 fn ambiguous_assignment(context: &mut CopContext<'_, '_>) {
-    for (needle, operator) in [("=-", "-"), ("=+", "+"), ("=*", "*"), ("=!", "!")] {
-        for start in context.source_file().code_offsets(needle) {
-            if !context.source().as_bytes()[..start]
-                .last()
-                .is_some_and(|byte| byte.is_ascii_whitespace())
-            {
-                continue;
+    struct AssignmentOperators<'pr>(Vec<ruby_prism::Location<'pr>>);
+
+    macro_rules! assignment_callback {
+        ($method:ident, $node:ty, $walk:path) => {
+            fn $method(&mut self, node: &$node) {
+                self.0.push(node.operator_loc());
+                $walk(self, node);
             }
-            if needle == "=!" && context.source().as_bytes().get(start + 2) == Some(&b'!') {
-                continue;
-            }
+        };
+    }
+
+    impl<'pr> ruby_prism::Visit<'pr> for AssignmentOperators<'pr> {
+        assignment_callback!(
+            visit_local_variable_write_node,
+            ruby_prism::LocalVariableWriteNode<'pr>,
+            ruby_prism::visit_local_variable_write_node
+        );
+        assignment_callback!(
+            visit_instance_variable_write_node,
+            ruby_prism::InstanceVariableWriteNode<'pr>,
+            ruby_prism::visit_instance_variable_write_node
+        );
+        assignment_callback!(
+            visit_class_variable_write_node,
+            ruby_prism::ClassVariableWriteNode<'pr>,
+            ruby_prism::visit_class_variable_write_node
+        );
+        assignment_callback!(
+            visit_global_variable_write_node,
+            ruby_prism::GlobalVariableWriteNode<'pr>,
+            ruby_prism::visit_global_variable_write_node
+        );
+        assignment_callback!(
+            visit_constant_write_node,
+            ruby_prism::ConstantWriteNode<'pr>,
+            ruby_prism::visit_constant_write_node
+        );
+        assignment_callback!(
+            visit_constant_path_write_node,
+            ruby_prism::ConstantPathWriteNode<'pr>,
+            ruby_prism::visit_constant_path_write_node
+        );
+    }
+
+    let parsed = ruby_prism::parse(context.source().as_bytes());
+    let mut operators = AssignmentOperators(Vec::new());
+    operators.visit(&parsed.node());
+    for operator_loc in operators.0 {
+        let start = operator_loc.start_offset();
+        let Some(source) = context.source().get(start..start + 2) else {
+            continue;
+        };
+        if let Some(replacement) = [("=-", "-="), ("=+", "+="), ("=*", "*="), ("=!", "!=")]
+            .into_iter()
+            .find_map(|(mistake, replacement)| (source == mistake).then_some(replacement))
+        {
             context.report(
-                format!("Suspicious assignment detected. Did you mean `{operator}=`?"),
-                start..start + needle.len(),
+                format!("Suspicious assignment detected. Did you mean `{replacement}`?"),
+                start..start + 2,
             );
         }
     }

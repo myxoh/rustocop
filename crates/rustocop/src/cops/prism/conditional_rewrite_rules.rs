@@ -198,6 +198,7 @@ impl RedundantConditionRule<'_, '_, '_> {
 
 fn predicate_call(node: &Node<'_>, context: &CopContext<'_, '_>) -> bool {
     let Some(call) = node.as_call_node() else { return false };
+    if call.block().is_some() { return false; }
     let name = String::from_utf8_lossy(call.name().as_slice());
     if !name.ends_with('?') { return false; }
     let allowed = context.config_values("AllowedMethods");

@@ -1,4 +1,5 @@
 {
+  "065a12b5031200c1": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\n",
   "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
   "bd65d3317b203bb6": "---\nAllCops:\n  TargetRubyVersion: 3.3\nLint/Syntax:\n  Description: Checks for syntax errors.\n  Enabled: true\n  VersionAdded: '0.9'\n  AutoCorrect: always\n"
 }

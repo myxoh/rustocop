@@ -232,6 +232,12 @@ impl Cop for MarshalLoad {
             return;
         }
 
+        if node
+            .arguments()
+            .is_none_or(|arguments| arguments.arguments().len() != 1)
+        {
+            return;
+        }
         let Some(argument) = first_argument(node) else {
             return;
         };

@@ -219,6 +219,15 @@ fn multiline_when_then(node: &WhenNode<'_>, context: &mut CopContext<'_, '_>) {
     let Some(last_condition) = node.conditions().last() else {
         return;
     };
+    let Some(first_condition) = node.conditions().first() else {
+        return;
+    };
+    if !context.source_file().same_line(
+        first_condition.location().start_offset(),
+        last_condition.location().end_offset(),
+    ) {
+        return;
+    }
     check_multiline_then(
         &last_condition,
         node.statements().and_then(|body| body.body().first()),

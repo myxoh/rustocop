@@ -97,7 +97,11 @@ fn case_equality(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     else {
         return;
     };
-    if receiver.as_regular_expression_node().is_some() {
+    if receiver.as_regular_expression_node().is_some()
+        || receiver.as_interpolated_regular_expression_node().is_some()
+        || receiver.as_match_last_line_node().is_some()
+        || receiver.as_interpolated_match_last_line_node().is_some()
+    {
         return;
     }
     let receiver_source = context.source_file().node(&receiver).to_string();

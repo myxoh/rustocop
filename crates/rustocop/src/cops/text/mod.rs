@@ -38,7 +38,6 @@ pub(crate) const LEGACY_COP_NAMES: &[&str] = &[
     "Style/ConditionalAssignment",
     "Style/Documentation",
     "Style/DoubleCopDisableDirective",
-    "Style/EndBlock",
     "Style/FrozenStringLiteralComment",
     "Style/GuardClause",
     "Style/HashSyntax",

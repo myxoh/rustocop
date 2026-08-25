@@ -201,10 +201,19 @@ rescue SystemExit => error
 end
 
 def input_key(test_case)
-  JSON.generate(test_case.slice(
-    "cop", "selection", "source", "path", "ruby_version", "parser_engine",
-    "default_external_encoding", "default_internal_encoding", "config", "file_mode", "lsp"
-  ))
+  JSON.generate(
+    "cop" => test_case.fetch("cop"),
+    "selection" => test_case["selection"],
+    "source" => test_case.fetch("source"),
+    "path" => test_case.fetch("path"),
+    "ruby_version" => test_case.fetch("ruby_version"),
+    "parser_engine" => test_case.fetch("parser_engine"),
+    "default_external_encoding" => test_case.fetch("default_external_encoding"),
+    "default_internal_encoding" => test_case["default_internal_encoding"],
+    "config" => test_case.fetch("config"),
+    "file_mode" => test_case["file_mode"],
+    "lsp" => test_case.fetch("lsp", false)
+  )
 end
 
 def imported_capture_cases

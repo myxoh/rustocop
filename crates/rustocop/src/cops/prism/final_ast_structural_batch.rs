@@ -1,5 +1,7 @@
 use super::catalog_cop::custom;
 use super::*;
+use crate::rubocop::ast::node::core::NodeRef as RubocopNodeRef;
+use crate::rubocop::ast::prism::convert as convert_rubocop_ast;
 use std::collections::{HashMap, HashSet};
 
 mod registry;
@@ -2126,261 +2128,229 @@ fn range_hash_receiver(node: &Node<'_>) -> bool {
 
 fn useless_access_modifier(context: &mut CopContext<'_, '_>) {
     let parsed = parse(context.source().as_bytes());
-    let mut collector = AccessModifierScopeCollector {
+    let (ast, root) = convert_rubocop_ast(context.source(), &parsed.node());
+    let Some(root) = root.map(|root| ast.node(root)) else {
+        return;
+    };
+    let mut checker = UselessAccessModifierChecker {
         context_creating: context.config_values("ContextCreatingMethods").to_vec(),
+        method_creating: context.config_values("MethodCreatingMethods").to_vec(),
         active_support: context.related_config_value("AllCops", "ActiveSupportExtensionsEnabled")
             == Some("true"),
-        scopes: Vec::new(),
+        reported: HashSet::new(),
+        context,
     };
-    collector.visit(&parsed.node());
-    for (statements, root) in collector.scopes {
-        inspect_access_modifier_scope(&statements, root, context);
-    }
+    checker.check(root);
 }
 
-struct AccessModifierScopeCollector<'pr> {
+struct UselessAccessModifierChecker<'context, 'config, 'source> {
     context_creating: Vec<String>,
+    method_creating: Vec<String>,
     active_support: bool,
-    scopes: Vec<(ruby_prism::StatementsNode<'pr>, bool)>,
+    reported: HashSet<std::ops::Range<usize>>,
+    context: &'context mut CopContext<'config, 'source>,
 }
 
-impl<'pr> Visit<'pr> for AccessModifierScopeCollector<'pr> {
-    fn visit_program_node(&mut self, node: &ruby_prism::ProgramNode<'pr>) {
-        self.scopes.push((node.statements(), true));
-        ruby_prism::visit_program_node(self, node);
-    }
-
-    fn visit_class_node(&mut self, node: &ruby_prism::ClassNode<'pr>) {
-        if let Some(statements) = node.body().and_then(|body| body.as_statements_node()) {
-            self.scopes.push((statements, false));
-        }
-        ruby_prism::visit_class_node(self, node);
-    }
-
-    fn visit_module_node(&mut self, node: &ruby_prism::ModuleNode<'pr>) {
-        if let Some(statements) = node.body().and_then(|body| body.as_statements_node()) {
-            self.scopes.push((statements, false));
-        }
-        ruby_prism::visit_module_node(self, node);
-    }
-
-    fn visit_singleton_class_node(&mut self, node: &ruby_prism::SingletonClassNode<'pr>) {
-        if let Some(statements) = node.body().and_then(|body| body.as_statements_node()) {
-            self.scopes.push((statements, false));
-        }
-        ruby_prism::visit_singleton_class_node(self, node);
-    }
-
-    fn visit_block_node(&mut self, node: &ruby_prism::BlockNode<'pr>) {
-        let qualifies = node.as_node().location();
-        let _ = qualifies;
-        ruby_prism::visit_block_node(self, node);
-    }
-
-    fn visit_call_node(&mut self, node: &CallNode<'pr>) {
-        let method = String::from_utf8_lossy(call_name(node));
-        let qualifying = matches!(
-            method.as_ref(),
-            "class_eval" | "instance_eval" | "new" | "define"
-        ) || self
-            .context_creating
-            .iter()
-            .any(|configured| configured == method.as_ref())
-            || self.active_support && method == "included";
-        if qualifying {
-            if let Some(block) = node.block().and_then(|block| block.as_block_node()) {
-                if let Some(statements) = block.body().and_then(|body| body.as_statements_node()) {
-                    self.scopes.push((statements, false));
+impl UselessAccessModifierChecker<'_, '_, '_> {
+    fn check(&mut self, root: RubocopNodeRef<'_>) {
+        if root.kind() == "begin" {
+            for child in root.child_nodes() {
+                if access_modifier(child) {
+                    self.report(child);
                 }
             }
         }
-        ruby_prism::visit_call_node(self, node);
-    }
-}
 
-fn inspect_access_modifier_scope(
-    statements: &ruby_prism::StatementsNode<'_>,
-    root: bool,
-    context: &mut CopContext<'_, '_>,
-) {
-    let mut visibility = "public".to_string();
-    let mut unused: Option<(String, std::ops::Range<usize>)> = None;
-    inspect_access_modifier_statements(statements, root, &mut visibility, &mut unused, context);
-    if let Some((method, location)) = unused {
-        report_useless_modifier(&method, location, context);
-    }
-}
-
-fn inspect_access_modifier_statements(
-    statements: &ruby_prism::StatementsNode<'_>,
-    root: bool,
-    visibility: &mut String,
-    unused: &mut Option<(String, std::ops::Range<usize>)>,
-    context: &mut CopContext<'_, '_>,
-) {
-    for child in statements.body().iter() {
-        if let Some(call) = child.as_call_node() {
-            let method = String::from_utf8_lossy(call_name(&call)).into_owned();
-            let bare = call.receiver().is_none()
-                && argument_count(&call) == 0
-                && call.block().is_none()
-                && matches!(method.as_str(), "private" | "protected" | "public");
-            let private_class = call.receiver().is_none()
-                && call.block().is_none()
-                && method == "private_class_method";
-            if bare || private_class {
-                let location = call.location().start_offset()..call.location().end_offset();
-                if root || private_class && argument_count(&call) == 0 {
-                    report_useless_modifier(&method, location, context);
-                    continue;
-                }
-                if private_class {
-                    *visibility = "public".to_string();
-                    *unused = None;
-                    continue;
-                }
-                if method == *visibility {
-                    report_useless_modifier(&method, location, context);
-                } else {
-                    if let Some((previous, location)) = unused.take() {
-                        report_useless_modifier(&previous, location, context);
-                    }
-                    *visibility = method.clone();
-                    *unused = Some((method, location));
-                }
-                continue;
-            }
-        }
-        if let Some(begin) = child.as_begin_node() {
-            if let Some(nested) = begin.statements() {
-                inspect_access_modifier_statements(&nested, root, visibility, unused, context);
-                continue;
-            }
-        }
-        if let Some(call) = child.as_call_node() {
-            if root {
-                continue;
-            }
-            let method = String::from_utf8_lossy(call_name(&call));
-            let active_included = method == "included"
-                && context.related_config_value("AllCops", "ActiveSupportExtensionsEnabled")
-                    == Some("true");
-            let new_scope = matches!(
-                method.as_ref(),
-                "class_eval" | "instance_eval" | "new" | "define"
-            ) || context
-                .config_values("ContextCreatingMethods")
-                .iter()
-                .any(|configured| configured == method.as_ref())
-                || active_included;
-            if !new_scope {
-                if let Some(statements) = call
-                    .block()
-                    .and_then(|block| block.as_block_node())
-                    .and_then(|block| block.body())
-                    .and_then(|body| body.as_statements_node())
+        for node in root.each_node(&[]) {
+            match node.kind() {
+                "class" | "module" | "sclass" => self.check_node(node.body()),
+                "block" | "numblock" | "itblock"
+                    if self.eval_call(node) || self.included_block(node) =>
                 {
-                    inspect_access_modifier_statements(
-                        &statements,
-                        root,
-                        visibility,
-                        unused,
-                        context,
-                    );
+                    self.check_node(node.body());
                 }
+                _ => {}
             }
         }
-        if access_node_defines_instance_method(&child, context) {
-            *unused = None;
+    }
+
+    fn check_node(&mut self, node: Option<RubocopNodeRef<'_>>) {
+        let Some(node) = node else { return };
+        if node.kind() == "begin" {
+            self.check_scope(node);
+        } else if bare_access_modifier(node) {
+            self.report(node);
         }
     }
-}
 
-fn access_node_defines_instance_method(node: &Node<'_>, context: &CopContext<'_, '_>) -> bool {
-    if let Some(definition) = node.as_def_node() {
-        return definition.receiver().is_none();
+    fn check_scope(&mut self, node: RubocopNodeRef<'_>) {
+        let (_, unused) = self.check_child_nodes(node, None, "public");
+        if let Some(unused) = unused {
+            self.report(unused);
+        }
     }
-    if node.as_class_node().is_some()
-        || node.as_module_node().is_some()
-        || node.as_singleton_class_node().is_some()
-    {
-        return false;
+
+    fn check_child_nodes<'ast>(
+        &mut self,
+        node: RubocopNodeRef<'ast>,
+        mut unused: Option<RubocopNodeRef<'ast>>,
+        mut visibility: &'ast str,
+    ) -> (&'ast str, Option<RubocopNodeRef<'ast>>) {
+        for child in node.child_nodes() {
+            if access_modifier(child) {
+                if bare_access_modifier(child) {
+                    let new_visibility = child.method_name().unwrap_or("public");
+                    if new_visibility == visibility {
+                        self.report(child);
+                    } else {
+                        if let Some(previous) = unused {
+                            self.report(previous);
+                        }
+                        visibility = new_visibility;
+                        unused = Some(child);
+                    }
+                } else if child.method_name() == Some("private_class_method") {
+                    if child.arguments().is_empty() {
+                        self.report(child);
+                    } else {
+                        // RuboCop's parallel assignment receives `nil` from
+                        // check_send_node for the argument-taking form.
+                        visibility = "";
+                        unused = None;
+                    }
+                }
+            } else if self.included_block(child) {
+                continue;
+            } else if self.method_definition(child) {
+                unused = None;
+            } else if self.start_of_new_scope(child) {
+                self.check_scope(child);
+            } else if child.kind() != "defs" {
+                (visibility, unused) = self.check_child_nodes(child, unused, visibility);
+            }
+        }
+        (visibility, unused)
     }
-    if let Some(call) = node.as_call_node() {
-        if call.receiver().is_none()
-            && (matches!(
-                call_name(&call),
-                b"attr" | b"attr_reader" | b"attr_writer" | b"attr_accessor" | b"define_method"
-            ) || context
-                .config_values("MethodCreatingMethods")
-                .iter()
-                .any(|method| method.as_bytes() == call_name(&call)))
-        {
+
+    fn method_definition(&self, node: RubocopNodeRef<'_>) -> bool {
+        if node.kind() == "def" {
             return true;
         }
-        if call.block().is_some()
-            && matches!(
-                call_name(&call),
-                b"class_eval" | b"instance_eval" | b"new" | b"define"
-            )
-        {
+        let call = match node.kind() {
+            "send" => Some(node),
+            "block" | "numblock" | "itblock" => node.send_node(),
+            _ => None,
+        };
+        let Some(call) = call.filter(|call| call.receiver().is_none()) else {
+            return false;
+        };
+        matches!(
+            call.method_name(),
+            Some("attr" | "attr_reader" | "attr_writer" | "attr_accessor" | "define_method")
+        ) || call.method_name().is_some_and(|name| {
+            name != "included" && self.method_creating.iter().any(|method| method == name)
+        })
+    }
+
+    fn start_of_new_scope(&self, node: RubocopNodeRef<'_>) -> bool {
+        matches!(node.kind(), "module" | "class" | "sclass") || self.eval_call(node)
+    }
+
+    fn eval_call(&self, node: RubocopNodeRef<'_>) -> bool {
+        if !matches!(node.kind(), "block" | "numblock" | "itblock") {
             return false;
         }
-        if call.arguments().is_some_and(|arguments| {
-            arguments
-                .arguments()
-                .iter()
-                .any(|argument| access_node_defines_instance_method(&argument, context))
-        }) {
-            return true;
+        let Some(call) = node.send_node() else {
+            return false;
+        };
+        matches!(call.method_name(), Some("class_eval" | "instance_eval"))
+            || node.class_constructor()
+            || call.method_name().is_some_and(|name| {
+                name != "included"
+                    && self.context_creating.iter().any(|method| method == name)
+                    && call
+                        .receiver()
+                        .is_none_or(|receiver| receiver.kind() == "const")
+            })
+    }
+
+    fn included_block(&self, node: RubocopNodeRef<'_>) -> bool {
+        self.active_support
+            && matches!(node.kind(), "block" | "numblock" | "itblock")
+            && node.method_name() == Some("included")
+    }
+
+    fn report(&mut self, node: RubocopNodeRef<'_>) {
+        let Some(character_range) = node.source_range() else {
+            return;
+        };
+        let location = character_range_to_byte(self.context.source(), character_range);
+        if !self.reported.insert(location.clone()) {
+            return;
         }
-        if let Some(block) = call.block().and_then(|block| block.as_block_node()) {
-            if let Some(body) = block.body() {
-                return access_node_defines_instance_method(&body, context);
-            }
-        }
+        let method = node.method_name().unwrap_or("public");
+        let line_start = self.context.source()[..location.start]
+            .rfind('\n')
+            .map_or(0, |offset| offset + 1);
+        let line_end = self.context.source()[location.end..]
+            .find('\n')
+            .map_or(self.context.source().len(), |offset| {
+                location.end + offset + 1
+            });
+        self.context.remove(
+            format!("Useless `{method}` access modifier."),
+            location,
+            line_start..line_end,
+        );
     }
-    if let Some(statements) = node.as_statements_node() {
-        return statements
-            .body()
-            .iter()
-            .any(|child| access_node_defines_instance_method(&child, context));
-    }
-    if let Some(if_node) = node.as_if_node() {
-        return if_node
-            .statements()
-            .is_some_and(|body| access_node_defines_instance_method(&body.as_node(), context))
-            || if_node
-                .subsequent()
-                .is_some_and(|body| access_node_defines_instance_method(&body, context));
-    }
-    if let Some(unless_node) = node.as_unless_node() {
-        return unless_node
-            .statements()
-            .is_some_and(|body| access_node_defines_instance_method(&body.as_node(), context))
-            || unless_node
-                .else_clause()
-                .is_some_and(|body| access_node_defines_instance_method(&body.as_node(), context));
-    }
-    false
 }
 
-fn report_useless_modifier(
-    method: &str,
-    location: std::ops::Range<usize>,
-    context: &mut CopContext<'_, '_>,
-) {
-    let line_start = context.source()[..location.start]
-        .rfind('\n')
-        .map_or(0, |offset| offset + 1);
-    let line_end = context.source()[location.end..]
-        .find('\n')
-        .map_or(context.source().len(), |offset| location.end + offset + 1);
-    context.remove(
-        format!("Useless `{method}` access modifier."),
-        location,
-        line_start..line_end,
-    );
+fn bare_access_modifier(node: RubocopNodeRef<'_>) -> bool {
+    node.kind() == "send"
+        && node.receiver().is_none()
+        && node.arguments().is_empty()
+        && matches!(node.method_name(), Some("private" | "protected" | "public"))
+        && access_modifier_macro_scope(node)
+}
+
+fn access_modifier_macro_scope(mut node: RubocopNodeRef<'_>) -> bool {
+    while let Some(parent) = node.parent() {
+        match parent.kind() {
+            "begin" | "kwbegin" => node = parent,
+            "class" | "module" | "sclass" => return parent.body() == Some(node),
+            "block" | "numblock" | "itblock" => {
+                if parent.body() != Some(node) {
+                    return false;
+                }
+                node = parent;
+            }
+            "if" => {
+                if parent.node_child(0) == Some(node) {
+                    return false;
+                }
+                node = parent;
+            }
+            _ => return false,
+        }
+    }
+    true
+}
+
+fn access_modifier(node: RubocopNodeRef<'_>) -> bool {
+    bare_access_modifier(node)
+        || node.kind() == "send"
+            && node.receiver().is_none()
+            && node.method_name() == Some("private_class_method")
+}
+
+fn character_range_to_byte(source: &str, range: std::ops::Range<usize>) -> std::ops::Range<usize> {
+    fn offset(source: &str, character: usize) -> usize {
+        source
+            .char_indices()
+            .nth(character)
+            .map_or(source.len(), |(offset, _)| offset)
+    }
+    offset(source, range.start)..offset(source, range.end)
 }
 
 struct AccessModifierDeclarations;

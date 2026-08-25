@@ -15,6 +15,10 @@ fn mixin_usage(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
             || ancestor.as_block_node().is_some()
             || ancestor.as_arguments_node().is_some()
             || ancestor.as_call_node().is_some()
+            || ancestor.as_rescue_node().is_some()
+            || ancestor
+                .as_begin_node()
+                .is_some_and(|begin| begin.rescue_clause().is_some())
     }) {
         return;
     }

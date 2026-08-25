@@ -1,4 +1,5 @@
 {
+  "065a12b5031200c1": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\n",
   "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
   "db25cfa5f89ed222": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/LineContinuationSpacing:\n  Description: Checks the spacing in front of backslash in line continuations.\n  Enabled: true\n  VersionAdded: '1.31'\n  EnforcedStyle: no_space\n  SupportedStyles:\n  - space\n  - no_space\n  AutoCorrect: always\n",
   "f884bbf5935e8db9": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/LineContinuationSpacing:\n  Description: Checks the spacing in front of backslash in line continuations.\n  Enabled: true\n  VersionAdded: '1.31'\n  EnforcedStyle: space\n  SupportedStyles:\n  - space\n  - no_space\n  AutoCorrect: always\n"

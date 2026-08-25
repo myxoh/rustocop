@@ -191,6 +191,9 @@ fn line_continuation_spacing(context: &mut CopContext<'_, '_>) {
             continue;
         }
         let slash = line.rfind('\\').unwrap_or(0);
+        if slash >= 2 && line.as_bytes()[slash - 2..slash] == *b"?\\" {
+            continue;
+        }
         if heredoc_ranges
             .iter()
             .any(|range| range.start <= offset + slash && offset + slash < range.end)

@@ -580,6 +580,14 @@ fn memoized_final_expression(body: &Node<'_>, candidate: &Node<'_>) -> bool {
         .as_statements_node()
         .and_then(|statements| statements.body().iter().last())
     {
+        if body
+            .as_statements_node()
+            .is_some_and(|statements| statements.body().len() > 1)
+            && (last.location().start_offset() != candidate.location().start_offset()
+                || last.location().end_offset() != candidate.location().end_offset())
+        {
+            return false;
+        }
         return memoized_final_expression(&last, candidate);
     }
     if let Some(block) = body.as_block_node() {
@@ -968,7 +976,7 @@ impl Cop for AssignmentInCondition {
     fn name(&self) -> &'static str { "Lint/AssignmentInCondition" }
 
     fn on_node<'pr>(&self, node: &Node<'pr>, ancestors: &[Node<'pr>], source: &str, context: &mut Context) {
-        let Some(operator) = plain_assignment_operator(node) else { return };
+        let Some(operator) = plain_assignment_operator(node, source) else { return };
         if !assignment_is_in_condition(node, ancestors) { return; }
         let mut cop_context = context.cop_context(self.name(), source, ancestors);
         let allow_safe = cop_context.config_bool("AllowSafeAssignment", true);
@@ -1005,10 +1013,13 @@ fn directly_parenthesized_assignment(node: &Node<'_>, ancestors: &[Node<'_>]) ->
     false
 }
 
-fn plain_assignment_operator<'pr>(node: &Node<'pr>) -> Option<ruby_prism::Location<'pr>> {
+fn plain_assignment_operator(node: &Node<'_>, source: &str) -> Option<std::ops::Range<usize>> {
     macro_rules! assignment {
         ($($cast:ident),+ $(,)?) => {$ (
-            if let Some(write) = node.$cast() { return Some(write.operator_loc()); }
+            if let Some(write) = node.$cast() {
+                let operator = write.operator_loc();
+                return Some(operator.start_offset()..operator.end_offset());
+            }
         )+ };
     }
     assignment!(
@@ -1019,7 +1030,17 @@ fn plain_assignment_operator<'pr>(node: &Node<'pr>) -> Option<ruby_prism::Locati
         as_constant_write_node,
         as_constant_path_write_node,
     );
-    node.as_call_node().and_then(|call| call.equal_loc())
+    if let Some(write) = node.as_multi_write_node() {
+        let start = write.location().start_offset();
+        let end = write.value().location().start_offset();
+        return source[start..end]
+            .rfind('=')
+            .map(|relative| start + relative..start + relative + 1);
+    }
+    node.as_call_node().and_then(|call| {
+        call.equal_loc()
+            .map(|operator| operator.start_offset()..operator.end_offset())
+    })
 }
 
 fn assignment_is_in_condition(node: &Node<'_>, ancestors: &[Node<'_>]) -> bool {

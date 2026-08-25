@@ -417,8 +417,13 @@ fn disabled_findings(source: &str, findings: &[Finding]) -> Vec<bool> {
                 DirectiveAction::Disable | DirectiveAction::Enable => {
                     let disabled = action == DirectiveAction::Disable;
                     if line[..comment_at].trim().is_empty() {
-                        state.update(&names, disabled);
-                        line_state = state.clone();
+                        if disabled {
+                            state.update(&names, true);
+                            line_state = state.clone();
+                        } else {
+                            line_state = state.clone();
+                            state.update(&names, false);
+                        }
                     } else {
                         line_state.update(&names, disabled);
                     }

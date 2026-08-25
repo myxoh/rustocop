@@ -90,6 +90,7 @@ fn nested_parenthesized_calls(node: &CallNode<'_>, context: &mut CopContext<'_, 
             continue;
         };
         if nested.opening_loc().is_some()
+            || nested.block().is_some()
             || call_name(&nested) == b"[]"
             || call_name(&nested).ends_with(b"=")
             || operator_method(call_name(&nested))

@@ -59,11 +59,19 @@ fn invalid_byte_syntax(context: &mut CopContext<'_, '_>) {
             .map(|error| error.location().start_offset());
         let mut seen = std::collections::HashSet::new();
         let version = context.target_ruby_version();
-        for error in errors {
+        for error in &errors {
             let location = error.location();
             let start = location.start_offset();
             let end = location.end_offset();
+            let parser_prism_suppresses_recovery_hint = error.message() == "expected a matching `]`"
+                && errors.iter().any(|other| {
+                    other.location().start_offset() == start
+                        && other.message() == "unexpected '['; expected an argument"
+                });
             if unterminated.is_some_and(|at| start > at) || !seen.insert((start, end)) {
+                continue;
+            }
+            if parser_prism_suppresses_recovery_hint {
                 continue;
             }
             let range = if start == end {
@@ -78,7 +86,7 @@ fn invalid_byte_syntax(context: &mut CopContext<'_, '_>) {
             context.report(
                 format!(
                     "{}\n(Using Ruby {}.{} parser; configure using `TargetRubyVersion` parameter, under `AllCops`)",
-                    prism_syntax_message(&error),
+                    prism_syntax_message(error),
                     version.major(),
                     version.minor()
                 ),
@@ -123,6 +131,9 @@ fn format_parameter_mismatch(node: &ruby_prism::CallNode<'_>, context: &mut CopC
             let Some(receiver) = node.receiver() else {
                 return;
             };
+            if context.source_file().node(&receiver).starts_with("<<") {
+                return;
+            }
             let Some(argument) = arguments.first() else {
                 return;
             };

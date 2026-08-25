@@ -39,6 +39,7 @@ impl QuotedSymbolsRule<'_, '_, '_> {
         } else {
             return;
         };
+        return_if!(body.is_empty());
         return_if!(body.contains('\n'));
         let style = self.quoted_symbol_style();
         let wrong = match style {
