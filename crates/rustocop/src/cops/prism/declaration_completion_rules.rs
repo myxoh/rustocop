@@ -1,4 +1,4 @@
-use ruby_prism::{CallNode, ClassNode, DefNode};
+use ruby_prism::{CallNode, ClassNode, DefNode, Node, ParametersNode, StatementsNode};
 
 use super::*;
 
@@ -160,25 +160,16 @@ fn redundant_initialize(node: &DefNode<'_>, context: &mut CopContext<'_, '_>) {
     if node.name().as_slice() != b"initialize" {
         return;
     }
-    let source = context.source_file().at(&node.location());
     let allow_comments = context.config_bool("AllowComments", true);
-    if allow_comments
-        && (source.contains('#')
-            || comments_before_next_statement(node.location().end_offset(), context.source()))
-    {
+    if allow_comments && definition_contains_allowed_comments(node, context) {
         return;
     }
-    let signature = source.lines().next().unwrap_or_default().trim();
-    let body_lines = source
-        .lines()
-        .skip(1)
-        .take(source.lines().count().saturating_sub(2))
-        .map(str::trim)
-        .filter(|line| !line.is_empty() && (allow_comments || !line.starts_with('#')))
-        .collect::<Vec<_>>();
-    let empty = node.body().is_none() && node.parameters().is_none();
-    let redundant_super =
-        body_lines.len() == 1 && super_matches_signature(signature, body_lines[0]);
+    let Some(parameters) = initialize_parameters(node) else { return };
+    let empty = node.body().is_none() && parameters.is_empty();
+    let redundant_super = node.body()
+        .and_then(|body| body.as_statements_node())
+        .and_then(|body| (body.body().len() == 1).then(|| body.body().first()).flatten())
+        .is_some_and(|body| initialize_forwards_same_arguments(&body, &parameters));
     if !empty && !redundant_super {
         return;
     }
@@ -202,39 +193,136 @@ fn redundant_initialize(node: &DefNode<'_>, context: &mut CopContext<'_, '_>) {
     context.remove(message, &location, start..end);
 }
 
-fn comments_before_next_statement(offset: usize, source: &str) -> bool {
-    source[offset..]
-        .lines()
-        .skip(1)
-        .map(str::trim)
-        .find(|line| !line.is_empty())
-        .is_some_and(|line| line.starts_with('#'))
+#[derive(Clone, Debug, Eq, PartialEq)]
+enum InitializeArgument {
+    Positional(Vec<u8>),
+    Keyword(Vec<u8>),
+    Block(Vec<u8>),
 }
 
-fn super_matches_signature(signature: &str, body: &str) -> bool {
-    let parameters = signature
-        .strip_prefix("def initialize")
-        .unwrap_or_default()
-        .trim();
-    if body == "super" {
-        return !parameters.contains('=') && !parameters.contains('*') && !parameters.contains(':');
+fn initialize_parameters(node: &DefNode<'_>) -> Option<Vec<InitializeArgument>> {
+    let Some(parameters) = node.parameters() else {
+        return Some(Vec::new());
+    };
+    simple_parameter_names(&parameters)
+}
+
+fn simple_parameter_names(parameters: &ParametersNode<'_>) -> Option<Vec<InitializeArgument>> {
+    if !parameters.optionals().is_empty()
+        || parameters.rest().is_some()
+        || parameters.keyword_rest().is_some()
+    {
+        return None;
     }
-    if body == "super()" {
-        return parameters == "()";
+    let mut names = Vec::new();
+    for parameter in parameters.requireds().iter().chain(parameters.posts().iter()) {
+        names.push(InitializeArgument::Positional(
+            parameter.as_required_parameter_node()?.name().as_slice().to_vec(),
+        ));
     }
-    let Some(super_arguments) = body
-        .strip_prefix("super(")
-        .and_then(|body| body.strip_suffix(')'))
-    else {
+    for parameter in parameters.keywords().iter() {
+        names.push(InitializeArgument::Keyword(
+            parameter.as_required_keyword_parameter_node()?.name().as_slice().to_vec(),
+        ));
+    }
+    if let Some(block) = parameters.block() {
+        names.push(InitializeArgument::Block(block.name()?.as_slice().to_vec()));
+    }
+    Some(names)
+}
+
+fn initialize_forwards_same_arguments(body: &Node<'_>, parameters: &[InitializeArgument]) -> bool {
+    if body.as_forwarding_super_node().is_some() {
+        return true;
+    }
+    let Some(super_node) = body.as_super_node() else { return false };
+    let mut forwarded = Vec::new();
+    if let Some(arguments) = super_node.arguments() {
+        for argument in arguments.arguments().iter() {
+            if let Some(read) = argument.as_local_variable_read_node() {
+                forwarded.push(InitializeArgument::Positional(read.name().as_slice().to_vec()));
+            } else if let Some(hash) = argument.as_keyword_hash_node() {
+                for element in hash.elements().iter() {
+                    let Some(pair) = element.as_assoc_node() else { return false };
+                    let Some(key) = pair.key().as_symbol_node() else { return false };
+                    let Some(value) = pair.value().as_local_variable_read_node() else { return false };
+                    if key.unescaped() != value.name().as_slice() {
+                        return false;
+                    }
+                    forwarded.push(InitializeArgument::Keyword(value.name().as_slice().to_vec()));
+                }
+            } else {
+                return false;
+            }
+        }
+    }
+    if let Some(block) = super_node.block().and_then(|block| block.as_block_argument_node()) {
+        let Some(read) = block.expression().and_then(|expression| expression.as_local_variable_read_node()) else {
+            return false;
+        };
+        forwarded.push(InitializeArgument::Block(read.name().as_slice().to_vec()));
+    }
+    forwarded == parameters
+}
+
+fn definition_contains_allowed_comments(node: &DefNode<'_>, context: &CopContext<'_, '_>) -> bool {
+    let Some(statements) = containing_statements(node, context.ancestors()) else {
         return false;
     };
-    parameters
-        .strip_prefix('(')
-        .and_then(|parameters| parameters.strip_suffix(')'))
-        .is_some_and(|parameters| {
-            parameters.split_whitespace().collect::<String>()
-                == super_arguments.split_whitespace().collect::<String>()
-        })
+    let body = statements.body().iter().collect::<Vec<_>>();
+    let Some(index) = body.iter().position(|statement| same_node(statement, &node.as_node())) else {
+        return false;
+    };
+    let end = if let Some(next) = body.get(index + 1) {
+        next.location().start_offset()
+    } else if body.len() == 1 {
+        node.location().end_offset()
+    } else {
+        node.location().start_offset()
+    };
+    let comments = &context.source()[node.location().start_offset()..end];
+    comments.lines().any(|line| {
+        let Some((_, comment)) = line.split_once('#') else { return false };
+        let directive = comment.trim_start();
+        if let Some(cops) = directive
+            .strip_prefix("rubocop:disable")
+            .or_else(|| directive.strip_prefix("rubocop:todo"))
+        {
+            !cops.split(',').map(str::trim).any(|cop| {
+                matches!(cop, "all" | "Style/RedundantInitialize")
+            })
+        } else {
+            true
+        }
+    })
+}
+
+fn containing_statements<'pr>(node: &DefNode<'pr>, ancestors: &[Node<'pr>]) -> Option<StatementsNode<'pr>> {
+    ancestors.iter().rev().find_map(|ancestor| {
+        let statements = if let Some(program) = ancestor.as_program_node() {
+            Some(program.statements())
+        } else if let Some(definition) = ancestor.as_def_node() {
+            definition.body().and_then(|body| body.as_statements_node())
+        } else if let Some(class) = ancestor.as_class_node() {
+            class.body().and_then(|body| body.as_statements_node())
+        } else if let Some(module) = ancestor.as_module_node() {
+            module.body().and_then(|body| body.as_statements_node())
+        } else if let Some(singleton) = ancestor.as_singleton_class_node() {
+            singleton.body().and_then(|body| body.as_statements_node())
+        } else if let Some(block) = ancestor.as_block_node() {
+            block.body().and_then(|body| body.as_statements_node())
+        } else if let Some(begin) = ancestor.as_begin_node() {
+            begin.statements()
+        } else {
+            None
+        }?;
+        statements.body().iter().any(|statement| same_node(&statement, &node.as_node())).then_some(statements)
+    })
+}
+
+fn same_node(left: &Node<'_>, right: &Node<'_>) -> bool {
+    left.location().start_offset() == right.location().start_offset()
+        && left.location().end_offset() == right.location().end_offset()
 }
 
 fn redundant_struct_keyword_init(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {

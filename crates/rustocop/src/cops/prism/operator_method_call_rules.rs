@@ -89,7 +89,11 @@ impl OperatorMethodCallRule<'_, '_, '_> {
         return_unless!(arguments.len() == 1);
         let rhs = &arguments[0];
         return_if!(invalid_operator_argument(rhs));
-        return_if!(node.opening_loc().is_some() && method_call_with_parenthesized_arg(rhs));
+        let super_receiver = receiver.as_super_node().is_some()
+            || receiver.as_forwarding_super_node().is_some();
+        return_if!(!super_receiver
+            && node.opening_loc().is_some()
+            && method_call_with_parenthesized_arg(rhs));
         let Some(selector) = node.message_loc() else { return };
         return_if!(matches!(node.name().as_slice(), b"~" | b"!") && selector.as_slice() != node.name().as_slice());
 
@@ -100,7 +104,9 @@ impl OperatorMethodCallRule<'_, '_, '_> {
         let rhs_source = self.source_file().node(rhs);
         let operator = String::from_utf8_lossy(node.name().as_slice());
         if chained {
-            return_if!(node.opening_loc().is_some() && method_call_with_parenthesized_arg(rhs));
+            return_if!(!super_receiver
+                && node.opening_loc().is_some()
+                && method_call_with_parenthesized_arg(rhs));
             let replacement = format!("({receiver_source} {operator} {rhs_source})");
             add_offense!(self, dot, message: "Redundant dot detected.", |corrector| {
                 corrector.replace(node.location(), replacement);

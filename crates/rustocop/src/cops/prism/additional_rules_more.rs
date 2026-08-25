@@ -5,7 +5,6 @@ declare_source_cops! {
     LeadingEmptyLines => "Layout/LeadingEmptyLines" => leading_empty_lines,
     EmptyBlockParameter => "Style/EmptyBlockParameter" => empty_block_parameter,
     TripleQuotes => "Lint/TripleQuotes" => triple_quotes,
-    UriEscapeUnescape => "Lint/UriEscapeUnescape" => uri_escape_unescape,
     OrAssignmentToConstant => "Lint/OrAssignmentToConstant" => or_assignment_to_constant,
     OrderedMagicComments => "Lint/OrderedMagicComments" => ordered_magic_comments,
 }
@@ -107,35 +106,6 @@ fn triple_quotes(source: &str, reporter: &mut Reporter<'_>) {
             start = end;
         } else {
             start += run;
-        }
-    }
-}
-
-fn uri_escape_unescape(source: &str, reporter: &mut Reporter<'_>) {
-    if !reporter.config_bool("Enabled", true)
-        || reporter.related_config_value("AllCops", "DisabledByDefault") == Some("true")
-            && !reporter.related_config_explicit("Lint/UriEscapeUnescape", "Enabled")
-    {
-        return;
-    }
-    for method in ["escape", "encode", "unescape", "decode"] {
-        for prefix in ["::URI.", "URI."] {
-            let needle = format!("{prefix}{method}(");
-            for start in all_offsets(source, &needle) {
-                if prefix == "URI." && start >= 2 && &source[start - 2..start] == "::" {
-                    continue;
-                }
-                let Some(close) = source[start..].find(')') else {
-                    continue;
-                };
-                let end = start + close + 1;
-                let alternatives = if matches!(method, "escape" | "encode") {
-                    "`CGI.escape`, `URI.encode_www_form` or `URI.encode_www_form_component`"
-                } else {
-                    "`CGI.unescape`, `URI.decode_www_form` or `URI.decode_www_form_component`"
-                };
-                reporter.report(format!("`{prefix}{method}` method is obsolete and should not be used. Instead, use {alternatives} depending on your specific use case."), start..end);
-            }
         }
     }
 }

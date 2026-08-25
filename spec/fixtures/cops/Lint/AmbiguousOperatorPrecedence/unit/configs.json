@@ -1,4 +1,5 @@
 {
   "2112a9a80427db2e": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/AmbiguousOperatorPrecedence:\n  Description: Checks for expressions containing multiple binary operations with ambiguous\n    precedence.\n  Enabled: true\n  VersionAdded: '1.21'\n  AutoCorrect: always\n",
-  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n"
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
+  "fa7c89a5d7567724": "---\nAllCops:\n  DisabledByDefault: true\n  ParserEngine: parser_prism\n  TargetRubyVersion: 3.4\nLint/AmbiguousOperatorPrecedence:\n  Enabled: true\n"
 }

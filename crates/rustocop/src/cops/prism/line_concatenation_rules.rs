@@ -63,5 +63,8 @@ fn next_line_starts_string(source: &str, line_end: usize) -> bool {
     trailing.is_empty()
         || trailing.starts_with('+')
         || trailing.starts_with("<<")
+        || trailing == "do"
+        || trailing.starts_with("do ")
+        || trailing.starts_with('{')
         || trailing.starts_with([')', ']', '}', ',', ';'])
 }

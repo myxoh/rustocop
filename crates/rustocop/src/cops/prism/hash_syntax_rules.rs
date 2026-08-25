@@ -3,7 +3,7 @@ use ruby_prism::{AssocNode, HashNode, Node};
 use super::*;
 
 define_cops! {
-    HashSyntax => "Style/HashSyntax" => recovery_rubocop_callbacks(HashSyntaxRule, [on_hash, on_keyword_hash]),
+    HashSyntax => "Style/HashSyntax" => rubocop_callbacks(HashSyntaxRule, [on_hash, on_keyword_hash]),
 }
 
 impl HashSyntaxRule<'_, '_, '_> {
@@ -168,7 +168,11 @@ impl HashSyntaxRule<'_, '_, '_> {
 fn is_rocket(pair: &AssocNode<'_>) -> bool { pair.operator_loc().is_some_and(|operator| operator.as_slice() == b"=>") }
 
 fn convertible_symbol(pair: &AssocNode<'_>, file: SourceFile<'_>, prefer_rockets: bool, version: crate::config::RubyVersion) -> bool {
-    let Some(symbol) = pair.key().as_symbol_node() else { return false };
+    let key = pair.key();
+    if key.as_interpolated_symbol_node().is_some() {
+        return version.at_least(2, 2);
+    }
+    let Some(symbol) = key.as_symbol_node() else { return false };
     let source = file.node(&symbol.as_node()).trim_start_matches(':').trim_end_matches(':');
     if prefer_rockets && source.ends_with(['?', '!']) { return false; }
     let quoted = (source.starts_with('"') && source.ends_with('"')) || (source.starts_with('\'') && source.ends_with('\''));

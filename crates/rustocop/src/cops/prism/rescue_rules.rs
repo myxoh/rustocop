@@ -111,10 +111,12 @@ fn useless_rescue(node: &ruby_prism::RescueNode<'_>, context: &mut CopContext<'_
         let used_in_ensure = context.ancestors().iter().rev().any(|ancestor| {
             ancestor.as_begin_node().is_some_and(|begin| {
                 begin.ensure_clause().is_some_and(|ensure_clause| {
-                    context
-                        .source_file()
-                        .at(&ensure_clause.location())
-                        .contains(reference)
+                    let mut finder = LocalReadFinder {
+                        name: reference.as_bytes(),
+                        found: false,
+                    };
+                    finder.visit(&ensure_clause.as_node());
+                    finder.found
                 })
             })
         });
@@ -123,4 +125,15 @@ fn useless_rescue(node: &ruby_prism::RescueNode<'_>, context: &mut CopContext<'_
         }
     }
     context.report("Useless `rescue` detected.", node.location());
+}
+
+struct LocalReadFinder<'a> {
+    name: &'a [u8],
+    found: bool,
+}
+
+impl<'pr> Visit<'pr> for LocalReadFinder<'_> {
+    fn visit_local_variable_read_node(&mut self, node: &ruby_prism::LocalVariableReadNode<'pr>) {
+        self.found |= node.name().as_slice() == self.name;
+    }
 }

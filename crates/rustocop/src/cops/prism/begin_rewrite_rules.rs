@@ -19,8 +19,7 @@ impl RedundantBeginRule<'_, '_, '_> {
         let statements = node.statements().map(|statements| statements.body().iter().collect::<Vec<_>>()).unwrap_or_default();
         return_if!(statements.is_empty());
         let parent = semantic_begin_parent(self.ancestors());
-        let direct_body = self.ancestors().iter().rev().find_map(Node::as_statements_node)
-            .is_some_and(|body| body.body().len() == 1);
+        let direct_body = parent.is_some_and(|parent| parent_has_only_begin(parent, node));
         let assignment = parent.filter(|parent| parent.as_def_node().is_none())
             .and_then(|parent| assignment_around_begin(parent, begin_keyword.start_offset(), self.source_file()));
         return_if!(assignment.is_some() && statements.len() != 1);
@@ -29,21 +28,24 @@ impl RedundantBeginRule<'_, '_, '_> {
                 || parent.as_and_node().is_some()
                 || parent.as_or_node().is_some()
         }));
-        return_if!(self.ancestors().iter().any(|ancestor| ancestor.as_lambda_node().is_some()));
+        return_if!(direct_block_is_lambda(self.ancestors()));
 
         let endless_definition = parent.and_then(Node::as_def_node).is_some_and(|definition| definition.equal_loc().is_some());
         let direct_definition = direct_body && parent.is_some_and(|parent| parent.as_def_node().is_some()) && !endless_definition;
         let direct_block = parent.and_then(Node::as_block_node).is_some_and(|block| {
             direct_body && block.opening_loc().as_slice() == b"do" && self.target_ruby_version().at_least(2, 5)
         });
-        let direct_branch = parent.is_some_and(branch_or_loop_parent);
+        let direct_branch = direct_body && parent.is_some_and(branch_or_loop_parent);
         let modifier_parent = parent.and_then(modifier_parent_parts)
             .filter(|(_, keyword, _)| keyword.start_offset() > begin_keyword.start_offset());
         return_if!(modifier_parent.is_some() && statements.len() > 1);
         return_if!(parent.and_then(Node::as_while_node).is_some_and(|loop_node| loop_node.keyword_loc().start_offset() > begin_keyword.start_offset())
             || parent.and_then(Node::as_until_node).is_some_and(|loop_node| loop_node.keyword_loc().start_offset() > begin_keyword.start_offset()));
         let top_level = parent.is_some_and(|parent| parent.as_program_node().is_some());
-        if (node.rescue_clause().is_some() || node.ensure_clause().is_some())
+        let contains_rescue_or_ensure = node.rescue_clause().is_some()
+            || node.ensure_clause().is_some()
+            || statements.first().is_some_and(|statement| statement.as_rescue_modifier_node().is_some());
+        if contains_rescue_or_ensure
             && !(direct_definition || direct_block)
         {
             return;
@@ -129,6 +131,51 @@ fn branch_or_loop_parent(node: &Node<'_>) -> bool {
         || node.as_while_node().is_some() || node.as_until_node().is_some()
         || node.as_when_node().is_some() || node.as_in_node().is_some()
         || node.as_else_node().is_some()
+}
+
+fn parent_has_only_begin(parent: &Node<'_>, begin: &BeginNode<'_>) -> bool {
+    let statements = if let Some(program) = parent.as_program_node() {
+        Some(program.statements())
+    } else if let Some(definition) = parent.as_def_node() {
+        definition.body().and_then(|body| body.as_statements_node())
+    } else if let Some(block) = parent.as_block_node() {
+        block.body().and_then(|body| body.as_statements_node())
+    } else if let Some(condition) = parent.as_if_node() {
+        condition.statements()
+    } else if let Some(condition) = parent.as_unless_node() {
+        condition.statements()
+    } else if let Some(branch) = parent.as_when_node() {
+        branch.statements()
+    } else if let Some(branch) = parent.as_in_node() {
+        branch.statements()
+    } else if let Some(branch) = parent.as_else_node() {
+        branch.statements()
+    } else if let Some(loop_node) = parent.as_while_node() {
+        loop_node.statements()
+    } else if let Some(loop_node) = parent.as_until_node() {
+        loop_node.statements()
+    } else {
+        None
+    };
+    statements.is_some_and(|statements| {
+        let body = statements.body();
+        body.len() == 1
+            && body.first().is_some_and(|child| {
+                child.location().start_offset() == begin.location().start_offset()
+                    && child.location().end_offset() == begin.location().end_offset()
+            })
+    })
+}
+
+fn direct_block_is_lambda(ancestors: &[Node<'_>]) -> bool {
+    let mut semantic = ancestors
+        .iter()
+        .rev()
+        .filter(|node| node.as_statements_node().is_none());
+    if semantic.next().is_none_or(|node| node.as_block_node().is_none()) {
+        return false;
+    }
+    semantic.next().is_some_and(|node| node.as_lambda_node().is_some())
 }
 
 fn modifier_parent_parts<'pr>(node: &Node<'pr>) -> Option<(std::ops::Range<usize>, ruby_prism::Location<'pr>, Node<'pr>)> {

@@ -116,10 +116,11 @@ fn file_expand_path(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) -> bo
         return false;
     }
     let path = String::from_utf8_lossy(path.unescaped());
-    let components = if path.is_empty() {
+    let normalized_path = path.trim_end_matches('/');
+    let components = if normalized_path.is_empty() {
         Vec::new()
     } else {
-        path.split('/').collect::<Vec<_>>()
+        normalized_path.split('/').collect::<Vec<_>>()
     };
     let depth = components.iter().filter(|part| **part != ".").count();
     let mut parent_parts = components

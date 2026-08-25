@@ -5,9 +5,6 @@ declare_source_cops! {
 }
 
 fn heredoc_method_call_position(source: &str, reporter: &mut Reporter<'_>) {
-    if !reporter.config_bool("Enabled", true) {
-        return;
-    }
     let lines = SourceFile::new(source)
         .lines()
         .map(|(start, line)| {
@@ -20,13 +17,14 @@ fn heredoc_method_call_position(source: &str, reporter: &mut Reporter<'_>) {
     let message =
         "Put a method call with a HEREDOC receiver on the same line as the HEREDOC opening.";
 
+    let mut heredoc_body_end = None;
     for (index, (opening_start, _, opening_line)) in lines.iter().enumerate() {
+        if heredoc_body_end.is_some_and(|end| index <= end) {
+            continue;
+        }
         let Some((terminator, marker_end)) = heredoc_marker(opening_line) else {
             continue;
         };
-        if opening_line[marker_end..].contains('.') || opening_line[marker_end..].contains("&.") {
-            continue;
-        }
         let Some(terminator_index) = lines[index + 1..]
             .iter()
             .position(|(_, _, line)| line.trim() == terminator)
@@ -34,15 +32,27 @@ fn heredoc_method_call_position(source: &str, reporter: &mut Reporter<'_>) {
         else {
             continue;
         };
+        // Heredoc-looking Ruby inside an outer heredoc is string data. Remember
+        // the lexical body even when the outer opening itself cannot offend.
+        heredoc_body_end = Some(terminator_index);
+        let opening_suffix = &opening_line[marker_end..];
+        if opening_suffix.contains('.')
+            || opening_suffix.contains("&.")
+            || opening_suffix.contains(')')
+        {
+            continue;
+        }
         let Some((call_start, call_end, call_line)) = lines.get(terminator_index + 1) else {
             continue;
         };
-        let indentation = call_line.len() - call_line.trim_start().len();
         let call = call_line.trim_start();
         if !call.starts_with('.') && !call.starts_with("&.") {
             continue;
         }
-        let offense = call_start + indentation..call_start + indentation + 1;
+        // RuboCop's parser-prism compatibility location for this particular
+        // call operator starts at the continuation line, not at the visible
+        // dot after its indentation.
+        let offense = *call_start..call_start + 1;
         let continuation = lines.get(terminator_index + 2).is_some_and(|(_, _, line)| {
             let line = line.trim_start();
             line.starts_with('.') || line.starts_with("&.")

@@ -27,7 +27,6 @@ fn assignment_indentation(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
         .find('\n')
         .map_or(source.len(), |at| assignment_line_start + at);
     if assignment_line_start == value_line_start
-        || !source[node_start..value_start].trim_end().ends_with('=')
         || !source[assignment_line_start..assignment_line_end].is_ascii()
     {
         return;
@@ -137,7 +136,13 @@ fn assignment_value<'pr>(node: &Node<'pr>) -> Option<Node<'pr>> {
         Some(write.value())
     } else if let Some(write) = node.as_call_operator_write_node() {
         Some(write.value())
-    } else { node.as_index_operator_write_node().map(|write| write.value()) }
+    } else if let Some(write) = node.as_index_operator_write_node() {
+        Some(write.value())
+    } else if let Some(call) = node.as_call_node().filter(|call| call.equal_loc().is_some()) {
+        call.arguments()?.arguments().iter().last()
+    } else {
+        None
+    }
 }
 
 fn begin_end_alignment(node: &ruby_prism::BeginNode<'_>, context: &mut CopContext<'_, '_>) {

@@ -81,14 +81,15 @@ fn multiple_comparison(node: &ruby_prism::OrNode<'_>, context: &mut CopContext<'
     ) {
         return;
     }
-    if comparisons.len() < threshold {
+    let Some(variable) = comparisons.first().map(|comparison| comparison.0.clone()) else {
         return;
-    }
-    let variable = &comparisons[0].0;
-    if comparisons
+    };
+    let retained = comparisons
         .iter()
-        .any(|(candidate, _, _, _)| candidate != variable)
-    {
+        .position(|(candidate, _, _, _)| candidate != &variable)
+        .unwrap_or(comparisons.len());
+    comparisons.truncate(retained);
+    if comparisons.len() < threshold {
         return;
     }
     let start = comparisons[0].2;
@@ -119,16 +120,31 @@ fn collect_comparisons(
     if !is_equality_comparison(node) {
         return false;
     }
-    if let Some((variable, value)) = comparison_parts(node, allow_methods) {
-        let variable_location = variable.location();
-        let value_location = value.location();
-        comparisons.push((
-            source[variable_location.start_offset()..variable_location.end_offset()].to_string(),
-            source[value_location.start_offset()..value_location.end_offset()].to_string(),
-            node.location().start_offset(),
-            node.location().end_offset(),
-        ));
+    if node.as_call_node().is_some_and(|call| {
+        call.receiver()
+            .is_some_and(|receiver| receiver.as_local_variable_read_node().is_some())
+            && only_argument(&call)
+                .is_some_and(|argument| argument.as_local_variable_read_node().is_some())
+    }) {
+        return true;
     }
+    let Some((variable, value)) = comparison_parts(node, allow_methods) else {
+        let call = node.as_call_node().expect("equality comparison is a call");
+        let receiver = call.receiver().expect("equality comparison has a receiver");
+        let argument = only_argument(&call).expect("equality comparison has one argument");
+        return receiver.as_local_variable_read_node().is_some()
+            || receiver.as_call_node().is_some()
+            || argument.as_local_variable_read_node().is_some()
+            || argument.as_call_node().is_some();
+    };
+    let variable_location = variable.location();
+    let value_location = value.location();
+    comparisons.push((
+        source[variable_location.start_offset()..variable_location.end_offset()].to_string(),
+        source[value_location.start_offset()..value_location.end_offset()].to_string(),
+        node.location().start_offset(),
+        node.location().end_offset(),
+    ));
     true
 }
 

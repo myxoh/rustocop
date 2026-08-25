@@ -7,7 +7,6 @@ use project_files::*;
 
 declare_source_cops! {
     AddRuntimeDependency => "Gemspec/AddRuntimeDependency" => add_runtime_dependency,
-    ArrayIntersect => "Style/ArrayIntersectWithSingleElement" => array_intersect,
     ClassAndModuleCamelCase => "Naming/ClassAndModuleCamelCase" => camel_case,
     ClassMethods => "Style/ClassMethods" => class_methods,
     RedundantCapitalW => "Style/RedundantCapitalW" => redundant_capital_w,
@@ -41,41 +40,6 @@ fn add_runtime_dependency(source: &str, context: &mut Reporter<'_>) {
                 offset + start..offset + end,
                 offset + start..offset + end,
                 "add_dependency",
-            );
-        }
-    }
-}
-
-fn array_intersect(source: &str, context: &mut Reporter<'_>) {
-    for start in find_all(source, ".intersect?(") {
-        if start > 0 && source.as_bytes()[start - 1] == b'&' {
-            continue;
-        }
-        let argument_start = start + ".intersect?(".len();
-        let Some(relative_end) = source[argument_start..].find(')') else {
-            continue;
-        };
-        let end = argument_start + relative_end + 1;
-        let argument = &source[argument_start..end - 1];
-        let element = if argument.starts_with('[')
-            && argument.ends_with(']')
-            && !argument[1..argument.len() - 1].contains(',')
-        {
-            Some(argument[1..argument.len() - 1].to_string())
-        } else if argument.starts_with("%i[")
-            && argument.ends_with(']')
-            && !argument[3..argument.len() - 1].contains(' ')
-        {
-            Some(format!(":{}", &argument[3..argument.len() - 1]))
-        } else {
-            None
-        };
-        if let Some(element) = element {
-            context.replace(
-                "Use `include?(element)` instead of `intersect?([element])`.",
-                start + 1..end,
-                start..end,
-                format!(".include?({element})"),
             );
         }
     }

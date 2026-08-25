@@ -53,7 +53,13 @@ pub(super) fn float_expression(node: Option<&Node<'_>>) -> bool {
             receiver.as_float_node().is_some()
                 && (matches!(
                     name,
-                    b"@-" | b"abs" | b"magnitude" | b"modulo" | b"next_float" | b"prev_float" | b"quo"
+                    b"@-"
+                        | b"abs"
+                        | b"magnitude"
+                        | b"modulo"
+                        | b"next_float"
+                        | b"prev_float"
+                        | b"quo"
                 ) || matches!(name, b"ceil" | b"floor" | b"round" | b"truncate")
                     && first_argument(&call).is_some_and(|argument| {
                         argument.as_integer_node().is_some_and(|integer| {

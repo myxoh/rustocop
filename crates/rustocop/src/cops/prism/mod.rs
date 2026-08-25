@@ -55,9 +55,11 @@ cop_modules!(
     additional_rules,
     additional_rules_literals,
     additional_rules_more,
+    uri_escape_unescape_rules,
     alias_rules,
     argument_and_inheritance_rules,
     argument_default_rules,
+    array_intersect_single_element_rules,
     assignment_completion_rules,
     assignment_rewrite_rules,
     block_association_rules,
@@ -286,19 +288,15 @@ pub(super) enum CopPhase {
     Source,
     Node,
     ParseErrorAndSource,
-    SourceAndNode,
 }
 
 impl CopPhase {
     const fn visits_source(self) -> bool {
-        matches!(
-            self,
-            Self::Source | Self::ParseErrorAndSource | Self::SourceAndNode
-        )
+        matches!(self, Self::Source | Self::ParseErrorAndSource)
     }
 
     const fn visits_nodes(self) -> bool {
-        matches!(self, Self::Node | Self::SourceAndNode)
+        matches!(self, Self::Node)
     }
 
     const fn visits_parse_errors(self) -> bool {

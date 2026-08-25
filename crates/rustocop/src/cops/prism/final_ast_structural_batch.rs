@@ -33,11 +33,7 @@ fn duplicate_require(context: &mut CopContext<'_, '_>) {
     collector.visit(&parsed.node());
     for (method, location) in collector.offenses {
         let line = context.source_file().line_range(location.start);
-        context.remove(
-            format!("Duplicate `{method}` detected."),
-            location,
-            line,
-        );
+        context.remove(format!("Duplicate `{method}` detected."), location, line);
     }
 }
 
@@ -209,59 +205,45 @@ fn literal_interpolation_expression(expression: &str) -> bool {
     if expression.contains("#{") || expression.starts_with('`') {
         return false;
     }
-    if matches!(expression, "nil" | "true" | "false") {
-        return true;
-    }
-    if expression.starts_with(['\'', '"'])
-        && expression.ends_with(expression.as_bytes()[0] as char)
-        && interpolation_is_single_string(expression)
-    {
-        return true;
-    }
-    if expression.starts_with(':') && !expression.starts_with("::") {
-        return expression.len() > 1;
-    }
-    if expression.starts_with('%') {
-        return expression.starts_with("%(")
-            || matches!(
-                expression.as_bytes().get(1),
-                Some(b'q' | b'Q' | b'w' | b'i' | b'I')
-            )
-            || expression
-                .as_bytes()
-                .get(1)
-                .is_some_and(|delimiter| !delimiter.is_ascii_alphanumeric());
-    }
-    if ((expression.starts_with('[') && expression.ends_with(']'))
-        || (expression.starts_with('{') && expression.ends_with('}')))
-        && interpolation_composite_is_literal(expression)
-    {
-        return true;
-    }
-    let numeric = expression
-        .bytes()
-        .all(|byte| byte.is_ascii_digit() || matches!(byte, b'_' | b'.' | b'+' | b'-' | b'e' | b'E' | b'x' | b'o' | b'b' | b'a'..=b'f' | b'A'..=b'F'));
-    numeric
-        && expression.bytes().any(|byte| byte.is_ascii_digit())
-        && expression
-            .as_bytes()
-            .first()
-            .is_some_and(|byte| byte.is_ascii_digit() || matches!(byte, b'+' | b'-'))
-}
-
-fn interpolation_is_single_string(expression: &str) -> bool {
     let parsed = ruby_prism::parse(expression.as_bytes());
     if parsed.errors().count() != 0 {
         return false;
     }
-    parsed
-        .node()
-        .as_program_node()
-        .and_then(|program| {
-            let body = program.statements().body();
-            (body.len() == 1).then(|| body.first()).flatten()
+    let Some(node) = parsed.node().as_program_node().and_then(|program| {
+        let body = program.statements().body();
+        (body.len() == 1).then(|| body.first()).flatten()
+    }) else {
+        return false;
+    };
+    node.as_nil_node().is_some()
+        || node.as_true_node().is_some()
+        || node.as_false_node().is_some()
+        || node.as_integer_node().is_some()
+        || node.as_float_node().is_some()
+        || node.as_rational_node().is_some()
+        || node.as_imaginary_node().is_some()
+        || node.as_range_node().is_some_and(|range| {
+            range.left().is_none_or(|bound| interpolation_range_bound(&bound))
+                && range
+                    .right()
+                    .is_none_or(|bound| interpolation_range_bound(&bound))
         })
-        .is_some_and(|node| node.as_string_node().is_some())
+        || node.as_string_node().is_some()
+        || node.as_symbol_node().is_some()
+        || (node.as_array_node().is_some() || node.as_hash_node().is_some())
+            && interpolation_composite_is_literal(expression)
+}
+
+fn interpolation_range_bound(node: &Node<'_>) -> bool {
+    node.as_nil_node().is_some()
+        || node.as_true_node().is_some()
+        || node.as_false_node().is_some()
+        || node.as_integer_node().is_some()
+        || node.as_float_node().is_some()
+        || node.as_rational_node().is_some()
+        || node.as_imaginary_node().is_some()
+        || node.as_string_node().is_some()
+        || node.as_symbol_node().is_some()
 }
 
 fn interpolation_composite_is_literal(expression: &str) -> bool {
@@ -889,12 +871,14 @@ impl Cop for Void {
         };
         let body = statements.body().iter().collect::<Vec<_>>();
         let direct_parent = ancestors.last();
-        let enclosing_definition = direct_parent.and_then(Node::as_def_node).filter(|definition| {
-            definition.body().is_some_and(|body| {
-                body.location().start_offset() == node.location().start_offset()
-                    && body.location().end_offset() == node.location().end_offset()
-            })
-        });
+        let enclosing_definition = direct_parent
+            .and_then(Node::as_def_node)
+            .filter(|definition| {
+                definition.body().is_some_and(|body| {
+                    body.location().start_offset() == node.location().start_offset()
+                        && body.location().end_offset() == node.location().end_offset()
+                })
+            });
         let ensure_body = ancestors.iter().rev().any(|ancestor| {
             ancestor.as_ensure_node().is_some_and(|ensure_node| {
                 ensure_node.statements().is_some_and(|body| {
@@ -911,22 +895,26 @@ impl Cop for Void {
             && enclosing_definition.as_ref().is_some_and(|definition| {
                 definition.name().as_slice() == b"initialize"
                     || void_setter_name(definition.name().as_slice())
-            }) || direct_parent.is_some_and(|parent| {
-            parent.as_for_node().is_some() || parent.as_ensure_node().is_some()
-        }) || ensure_body
-            || direct_parent.and_then(Node::as_block_node).is_some_and(|block| {
-                ancestors.iter().rev().any(|ancestor| {
-                    ancestor.as_call_node().is_some_and(|call| {
-                        call.name().as_slice() == b"tap"
-                            && call.block().is_some_and(|candidate| {
-                                candidate.location().start_offset()
-                                    == block.location().start_offset()
-                                    && candidate.location().end_offset()
-                                        == block.location().end_offset()
-                            })
+            })
+            || direct_parent.is_some_and(|parent| {
+                parent.as_for_node().is_some() || parent.as_ensure_node().is_some()
+            })
+            || ensure_body
+            || direct_parent
+                .and_then(Node::as_block_node)
+                .is_some_and(|block| {
+                    ancestors.iter().rev().any(|ancestor| {
+                        ancestor.as_call_node().is_some_and(|call| {
+                            call.name().as_slice() == b"tap"
+                                && call.block().is_some_and(|candidate| {
+                                    candidate.location().start_offset()
+                                        == block.location().start_offset()
+                                        && candidate.location().end_offset()
+                                            == block.location().end_offset()
+                                })
+                        })
                     })
-                })
-            });
+                });
         let correctable = !enclosing_definition
             .as_ref()
             .is_some_and(|definition| void_setter_name(definition.name().as_slice()));
@@ -1234,8 +1222,22 @@ fn check_void_if_body(
         && !body[0].as_call_node().is_some_and(|call| {
             matches!(
                 call.name().as_slice(),
-                b"*" | b"/" | b"%" | b"+" | b"-" | b"==" | b"===" | b"!=" | b"<" | b">"
-                    | b"<=" | b">=" | b"<=>" | b"+@" | b"-@" | b"~" | b"!"
+                b"*" | b"/"
+                    | b"%"
+                    | b"+"
+                    | b"-"
+                    | b"=="
+                    | b"==="
+                    | b"!="
+                    | b"<"
+                    | b">"
+                    | b"<="
+                    | b">="
+                    | b"<=>"
+                    | b"+@"
+                    | b"-@"
+                    | b"~"
+                    | b"!"
             )
         })
     {
@@ -2474,16 +2476,33 @@ impl Cop for AccessModifierDeclarations {
         if argument_count(&call) == 0 {
             return;
         }
-        if ancestors
+        let inside_conditional = ancestors
             .iter()
-            .any(|ancestor| {
-                ancestor.as_if_node().is_some()
-                    || ancestor.as_rescue_node().is_some()
-                    || ancestor.as_ensure_node().is_some()
-                    || ancestor.as_begin_node().is_some_and(|begin| {
-                        begin.rescue_clause().is_some() || begin.ensure_clause().is_some()
-                    })
+            .any(|ancestor| ancestor.as_if_node().is_some() || ancestor.as_unless_node().is_some());
+        let modifier_conditional = ancestors.iter().any(|ancestor| {
+            ancestor.as_if_node().is_some_and(|conditional| {
+                conditional.if_keyword_loc().is_some_and(|keyword| {
+                    context
+                        .source_file()
+                        .same_line(keyword.start_offset(), call.location().start_offset())
+                })
+            }) || ancestor.as_unless_node().is_some_and(|conditional| {
+                context.source_file().same_line(
+                    conditional.keyword_loc().start_offset(),
+                    call.location().start_offset(),
+                )
             })
+        });
+        let rescue_or_ensure = ancestors.iter().any(|ancestor| {
+            ancestor.as_rescue_node().is_some()
+                || ancestor.as_ensure_node().is_some()
+                || ancestor.as_begin_node().is_some_and(|begin| {
+                    begin.rescue_clause().is_some() || begin.ensure_clause().is_some()
+                })
+        });
+        if modifier_conditional
+            || inside_conditional && !left_sibling_same_inline_modifier(&call, &context)
+            || rescue_or_ensure
         {
             return;
         }
@@ -2499,6 +2518,43 @@ impl Cop for AccessModifierDeclarations {
         let message = format!("`{modifier}` should not be inlined in method definitions.");
         let argument = first_argument(&call).expect("modifier has arguments");
         if let Some(definition) = argument.as_def_node() {
+            if inside_conditional && left_sibling_same_inline_modifier(&call, &context) {
+                let insertion = ancestors.iter().rev().find_map(|ancestor| {
+                    if let Some(class) = ancestor.as_class_node() {
+                        Some(class.end_keyword_loc().start_offset())
+                    } else if let Some(module) = ancestor.as_module_node() {
+                        Some(module.end_keyword_loc().start_offset())
+                    } else {
+                        ancestor
+                            .as_singleton_class_node()
+                            .map(|class| class.end_keyword_loc().start_offset())
+                    }
+                });
+                if let Some(insertion) = insertion {
+                    let removal_start = context.source_file().line_start(selector.start_offset());
+                    let definition_end = context
+                        .source_file()
+                        .line_end(definition.location().end_offset());
+                    let removal_end = source
+                        .get(definition_end..)
+                        .and_then(|tail| tail.strip_prefix('\n').map(|_| definition_end + 1))
+                        .unwrap_or(definition_end);
+                    let definition_source =
+                        context.source_file().at(&definition.location()).to_string();
+                    context.replace_many(
+                        message,
+                        &selector,
+                        vec![
+                            (removal_start..removal_end, String::new()),
+                            (
+                                insertion..insertion,
+                                format!("{modifier}\n\n{definition_source}\n"),
+                            ),
+                        ],
+                    );
+                    return;
+                }
+            }
             if let Some((edit, replacement)) = grouped_repeated_inline_rewrite(
                 source,
                 access_modifier_scope(&context),
@@ -2917,6 +2973,14 @@ fn right_sibling_definition(node: &CallNode<'_>, context: &CopContext<'_, '_>) -
             singleton.body().and_then(|body| body.as_statements_node())
         } else if let Some(begin) = ancestor.as_begin_node() {
             begin.statements()
+        } else if let Some(condition) = ancestor.as_if_node() {
+            condition.statements()
+        } else if let Some(condition) = ancestor.as_unless_node() {
+            condition.statements()
+        } else if let Some(branch) = ancestor.as_else_node() {
+            branch.statements()
+        } else if let Some(rescue) = ancestor.as_rescue_node() {
+            rescue.statements()
         } else {
             None
         };
@@ -2958,6 +3022,14 @@ fn right_sibling_same_inline_modifier(node: &CallNode<'_>, context: &CopContext<
             singleton.body().and_then(|body| body.as_statements_node())
         } else if let Some(begin) = ancestor.as_begin_node() {
             begin.statements()
+        } else if let Some(condition) = ancestor.as_if_node() {
+            condition.statements()
+        } else if let Some(condition) = ancestor.as_unless_node() {
+            condition.statements()
+        } else if let Some(branch) = ancestor.as_else_node() {
+            branch.statements()
+        } else if let Some(rescue) = ancestor.as_rescue_node() {
+            rescue.statements()
         } else {
             None
         };
@@ -2972,6 +3044,50 @@ fn right_sibling_same_inline_modifier(node: &CallNode<'_>, context: &CopContext<
                         return false;
                     };
                     call.location().start_offset() > start
+                        && call.receiver().is_none()
+                        && call_name(&call) == call_name(node)
+                        && argument_count(&call) > 0
+                        && !allowed_inline_modifier(&call, context)
+                })
+        })
+    })
+}
+
+fn left_sibling_same_inline_modifier(node: &CallNode<'_>, context: &CopContext<'_, '_>) -> bool {
+    let start = node.location().start_offset();
+    context.ancestors().iter().rev().any(|ancestor| {
+        let statements = if let Some(program) = ancestor.as_program_node() {
+            Some(program.statements())
+        } else if let Some(class) = ancestor.as_class_node() {
+            class.body().and_then(|body| body.as_statements_node())
+        } else if let Some(module) = ancestor.as_module_node() {
+            module.body().and_then(|body| body.as_statements_node())
+        } else if let Some(singleton) = ancestor.as_singleton_class_node() {
+            singleton.body().and_then(|body| body.as_statements_node())
+        } else if let Some(begin) = ancestor.as_begin_node() {
+            begin.statements()
+        } else if let Some(condition) = ancestor.as_if_node() {
+            condition.statements()
+        } else if let Some(condition) = ancestor.as_unless_node() {
+            condition.statements()
+        } else if let Some(branch) = ancestor.as_else_node() {
+            branch.statements()
+        } else if let Some(rescue) = ancestor.as_rescue_node() {
+            rescue.statements()
+        } else {
+            None
+        };
+        statements.is_some_and(|statements| {
+            let direct_child = statements
+                .body()
+                .iter()
+                .any(|child| child.location().start_offset() == start);
+            direct_child
+                && statements.body().iter().any(|sibling| {
+                    let Some(call) = sibling.as_call_node() else {
+                        return false;
+                    };
+                    call.location().start_offset() < start
                         && call.receiver().is_none()
                         && call_name(&call) == call_name(node)
                         && argument_count(&call) > 0
@@ -3160,23 +3276,19 @@ fn check_arguments_forwarding(
     let referenced = tokens
         .iter()
         .map(|token| {
-            use_collector
-                .reads
-                .get(&token.name)
-                .is_some_and(|reads| {
-                    reads
-                        .iter()
-                        .any(|offset| !use_collector.forwarded_reads.contains(offset))
+            use_collector.reads.get(&token.name).is_some_and(|reads| {
+                reads
+                    .iter()
+                    .any(|offset| !use_collector.forwarded_reads.contains(offset))
+            }) || body.lines().any(|line| {
+                line.match_indices(&token.name).any(|(at, _)| {
+                    let before = line[..at].chars().next_back();
+                    let after = &line[at + token.name.len()..];
+                    !before.is_some_and(|character| {
+                        character.is_ascii_alphanumeric() || character == '_'
+                    }) && (after.trim_start().starts_with('=') || after.starts_with('.'))
                 })
-                || body.lines().any(|line| {
-                    line.match_indices(&token.name).any(|(at, _)| {
-                        let before = line[..at].chars().next_back();
-                        let after = &line[at + token.name.len()..];
-                        !before.is_some_and(|character| {
-                            character.is_ascii_alphanumeric() || character == '_'
-                        }) && (after.trim_start().starts_with('=') || after.starts_with('.'))
-                    })
-                })
+            })
         })
         .collect::<Vec<_>>();
 
@@ -3293,9 +3405,10 @@ fn report_anonymous_full_forwarding(
         };
         let sequence = raw[star..=ampersand].trim();
         if context.target_ruby_version().at_least(3, 2)
-            && (sequence.starts_with("**") || !sequence.contains("**")) {
-                return false;
-            }
+            && (sequence.starts_with("**") || !sequence.contains("**"))
+        {
+            return false;
+        }
         let signature_start = range.start_offset() + star;
         let signature_end = signature_start + sequence.len();
         let body_start = range.end_offset();
@@ -3312,9 +3425,9 @@ fn report_anonymous_full_forwarding(
             .collect::<Vec<_>>();
         if forwarded_names.iter().any(|name| {
             body.lines().any(|line| {
-                line.trim_start().strip_prefix(name).is_some_and(|rest| {
-                    rest.trim_start().starts_with('=') || rest.starts_with('.')
-                })
+                line.trim_start()
+                    .strip_prefix(name)
+                    .is_some_and(|rest| rest.trim_start().starts_with('=') || rest.starts_with('.'))
             })
         }) {
             return false;
@@ -3369,7 +3482,12 @@ impl ForwardingUseCollector {
                     .expression()
                     .and_then(|value| value.as_local_variable_read_node())
                 {
-                    self.record("*", read.name().as_slice(), splat.location(), read.location());
+                    self.record(
+                        "*",
+                        read.name().as_slice(),
+                        splat.location(),
+                        read.location(),
+                    );
                 }
             } else if let Some(hash) = argument.as_keyword_hash_node() {
                 for element in hash.elements().iter() {
@@ -3382,7 +3500,12 @@ impl ForwardingUseCollector {
                     else {
                         continue;
                     };
-                    self.record("**", read.name().as_slice(), splat.location(), read.location());
+                    self.record(
+                        "**",
+                        read.name().as_slice(),
+                        splat.location(),
+                        read.location(),
+                    );
                 }
             }
         }
@@ -3398,7 +3521,12 @@ impl ForwardingUseCollector {
         else {
             return;
         };
-        self.record("&", read.name().as_slice(), argument.location(), read.location());
+        self.record(
+            "&",
+            read.name().as_slice(),
+            argument.location(),
+            read.location(),
+        );
     }
 
     fn record(
@@ -3409,9 +3537,10 @@ impl ForwardingUseCollector {
         read_location: ruby_prism::Location<'_>,
     ) {
         let name = String::from_utf8_lossy(name).into_owned();
-        self.uses.entry(format!("{prefix}{name}")).or_default().push(
-            use_location.start_offset()..use_location.end_offset(),
-        );
+        self.uses
+            .entry(format!("{prefix}{name}"))
+            .or_default()
+            .push(use_location.start_offset()..use_location.end_offset());
         self.forwarded_reads.insert(read_location.start_offset());
     }
 }
@@ -3836,9 +3965,9 @@ fn anonymous_class_scope(ancestors: &[Node<'_>], source: &str) -> Option<(String
             if let Some(write) = parent.as_constant_write_node() {
                 Some(location_text(&write.name_loc(), source).to_string())
             } else {
-                parent.as_constant_path_write_node().map(|write| {
-                    location_text(&write.target().location(), source).to_string()
-                })
+                parent
+                    .as_constant_path_write_node()
+                    .map(|write| location_text(&write.target().location(), source).to_string())
             }
         });
     if let Some(name) = assigned_name {
@@ -4412,9 +4541,8 @@ fn safe_navigation_conditional(
     ternary: bool,
     context: &mut CopContext<'_, '_>,
 ) {
-    let strict_project_config = context
-        .related_config_value("AllCops", "DisabledByDefault")
-        == Some("true");
+    let strict_project_config =
+        context.related_config_value("AllCops", "DisabledByDefault") == Some("true");
     if strict_project_config && safe_navigation_in_chained_block(context.ancestors()) {
         return;
     }
@@ -4489,16 +4617,14 @@ fn safe_navigation_and(node: &ruby_prism::AndNode<'_>, context: &mut CopContext<
         safe_navigation_and_with_or(node, context);
         return;
     }
-    let strict_project_block = context
-        .related_config_value("AllCops", "DisabledByDefault")
+    let strict_project_block = context.related_config_value("AllCops", "DisabledByDefault")
         == Some("true")
         && context
             .ancestors()
             .iter()
             .any(|ancestor| ancestor.as_block_node().is_some());
     if strict_project_block
-        && (candidates[0].index > 0
-            || safe_navigation_in_chained_block(context.ancestors()))
+        && (candidates[0].index > 0 || safe_navigation_in_chained_block(context.ancestors()))
     {
         return;
     }
@@ -4670,9 +4796,8 @@ fn safe_navigation_chain<'pr>(
         })
         .count();
     if unsafe_chain_length > 1 {
-        let disabled_by_default = context
-            .related_config_value("AllCops", "DisabledByDefault")
-            == Some("true");
+        let disabled_by_default =
+            context.related_config_value("AllCops", "DisabledByDefault") == Some("true");
         if disabled_by_default
             || context.related_config_value("Lint/SafeNavigationChain", "Enabled") != Some("true")
         {
@@ -4910,8 +5035,7 @@ fn unsafe_safe_navigation_call(call: &CallNode<'_>) -> bool {
 fn safe_navigation_nil_method(name: &[u8]) -> bool {
     matches!(
         name,
-        b"!"
-            | b"!="
+        b"!" | b"!="
             | b"!~"
             | b"&"
             | b"<=>"

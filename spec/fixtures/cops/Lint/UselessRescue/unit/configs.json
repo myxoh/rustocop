@@ -1,3 +1,4 @@
 {
+  "04e5f5dc8f8f3090": "---\nAllCops:\n  DisabledByDefault: true\n  ParserEngine: parser_prism\n  TargetRubyVersion: 3.4\nLint/UselessRescue:\n  Enabled: true\n",
   "65c77806dbe34e3a": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/UselessRescue:\n  Description: Checks for useless `rescue`s.\n  Enabled: true\n  VersionAdded: '1.43'\n  AutoCorrect: always\n"
 }

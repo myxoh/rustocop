@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::ffi::OsStr;
 use std::fs;
 use std::io::{self, Read};
@@ -19,6 +20,7 @@ pub(super) fn inspect(options: &RunOptions) -> io::Result<Vec<InspectionResult>>
     };
     let mut results = engine::inspect_files(&files, options, &plan)?;
     for result in &mut results {
+        collapse_cli_duplicate_locations(result);
         if fs::metadata(&result.path).is_ok_and(|metadata| metadata.len() == 0) {
             for offense in &mut result.offenses {
                 if offense.cop_name == "Lint/EmptyFile" && offense.length == 0 {
@@ -40,7 +42,19 @@ fn inspect_stdin(
     let content = crate::engine::source::DecodedSource::from_bytes(&bytes)?;
     let path = engine::expanded_path(path);
     let (offenses, _) = plan.inspect_content(&path, content.as_str(), &options.inspection);
-    Ok(vec![InspectionResult { path, offenses }])
+    let mut result = InspectionResult { path, offenses };
+    collapse_cli_duplicate_locations(&mut result);
+    Ok(vec![result])
+}
+
+fn collapse_cli_duplicate_locations(result: &mut InspectionResult) {
+    let mut seen = HashSet::new();
+    result.offenses.reverse();
+    result.offenses.retain(|offense| {
+        offense.cop_name != "Lint/AmbiguousOperatorPrecedence"
+            || seen.insert((offense.cop_name.clone(), offense.line, offense.column))
+    });
+    result.offenses.reverse();
 }
 
 fn expand_targets(targets: &[String]) -> io::Result<Vec<String>> {

@@ -230,6 +230,7 @@ fn ambiguous_call_operator(node: &CallNode<'_>, context: &mut CopContext<'_, '_>
     {
         ("*", "Ambiguous splat operator. Parenthesize the method arguments if it's surely a splat operator, or add a whitespace to the right of the `*` if it should be a multiplication.")
     } else if argument_source.starts_with('&')
+        && !(argument_source.starts_with("&:") && !argument_source.starts_with("&::"))
         && !argument_source[1..].starts_with(char::is_whitespace)
     {
         ("&", "Ambiguous block operator. Parenthesize the method arguments if it's surely a block operator, or add a whitespace to the right of the `&` if it should be a binary AND.")

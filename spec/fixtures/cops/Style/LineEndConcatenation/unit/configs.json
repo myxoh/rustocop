@@ -1,4 +1,5 @@
 {
   "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
+  "738de6ed423edab2": "---\nAllCops:\n  DisabledByDefault: true\n  ParserEngine: parser_prism\n  TargetRubyVersion: 3.4\nStyle/LineEndConcatenation:\n  Enabled: true\n",
   "d310199a408995ac": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/LineEndConcatenation:\n  Description: Use \\ instead of + or << to concatenate two string literals at line\n    end.\n  Enabled: true\n  SafeAutoCorrect: false\n  VersionAdded: '0.18'\n  VersionChanged: '0.64'\n  AutoCorrect: always\n"
 }

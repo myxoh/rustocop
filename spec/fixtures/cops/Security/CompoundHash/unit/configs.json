@@ -1,4 +1,5 @@
 {
   "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
+  "a6e626af383ef2d2": "---\nAllCops:\n  DisabledByDefault: true\n  ParserEngine: parser_prism\n  TargetRubyVersion: 3.4\nSecurity/CompoundHash:\n  Enabled: true\n",
   "ae581c6e476fde7d": "---\nAllCops:\n  TargetRubyVersion: 2.7\nSecurity/CompoundHash:\n  Description: When overwriting Object#hash to combine values, prefer delegating to\n    Array#hash over writing a custom implementation.\n  Enabled: true\n  Safe: false\n  VersionAdded: '1.28'\n  VersionChanged: '1.51'\n  AutoCorrect: always\n"
 }

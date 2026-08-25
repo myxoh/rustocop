@@ -20,18 +20,19 @@ struct ContinuedString {
     end: usize,
     opening_end: usize,
     closing_start: usize,
+    depth: usize,
 }
 
 fn continued_strings(source: &str) -> Vec<Vec<ContinuedString>> {
-    struct Collector { strings: Vec<ContinuedString> }
+    struct Collector { strings: Vec<ContinuedString>, depth: usize }
     impl<'pr> Visit<'pr> for Collector {
-        fn visit_string_node(&mut self,node:&ruby_prism::StringNode<'pr>){self.strings.push(ContinuedString{start:node.location().start_offset(),end:node.location().end_offset(),opening_end:node.opening_loc().map_or(node.content_loc().start_offset(),|location|location.end_offset()),closing_start:node.closing_loc().map_or(node.content_loc().end_offset(),|location|location.start_offset())});}
-        fn visit_interpolated_string_node(&mut self,node:&ruby_prism::InterpolatedStringNode<'pr>){if node.opening_loc().is_none(){for part in node.parts().iter(){self.visit(&part);}return}self.strings.push(ContinuedString{start:node.location().start_offset(),end:node.location().end_offset(),opening_end:node.opening_loc().map_or(node.location().start_offset(),|location|location.end_offset()),closing_start:node.closing_loc().map_or(node.location().end_offset(),|location|location.start_offset())});for part in node.parts().iter(){if part.as_string_node().is_none(){self.visit(&part);}}}
+        fn visit_string_node(&mut self,node:&ruby_prism::StringNode<'pr>){self.strings.push(ContinuedString{start:node.location().start_offset(),end:node.location().end_offset(),opening_end:node.opening_loc().map_or(node.content_loc().start_offset(),|location|location.end_offset()),closing_start:node.closing_loc().map_or(node.content_loc().end_offset(),|location|location.start_offset()),depth:self.depth});}
+        fn visit_interpolated_string_node(&mut self,node:&ruby_prism::InterpolatedStringNode<'pr>){if node.opening_loc().is_none(){for part in node.parts().iter(){self.visit(&part);}return}self.strings.push(ContinuedString{start:node.location().start_offset(),end:node.location().end_offset(),opening_end:node.opening_loc().map_or(node.location().start_offset(),|location|location.end_offset()),closing_start:node.closing_loc().map_or(node.location().end_offset(),|location|location.start_offset()),depth:self.depth});self.depth+=1;for part in node.parts().iter(){if part.as_string_node().is_none(){self.visit(&part);}}self.depth-=1;}
     }
-    let parsed=parse(source.as_bytes());let mut collector=Collector{strings:Vec::new()};collector.visit(&parsed.node());collector.strings.retain(|string|string.start<=string.opening_end&&string.opening_end<=string.closing_start&&string.closing_start<=string.end&&string.end<=source.len());let snapshot=collector.strings.clone();collector.strings.retain(|outer|!snapshot.iter().any(|inner|outer.start<inner.start&&inner.end<outer.end&&source[outer.start..outer.end].contains("\\\n")));collector.strings.sort_by_key(|string|string.start);
+    let parsed=parse(source.as_bytes());let mut collector=Collector{strings:Vec::new(),depth:0};collector.visit(&parsed.node());collector.strings.retain(|string|string.start<=string.opening_end&&string.opening_end<=string.closing_start&&string.closing_start<=string.end&&string.end<=source.len());collector.strings.sort_by_key(|string|(string.depth,string.start));
     let mut groups=Vec::new();let mut group=Vec::new();
     for string in collector.strings {
-        let joined=group.last().is_some_and(|previous:&ContinuedString|previous.end<=string.start&&{let gap=&source[previous.end..string.start];gap.contains("\\\n")&&gap.bytes().all(|byte|matches!(byte,b' '|b'\t'|b'\r'|b'\n'|b'\\'))});
+        let joined=group.last().is_some_and(|previous:&ContinuedString|previous.depth==string.depth&&previous.end<=string.start&&{let gap=&source[previous.end..string.start];gap.contains("\\\n")&&gap.bytes().all(|byte|matches!(byte,b' '|b'\t'|b'\r'|b'\n'|b'\\'))});
         if !joined&&!group.is_empty(){groups.push(std::mem::take(&mut group));}group.push(string);
     }
     if group.len()>1{groups.push(group);}groups.into_iter().filter(|group|group.len()>1).collect()

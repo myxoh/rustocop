@@ -746,6 +746,12 @@ fn enforce_bracket_spacing(
             .bytes()
             .take_while(|byte| byte.is_ascii_whitespace())
             .count();
+    let left_horizontal_end = opening
+        + 1
+        + inside
+            .bytes()
+            .take_while(|byte| matches!(byte, b' ' | b'\t'))
+            .count();
     let right_ws_start = closing
         - inside
             .bytes()
@@ -780,7 +786,11 @@ fn enforce_bracket_spacing(
 
     let comment_after_opening = source[left_ws_end..].starts_with('#');
     let mut left_reported = false;
-    if (!left_newline || compact_left) && !(style == "no_space" && comment_after_opening) {
+    if (!left_newline
+        || compact_left
+        || !require_left_space && left_horizontal_end > opening + 1)
+        && !(style == "no_space" && comment_after_opening)
+    {
         if require_left_space && left_ws_end == opening + 1 {
             let mut edits = vec![(opening + 1..opening + 1, " ".to_string())];
             if let Some(edit) = right_edit.clone() {
@@ -792,10 +802,19 @@ fn enforce_bracket_spacing(
             let offense = message("Do not use");
             let range = if compact_left && left_newline {
                 opening + 1..opening + 1
+            } else if left_newline && left_horizontal_end > opening + 1 {
+                opening + 1..left_horizontal_end
             } else {
                 opening + 1..left_ws_end
             };
-            let mut edits = vec![(opening + 1..left_ws_end, String::new())];
+            let edit_end = if compact_left {
+                left_ws_end
+            } else if left_newline {
+                left_horizontal_end
+            } else {
+                left_ws_end
+            };
+            let mut edits = vec![(opening + 1..edit_end, String::new())];
             if let Some(edit) = right_edit.clone() {
                 edits.push(edit);
             }

@@ -1,4 +1,5 @@
 {
+  "0e539b95fd10af83": "---\nAllCops:\n  DisabledByDefault: true\n  ParserEngine: parser_prism\n  TargetRubyVersion: 3.4\nStyle/NumberedParameters:\n  Enabled: true\n  EnforcedStyle: allow_single_line\n",
   "1508c190237d7609": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/NumberedParameters:\n  Description: Restrict the usage of numbered parameters.\n  Enabled: true\n  VersionAdded: '1.22'\n  EnforcedStyle: allow_single_line\n  SupportedStyles:\n  - allow_single_line\n  - disallow\n  AutoCorrect: always\n",
   "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
   "8b12c4a90736bd3f": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/NumberedParameters:\n  Description: Restrict the usage of numbered parameters.\n  Enabled: true\n  VersionAdded: '1.22'\n  EnforcedStyle: disallow\n  SupportedStyles:\n  - allow_single_line\n  - disallow\n  AutoCorrect: always\n"

@@ -1,3 +1,4 @@
 {
-  "140a492cfbf2f276": "---\nAllCops:\n  TargetRubyVersion: 2.7\nNaming/BinaryOperatorParameterName:\n  Description: When defining binary operators, name the argument other.\n  StyleGuide: \"#other-arg\"\n  Enabled: true\n  VersionAdded: '0.50'\n  VersionChanged: '1.2'\n  AutoCorrect: always\n"
+  "140a492cfbf2f276": "---\nAllCops:\n  TargetRubyVersion: 2.7\nNaming/BinaryOperatorParameterName:\n  Description: When defining binary operators, name the argument other.\n  StyleGuide: \"#other-arg\"\n  Enabled: true\n  VersionAdded: '0.50'\n  VersionChanged: '1.2'\n  AutoCorrect: always\n",
+  "ad8601e29fe5dbe9": "---\nAllCops:\n  DisabledByDefault: true\n  ParserEngine: parser_prism\n  TargetRubyVersion: 3.4\nNaming/BinaryOperatorParameterName:\n  Enabled: true\n"
 }

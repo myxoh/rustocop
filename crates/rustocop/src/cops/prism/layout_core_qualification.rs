@@ -209,19 +209,52 @@ fn empty_lines_around_access_modifier(node: &CallNode<'_>, context: &mut CopCont
         .ancestors()
         .iter()
         .any(|ancestor| ancestor.as_block_node().is_some());
-    let inside_class_like = context.ancestors().iter().any(|ancestor| {
-        ancestor.as_class_node().is_some()
-            || ancestor.as_module_node().is_some()
-            || ancestor.as_singleton_class_node().is_some()
+    let assigned_block = context.ancestors().iter().any(|ancestor| {
+        ancestor.as_local_variable_write_node().is_some()
+            || ancestor.as_instance_variable_write_node().is_some()
+            || ancestor.as_class_variable_write_node().is_some()
+            || ancestor.as_global_variable_write_node().is_some()
+            || ancestor.as_constant_write_node().is_some()
+            || ancestor.as_constant_path_write_node().is_some()
     });
-    let inside_class_constructor = context.ancestors().iter().any(|ancestor| {
-        ancestor.as_call_node().is_some_and(|call| {
-            call.name().as_slice() == b"new"
-                && (root_constant(call.receiver(), b"Class")
-                    || root_constant(call.receiver(), b"Module"))
+    let class_constructor_block = context
+        .ancestors()
+        .iter()
+        .rev()
+        .find_map(Node::as_block_node)
+        .is_some_and(|block| {
+            context.ancestors().iter().rev().any(|ancestor| {
+                let Some(call) = ancestor.as_call_node() else {
+                    return false;
+                };
+                let same_block = call.block().is_some_and(|call_block| {
+                    call_block.location().start_offset() == block.location().start_offset()
+                        && call_block.location().end_offset() == block.location().end_offset()
+                });
+                same_block
+                    && call.name().as_slice() == b"new"
+                    && call.receiver().is_some_and(|receiver| {
+                        matches!(
+                            context.source_file().node(&receiver).trim_start_matches("::"),
+                            "Class" | "Module" | "Struct"
+                        )
+                    })
+            })
+        });
+    let inside_condition = context.ancestors().iter().any(|ancestor| {
+        let predicate = if let Some(condition) = ancestor.as_if_node() {
+            Some(condition.predicate())
+        } else {
+            ancestor
+                .as_unless_node()
+                .map(|condition| condition.predicate())
+        };
+        predicate.is_some_and(|predicate| {
+            predicate.location().start_offset() <= node.location().start_offset()
+                && node.location().end_offset() <= predicate.location().end_offset()
         })
     });
-    if inside_block && !inside_class_like && !inside_class_constructor {
+    if inside_condition || inside_block && assigned_block && !class_constructor_block {
         return;
     }
     for ancestor in context.ancestors().iter().rev() {
@@ -748,13 +781,6 @@ fn first_argument_indentation(node: &Node<'_>, context: &mut CopContext<'_, '_>)
         || source[..call_start]
             .rfind("#{")
             .is_some_and(|opening| !source[opening + 2..call_start].contains('}'));
-    let inside_heredoc_interpolation = context.ancestors().iter().any(|ancestor| {
-        ancestor.as_interpolated_string_node().is_some()
-            && context.source_file().node(ancestor).trim_start().starts_with("<<")
-    });
-    if inside_heredoc_interpolation {
-        return;
-    }
     let outer = (!inside_interpolation)
         .then(|| semantic_parent.and_then(|parent| parent.as_call_node()))
         .flatten();
@@ -783,8 +809,12 @@ fn first_argument_indentation(node: &Node<'_>, context: &mut CopContext<'_, '_>)
         .map_or(call_start, |parent| parent.location().start_offset());
     let base_source = source[base_start..argument_start].trim();
     let base = if inside_interpolation {
-        let call_line = line_index(source, call_start);
-        line(source, call_line).len() - line(source, call_line).trim_start().len()
+        let selector_start = call_node
+            .as_ref()
+            .and_then(|call| call.message_loc())
+            .map_or(call_start, |selector| selector.start_offset());
+        let selector_line = line_index(source, selector_start);
+        line(source, selector_line).len() - line(source, selector_line).trim_start().len()
     } else if special_indentation {
         if base_source.contains('\n') {
             previous_line

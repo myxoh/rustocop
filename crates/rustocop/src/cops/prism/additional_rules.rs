@@ -12,7 +12,6 @@ mod source_registry {
 
     declare_source_cops! {
         RubyVersionGlobalsUsage => "Gemspec/RubyVersionGlobalsUsage" => super::ruby_version_globals,
-        DisjunctiveAssignmentInConstructor => "Lint/DisjunctiveAssignmentInConstructor" => super::disjunctive_assignment,
         RefinementImportMethods => "Lint/RefinementImportMethods" => super::refinement_import_methods,
         AttributeAssignment => "Gemspec/AttributeAssignment" => super::attribute_assignment,
         EachWithObjectArgument => "Lint/EachWithObjectArgument" => super::each_with_object_argument,
@@ -25,10 +24,12 @@ mod source_registry {
 }
 
 define_call_cop!(InsecureProtocolSource => "Bundler/InsecureProtocolSource" => insecure_protocol_source);
+define_node_cop!(DisjunctiveAssignmentInConstructor => "Lint/DisjunctiveAssignmentInConstructor" => as_def_node => disjunctive_assignment);
 
 pub(super) fn cops() -> Vec<Box<dyn Cop>> {
     let mut cops = source_registry::cops();
     cops.push(Box::new(InsecureProtocolSource));
+    cops.push(Box::new(DisjunctiveAssignmentInConstructor));
     cops
 }
 
@@ -125,71 +126,46 @@ fn insecure_protocol_source(node: &CallNode<'_>, context: &mut CopContext<'_, '_
     }
 }
 
-fn disjunctive_assignment(source: &str, reporter: &mut Reporter<'_>) {
-    let mut in_initialize = false;
-    let mut unsafe_call_seen = false;
-    let mut rescued_constructor = false;
-    for (offset, line) in source_lines(source) {
-        let trimmed = line.trim();
-        if trimmed.strip_prefix("def initialize").is_some_and(|rest| {
-            rest.is_empty() || rest.starts_with('(') || rest.starts_with(char::is_whitespace)
-        }) {
-            in_initialize = true;
-            unsafe_call_seen = false;
-            rescued_constructor = constructor_has_rescue(source, offset, line);
-            continue;
-        }
-        if in_initialize && trimmed == "end" {
-            in_initialize = false;
-        }
-        if in_initialize
-            && !rescued_constructor
-            && !unsafe_call_seen
-            && !trimmed.is_empty()
-            && !trimmed.starts_with('#')
-        {
-            let operator = trimmed.find("||=");
-            let instance_variable = operator.is_some_and(|operator| {
-                let lhs = trimmed[..operator].trim();
-                lhs.strip_prefix('@').is_some_and(|name| {
-                    !name.is_empty()
-                        && name
-                            .bytes()
-                            .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
-                })
-            });
-            if instance_variable {
-                let operator = line.find("||=").expect("trimmed line contains operator");
-                let start = offset + operator;
-                reporter.replace(
-                    "Unnecessary disjunctive assignment. Use plain assignment.",
-                    start..start + 3,
-                    start..start + 3,
-                    "=",
-                );
-            } else {
-                unsafe_call_seen = true;
+fn disjunctive_assignment(
+    node: &ruby_prism::DefNode<'_>,
+    context: &mut CopContext<'_, '_>,
+) {
+    if node.name().as_slice() != b"initialize" {
+        return;
+    }
+    let Some(body) = node.body() else {
+        return;
+    };
+    if let Some(statements) = body.as_statements_node() {
+        for expression in statements.body().iter() {
+            if !check_constructor_assignment(&expression, context) {
+                break;
             }
         }
+    } else {
+        check_constructor_assignment(&body, context);
     }
 }
 
-fn constructor_has_rescue(source: &str, definition_offset: usize, definition_line: &str) -> bool {
-    let indentation = definition_line.len() - definition_line.trim_start().len();
-    for (offset, line) in source_lines(source) {
-        if offset <= definition_offset {
-            continue;
-        }
-        let trimmed = line.trim();
-        let line_indentation = line.len() - line.trim_start().len();
-        if trimmed == "end" && line_indentation <= indentation {
-            return false;
-        }
-        if trimmed.starts_with("rescue") && line_indentation == indentation {
-            return true;
-        }
+fn check_constructor_assignment(node: &Node<'_>, context: &mut CopContext<'_, '_>) -> bool {
+    if let Some(write) = node.as_instance_variable_or_write_node() {
+        let operator = write.operator_loc();
+        context.replace(
+            "Unnecessary disjunctive assignment. Use plain assignment.",
+            &operator,
+            &operator,
+            "=",
+        );
+        true
+    } else {
+        node.as_local_variable_or_write_node().is_some()
+            || node.as_class_variable_or_write_node().is_some()
+            || node.as_global_variable_or_write_node().is_some()
+            || node.as_constant_or_write_node().is_some()
+            || node.as_constant_path_or_write_node().is_some()
+            || node.as_call_or_write_node().is_some()
+            || node.as_index_or_write_node().is_some()
     }
-    false
 }
 
 fn refinement_import_methods(source: &str, reporter: &mut Reporter<'_>) {

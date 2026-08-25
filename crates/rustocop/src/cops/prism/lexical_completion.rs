@@ -238,6 +238,23 @@ fn disable_cops_within_source_code_directive(context: &mut CopContext<'_, '_>) {
             continue;
         };
         let cops = list.split(',').map(str::trim).collect::<Vec<_>>();
+        let disables_this_cop = matches!(command, "disable" | "todo")
+            && cops.iter().any(|cop| {
+                cop.split_whitespace()
+                    .next()
+                    .map(|name| name.trim_matches(|character: char| {
+                        !character.is_alphanumeric() && !matches!(character, '_' | '/')
+                    }))
+                    == Some("Style/DisableCopsWithinSourceCodeDirective")
+            });
+        if disables_this_cop
+            && !context.related_config_explicit(
+                "Style/DisableCopsWithinSourceCodeDirective",
+                "Enabled",
+            )
+        {
+            continue;
+        }
         if command == "enable" && cops.contains(&"all") && all_disabled {
             all_disabled = false;
             continue;
@@ -248,7 +265,7 @@ fn disable_cops_within_source_code_directive(context: &mut CopContext<'_, '_>) {
         let disallowed = cops
             .iter()
             .copied()
-            .filter(|cop| !allowed.iter().any(|allowed| allowed == cop))
+            .filter(|cop| !cop.is_empty() && !allowed.iter().any(|allowed| allowed == cop))
             .collect::<Vec<_>>();
         if disallowed.is_empty() {
             continue;
@@ -288,5 +305,8 @@ fn directive(comment: &str) -> Option<(&str, &str)> {
     let body = after_marker.strip_prefix(':')?;
     let (command, cops) = body.trim().split_once(' ')?;
     let cops = cops.split_once(" -- ").map_or(cops, |(cops, _)| cops).trim();
+    if cops.starts_with('.') {
+        return None;
+    }
     matches!(command, "disable" | "enable" | "todo").then_some((command, cops))
 }

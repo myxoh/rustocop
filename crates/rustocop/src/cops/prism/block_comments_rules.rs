@@ -14,31 +14,38 @@ fn on_new_investigation(context: &mut CopContext<'_, '_>) {
         // Prism only exposes an embdoc as a comment when the markers are Ruby
         // syntax. Checking the parsed comment text distinguishes it from
         // `=begin` embedded in heredocs, strings, and ordinary `#` comments.
-        let Some(body_and_end) = source.strip_prefix("=begin\n") else {
+        if !source.starts_with("=begin") || source.len() < "=begin\n".len() {
             continue;
-        };
-        let Some(body) = body_and_end.strip_suffix("=end\n").or_else(|| body_and_end.strip_suffix("=end")) else {
-            continue;
-        };
-
-        let replacement = body
-            .strip_suffix('\n')
-            .unwrap_or(body)
-            .lines()
-            .map(|line| {
-                if line.is_empty() {
-                    "#".to_string()
-                } else {
-                    format!("# {line}")
-                }
-            })
-            .collect::<Vec<_>>()
-            .join("\n");
-        let replacement = if replacement.is_empty() {
-            replacement
+        }
+        let begin_end = "=begin\n".len();
+        let (end_start, end_end) = if source.ends_with('\n') {
+            (source.len().saturating_sub("=end\n".len()), source.len())
         } else {
-            format!("{replacement}\n")
+            (
+                source.len().saturating_sub("\n=end".len() + 1),
+                source.len().saturating_sub(2),
+            )
         };
+        if begin_end > end_start || end_start > end_end {
+            continue;
+        }
+        let contents = &source[begin_end..end_start];
+        let mut replacement = String::new();
+        if !contents.is_empty() {
+            replacement.push_str("# ");
+            let bytes = contents.as_bytes();
+            for (index, character) in contents.char_indices() {
+                replacement.push(character);
+                if character == '\n' {
+                    if bytes.get(index + 1) == Some(&b'\n') {
+                        replacement.push('#');
+                    } else if bytes.get(index + 1).is_some_and(|byte| *byte != b'#') {
+                        replacement.push_str("# ");
+                    }
+                }
+            }
+        }
+        replacement.push_str(&source[end_end..]);
 
         context.replace(
             "Do not use block comments.",

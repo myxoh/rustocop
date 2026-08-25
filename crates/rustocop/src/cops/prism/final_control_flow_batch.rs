@@ -769,38 +769,6 @@ impl Cop for DuplicateBranchCop {
             if if_node
                 .if_keyword_loc()
                 .is_some_and(|keyword| keyword.as_slice() == b"elsif")
-                || ancestors.iter().any(|ancestor| {
-                    ancestor.as_else_node().is_some_and(|else_node| {
-                        else_node.statements().is_some_and(|statements| {
-                            statements.location().start_offset() == node.location().start_offset()
-                                && statements.location().end_offset()
-                                    == node.location().end_offset()
-                            })
-                    })
-                    || ancestor.as_if_node().is_some_and(|parent| {
-                        parent
-                            .subsequent()
-                            .and_then(|branch| branch.as_else_node())
-                            .and_then(|else_node| else_node.statements())
-                            .is_some_and(|statements| {
-                                statements.location().start_offset()
-                                    == node.location().start_offset()
-                                    && statements.location().end_offset()
-                                        == node.location().end_offset()
-                            })
-                    })
-                    || ancestor.as_unless_node().is_some_and(|parent| {
-                        parent
-                            .else_clause()
-                            .and_then(|else_node| else_node.statements())
-                            .is_some_and(|statements| {
-                                statements.location().start_offset()
-                                    == node.location().start_offset()
-                                    && statements.location().end_offset()
-                                        == node.location().end_offset()
-                            })
-                    })
-                })
             {
                 return;
             }
@@ -1009,6 +977,13 @@ fn conditional_branch_end(node: &ruby_prism::IfNode<'_>, source: &str) -> usize 
         && source.as_bytes().get(end - 1).is_some_and(u8::is_ascii_whitespace)
     {
         end -= 1;
+    }
+    let line_start = source[..end].rfind('\n').map_or(0, |at| at + 1);
+    let final_line = &source[line_start..end];
+    let without_comment = duplicate_branch_line(final_line);
+    if final_line.contains('#') && without_comment.len() < final_line.trim().len() {
+        let indentation = final_line.len() - final_line.trim_start().len();
+        end = line_start + indentation + without_comment.len();
     }
     end
 }

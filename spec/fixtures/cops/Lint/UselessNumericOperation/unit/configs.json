@@ -1,3 +1,4 @@
 {
-  "49a5072d5931b40c": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/UselessNumericOperation:\n  Description: Checks for useless numeric operations.\n  Enabled: true\n  VersionAdded: '1.66'\n  AutoCorrect: always\n"
+  "49a5072d5931b40c": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/UselessNumericOperation:\n  Description: Checks for useless numeric operations.\n  Enabled: true\n  VersionAdded: '1.66'\n  AutoCorrect: always\n",
+  "5c64336e5ce7c446": "---\nAllCops:\n  DisabledByDefault: true\n  ParserEngine: parser_prism\n  TargetRubyVersion: 3.4\nLint/UselessNumericOperation:\n  Enabled: true\n"
 }

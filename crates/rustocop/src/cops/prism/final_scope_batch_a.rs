@@ -1108,6 +1108,15 @@ impl<'pr> ruby_prism::Visit<'pr> for BlockForwardingUsage<'_> {
         ruby_prism::visit_local_variable_write_node(self, node);
     }
 
+    fn visit_local_variable_target_node(
+        &mut self,
+        node: &ruby_prism::LocalVariableTargetNode<'pr>,
+    ) {
+        if node.name().as_slice() == self.name {
+            self.other_use = true;
+        }
+    }
+
     fn visit_local_variable_or_write_node(
         &mut self,
         node: &ruby_prism::LocalVariableOrWriteNode<'pr>,

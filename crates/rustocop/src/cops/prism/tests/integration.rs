@@ -20,11 +20,7 @@ fn partitions_cops_by_the_work_they_perform() {
 
     assert_eq!(
         indices_for(&registry.phases.source),
-        [
-            "Lint/Syntax",
-            "Lint/DuplicateMagicComment",
-            "Security/CompoundHash"
-        ]
+        ["Lint/Syntax", "Lint/DuplicateMagicComment"]
     );
     assert_eq!(
         indices_for(&registry.phases.nodes),

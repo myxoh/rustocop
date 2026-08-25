@@ -45,6 +45,9 @@ fn duplicate_magic_comment(context: &mut CopContext<'_, '_>) {
     let mut seen = HashSet::new();
     for (start, line) in source_lines(context.source()) {
         let trimmed = line.trim_start_matches('\u{feff}');
+        if !trimmed.is_empty() && !trimmed.starts_with('#') {
+            break;
+        }
         let kind = if trimmed.starts_with("# frozen_string_literal:") {
             "frozen"
         } else if trimmed.starts_with("# encoding:") || trimmed.starts_with("# coding:") {

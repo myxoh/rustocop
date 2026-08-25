@@ -258,24 +258,29 @@ fn binary_operator_parameter_name(
     node: &ruby_prism::DefNode<'_>,
     context: &mut CopContext<'_, '_>,
 ) {
-    const OPERATORS: &[&[u8]] = &[
-        b"+", b"-", b"*", b"/", b"%", b"**", b"==", b"!=", b">", b"<", b">=", b"<=", b"<=>",
-        b"eql?", b"equal?", b"|", b"&", b"^",
-    ];
-    if !OPERATORS.contains(&node.name().as_slice()) {
+    if node.receiver().is_some() || !checked_binary_operator(node.name().as_slice()) {
         return;
     }
     let Some(parameters) = node.parameters() else {
         return;
     };
-    let parameter_source = context.source_file().at(&parameters.location());
-    let old = parameter_source.trim_matches(['(', ')', ' ', '\n']);
-    if old.is_empty() || old.contains(',') || matches!(old, "other" | "_other") {
+    if parameters.requireds().len() != 1
+        || !parameters.optionals().is_empty()
+        || parameters.rest().is_some()
+        || !parameters.posts().is_empty()
+        || !parameters.keywords().is_empty()
+        || parameters.keyword_rest().is_some()
+        || parameters.block().is_some()
+    {
         return;
     }
-    let parameter_start =
-        parameters.location().start_offset() + parameter_source.find(old).unwrap_or(0);
-    let offense = parameter_start..parameter_start + old.len();
+    let Some(parameter) = parameters.requireds().iter().next()
+        .and_then(|parameter| parameter.as_required_parameter_node()) else { return };
+    let old = String::from_utf8_lossy(parameter.name().as_slice());
+    if matches!(old.as_ref(), "other" | "_other") {
+        return;
+    }
+    let offense = parameter.location().start_offset()..parameter.location().end_offset();
     let mut edits = vec![(offense.clone(), "other".to_string())];
     let location = node.location();
     edits.extend(
@@ -283,7 +288,7 @@ fn binary_operator_parameter_name(
             context.source(),
             location.start_offset(),
             location.end_offset(),
-            old,
+            &old,
         )
         .filter(|range| *range != offense)
         .map(|range| (range, "other".to_string())),
@@ -294,6 +299,19 @@ fn binary_operator_parameter_name(
         offense,
         edits,
     );
+}
+
+fn checked_binary_operator(name: &[u8]) -> bool {
+    if matches!(name, b"eql?" | b"equal?") {
+        return true;
+    }
+    if matches!(name, b"+@" | b"-@" | b"[]" | b"[]=" | b"<<" | b"===" | b"`" | b"=~") {
+        return false;
+    }
+    std::str::from_utf8(name)
+        .ok()
+        .and_then(|name| name.chars().next())
+        .is_some_and(|character| !character.is_alphanumeric() && character != '_')
 }
 
 fn identifier_ranges<'a>(
