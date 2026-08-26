@@ -68,6 +68,9 @@ RSpec.describe "shared infrastructure" do
       expect(signature.cop).to eq("Style/Example")
       expect(signature.location_tuple).to eq(["convention", "Use the example.", 2, 3, 2, 7])
       expect(signature.to_h).to include("path" => "app/model.rb", "last_column" => 7)
+
+      encoded = described_class.encode_report(report, cops: ["Style/Example"], corpus: "/tmp/corpus")
+      expect(described_class.hashes_from_encoded(encoded)).to eq([signature.to_h])
     end
   end
 

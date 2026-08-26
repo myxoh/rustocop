@@ -118,11 +118,16 @@ bound to a deterministic SHA-256 of every native cop source file as well as the
 compiled binary, so unrelated edits do not invalidate it and cop changes cannot
 silently reuse stale results.
 
-A warm complete audit measured on 2026-08-26 took 66.4 seconds wall-clock with
-50/50 native cache hits and no mismatches. Caching avoids both linter runs, but
-the runner must still load and exactly compare the large stored diagnostic
-inventories. Focused cop audits remain the fast development path; the complete
-audit is the final corpus gate.
+A warm complete audit measured on 2026-08-26 took 16.0 seconds wall-clock with
+50/50 native cache hits and no mismatches. The compact cache stores only the
+eight fields in a parity signature, with dictionaries for repeated paths, cops,
+and messages. Migrating the previous verbose cache and completing the same
+audit took 33.9 seconds. A changed native binary still causes a safe cold cache
+miss: the measured 606-cop, 85,471-file cold audit took 13 minutes 13 seconds.
+The runner now announces its warm/cold cache state before starting. Focused cop
+audits remain the development path after implementation changes; two historically
+expensive cops completed a cold exact audit across all 50 projects in 40 seconds.
+The complete cached audit is the final corpus gate.
 
 ## Performance
 

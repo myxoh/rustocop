@@ -29,24 +29,32 @@ RSpec.describe Rustocop::NativeResultCache do
   end
   let(:result) do
     {
-      "stdout" => JSON.generate(report),
+      "stdout" => "captured Rustocop report",
       "stderr" => "warning\n",
       "exitstatus" => 1,
-      "seconds" => 4.5
+      "seconds" => 4.5,
+      "encoded_offenses" => {
+        "paths" => ["offense.rb"],
+        "cops" => %w[Layout/A Lint/B],
+        "messages" => ["Example"],
+        "offenses" => [[0, 0, "convention", 0, 1, 1, 1, 2]]
+      }
     }
   end
 
-  it "round trips a result and omits empty files from the cached payload" do
+  it "round trips only the compact diagnostic payload" do
     Dir.mktmpdir("rustocop-native-cache") do |root|
       cache = described_class.new(root:)
+      expect(cache.cached?(metadata)).to be(false)
       stored = cache.store(metadata, result)
+      expect(cache.cached?(metadata)).to be(true)
       cached = cache.fetch(metadata)
 
       expect(stored.fetch("cache_hit")).to be(false)
       expect(cached.fetch("cache_hit")).to be(true)
       expect(cached.fetch("stderr")).to eq("warning\n")
-      expect(cached.dig("report", "files").map { |file| file.fetch("path") }).to eq(["offense.rb"])
-      expect(cached.dig("report", "summary", "target_file_count")).to eq(2)
+      expect(cached.fetch("encoded_offenses")).to eq(result.fetch("encoded_offenses"))
+      expect(cached).not_to have_key("report")
     end
   end
 

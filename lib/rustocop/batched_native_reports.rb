@@ -8,6 +8,7 @@ module Rustocop
 
     def capture(cops:, batch_size:, run:)
       reports = []
+      encoded_offenses = []
       stderr = +""
       seconds = 0.0
       cache_hits = 0
@@ -21,7 +22,11 @@ module Rustocop
         return result.merge("failed_cops" => batch) unless accepted?(result)
 
         begin
-          reports << (result["report"] || JSON.parse(result.fetch("stdout")))
+          if result["encoded_offenses"]
+            encoded_offenses << result.fetch("encoded_offenses")
+          else
+            reports << (result["report"] || JSON.parse(result.fetch("stdout")))
+          end
         rescue JSON::ParserError => e
           return result.merge(
             "exitstatus" => 2,
@@ -31,16 +36,20 @@ module Rustocop
         end
       end
 
-      report = merge(reports)
-      {
+      report = merge(reports) unless reports.empty?
+      offense_count = encoded_offenses.sum { |encoded| encoded.fetch("offenses").length }
+      offense_count += report.fetch("summary").fetch("offense_count") if report
+      result = {
         "stdout" => "batched Rustocop report",
         "stderr" => stderr,
-        "exitstatus" => report.fetch("summary").fetch("offense_count").zero? ? 0 : 1,
+        "exitstatus" => offense_count.zero? ? 0 : 1,
         "seconds" => seconds,
         "cache_hits" => cache_hits,
-        "cache_misses" => cache_misses,
-        "report" => report
+        "cache_misses" => cache_misses
       }
+      result["report"] = report if report
+      result["encoded_offenses"] = encoded_offenses unless encoded_offenses.empty?
+      result
     end
 
     def merge(reports)

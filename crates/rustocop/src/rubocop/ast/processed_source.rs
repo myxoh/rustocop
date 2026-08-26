@@ -13,6 +13,7 @@ use ruby_prism::{parse as prism_parse, CommentType};
 use super::node::core::{Ast, NodeId, NodeRef};
 use super::prism;
 use super::source::SourceBuffer;
+use super::source_position::SourcePositionIndex;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum ParserEngine {
@@ -220,11 +221,12 @@ impl<'source> ProcessedSource<'source> {
     ) -> Result<Self, ParserEngineError> {
         let parser_engine = normalize_parser_engine(parser_engine, ruby_version)?;
         let parsed = prism_parse(source.as_bytes());
+        let positions = SourcePositionIndex::new(source);
         let diagnostics: Vec<_> = parsed
             .warnings()
             .map(|diagnostic| {
                 source_diagnostic(
-                    source,
+                    &positions,
                     DiagnosticLevel::Warning,
                     diagnostic.message(),
                     diagnostic.location().start_offset()..diagnostic.location().end_offset(),
@@ -232,7 +234,7 @@ impl<'source> ProcessedSource<'source> {
             })
             .chain(parsed.errors().map(|diagnostic| {
                 source_diagnostic(
-                    source,
+                    &positions,
                     DiagnosticLevel::Error,
                     diagnostic.message(),
                     diagnostic.location().start_offset()..diagnostic.location().end_offset(),
@@ -249,10 +251,10 @@ impl<'source> ProcessedSource<'source> {
             .comments()
             .map(|comment| {
                 let byte_range = comment.location().start_offset()..comment.location().end_offset();
-                let range = byte_range_to_character(source, byte_range.clone());
+                let range = positions.character_range(byte_range.clone());
                 SourceComment {
                     text: String::from_utf8_lossy(comment.text()).into_owned(),
-                    line: line_for_character_position(source, range.start),
+                    line: positions.line_for_byte(byte_range.start),
                     range,
                     embedded_document: comment.type_() == CommentType::EmbDocComment,
                 }
@@ -271,7 +273,7 @@ impl<'source> ProcessedSource<'source> {
         let data_start = parsed.data_loc().map(|location| location.start_offset());
         let lines = source_lines(source, data_start);
         let tokens = if valid_syntax {
-            lex(source, data_start)
+            lex(source, data_start, &positions)
         } else {
             Vec::new()
         };
@@ -616,7 +618,7 @@ fn normalize_parser_engine(
     })
 }
 fn source_diagnostic(
-    source: &str,
+    positions: &SourcePositionIndex,
     level: DiagnosticLevel,
     message: &str,
     range: Range<usize>,
@@ -624,19 +626,8 @@ fn source_diagnostic(
     SourceDiagnostic {
         level,
         message: message.to_owned(),
-        range: byte_range_to_character(source, range),
+        range: positions.character_range(range),
     }
-}
-fn byte_range_to_character(source: &str, range: Range<usize>) -> Range<usize> {
-    source[..range.start].chars().count()..source[..range.end].chars().count()
-}
-fn line_for_character_position(source: &str, position: usize) -> usize {
-    source
-        .chars()
-        .take(position)
-        .filter(|character| *character == '\n')
-        .count()
-        + 1
 }
 fn source_lines(source: &str, data_start: Option<usize>) -> Vec<String> {
     if source.is_empty() {
@@ -654,7 +645,11 @@ fn source_lines(source: &str, data_start: Option<usize>) -> Vec<String> {
 }
 
 #[allow(clippy::too_many_lines)] // Token precedence intentionally follows RuboCop's lexer contract.
-fn lex(source: &str, data_start: Option<usize>) -> Vec<SourceToken> {
+fn lex(
+    source: &str,
+    data_start: Option<usize>,
+    positions: &SourcePositionIndex,
+) -> Vec<SourceToken> {
     let limit = data_start.unwrap_or(source.len());
     let mut tokens = Vec::new();
     let mut byte = 0;
@@ -669,19 +664,20 @@ fn lex(source: &str, data_start: Option<usize>) -> Vec<SourceToken> {
             let end = source[byte..]
                 .find('\n')
                 .map_or(limit, |offset| byte + offset);
-            push_token(source, &mut tokens, "tCOMMENT", start, end);
+            push_token(source, positions, &mut tokens, "tCOMMENT", start, end);
             byte = end;
             continue;
         }
         if character == '\n' {
             byte += 1;
-            push_token(source, &mut tokens, "tNL", start, byte);
+            push_token(source, positions, &mut tokens, "tNL", start, byte);
             continue;
         }
         if matches!(character, '\'' | '"' | '`') {
             byte = scan_quoted(source, byte, limit, character);
             push_token(
                 source,
+                positions,
                 &mut tokens,
                 if character == '`' {
                     "tXSTRING"
@@ -707,6 +703,7 @@ fn lex(source: &str, data_start: Option<usize>) -> Vec<SourceToken> {
             let has_prefix = !source[line_start..start].trim().is_empty();
             push_token(
                 source,
+                positions,
                 &mut tokens,
                 keyword_kind(text, has_prefix),
                 start,
@@ -740,6 +737,7 @@ fn lex(source: &str, data_start: Option<usize>) -> Vec<SourceToken> {
             }
             push_token(
                 source,
+                positions,
                 &mut tokens,
                 if source[start..byte].contains('.') {
                     "tFLOAT"
@@ -772,7 +770,7 @@ fn lex(source: &str, data_start: Option<usize>) -> Vec<SourceToken> {
                 "**" => "tPOW",
                 _ => "tOPERATOR",
             };
-            push_token(source, &mut tokens, kind, start, byte);
+            push_token(source, positions, &mut tokens, kind, start, byte);
             continue;
         }
 
@@ -827,7 +825,7 @@ fn lex(source: &str, data_start: Option<usize>) -> Vec<SourceToken> {
             '&' => "tAMPER",
             _ => "tCHAR",
         };
-        push_token(source, &mut tokens, kind, start, byte);
+        push_token(source, positions, &mut tokens, kind, start, byte);
     }
     tokens
 }
@@ -879,15 +877,15 @@ fn keyword_kind(text: &str, has_prefix: bool) -> &'static str {
 }
 fn push_token(
     source: &str,
+    positions: &SourcePositionIndex,
     tokens: &mut Vec<SourceToken>,
     kind: &'static str,
     start: usize,
     end: usize,
 ) {
-    let range = byte_range_to_character(source, start..end);
-    let line = line_for_character_position(source, range.start);
-    let line_start = source[..start].rfind('\n').map_or(0, |index| index + 1);
-    let column = source[line_start..start].chars().count();
+    let range = positions.character_range(start..end);
+    let line = positions.line_for_byte(start);
+    let column = positions.column_for_byte(start);
     tokens.push(SourceToken {
         kind,
         text: source[start..end].to_owned(),

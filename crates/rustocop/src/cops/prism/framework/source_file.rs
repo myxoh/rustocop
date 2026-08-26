@@ -241,6 +241,11 @@ impl<'source> SourceFile<'source> {
     /// Source ranges occupied by literals whose punctuation must not be
     /// mistaken for Ruby syntax by source-oriented layout cops.
     pub(super) fn literal_ranges(self) -> Vec<Range<usize>> {
+        let parsed = parse(self.source.as_bytes());
+        Self::literal_ranges_from(&parsed)
+    }
+
+    pub(super) fn literal_ranges_from(parsed: &ruby_prism::ParseResult<'_>) -> Vec<Range<usize>> {
         struct LiteralRanges(Vec<Range<usize>>);
 
         impl LiteralRanges {
@@ -356,13 +361,17 @@ impl<'source> SourceFile<'source> {
             }
         }
 
-        let parsed = parse(self.source.as_bytes());
         let mut ranges = LiteralRanges(Vec::new());
         ranges.visit(&parsed.node());
         ranges.0
     }
 
     pub(super) fn heredoc_ranges(self) -> Vec<Range<usize>> {
+        let parsed = parse(self.source.as_bytes());
+        Self::heredoc_ranges_from(&parsed)
+    }
+
+    pub(super) fn heredoc_ranges_from(parsed: &ruby_prism::ParseResult<'_>) -> Vec<Range<usize>> {
         struct HeredocRanges(Vec<Range<usize>>);
 
         impl HeredocRanges {
@@ -389,14 +398,18 @@ impl<'source> SourceFile<'source> {
             }
         }
 
-        let parsed = parse(self.source.as_bytes());
         let mut ranges = HeredocRanges(Vec::new());
         ranges.visit(&parsed.node());
         ranges.0
     }
 
     pub(super) fn comment_ranges(self) -> Vec<Range<usize>> {
-        parse(self.source.as_bytes())
+        let parsed = parse(self.source.as_bytes());
+        Self::comment_ranges_from(&parsed)
+    }
+
+    pub(super) fn comment_ranges_from(parsed: &ruby_prism::ParseResult<'_>) -> Vec<Range<usize>> {
+        parsed
             .comments()
             .map(|comment| {
                 let location = comment.location();

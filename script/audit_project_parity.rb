@@ -180,13 +180,44 @@ def capture_native(native, jobs, common, corpus, cops, batch_size, cache:, cache
   Rustocop::BatchedNativeReports.capture(cops:, batch_size:, run: lambda do |batch|
     metadata = cache_metadata.merge("cops" => batch)
     cached = cache&.fetch(metadata)
-    next cached if cached
+    if cached
+      unless cached["encoded_offenses"]
+        cached = compact_native_result(cached, corpus:, cops: batch)
+        cache.store(metadata, cached) if cached["encoded_offenses"]
+      end
+      next cached
+    end
 
     result = capture(native_command(native, jobs, common, corpus, batch))
     next result unless cache && accepted?(result)
 
+    result = compact_native_result(result, corpus:, cops: batch)
+    next result unless result["encoded_offenses"]
+
     cache.store(metadata, result)
   end)
+end
+
+def native_cache_metadata(project, native_sha256:, config_sha256:)
+  {
+    "native_sha256" => native_sha256,
+    "config_sha256" => config_sha256,
+    "project" => project.slice("name", "repository", "revision"),
+    "files" => project.fetch("files")
+  }
+end
+
+def compact_native_result(result, corpus:, cops:)
+  report = result["report"] || JSON.parse(result.fetch("stdout"))
+  compact = result.dup
+  compact.delete("report")
+  compact["stdout"] = "captured Rustocop report"
+  compact["encoded_offenses"] = Rustocop::DiagnosticSignatures.encode_report(
+    report, cops:, corpus:, root: ROOT
+  )
+  compact
+rescue JSON::ParserError, KeyError
+  result
 end
 
 def cop_inspection_error?(result)
@@ -330,6 +361,18 @@ native_sha256 = Digest::SHA256.file(options[:native]).hexdigest
 native_cache = if options[:native_cache]
                  Rustocop::NativeResultCache.new(root: options[:native_cache_root])
                end
+if native_cache
+  batches = cops.each_slice(options[:native_batch_size]).to_a
+  cache_entries = projects.product(batches).map do |project, batch|
+    native_cache_metadata(project, native_sha256:, config_sha256:).merge("cops" => batch)
+  end
+  cache_hits = cache_entries.count { |metadata| native_cache.cached?(metadata) }
+  cache_state = cache_hits == cache_entries.length ? "warm" : "cold"
+  warn "Native cache preflight: #{cache_state} (#{cache_hits}/#{cache_entries.length} entries present)"
+  if cache_state == "cold" && cops.length > 1
+    warn "Cold full-corpus execution runs every selected cop; use --cops Department/Name while developing a focused change."
+  end
+end
 reference_source = options[:refresh_rubocop_reference] ? "refreshed" : "cached"
 if options[:refresh_rubocop_reference]
   rubocop_survivors = cops.dup
@@ -436,12 +479,7 @@ loop do
   failure = nil
   projects.each do |project|
     warn "Rust crash gate: #{project.fetch('name')} (#{rust_survivors.length} cops)"
-    cache_metadata = {
-      "native_sha256" => native_sha256,
-      "config_sha256" => config_sha256,
-      "project" => project.slice("name", "repository", "revision"),
-      "files" => project.fetch("files")
-    }
+    cache_metadata = native_cache_metadata(project, native_sha256:, config_sha256:)
     result = capture_native(
       options[:native], options[:jobs], common, project.fetch("corpus"), rust_survivors,
       options[:native_batch_size], cache: native_cache, cache_metadata:
@@ -458,12 +496,7 @@ loop do
   end
 
   project, result = failure
-  cache_metadata = {
-    "native_sha256" => native_sha256,
-    "config_sha256" => config_sha256,
-    "project" => project.slice("name", "repository", "revision"),
-    "files" => project.fetch("files")
-  }
+  cache_metadata = native_cache_metadata(project, native_sha256:, config_sha256:)
   crash_candidates = result.fetch("failed_cops", rust_survivors)
   culprit = isolate_crash(crash_candidates) do |subset|
     probe = capture_native(
@@ -493,9 +526,15 @@ project_results = projects.to_h do |project|
   rust_result = rust_results.fetch(project.fetch("name"))
   ruby_result = rubocop_reference.fetch("projects").fetch(project.fetch("name"))
 
-  rust_offenses = Rustocop::DiagnosticSignatures.hashes_from_report(
-    rust_result.fetch("report"), corpus:, root: ROOT
-  )
+  rust_offenses = if rust_result["encoded_offenses"]
+                    Rustocop::DiagnosticSignatures.hashes_from_encoded(
+                      rust_result.fetch("encoded_offenses")
+                    )
+                  else
+                    Rustocop::DiagnosticSignatures.hashes_from_report(
+                      rust_result.fetch("report"), corpus:, root: ROOT
+                    )
+                  end
   ruby_offenses = decode_offenses(ruby_result, rubocop_reference.fetch("cops")).select do |offense|
     survivor_lookup.key?(offense.fetch("cop"))
   end

@@ -33,15 +33,55 @@ struct NodeData {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct Ast {
     source: String,
+    char_byte_offsets: Vec<usize>,
+    line_starts: Vec<usize>,
     nodes: Vec<NodeData>,
 }
 
 impl Ast {
     pub(crate) fn new(source: impl Into<String>) -> Self {
+        let source = source.into();
+        let mut char_byte_offsets = Vec::with_capacity(source.len() + 1);
+        let mut line_starts = vec![0];
+        for (character_offset, (byte_offset, character)) in source.char_indices().enumerate() {
+            char_byte_offsets.push(byte_offset);
+            if character == '\n' {
+                line_starts.push(character_offset + 1);
+            }
+        }
+        char_byte_offsets.push(source.len());
         Self {
-            source: source.into(),
+            source,
+            char_byte_offsets,
+            line_starts,
             nodes: Vec::new(),
         }
+    }
+
+    fn char_slice(&self, range: Range<usize>) -> Option<&str> {
+        let start = self
+            .char_byte_offsets
+            .get(range.start)
+            .copied()
+            .unwrap_or(self.source.len());
+        let end = self
+            .char_byte_offsets
+            .get(range.end)
+            .copied()
+            .unwrap_or(self.source.len());
+        self.source.get(start..end)
+    }
+
+    fn line_at(&self, position: usize) -> usize {
+        self.line_starts.partition_point(|start| *start <= position)
+    }
+
+    fn column_at(&self, position: usize) -> usize {
+        let line = self
+            .line_starts
+            .partition_point(|start| *start <= position)
+            .saturating_sub(1);
+        position.saturating_sub(self.line_starts[line])
     }
 
     pub(crate) fn add_node(
@@ -215,7 +255,7 @@ impl<'ast> NodeRef<'ast> {
     }
     pub(crate) fn source(self) -> Option<&'ast str> {
         let range = self.data().source_range.as_ref()?;
-        char_slice(&self.ast.source, range.clone())
+        self.ast.char_slice(range.clone())
     }
     pub(crate) fn source_length(self) -> usize {
         self.data()
@@ -230,12 +270,13 @@ impl<'ast> NodeRef<'ast> {
         self.data()
             .source_range
             .as_ref()
-            .map_or(1, |range| line_at(&self.ast.source, range.start))
+            .map_or(1, |range| self.ast.line_at(range.start))
     }
     pub(crate) fn last_line(self) -> usize {
-        self.data().source_range.as_ref().map_or(1, |range| {
-            line_at(&self.ast.source, range.end.saturating_sub(1))
-        })
+        self.data()
+            .source_range
+            .as_ref()
+            .map_or(1, |range| self.ast.line_at(range.end.saturating_sub(1)))
     }
     pub(crate) fn line_count(self) -> usize {
         self.data()
@@ -247,21 +288,21 @@ impl<'ast> NodeRef<'ast> {
         self.data()
             .source_range
             .as_ref()
-            .map_or(0, |range| column_at(&self.ast.source, range.start))
+            .map_or(0, |range| self.ast.column_at(range.start))
     }
     pub(crate) fn last_column(self) -> usize {
         self.data()
             .source_range
             .as_ref()
-            .map_or(0, |range| column_at(&self.ast.source, range.end))
+            .map_or(0, |range| self.ast.column_at(range.end))
     }
     pub(crate) fn loc_column(self, name: &str) -> Option<usize> {
         self.loc(name)
-            .map(|(range, _)| column_at(&self.ast.source, range.start))
+            .map(|(range, _)| self.ast.column_at(range.start))
     }
     pub(crate) fn loc_last_column(self, name: &str) -> Option<usize> {
         self.loc(name)
-            .map(|(range, _)| column_at(&self.ast.source, range.end))
+            .map(|(range, _)| self.ast.column_at(range.end))
     }
     pub(crate) fn nonempty_line_count(self) -> usize {
         self.source().map_or(0, |source| {
@@ -281,8 +322,7 @@ impl<'ast> NodeRef<'ast> {
         if matches!(self.kind(), "block" | "numblock" | "itblock") {
             return self.loc("begin").zip(self.loc("end")).is_some_and(
                 |((opening, _), (closing, _))| {
-                    line_at(&self.ast.source, opening.start)
-                        == line_at(&self.ast.source, closing.start)
+                    self.ast.line_at(opening.start) == self.ast.line_at(closing.start)
                 },
             );
         }
@@ -848,31 +888,6 @@ fn node_value<'a>(ast: &'a Ast, value: &NodeValue) -> Option<NodeRef<'a>> {
     } else {
         None
     }
-}
-fn char_slice(source: &str, range: Range<usize>) -> Option<&str> {
-    let start = source
-        .char_indices()
-        .nth(range.start)
-        .map_or(source.len(), |(index, _)| index);
-    let end = source
-        .char_indices()
-        .nth(range.end)
-        .map_or(source.len(), |(index, _)| index);
-    source.get(start..end)
-}
-fn line_at(source: &str, position: usize) -> usize {
-    source
-        .chars()
-        .take(position)
-        .filter(|character| *character == '\n')
-        .count()
-        + 1
-}
-fn column_at(source: &str, position: usize) -> usize {
-    source.chars().take(position).fold(
-        0,
-        |column, character| if character == '\n' { 0 } else { column + 1 },
-    )
 }
 fn group_for_type(kind: &str) -> Option<&'static str> {
     Some(match kind {

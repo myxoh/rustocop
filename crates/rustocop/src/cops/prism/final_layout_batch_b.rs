@@ -3553,6 +3553,7 @@ fn report_hash_alignment(
 #[allow(clippy::cognitive_complexity, clippy::too_many_lines)]
 fn operator_spacing(context: &mut CopContext<'_, '_>) {
     let source = context.source().to_owned();
+    let parsed = ruby_prism::parse(source.as_bytes());
     let exponent_space = context
         .config_value("EnforcedStyleForExponentOperator")
         .is_some_and(|style| style == "space");
@@ -3576,7 +3577,7 @@ fn operator_spacing(context: &mut CopContext<'_, '_>) {
     // regexp arguments). RuboCop's previous scanner selected the narrowest
     // containing range. Keep that exact choice with a sweep-line heap instead of
     // testing every source byte against every literal.
-    let literal_ranges = context.source_file().literal_ranges();
+    let literal_ranges = SourceFile::literal_ranges_from(&parsed);
     let mut literal_events = literal_ranges
         .iter()
         .cloned()
@@ -3585,12 +3586,12 @@ fn operator_spacing(context: &mut CopContext<'_, '_>) {
         .collect::<Vec<_>>();
     literal_events.sort_by_key(|&(start, order, _)| (start, order));
     let mut active_literals = std::collections::BinaryHeap::new();
-    let mut comment_ranges = context.source_file().comment_ranges();
+    let mut comment_ranges = SourceFile::comment_ranges_from(&parsed);
     comment_ranges.sort_by_key(|range| range.start);
-    let unary_operator_offsets = unary_operator_offsets(&source);
-    let hash_pair_starts = hash_pair_starts(&source);
+    let unary_operator_offsets = unary_operator_offsets(&parsed.node());
+    let hash_pair_starts = hash_pair_starts(&parsed.node());
     let (structural_operator_offsets, ternary_operator_offsets) =
-        spacing_structural_operator_offsets(&source);
+        spacing_structural_operator_offsets(&source, &parsed);
     let mut literal_index = 0;
     let mut comment_index = 0;
 
@@ -3875,11 +3876,11 @@ fn operator_spacing(context: &mut CopContext<'_, '_>) {
 
 fn spacing_structural_operator_offsets(
     source: &str,
+    parsed: &ruby_prism::ParseResult<'_>,
 ) -> (
     std::collections::HashSet<usize>,
     std::collections::HashSet<usize>,
 ) {
-    let parsed = ruby_prism::parse(source.as_bytes());
     let (ast, root) = convert_rubocop_ast(source, &parsed.node());
     let Some(root) = root.map(|root| ast.node(root)) else {
         return Default::default();
@@ -3918,7 +3919,7 @@ fn spacing_structural_operator_offsets(
     (offsets, ternary_offsets)
 }
 
-fn unary_operator_offsets(source: &str) -> std::collections::HashSet<usize> {
+fn unary_operator_offsets(root: &Node<'_>) -> std::collections::HashSet<usize> {
     #[derive(Default)]
     struct UnaryOperators(std::collections::HashSet<usize>);
 
@@ -4054,13 +4055,12 @@ fn unary_operator_offsets(source: &str) -> std::collections::HashSet<usize> {
         }
     }
 
-    let parsed = ruby_prism::parse(source.as_bytes());
     let mut operators = UnaryOperators::default();
-    operators.visit(&parsed.node());
+    operators.visit(root);
     operators.0
 }
 
-fn hash_pair_starts(source: &str) -> std::collections::HashMap<usize, usize> {
+fn hash_pair_starts(root: &Node<'_>) -> std::collections::HashMap<usize, usize> {
     #[derive(Default)]
     struct HashPairs(std::collections::HashMap<usize, usize>);
 
@@ -4074,9 +4074,8 @@ fn hash_pair_starts(source: &str) -> std::collections::HashMap<usize, usize> {
         }
     }
 
-    let parsed = ruby_prism::parse(source.as_bytes());
     let mut pairs = HashPairs::default();
-    pairs.visit(&parsed.node());
+    pairs.visit(root);
     pairs.0
 }
 

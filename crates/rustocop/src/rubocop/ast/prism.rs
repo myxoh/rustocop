@@ -18,6 +18,7 @@ use ruby_prism::{
 };
 
 use super::node::core::{Ast, NodeId, NodeValue};
+use super::source_position::SourcePositionIndex;
 
 #[derive(Clone, Copy)]
 enum Frame {
@@ -31,6 +32,7 @@ pub(crate) fn convert(source: &str, root: &Node<'_>) -> (Ast, Option<NodeId>) {
     let mut converter = Converter {
         ast: Ast::new(source),
         source,
+        positions: SourcePositionIndex::new(source),
         frames: Vec::new(),
         roots: Vec::new(),
         pattern_depth: 0,
@@ -65,6 +67,7 @@ pub(crate) fn convert(source: &str, root: &Node<'_>) -> (Ast, Option<NodeId>) {
 struct Converter<'source> {
     ast: Ast,
     source: &'source str,
+    positions: SourcePositionIndex,
     frames: Vec<Frame>,
     roots: Vec<NodeId>,
     pattern_depth: usize,
@@ -91,7 +94,12 @@ impl Converter<'_> {
 
     fn location(&self, node: &Node<'_>) -> Range<usize> {
         let location = node.location();
-        byte_range_to_character(self.source, location.start_offset()..location.end_offset())
+        self.positions
+            .character_range(location.start_offset()..location.end_offset())
+    }
+
+    fn character_range(&self, range: Range<usize>) -> Range<usize> {
+        self.positions.character_range(range)
     }
 
     fn source_for(&self, node: &Node<'_>) -> &str {
@@ -116,10 +124,8 @@ impl Converter<'_> {
                 .add_node(block_kind, Vec::new(), Some(self.location(&node)));
             self.attach(outer);
             let operator = lambda.operator_loc();
-            let operator_range = byte_range_to_character(
-                self.source,
-                operator.start_offset()..operator.end_offset(),
-            );
+            let operator_range =
+                self.character_range(operator.start_offset()..operator.end_offset());
             let send = self.ast.add_node(
                 "send",
                 vec![NodeValue::Nil, NodeValue::Symbol("lambda".into())],
@@ -195,8 +201,7 @@ impl Converter<'_> {
                 {
                     send_end -= 1;
                 }
-                let send_range =
-                    byte_range_to_character(self.source, node.location().start_offset()..send_end);
+                let send_range = self.character_range(node.location().start_offset()..send_end);
                 let outer = self.ast.add_node(
                     implicit_block_kind(block.parameters()),
                     Vec::new(),
@@ -247,10 +252,7 @@ impl Converter<'_> {
                 let inner = self.ast.add_node(
                     "super",
                     Vec::new(),
-                    Some(byte_range_to_character(
-                        self.source,
-                        node.location().start_offset()..super_end,
-                    )),
+                    Some(self.character_range(node.location().start_offset()..super_end)),
                 );
                 self.ast.append_child(outer, NodeValue::Node(inner));
                 self.frames.push(Frame::Super {
@@ -430,7 +432,7 @@ impl Converter<'_> {
 
     fn set_location(&mut self, id: NodeId, name: &str, location: ruby_prism::Location<'_>) {
         let bytes = location.start_offset()..location.end_offset();
-        let range = byte_range_to_character(self.source, bytes.clone());
+        let range = self.character_range(bytes.clone());
         let text = self.source.get(bytes).unwrap_or("").to_owned();
         self.ast.set_location(id, name, range, &text);
     }
@@ -441,7 +443,7 @@ impl Converter<'_> {
         while end > start && matches!(self.source.as_bytes()[end - 1], b'\n' | b'\r') {
             end -= 1;
         }
-        let range = byte_range_to_character(self.source, start..end);
+        let range = self.character_range(start..end);
         let value = self.source.get(start..end).unwrap_or("").to_owned();
         self.ast.set_location(id, "heredoc_end", range, &value);
     }
@@ -455,7 +457,7 @@ impl Converter<'_> {
         let bytes = closing.start_offset()..closing.end_offset();
         let closing_source = self.source.get(bytes.clone()).unwrap_or("");
         let option_count = options.len();
-        let closing_range = byte_range_to_character(self.source, bytes);
+        let closing_range = self.character_range(bytes);
         let option_start = closing_range.end.saturating_sub(option_count);
         let regopt = self.ast.add_node(
             "regopt",
@@ -674,7 +676,7 @@ impl<'pr> Visit<'pr> for Converter<'_> {
         let mlhs = self.ast.add_node(
             "mlhs",
             Vec::new(),
-            Some(byte_range_to_character(self.source, lhs_start..lhs_end)),
+            Some(self.character_range(lhs_start..lhs_end)),
         );
         self.ast.append_child(masgn, NodeValue::Node(mlhs));
         self.multiple_assignment_depth += 1;
@@ -782,12 +784,8 @@ impl<'pr> Visit<'pr> for Converter<'_> {
             let source = self.source.get(bytes.clone()).unwrap_or("");
             if let Some(relative) = source.find(':') {
                 let operator_bytes = bytes.start + relative..bytes.start + relative + 1;
-                self.ast.set_location(
-                    pair,
-                    "operator",
-                    byte_range_to_character(self.source, operator_bytes),
-                    ":",
-                );
+                self.ast
+                    .set_location(pair, "operator", self.character_range(operator_bytes), ":");
             }
         }
     }
@@ -917,10 +915,8 @@ impl<'pr> Visit<'pr> for Converter<'_> {
         self.ast.clear_children(rescue);
         self.visit(&node.expression());
         let body_range = self.location(&node.rescue_expression());
-        let keyword_range = byte_range_to_character(
-            self.source,
-            node.keyword_loc().start_offset()..node.keyword_loc().end_offset(),
-        );
+        let keyword_range = self
+            .character_range(node.keyword_loc().start_offset()..node.keyword_loc().end_offset());
         let resbody = self.ast.add_node(
             "resbody",
             vec![NodeValue::Nil, NodeValue::Nil],
@@ -990,10 +986,7 @@ impl<'pr> Visit<'pr> for Converter<'_> {
             .unwrap_or_else(|| node.keyword_loc().end_offset());
         self.ast.set_source_range(
             resbody,
-            Some(byte_range_to_character(
-                self.source,
-                clause_start..clause_end,
-            )),
+            Some(self.character_range(clause_start..clause_end)),
         );
         self.frames.pop();
         if let Some(subsequent) = node.subsequent() {
@@ -1106,10 +1099,7 @@ impl<'pr> Visit<'pr> for Converter<'_> {
                 .map(|node| node.id())
             {
                 if let (Some(opening), Some(closing)) = (node.lparen_loc(), node.rparen_loc()) {
-                    let range = byte_range_to_character(
-                        self.source,
-                        opening.start_offset()..closing.end_offset(),
-                    );
+                    let range = self.character_range(opening.start_offset()..closing.end_offset());
                     self.ast.set_source_range(args, Some(range));
                     self.set_location(args, "begin", opening);
                     self.set_location(args, "end", closing);
@@ -1121,10 +1111,7 @@ impl<'pr> Visit<'pr> for Converter<'_> {
             if let (Some(opening), Some(closing)) = (node.lparen_loc(), node.rparen_loc()) {
                 self.ast.set_source_range(
                     args,
-                    Some(byte_range_to_character(
-                        self.source,
-                        opening.start_offset()..closing.end_offset(),
-                    )),
+                    Some(self.character_range(opening.start_offset()..closing.end_offset())),
                 );
                 self.set_location(args, "begin", opening);
                 self.set_location(args, "end", closing);
@@ -1281,8 +1268,7 @@ impl<'pr> Visit<'pr> for Converter<'_> {
                 let empty_else = self.ast.add_node(
                     "empty_else",
                     Vec::new(),
-                    Some(byte_range_to_character(
-                        self.source,
+                    Some(self.character_range(
                         otherwise.else_keyword_loc().start_offset()
                             ..otherwise.else_keyword_loc().end_offset(),
                     )),
@@ -1534,10 +1520,8 @@ impl<'pr> Visit<'pr> for Converter<'_> {
         };
         self.ast.clear_children(regexp);
         let content_location = node.content_loc();
-        let content_range = byte_range_to_character(
-            self.source,
-            content_location.start_offset()..content_location.end_offset(),
-        );
+        let content_range =
+            self.character_range(content_location.start_offset()..content_location.end_offset());
         let content = String::from_utf8_lossy(node.unescaped()).into_owned();
         let string =
             self.ast
@@ -1568,10 +1552,7 @@ impl<'pr> Visit<'pr> for Converter<'_> {
             if let Some(opening) = opening {
                 self.ast.set_source_range(
                     string,
-                    Some(byte_range_to_character(
-                        self.source,
-                        opening.start_offset()..opening.end_offset(),
-                    )),
+                    Some(self.character_range(opening.start_offset()..opening.end_offset())),
                 );
             }
         } else {
@@ -1601,10 +1582,7 @@ impl<'pr> Visit<'pr> for Converter<'_> {
             self.set_heredoc_end(string, node.closing_loc());
             self.ast.set_source_range(
                 string,
-                Some(byte_range_to_character(
-                    self.source,
-                    opening.start_offset()..opening.end_offset(),
-                )),
+                Some(self.character_range(opening.start_offset()..opening.end_offset())),
             );
         } else {
             self.set_location(string, "begin", opening);
@@ -1656,10 +1634,7 @@ impl<'pr> Visit<'pr> for Converter<'_> {
             if let Some(opening) = node.opening_loc() {
                 self.ast.set_source_range(
                     string,
-                    Some(byte_range_to_character(
-                        self.source,
-                        opening.start_offset()..opening.end_offset(),
-                    )),
+                    Some(self.character_range(opening.start_offset()..opening.end_offset())),
                 );
             }
         }
@@ -1730,7 +1705,7 @@ impl<'pr> Visit<'pr> for Converter<'_> {
         self.ast.set_location(
             super_node,
             "keyword",
-            byte_range_to_character(self.source, start..start + "super".len()),
+            self.character_range(start..start + "super".len()),
             "super",
         );
     }
@@ -1760,10 +1735,8 @@ impl<'pr> Visit<'pr> for Converter<'_> {
         };
         self.ast.clear_children(string);
         let content_location = node.content_loc();
-        let content_range = byte_range_to_character(
-            self.source,
-            content_location.start_offset()..content_location.end_offset(),
-        );
+        let content_range =
+            self.character_range(content_location.start_offset()..content_location.end_offset());
         let content = self.ast.add_node(
             "str",
             vec![NodeValue::String(
@@ -1782,10 +1755,7 @@ impl<'pr> Visit<'pr> for Converter<'_> {
             self.set_heredoc_end(string, node.closing_loc());
             self.ast.set_source_range(
                 string,
-                Some(byte_range_to_character(
-                    self.source,
-                    opening.start_offset()..opening.end_offset(),
-                )),
+                Some(self.character_range(opening.start_offset()..opening.end_offset())),
             );
         } else {
             self.set_location(string, "begin", opening);
@@ -2052,8 +2022,4 @@ fn unquote(source: &str) -> String {
         .and_then(|value| value.strip_suffix(['\'', '"', '`']))
         .unwrap_or(source)
         .to_owned()
-}
-
-fn byte_range_to_character(source: &str, range: Range<usize>) -> Range<usize> {
-    source[..range.start].chars().count()..source[..range.end].chars().count()
 }

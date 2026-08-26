@@ -6,6 +6,7 @@ pub(crate) mod node_pattern;
 pub(crate) mod prism;
 pub(crate) mod processed_source;
 pub(crate) mod source;
+mod source_position;
 pub(crate) mod token;
 pub(crate) mod traversal;
 

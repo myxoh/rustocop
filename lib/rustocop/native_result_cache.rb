@@ -6,10 +6,14 @@ require_relative "artifact_store"
 
 module Rustocop
   class NativeResultCache
-    FORMAT_VERSION = 1
+    FORMAT_VERSION = 2
 
     def initialize(root:)
       @root = root
+    end
+
+    def cached?(metadata)
+      File.file?(path_for(metadata))
     end
 
     def fetch(metadata)
@@ -18,25 +22,25 @@ module Rustocop
 
       started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
       payload = ArtifactStore.read_gzip_json(path, label: "native parity cache")
-      return unless payload["format_version"] == FORMAT_VERSION && payload["metadata"] == metadata
+      return unless [1, FORMAT_VERSION].include?(payload["format_version"]) && payload["metadata"] == metadata
 
-      {
+      result = {
         "stdout" => "cached Rustocop report",
         "stderr" => payload.fetch("stderr"),
         "exitstatus" => payload.fetch("exitstatus"),
         "seconds" => Process.clock_gettime(Process::CLOCK_MONOTONIC) - started,
-        "report" => payload.fetch("report"),
         "cache_hit" => true
       }
+      if payload["format_version"] == FORMAT_VERSION
+        result.merge("encoded_offenses" => payload.fetch("encoded_offenses"))
+      else
+        result.merge("report" => payload.fetch("report"))
+      end
     rescue ArtifactStore::Error, KeyError
       nil
     end
 
     def store(metadata, result)
-      report = result["report"] || JSON.parse(result.fetch("stdout"))
-      compact = report.merge(
-        "files" => report.fetch("files").reject { |file| file.fetch("offenses").empty? }
-      )
       ArtifactStore.write_gzip_json(
         path_for(metadata),
         {
@@ -45,11 +49,11 @@ module Rustocop
           "stderr" => result.fetch("stderr"),
           "exitstatus" => result.fetch("exitstatus"),
           "compute_seconds" => result.fetch("seconds"),
-          "report" => compact
+          "encoded_offenses" => result.fetch("encoded_offenses")
         },
         compression: Zlib::BEST_SPEED
       )
-      result.merge("report" => report, "cache_hit" => false)
+      result.merge("cache_hit" => false)
     rescue JSON::ParserError, KeyError
       result.merge("cache_hit" => false)
     end

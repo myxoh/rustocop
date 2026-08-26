@@ -130,7 +130,9 @@ the checked-in compressed RuboCop reference. Rustocop preserves the complete
 selected cop set in one process by default so selection-sensitive behavior
 matches the reference. Results are cached under `tmp/project-parity/native-cache/` using
 the native binary, configuration, pinned project revision, corpus file count,
-and exact cop selection as the cache key. Alongside the concise JSON report,
+and exact cop selection as the cache key. Cache payloads contain dictionary-coded
+diagnostic signatures rather than verbose formatter reports; version-1 entries
+are migrated transparently when read. Alongside the concise JSON report,
 it writes a `.mismatches.json.gz` sidecar containing every distinct unmatched
 signature, its multiplicity, project revision, and source-file digest. The
 normal command reuses the complete cached 50-project reference and runs only
@@ -143,6 +145,14 @@ bundle exec ruby script/audit_project_parity.rb \
   --report tmp/project-parity/all-cops-current.json \
   --markdown tmp/project-parity/all-cops-current.md
 ```
+
+On the audit machine on 2026-08-26, the exact default command above took 16.0
+seconds with 50/50 compact-cache hits. Migrating the old verbose entries took
+33.9 seconds. A binary-changing cold run remains intentionally distinct: the
+measured 606-cop audit took 792.5 seconds because it executed every selected cop
+over all 85,471 files. The runner prints a cache preflight before project work,
+so this expensive state is visible immediately. A focused two-cop cold audit
+completed in 40 seconds and matched all 50 projects exactly.
 
 Use `--no-native-cache` when measuring cold native execution. Use
 `--native-cache-root PATH` to isolate a benchmark cache. Reports record the

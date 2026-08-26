@@ -60,6 +60,29 @@ RSpec.describe Rustocop::BatchedNativeReports do
     expect(result.fetch("exitstatus")).to eq(1)
   end
 
+  it "keeps compact diagnostic batches compact" do
+    result = described_class.capture(cops: %w[A B], batch_size: 1, run: lambda do |batch|
+      {
+        "stdout" => "captured Rustocop report",
+        "stderr" => "",
+        "exitstatus" => 1,
+        "seconds" => 0.25,
+        "cache_hit" => true,
+        "encoded_offenses" => {
+          "paths" => ["a.rb"],
+          "cops" => batch,
+          "messages" => ["Example"],
+          "offenses" => [[0, 0, "convention", 0, 1, 1, 1, 2]]
+        }
+      }
+    end)
+
+    expect(result.fetch("encoded_offenses").length).to eq(2)
+    expect(result.fetch("cache_hits")).to eq(2)
+    expect(result).not_to have_key("report")
+    expect(result.fetch("exitstatus")).to eq(1)
+  end
+
   it "returns the failing batch so crash isolation stays bounded" do
     result = described_class.capture(cops: %w[A B C], batch_size: 2, run: lambda do |batch|
       next successful_result(report([], offense_count: 0)) if batch == %w[A B]
