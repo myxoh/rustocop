@@ -87,6 +87,10 @@ impl<'context, 'pr> CopContext<'context, 'pr> {
         self.reporter.source_encoding()
     }
 
+    pub(super) fn cop_enabled(&self, cop_name: &str) -> bool {
+        self.reporter.cop_enabled(cop_name)
+    }
+
     pub(super) fn autocorrect_enabled(&self) -> bool {
         self.reporter.autocorrect_enabled()
     }
@@ -129,6 +133,10 @@ impl<'context, 'pr> CopContext<'context, 'pr> {
 
     pub(super) fn config_contains(&self, key: &str) -> bool {
         self.reporter.config_contains(key)
+    }
+
+    pub(super) fn config_explicit(&self, key: &str) -> bool {
+        self.reporter.config_explicit(key)
     }
 
     pub(super) fn config_map(

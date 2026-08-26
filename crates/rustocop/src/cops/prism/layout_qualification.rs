@@ -2,169 +2,162 @@ use super::*;
 
 define_cops! {
     ArrayAlignment => "Layout/ArrayAlignment" => any_node(array_alignment),
-    MultilineAssignmentLayout => "Layout/MultilineAssignmentLayout" => any_node(multiline_assignment_layout),
+    MultilineAssignmentLayout => "Layout/MultilineAssignmentLayout" => source(multiline_assignment_layout),
     EndAlignment => "Layout/EndAlignment" => any_node(end_alignment),
     ExtraSpacing => "Layout/ExtraSpacing" => source(extra_spacing),
     FirstHashElementIndentation => "Layout/FirstHashElementIndentation" => node(as_hash_node, first_hash_element_indentation),
 }
 
-#[allow(clippy::cognitive_complexity, clippy::too_many_lines)]
-fn multiline_assignment_layout(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
-    let value = if let Some(write) = node.as_local_variable_write_node() {
-        Some(write.value())
-    } else if let Some(write) = node.as_instance_variable_write_node() {
-        Some(write.value())
-    } else if let Some(write) = node.as_class_variable_write_node() {
-        Some(write.value())
-    } else if let Some(write) = node.as_global_variable_write_node() {
-        Some(write.value())
-    } else if let Some(write) = node.as_constant_write_node() {
-        Some(write.value())
-    } else if let Some(write) = node.as_constant_path_write_node() {
-        Some(write.value())
-    } else if let Some(write) = node.as_multi_write_node() {
-        Some(write.value())
-    } else if let Some(write) = node.as_local_variable_or_write_node() {
-        Some(write.value())
-    } else if let Some(write) = node.as_local_variable_and_write_node() {
-        Some(write.value())
-    } else if let Some(write) = node.as_instance_variable_or_write_node() {
-        Some(write.value())
-    } else if let Some(write) = node.as_instance_variable_and_write_node() {
-        Some(write.value())
-    } else if let Some(write) = node.as_class_variable_or_write_node() {
-        Some(write.value())
-    } else if let Some(write) = node.as_class_variable_and_write_node() {
-        Some(write.value())
-    } else if let Some(write) = node.as_global_variable_or_write_node() {
-        Some(write.value())
-    } else if let Some(write) = node.as_global_variable_and_write_node() {
-        Some(write.value())
-    } else if let Some(write) = node.as_constant_or_write_node() {
-        Some(write.value())
-    } else if let Some(write) = node.as_constant_and_write_node() {
-        Some(write.value())
-    } else if let Some(write) = node.as_constant_path_or_write_node() {
-        Some(write.value())
-    } else if let Some(write) = node.as_constant_path_and_write_node() {
-        Some(write.value())
-    } else if let Some(write) = node.as_index_or_write_node() {
-        Some(write.value())
-    } else if let Some(write) = node.as_index_and_write_node() {
-        Some(write.value())
-    } else if let Some(write) = node.as_call_or_write_node() {
-        Some(write.value())
-    } else if let Some(write) = node.as_call_and_write_node() {
-        Some(write.value())
-    } else if let Some(write) = node.as_local_variable_operator_write_node() {
-        Some(write.value())
-    } else if let Some(write) = node.as_instance_variable_operator_write_node() {
-        Some(write.value())
-    } else if let Some(write) = node.as_class_variable_operator_write_node() {
-        Some(write.value())
-    } else if let Some(write) = node.as_global_variable_operator_write_node() {
-        Some(write.value())
-    } else if let Some(write) = node.as_constant_operator_write_node() {
-        Some(write.value())
-    } else if let Some(write) = node.as_constant_path_operator_write_node() {
-        Some(write.value())
-    } else if let Some(write) = node.as_index_operator_write_node() {
-        Some(write.value())
-    } else if let Some(write) = node.as_call_operator_write_node() {
-        Some(write.value())
-    } else if let Some(call) = node.as_call_node() {
-        let name = call_name(&call);
-        if !name.ends_with(b"=") {
-            return;
+fn multiline_assignment_layout(context: &mut CopContext<'_, '_>) {
+    use crate::rubocop::ast::prism::convert as convert_rubocop_ast;
+    use crate::rubocop::cop::mixin::check_assignment::extract_rhs;
+
+    let source = context.source().to_string();
+    let supported = context.config_values("SupportedTypes").to_vec();
+    let style = context.policy().enforced_style("new_line").to_string();
+    let parsed = ruby_prism::parse(source.as_bytes());
+    let (ast, root) = convert_rubocop_ast(&source, &parsed.node());
+    let Some(root) = root.map(|root| ast.node(root)) else {
+        return;
+    };
+    let mut corrections = Vec::new();
+
+    for assignment in root.each_node(&[
+        "lvasgn", "ivasgn", "cvasgn", "gvasgn", "casgn", "masgn", "op_asgn", "or_asgn",
+        "and_asgn", "send",
+    ]) {
+        let Some(rhs) = extract_rhs(assignment) else {
+            continue;
+        };
+        if assignment.kind() == "send"
+            && !assignment.method_name().is_some_and(|name| {
+                name.ends_with('=')
+                    && !matches!(name, "==" | "===" | "!=" | "=~" | "!~" | "<=" | ">=")
+            })
+        {
+            continue;
         }
-        call.arguments()
-            .and_then(|arguments| arguments.arguments().last())
-    } else {
-        None
-    };
-    let Some(value) = value else {
-        return;
-    };
-    let file = context.source_file();
-    let supported = context.config_values("SupportedTypes");
-    let kind = if value.as_if_node().is_some() || value.as_unless_node().is_some() {
-        "if"
-    } else if value.as_array_node().is_some() {
-        "array"
-    } else if value.as_lambda_node().is_some()
-        || value
-            .as_super_node()
-            .is_some_and(|call| call.block().and_then(|block| block.as_block_node()).is_some())
-        || value.as_forwarding_super_node().is_some_and(|call| {
-            call.block().is_some()
-        })
-        || value.as_call_node().is_some_and(|call| {
-            call.block()
-                .and_then(|block| block.as_block_node())
-                .is_some()
-                && !call
-                    .receiver()
-                    .and_then(|receiver| receiver.as_call_node())
-                    .and_then(|receiver| receiver.block())
-                    .and_then(|block| block.as_block_node())
-                    .is_some_and(|block| {
-                        file.same_line(
-                            block.opening_loc().start_offset(),
-                            block.closing_loc().start_offset(),
-                        )
-                    })
-        })
-    {
-        "block"
-    } else if value.as_case_node().is_some() {
-        "case"
-    } else if value.as_class_node().is_some() {
-        "class"
-    } else if value.as_module_node().is_some() {
-        "module"
-    } else if value.as_begin_node().is_some() {
-        "kwbegin"
-    } else {
-        return;
-    };
-    if !supported.iter().any(|supported| supported == kind) {
-        return;
+        let Some(assignment_chars) = assignment.source_range() else {
+            continue;
+        };
+        let Some(rhs_chars) = rhs.source_range() else {
+            continue;
+        };
+        let Some(operator_chars) = multiline_assignment_operator(
+            &source,
+            assignment_chars.clone(),
+            rhs_chars.clone(),
+            assignment.loc("operator").map(|(range, _)| range.clone()),
+        ) else {
+            continue;
+        };
+        let operator_source = source
+            .chars()
+            .skip(operator_chars.start)
+            .take(operator_chars.end - operator_chars.start)
+            .collect::<String>();
+        if assignment.kind() == "send" && operator_source != "=" {
+            continue;
+        }
+
+        let block_family = matches!(rhs.kind(), "block" | "numblock" | "itblock");
+        let supported_rhs = if block_family {
+            supported.iter().any(|kind| kind == "block")
+        } else {
+            supported.iter().any(|kind| kind == rhs.kind())
+        };
+        if !supported_rhs {
+            continue;
+        }
+
+        let block_begins_on_assignment_line = rhs.loc("begin").is_some_and(|(begin, _)| {
+            multiline_assignment_line_at(&source, begin.start) == assignment.first_line()
+        });
+        if rhs.single_line() && (rhs.kind() != "block" || block_begins_on_assignment_line) {
+            continue;
+        }
+
+        let same_line =
+            multiline_assignment_line_at(&source, operator_chars.start) == rhs.first_line();
+        let (message, edit_chars, replacement) = if style == "new_line" && same_line {
+            (
+                "Right hand side of multi-line assignment is on the same line as the assignment operator `=`.",
+                operator_chars.end..operator_chars.end,
+                "\n",
+            )
+        } else if style == "same_line" && !same_line {
+            (
+                "Right hand side of multi-line assignment is not on the same line as the assignment operator `=`.",
+                operator_chars.end..rhs_chars.start,
+                " ",
+            )
+        } else {
+            continue;
+        };
+        corrections.push((
+            message,
+            multiline_assignment_character_range_to_byte(&source, assignment_chars),
+            multiline_assignment_character_range_to_byte(&source, edit_chars),
+            replacement,
+        ));
     }
-    let location = node.location();
-    let value_location = value.location();
-    if file.same_line(location.start_offset(), location.end_offset()) {
-        return;
+
+    for (message, offense, edit, replacement) in corrections {
+        context.replace(message, offense, edit, replacement);
     }
-    let operator = context.source()[location.start_offset()..value_location.start_offset()]
-        .rfind('=')
-        .map(|relative| location.start_offset() + relative);
-    let Some(operator) = operator else {
-        return;
+}
+
+fn multiline_assignment_operator(
+    source: &str,
+    assignment: std::ops::Range<usize>,
+    rhs: std::ops::Range<usize>,
+    translated: Option<std::ops::Range<usize>>,
+) -> Option<std::ops::Range<usize>> {
+    if let Some(translated) = translated {
+        let translated_source = source
+            .chars()
+            .skip(translated.start)
+            .take(translated.end - translated.start)
+            .collect::<String>();
+        if translated_source.ends_with('=') {
+            return Some(translated);
+        }
+    }
+    let prefix = source
+        .chars()
+        .skip(assignment.start)
+        .take(rhs.start.saturating_sub(assignment.start))
+        .collect::<String>();
+    let equal_byte = prefix.rfind('=')?;
+    let equal = prefix[..equal_byte].chars().count();
+    let mut start = equal;
+    let characters = prefix.chars().collect::<Vec<_>>();
+    while start > 0 && "&|+-*/%^<>".contains(characters[start - 1]) {
+        start -= 1;
+    }
+    Some(assignment.start + start..assignment.start + equal + 1)
+}
+
+fn multiline_assignment_line_at(source: &str, character_offset: usize) -> usize {
+    source
+        .chars()
+        .take(character_offset)
+        .filter(|character| *character == '\n')
+        .count()
+        + 1
+}
+
+fn multiline_assignment_character_range_to_byte(
+    source: &str,
+    range: std::ops::Range<usize>,
+) -> std::ops::Range<usize> {
+    let byte_at = |offset| {
+        source
+            .char_indices()
+            .nth(offset)
+            .map_or(source.len(), |(byte, _)| byte)
     };
-    // Operator assignments such as `<<` are represented as calls as well but
-    // are outside this cop's contract.
-    if context.source().as_bytes().get(operator + 1) == Some(&b'=')
-        || operator > 0 && context.source().as_bytes().get(operator - 1) == Some(&b'=')
-    {
-        return;
-    }
-    let same_line = file.same_line(operator, value_location.start_offset());
-    let style = context.policy().enforced_style("new_line");
-    if style == "new_line" && same_line {
-        context.insert(
-            "Right hand side of multi-line assignment is on the same line as the assignment operator `=`.",
-            &location,
-            operator + 1,
-            "\n",
-        );
-    } else if style == "same_line" && !same_line {
-        context.replace(
-            "Right hand side of multi-line assignment is not on the same line as the assignment operator `=`.",
-            &location,
-            operator + 1..value_location.start_offset(),
-            " ",
-        );
-    }
+    byte_at(range.start)..byte_at(range.end)
 }
 
 fn array_alignment(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
@@ -487,22 +480,29 @@ fn extra_spacing(_context: &mut CopContext<'_, '_>) {
     if source.trim().is_empty() {
         return;
     }
-    let tokens = spacing_tokens(source);
+    let syntax_end = source
+        .match_indices("__END__")
+        .find(|(offset, _)| {
+            (*offset == 0 || source.as_bytes().get(offset - 1) == Some(&b'\n'))
+                && source.as_bytes().get(offset + 7).is_none_or(|byte| *byte == b'\n')
+        })
+        .map_or(source.len(), |(offset, _)| offset);
+    let tokens = spacing_tokens(&source[..syntax_end]);
     let lines = context
         .source_file()
         .lines()
         .map(|(_, line)| line)
         .collect::<Vec<_>>();
-    let delimiters = delimiter_ranges(source, &tokens);
+    let ignored_hash_ranges = multiline_hash_pair_ranges(source);
     let literal_ranges = context
         .source_file()
         .literal_ranges()
         .into_iter()
-        .filter(|range| source[range.clone()].contains('\n'))
         .collect::<Vec<_>>();
     let allow_alignment = context.config_bool("AllowForAlignment", true);
     let allow_trailing_comments = context.config_bool("AllowBeforeTrailingComments", false);
-    let force_equals = context.config_bool("ForceEqualSignAlignment", false);
+    let force_equals = context.config_explicit("ForceEqualSignAlignment")
+        && context.config_bool("ForceEqualSignAlignment", false);
     let assignment_tokens = assignment_token_indices(&tokens, &lines);
     let assignment_starts = assignment_tokens
         .iter()
@@ -510,6 +510,7 @@ fn extra_spacing(_context: &mut CopContext<'_, '_>) {
         .collect::<std::collections::HashSet<_>>();
 
     let mut aligned_comment_lines = std::collections::HashSet::new();
+    let mut full_line_comment_lines = std::collections::HashSet::new();
     let comments = context
         .source_file()
         .comment_ranges()
@@ -526,14 +527,21 @@ fn extra_spacing(_context: &mut CopContext<'_, '_>) {
             aligned_comment_lines.insert(pair[1].0);
         }
     }
+    for range in context.source_file().comment_ranges() {
+        let line = source[..range.start].bytes().filter(|byte| *byte == b'\n').count();
+        let line_start = source[..range.start].rfind('\n').map_or(0, |at| at + 1);
+        if source[line_start..range.start].trim().is_empty() {
+            full_line_comment_lines.insert(line);
+        }
+    }
 
     let mut ordinary_offenses = Vec::new();
     for pair in tokens.windows(2) {
         let (left, right) = (&pair[0], &pair[1]);
-        if literal_ranges.iter().any(|range| {
-            range.start <= left.start && left.start < range.end
-                || range.start <= right.start && right.start < range.end
-        }) {
+        if literal_ranges
+            .iter()
+            .any(|range| range.start <= left.end && right.start <= range.end)
+        {
             continue;
         }
         if left.line != right.line || right.start.saturating_sub(left.end) <= 1 {
@@ -548,42 +556,14 @@ fn extra_spacing(_context: &mut CopContext<'_, '_>) {
         if allow_trailing_comments && right.kind == SpacingTokenKind::Comment {
             continue;
         }
-        if ignored_hash_spacing(source, left, right, &delimiters) {
-            continue;
-        }
-        let definition_line = lines
-            .get(right.line)
-            .is_some_and(|line| line.trim_start().starts_with("def "));
-        let multiline_call_argument = left.text == ","
-            && lines
-                .get(right.line)
-                .is_some_and(|line| line.trim_end().ends_with(','));
-        if allow_alignment && multiline_call_argument {
-            continue;
-        }
-        let call_name = lines
-            .get(right.line)
-            .and_then(|line| line.split_whitespace().next());
-        let aligned_call_group = call_name.is_some_and(|call_name| {
-            [right.line.checked_sub(1), Some(right.line + 1)]
-                .into_iter()
-                .flatten()
-                .filter_map(|line| lines.get(line))
-                .any(|line| line.trim_start().starts_with(call_name))
-        });
-        if allow_alignment
-            && left.text == ","
-            && source.as_bytes().get(right.end) == Some(&b':')
-            && aligned_call_group
+        if ignored_hash_ranges
+            .iter()
+            .any(|range| range.start <= left.end && left.end < range.end)
         {
             continue;
         }
-        let keyword_argument = left.text == ","
-            && source.as_bytes().get(right.end) == Some(&b':');
         if allow_alignment
-            && !definition_line
-            && !keyword_argument
-            && aligned_spacing_token(source, &lines, &tokens, right, &aligned_comment_lines)
+            && aligned_spacing_token(&lines, &tokens, right, &full_line_comment_lines)
         {
             continue;
         }
@@ -779,131 +759,122 @@ fn percent_literal_end(source: &str, start: usize) -> Option<usize> {
     Some(bytes.len())
 }
 
-#[derive(Clone, Debug)]
-struct DelimiterRange {
-    start: usize,
-    end: usize,
-    multiline: bool,
-}
-
-fn delimiter_ranges(source: &str, tokens: &[SpacingToken]) -> Vec<DelimiterRange> {
-    let mut stack = Vec::<(String, usize)>::new();
-    let mut ranges = Vec::new();
-    for token in tokens {
-        if matches!(token.text.as_str(), "{" | "(" | "[") {
-            stack.push((token.text.clone(), token.start));
-            continue;
-        }
-        let expected = match token.text.as_str() {
-            "}" => "{",
-            ")" => "(",
-            "]" => "[",
-            _ => continue,
-        };
-        let Some(position) = stack.iter().rposition(|(opening, _)| opening == expected) else {
-            continue;
-        };
-        let (_, start) = stack.remove(position);
-        ranges.push(DelimiterRange {
-            start,
-            end: token.end,
-            multiline: source[start..token.end].contains('\n'),
-        });
+fn multiline_hash_pair_ranges(source: &str) -> Vec<std::ops::Range<usize>> {
+    struct PairRanges<'source> {
+        source: &'source str,
+        ranges: Vec<std::ops::Range<usize>>,
     }
-    ranges
-}
-
-fn ignored_hash_spacing(
-    _source: &str,
-    left: &SpacingToken,
-    right: &SpacingToken,
-    delimiters: &[DelimiterRange],
-) -> bool {
-    let beside_separator = matches!(left.text.as_str(), ":" | "=>") || right.text == "=>";
-    if !beside_separator {
-        return false;
-    }
-    delimiters
-        .iter()
-        .filter(|range| range.start < left.end && right.start < range.end)
-        .min_by_key(|range| range.end - range.start)
-        .is_some_and(|range| {
-            range.multiline && matches!(_source.as_bytes()[range.start], b'{' | b'(')
-        })
-}
-
-fn aligned_spacing_token(
-    source: &str,
-    lines: &[&str],
-    tokens: &[SpacingToken],
-    token: &SpacingToken,
-    aligned_comment_lines: &std::collections::HashSet<usize>,
-) -> bool {
-    if token.kind == SpacingTokenKind::Comment {
-        let actual_line = source[..token.start]
-            .bytes()
-            .filter(|byte| *byte == b'\n')
-            .count();
-        return aligned_comment_lines.contains(&actual_line);
-    }
-    let equality_like = equality_or_comparison(&token.text);
-    if equality_like
-        && tokens.iter().any(|candidate| {
-            candidate.line != token.line
-                && equality_or_comparison(&candidate.text)
-                && aligned_operators(token, candidate)
-        })
-    {
-        return true;
-    }
-    for (line_number, line) in lines.iter().enumerate() {
-        if line_number == token.line || line.trim_start().starts_with('#') {
-            continue;
-        }
-        let aligned_candidate = tokens.iter().find(|candidate| {
-            candidate.line == line_number && candidate.column == token.column
-        });
-        let same_start = aligned_candidate.is_some_and(|candidate| {
-            (token.kind != SpacingTokenKind::Operator || candidate.text == token.text)
-                && lines[candidate.line]
-                .get(candidate.column.saturating_sub(1)..candidate.column + 1)
-                .is_some_and(|pair| {
-                    candidate.column > 0
-                        && pair.as_bytes()[0].is_ascii_whitespace()
-                        && !pair.as_bytes()[1].is_ascii_whitespace()
-                }) || candidate.kind == SpacingTokenKind::Word
-                && token.kind == SpacingTokenKind::Word
-                && lines_have_aligned_operator(tokens, token.line, candidate.line)
-        });
-        let identical = line
-            .get(token.column..token.column + token.text.len())
-            .is_some_and(|value| value == token.text);
-        if same_start || identical {
-            return true;
-        }
-        if equality_like {
-            let other = tokens.iter().find(|candidate| {
-                candidate.line == line_number && equality_or_comparison(&candidate.text)
-            });
-            if other.is_some_and(|candidate| aligned_operators(token, candidate)) {
-                return true;
+    impl PairRanges<'_> {
+        fn collect(&mut self, elements: ruby_prism::NodeList<'_>, multiline: bool) {
+            if !multiline {
+                return;
+            }
+            for element in elements.iter() {
+                let Some(pair) = element.as_assoc_node() else { continue };
+                let key_end = pair.key().location().end_offset();
+                let value_start = pair.value().location().start_offset();
+                if key_end <= value_start {
+                    self.ranges.push(key_end..value_start);
+                }
             }
         }
     }
-    let _ = source;
-    false
+    impl<'pr> ruby_prism::Visit<'pr> for PairRanges<'_> {
+        fn visit_hash_node(&mut self, node: &ruby_prism::HashNode<'pr>) {
+            self.collect(
+                node.elements(),
+                self.source[node.location().start_offset()..node.location().end_offset()]
+                    .contains('\n'),
+            );
+            ruby_prism::visit_hash_node(self, node);
+        }
+        fn visit_keyword_hash_node(&mut self, node: &ruby_prism::KeywordHashNode<'pr>) {
+            self.collect(
+                node.elements(),
+                self.source[node.location().start_offset()..node.location().end_offset()]
+                    .contains('\n'),
+            );
+            ruby_prism::visit_keyword_hash_node(self, node);
+        }
+    }
+    let parsed = ruby_prism::parse(source.as_bytes());
+    let mut ranges = PairRanges {
+        source,
+        ranges: Vec::new(),
+    };
+    ranges.visit(&parsed.node());
+    ranges.ranges
 }
 
-fn lines_have_aligned_operator(tokens: &[SpacingToken], left_line: usize, right_line: usize) -> bool {
-    tokens
-        .iter()
-        .filter(|token| token.line == left_line && equality_or_comparison(&token.text))
-        .any(|left| {
-            tokens
-                .iter()
-                .filter(|token| token.line == right_line && equality_or_comparison(&token.text))
-                .any(|right| aligned_operators(left, right))
+fn aligned_spacing_token(
+    lines: &[&str],
+    tokens: &[SpacingToken],
+    token: &SpacingToken,
+    full_line_comment_lines: &std::collections::HashSet<usize>,
+) -> bool {
+    if token.kind == SpacingTokenKind::Comment {
+        return false;
+    }
+    let indentation = lines
+        .get(token.line)
+        .map_or(0, |line| line.len() - line.trim_start().len());
+    let preceding = (0..token.line).rev().collect::<Vec<_>>();
+    let following = (token.line + 1..lines.len()).collect::<Vec<_>>();
+    [None, Some(indentation)].into_iter().any(|required_indent| {
+        [&preceding, &following].into_iter().any(|line_numbers| {
+            aligned_spacing_in_lines(
+                lines,
+                tokens,
+                token,
+                line_numbers,
+                required_indent,
+                full_line_comment_lines,
+            )
         })
+    })
+}
+
+fn aligned_spacing_in_lines(
+    lines: &[&str],
+    tokens: &[SpacingToken],
+    token: &SpacingToken,
+    line_numbers: &[usize],
+    required_indent: Option<usize>,
+    full_line_comment_lines: &std::collections::HashSet<usize>,
+) -> bool {
+    for line_number in line_numbers {
+        if full_line_comment_lines.contains(line_number) {
+            continue;
+        }
+        let Some(line) = lines.get(*line_number) else { continue };
+        let Some(indentation) = line.find(|character: char| !character.is_whitespace()) else {
+            continue;
+        };
+        if required_indent.is_some_and(|required| required != indentation) {
+            continue;
+        }
+        let word_aligned = token.column > 0
+            && line
+                .get(token.column - 1..token.column + 1)
+                .is_some_and(|pair| {
+                    pair.as_bytes()[0].is_ascii_whitespace()
+                        && !pair.as_bytes()[1].is_ascii_whitespace()
+                })
+            || line
+                .get(token.column..token.column + token.text.len())
+                .is_some_and(|value| value == token.text);
+        let operator_aligned = equality_or_comparison(&token.text)
+            && tokens
+                .iter()
+                .find(|candidate| {
+                    candidate.line == *line_number && equality_or_comparison(&candidate.text)
+                })
+                .is_some_and(|candidate| aligned_operators(token, candidate));
+        // RuboCop intentionally decides on the nearest eligible line. It does
+        // not keep searching farther through the file after a non-match.
+        return word_aligned || operator_aligned;
+    }
+    false
 }
 
 fn equality_or_comparison(value: &str) -> bool {

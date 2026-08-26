@@ -1,4 +1,6 @@
 use super::*;
+use crate::rubocop::ast::node::core::NodeRef as RubocopNodeRef;
+use crate::rubocop::ast::prism::convert as convert_rubocop_ast;
 
 #[derive(Default)]
 struct WordArrayState {
@@ -382,149 +384,177 @@ fn bare_symbol(value: &str) -> bool {
 }
 
 fn fetch_env_var(context: &mut CopContext<'_, '_>) {
+    let source = context.source().to_string();
     let default_to_nil = context.config_bool("DefaultToNil", true);
     let allowed = context.config_values("AllowedVars").to_vec();
-    let mut guarded = Vec::<Vec<String>>::new();
-    let code_offsets = context
-        .source_file()
-        .code_offsets("ENV[")
-        .into_iter()
-        .collect::<std::collections::HashSet<_>>();
-    let literal_ranges = context.source_file().literal_ranges();
-    let comment_ranges = context.source_file().comment_ranges();
-    for (offset, line) in context.source_file().lines() {
-        let trimmed = line.trim_start();
-        if trimmed == "end" { guarded.pop(); }
-        let conditional = trimmed.starts_with("if ") || trimmed.starts_with("unless ");
-        let mut condition_keys = Vec::new();
-        if conditional {
-            condition_keys.extend(env_keys(line));
-            if let Some(argument) = line.split("ENV.key?(").nth(1).and_then(|tail| tail.split(')').next()) {
-                condition_keys.push(argument.to_string());
-            }
+    let parsed = ruby_prism::parse(source.as_bytes());
+    let (ast, root) = convert_rubocop_ast(&source, &parsed.node());
+    let Some(root) = root.map(|root| ast.node(root)) else {
+        return;
+    };
+
+    for node in root.each_node(&["send"]) {
+        if node.method_name() != Some("[]") {
+            continue;
         }
-        let modifier_keys = [" if ", " unless "]
-            .into_iter()
-            .filter_map(|keyword| {
-                line.rfind(keyword).and_then(|at| {
-                    (!line[..at].trim().is_empty()).then_some(&line[at + keyword.len()..])
-                })
-            })
-            .flat_map(env_keys)
-            .collect::<Vec<_>>();
-        let mut search = 0;
-        while let Some(relative) = line[search..].find("ENV[") {
-            let start = search + relative;
-            if start > 0
-                && (line.as_bytes()[start - 1].is_ascii_alphanumeric()
-                    || line.as_bytes()[start - 1] == b'_')
-            {
-                search = start + "ENV[".len();
-                continue;
-            }
-            let prefix = &line[..start];
-            let in_interpolation = prefix.rfind("#{").is_some_and(|opening| {
-                prefix.rfind('}').is_none_or(|closing| closing < opening)
-            });
-            let absolute_start = offset + start;
-            let in_literal = literal_ranges
-                .iter()
-                .any(|range| range.start <= absolute_start && absolute_start < range.end);
-            let in_comment = comment_ranges
-                .iter()
-                .any(|range| range.start <= absolute_start && absolute_start < range.end);
-            if in_comment
-                || (!code_offsets.contains(&absolute_start) && in_literal && !in_interpolation)
-            {
-                search = start + "ENV[".len();
-                continue;
-            }
-            let value_start = start + "ENV[".len();
-            let Some(close) = line[value_start..].find(']').map(|at| value_start + at) else { break };
-            let key = &line[value_start..close];
-            let bare_key = key.trim_matches(['\'', '"']);
-            let before = line[..start].trim_end().as_bytes().last().copied();
-            let after = line[close + 1..].trim_start();
-            let guarded_here = guarded.iter().any(|keys| keys.iter().any(|guarded| guarded == key));
-            let condition_prefix = if trimmed.starts_with("if ") {
-                line[..start]
-                    .trim_start()
-                    .strip_prefix("if ")
-                    .unwrap_or_default()
-            } else if trimmed.starts_with("unless ") {
-                line[..start]
-                    .trim_start()
-                    .strip_prefix("unless ")
-                    .unwrap_or_default()
-            } else {
-                ""
-            };
-            let directly_conditional = conditional
-                && (condition_prefix.trim().is_empty()
-                    || condition_prefix.trim_end().ends_with("||")
-                    || condition_prefix.trim_end().ends_with("&&")
-                    || condition_prefix
-                        .trim_end_matches('(')
-                        .trim_end()
-                        .ends_with('?'));
-            if allowed.iter().any(|allowed| allowed == bare_key)
-                || directly_conditional
-                || guarded_here
-                || modifier_keys.iter().any(|guarded| guarded == key)
-                || before == Some(b'!')
-                || after.starts_with(['.', '&'])
-                || after.starts_with('=')
-                    && !after.starts_with("=>")
-                    && !after.starts_with("==")
-                    && !after.starts_with("=~")
-                || after.starts_with("==")
-                || after.starts_with("!=")
-                || after.starts_with("||")
-                || after.starts_with("&&=")
-                || after.starts_with('?')
-            {
-                search = close + 1;
-                continue;
-            }
-            let default = if default_to_nil { ", nil" } else { "" };
-            let original = &line[start..close + 1];
-            context.replace(
-                format!("Use `ENV.fetch({key}{default})` instead of `{original}`."),
-                offset + start..offset + close + 1,
-                offset + start..offset + close + 1,
-                format!("ENV.fetch({key}{default})"),
-            );
-            search = close + 1;
+        let Some(receiver) = node.receiver() else {
+            continue;
+        };
+        if receiver.kind() != "const" || receiver.const_name().as_deref() != Some("ENV") {
+            continue;
         }
-        if conditional {
-            guarded.push(condition_keys);
+        let arguments = node.arguments();
+        let [name_node] = arguments.as_slice() else {
+            continue;
+        };
+        if name_node
+            .str_content()
+            .is_some_and(|name| allowed.iter().any(|allowed| allowed == name))
+            || fetch_env_allowable_use(node)
+        {
+            continue;
         }
+        let (Some(node_range), Some(name_range)) = (node.source_range(), name_node.source_range())
+        else {
+            continue;
+        };
+        let key = source
+            .chars()
+            .skip(name_range.start)
+            .take(name_range.end - name_range.start)
+            .collect::<String>();
+        let original = source
+            .chars()
+            .skip(node_range.start)
+            .take(node_range.end - node_range.start)
+            .collect::<String>();
+        let default = if default_to_nil { ", nil" } else { "" };
+        let byte_range = fetch_env_character_range_to_byte(&source, node_range);
+        context.replace(
+            format!("Use `ENV.fetch({key}{default})` instead of `{original}`."),
+            byte_range.clone(),
+            byte_range,
+            format!("ENV.fetch({key}{default})"),
+        );
     }
 }
 
-fn env_keys(line: &str) -> Vec<String> {
-    let mut keys = Vec::new();
-    let mut search = 0;
-    while let Some(relative) = line[search..].find("ENV[") {
-        let start = search + relative + "ENV[".len();
-        let Some(close) = line[start..].find(']').map(|at| start + at) else { break };
-        let after = line[close + 1..].trim_start();
-        let predicate_receiver = after
-            .strip_prefix("&.")
-            .or_else(|| after.strip_prefix('.'))
-            .is_some_and(|method| {
-                method
-                    .bytes()
-                    .take_while(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'_' | b'?' | b'!'))
-                    .last()
-                    == Some(b'?')
-            });
-        if !after.starts_with(['.', '&']) || predicate_receiver {
-            keys.push(line[start..close].to_string());
-        }
-        search = close + 1;
+fn fetch_env_allowable_use(node: RubocopNodeRef<'_>) -> bool {
+    fetch_env_used_as_flag(node)
+        || fetch_env_message_chained_with_dot(node)
+        || fetch_env_assigned(node)
+        || fetch_env_or_lhs(node)
+}
+
+fn fetch_env_used_as_flag(node: RubocopNodeRef<'_>) -> bool {
+    if node.root() {
+        return false;
     }
-    keys
+    if fetch_env_used_if_condition_in_body(node) {
+        return true;
+    }
+    node.parent().is_some_and(|parent| {
+        parent.kind() == "send" && (fetch_env_prefix_bang(parent, node) || parent.comparison_method())
+    })
+}
+
+fn fetch_env_prefix_bang(parent: RubocopNodeRef<'_>, node: RubocopNodeRef<'_>) -> bool {
+    parent.method_name() == Some("!")
+        && parent.receiver() == Some(node)
+        && parent.loc_is("selector", "!")
+}
+
+fn fetch_env_used_if_condition_in_body(node: RubocopNodeRef<'_>) -> bool {
+    let Some(condition) = node
+        .ancestors()
+        .into_iter()
+        .find(|ancestor| ancestor.kind() == "if")
+        .and_then(RubocopNodeRef::condition)
+    else {
+        return false;
+    };
+    if condition.kind() == "send"
+        && fetch_env_node_lists_equal(&condition.child_nodes(), &node.child_nodes())
+    {
+        return true;
+    }
+    fetch_env_used_in_condition(node, condition)
+}
+
+fn fetch_env_used_in_condition(
+    node: RubocopNodeRef<'_>,
+    condition: RubocopNodeRef<'_>,
+) -> bool {
+    if condition.kind() == "send" {
+        if condition.assignment_method() && fetch_env_partial_match(node, condition) {
+            return true;
+        }
+        if !condition.comparison_method() && !condition.predicate_method() {
+            return false;
+        }
+    }
+    condition
+        .child_nodes()
+        .into_iter()
+        .any(|child| child.structurally_equal(node))
+}
+
+fn fetch_env_partial_match(node: RubocopNodeRef<'_>, condition: RubocopNodeRef<'_>) -> bool {
+    let condition_children = condition.child_nodes();
+    node.child_nodes()
+        .into_iter()
+        .all(|child| {
+            condition_children
+                .iter()
+                .any(|candidate| candidate.structurally_equal(child))
+        })
+}
+
+fn fetch_env_node_lists_equal(left: &[RubocopNodeRef<'_>], right: &[RubocopNodeRef<'_>]) -> bool {
+    left.len() == right.len()
+        && left
+            .iter()
+            .zip(right)
+            .all(|(left, right)| left.structurally_equal(*right))
+}
+
+fn fetch_env_message_chained_with_dot(node: RubocopNodeRef<'_>) -> bool {
+    let Some(parent) = node.parent() else {
+        return false;
+    };
+    parent.call_type()
+        && parent.receiver() == Some(node)
+        && (parent.loc("dot").is_some() || parent.kind() == "csend")
+}
+
+fn fetch_env_assigned(node: RubocopNodeRef<'_>) -> bool {
+    node.parent().is_some_and(|parent| {
+        matches!(parent.kind(), "op_asgn" | "and_asgn" | "or_asgn" | "masgn")
+            && parent.lhs() == Some(node)
+    })
+}
+
+fn fetch_env_or_lhs(node: RubocopNodeRef<'_>) -> bool {
+    node.parent().is_some_and(|parent| {
+        parent.kind() == "or"
+            && (parent.lhs() == Some(node)
+                || parent.parent().is_some_and(|grandparent| grandparent.kind() == "or"))
+    })
+}
+
+fn fetch_env_character_range_to_byte(
+    source: &str,
+    range: std::ops::Range<usize>,
+) -> std::ops::Range<usize> {
+    let start = source
+        .char_indices()
+        .nth(range.start)
+        .map_or(source.len(), |(byte, _)| byte);
+    let end = source
+        .char_indices()
+        .nth(range.end)
+        .map_or(source.len(), |(byte, _)| byte);
+    start..end
 }
 
 fn string_concatenation(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {

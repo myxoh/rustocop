@@ -272,9 +272,20 @@ impl<'ast> NodeRef<'ast> {
         })
     }
     pub(crate) fn multiline(self) -> bool {
+        if matches!(self.kind(), "block" | "numblock" | "itblock") {
+            return !self.single_line();
+        }
         self.line_count() > 1
     }
     pub(crate) fn single_line(self) -> bool {
+        if matches!(self.kind(), "block" | "numblock" | "itblock") {
+            return self.loc("begin").zip(self.loc("end")).is_some_and(
+                |((opening, _), (closing, _))| {
+                    line_at(&self.ast.source, opening.start)
+                        == line_at(&self.ast.source, closing.start)
+                },
+            );
+        }
         self.line_count() == 1
     }
     pub(crate) fn type_is(self, types: &[&str]) -> bool {

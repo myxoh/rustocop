@@ -1,4 +1,6 @@
 use super::*;
+use crate::rubocop::ast::node::core::NodeRef as RubocopNodeRef;
+use crate::rubocop::ast::prism::convert as convert_rubocop_ast;
 use std::collections::HashMap;
 
 define_cops! {
@@ -721,143 +723,79 @@ fn unused_block_message(
 }
 
 fn ambiguous_range(context: &mut CopContext<'_, '_>) {
-    for (offset, line) in context.source_file().lines() {
-        let code = line.trim_start();
-        if code.starts_with(['\'', '"', '`', '/', ':']) {
-            continue;
-        }
-        let Some((at, operator)) = line
-            .find("...")
-            .map(|at| (at, "..."))
-            .or_else(|| line.find("..").map(|at| (at, "..")))
-        else {
-            continue;
-        };
-        let operator_end = at + operator.len();
-        if line.as_bytes().get(at.wrapping_sub(1)) == Some(&b')')
-            && line.as_bytes().get(operator_end) == Some(&b'(')
-        {
-            continue;
-        }
-        let unmatched_open = line[..at]
-            .rfind('(')
-            .filter(|open| {
-                line[*open + 1..at].matches('(').count()
-                    >= line[*open + 1..at].matches(')').count()
-            })
-            .or_else(|| {
-                line[..at].rfind('[').filter(|open| {
-                    line[*open + 1..at].matches('[').count()
-                        >= line[*open + 1..at].matches(']').count()
-                })
-            });
-        let mut left_start = unmatched_open.map_or(0, |open| open + 1);
-        if let Some(colon) = line[left_start..at].rfind(':') {
-            let after_colon = left_start + colon + 1;
-            if line[after_colon..at].starts_with(char::is_whitespace) {
-                left_start = after_colon;
-            }
-        }
-        let right_end = unmatched_open
-            .and_then(|_| {
-                line[operator_end..]
-                    .rfind([')', ']'])
-                    .map(|close| operator_end + close)
-            })
-            .unwrap_or(line.len());
-        let require_method_chains = context.config_bool("RequireParenthesesForMethodChains", false);
-        let left = trimmed_boundary(line, left_start..at);
-        let right = trimmed_boundary(line, operator_end..right_end);
-        for boundary in [left, right].into_iter().flatten() {
-            let value = &line[boundary.clone()];
-            if ambiguous_range_boundary(value, require_method_chains) {
-                let absolute = offset + boundary.start..offset + boundary.end;
-                context.replace_many(
-                    "Wrap complex range boundaries with parentheses to avoid ambiguity.",
-                    absolute.clone(),
-                    vec![
-                        (absolute.start..absolute.start, "(".to_string()),
-                        (absolute.end..absolute.end, ")".to_string()),
-                    ],
-                );
-            }
-        }
-    }
-}
-
-fn trimmed_boundary(
-    source: &str,
-    mut range: std::ops::Range<usize>,
-) -> Option<std::ops::Range<usize>> {
-    while range.start < range.end && source.as_bytes()[range.start].is_ascii_whitespace() {
-        range.start += 1;
-    }
-    while range.end > range.start && source.as_bytes()[range.end - 1].is_ascii_whitespace() {
-        range.end -= 1;
-    }
-    (range.start < range.end).then_some(range)
-}
-
-fn ambiguous_range_boundary(boundary: &str, require_method_chains: bool) -> bool {
-    if boundary.starts_with('(') && boundary.ends_with(')') {
-        return false;
-    }
-    if has_top_level_range_operator(boundary) {
-        return true;
-    }
-    if !boundary.contains('.') {
-        return false;
-    }
-    if boundary
-        .bytes()
-        .all(|byte| byte.is_ascii_digit() || byte == b'.')
-    {
-        return false;
-    }
-    let receiver = boundary.split('.').next().unwrap_or_default();
-    require_method_chains
-        || receiver.bytes().all(|byte| byte.is_ascii_digit())
-            && boundary.matches('.').count() == 1
-}
-
-fn has_top_level_range_operator(source: &str) -> bool {
-    let mut depths = (0usize, 0usize, 0usize);
-    let mut quote = None;
-    let bytes = source.as_bytes();
-    let mut index = 0;
-    while index < bytes.len() {
-        let byte = bytes[index];
-        if let Some(delimiter) = quote {
-            if byte == b'\\' {
-                index += 2;
+    let source = context.source().to_string();
+    let parsed = ruby_prism::parse(source.as_bytes());
+    let (ast, root) = convert_rubocop_ast(&source, &parsed.node());
+    let Some(root) = root.map(|root| ast.node(root)) else {
+        return;
+    };
+    let require_method_chains = context.config_bool("RequireParenthesesForMethodChains", false);
+    for range in root.each_node(&["irange", "erange"]) {
+        for boundary in [range.node_child(0), range.node_child(1)].into_iter().flatten() {
+            if ambiguous_range_acceptable(boundary, require_method_chains) {
                 continue;
             }
-            if byte == delimiter {
-                quote = None;
-            }
-            index += 1;
-            continue;
+            let Some(character_range) = boundary.source_range() else {
+                continue;
+            };
+            let byte_range = ambiguous_range_character_range_to_byte(&source, character_range);
+            context.replace_many(
+                "Wrap complex range boundaries with parentheses to avoid ambiguity.",
+                byte_range.clone(),
+                vec![
+                    (byte_range.start..byte_range.start, "(".to_string()),
+                    (byte_range.end..byte_range.end, ")".to_string()),
+                ],
+            );
         }
-        match byte {
-            b'\'' | b'"' | b'`' => quote = Some(byte),
-            b'(' => depths.0 += 1,
-            b')' => depths.0 = depths.0.saturating_sub(1),
-            b'[' => depths.1 += 1,
-            b']' => depths.1 = depths.1.saturating_sub(1),
-            b'{' => depths.2 += 1,
-            b'}' => depths.2 = depths.2.saturating_sub(1),
-            _ if depths == (0, 0, 0)
-                && [" || ", " && ", " + ", " - ", " * ", " % "]
-                    .iter()
-                    .any(|operator| bytes[index..].starts_with(operator.as_bytes()))
-                => {
-                    return true;
-                }
-            _ => {}
-        }
-        index += 1;
     }
-    false
+}
+
+fn ambiguous_range_acceptable(node: RubocopNodeRef<'_>, require_method_chains: bool) -> bool {
+    if node.kind() == "begin"
+        || node.literal()
+        || ambiguous_range_rational_literal(node)
+        || node.variable()
+        || node.kind() == "const"
+        || node.kind() == "self"
+    {
+        return true;
+    }
+    if !node.call_type() {
+        return false;
+    }
+    if matches!(node.method_name(), Some("!" | "~" | "+@" | "-@")) {
+        return true;
+    }
+    if node.receiver().is_some_and(RubocopNodeRef::basic_literal) {
+        return false;
+    }
+    if node.operator_method() && node.method_name() != Some("[]") {
+        return false;
+    }
+    !require_method_chains || node.receiver().is_none()
+}
+
+fn ambiguous_range_rational_literal(node: RubocopNodeRef<'_>) -> bool {
+    node.kind() == "send"
+        && node.method_name() == Some("/")
+        && node.receiver().is_some_and(|receiver| receiver.kind() == "int")
+        && node
+            .first_argument()
+            .is_some_and(|argument| argument.kind() == "rational")
+}
+
+fn ambiguous_range_character_range_to_byte(
+    source: &str,
+    range: std::ops::Range<usize>,
+) -> std::ops::Range<usize> {
+    let offset = |character: usize| {
+        source
+            .char_indices()
+            .nth(character)
+            .map_or(source.len(), |(byte, _)| byte)
+    };
+    offset(range.start)..offset(range.end)
 }
 
 fn non_atomic_file_operation(context: &mut CopContext<'_, '_>) {
@@ -1631,7 +1569,7 @@ fn documentation_method(context: &mut CopContext<'_, '_>) {
     fn visibility(name: &[u8]) -> Option<bool> {
         match name {
             b"public" => Some(true),
-            b"private" | b"protected" | b"private_class_method" => Some(false),
+            b"private" | b"protected" => Some(false),
             _ => None,
         }
     }
@@ -1641,6 +1579,8 @@ fn documentation_method(context: &mut CopContext<'_, '_>) {
         definitions: HashMap<usize, std::ops::Range<usize>>,
         modifiers: HashMap<usize, std::ops::Range<usize>>,
         public: HashMap<usize, bool>,
+        explicit_begin_definitions: std::collections::HashSet<usize>,
+        postfix_definitions: std::collections::HashSet<usize>,
     }
 
     impl<'pr> Visit<'pr> for DefinitionRanges {
@@ -1649,15 +1589,18 @@ fn documentation_method(context: &mut CopContext<'_, '_>) {
             // Every statement list starts public, including lists owned by
             // blocks such as `class_methods`, `Struct.new`, and `Module.new`.
             let mut current_public = true;
-            let mut definitions_by_name: HashMap<Vec<u8>, Vec<usize>> = HashMap::new();
+            let mut definitions_by_name: HashMap<Vec<u8>, Vec<(usize, bool)>> = HashMap::new();
             for statement in node.body().iter() {
                 if let Some(definition) = statement.as_def_node() {
                     let start = definition.location().start_offset();
+                    let singleton = definition
+                        .receiver()
+                        .is_some_and(|receiver| receiver.as_self_node().is_some());
                     self.public.insert(start, current_public);
                     definitions_by_name
                         .entry(definition.name().as_slice().to_vec())
                         .or_default()
-                        .push(start);
+                        .push((start, singleton));
                     continue;
                 }
                 let Some(call) = statement.as_call_node() else {
@@ -1670,6 +1613,7 @@ fn documentation_method(context: &mut CopContext<'_, '_>) {
                     .arguments()
                     .map(|arguments| arguments.arguments().iter().collect::<Vec<_>>())
                     .unwrap_or_default();
+                let argument_count = arguments.len();
                 if let Some(call_public) = visibility(call_name(&call)) {
                     if arguments.is_empty() {
                         current_public = call_public;
@@ -1677,18 +1621,42 @@ fn documentation_method(context: &mut CopContext<'_, '_>) {
                     for argument in arguments {
                         if let Some(definition) = argument.as_def_node() {
                             let start = definition.location().start_offset();
+                            let singleton = definition
+                                .receiver()
+                                .is_some_and(|receiver| receiver.as_self_node().is_some());
                             self.public.insert(start, call_public);
                             definitions_by_name
                                 .entry(definition.name().as_slice().to_vec())
                                 .or_default()
-                                .push(start);
+                                .push((start, singleton));
                         } else if let Some(symbol) = argument.as_symbol_node() {
-                            if let Some(starts) = definitions_by_name.get(symbol.unescaped()) {
-                                for start in starts {
-                                    self.public.insert(*start, call_public);
+                            if argument_count != 1 {
+                                continue;
+                            }
+                            if let Some(definitions) = definitions_by_name.get(symbol.unescaped()) {
+                                let class_visibility = call_name(&call) == b"private_class_method";
+                                if class_visibility {
+                                    continue;
+                                }
+                                for (start, singleton) in definitions {
+                                    if *singleton == class_visibility {
+                                        self.public.insert(*start, call_public);
+                                    }
                                 }
                             }
                         }
+                    }
+                } else if call_name(&call) == b"private_class_method" {
+                    for definition in arguments
+                        .iter()
+                        .filter_map(|argument| argument.as_def_node())
+                    {
+                        let start = definition.location().start_offset();
+                        self.public.insert(start, false);
+                        definitions_by_name
+                            .entry(definition.name().as_slice().to_vec())
+                            .or_default()
+                            .push((start, definition.receiver().is_some()));
                     }
                 } else if matches!(call_name(&call), b"module_function" | b"ruby2_keywords") {
                     for definition in arguments
@@ -1696,11 +1664,14 @@ fn documentation_method(context: &mut CopContext<'_, '_>) {
                         .filter_map(|argument| argument.as_def_node())
                     {
                         let start = definition.location().start_offset();
+                        let singleton = definition
+                            .receiver()
+                            .is_some_and(|receiver| receiver.as_self_node().is_some());
                         self.public.insert(start, current_public);
                         definitions_by_name
                             .entry(definition.name().as_slice().to_vec())
                             .or_default()
-                            .push(start);
+                            .push((start, singleton));
                     }
                 }
             }
@@ -1737,12 +1708,64 @@ fn documentation_method(context: &mut CopContext<'_, '_>) {
             }
             ruby_prism::visit_call_node(self, node);
         }
+
+        fn visit_if_node(&mut self, node: &ruby_prism::IfNode<'pr>) {
+            if let Some(statements) = node.statements() {
+                if node.if_keyword_loc().is_some_and(|keyword| keyword.start_offset() > statements.location().start_offset()) {
+                    for statement in statements.body().iter() {
+                        if let Some(definition) = statement.as_def_node() {
+                            self.postfix_definitions.insert(definition.location().start_offset());
+                        }
+                    }
+                }
+            }
+            ruby_prism::visit_if_node(self, node);
+        }
+
+        fn visit_unless_node(&mut self, node: &ruby_prism::UnlessNode<'pr>) {
+            if let Some(statements) = node.statements() {
+                if node.keyword_loc().start_offset() > statements.location().start_offset() {
+                    for statement in statements.body().iter() {
+                        if let Some(definition) = statement.as_def_node() {
+                            self.postfix_definitions.insert(definition.location().start_offset());
+                        }
+                    }
+                }
+            }
+            ruby_prism::visit_unless_node(self, node);
+        }
+
+        fn visit_begin_node(&mut self, node: &ruby_prism::BeginNode<'pr>) {
+            if let Some(statements) = node.statements() {
+                if let Some(definition) = statements
+                    .body()
+                    .iter()
+                    .next()
+                    .and_then(|statement| statement.as_def_node())
+                {
+                    self.explicit_begin_definitions.insert(definition.location().start_offset());
+                }
+            }
+            ruby_prism::visit_begin_node(self, node);
+        }
     }
 
     let parsed = parse(context.source().as_bytes());
     let mut definition_ranges = DefinitionRanges::default();
     definition_ranges.visit(&parsed.node());
     let lines = context.source_file().lines().collect::<Vec<_>>();
+    let mut comments_by_line = HashMap::new();
+    for comment in parsed.comments() {
+        let location = comment.location();
+        let line_index = lines
+            .partition_point(|(offset, _)| *offset <= location.start_offset())
+            .saturating_sub(1);
+        let column = location.start_offset().saturating_sub(lines[line_index].0);
+        comments_by_line.insert(
+            line_index,
+            (column, context.source()[location.start_offset()..location.end_offset()].to_string()),
+        );
+    }
     let require_non_public = context.config_bool("RequireForNonPublicMethods", false);
     let allowed_methods = context.config_values("AllowedMethods").to_vec();
     for (index, (offset, line)) in lines.iter().copied().enumerate() {
@@ -1751,18 +1774,6 @@ fn documentation_method(context: &mut CopContext<'_, '_>) {
             continue;
         };
         let prefix = trimmed[..def_at].trim();
-        if !prefix.is_empty()
-            && !matches!(
-                prefix,
-                "private"
-                    | "protected"
-                    | "private_class_method"
-                    | "module_function"
-                    | "ruby2_keywords"
-            )
-        {
-            continue;
-        }
         let line_indent = line.len() - trimmed.len();
         let definition_start = offset + line_indent + def_at;
         let Some(structural_range) = definition_ranges
@@ -1794,11 +1805,40 @@ fn documentation_method(context: &mut CopContext<'_, '_>) {
         if bare_name == "initialize" || allowed_methods.iter().any(|allowed| allowed == bare_name) {
             continue;
         }
-        let documented = lines[..index]
-            .iter()
-            .rev()
-            .take_while(|(_, previous)| previous.trim_start().starts_with('#'))
-            .any(|(_, previous)| documentation_comment(previous));
+        let modifier_uses_parent = matches!(prefix, "module_function" | "ruby2_keywords");
+        let postfix_definition = definition_ranges.postfix_definitions.contains(&definition_start);
+        let documented = if definition_ranges.explicit_begin_definitions.contains(&definition_start)
+            || postfix_definition
+            || !prefix.is_empty() && !modifier_uses_parent
+        {
+            false
+        } else if index == 0 || !comments_by_line.contains_key(&(index - 1)) {
+            false
+        } else {
+            let mut comment_line = index - 1;
+            let mut found = false;
+            loop {
+                if let Some((column, comment)) = comments_by_line.get(&comment_line) {
+                    let code_before_comment = lines[comment_line].1[..*column].trim();
+                    let attached_inline_branch = ["else", "elsif", "when", "rescue", "ensure"]
+                        .iter()
+                        .any(|keyword| code_before_comment.starts_with(keyword));
+                    if code_before_comment.is_empty() || attached_inline_branch {
+                        found |= documentation_comment(comment);
+                    }
+                    if !code_before_comment.is_empty() {
+                        break;
+                    }
+                } else if !lines[comment_line].1.trim().is_empty() {
+                    break;
+                }
+                if comment_line == 0 {
+                    break;
+                }
+                comment_line -= 1;
+            }
+            found
+        };
         if !documented {
             context.report(
                 "Missing method documentation comment.",
@@ -1814,10 +1854,27 @@ fn documentation_comment(line: &str) -> bool {
         .strip_prefix('#')
         .map(str::trim)
         .unwrap_or_default();
-    !comment.is_empty()
-        && !["TODO", "FIXME", "OPTIMIZE", "HACK", "NOTE", "rubocop:"]
-            .iter()
-            .any(|marker| comment.starts_with(marker))
+    let lower = comment.to_ascii_lowercase();
+    if lower.starts_with("rubocop:")
+        || lower.starts_with("frozen_string_literal:")
+        || lower.starts_with("encoding:")
+    {
+        return false;
+    }
+    for marker in ["todo", "fixme", "optimize", "hack", "note", "review"] {
+        let Some(suffix) = lower.strip_prefix(marker) else {
+            continue;
+        };
+        if suffix.starts_with(':') {
+            return false;
+        }
+        if suffix.starts_with(char::is_whitespace) {
+            let titlecase = comment.starts_with(char::is_uppercase)
+                && comment[1..].starts_with(|character: char| character.is_lowercase());
+            return titlecase;
+        }
+    }
+    true
 }
 
 #[allow(clippy::too_many_lines)]

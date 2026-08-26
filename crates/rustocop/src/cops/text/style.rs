@@ -14,5 +14,5 @@ pub(super) fn after_prism(
     options: &InspectionConfig,
     offenses: &mut Vec<Offense>,
 ) {
-    super::style_declarations::check(lines, options, offenses);
+    let _ = (lines, options, offenses);
 }

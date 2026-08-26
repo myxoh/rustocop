@@ -29,7 +29,7 @@ impl<'processed, 'source> StatementModifier<'processed, 'source> {
 
     pub(crate) fn single_line_as_modifier(&self, node: NodeRef<'_>) -> bool {
         !self.non_eligible_node(node)
-            && !self.non_eligible_body(node.if_branch())
+            && !self.non_eligible_body(node.node_child(1))
             && !self.non_eligible_condition(node.condition())
             && self.modifier_fits_on_single_line(node)
     }
@@ -83,7 +83,10 @@ impl<'processed, 'source> StatementModifier<'processed, 'source> {
     }
 
     pub(crate) fn to_modifier_form(&self, node: NodeRef<'_>) -> String {
-        let Some(body) = node.if_branch() else {
+        // Parser-shaped `if` nodes retain the source body in child 1 for both
+        // `if` and `unless`; `if_branch` instead exposes the truthy semantic
+        // branch and therefore points at child 2 for `unless`.
+        let Some(body) = node.node_child(1) else {
             return String::new();
         };
         let Some(condition) = node.condition().and_then(NodeRef::source) else {

@@ -62,6 +62,8 @@ pub(crate) struct Context {
     target_ruby_version: RubyVersion,
     source_encoding: SourceEncoding,
     cop_config: Arc<CopConfig>,
+    enabled_cops: HashSet<&'static str>,
+    parser_warnings: Vec<(String, Range<usize>)>,
     line_starts: Vec<usize>,
     findings: Vec<Finding>,
     corrections: Vec<Correction>,
@@ -83,6 +85,8 @@ impl Context {
             target_ruby_version,
             source_encoding,
             cop_config,
+            enabled_cops: HashSet::new(),
+            parser_warnings: Vec::new(),
             line_starts: Vec::new(),
             findings: Vec::new(),
             corrections: Vec::new(),
@@ -91,6 +95,35 @@ impl Context {
 
     pub(super) fn target_ruby_version(&self) -> RubyVersion {
         self.target_ruby_version
+    }
+
+    pub(super) fn set_enabled_cops<'a>(&mut self, cops: impl Iterator<Item = &'a dyn super::Cop>) {
+        self.enabled_cops = cops.map(super::Cop::name).collect();
+    }
+
+    pub(super) fn set_parser_warnings<'pr>(
+        &mut self,
+        warnings: impl Iterator<Item = ruby_prism::Diagnostic<'pr>>,
+    ) {
+        self.parser_warnings = warnings
+            .map(|warning| {
+                let location = warning.location();
+                (
+                    warning.message().to_string(),
+                    location.start_offset()..location.end_offset(),
+                )
+            })
+            .collect();
+    }
+
+    pub(super) fn parser_warning_at(&self, offset: usize, message: &str) -> bool {
+        self.parser_warnings
+            .iter()
+            .any(|(warning, range)| range.start == offset && warning.contains(message))
+    }
+
+    fn cop_enabled(&self, cop_name: &str) -> bool {
+        self.enabled_cops.contains(cop_name)
     }
 
     pub(super) fn source_encoding(&self) -> SourceEncoding {
@@ -392,10 +425,15 @@ impl DisabledState {
         for name in names {
             if name.eq_ignore_ascii_case("all") {
                 self.all = disabled;
-            } else if disabled {
-                Arc::make_mut(&mut self.cops).insert((*name).to_string());
             } else {
-                Arc::make_mut(&mut self.cops).remove(*name);
+                // RuboCop accepts both `Metrics` and the frequently used
+                // `Metrics/` spelling as department-wide directives.
+                let name = name.trim_end_matches('/');
+                if disabled {
+                    Arc::make_mut(&mut self.cops).insert(name.to_string());
+                } else {
+                    Arc::make_mut(&mut self.cops).remove(name);
+                }
             }
         }
     }

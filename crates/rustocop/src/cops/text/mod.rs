@@ -4,7 +4,6 @@ mod layout;
 mod lint;
 mod lint_semantic;
 mod style;
-mod style_declarations;
 
 use crate::config::InspectionConfig;
 pub(crate) use crate::model::{push_offense, CorrectionStatus, Offense, SourceLine};
@@ -33,7 +32,6 @@ pub(crate) const LEGACY_COP_NAMES: &[&str] = &[
     "Rails/FilePath",
     "Rails/ReversibleMigration",
     "Style/ConditionalAssignment",
-    "Style/Documentation",
     "Style/FrozenStringLiteralComment",
     "Style/GuardClause",
     "Style/HashSyntax",

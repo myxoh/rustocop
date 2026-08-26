@@ -84,7 +84,11 @@ fn missing_cop_enable_directive(context: &mut CopContext<'_, '_>) {
             continue;
         }
         let trimmed = &line[comment_start..];
-        let names = &trimmed[marker.len()..];
+        let names = trimmed[marker.len()..]
+            .split("--")
+            .next()
+            .unwrap_or_default()
+            .trim();
         let wrapped_by_push_pop = source
             .lines()
             .take(line_index)
@@ -101,12 +105,26 @@ fn missing_cop_enable_directive(context: &mut CopContext<'_, '_>) {
             .iter()
             .any(|name| context.related_config_explicit(name, "Enabled"));
         for name in names {
+            if name.is_empty()
+                || name.bytes().any(|byte| {
+                    !(byte.is_ascii_alphanumeric() || matches!(byte, b'/' | b'_'))
+                })
+            {
+                continue;
+            }
             if prefer_explicit && !context.related_config_explicit(name, "Enabled") {
                 continue;
             }
+            let built_in_department = name.split_once('/').is_some_and(|(department, _)| {
+                matches!(
+                    department,
+                    "Bundler" | "Gemspec" | "Layout" | "Lint" | "Metrics" | "Migration"
+                        | "Naming" | "Security" | "Style"
+                )
+            });
             if context.related_config_value("AllCops", "DisabledByDefault") == Some("true")
-                && !context.related_config_explicit(name, "Enabled")
-                && context.related_config_value(name, "Enabled").is_some()
+                && built_in_department
+                && !context.cop_enabled(name)
             {
                 continue;
             }
@@ -118,13 +136,21 @@ fn missing_cop_enable_directive(context: &mut CopContext<'_, '_>) {
                 .enumerate()
                 .skip(line_index + 1)
                 .find_map(|(index, line)| {
-                    let list = line.trim().strip_prefix("# rubocop:enable ")?;
+                    let trimmed = line.trim();
+                    let list = trimmed
+                        .strip_prefix("# rubocop:enable ")
+                        .or_else(|| trimmed.strip_prefix("# rubocop: enable "))?;
                     list.split("--")
                         .next()
                         .unwrap_or_default()
                         .split(',')
                         .map(str::trim)
-                        .any(|enabled| enabled == name)
+                        .any(|enabled| {
+                            enabled == name
+                                || name
+                                    .split_once('/')
+                                    .is_some_and(|(department, _)| enabled == department)
+                        })
                         .then_some(index)
                 });
             let missing = enable_line.is_none();

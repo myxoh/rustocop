@@ -32,9 +32,16 @@ fn underscore_variable(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
         } else {
             context.source()[..range.start]
                 .rfind("/(?<")
+                .filter(|start| {
+                    let prefix = &context.source()[start + 4..range.start];
+                    !prefix.contains(['=', '!'])
+                        && !prefix.contains('\n')
+                        && prefix.bytes().all(|byte| byte == b'_' || byte.is_ascii_alphanumeric())
+                })
                 .and_then(|start| {
                     context.source()[range.end..]
                         .find('/')
+                        .filter(|end| !context.source()[range.end..range.end + end].contains('\n'))
                         .map(|end| start..range.end + end + 1)
                 })
                 .unwrap_or(range)
@@ -173,72 +180,130 @@ fn underscore_prefixed_name(name: &[u8]) -> bool {
 }
 
 fn heredoc_naming(context: &mut CopContext<'_, '_>) {
-    let mut forbidden = context.config_values("ForbiddenDelimiters").to_vec();
-    if forbidden.is_empty() {
-        forbidden.push("END".to_string());
+    use crate::rubocop::ast::prism::convert as convert_rubocop_ast;
+
+    let source = context.source().to_string();
+    let parsed = ruby_prism::parse(source.as_bytes());
+    if parsed.errors().next().is_some() {
+        for range in blank_heredoc_opening_ranges(&source) {
+            context.report("Use meaningful heredoc delimiters.", range);
+        }
+        return;
     }
-    for (line_offset, line) in context.source_file().lines() {
-        for (at, _) in line.match_indices("<<") {
-            let modifier = usize::from(matches!(line.as_bytes().get(at + 2), Some(b'-' | b'~')));
-            let tail = &line[at + 2 + modifier..];
-            if tail.starts_with(char::is_whitespace) || tail.starts_with('=') {
-                continue;
-            }
-            let quoted = matches!(tail.as_bytes().first(), Some(b'\'' | b'"' | b'`'));
-            let (delimiter, token_length) = match tail.as_bytes().first().copied() {
-                Some(quote @ (b'\'' | b'"' | b'`')) => {
-                    let value = &tail[1..];
-                    let Some(end) = value.bytes().position(|byte| byte == quote) else {
-                        continue;
-                    };
-                    (&value[..end], 2 + modifier + end + 2)
-                }
-                _ => {
-                    let end = tail
-                        .find(|character: char| {
-                            !(character.is_ascii_alphanumeric() || character == '_')
-                        })
-                        .unwrap_or(tail.len());
-                    (&tail[..end], 2 + modifier + end)
-                }
-            };
-            let meaningful = !delimiter.is_empty()
-                && delimiter
-                    .bytes()
-                    .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
-                && !forbidden.iter().any(|value| value == delimiter)
-                && !default_forbidden_heredoc_delimiter(delimiter);
-            if meaningful {
-                continue;
-            }
-            if delimiter.is_empty() {
-                if quoted {
-                    context.report(
-                        "Use meaningful heredoc delimiters.",
-                        line_offset + at..line_offset + at + token_length,
-                    );
-                }
-                continue;
-            } else if let Some((offset, line)) = context
-                .source_file()
-                .lines()
-                .find(|(offset, line)| *offset > line_offset && line.trim() == delimiter)
-            {
-                context.report(
-                    "Use meaningful heredoc delimiters.",
-                    offset..offset + line.len(),
-                );
-            }
+    let (ast, root) = convert_rubocop_ast(&source, &parsed.node());
+    let Some(root) = root.map(|root| ast.node(root)) else {
+        return;
+    };
+    let configured = context.config_values("ForbiddenDelimiters").to_vec();
+    let forbidden = if !context.related_config_explicit(
+        "Naming/HeredocDelimiterNaming",
+        "ForbiddenDelimiters",
+    ) {
+        vec![regex::Regex::new(r"(?i)(^|\s)(EO[A-Z]|END)(\s|$)").expect("default regex")]
+    } else {
+        configured
+            .iter()
+            .filter_map(|pattern| heredoc_forbidden_regex(pattern))
+            .collect()
+    };
+
+    for node in root.each_node(&["any_str"]) {
+        if !node.heredoc() {
+            continue;
+        }
+        let delimiter = heredoc_delimiter(node.source().unwrap_or(""));
+        let meaningful = regex::Regex::new(r"\w")
+            .expect("word regex")
+            .is_match(delimiter)
+            && forbidden.iter().all(|pattern| !pattern.is_match(delimiter));
+        if meaningful {
+            continue;
+        }
+        let range = if delimiter.is_empty() {
+            node.source_range()
+        } else {
+            node.loc("heredoc_end").map(|(range, _)| range.clone())
+        };
+        if let Some(range) = range {
+            context.report(
+                "Use meaningful heredoc delimiters.",
+                heredoc_character_range_to_byte(&source, range),
+            );
         }
     }
 }
 
-fn default_forbidden_heredoc_delimiter(delimiter: &str) -> bool {
-    let upper = delimiter.to_ascii_uppercase();
-    upper == "END"
-        || upper.len() == 3
-            && upper.starts_with("EO")
-            && upper.as_bytes()[2].is_ascii_alphabetic()
+fn heredoc_delimiter(opening: &str) -> &str {
+    let Some(at) = opening.find("<<") else {
+        return "";
+    };
+    let mut tail = &opening[at + 2..];
+    if matches!(tail.as_bytes().first(), Some(b'-' | b'~')) {
+        tail = &tail[1..];
+    }
+    match tail.as_bytes().first().copied() {
+        Some(quote @ (b'\'' | b'"' | b'`')) => tail[1..]
+            .bytes()
+            .position(|byte| byte == quote)
+            .map_or("", |end| &tail[1..end + 1]),
+        _ => tail
+            .find(|character: char| character.is_whitespace())
+            .map_or(tail, |end| &tail[..end]),
+    }
+}
+
+fn heredoc_forbidden_regex(pattern: &str) -> Option<regex::Regex> {
+    let pattern = pattern
+        .strip_prefix("!ruby/regexp")
+        .unwrap_or(pattern)
+        .trim()
+        .trim_matches(['\'', '"'])
+        .replace("\\A", "^")
+        .replace("\\z", "$");
+    let pattern = if let Some(body) = pattern.strip_prefix('/') {
+        let end = body.rfind('/')?;
+        let flags = &body[end + 1..];
+        format!("{}{}", if flags.contains('i') { "(?i)" } else { "" }, &body[..end])
+    } else {
+        pattern
+    };
+    regex::Regex::new(&pattern).ok()
+}
+
+fn heredoc_character_range_to_byte(
+    source: &str,
+    range: std::ops::Range<usize>,
+) -> std::ops::Range<usize> {
+    let start = source
+        .char_indices()
+        .nth(range.start)
+        .map_or(source.len(), |(byte, _)| byte);
+    let end = source
+        .char_indices()
+        .nth(range.end)
+        .map_or(source.len(), |(byte, _)| byte);
+    start..end
+}
+
+fn blank_heredoc_opening_ranges(source: &str) -> Vec<std::ops::Range<usize>> {
+    let mut ranges = Vec::new();
+    let mut line_start = 0;
+    for line in source.split_inclusive('\n') {
+        let bytes = line.as_bytes();
+        for (at, _) in line.match_indices("<<") {
+            let mut cursor = at + 2;
+            if matches!(bytes.get(cursor), Some(b'-' | b'~')) {
+                cursor += 1;
+            }
+            if let Some(quote @ (b'\'' | b'"' | b'`')) = bytes.get(cursor).copied() {
+                if bytes.get(cursor + 1) == Some(&quote) {
+                    ranges.push(line_start + at..line_start + cursor + 2);
+                }
+            }
+        }
+        line_start += line.len();
+    }
+    ranges
 }
 
 fn deprecated_constants(node: &Node<'_>, context: &mut CopContext<'_, '_>) {

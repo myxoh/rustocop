@@ -1,8 +1,8 @@
 use std::collections::HashSet;
 
 use super::source_helpers::*;
-use super::source_syntax::matching_delimiter;
 use super::*;
+use crate::rubocop::ast::prism::convert as convert_rubocop_ast;
 
 mod literal_layout;
 use literal_layout::*;
@@ -281,52 +281,52 @@ fn useless_defined(node: &ruby_prism::DefinedNode<'_>, context: &mut CopContext<
 }
 
 fn auto_resource_cleanup(source: &str, reporter: &mut Reporter<'_>) {
-    let file = SourceFile::new(source);
-    let comment_ranges = file.comment_ranges();
-    for receiver in ["::Tempfile", "Tempfile", "::File", "File"] {
-        for separator in ["(", " "] {
-            let needle = format!("{receiver}.open{separator}");
-            for start in all_offsets(source, &needle) {
-            if comment_ranges
-                .iter()
-                .any(|range| range.start <= start && start < range.end)
-            {
-                continue;
-            }
-            if !receiver.starts_with("::") && start >= 2 && &source[start - 2..start] == "::" {
-                continue;
-            }
-            let line_start = source[..start].rfind('\n').map_or(0, |newline| newline + 1);
-            let prefix = source[line_start..start].trim_end();
-            if prefix.ends_with(':') || prefix.ends_with("=>") {
-                continue;
-            }
-            let line_end_offset =
-                line_end(source, start).saturating_sub(usize::from(source[start..].contains('\n')));
-            let end = if separator == "(" {
-                let opening = start + needle.len() - 1;
-                matching_delimiter(source, opening, b'(', b')')
-                    .map_or(line_end_offset, |closing| closing + 1)
-            } else {
-                line_end_offset
-            };
-            let line = &source[start..end];
-            let full_line = &source[start..line_end_offset];
-            let block_brace = full_line
-                .rfind(')')
-                .is_some_and(|closing| full_line[closing + 1..].contains('{'));
-            if !block_brace
-                && !line.contains("&:")
-                && !line.contains(", &")
-                && !full_line.contains(" do")
-                && !full_line.ends_with(".close")
-            {
-                reporter.report(
-                    format!("Use the block version of `{receiver}.open`."),
-                    start..end,
-                );
-            }
+    let parsed = ruby_prism::parse(source.as_bytes());
+    let (ast, root) = convert_rubocop_ast(source, &parsed.node());
+    let Some(root) = root.map(|root| ast.node(root)) else {
+        return;
+    };
+    for node in root.each_node(&["send"]) {
+        if node.method_name() != Some("open") {
+            continue;
         }
+        let Some(receiver) = node.receiver() else {
+            continue;
+        };
+        if !(receiver.global_const("File") || receiver.global_const("Tempfile")) {
+            continue;
         }
+        if node
+            .arguments()
+            .last()
+            .is_some_and(|argument| argument.kind() == "block_pass")
+        {
+            continue;
+        }
+        if node.parent().is_some_and(|parent| {
+            parent.type_is(&["any_block"]) || parent.kind() != "lvasgn"
+        }) {
+            continue;
+        }
+        let (Some(range), Some(receiver_source)) = (node.source_range(), receiver.source()) else {
+            continue;
+        };
+        reporter.report(
+            format!("Use the block version of `{receiver_source}.open`."),
+            auto_resource_character_range_to_byte(source, range),
+        );
     }
+}
+
+fn auto_resource_character_range_to_byte(
+    source: &str,
+    range: std::ops::Range<usize>,
+) -> std::ops::Range<usize> {
+    let byte = |character: usize| {
+        source
+            .char_indices()
+            .nth(character)
+            .map_or(source.len(), |(offset, _)| offset)
+    };
+    byte(range.start)..byte(range.end)
 }

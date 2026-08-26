@@ -228,6 +228,20 @@ impl Cop for RedundantLineBreakCop {
         "Layout/RedundantLineBreak"
     }
 
+    fn phase(&self) -> CopPhase {
+        CopPhase::Source
+    }
+
+    fn on_source(&self, source: &str, context: &mut Context) {
+        let parsed = ruby_prism::parse(source.as_bytes());
+        let (ast, root) = convert_rubocop_ast(source, &parsed.node());
+        let Some(root) = root.map(|root| ast.node(root)) else {
+            return;
+        };
+        let mut cop = context.cop_context(self.name(), source, &[]);
+        redundant_line_break_compat(root, source, &mut cop);
+    }
+
     fn investigation_state(&self) -> Box<dyn Any> {
         Box::new(RedundantLineBreakState::default())
     }
@@ -381,6 +395,259 @@ impl RedundantLineBreakCop {
             );
         }
     }
+}
+
+fn redundant_line_break_compat(
+    root: RubocopNodeRef<'_>,
+    source: &str,
+    context: &mut CopContext<'_, '_>,
+) {
+    let inspect_blocks = context.config_bool("InspectBlocks", false);
+    let single_line_block_chain = context
+        .related_config_value("Layout/SingleLineBlockChain", "Enabled")
+        != Some("false");
+    let line_length_enabled = context.related_config_value("Layout/LineLength", "Enabled") != Some("false");
+    let max_line_length = line_length_enabled.then(|| {
+        context
+            .related_config_value("Layout/LineLength", "Max")
+            .and_then(|value| value.parse::<usize>().ok())
+            .unwrap_or(120)
+    });
+    let comment_lines = SourceFile::new(source)
+        .comment_ranges()
+        .into_iter()
+        .map(|range| source[..range.start].bytes().filter(|byte| *byte == b'\n').count() + 1)
+        .collect::<std::collections::HashSet<_>>();
+
+    let assignment_ranges = root
+        .each_node(&[
+            "lvasgn", "ivasgn", "cvasgn", "gvasgn", "casgn", "masgn", "op_asgn",
+            "or_asgn", "and_asgn",
+        ])
+        .into_iter()
+        .filter_map(RubocopNodeRef::source_range)
+        .collect::<Vec<_>>();
+    let mut candidates = Vec::<RubocopNodeRef<'_>>::new();
+    for node in root.each_node(&[]) {
+        if matches!(
+            node.kind(),
+            "lvasgn" | "ivasgn" | "cvasgn" | "gvasgn" | "casgn" | "masgn"
+                | "op_asgn" | "or_asgn" | "and_asgn"
+        ) && !(node.kind() == "lvasgn" && source.ends_with("%\n\n"))
+            && redundant_line_break_compat_offense(
+                node,
+                source,
+                inspect_blocks,
+                single_line_block_chain,
+                max_line_length,
+                &comment_lines,
+            )
+        {
+            candidates.push(node);
+        }
+        if !node.call_type() {
+            continue;
+        }
+        if node.source_range().is_some_and(|range| assignment_ranges.contains(&range)) {
+            continue;
+        }
+        let mut whole = node;
+        while let Some(parent) = whole.parent() {
+            if parent.kind() == "send"
+                || redundant_line_break_convertible_block(whole, parent)
+                || redundant_line_break_binary(parent)
+            {
+                whole = parent;
+            } else {
+                break;
+            }
+        }
+        if whole
+            .source_range()
+            .is_some_and(|range| assignment_ranges.contains(&range))
+        {
+            continue;
+        }
+        if redundant_line_break_compat_offense(
+            whole,
+            source,
+            inspect_blocks,
+            single_line_block_chain,
+            max_line_length,
+            &comment_lines,
+        ) {
+            candidates.push(whole);
+        }
+    }
+
+    candidates.sort_by_key(|node| {
+        let range = node.source_range().unwrap_or(0..0);
+        (range.start, std::cmp::Reverse(range.end.saturating_sub(range.start)))
+    });
+    let mut reported = Vec::<std::ops::Range<usize>>::new();
+    for node in candidates {
+        let Some(mut character_range) = node.source_range() else {
+            continue;
+        };
+        if node.source().is_some_and(|value| value.ends_with('\\')) {
+            character_range.end = character_range.end.saturating_sub(1);
+            let before_backslash = source
+                .chars()
+                .nth(character_range.end.saturating_sub(1));
+            if before_backslash.is_some_and(char::is_whitespace) {
+                character_range.end = character_range.end.saturating_sub(1);
+            }
+        }
+        if reported.iter().any(|range| {
+            range.start <= character_range.start && character_range.end <= range.end
+        }) {
+            continue;
+        }
+        let byte_range = redundant_line_break_character_range_to_byte(source, character_range.clone());
+        let replacement = redundant_single_line(&source[byte_range.clone()]).unwrap_or_default();
+        context.replace(
+            "Redundant line break detected.",
+            byte_range.clone(),
+            byte_range,
+            replacement.trim().to_string(),
+        );
+        reported.push(character_range);
+    }
+}
+
+fn redundant_line_break_compat_offense(
+    node: RubocopNodeRef<'_>,
+    source: &str,
+    inspect_blocks: bool,
+    single_line_block_chain: bool,
+    max_line_length: Option<usize>,
+    comment_lines: &std::collections::HashSet<usize>,
+) -> bool {
+    if !node.multiline()
+        || redundant_line_break_too_long(node, source, max_line_length)
+        || (node.first_line()..=node.last_line()).any(|line| comment_lines.contains(&line))
+        || !redundant_line_break_safe_to_split(node)
+    {
+        return false;
+    }
+    if node.operator_keyword() {
+        let Some((operator, _)) = node.loc("operator") else {
+            return false;
+        };
+        let byte = redundant_line_break_character_offset_to_byte(source, operator.start);
+        let line_start = source[..byte].rfind('\n').map_or(0, |index| index + 1);
+        let line_end = source[byte..]
+            .find('\n')
+            .map_or(source.len(), |index| byte + index);
+        return source[line_start..line_end].trim_end().ends_with('\\');
+    }
+    if redundant_line_break_index_access_chained(node) {
+        return false;
+    }
+    if single_line_block_chain && node.each_descendant(&["any_block"]).into_iter().any(|block| {
+        block.parent().is_some_and(|parent| {
+            parent.call_type() && parent.loc("dot").is_some() && block.single_line()
+        })
+    }) {
+        return false;
+    }
+    if !inspect_blocks
+        && (node.type_is(&["any_block"])
+            || node
+                .each_descendant(&["any_block"])
+                .into_iter()
+                .any(RubocopNodeRef::multiline))
+    {
+        return false;
+    }
+    true
+}
+
+fn redundant_line_break_convertible_block(
+    node: RubocopNodeRef<'_>,
+    parent: RubocopNodeRef<'_>,
+) -> bool {
+    parent.type_is(&["any_block"])
+        && parent.send_node() == Some(node)
+        && (node.parenthesized_call() || !node.has_arguments())
+}
+
+fn redundant_line_break_binary(node: RubocopNodeRef<'_>) -> bool {
+    node.operator_keyword()
+        || node.call_type()
+            && node.operator_method()
+            && !matches!(node.method_name(), Some("!" | "~" | "+@" | "-@" | "[]" | "[]="))
+}
+
+fn redundant_line_break_index_access_chained(node: RubocopNodeRef<'_>) -> bool {
+    node.call_type()
+        && node.method_name() == Some("[]")
+        && node.receiver().is_some_and(|receiver| {
+            receiver.call_type() && receiver.method_name() == Some("[]")
+        })
+}
+
+fn redundant_line_break_safe_to_split(node: RubocopNodeRef<'_>) -> bool {
+    if !node
+        .each_descendant(&["if", "case", "kwbegin", "any_def", "rescue", "ensure"])
+        .is_empty()
+    {
+        return false;
+    }
+    if node.each_descendant(&["dstr", "str"]).into_iter().any(|literal| {
+        literal
+            .loc("begin")
+            .is_some_and(|(_, source)| source.starts_with("<<"))
+            || literal
+                .str_content()
+                .is_some_and(|value| value.contains('\n'))
+    }) {
+        return false;
+    }
+    !node
+        .each_descendant(&["begin", "sym"])
+        .into_iter()
+        .any(RubocopNodeRef::multiline)
+}
+
+fn redundant_line_break_too_long(
+    node: RubocopNodeRef<'_>,
+    source: &str,
+    max: Option<usize>,
+) -> bool {
+    let Some(max) = max else {
+        return false;
+    };
+    let Some(range) = node.source_range() else {
+        return false;
+    };
+    let start = redundant_line_break_character_offset_to_byte(source, range.start);
+    let end = redundant_line_break_character_offset_to_byte(source, range.end);
+    let line_start = source[..start].rfind('\n').map_or(0, |index| index + 1);
+    let line_end = source[end..]
+        .find('\n')
+        .map_or(source.len(), |index| end + index);
+    let leading = source[line_start..line_end]
+        .chars()
+        .take_while(|character| character.is_ascii_whitespace())
+        .count();
+    redundant_single_line(&source[line_start..line_end])
+        .is_some_and(|line| leading + line.chars().count() > max)
+}
+
+fn redundant_line_break_character_offset_to_byte(source: &str, offset: usize) -> usize {
+    source
+        .char_indices()
+        .nth(offset)
+        .map_or(source.len(), |(byte, _)| byte)
+}
+
+fn redundant_line_break_character_range_to_byte(
+    source: &str,
+    range: std::ops::Range<usize>,
+) -> std::ops::Range<usize> {
+    redundant_line_break_character_offset_to_byte(source, range.start)
+        ..redundant_line_break_character_offset_to_byte(source, range.end)
 }
 
 fn redundant_binary_wrapper(node: &Node<'_>) -> bool {

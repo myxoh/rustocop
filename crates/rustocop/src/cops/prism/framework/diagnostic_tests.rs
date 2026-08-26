@@ -286,3 +286,16 @@ fn department_directives_suppress_member_cops() {
     assert_eq!(inspection.findings.len(), 1);
     assert_eq!(inspection.findings[0].cop_name, "Lint/Example");
 }
+
+#[test]
+fn slash_terminated_department_directives_suppress_member_cops() {
+    let source = "value # rubocop:disable Metrics/\n";
+    let mut context = context(false);
+    context.report("Metrics/MethodLength", "Hidden.", 0..5);
+    context.report("Style/Example", "Visible.", 0..5);
+
+    let inspection = context.finish(source);
+
+    assert_eq!(inspection.findings.len(), 1);
+    assert_eq!(inspection.findings[0].cop_name, "Style/Example");
+}

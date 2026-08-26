@@ -5,7 +5,7 @@ define_cops! {
     ParameterLists => "Metrics/ParameterLists" => any_node(parameter_lists),
     CollectionLiteralLength => "Metrics/CollectionLiteralLength" => any_node(collection_literal_length),
     BinaryOperatorParameterName => "Naming/BinaryOperatorParameterName" => node(as_def_node, binary_operator_parameter_name),
-    BlockParameterName => "Naming/BlockParameterName" => source(block_parameter_name),
+    BlockParameterName => "Naming/BlockParameterName" => any_node(block_parameter_name),
     PredicatePrefix => "Naming/PredicatePrefix" => any_node(predicate_prefix),
 }
 
@@ -332,74 +332,151 @@ fn identifier_ranges<'a>(
         })
 }
 
-fn block_parameter_name(context: &mut CopContext<'_, '_>) {
-    let source = context.source();
-    let minimum = context.config_usize("MinNameLength", 2);
+fn block_parameter_name(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
+    let parameters = if let Some(block) = node.as_block_node() {
+        block
+            .parameters()
+            .and_then(|parameters| parameters.as_block_parameters_node())
+            .and_then(|parameters| parameters.parameters())
+    } else if let Some(lambda) = node.as_lambda_node() {
+        lambda
+            .parameters()
+            .and_then(|parameters| parameters.as_parameters_node())
+    } else {
+        return;
+    };
+    let Some(parameters) = parameters else { return };
+    let minimum = context.config_usize("MinNameLength", 1);
     let allow_numbers = context.config_bool("AllowNamesEndingInNumbers", false);
     let allowed = context.config_values("AllowedNames").to_vec();
     let forbidden = context.config_values("ForbiddenNames").to_vec();
-    let mut search = 0;
-    while let Some(first_relative) = source[search..].find('|') {
-        let first = search + first_relative;
-        let Some(second_relative) = source[first + 1..].find('|') else {
-            break;
-        };
-        let second = first + 1 + second_relative;
-        if source[first + 1..second].contains('\n') {
-            search = second + 1;
+    for parameter in block_name_parameters(&parameters) {
+        if parameter.name == "_" {
             continue;
         }
-        for (relative, raw) in split_parameters(&source[first + 1..second]) {
-            let name = raw.trim_start_matches(['*', '&']);
-            let bare = name.trim_start_matches('_');
-            if allowed.iter().any(|allowed| allowed == bare) {
-                continue;
-            }
-            let start = first + 1 + relative;
-            let range = start..start + raw.len();
-            let message = if forbidden.iter().any(|forbidden| forbidden == bare) {
-                Some(format!(
-                    "Do not use {bare} as a name for a block parameter."
-                ))
-            } else if bare.len() < minimum {
-                Some(format!(
-                    "Block parameter must be at least {minimum} characters long."
-                ))
-            } else if bare.bytes().any(|byte| byte.is_ascii_uppercase()) {
-                Some("Only use lowercase characters for block parameter.".to_string())
-            } else if !allow_numbers
-                && bare
-                    .bytes()
-                    .next_back()
-                    .is_some_and(|byte| byte.is_ascii_digit())
-            {
-                Some("Do not end block parameter with a number.".to_string())
-            } else {
-                None
-            };
-            if let Some(message) = message {
-                context.report(message, range);
-            }
+        let bare = parameter.name.trim_start_matches('_');
+        if allowed.iter().any(|allowed| allowed == bare) {
+            continue;
         }
-        search = second + 1;
+        if forbidden.iter().any(|forbidden| forbidden == bare) {
+            context.report(
+                format!("Do not use {bare} as a name for a block parameter."),
+                parameter.range.clone(),
+            );
+        }
+        if bare.chars().any(char::is_uppercase) {
+            context.report(
+                "Only use lowercase characters for block parameter.",
+                parameter.range.clone(),
+            );
+        }
+        if bare.chars().count() < minimum {
+            context.report(
+                format!("Block parameter must be at least {minimum} characters long."),
+                parameter.range.clone(),
+            );
+        }
+        if !allow_numbers && bare.ends_with(|character: char| character.is_ascii_digit()) {
+            context.report(
+                "Do not end block parameter with a number.",
+                parameter.range,
+            );
+        }
     }
 }
 
-fn split_parameters(source: &str) -> Vec<(usize, &str)> {
-    let mut start = 0;
+struct BlockNameParameter {
+    name: String,
+    range: std::ops::Range<usize>,
+}
+
+fn block_name_parameters(parameters: &ruby_prism::ParametersNode<'_>) -> Vec<BlockNameParameter> {
     let mut result = Vec::new();
-    for (at, character) in source.char_indices() {
-        if character == ',' {
-            let raw = source[start..at].trim();
-            if !raw.is_empty() {
-                result.push((start + source[start..at].find(raw).unwrap_or(0), raw));
-            }
-            start = at + 1;
+    for parameter in parameters
+        .requireds()
+        .iter()
+        .chain(parameters.posts().iter())
+    {
+        if let Some(parameter) = parameter.as_required_parameter_node() {
+            push_block_name_parameter(
+                &mut result,
+                parameter.name().as_slice(),
+                parameter.location().start_offset(),
+                0,
+            );
         }
     }
-    let raw = source[start..].trim();
-    if !raw.is_empty() {
-        result.push((start + source[start..].find(raw).unwrap_or(0), raw));
+    for parameter in parameters.optionals().iter() {
+        if let Some(parameter) = parameter.as_optional_parameter_node() {
+            push_block_name_parameter(
+                &mut result,
+                parameter.name().as_slice(),
+                parameter.name_loc().start_offset(),
+                0,
+            );
+        }
+    }
+    for parameter in parameters.keywords().iter() {
+        let name_and_location = parameter
+            .as_required_keyword_parameter_node()
+            .map(|parameter| (parameter.name(), parameter.name_loc()))
+            .or_else(|| {
+                parameter
+                    .as_optional_keyword_parameter_node()
+                    .map(|parameter| (parameter.name(), parameter.name_loc()))
+            });
+        if let Some((name, location)) = name_and_location {
+            push_block_name_parameter(&mut result, name.as_slice(), location.start_offset(), 0);
+        }
+    }
+    if let Some(parameter) = parameters
+        .rest()
+        .and_then(|parameter| parameter.as_rest_parameter_node())
+    {
+        if let Some(name) = parameter.name() {
+            push_block_name_parameter(
+                &mut result,
+                name.as_slice(),
+                parameter.location().start_offset(),
+                1,
+            );
+        }
+    }
+    if let Some(parameter) = parameters
+        .keyword_rest()
+        .and_then(|parameter| parameter.as_keyword_rest_parameter_node())
+    {
+        if let Some(name) = parameter.name() {
+            push_block_name_parameter(
+                &mut result,
+                name.as_slice(),
+                parameter.location().start_offset(),
+                2,
+            );
+        }
+    }
+    if let Some(parameter) = parameters.block() {
+        if let Some(name) = parameter.name() {
+            push_block_name_parameter(
+                &mut result,
+                name.as_slice(),
+                parameter.location().start_offset(),
+                0,
+            );
+        }
     }
     result
+}
+
+fn push_block_name_parameter(
+    parameters: &mut Vec<BlockNameParameter>,
+    name: &[u8],
+    start: usize,
+    prefix_length: usize,
+) {
+    let name = String::from_utf8_lossy(name).into_owned();
+    parameters.push(BlockNameParameter {
+        range: start..start + name.len() + prefix_length,
+        name,
+    });
 }

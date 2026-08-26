@@ -742,6 +742,19 @@ fn super_and_yield_share_the_parameterized_dispatch_contract() {
     assert_eq!(node.kind(), "zsuper");
     assert_eq!(node.method_name(), Some("super"));
     assert!(node.arguments().is_empty());
+
+    let parsed = parse("def example(*args); super(*args) do |*values|; work(*values); end; end");
+    let block = parsed.ast().unwrap().body().unwrap();
+    assert_eq!(block.kind(), "block");
+    let super_node = block.node_child(0).expect("super block send");
+    assert_eq!(super_node.kind(), "super");
+    assert_eq!(super_node.arguments().len(), 1);
+    assert!(super_node.splat_argument());
+    assert_eq!(block.arguments().len(), 1);
+    assert_eq!(
+        block.first_argument().and_then(|argument| argument.name()),
+        Some("values")
+    );
 }
 
 #[test]
@@ -821,6 +834,45 @@ fn strings_preserve_quote_character_heredoc_and_percent_kinds() {
     assert!(!content.single_quoted());
     assert!(!content.double_quoted());
     assert!(!content.percent_literal(None));
+
+    let parsed = parse("<<~EOS\n  body\nEOS\n");
+    let node = parsed.ast().unwrap();
+    assert_eq!(node.source(), Some("<<~EOS"));
+    assert_eq!(
+        node.loc("heredoc_end").map(|(_, source)| source.as_str()),
+        Some("EOS")
+    );
+
+    let parsed = parse("<<~EOS\n  value = #{item}\nEOS\n");
+    let node = parsed.ast().unwrap();
+    assert_eq!(node.kind(), "dstr");
+    assert_eq!(node.source(), Some("<<~EOS"));
+    assert_eq!(
+        node.loc("heredoc_end").map(|(_, source)| source.as_str()),
+        Some("EOS")
+    );
+
+    let parsed = parse("class Example\n  CONTENT = <<~EOS\n    body\n  EOS\nend\n");
+    let root = parsed.ast().unwrap();
+    let heredocs = root
+        .each_node(&["any_str"])
+        .into_iter()
+        .filter(|node| node.heredoc())
+        .collect::<Vec<_>>();
+    assert_eq!(heredocs.len(), 1);
+    assert_eq!(heredocs[0].source(), Some("<<~EOS"));
+
+    let parsed = parse(
+        "class Gitlab::Seeder::ContainerImages\n  attr_reader :tmp_dir\n\n  DOCKER_FILE_CONTENTS = <<~EOS\n    FROM scratch\n    ARG tag\n    ENV tag=$tag\n  EOS\n\n  def seed!\n    puts \"#{project}\"\n  end\nend\n",
+    );
+    let root = parsed.ast().unwrap();
+    assert_eq!(
+        root.each_node(&["any_str"])
+            .into_iter()
+            .filter(|node| node.heredoc())
+            .count(),
+        1
+    );
 }
 
 #[test]
@@ -1304,6 +1356,12 @@ fn blocks_expose_arguments_delimiters_dispatch_and_context() {
         assert_eq!(node.multiline(), multiline, "{source}");
         assert_eq!(node.single_line(), !multiline, "{source}");
     }
+
+    let chained_numblock = parse("capture do\n  work\nend.map { _1 }");
+    let chained_numblock = chained_numblock.ast().unwrap();
+    assert_eq!(chained_numblock.kind(), "numblock");
+    assert!(chained_numblock.single_line());
+    assert!(!chained_numblock.multiline());
 
     assert!(parse("-> { work }").ast().unwrap().lambda_block());
     assert!(parse("lambda { work }").ast().unwrap().lambda_block());

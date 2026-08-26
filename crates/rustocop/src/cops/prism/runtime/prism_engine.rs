@@ -35,6 +35,8 @@ impl Engine {
             source_encoding,
             cop_config,
         );
+        context.set_enabled_cops(self.registry.cops.iter().map(|cop| cop.as_ref()));
+        context.set_parser_warnings(parsed.warnings());
         let has_unrecoverable_parse_errors = parsed
             .errors()
             .any(|error| !is_context_only_parse_error(error.message()));

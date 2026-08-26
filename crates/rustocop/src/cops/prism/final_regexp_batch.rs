@@ -581,9 +581,19 @@ impl Cop for AmbiguousRegexpLiteral {
     fn on_node<'pr>(&self, node: &Node<'pr>, ancestors: &[Node<'pr>], source: &str, context: &mut Context) {
         let Some(call) = node.as_call_node() else { return };
         if call.opening_loc().is_some() { return; }
+        let name = call.name();
+        if call.equal_loc().is_some()
+            || matches!(name.as_slice(), b"=~" | b"!~" | b"==" | b"===" | b"!=" | b"<=" | b">=")
+            || name.as_slice().ends_with(b"=")
+        {
+            return;
+        }
         let Some(arguments) = call.arguments() else { return };
         let Some(first) = arguments.arguments().iter().next() else { return };
         let Some(opening) = leading_regexp_opening(&first) else { return };
+        if !context.parser_warning_at(opening.start_offset(), "ambiguous `/`") {
+            return;
+        }
         let mut cop_context = context.cop_context(self.name(), source, ancestors);
         let message = "Ambiguous regexp literal. Parenthesize the method arguments if it's surely a regexp literal, or add a whitespace to the right of the `/` if it should be a division.";
         let start = arguments.location().start_offset();
@@ -631,12 +641,31 @@ impl Cop for DuplicateRegexpCharacterClassElement {
 fn duplicate_regexp_class_tokens(literal: &str) -> Vec<std::ops::Range<usize>> {
     let bytes = literal.as_bytes();
     let mut duplicates = Vec::new();
-    let mut index = 0;
+    // In `%r[...]`, the first `[` is the regexp delimiter, not a character
+    // class. Prism locations include the literal delimiters.
+    let mut index = if bytes.starts_with(b"%r") { 3 } else { 1 };
     while index < bytes.len() {
-        if bytes[index] != b'[' || index > 0 && bytes[index - 1] == b'\\' { index += 1; continue; }
+        if bytes.get(index..index + 2) == Some(b"#{") {
+            let mut depth = 1usize;
+            index += 2;
+            while index < bytes.len() && depth > 0 {
+                if bytes[index] == b'{' {
+                    depth += 1;
+                } else if bytes[index] == b'}' {
+                    depth -= 1;
+                }
+                index += 1;
+            }
+            continue;
+        }
+        if bytes[index] != b'[' || regexp_byte_is_escaped(bytes, index) {
+            index += 1;
+            continue;
+        }
         let class_start = index + 1;
         let mut end = class_start;
         let mut interpolation = 0usize;
+        let mut class_depth = 1usize;
         while end < bytes.len() {
             if bytes.get(end..end + 2) == Some(b"#{") { interpolation += 1; end += 2; continue; }
             if interpolation > 0 {
@@ -647,7 +676,18 @@ fn duplicate_regexp_class_tokens(literal: &str) -> Vec<std::ops::Range<usize>> {
             if bytes.get(end..end + 2) == Some(b"[:") {
                 if let Some(close) = literal[end + 2..].find(":]") { end += close + 4; continue; }
             }
-            if bytes[end] == b']' { break; }
+            if bytes[end] == b'\\' {
+                end = regexp_escape_end(bytes, end, bytes.len());
+                continue;
+            }
+            if bytes[end] == b'[' {
+                class_depth += 1;
+            } else if bytes[end] == b']' {
+                class_depth -= 1;
+                if class_depth == 0 {
+                    break;
+                }
+            }
             end += 1;
         }
         if end >= bytes.len() { break; }
@@ -655,27 +695,60 @@ fn duplicate_regexp_class_tokens(literal: &str) -> Vec<std::ops::Range<usize>> {
         if body.contains("&&") { index = end + 1; continue; }
         let mut seen = HashSet::<String>::new();
         let mut at = class_start;
+        // A caret at the beginning negates the set; it is metadata, not an
+        // element that can duplicate a later literal caret.
+        if at < end && bytes[at] == b'^' {
+            at += 1;
+        }
         while at < end {
             if bytes.get(at..at + 2) == Some(b"#{") {
                 let mut depth = 1usize; at += 2;
                 while at < end && depth > 0 { if bytes[at] == b'{' { depth += 1; } else if bytes[at] == b'}' { depth -= 1; } at += 1; }
                 continue;
             }
+            if bytes[at] == b'[' && bytes.get(at..at + 2) != Some(b"[:") {
+                let mut nested_depth = 1usize;
+                at += 1;
+                while at < end && nested_depth > 0 {
+                    if bytes.get(at..at + 2) == Some(b"#{") {
+                        let mut interpolation_depth = 1usize;
+                        at += 2;
+                        while at < end && interpolation_depth > 0 {
+                            if bytes[at] == b'{' {
+                                interpolation_depth += 1;
+                            } else if bytes[at] == b'}' {
+                                interpolation_depth -= 1;
+                            }
+                            at += 1;
+                        }
+                    } else if bytes[at] == b'\\' {
+                        at = regexp_escape_end(bytes, at, end);
+                    } else {
+                        if bytes[at] == b'[' {
+                            nested_depth += 1;
+                        } else if bytes[at] == b']' {
+                            nested_depth -= 1;
+                        }
+                        at += 1;
+                    }
+                }
+                continue;
+            }
             let token_start = at;
             if bytes.get(at..at + 2) == Some(b"[:") {
                 if let Some(close) = literal[at + 2..end].find(":]") { at += close + 4; } else { at += 1; }
             } else if bytes[at] == b'\\' {
-                at += 1;
-                if at < end && matches!(bytes[at], b'0'..=b'7') {
-                    let mut digits = 0; while at < end && digits < 3 && matches!(bytes[at], b'0'..=b'7') { at += 1; digits += 1; }
-                } else { at = (at + 1).min(end); }
+                at = regexp_escape_end(bytes, at, end);
             } else {
                 let char_len = literal[at..].chars().next().map_or(1, char::len_utf8);
                 at = (at + char_len).min(end);
-                if at < end && bytes[at] == b'-' && at + 1 < end {
-                    at += 1;
-                    if bytes[at] == b'\\' { at = (at + 2).min(end); }
-                    else { at += literal[at..].chars().next().map_or(1, char::len_utf8); }
+            }
+            if at < end && bytes[at] == b'-' && at + 1 < end && bytes[token_start] != b'-' {
+                at += 1;
+                if bytes[at] == b'\\' {
+                    at = regexp_escape_end(bytes, at, end);
+                } else {
+                    at += literal[at..].chars().next().map_or(1, char::len_utf8);
                 }
             }
             let token = literal[token_start..at].to_string();
@@ -684,6 +757,65 @@ fn duplicate_regexp_class_tokens(literal: &str) -> Vec<std::ops::Range<usize>> {
         index = end + 1;
     }
     duplicates
+}
+
+fn regexp_byte_is_escaped(bytes: &[u8], index: usize) -> bool {
+    let mut backslashes = 0usize;
+    let mut cursor = index;
+    while cursor > 0 && bytes[cursor - 1] == b'\\' {
+        backslashes += 1;
+        cursor -= 1;
+    }
+    backslashes % 2 == 1
+}
+
+fn regexp_escape_end(bytes: &[u8], start: usize, limit: usize) -> usize {
+    let mut at = start + 1;
+    if at >= limit {
+        return limit;
+    }
+    match bytes[at] {
+        b'0'..=b'7' => {
+            let mut digits = 0;
+            while at < limit && digits < 3 && matches!(bytes[at], b'0'..=b'7') {
+                at += 1;
+                digits += 1;
+            }
+        }
+        b'x' => {
+            at += 1;
+            for _ in 0..2 {
+                if at < limit && bytes[at].is_ascii_hexdigit() {
+                    at += 1;
+                }
+            }
+        }
+        b'u' => {
+            at += 1;
+            if at < limit && bytes[at] == b'{' {
+                at += 1;
+                while at < limit && bytes[at] != b'}' {
+                    at += 1;
+                }
+                at = (at + 1).min(limit);
+            } else {
+                for _ in 0..4 {
+                    if at < limit && bytes[at].is_ascii_hexdigit() {
+                        at += 1;
+                    }
+                }
+            }
+        }
+        b'p' | b'P' if bytes.get(at + 1) == Some(&b'{') => {
+            at += 2;
+            while at < limit && bytes[at] != b'}' {
+                at += 1;
+            }
+            at = (at + 1).min(limit);
+        }
+        _ => at = (at + 1).min(limit),
+    }
+    at
 }
 
 fn out_of_range_ref(context: &mut CopContext<'_, '_>) {

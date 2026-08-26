@@ -57,14 +57,44 @@ impl Cop for LineEndStringConcatenationIndentation {
     fn phase(&self)->CopPhase{CopPhase::Source}
     fn on_source(&self,source:&str,context:&mut Context){
         let mut cop=context.cop_context(self.name(),source,&[]);let style=cop.policy().enforced_style("aligned").to_string();let related=cop.related_config_value("Layout/IndentationWidth","Width").and_then(|value|value.parse().ok()).unwrap_or(2);let width=cop.config_usize("IndentationWidth",related);
+        let parsed = ruby_prism::parse(source.as_bytes());
+        let (ast, root) = crate::rubocop::ast::prism::convert(source, &parsed.node());
+        let mut dstr_rules = std::collections::HashMap::new();
+        if let Some(root) = root.map(|root| ast.node(root)) {
+            for dstr in root.each_node(&["dstr"]) {
+                let children = dstr.child_nodes();
+                if !dstr.multiline()
+                    || children.is_empty()
+                    || children.iter().any(|child| !matches!(child.kind(), "str" | "dstr") || child.multiline())
+                {
+                    continue;
+                }
+                let Some(first_range) = children[0].source_range() else { continue };
+                let first_start = character_offset_to_byte(source, first_range.start);
+                let always_indented = dstr.parent().is_none_or(|parent| {
+                    matches!(parent.kind(), "block" | "begin" | "def" | "defs" | "if")
+                });
+                let source_line = cop.source_file().line(first_start);
+                let base_column = if dstr.parent().is_some_and(|parent| parent.kind() == "pair") {
+                    dstr.parent().map_or(0, |parent| parent.column())
+                } else {
+                    source_line.find(|character: char| !character.is_whitespace()).unwrap_or(0)
+                };
+                dstr_rules.insert(first_start, (always_indented, base_column));
+            }
+        }
         let mut findings=Vec::<(&'static str,std::ops::Range<usize>,std::ops::Range<usize>,String)>::new();
         let mut correction_edits=Vec::<(std::ops::Range<usize>,String)>::new();
-        for group in continued_strings(source){let first=&group[0];let line_start=cop.source_file().line_start(first.start);let prefix=&source[line_start..first.start];let starts_statement=prefix.trim().is_empty();let leading=prefix.bytes().take_while(|byte|matches!(byte,b' '|b'\t')).count();let hash_key_indent=prefix.rfind("{ ").filter(|_|prefix.contains("=>")).map(|opening|opening+2);let expected=if style=="aligned"&&!starts_statement{first.start-line_start}else{hash_key_indent.unwrap_or(leading)+width};let before=findings.len();
-            for (index,string) in group.iter().enumerate().skip(1){let current_start=cop.source_file().line_start(string.start);let actual=string.start-current_start;let pair_expected=if index==1{expected}else{let previous=&group[index-1];previous.start-cop.source_file().line_start(previous.start)};if actual==pair_expected{continue}let message=if (style=="indented"||starts_statement)&&index==1{"Indent the first part of a string concatenated with backslash."}else{"Align parts of a string concatenated with backslash."};findings.push((message,string.start..string.end,current_start..string.start," ".repeat(expected)));}
-            if findings.len()>before{for string in group.iter().skip(1){let current_start=cop.source_file().line_start(string.start);if string.start-current_start!=expected{correction_edits.push((current_start..string.start," ".repeat(expected)));}}}
+        for group in continued_strings(source){let first=&group[0];let line_start=cop.source_file().line_start(first.start);let first_column=first.start-line_start;let Some((always_indented,base_column))=dstr_rules.get(&first.start).copied() else { continue };let indented=style!="aligned"||always_indented;let expected=if indented{base_column+width}else{first_column};let before=findings.len();
+            for (index,string) in group.iter().enumerate().skip(1){let current_start=cop.source_file().line_start(string.start);let actual=string.start-current_start;let pair_expected=if index==1{expected}else{let previous=&group[index-1];previous.start-cop.source_file().line_start(previous.start)};if actual==pair_expected{continue}let message=if indented&&index==1{"Indent the first part of a string concatenated with backslash."}else{"Align parts of a string concatenated with backslash."};findings.push((message,string.start..string.end,current_start..string.start," ".repeat(pair_expected)));}
+            if findings.len()>before{for (index,string) in group.iter().enumerate().skip(1){let current_start=cop.source_file().line_start(string.start);let target=if index==1{expected}else{let previous=&group[index-1];previous.start-cop.source_file().line_start(previous.start)};if string.start-current_start!=target{correction_edits.push((current_start..string.start," ".repeat(target)));}}}
         }
         for (message,offense,_,_) in findings{let edits=correction_edits.clone();cop.add_offense(offense,message,|corrector|{for (range,replacement) in edits{corrector.replace(range,replacement);}});}
     }
+}
+
+fn character_offset_to_byte(source: &str, character: usize) -> usize {
+    source.char_indices().nth(character).map_or(source.len(), |(byte, _)| byte)
 }
 
 fn space_inside_hash_literal_braces(context: &mut CopContext<'_, '_>) {

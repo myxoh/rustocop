@@ -9,11 +9,12 @@ use ruby_prism::{
     AndNode, AssocNode, AssocSplatNode, BeginNode, BlockNode, BlockParametersNode, BreakNode,
     CallNode, CallOperatorWriteNode, CallTargetNode, CaseMatchNode, CaseNode, ClassNode,
     ConstantPathNode, ConstantPathWriteNode, DefNode, ForNode, ForwardingSuperNode, IfNode, InNode,
-    IndexTargetNode, InterpolatedRegularExpressionNode, InterpolatedStringNode, LambdaNode,
-    MatchWriteNode, ModuleNode, MultiTargetNode, MultiWriteNode, NextNode, Node, OrNode,
-    ParametersNode, RangeNode as PrismRangeNode, RegularExpressionNode, RescueModifierNode,
-    RescueNode, ReturnNode, SingletonClassNode, SplatNode, StatementsNode, StringNode, SuperNode,
-    SymbolNode, UnlessNode, UntilNode, Visit, WhenNode, WhileNode, XStringNode, YieldNode,
+    IndexTargetNode, InterpolatedRegularExpressionNode, InterpolatedStringNode,
+    InterpolatedXStringNode, LambdaNode, MatchWriteNode, ModuleNode, MultiTargetNode,
+    MultiWriteNode, NextNode, Node, OrNode, ParametersNode, RangeNode as PrismRangeNode,
+    RegularExpressionNode, RescueModifierNode, RescueNode, ReturnNode, SingletonClassNode,
+    SplatNode, StatementsNode, StringNode, SuperNode, SymbolNode, UnlessNode, UntilNode, Visit,
+    WhenNode, WhileNode, XStringNode, YieldNode,
 };
 
 use super::node::core::{Ast, NodeId, NodeValue};
@@ -23,6 +24,7 @@ enum Frame {
     Transparent,
     Node(NodeId),
     Call { outer: NodeId, send: NodeId },
+    Super { outer: NodeId, super_node: NodeId },
 }
 
 pub(crate) fn convert(source: &str, root: &Node<'_>) -> (Ast, Option<NodeId>) {
@@ -74,6 +76,7 @@ impl Converter<'_> {
         self.frames.iter().rev().find_map(|frame| match *frame {
             Frame::Node(id) => Some(id),
             Frame::Call { outer, .. } => Some(outer),
+            Frame::Super { outer, .. } => Some(outer),
             Frame::Transparent => None,
         })
     }
@@ -225,6 +228,37 @@ impl Converter<'_> {
                 self.frames.push(Frame::Node(send));
             }
             return;
+        }
+
+        if let Some(super_node) = node.as_super_node() {
+            if let Some(block) = super_node.block().and_then(|block| block.as_block_node()) {
+                let mut super_end = block.opening_loc().start_offset();
+                while super_end > node.location().start_offset()
+                    && self.source.as_bytes()[super_end - 1].is_ascii_whitespace()
+                {
+                    super_end -= 1;
+                }
+                let outer = self.ast.add_node(
+                    implicit_block_kind(block.parameters()),
+                    Vec::new(),
+                    Some(self.location(&node)),
+                );
+                self.attach(outer);
+                let inner = self.ast.add_node(
+                    "super",
+                    Vec::new(),
+                    Some(byte_range_to_character(
+                        self.source,
+                        node.location().start_offset()..super_end,
+                    )),
+                );
+                self.ast.append_child(outer, NodeValue::Node(inner));
+                self.frames.push(Frame::Super {
+                    outer,
+                    super_node: inner,
+                });
+                return;
+            }
         }
 
         let kind = if self.pattern_depth > 0 && raw.ends_with("TargetNode") {
@@ -401,6 +435,17 @@ impl Converter<'_> {
         self.ast.set_location(id, name, range, &text);
     }
 
+    fn set_heredoc_end(&mut self, id: NodeId, location: ruby_prism::Location<'_>) {
+        let start = location.start_offset();
+        let mut end = location.end_offset();
+        while end > start && matches!(self.source.as_bytes()[end - 1], b'\n' | b'\r') {
+            end -= 1;
+        }
+        let range = byte_range_to_character(self.source, start..end);
+        let value = self.source.get(start..end).unwrap_or("").to_owned();
+        self.ast.set_location(id, "heredoc_end", range, &value);
+    }
+
     fn append_regopt(
         &mut self,
         regexp: NodeId,
@@ -469,7 +514,9 @@ impl<'pr> Visit<'pr> for Converter<'_> {
                 self.populate_block(&block, outer);
             }
             Frame::Node(send) => self.populate_call(node, send),
-            Frame::Transparent => unreachable!("calls are never transparent"),
+            Frame::Transparent | Frame::Super { .. } => {
+                unreachable!("calls are never transparent or super frames")
+            }
         }
     }
 
@@ -927,6 +974,27 @@ impl<'pr> Visit<'pr> for Converter<'_> {
         if let Some(operator) = node.operator_loc() {
             self.set_location(resbody, "operator", operator);
         }
+        let clause_start = node.keyword_loc().start_offset();
+        let clause_end = node
+            .statements()
+            .map(|statements| statements.location().end_offset())
+            .or_else(|| {
+                node.reference()
+                    .map(|reference| reference.location().end_offset())
+            })
+            .or_else(|| {
+                node.exceptions()
+                    .last()
+                    .map(|exception| exception.location().end_offset())
+            })
+            .unwrap_or_else(|| node.keyword_loc().end_offset());
+        self.ast.set_source_range(
+            resbody,
+            Some(byte_range_to_character(
+                self.source,
+                clause_start..clause_end,
+            )),
+        );
         self.frames.pop();
         if let Some(subsequent) = node.subsequent() {
             self.with_parent(frame_node, |this| this.visit_rescue_node(&subsequent));
@@ -1487,11 +1555,60 @@ impl<'pr> Visit<'pr> for Converter<'_> {
         for part in &node.parts() {
             self.visit(&part);
         }
-        if let Some(opening) = node.opening_loc() {
-            self.set_location(string, "begin", opening);
+        let opening = node.opening_loc();
+        let heredoc = opening.as_ref().is_some_and(|location| {
+            self.source
+                .get(location.start_offset()..location.end_offset())
+                .is_some_and(|source| source.starts_with("<<"))
+        });
+        if heredoc {
+            if let Some(closing) = node.closing_loc() {
+                self.set_heredoc_end(string, closing);
+            }
+            if let Some(opening) = opening {
+                self.ast.set_source_range(
+                    string,
+                    Some(byte_range_to_character(
+                        self.source,
+                        opening.start_offset()..opening.end_offset(),
+                    )),
+                );
+            }
+        } else {
+            if let Some(opening) = opening {
+                self.set_location(string, "begin", opening);
+            }
+            if let Some(closing) = node.closing_loc() {
+                self.set_location(string, "end", closing);
+            }
         }
-        if let Some(closing) = node.closing_loc() {
-            self.set_location(string, "end", closing);
+    }
+
+    fn visit_interpolated_x_string_node(&mut self, node: &InterpolatedXStringNode<'pr>) {
+        let Frame::Node(string) = *self.frames.last().expect("interpolated xstring frame") else {
+            unreachable!()
+        };
+        self.ast.clear_children(string);
+        for part in &node.parts() {
+            self.visit(&part);
+        }
+        let opening = node.opening_loc();
+        let opening_source = self
+            .source
+            .get(opening.start_offset()..opening.end_offset())
+            .unwrap_or("");
+        if opening_source.starts_with("<<") {
+            self.set_heredoc_end(string, node.closing_loc());
+            self.ast.set_source_range(
+                string,
+                Some(byte_range_to_character(
+                    self.source,
+                    opening.start_offset()..opening.end_offset(),
+                )),
+            );
+        } else {
+            self.set_location(string, "begin", opening);
+            self.set_location(string, "end", node.closing_loc());
         }
     }
 
@@ -1534,7 +1651,7 @@ impl<'pr> Visit<'pr> for Converter<'_> {
         if heredoc {
             self.set_location(string, "heredoc_body", node.content_loc());
             if let Some(closing) = node.closing_loc() {
-                self.set_location(string, "heredoc_end", closing);
+                self.set_heredoc_end(string, closing);
             }
             if let Some(opening) = node.opening_loc() {
                 self.ast.set_source_range(
@@ -1570,24 +1687,34 @@ impl<'pr> Visit<'pr> for Converter<'_> {
     }
 
     fn visit_super_node(&mut self, node: &SuperNode<'pr>) {
-        let Frame::Node(super_node) = *self.frames.last().expect("super frame") else {
-            unreachable!()
+        let frame = *self.frames.last().expect("super frame");
+        let super_node = match frame {
+            Frame::Node(super_node) | Frame::Super { super_node, .. } => super_node,
+            Frame::Transparent | Frame::Call { .. } => unreachable!(),
         };
         self.ast.clear_children(super_node);
-        if let Some(arguments) = node.arguments() {
-            for argument in &arguments.arguments() {
-                self.visit(&argument);
+        self.with_parent(super_node, |this| {
+            if let Some(arguments) = node.arguments() {
+                for argument in &arguments.arguments() {
+                    this.visit(&argument);
+                }
             }
-        }
-        if let Some(block) = node.block() {
-            self.visit(&block);
-        }
+        });
         self.set_location(super_node, "keyword", node.keyword_loc());
         if let Some(location) = node.lparen_loc() {
             self.set_location(super_node, "begin", location);
         }
         if let Some(location) = node.rparen_loc() {
             self.set_location(super_node, "end", location);
+        }
+        if let Frame::Super { outer, .. } = frame {
+            let block = node
+                .block()
+                .and_then(|block| block.as_block_node())
+                .expect("block super frame");
+            self.populate_block(&block, outer);
+        } else if let Some(block) = node.block() {
+            self.visit(&block);
         }
     }
 
@@ -1652,7 +1779,7 @@ impl<'pr> Visit<'pr> for Converter<'_> {
             .unwrap_or("");
         if opening_source.starts_with("<<") {
             self.set_location(string, "heredoc_body", node.content_loc());
-            self.set_location(string, "heredoc_end", node.closing_loc());
+            self.set_heredoc_end(string, node.closing_loc());
             self.ast.set_source_range(
                 string,
                 Some(byte_range_to_character(

@@ -26,20 +26,25 @@ fn method_length(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
         else {
             return;
         };
-        let name = first_argument(&call)
-            .map(|argument| {
-                node_source(context.source(), &argument)
-                    .trim_start_matches(':')
-                    .as_bytes()
-                    .to_vec()
-            })
-            .unwrap_or_default();
+        let Some(argument) = first_argument(&call).filter(|argument| {
+            argument.as_symbol_node().is_some() || argument.as_string_node().is_some()
+        }) else {
+            return;
+        };
+        let name = node_source(context.source(), &argument)
+            .trim_start_matches(':')
+            .trim_matches(['\'', '"'])
+            .as_bytes()
+            .to_vec();
         (
             name,
             block.body(),
             call.location(),
             Some(block.closing_loc().start_offset()),
-            None,
+            block
+                .parameters()
+                .map(|parameters| parameters.location().end_offset())
+                .or(Some(block.opening_loc().end_offset())),
         )
     } else {
         return;
@@ -49,6 +54,14 @@ fn method_length(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
     }
     let maximum = context.config_usize("Max", 10);
     let count = body.map_or(0, |body| {
+        let body = body
+            .as_statements_node()
+            .filter(|statements| statements.body().len() == 1)
+            .and_then(|statements| statements.body().first())
+            .unwrap_or(body);
+        if direct_heredoc(&body) {
+            return 1;
+        }
         let body_location = body.location();
         let source_start = header_end
             .filter(|header_end| body_location.start_offset() <= *header_end)
@@ -58,31 +71,36 @@ fn method_length(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
                     .find(';')
                     .map_or_else(
                         || {
-                            line_end
-                                + usize::from(
-                                    context.source().as_bytes().get(line_end) == Some(&b'\n'),
+                            context.source()[header_end..line_end]
+                                .find(|character: char| !character.is_whitespace())
+                                .map_or_else(
+                                    || {
+                                        line_end
+                                            + usize::from(
+                                                context.source().as_bytes().get(line_end)
+                                                    == Some(&b'\n'),
+                                            )
+                                    },
+                                    |content| header_end + content,
                                 )
                         },
                         |semicolon| header_end + semicolon + 1,
                     )
             })
             .unwrap_or_else(|| body_location.start_offset());
-        let source_end = body_end
+        let mut source_end = body_end
             .map(|end| context.source_file().line_start(end))
             .filter(|end| *end > source_start)
             .unwrap_or_else(|| body_location.end_offset());
+        if let Some(heredoc_end) = descendant_source_end_with_heredoc(&body) {
+            source_end = heredoc_end;
+        }
         let source = if source_end > source_start {
             &context.source()[source_start..source_end]
         } else {
             context.source_file().at(&body_location)
         };
         let mut count = code_lines(source, false, context.config_bool("CountComments", false));
-        if source.lines().any(|line| line.contains("<<~") || line.contains("<<-"))
-            && source.lines().rev().find(|line| !line.trim().is_empty()).map(str::trim)
-                == Some("end")
-        {
-            count = count.saturating_sub(1);
-        }
         if context
             .config_values("CountAsOne")
             .iter()
@@ -113,6 +131,115 @@ fn method_length(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
             context.report(message, location);
         }
     }
+}
+
+fn direct_heredoc(node: &Node<'_>) -> bool {
+    node.as_string_node()
+        .and_then(|string| string.opening_loc())
+        .or_else(|| {
+            node.as_interpolated_string_node()
+                .and_then(|string| string.opening_loc())
+        })
+        .is_some_and(|opening| opening.as_slice().starts_with(b"<<"))
+}
+
+fn direct_heredoc_end(node: &Node<'_>) -> Option<usize> {
+    node.as_string_node()
+        .and_then(|string| {
+            string
+                .opening_loc()
+                .filter(|opening| opening.as_slice().starts_with(b"<<"))
+                .and_then(|_| string.closing_loc())
+        })
+        .or_else(|| {
+            node.as_interpolated_string_node().and_then(|string| {
+                string
+                    .opening_loc()
+                    .filter(|opening| opening.as_slice().starts_with(b"<<"))
+                    .and_then(|_| string.closing_loc())
+            })
+        })
+        .map(|closing| closing.end_offset())
+}
+
+fn descendant_source_end_with_heredoc(node: &Node<'_>) -> Option<usize> {
+    struct DescendantEnd {
+        first: bool,
+        found_heredoc: bool,
+        end: usize,
+        root_block_end: Option<usize>,
+    }
+
+    impl DescendantEnd {
+        fn record(&mut self, node: &Node<'_>) {
+            if std::mem::replace(&mut self.first, false) {
+                return;
+            }
+            // Prism models `else` and statement lists as structural wrapper
+            // nodes. Parser/RuboCop does not expose those wrappers as AST
+            // descendants, so their ranges must not extend the metric body.
+            let prism_only_wrapper = node.as_else_node().is_some()
+                || node.as_statements_node().is_some()
+                || node.as_rescue_node().is_some()
+                || node.as_ensure_node().is_some()
+                || node
+                    .as_begin_node()
+                    .is_some_and(|begin| begin.begin_keyword_loc().is_none())
+                || node.as_block_node().is_some_and(|block| {
+                    self.root_block_end == Some(block.location().end_offset())
+                })
+                || node.as_if_node().is_some_and(|conditional| {
+                    conditional
+                        .if_keyword_loc()
+                        .is_some_and(|keyword| keyword.as_slice() == b"elsif")
+                });
+            if !prism_only_wrapper {
+                self.end = self.end.max(node.location().end_offset());
+            }
+            let closing = node
+                .as_string_node()
+                .and_then(|string| {
+                    string
+                        .opening_loc()
+                        .filter(|opening| opening.as_slice().starts_with(b"<<"))
+                        .and_then(|_| string.closing_loc())
+                })
+                .or_else(|| {
+                    node.as_interpolated_string_node().and_then(|string| {
+                        string
+                            .opening_loc()
+                            .filter(|opening| opening.as_slice().starts_with(b"<<"))
+                            .and_then(|_| string.closing_loc())
+                    })
+                });
+            if let Some(closing) = closing {
+                self.found_heredoc = true;
+                self.end = self.end.max(closing.end_offset());
+            }
+        }
+    }
+
+    impl<'pr> Visit<'pr> for DescendantEnd {
+        fn visit_branch_node_enter(&mut self, node: Node<'pr>) {
+            self.record(&node);
+        }
+
+        fn visit_leaf_node_enter(&mut self, node: Node<'pr>) {
+            self.record(&node);
+        }
+    }
+
+    let mut finder = DescendantEnd {
+        first: true,
+        found_heredoc: false,
+        end: node.location().start_offset(),
+        root_block_end: node
+            .as_call_node()
+            .and_then(|call| call.block())
+            .map(|block| block.location().end_offset()),
+    };
+    finder.visit(node);
+    finder.found_heredoc.then_some(finder.end)
 }
 
 fn block_length(node: &ruby_prism::BlockNode<'_>, context: &mut CopContext<'_, '_>) {
@@ -147,7 +274,28 @@ fn block_length(node: &ruby_prism::BlockNode<'_>, context: &mut CopContext<'_, '
     }
     let maximum = context.config_usize("Max", 25);
     let count = node.body().map_or(0, |body| {
-        let source = context.source_file().at(&body.location());
+        let body = body
+            .as_statements_node()
+            .filter(|statements| statements.body().len() == 1)
+            .and_then(|statements| statements.body().first())
+            .unwrap_or(body);
+        let location = body.location();
+        let implicit_begin = body
+            .as_begin_node()
+            .filter(|begin| begin.begin_keyword_loc().is_none());
+        let start = implicit_begin
+            .as_ref()
+            .and_then(|begin| begin.statements())
+            .map_or_else(|| location.start_offset(), |statements| statements.location().start_offset());
+        let end = direct_heredoc_end(&body)
+            .or_else(|| descendant_source_end_with_heredoc(&body))
+            .unwrap_or_else(|| {
+                implicit_begin.map_or_else(
+                    || location.end_offset(),
+                    |_| node.closing_loc().start_offset(),
+                )
+            });
+        let source = &context.source()[start..end];
         let mut count = code_lines(source, false, context.config_bool("CountComments", false));
         if context
             .config_values("CountAsOne")
@@ -350,60 +498,8 @@ impl AbcCounter<'_> {
             }
         }
         self.branches += 1;
-        if node.block().is_some()
-            && matches!(
-                name,
-                b"all?"
-                    | b"any?"
-                    | b"collect"
-                    | b"collect!"
-                    | b"count"
-                    | b"detect"
-                    | b"delete_if"
-                    | b"drop_while"
-                    | b"each"
-                    | b"each_cons"
-                    | b"each_entry"
-                    | b"each_index"
-                    | b"each_key"
-                    | b"each_pair"
-                    | b"each_slice"
-                    | b"each_value"
-                    | b"each_with_index"
-                    | b"each_with_object"
-                    | b"filter_map"
-                    | b"find_all"
-                    | b"find_index"
-                    | b"flat_map"
-                    | b"group_by"
-                    | b"keep_if"
-                    | b"with_index"
-                    | b"with_object"
-                    | b"map"
-                    | b"map!"
-                    | b"select"
-                    | b"select!"
-                    | b"reject"
-                    | b"reject!"
-                    | b"filter"
-                    | b"find"
-                    | b"reduce"
-                    | b"inject"
-                    | b"none?"
-                    | b"one?"
-                    | b"partition"
-                    | b"reverse_each"
-                    | b"sort_by"
-                    | b"sum"
-                    | b"take_while"
-                    | b"transform_keys"
-                    | b"transform_keys!"
-                    | b"transform_values"
-                    | b"transform_values!"
-                    | b"times"
-                    | b"upto"
-                    | b"downto"
-            )
+        if node.block().is_some_and(|block| abc_rubocop_counted_block(&block))
+            && abc_iterating_method(name)
         {
             self.condition();
         }
@@ -420,12 +516,14 @@ impl AbcCounter<'_> {
         }
         if let Some(conditional) = node.as_if_node() {
             self.condition();
-            if conditional.subsequent().is_some_and(|branch| branch.as_else_node().is_some()) {
+            if conditional.if_keyword_loc().is_some()
+                && conditional.subsequent().is_some_and(|branch| branch.as_else_node().is_some())
+            {
                 self.condition();
             }
         } else if node.as_unless_node().is_some()
-            || node.as_while_node().is_some()
-            || node.as_until_node().is_some()
+            || node.as_while_node().is_some_and(|loop_node| !loop_node.is_begin_modifier())
+            || node.as_until_node().is_some_and(|loop_node| !loop_node.is_begin_modifier())
             || node.as_for_node().is_some()
             || node.as_rescue_node().is_some()
             || node.as_rescue_modifier_node().is_some()
@@ -435,9 +533,6 @@ impl AbcCounter<'_> {
             || node.as_or_node().is_some()
             || node.as_flip_flop_node().is_some()
         {
-            self.condition();
-        }
-        if node.as_case_node().is_some_and(|case| case.else_clause().is_some()) {
             self.condition();
         }
         if node.as_for_node().is_some() {
@@ -578,5 +673,50 @@ impl<'pr> Visit<'pr> for AbcCounter<'_> {
         ruby_prism::visit_rescue_node(self, node);
     }
 
-    fn visit_def_node(&mut self, _node: &ruby_prism::DefNode<'pr>) {}
+    fn visit_in_node(&mut self, node: &ruby_prism::InNode<'pr>) {
+        self.condition();
+        let pattern = node.pattern();
+        if let Some(guard) = pattern.as_if_node() {
+            self.visit(&guard.predicate());
+            if let Some(statements) = guard.statements() {
+                self.visit_statements_node(&statements);
+            }
+        } else if let Some(guard) = pattern.as_unless_node() {
+            self.visit(&guard.predicate());
+            if let Some(statements) = guard.statements() {
+                self.visit_statements_node(&statements);
+            }
+        } else {
+            self.visit(&pattern);
+        }
+        if let Some(statements) = node.statements() {
+            self.visit_statements_node(&statements);
+        }
+    }
+}
+
+fn abc_rubocop_counted_block(node: &Node<'_>) -> bool {
+    let Some(block) = node.as_block_node() else {
+        return node.as_block_argument_node().is_some();
+    };
+    block.parameters().is_none_or(|parameters| {
+        parameters.as_numbered_parameters_node().is_none()
+            && parameters.as_it_parameters_node().is_none()
+    })
+}
+
+fn abc_iterating_method(name: &[u8]) -> bool {
+    matches!(name,
+        b"all?"|b"any?"|b"chain"|b"chunk"|b"chunk_while"|b"collect"|b"collect_concat"|b"count"|b"cycle"|
+        b"detect"|b"drop"|b"drop_while"|b"each"|b"each_cons"|b"each_entry"|b"each_slice"|b"each_with_index"|
+        b"each_with_object"|b"entries"|b"filter"|b"filter_map"|b"find"|b"find_all"|b"find_index"|b"flat_map"|
+        b"grep"|b"grep_v"|b"group_by"|b"inject"|b"lazy"|b"map"|b"max"|b"max_by"|b"min"|b"min_by"|b"minmax"|
+        b"minmax_by"|b"none?"|b"one?"|b"partition"|b"reduce"|b"reject"|b"reverse_each"|b"select"|b"slice_after"|
+        b"slice_before"|b"slice_when"|b"sort"|b"sort_by"|b"sum"|b"take"|b"take_while"|b"tally"|b"to_h"|b"uniq"|
+        b"zip"|b"with_index"|b"with_object"|b"bsearch"|b"bsearch_index"|b"collect!"|b"combination"|b"d_permutation"|
+        b"delete_if"|b"each_index"|b"keep_if"|b"map!"|b"permutation"|b"product"|b"reject!"|b"repeat"|
+        b"repeated_combination"|b"select!"|b"sort!"|b"each_key"|b"each_pair"|b"each_value"|b"fetch"|
+        b"fetch_values"|b"has_key?"|b"merge"|b"merge!"|b"transform_keys"|b"transform_keys!"|
+        b"transform_values"|b"transform_values!"
+    )
 }

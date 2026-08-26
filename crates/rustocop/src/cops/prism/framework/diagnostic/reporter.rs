@@ -27,6 +27,10 @@ impl Reporter<'_> {
         self.context.source_encoding()
     }
 
+    pub(in super::super) fn cop_enabled(&self, cop_name: &str) -> bool {
+        self.context.cop_enabled(cop_name)
+    }
+
     pub(in super::super) fn line_index(&self, offset: usize) -> usize {
         self.context.line_index(offset)
     }
@@ -61,6 +65,12 @@ impl Reporter<'_> {
 
     pub(in super::super) fn config_contains(&self, key: &str) -> bool {
         self.context.cop_config.contains(self.cop_name, key)
+    }
+
+    pub(in super::super) fn config_explicit(&self, key: &str) -> bool {
+        self.context
+            .cop_config
+            .explicitly_contains(self.cop_name, key)
     }
 
     pub(in super::super) fn config_map(

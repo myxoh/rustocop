@@ -553,7 +553,10 @@ fn memoized_definition<'pr>(
         }) else {
             continue;
         };
-        if !matches!(call_name(&call), b"define_method" | b"define_singleton_method") {
+        if !matches!(
+            call_name(&call),
+            b"define_method" | b"define_singleton_method"
+        ) {
             continue;
         }
         let argument = first_argument(&call)?;
@@ -603,16 +606,17 @@ fn memoized_final_expression(body: &Node<'_>, candidate: &Node<'_>) -> bool {
             .is_some_and(|body| memoized_only_statement(&body, candidate));
     }
     if let Some(condition) = body.as_if_node() {
-        if condition.if_keyword_loc().is_some_and(|keyword| {
-            keyword.start_offset() != condition.location().start_offset()
-        }) {
+        if condition
+            .if_keyword_loc()
+            .is_some_and(|keyword| keyword.start_offset() != condition.location().start_offset())
+        {
             return false;
         }
         if let Some(subsequent) = condition.subsequent() {
             return if let Some(otherwise) = subsequent.as_else_node() {
-                otherwise
-                    .statements()
-                    .is_some_and(|statements| memoized_only_statement(&statements.as_node(), candidate))
+                otherwise.statements().is_some_and(|statements| {
+                    memoized_only_statement(&statements.as_node(), candidate)
+                })
             } else {
                 false
             };
@@ -624,9 +628,9 @@ fn memoized_final_expression(body: &Node<'_>, candidate: &Node<'_>) -> bool {
             return false;
         }
         if let Some(otherwise) = condition.else_clause() {
-            return otherwise
-                .statements()
-                .is_some_and(|statements| memoized_only_statement(&statements.as_node(), candidate));
+            return otherwise.statements().is_some_and(|statements| {
+                memoized_only_statement(&statements.as_node(), candidate)
+            });
         }
         return false;
     }
@@ -682,8 +686,10 @@ fn report_memoized_name(
     let no_underscore = method_name.strip_prefix('_').unwrap_or(&method_name);
     let with_underscore = format!("_{method_name}");
     let matches = match style {
-        "required" => variable_name == with_underscore
-            || method_name.starts_with('_') && variable_name == method_name,
+        "required" => {
+            variable_name == with_underscore
+                || method_name.starts_with('_') && variable_name == method_name
+        }
         "optional" => {
             variable_name == method_name
                 || variable_name == with_underscore
@@ -701,9 +707,7 @@ fn report_memoized_name(
     };
     let expected = format!("@{suggestion}");
     let message = if style == "required" && !variable_name.starts_with('_') {
-        format!(
-            "Memoized variable `{variable}` does not start with `_`. Use `{expected}` instead."
-        )
+        format!("Memoized variable `{variable}` does not start with `_`. Use `{expected}` instead.")
     } else {
         format!(
             "Memoized variable `{variable}` does not match method name `{method}`. Use `{expected}` instead."
@@ -973,15 +977,29 @@ fn file_name(context: &mut CopContext<'_, '_>) {
 struct AssignmentInCondition;
 
 impl Cop for AssignmentInCondition {
-    fn name(&self) -> &'static str { "Lint/AssignmentInCondition" }
+    fn name(&self) -> &'static str {
+        "Lint/AssignmentInCondition"
+    }
 
-    fn on_node<'pr>(&self, node: &Node<'pr>, ancestors: &[Node<'pr>], source: &str, context: &mut Context) {
-        let Some(operator) = plain_assignment_operator(node, source) else { return };
-        if !assignment_is_in_condition(node, ancestors) { return; }
+    fn on_node<'pr>(
+        &self,
+        node: &Node<'pr>,
+        ancestors: &[Node<'pr>],
+        source: &str,
+        context: &mut Context,
+    ) {
+        let Some(operator) = plain_assignment_operator(node, source) else {
+            return;
+        };
+        if !assignment_is_in_condition(node, ancestors) {
+            return;
+        }
         let mut cop_context = context.cop_context(self.name(), source, ancestors);
         let allow_safe = cop_context.config_bool("AllowSafeAssignment", true);
         let already_parenthesized = directly_parenthesized_assignment(node, ancestors);
-        if allow_safe && already_parenthesized { return; }
+        if allow_safe && already_parenthesized {
+            return;
+        }
         let message = if allow_safe {
             "Use `==` if you meant to do a comparison or wrap the expression in parentheses to indicate you meant to assign in a condition."
         } else {
@@ -989,7 +1007,10 @@ impl Cop for AssignmentInCondition {
         };
         if allow_safe {
             let location = node.location();
-            let replacement = format!("({})", &source[location.start_offset()..location.end_offset()]);
+            let replacement = format!(
+                "({})",
+                &source[location.start_offset()..location.end_offset()]
+            );
             cop_context.replace(message, operator, location, replacement);
         } else {
             cop_context.report(message, operator);
@@ -999,15 +1020,24 @@ impl Cop for AssignmentInCondition {
 
 fn directly_parenthesized_assignment(node: &Node<'_>, ancestors: &[Node<'_>]) -> bool {
     for ancestor in ancestors.iter().rev() {
-        if ancestor.as_statements_node().is_some() { continue; }
-        if ancestor.as_and_node().is_some() || ancestor.as_or_node().is_some() { return false; }
+        if ancestor.as_statements_node().is_some() {
+            continue;
+        }
+        if ancestor.as_and_node().is_some() || ancestor.as_or_node().is_some() {
+            return false;
+        }
         return ancestor.as_parentheses_node().is_some_and(|parentheses| {
-            parentheses.body().and_then(|body| body.as_statements_node()).is_some_and(|statements| {
-                statements.body().len() == 1 && statements.body().first().is_some_and(|expression| {
-                    expression.location().start_offset() == node.location().start_offset()
-                        && expression.location().end_offset() == node.location().end_offset()
+            parentheses
+                .body()
+                .and_then(|body| body.as_statements_node())
+                .is_some_and(|statements| {
+                    statements.body().len() == 1
+                        && statements.body().first().is_some_and(|expression| {
+                            expression.location().start_offset() == node.location().start_offset()
+                                && expression.location().end_offset()
+                                    == node.location().end_offset()
+                        })
                 })
-            })
         });
     }
     false
@@ -1046,20 +1076,30 @@ fn plain_assignment_operator(node: &Node<'_>, source: &str) -> Option<std::ops::
 fn assignment_is_in_condition(node: &Node<'_>, ancestors: &[Node<'_>]) -> bool {
     let location = node.location();
     for ancestor in ancestors.iter().rev() {
-        if ancestor.as_block_node().is_some() || ancestor.as_lambda_node().is_some() || ancestor.as_def_node().is_some() {
+        if ancestor.as_block_node().is_some()
+            || ancestor.as_lambda_node().is_some()
+            || ancestor.as_def_node().is_some()
+        {
             return false;
         }
-        if ancestor.as_call_node().is_some() { return false; }
+        if ancestor.as_call_node().is_some() {
+            return false;
+        }
         let predicate = if let Some(condition) = ancestor.as_if_node() {
             Some(condition.predicate())
         } else if let Some(condition) = ancestor.as_unless_node() {
             Some(condition.predicate())
         } else if let Some(condition) = ancestor.as_while_node() {
             Some(condition.predicate())
-        } else { ancestor.as_until_node().map(|condition| condition.predicate()) };
+        } else {
+            ancestor
+                .as_until_node()
+                .map(|condition| condition.predicate())
+        };
         if let Some(predicate) = predicate {
             let predicate = predicate.location();
-            return predicate.start_offset() <= location.start_offset() && location.end_offset() <= predicate.end_offset();
+            return predicate.start_offset() <= location.start_offset()
+                && location.end_offset() <= predicate.end_offset();
         }
     }
     false
@@ -1068,67 +1108,164 @@ fn assignment_is_in_condition(node: &Node<'_>, ancestors: &[Node<'_>]) -> bool {
 struct VariableName;
 
 impl Cop for VariableName {
-    fn name(&self) -> &'static str { "Naming/VariableName" }
+    fn name(&self) -> &'static str {
+        "Naming/VariableName"
+    }
 
-    fn on_node<'pr>(&self, node: &Node<'pr>, ancestors: &[Node<'pr>], source: &str, context: &mut Context) {
+    fn on_node<'pr>(
+        &self,
+        node: &Node<'pr>,
+        ancestors: &[Node<'pr>],
+        source: &str,
+        context: &mut Context,
+    ) {
         let parameters = if let Some(definition) = node.as_def_node() {
             definition.parameters()
         } else if let Some(block) = node.as_block_node() {
-            block.parameters().and_then(|parameters| parameters.as_block_parameters_node()).and_then(|parameters| parameters.parameters())
+            block
+                .parameters()
+                .and_then(|parameters| parameters.as_block_parameters_node())
+                .and_then(|parameters| parameters.parameters())
         } else if let Some(lambda) = node.as_lambda_node() {
-            lambda.parameters().and_then(|parameters| parameters.as_block_parameters_node()).and_then(|parameters| parameters.parameters())
-        } else { None };
+            lambda
+                .parameters()
+                .and_then(|parameters| parameters.as_block_parameters_node())
+                .and_then(|parameters| parameters.parameters())
+        } else {
+            None
+        };
         if let Some(parameter) = parameters.and_then(|parameters| parameters.block()) {
             if let (Some(name), Some(location)) = (parameter.name(), parameter.name_loc()) {
                 let mut cop_context = context.cop_context(self.name(), source, ancestors);
-                check_variable_name(String::from_utf8_lossy(name.as_slice()).into_owned(), location, &mut cop_context);
+                check_variable_name(
+                    String::from_utf8_lossy(name.as_slice()).into_owned(),
+                    location,
+                    &mut cop_context,
+                );
             }
         }
-        let Some((name, location)) = variable_identifier(node) else { return };
+        let Some((name, location, global)) = variable_identifier(node, true) else {
+            return;
+        };
         let mut cop_context = context.cop_context(self.name(), source, ancestors);
+        if global {
+            let bare = name.trim_start_matches('$');
+            let forbidden = cop_context
+                .config_values("ForbiddenIdentifiers")
+                .iter()
+                .any(|item| item == bare)
+                || patterns_match(cop_context.config_values("ForbiddenPatterns"), bare);
+            if forbidden {
+                cop_context.report(
+                    format!("`{name}` is forbidden, use another name instead."),
+                    location,
+                );
+            }
+            return;
+        }
         check_variable_name(name, location, &mut cop_context);
     }
 }
 
-fn check_variable_name(name: String, location: ruby_prism::Location<'_>, cop_context: &mut CopContext<'_, '_>) {
-        let bare = name.trim_start_matches(['@', '$']);
-        if bare.is_empty()
-            || name.starts_with('$') && bare.bytes().all(|byte| byte.is_ascii_uppercase() || byte == b'_' || byte.is_ascii_digit())
-            || identifier_allowed(bare, cop_context) { return; }
+fn check_variable_name(
+    name: String,
+    location: ruby_prism::Location<'_>,
+    cop_context: &mut CopContext<'_, '_>,
+) {
+    let bare = name.trim_start_matches(['@', '$']);
+    if bare.is_empty()
+        || name.starts_with('$')
+            && bare
+                .bytes()
+                .all(|byte| byte.is_ascii_uppercase() || byte == b'_' || byte.is_ascii_digit())
+        || identifier_allowed(bare, cop_context)
+    {
+        return;
+    }
 
-        let offense = location.start_offset()..location.start_offset() + name.len();
-        let forbidden = cop_context.config_values("ForbiddenIdentifiers").iter().any(|item| item == bare)
-            || patterns_match(cop_context.config_values("ForbiddenPatterns"), bare);
-        if forbidden {
-            cop_context.report(format!("`{name}` is forbidden, use another name instead."), offense);
-            return;
-        }
+    let offense = location.start_offset()..location.start_offset() + name.len();
+    let forbidden = cop_context
+        .config_values("ForbiddenIdentifiers")
+        .iter()
+        .any(|item| item == bare)
+        || patterns_match(cop_context.config_values("ForbiddenPatterns"), bare);
+    if forbidden {
+        cop_context.report(
+            format!("`{name}` is forbidden, use another name instead."),
+            offense,
+        );
+        return;
+    }
 
-        let style = cop_context.policy().enforced_style("snake_case");
-        if invalid_variable_name(bare, style) {
-            cop_context.report(format!("Use {style} for variable names."), offense);
-        }
+    let style = cop_context.policy().enforced_style("snake_case");
+    if invalid_variable_name(bare, style) {
+        cop_context.report(format!("Use {style} for variable names."), offense);
+    }
 }
 
 struct VariableNumber;
 
 impl Cop for VariableNumber {
-    fn name(&self) -> &'static str { "Naming/VariableNumber" }
+    fn name(&self) -> &'static str {
+        "Naming/VariableNumber"
+    }
 
-    fn on_node<'pr>(&self, node: &Node<'pr>, ancestors: &[Node<'pr>], source: &str, context: &mut Context) {
+    fn on_node<'pr>(
+        &self,
+        node: &Node<'pr>,
+        ancestors: &[Node<'pr>],
+        source: &str,
+        context: &mut Context,
+    ) {
         let (name, location, kind) = if let Some(definition) = node.as_def_node() {
-            (String::from_utf8_lossy(definition.name().as_slice()).into_owned(), definition.name_loc(), "method name")
+            let location = definition.name_loc();
+            (
+                String::from_utf8_lossy(definition.name().as_slice()).into_owned(),
+                location.start_offset()..location.end_offset(),
+                "method name",
+            )
         } else if let Some(symbol) = node.as_symbol_node() {
-            (String::from_utf8_lossy(symbol.unescaped()).into_owned(), symbol.location(), "symbol")
-        } else if let Some((name, location)) = variable_identifier(node) {
-            (name, location, "variable")
-        } else { return };
+            // Parser AST represents a hash label's expression as its name,
+            // excluding the trailing colon. Prism's SymbolNode location
+            // includes that colon, while an ordinary `:symbol` offense does
+            // include its leading colon.
+            let symbol_location = symbol.location();
+            let location = if symbol_location.as_slice().ends_with(b":") {
+                symbol_location.start_offset()..symbol_location.end_offset() - 1
+            } else {
+                symbol_location.start_offset()..symbol_location.end_offset()
+            };
+            (
+                String::from_utf8_lossy(symbol.unescaped()).into_owned(),
+                location,
+                "symbol",
+            )
+        } else if let Some((name, location, _)) = variable_number_identifier(node) {
+            (
+                name,
+                location.start_offset()..location.end_offset(),
+                "variable",
+            )
+        } else {
+            return;
+        };
         let mut cop_context = context.cop_context(self.name(), source, ancestors);
         if kind == "method name" && !cop_context.config_bool("CheckMethodNames", true)
-            || kind == "symbol" && !cop_context.config_bool("CheckSymbols", true) { return; }
+            || kind == "symbol" && !cop_context.config_bool("CheckSymbols", true)
+        {
+            return;
+        }
         let bare = name.trim_start_matches(['@', '$']);
-        if bare == "_1" || bare.chars().all(|character| character.is_ascii_digit())
-            || identifier_allowed(bare, &cop_context) { return; }
+        let empty_hash_label = kind == "symbol"
+            && bare.is_empty()
+            && source.as_bytes().get(location.end) == Some(&b':');
+        if bare.is_empty() && !empty_hash_label
+            || bare == "_1"
+            || !bare.is_empty() && bare.chars().all(|character| character.is_ascii_digit())
+            || identifier_allowed(bare, &cop_context)
+        {
+            return;
+        }
         let style = cop_context.policy().enforced_style("normalcase");
         if invalid_variable_number(bare, style) {
             cop_context.report(format!("Use {style} for {kind} numbers."), location);
@@ -1136,56 +1273,114 @@ impl Cop for VariableNumber {
     }
 }
 
-fn variable_identifier<'pr>(node: &Node<'pr>) -> Option<(String, ruby_prism::Location<'pr>)> {
+fn variable_number_identifier<'pr>(
+    node: &Node<'pr>,
+) -> Option<(String, ruby_prism::Location<'pr>, bool)> {
+    // RuboCop's callback contract aliases only `on_arg` here. Optional,
+    // keyword, rest, keyword-rest, and block parameters deliberately do not
+    // participate in VariableNumber (unlike Naming/VariableName).
+    if node.as_optional_parameter_node().is_some()
+        || node.as_required_keyword_parameter_node().is_some()
+        || node.as_optional_keyword_parameter_node().is_some()
+        || node.as_rest_parameter_node().is_some()
+        || node.as_keyword_rest_parameter_node().is_some()
+        || node.as_block_parameter_node().is_some()
+    {
+        return None;
+    }
+    variable_identifier(node, false)
+}
+
+fn variable_identifier<'pr>(
+    node: &Node<'pr>,
+    include_local_reads: bool,
+) -> Option<(String, ruby_prism::Location<'pr>, bool)> {
     macro_rules! named {
-        ($cast:ident, $loc:ident) => {
+        ($cast:ident, $loc:ident, $global:expr) => {
             if let Some(value) = node.$cast() {
-                return Some((String::from_utf8_lossy(value.name().as_slice()).into_owned(), value.$loc()));
+                return Some((
+                    String::from_utf8_lossy(value.name().as_slice()).into_owned(),
+                    value.$loc(),
+                    $global,
+                ));
             }
         };
     }
-    named!(as_local_variable_read_node, location);
-    named!(as_local_variable_write_node, name_loc);
-    named!(as_local_variable_target_node, location);
-    named!(as_local_variable_and_write_node, name_loc);
-    named!(as_local_variable_or_write_node, name_loc);
-    named!(as_local_variable_operator_write_node, name_loc);
-    named!(as_instance_variable_read_node, location);
-    named!(as_instance_variable_write_node, name_loc);
-    named!(as_instance_variable_target_node, location);
-    named!(as_instance_variable_and_write_node, name_loc);
-    named!(as_instance_variable_or_write_node, name_loc);
-    named!(as_instance_variable_operator_write_node, name_loc);
-    named!(as_class_variable_read_node, location);
-    named!(as_class_variable_write_node, name_loc);
-    named!(as_class_variable_target_node, location);
-    named!(as_class_variable_and_write_node, name_loc);
-    named!(as_class_variable_or_write_node, name_loc);
-    named!(as_class_variable_operator_write_node, name_loc);
-    named!(as_global_variable_read_node, location);
-    named!(as_global_variable_write_node, name_loc);
-    named!(as_global_variable_target_node, location);
-    named!(as_global_variable_and_write_node, name_loc);
-    named!(as_global_variable_or_write_node, name_loc);
-    named!(as_global_variable_operator_write_node, name_loc);
-    named!(as_required_parameter_node, location);
-    named!(as_optional_parameter_node, name_loc);
-    named!(as_required_keyword_parameter_node, name_loc);
-    named!(as_optional_keyword_parameter_node, name_loc);
+    if include_local_reads {
+        named!(as_local_variable_read_node, location, false);
+    }
+    named!(as_local_variable_write_node, name_loc, false);
+    named!(as_local_variable_target_node, location, false);
+    named!(as_local_variable_and_write_node, name_loc, false);
+    named!(as_local_variable_or_write_node, name_loc, false);
+    named!(as_local_variable_operator_write_node, name_loc, false);
+    named!(as_instance_variable_write_node, name_loc, false);
+    named!(as_instance_variable_target_node, location, false);
+    named!(as_instance_variable_and_write_node, name_loc, false);
+    named!(as_instance_variable_or_write_node, name_loc, false);
+    named!(as_instance_variable_operator_write_node, name_loc, false);
+    named!(as_class_variable_write_node, name_loc, false);
+    named!(as_class_variable_target_node, location, false);
+    named!(as_class_variable_and_write_node, name_loc, false);
+    named!(as_class_variable_or_write_node, name_loc, false);
+    named!(as_class_variable_operator_write_node, name_loc, false);
+    named!(as_global_variable_write_node, name_loc, true);
+    named!(as_global_variable_target_node, location, true);
+    named!(as_global_variable_and_write_node, name_loc, true);
+    named!(as_global_variable_or_write_node, name_loc, true);
+    named!(as_global_variable_operator_write_node, name_loc, true);
+    named!(as_required_parameter_node, location, false);
+    named!(as_optional_parameter_node, name_loc, false);
+    named!(as_required_keyword_parameter_node, name_loc, false);
+    named!(as_optional_keyword_parameter_node, name_loc, false);
     if let Some(value) = node.as_rest_parameter_node() {
-        return value.name().zip(value.name_loc()).map(|(name, location)| (String::from_utf8_lossy(name.as_slice()).into_owned(), location));
+        return value.name().zip(value.name_loc()).map(|(name, location)| {
+            (
+                String::from_utf8_lossy(name.as_slice()).into_owned(),
+                location,
+                false,
+            )
+        });
     }
     if let Some(value) = node.as_keyword_rest_parameter_node() {
-        return value.name().zip(value.name_loc()).map(|(name, location)| (String::from_utf8_lossy(name.as_slice()).into_owned(), location));
+        return value.name().zip(value.name_loc()).map(|(name, location)| {
+            (
+                String::from_utf8_lossy(name.as_slice()).into_owned(),
+                location,
+                false,
+            )
+        });
     }
     if let Some(value) = node.as_block_parameter_node() {
-        return value.name().zip(value.name_loc()).map(|(name, location)| (String::from_utf8_lossy(name.as_slice()).into_owned(), location));
+        return value.name().zip(value.name_loc()).map(|(name, location)| {
+            (
+                String::from_utf8_lossy(name.as_slice()).into_owned(),
+                location,
+                false,
+            )
+        });
     }
     None
 }
 
 fn identifier_allowed(name: &str, context: &CopContext<'_, '_>) -> bool {
-    context.config_values("AllowedIdentifiers").iter().any(|allowed| allowed == name)
+    context
+        .config_values("AllowedIdentifiers")
+        .iter()
+        .any(|allowed| allowed == name)
+        || !context.config_explicit("AllowedIdentifiers")
+            && matches!(
+                name,
+                "TLS1_1"
+                    | "TLS1_2"
+                    | "capture3"
+                    | "iso8601"
+                    | "rfc1123_date"
+                    | "rfc822"
+                    | "rfc2822"
+                    | "rfc3339"
+                    | "x86_64"
+            )
         || patterns_match(context.config_values("AllowedPatterns"), name)
 }
 
@@ -1197,10 +1392,21 @@ fn patterns_match(patterns: &[String], name: &str) -> bool {
 }
 
 fn invalid_variable_number(name: &str, style: &str) -> bool {
-    if style == "non_integer" { return name.chars().any(|character| character.is_ascii_digit()); }
+    if name.is_empty() {
+        return true;
+    }
+    if style == "non_integer" {
+        return name.chars().any(|character| character.is_ascii_digit());
+    }
     let prefix = name.trim_end_matches(|character: char| character.is_ascii_digit());
-    if prefix.len() == name.len() { return false; }
-    if style == "snake_case" { !prefix.ends_with('_') } else { prefix.ends_with('_') }
+    if prefix.len() == name.len() {
+        return false;
+    }
+    if style == "snake_case" {
+        !prefix.ends_with('_')
+    } else {
+        prefix.ends_with('_')
+    }
 }
 
 fn invalid_variable_name(name: &str, style: &str) -> bool {
@@ -1219,68 +1425,263 @@ fn invalid_variable_name(name: &str, style: &str) -> bool {
 struct UselessAssignment;
 
 impl Cop for UselessAssignment {
-    fn name(&self) -> &'static str { "Lint/UselessAssignment" }
-    fn phase(&self) -> CopPhase { CopPhase::Source }
+    fn name(&self) -> &'static str {
+        "Lint/UselessAssignment"
+    }
+    fn phase(&self) -> CopPhase {
+        CopPhase::Source
+    }
 
     #[allow(clippy::cognitive_complexity)]
     fn on_source(&self, source: &str, context: &mut Context) {
         let parsed = parse(source.as_bytes());
-        let mut collector = AssignmentEventCollector { source, scope: 0, next_scope: 1, events: Vec::new(), candidates: Vec::new(), branches: Vec::new(), next_branch: 0, modifier_branches:std::collections::HashSet::new(), loops: Vec::new(), next_loop: 0, retry_loops:std::collections::HashSet::new(), interrupts:Vec::new(), next_interrupt:0, block_depth: 0, target: AssignmentTarget::Normal, ignore_targets: 0, shadowed:Vec::new(), parameter_stack:Vec::new() };
+        let mut collector = AssignmentEventCollector {
+            source,
+            scope: 0,
+            next_scope: 1,
+            events: Vec::new(),
+            candidates: Vec::new(),
+            branches: Vec::new(),
+            next_branch: 0,
+            modifier_branches: std::collections::HashSet::new(),
+            loops: Vec::new(),
+            next_loop: 0,
+            retry_loops: std::collections::HashSet::new(),
+            interrupts: Vec::new(),
+            next_interrupt: 0,
+            block_depth: 0,
+            target: AssignmentTarget::Normal,
+            ignore_targets: 0,
+            block_scopes: Vec::new(),
+            parameter_stack: Vec::new(),
+        };
         collector.visit(&parsed.node());
+        collector.candidates.extend(
+            collector
+                .events
+                .iter()
+                .map(|event| (event.scope, event.name.clone())),
+        );
         for (index, event) in collector.events.iter().enumerate() {
-            let AssignmentEventKind::Write { correction, consumes_previous, suffix } = &event.kind else { continue };
-            if event.name.starts_with('_') { continue; }
-            if *consumes_previous&&!event.loops.is_empty()&&!event.branches.is_empty(){continue}
-            if collector.events[index+1..].iter().any(|outer|{let AssignmentEventKind::Write{correction:Some(edit),consumes_previous:false,..}=&outer.kind else{return false};outer.scope==event.scope&&outer.offense.start<event.offense.start&&edit.range.end<=event.offense.start&&source[edit.range.end..event.offense.start].bytes().all(|byte|matches!(byte,b' '|b'\t'|b'-'|b'+'|b'!'|b'~'))}){continue}
-            let mut used = collector.events.iter().enumerate().any(|(other_index, other)| {
-                other.scope == event.scope && other.name == event.name && matches!(other.kind, AssignmentEventKind::Read)
-                    && event.block_depth > 0 && other_index < index
-                    && !branch_conflict(event, other)
-            });
-            if event.block_depth>0{used|=collector.events[..index].iter().any(|other|other.scope==event.scope&&other.name==event.name&&!branch_conflict(event,other)&&matches!(other.kind,AssignmentEventKind::Write{..}));}
-            if !event.interrupts.is_empty() {
-                for other in collector.events[index+1..].iter().filter(|other|other.scope==event.scope&&other.name==event.name&&event.interrupts.iter().any(|id|!other.interrupts.contains(id))){match other.kind{AssignmentEventKind::Read=>{used=true;break},AssignmentEventKind::Write{..} if other.branches.is_empty()=>break,AssignmentEventKind::Write{..}=>{}}}
+            let AssignmentEventKind::Write {
+                correction,
+                consumes_previous,
+                suffix,
+            } = &event.kind
+            else {
+                continue;
+            };
+            if event.name.starts_with('_') {
+                continue;
             }
-            if event.loops.iter().any(|id|collector.retry_loops.contains(id)){used=true;}
-            if used { continue; }
-            let mut shadowed_branches=Vec::<(usize,usize)>::new();
+            if *consumes_previous && !event.loops.is_empty() && !event.branches.is_empty() {
+                continue;
+            }
+            if collector.events[index + 1..].iter().any(|outer| {
+                let AssignmentEventKind::Write {
+                    correction: Some(edit),
+                    consumes_previous: false,
+                    ..
+                } = &outer.kind
+                else {
+                    return false;
+                };
+                outer.scope == event.scope
+                    && outer.offense.start < event.offense.start
+                    && edit.range.end <= event.offense.start
+                    && source[edit.range.end..event.offense.start]
+                        .bytes()
+                        .all(|byte| matches!(byte, b' ' | b'\t' | b'-' | b'+' | b'!' | b'~'))
+            }) {
+                continue;
+            }
+            let mut used = false;
+            if event.block_depth > 0 {
+                used |= collector.events[..index].iter().any(|other| {
+                    other.scope == event.scope
+                        && other.name == event.name
+                        && other.block_depth < event.block_depth
+                        && other.offense.start < event.offense.start
+                        && !branch_conflict(event, other)
+                        && matches!(other.kind, AssignmentEventKind::Read)
+                });
+            }
+            if event.block_depth > 0 {
+                used |= collector.events[..index].iter().any(|other| {
+                    other.scope == event.scope
+                        && other.name == event.name
+                        && other.block_depth < event.block_depth
+                        && !branch_conflict(event, other)
+                        && matches!(other.kind, AssignmentEventKind::Write { .. })
+                });
+            }
+            if !event.interrupts.is_empty() {
+                for other in collector.events[index + 1..].iter().filter(|other| {
+                    other.scope == event.scope
+                        && other.name == event.name
+                        && event
+                            .interrupts
+                            .iter()
+                            .any(|id| !other.interrupts.contains(id))
+                }) {
+                    match other.kind {
+                        AssignmentEventKind::Read => {
+                            used = true;
+                            break;
+                        }
+                        AssignmentEventKind::Write { .. } if other.branches.is_empty() => break,
+                        AssignmentEventKind::Write { .. } => {}
+                    }
+                }
+            }
+            if event
+                .loops
+                .iter()
+                .any(|id| collector.retry_loops.contains(id))
+            {
+                used = true;
+            }
+            if used {
+                continue;
+            }
+            let mut shadowed_branches = Vec::<(usize, usize)>::new();
             for later in &collector.events[index + 1..] {
-                if later.scope != event.scope { continue; }
-                if branch_conflict(event, later) { continue; }
-                if shadowed_branches.iter().any(|branch|later.branches.contains(branch)){continue}
-                if later.name != event.name { continue; }
+                if later.scope != event.scope {
+                    continue;
+                }
+                if branch_conflict(event, later) {
+                    continue;
+                }
+                if shadowed_branches
+                    .iter()
+                    .any(|branch| later.branches.contains(branch))
+                {
+                    continue;
+                }
+                if later.name != event.name {
+                    continue;
+                }
                 match later.kind {
                     AssignmentEventKind::Read => used = true,
-                    AssignmentEventKind::Write { consumes_previous, .. } => {
-                        if consumes_previous&&event.branches.iter().all(|branch|later.branches.contains(branch)) { used = true; }
-                        let conditional_write = later.branches.iter().any(|branch| !event.branches.iter().any(|own| own.0 == branch.0))
-                            || later.target!=AssignmentTarget::For&&later.loops.iter().any(|loop_id| !event.loops.contains(loop_id))
+                    AssignmentEventKind::Write {
+                        consumes_previous, ..
+                    } => {
+                        if consumes_previous && later.offense.start >= event.end {
+                            used = true;
+                        }
+                        let conditional_write = later
+                            .branches
+                            .iter()
+                            .any(|branch| !event.branches.iter().any(|own| own.0 == branch.0))
+                            || later.target != AssignmentTarget::For
+                                && later
+                                    .loops
+                                    .iter()
+                                    .any(|loop_id| !event.loops.contains(loop_id))
                             || later.block_depth > event.block_depth;
-                        if later.block_depth > event.block_depth { used = true; }
-                        if conditional_write {shadowed_branches.extend(later.branches.iter().filter(|branch|!collector.modifier_branches.contains(&branch.0)&&!event.branches.iter().any(|own|own.0==branch.0)).copied());continue;}
+                        if later.block_depth > event.block_depth {
+                            used = true;
+                        }
+                        if conditional_write {
+                            shadowed_branches.extend(
+                                later
+                                    .branches
+                                    .iter()
+                                    .filter(|branch| {
+                                        !collector.modifier_branches.contains(&branch.0)
+                                            && !event.branches.iter().any(|own| own.0 == branch.0)
+                                    })
+                                    .copied(),
+                            );
+                            continue;
+                        }
                     }
                 }
                 break;
             }
             if !used {
-                if let Some(loop_id)=event.loops.last() {
-                    for earlier in collector.events[..index].iter().filter(|other|other.scope==event.scope&&other.loops.contains(loop_id)&&!branch_conflict(event,other)) {
-                        if earlier.name!=event.name {continue}
-                        match earlier.kind { AssignmentEventKind::Read=>used=true, AssignmentEventKind::Write{..}=>{} }
+                if let Some(loop_id) = event.loops.last() {
+                    for earlier in collector.events[..index].iter().filter(|other| {
+                        other.scope == event.scope
+                            && other.loops.contains(loop_id)
+                            && !branch_conflict(event, other)
+                    }) {
+                        if earlier.name != event.name {
+                            continue;
+                        }
+                        match earlier.kind {
+                            AssignmentEventKind::Read => used = true,
+                            AssignmentEventKind::Write { .. } => {}
+                        }
                         break;
                     }
                 }
             }
-            if used { continue; }
-            let suggestion=if suffix.is_empty()&&event.target!=AssignmentTarget::Multiple&&event.name.len()>=3{collector.candidates.iter().filter(|(scope,name)|*scope==event.scope&&name!=&event.name&&edit_distance(name,&event.name)<=2&&(event.target!=AssignmentTarget::For||name==&format!("{}s",event.name)||name==&format!("{}es",event.name))).min_by_key(|(_,name)|edit_distance(name,&event.name)).map(|(_,name)|format!(" Did you mean `{name}`?"))}else{None};
-            let mut effective_suffix=suggestion.as_deref().unwrap_or(suffix);
-            if suffix.starts_with(" Use `||`"){let tail=&source[event.end..];if tail.lines().take_while(|line|line.trim()!="end").any(|line|!line.trim().is_empty()){effective_suffix="";}}
-            let message = format!("Useless assignment to variable - `{}`.{}", event.name, effective_suffix);
-            let line_start=source[..event.offense.start].rfind('\n').map_or(0,|position|position+1);let line_end=source[event.offense.end..].find('\n').map_or(source.len(),|position|event.offense.end+position);let line=&source[line_start..line_end];let prefix=&source[line_start..event.offense.start];let paren_depth=prefix.bytes().fold(0isize,|depth,byte|match byte{b'('=>depth+1,b')'=>(depth-1).max(0),_=>depth});let sequential=paren_depth==0&&line.contains(',')&&line.matches('=').count()>=2;
-            if let Some(edit) = correction.clone().filter(|_|!sequential) {
-                context.replace(self.name(), message, event.offense.clone(), edit.range, edit.replacement);
-            } else if matches!(event.target,AssignmentTarget::Multiple|AssignmentTarget::For) {
-                context.replace(self.name(), message, event.offense.clone(), event.offense.clone(), "_");
+            if used {
+                continue;
+            }
+            let suggestion = if suffix.is_empty() && event.target != AssignmentTarget::Multiple {
+                did_you_mean_name(
+                    &event.name,
+                    collector
+                        .candidates
+                        .iter()
+                        .filter(|(scope, _)| *scope == event.scope)
+                        .map(|(_, name)| name.as_str()),
+                )
+                .map(|name| format!(" Did you mean `{name}`?"))
+            } else {
+                None
+            };
+            let mut effective_suffix = suggestion.as_deref().unwrap_or(suffix);
+            if suffix.starts_with(" Use `||`") {
+                let tail = &source[event.end..];
+                if tail
+                    .lines()
+                    .take_while(|line| line.trim() != "end")
+                    .any(|line| !line.trim().is_empty())
+                {
+                    effective_suffix = "";
+                }
+            }
+            let message = format!(
+                "Useless assignment to variable - `{}`.{}",
+                event.name, effective_suffix
+            );
+            let line_start = source[..event.offense.start]
+                .rfind('\n')
+                .map_or(0, |position| position + 1);
+            let line_end = source[event.offense.end..]
+                .find('\n')
+                .map_or(source.len(), |position| event.offense.end + position);
+            let line = &source[line_start..line_end];
+            let prefix = &source[line_start..event.offense.start];
+            let paren_depth = prefix.bytes().fold(0isize, |depth, byte| match byte {
+                b'(' => depth + 1,
+                b')' => (depth - 1).max(0),
+                _ => depth,
+            });
+            let sequential =
+                paren_depth == 0 && line.contains(',') && line.matches('=').count() >= 2;
+            if let Some(edit) = correction.clone().filter(|_| !sequential) {
+                context.replace(
+                    self.name(),
+                    message,
+                    event.offense.clone(),
+                    edit.range,
+                    edit.replacement,
+                );
+            } else if matches!(
+                event.target,
+                AssignmentTarget::Multiple | AssignmentTarget::For
+            ) {
+                context.replace(
+                    self.name(),
+                    message,
+                    event.offense.clone(),
+                    event.offense.clone(),
+                    "_",
+                );
             } else {
                 context.report(self.name(), message, event.offense.clone());
             }
@@ -1290,14 +1691,26 @@ impl Cop for UselessAssignment {
 
 enum AssignmentEventKind {
     Read,
-    Write { correction: Option<AssignmentCorrection>, consumes_previous: bool, suffix: String },
+    Write {
+        correction: Option<AssignmentCorrection>,
+        consumes_previous: bool,
+        suffix: String,
+    },
 }
 
 #[derive(Clone)]
-struct AssignmentCorrection { range: std::ops::Range<usize>, replacement: &'static str }
+struct AssignmentCorrection {
+    range: std::ops::Range<usize>,
+    replacement: &'static str,
+}
 
 #[derive(Clone, Copy, PartialEq, Eq)]
-enum AssignmentTarget { Normal, Multiple, For, Rescue }
+enum AssignmentTarget {
+    Normal,
+    Multiple,
+    For,
+    Rescue,
+}
 
 struct AssignmentEvent {
     scope: usize,
@@ -1317,7 +1730,7 @@ struct AssignmentEventCollector<'s> {
     scope: usize,
     next_scope: usize,
     events: Vec<AssignmentEvent>,
-    candidates: Vec<(usize,String)>,
+    candidates: Vec<(usize, String)>,
     branches: Vec<(usize, usize)>,
     next_branch: usize,
     modifier_branches: std::collections::HashSet<usize>,
@@ -1329,155 +1742,732 @@ struct AssignmentEventCollector<'s> {
     block_depth: usize,
     target: AssignmentTarget,
     ignore_targets: usize,
-    shadowed: Vec<(String,usize)>,
+    block_scopes: Vec<usize>,
     parameter_stack: Vec<Vec<String>>,
 }
 
-fn edit_distance(left:&str,right:&str)->usize{let mut row=(0..=right.len()).collect::<Vec<_>>();for (i,a) in left.bytes().enumerate(){let mut diagonal=i;row[0]=i+1;for (j,b) in right.bytes().enumerate(){let above=row[j+1];row[j+1]=if a==b{diagonal}else{1+diagonal.min(above).min(row[j])};diagonal=above;}}row[right.len()]}
+fn edit_distance(left: &str, right: &str) -> usize {
+    let mut row = (0..=right.len()).collect::<Vec<_>>();
+    for (i, a) in left.bytes().enumerate() {
+        let mut diagonal = i;
+        row[0] = i + 1;
+        for (j, b) in right.bytes().enumerate() {
+            let above = row[j + 1];
+            row[j + 1] = if a == b {
+                diagonal
+            } else {
+                1 + diagonal.min(above).min(row[j])
+            };
+            diagonal = above;
+        }
+    }
+    row[right.len()]
+}
+
+fn did_you_mean_name<'a>(target: &str, names: impl Iterator<Item = &'a str>) -> Option<String> {
+    let normalized_target = target.to_ascii_lowercase().replace('@', "");
+    let jaro_threshold = if normalized_target.len() > 3 {
+        0.834
+    } else {
+        0.77
+    };
+    let mut unique = Vec::<String>::new();
+    for name in names {
+        if name != target && !unique.iter().any(|known| known == name) {
+            unique.push(name.to_string());
+        }
+    }
+    let mut words = unique
+        .into_iter()
+        .filter_map(|word| {
+            let normalized = word.to_ascii_lowercase().replace('@', "");
+            let score = jaro_winkler_distance(&normalized, &normalized_target);
+            (score >= jaro_threshold).then_some((word, normalized, score))
+        })
+        .collect::<Vec<_>>();
+    words.sort_by(|left, right| {
+        left.2
+            .partial_cmp(&right.2)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
+    words.reverse();
+    let threshold = normalized_target.len().div_ceil(4);
+    if let Some((word, _, _)) = words
+        .iter()
+        .find(|(_, normalized, _)| edit_distance(normalized, &normalized_target) <= threshold)
+    {
+        return Some(word.clone());
+    }
+    words
+        .into_iter()
+        .find(|(_, normalized, _)| {
+            let length = normalized_target.len().min(normalized.len());
+            edit_distance(normalized, &normalized_target) < length
+        })
+        .map(|(word, _, _)| word)
+}
+
+fn jaro_winkler_distance(left: &str, right: &str) -> f64 {
+    let left = left.as_bytes();
+    let right = right.as_bytes();
+    if left == right {
+        return 1.0;
+    }
+    if left.is_empty() || right.is_empty() {
+        return 0.0;
+    }
+    let radius = left
+        .len()
+        .max(right.len())
+        .saturating_div(2)
+        .saturating_sub(1);
+    let mut left_match = vec![false; left.len()];
+    let mut right_match = vec![false; right.len()];
+    let mut matches = 0usize;
+    for (index, byte) in left.iter().enumerate() {
+        let start = index.saturating_sub(radius);
+        let end = (index + radius + 1).min(right.len());
+        if let Some(other) =
+            (start..end).find(|&other| !right_match[other] && right[other] == *byte)
+        {
+            left_match[index] = true;
+            right_match[other] = true;
+            matches += 1;
+        }
+    }
+    if matches == 0 {
+        return 0.0;
+    }
+    let left_sequence = left
+        .iter()
+        .zip(&left_match)
+        .filter_map(|(byte, matched)| matched.then_some(*byte));
+    let right_sequence = right
+        .iter()
+        .zip(&right_match)
+        .filter_map(|(byte, matched)| matched.then_some(*byte));
+    let transpositions = left_sequence
+        .zip(right_sequence)
+        .filter(|(a, b)| a != b)
+        .count() as f64
+        / 2.0;
+    let matches = matches as f64;
+    let jaro = (matches / left.len() as f64
+        + matches / right.len() as f64
+        + (matches - transpositions) / matches)
+        / 3.0;
+    let prefix = left
+        .iter()
+        .zip(right)
+        .take(4)
+        .take_while(|(a, b)| a == b)
+        .count() as f64;
+    jaro + prefix * 0.1 * (1.0 - jaro)
+}
 
 fn branch_conflict(left: &AssignmentEvent, right: &AssignmentEvent) -> bool {
-    left.branches.iter().any(|branch| right.branches.iter().any(|other| branch.0 == other.0 && branch.1 != other.1))
+    left.branches.iter().any(|branch| {
+        right
+            .branches
+            .iter()
+            .any(|other| branch.0 == other.0 && branch.1 != other.1)
+    })
 }
 
 impl AssignmentEventCollector<'_> {
     fn nested_scope(&mut self, visit: impl FnOnce(&mut Self)) {
         let parent = self.scope;
-        let parent_branches=std::mem::take(&mut self.branches);
-        let parent_loops=std::mem::take(&mut self.loops);
-        let parent_block=self.block_depth;
-        self.block_depth=0;
+        let parent_branches = std::mem::take(&mut self.branches);
+        let parent_loops = std::mem::take(&mut self.loops);
+        let parent_block = self.block_depth;
+        let parent_block_scopes = std::mem::take(&mut self.block_scopes);
+        self.block_depth = 0;
         self.scope = self.next_scope;
         self.next_scope += 1;
         visit(self);
         self.scope = parent;
-        self.branches=parent_branches;
-        self.loops=parent_loops;
-        self.block_depth=parent_block;
+        self.branches = parent_branches;
+        self.loops = parent_loops;
+        self.block_depth = parent_block;
+        self.block_scopes = parent_block_scopes;
     }
 
-    fn read(&mut self, name: &[u8], location: ruby_prism::Location<'_>) {
-        let name=String::from_utf8_lossy(name).into_owned();let scope=self.shadowed.iter().rev().find(|(candidate,_)|candidate==&name).map_or(self.scope,|(_,scope)|*scope);self.candidates.push((scope,name.clone()));
-        self.events.push(AssignmentEvent { scope, name, offense: location.start_offset()..location.end_offset(), end:location.end_offset(), target: AssignmentTarget::Normal, branches: self.branches.clone(), loops: self.loops.clone(), interrupts:self.interrupts.clone(), block_depth: self.block_depth, kind: AssignmentEventKind::Read });
+    fn scope_for_depth(&self, depth: u32) -> usize {
+        let depth = depth as usize;
+        if depth < self.block_scopes.len() {
+            self.block_scopes[self.block_scopes.len() - 1 - depth]
+        } else {
+            self.scope
+        }
     }
 
-    fn write(&mut self, name: &[u8], location: ruby_prism::Location<'_>, correction: Option<AssignmentCorrection>, consumes_previous: bool) {
-        let suffix = if consumes_previous { String::new() } else if self.target == AssignmentTarget::Multiple { format!(" Use `_` or `_{}` as a variable name to indicate that it won't be used.",String::from_utf8_lossy(name)) } else { String::new() };
-        let name=String::from_utf8_lossy(name).into_owned();let scope=self.shadowed.iter().rev().find(|(candidate,_)|candidate==&name).map_or(self.scope,|(_,scope)|*scope);
-        self.events.push(AssignmentEvent { scope, name, offense: location.start_offset()..location.end_offset(), end:location.end_offset(), target: self.target, branches: self.branches.clone(), loops: self.loops.clone(), interrupts:self.interrupts.clone(), block_depth: self.block_depth, kind: AssignmentEventKind::Write { correction, consumes_previous, suffix } });
+    fn read(&mut self, name: &[u8], location: ruby_prism::Location<'_>, depth: u32) {
+        let name = String::from_utf8_lossy(name).into_owned();
+        let scope = self.scope_for_depth(depth);
+        self.candidates.push((scope, name.clone()));
+        self.events.push(AssignmentEvent {
+            scope,
+            name,
+            offense: location.start_offset()..location.end_offset(),
+            end: location.end_offset(),
+            target: AssignmentTarget::Normal,
+            branches: self.branches.clone(),
+            loops: self.loops.clone(),
+            interrupts: self.interrupts.clone(),
+            block_depth: self.block_depth,
+            kind: AssignmentEventKind::Read,
+        });
     }
 
-    fn with_branch(&mut self, group: usize, arm: usize, visit: impl FnOnce(&mut Self)) { self.branches.push((group, arm)); visit(self); self.branches.pop(); }
-    fn with_loop(&mut self, visit: impl FnOnce(&mut Self)) { let id = self.next_loop; self.next_loop += 1; self.loops.push(id); visit(self); self.loops.pop(); }
+    fn write(
+        &mut self,
+        name: &[u8],
+        location: ruby_prism::Location<'_>,
+        correction: Option<AssignmentCorrection>,
+        consumes_previous: bool,
+        depth: u32,
+    ) {
+        let suffix = if consumes_previous {
+            String::new()
+        } else if self.target == AssignmentTarget::Multiple {
+            format!(
+                " Use `_` or `_{}` as a variable name to indicate that it won't be used.",
+                String::from_utf8_lossy(name)
+            )
+        } else {
+            String::new()
+        };
+        let name = String::from_utf8_lossy(name).into_owned();
+        let scope = self.scope_for_depth(depth);
+        self.events.push(AssignmentEvent {
+            scope,
+            name,
+            offense: location.start_offset()..location.end_offset(),
+            end: location.end_offset(),
+            target: self.target,
+            branches: self.branches.clone(),
+            loops: self.loops.clone(),
+            interrupts: self.interrupts.clone(),
+            block_depth: self.block_depth,
+            kind: AssignmentEventKind::Write {
+                correction,
+                consumes_previous,
+                suffix,
+            },
+        });
+    }
+
+    fn with_branch(&mut self, group: usize, arm: usize, visit: impl FnOnce(&mut Self)) {
+        self.branches.push((group, arm));
+        visit(self);
+        self.branches.pop();
+    }
+    fn with_loop(&mut self, visit: impl FnOnce(&mut Self)) {
+        let id = self.next_loop;
+        self.next_loop += 1;
+        self.loops.push(id);
+        visit(self);
+        self.loops.pop();
+    }
 }
 
-impl<'s,'pr> Visit<'pr> for AssignmentEventCollector<'s> {
-    fn visit_call_node(&mut self,node:&ruby_prism::CallNode<'pr>){if node.receiver().is_none()&&node.arguments().is_none(){self.candidates.push((self.scope,String::from_utf8_lossy(node.name().as_slice()).into_owned()));}ruby_prism::visit_call_node(self,node);}
+impl<'s, 'pr> Visit<'pr> for AssignmentEventCollector<'s> {
+    fn visit_call_node(&mut self, node: &ruby_prism::CallNode<'pr>) {
+        if node.receiver().is_none() && node.arguments().is_none() {
+            self.candidates.push((
+                self.scope_for_depth(0),
+                String::from_utf8_lossy(node.name().as_slice()).into_owned(),
+            ));
+        }
+        ruby_prism::visit_call_node(self, node);
+    }
     fn visit_def_node(&mut self, node: &ruby_prism::DefNode<'pr>) {
-        if let Some(receiver) = node.receiver() { self.visit(&receiver); }
-        let names=node.parameters().map(|parameters|{let slice=&self.source[parameters.location().start_offset()..parameters.location().end_offset()];slice.split(|character:char|!character.is_ascii_alphanumeric()&&character!='_').filter(|name|!name.is_empty()&&!matches!(*name,"nil"|"true"|"false")).map(str::to_string).collect()}).unwrap_or_default();
-        self.nested_scope(|this| {this.parameter_stack.push(names);if let Some(parameters) = node.parameters() { this.visit(&parameters.as_node()); }
-            if let Some(body) = node.body() { this.visit(&body); }this.parameter_stack.pop();});
+        if let Some(receiver) = node.receiver() {
+            self.visit(&receiver);
+        }
+        let names = node
+            .parameters()
+            .map(|parameters| {
+                let slice = &self.source
+                    [parameters.location().start_offset()..parameters.location().end_offset()];
+                slice
+                    .split(|character: char| !character.is_ascii_alphanumeric() && character != '_')
+                    .filter(|name| !name.is_empty() && !matches!(*name, "nil" | "true" | "false"))
+                    .map(str::to_string)
+                    .collect()
+            })
+            .unwrap_or_default();
+        self.nested_scope(|this| {
+            this.parameter_stack.push(names);
+            if let Some(parameters) = node.parameters() {
+                this.visit(&parameters.as_node());
+            }
+            if let Some(body) = node.body() {
+                this.visit(&body);
+            }
+            this.parameter_stack.pop();
+        });
     }
     fn visit_class_node(&mut self, node: &ruby_prism::ClassNode<'pr>) {
-        if let Some(superclass) = node.superclass() { self.visit(&superclass); }
-        self.nested_scope(|this| { if let Some(body) = node.body() { this.visit(&body); } });
+        if let Some(superclass) = node.superclass() {
+            self.visit(&superclass);
+        }
+        self.nested_scope(|this| {
+            if let Some(body) = node.body() {
+                this.visit(&body);
+            }
+        });
     }
     fn visit_module_node(&mut self, node: &ruby_prism::ModuleNode<'pr>) {
         self.visit(&node.constant_path());
-        self.nested_scope(|this| { if let Some(body) = node.body() { this.visit(&body); } });
+        self.nested_scope(|this| {
+            if let Some(body) = node.body() {
+                this.visit(&body);
+            }
+        });
     }
     fn visit_singleton_class_node(&mut self, node: &ruby_prism::SingletonClassNode<'pr>) {
-        self.visit(&node.expression()); self.nested_scope(|this| { if let Some(body) = node.body() { this.visit(&body); } });
+        self.visit(&node.expression());
+        self.nested_scope(|this| {
+            if let Some(body) = node.body() {
+                this.visit(&body);
+            }
+        });
     }
     fn visit_if_node(&mut self, node: &ruby_prism::IfNode<'pr>) {
-        let group = self.next_branch; self.next_branch += 1;
-        let modifier = node.if_keyword_loc().is_some_and(|keyword| keyword.start_offset() != node.location().start_offset());
+        let group = self.next_branch;
+        self.next_branch += 1;
+        let modifier = node
+            .if_keyword_loc()
+            .is_some_and(|keyword| keyword.start_offset() != node.location().start_offset());
         if modifier {
             self.modifier_branches.insert(group);
             self.with_branch(group, 0, |this| {
                 this.visit(&node.predicate());
-                if let Some(statements) = node.statements() { this.visit(&statements.as_node()); }
+                if let Some(statements) = node.statements() {
+                    this.visit(&statements.as_node());
+                }
             });
-            if let Some(subsequent) = node.subsequent() { self.with_branch(group, 1, |this| this.visit(&subsequent)); }
+            if let Some(subsequent) = node.subsequent() {
+                self.with_branch(group, 1, |this| this.visit(&subsequent));
+            }
             return;
         }
         self.visit(&node.predicate());
-        if let Some(statements) = node.statements() { self.with_branch(group, 0, |this| this.visit(&statements.as_node())); }
-        if let Some(subsequent) = node.subsequent() { self.with_branch(group, 1, |this| this.visit(&subsequent)); }
+        if let Some(statements) = node.statements() {
+            self.with_branch(group, 0, |this| this.visit(&statements.as_node()));
+        }
+        if let Some(subsequent) = node.subsequent() {
+            self.with_branch(group, 1, |this| this.visit(&subsequent));
+        }
     }
     fn visit_unless_node(&mut self, node: &ruby_prism::UnlessNode<'pr>) {
-        let group = self.next_branch; self.next_branch += 1;
+        let group = self.next_branch;
+        self.next_branch += 1;
         let modifier = node.keyword_loc().start_offset() != node.location().start_offset();
         if modifier {
             self.modifier_branches.insert(group);
             self.with_branch(group, 0, |this| {
                 this.visit(&node.predicate());
-                if let Some(statements) = node.statements() { this.visit(&statements.as_node()); }
+                if let Some(statements) = node.statements() {
+                    this.visit(&statements.as_node());
+                }
             });
-            if let Some(clause) = node.else_clause() { self.with_branch(group, 1, |this| this.visit(&clause.as_node())); }
+            if let Some(clause) = node.else_clause() {
+                self.with_branch(group, 1, |this| this.visit(&clause.as_node()));
+            }
             return;
         }
         self.visit(&node.predicate());
-        if let Some(statements) = node.statements() { self.with_branch(group, 0, |this| this.visit(&statements.as_node())); }
-        if let Some(clause) = node.else_clause() { self.with_branch(group, 1, |this| this.visit(&clause.as_node())); }
+        if let Some(statements) = node.statements() {
+            self.with_branch(group, 0, |this| this.visit(&statements.as_node()));
+        }
+        if let Some(clause) = node.else_clause() {
+            self.with_branch(group, 1, |this| this.visit(&clause.as_node()));
+        }
     }
     fn visit_while_node(&mut self, node: &ruby_prism::WhileNode<'pr>) {
         let modifier = node.keyword_loc().start_offset() != node.location().start_offset();
         if modifier {
-            let group=self.next_branch;self.next_branch+=1;self.modifier_branches.insert(group);
-            self.with_branch(group,0,|this|this.with_loop(|this|ruby_prism::visit_while_node(this,node)));
-        } else { self.with_loop(|this| ruby_prism::visit_while_node(this, node)); }
+            let group = self.next_branch;
+            self.next_branch += 1;
+            self.modifier_branches.insert(group);
+            self.with_branch(group, 0, |this| {
+                this.with_loop(|this| ruby_prism::visit_while_node(this, node))
+            });
+        } else {
+            self.with_loop(|this| ruby_prism::visit_while_node(this, node));
+        }
     }
     fn visit_until_node(&mut self, node: &ruby_prism::UntilNode<'pr>) {
         let modifier = node.keyword_loc().start_offset() != node.location().start_offset();
         if modifier {
-            let group=self.next_branch;self.next_branch+=1;self.modifier_branches.insert(group);
-            self.with_branch(group,0,|this|this.with_loop(|this|ruby_prism::visit_until_node(this,node)));
-        } else { self.with_loop(|this| ruby_prism::visit_until_node(this, node)); }
+            let group = self.next_branch;
+            self.next_branch += 1;
+            self.modifier_branches.insert(group);
+            self.with_branch(group, 0, |this| {
+                this.with_loop(|this| ruby_prism::visit_until_node(this, node))
+            });
+        } else {
+            self.with_loop(|this| ruby_prism::visit_until_node(this, node));
+        }
     }
     fn visit_for_node(&mut self, node: &ruby_prism::ForNode<'pr>) {
         self.visit(&node.collection());
-        self.with_loop(|this| { let old=this.target;this.target=AssignmentTarget::For;this.visit(&node.index());this.target=old;if let Some(statements)=node.statements(){this.visit(&statements.as_node());} });
+        self.with_loop(|this| {
+            let old = this.target;
+            this.target = AssignmentTarget::For;
+            this.visit(&node.index());
+            this.target = old;
+            if let Some(statements) = node.statements() {
+                this.visit(&statements.as_node());
+            }
+        });
     }
-    fn visit_and_node(&mut self,node:&ruby_prism::AndNode<'pr>){self.visit(&node.left());let group=self.next_branch;self.next_branch+=1;self.with_branch(group,0,|this|this.visit(&node.right()));}
-    fn visit_or_node(&mut self,node:&ruby_prism::OrNode<'pr>){self.visit(&node.left());let group=self.next_branch;self.next_branch+=1;self.with_branch(group,0,|this|this.visit(&node.right()));}
-    fn visit_case_node(&mut self,node:&ruby_prism::CaseNode<'pr>){if let Some(predicate)=node.predicate(){self.visit(&predicate);}let group=self.next_branch;self.next_branch+=1;for (arm,condition) in node.conditions().iter().enumerate(){self.with_branch(group,arm,|this|this.visit(&condition));}if let Some(otherwise)=node.else_clause(){self.with_branch(group,node.conditions().len(),|this|this.visit(&otherwise.as_node()));}}
-    fn visit_case_match_node(&mut self,node:&ruby_prism::CaseMatchNode<'pr>){if let Some(predicate)=node.predicate(){self.visit(&predicate);}let group=self.next_branch;self.next_branch+=1;for (arm,condition) in node.conditions().iter().enumerate(){self.with_branch(group,arm,|this|this.visit(&condition));}if let Some(otherwise)=node.else_clause(){self.with_branch(group,node.conditions().len(),|this|this.visit(&otherwise.as_node()));}}
-    fn visit_begin_node(&mut self,node:&ruby_prism::BeginNode<'pr>){
-        if node.rescue_clause().is_none()&&node.ensure_clause().is_none(){ruby_prism::visit_begin_node(self,node);return}
-        let group=self.next_branch;self.next_branch+=1;let interrupt=self.next_interrupt;self.next_interrupt+=1;
-        if let Some(statements)=node.statements(){self.with_branch(group,0,|this|{this.interrupts.push(interrupt);this.visit(&statements.as_node());this.interrupts.pop();});}
-        let mut rescue=node.rescue_clause();let mut arm=1;
-        while let Some(clause)=rescue{self.with_branch(group,arm,|this|this.with_loop(|this|{for exception in clause.exceptions().iter(){this.visit(&exception);}if let Some(reference)=clause.reference(){if let Some(target)=reference.as_local_variable_target_node(){let old=this.target;this.target=AssignmentTarget::Rescue;let start=clause.operator_loc().map_or(target.location().start_offset(),|operator|operator.start_offset().saturating_sub(1));this.write(target.name().as_slice(),target.location(),Some(AssignmentCorrection{range:start..target.location().end_offset(),replacement:""}),false);this.target=old;}else{this.visit(&reference);}}
-            if let Some(statements)=clause.statements(){this.visit(&statements.as_node());}}));rescue=clause.subsequent();arm+=1;}
-        if let Some(otherwise)=node.else_clause(){self.with_branch(group,0,|this|this.visit(&otherwise.as_node()));}
-        if let Some(ensure)=node.ensure_clause(){self.visit(&ensure.as_node());}
+    fn visit_and_node(&mut self, node: &ruby_prism::AndNode<'pr>) {
+        self.visit(&node.left());
+        let group = self.next_branch;
+        self.next_branch += 1;
+        self.with_branch(group, 0, |this| this.visit(&node.right()));
     }
-    fn visit_in_node(&mut self,node:&ruby_prism::InNode<'pr>){self.ignore_targets+=1;self.visit(&node.pattern());self.ignore_targets-=1;if let Some(statements)=node.statements(){self.visit(&statements.as_node());}}
-    fn visit_match_predicate_node(&mut self,node:&ruby_prism::MatchPredicateNode<'pr>){self.visit(&node.value());self.ignore_targets+=1;self.visit(&node.pattern());self.ignore_targets-=1;}
-    fn visit_match_required_node(&mut self,node:&ruby_prism::MatchRequiredNode<'pr>){self.visit(&node.value());self.ignore_targets+=1;self.visit(&node.pattern());self.ignore_targets-=1;}
-    fn visit_multi_write_node(&mut self,node:&ruby_prism::MultiWriteNode<'pr>){self.visit(&node.value());let old=self.target;self.target=AssignmentTarget::Multiple;for target in node.lefts().iter(){self.visit(&target);}if let Some(target)=node.rest(){self.visit(&target);}for target in node.rights().iter(){self.visit(&target);}self.target=old;}
-    fn visit_block_node(&mut self, node: &ruby_prism::BlockNode<'pr>) {let mut added=0;if let Some(parameters)=node.parameters(){let slice=&self.source[parameters.location().start_offset()..parameters.location().end_offset()];if slice.contains('|'){let scope=self.next_scope;self.next_scope+=1;for name in slice.split(|character:char|!character.is_ascii_alphanumeric()&&character!='_').filter(|name|!name.is_empty()){self.shadowed.push((name.to_string(),scope));added+=1;}}self.visit(&parameters);}self.block_depth+=1;if let Some(body)=node.body(){self.visit(&body);}self.block_depth-=1;for _ in 0..added{self.shadowed.pop();}}
+    fn visit_or_node(&mut self, node: &ruby_prism::OrNode<'pr>) {
+        self.visit(&node.left());
+        let group = self.next_branch;
+        self.next_branch += 1;
+        self.with_branch(group, 0, |this| this.visit(&node.right()));
+    }
+    fn visit_case_node(&mut self, node: &ruby_prism::CaseNode<'pr>) {
+        if let Some(predicate) = node.predicate() {
+            self.visit(&predicate);
+        }
+        let group = self.next_branch;
+        self.next_branch += 1;
+        for (arm, condition) in node.conditions().iter().enumerate() {
+            self.with_branch(group, arm, |this| this.visit(&condition));
+        }
+        if let Some(otherwise) = node.else_clause() {
+            self.with_branch(group, node.conditions().len(), |this| {
+                this.visit(&otherwise.as_node())
+            });
+        }
+    }
+    fn visit_case_match_node(&mut self, node: &ruby_prism::CaseMatchNode<'pr>) {
+        if let Some(predicate) = node.predicate() {
+            self.visit(&predicate);
+        }
+        let group = self.next_branch;
+        self.next_branch += 1;
+        for (arm, condition) in node.conditions().iter().enumerate() {
+            self.with_branch(group, arm, |this| this.visit(&condition));
+        }
+        if let Some(otherwise) = node.else_clause() {
+            self.with_branch(group, node.conditions().len(), |this| {
+                this.visit(&otherwise.as_node())
+            });
+        }
+    }
+    fn visit_begin_node(&mut self, node: &ruby_prism::BeginNode<'pr>) {
+        if node.rescue_clause().is_none() && node.ensure_clause().is_none() {
+            ruby_prism::visit_begin_node(self, node);
+            return;
+        }
+        let group = self.next_branch;
+        self.next_branch += 1;
+        let interrupt = self.next_interrupt;
+        self.next_interrupt += 1;
+        if let Some(statements) = node.statements() {
+            self.with_branch(group, 0, |this| {
+                this.interrupts.push(interrupt);
+                this.visit(&statements.as_node());
+                this.interrupts.pop();
+            });
+        }
+        let mut rescue = node.rescue_clause();
+        let mut arm = 1;
+        while let Some(clause) = rescue {
+            self.with_branch(group, arm, |this| {
+                this.with_loop(|this| {
+                    for exception in clause.exceptions().iter() {
+                        this.visit(&exception);
+                    }
+                    if let Some(reference) = clause.reference() {
+                        if let Some(target) = reference.as_local_variable_target_node() {
+                            let old = this.target;
+                            this.target = AssignmentTarget::Rescue;
+                            let start = clause
+                                .operator_loc()
+                                .map_or(target.location().start_offset(), |operator| {
+                                    operator.start_offset().saturating_sub(1)
+                                });
+                            this.write(
+                                target.name().as_slice(),
+                                target.location(),
+                                Some(AssignmentCorrection {
+                                    range: start..target.location().end_offset(),
+                                    replacement: "",
+                                }),
+                                false,
+                                target.depth(),
+                            );
+                            this.target = old;
+                        } else {
+                            this.visit(&reference);
+                        }
+                    }
+                    if let Some(statements) = clause.statements() {
+                        this.visit(&statements.as_node());
+                    }
+                })
+            });
+            rescue = clause.subsequent();
+            arm += 1;
+        }
+        if let Some(otherwise) = node.else_clause() {
+            self.with_branch(group, 0, |this| this.visit(&otherwise.as_node()));
+        }
+        if let Some(ensure) = node.ensure_clause() {
+            self.visit(&ensure.as_node());
+        }
+    }
+    fn visit_in_node(&mut self, node: &ruby_prism::InNode<'pr>) {
+        self.ignore_targets += 1;
+        self.visit(&node.pattern());
+        self.ignore_targets -= 1;
+        if let Some(statements) = node.statements() {
+            self.visit(&statements.as_node());
+        }
+    }
+    fn visit_match_predicate_node(&mut self, node: &ruby_prism::MatchPredicateNode<'pr>) {
+        self.visit(&node.value());
+        self.ignore_targets += 1;
+        self.visit(&node.pattern());
+        self.ignore_targets -= 1;
+    }
+    fn visit_match_required_node(&mut self, node: &ruby_prism::MatchRequiredNode<'pr>) {
+        self.visit(&node.value());
+        self.ignore_targets += 1;
+        self.visit(&node.pattern());
+        self.ignore_targets -= 1;
+    }
+    fn visit_multi_write_node(&mut self, node: &ruby_prism::MultiWriteNode<'pr>) {
+        self.visit(&node.value());
+        let old = self.target;
+        self.target = AssignmentTarget::Multiple;
+        for target in node.lefts().iter() {
+            self.visit(&target);
+        }
+        if let Some(target) = node.rest() {
+            self.visit(&target);
+        }
+        for target in node.rights().iter() {
+            self.visit(&target);
+        }
+        self.target = old;
+    }
+    fn visit_block_node(&mut self, node: &ruby_prism::BlockNode<'pr>) {
+        let scope = self.next_scope;
+        self.next_scope += 1;
+        self.block_scopes.push(scope);
+        if let Some(parameters) = node.parameters() {
+            self.visit(&parameters);
+        }
+        self.block_depth += 1;
+        if let Some(body) = node.body() {
+            self.visit(&body);
+        }
+        self.block_depth -= 1;
+        self.block_scopes.pop();
+    }
 
-    fn visit_local_variable_read_node(&mut self, node: &ruby_prism::LocalVariableReadNode<'pr>) { self.read(node.name().as_slice(), node.location()); }
+    fn visit_lambda_node(&mut self, node: &ruby_prism::LambdaNode<'pr>) {
+        let scope = self.next_scope;
+        self.next_scope += 1;
+        self.block_scopes.push(scope);
+        self.block_depth += 1;
+        ruby_prism::visit_lambda_node(self, node);
+        self.block_depth -= 1;
+        self.block_scopes.pop();
+    }
+
+    fn visit_local_variable_read_node(&mut self, node: &ruby_prism::LocalVariableReadNode<'pr>) {
+        self.read(node.name().as_slice(), node.location(), node.depth());
+    }
     fn visit_local_variable_write_node(&mut self, node: &ruby_prism::LocalVariableWriteNode<'pr>) {
         self.visit(&node.value());
-        self.write(node.name().as_slice(), node.name_loc(), Some(AssignmentCorrection{range:node.name_loc().start_offset()..node.value().location().start_offset(),replacement:""}), false);
+        self.write(
+            node.name().as_slice(),
+            node.name_loc(),
+            Some(AssignmentCorrection {
+                range: node.name_loc().start_offset()..node.value().location().start_offset(),
+                replacement: "",
+            }),
+            false,
+            node.depth(),
+        );
     }
-    fn visit_local_variable_operator_write_node(&mut self, node: &ruby_prism::LocalVariableOperatorWriteNode<'pr>) {
-        let group=self.next_branch;self.next_branch+=1;self.with_branch(group,0,|this|this.visit(&node.value()));let operator=String::from_utf8_lossy(node.binary_operator_loc().as_slice()).trim_end_matches('=').to_string();let suffix=format!(" Use `{operator}` instead of `{operator}=`.");self.events.push(AssignmentEvent{scope:self.scope,name:String::from_utf8_lossy(node.name().as_slice()).into_owned(),offense:node.name_loc().start_offset()..node.name_loc().end_offset(),end:node.location().end_offset(),target:AssignmentTarget::Normal,branches:self.branches.clone(),loops:self.loops.clone(),interrupts:self.interrupts.clone(),block_depth:self.block_depth,kind:AssignmentEventKind::Write{correction:Some(AssignmentCorrection{range:node.binary_operator_loc().start_offset()..node.binary_operator_loc().end_offset(),replacement:match operator.as_str(){"+"=>"+","-"=>"-","*"=>"*","/"=>"/","%"=>"%","**"=>"**","&"=>"&","|"=>"|","^"=>"^","<<"=>"<<",">>"=>">>",_=>""}}),consumes_previous:true,suffix}});
+    fn visit_local_variable_operator_write_node(
+        &mut self,
+        node: &ruby_prism::LocalVariableOperatorWriteNode<'pr>,
+    ) {
+        let group = self.next_branch;
+        self.next_branch += 1;
+        self.with_branch(group, 0, |this| this.visit(&node.value()));
+        let operator = String::from_utf8_lossy(node.binary_operator_loc().as_slice())
+            .trim_end_matches('=')
+            .to_string();
+        let suffix = format!(" Use `{operator}` instead of `{operator}=`.");
+        self.events.push(AssignmentEvent {
+            scope: self.scope_for_depth(node.depth()),
+            name: String::from_utf8_lossy(node.name().as_slice()).into_owned(),
+            offense: node.name_loc().start_offset()..node.name_loc().end_offset(),
+            end: node.location().end_offset(),
+            target: AssignmentTarget::Normal,
+            branches: self.branches.clone(),
+            loops: self.loops.clone(),
+            interrupts: self.interrupts.clone(),
+            block_depth: self.block_depth,
+            kind: AssignmentEventKind::Write {
+                correction: Some(AssignmentCorrection {
+                    range: node.binary_operator_loc().start_offset()
+                        ..node.binary_operator_loc().end_offset(),
+                    replacement: match operator.as_str() {
+                        "+" => "+",
+                        "-" => "-",
+                        "*" => "*",
+                        "/" => "/",
+                        "%" => "%",
+                        "**" => "**",
+                        "&" => "&",
+                        "|" => "|",
+                        "^" => "^",
+                        "<<" => "<<",
+                        ">>" => ">>",
+                        _ => "",
+                    },
+                }),
+                consumes_previous: true,
+                suffix,
+            },
+        });
     }
-    fn visit_local_variable_or_write_node(&mut self, node: &ruby_prism::LocalVariableOrWriteNode<'pr>) {
-        let group=self.next_branch;self.next_branch+=1;self.with_branch(group,0,|this|this.visit(&node.value()));self.events.push(AssignmentEvent{scope:self.scope,name:String::from_utf8_lossy(node.name().as_slice()).into_owned(),offense:node.name_loc().start_offset()..node.name_loc().end_offset(),end:node.location().end_offset(),target:AssignmentTarget::Normal,branches:self.branches.clone(),loops:self.loops.clone(),interrupts:self.interrupts.clone(),block_depth:self.block_depth,kind:AssignmentEventKind::Write{correction:None,consumes_previous:true,suffix:" Use `||` instead of `||=`.".into()}});
+    fn visit_local_variable_or_write_node(
+        &mut self,
+        node: &ruby_prism::LocalVariableOrWriteNode<'pr>,
+    ) {
+        let group = self.next_branch;
+        self.next_branch += 1;
+        self.with_branch(group, 0, |this| this.visit(&node.value()));
+        self.events.push(AssignmentEvent {
+            scope: self.scope_for_depth(node.depth()),
+            name: String::from_utf8_lossy(node.name().as_slice()).into_owned(),
+            offense: node.name_loc().start_offset()..node.name_loc().end_offset(),
+            end: node.location().end_offset(),
+            target: AssignmentTarget::Normal,
+            branches: self.branches.clone(),
+            loops: self.loops.clone(),
+            interrupts: self.interrupts.clone(),
+            block_depth: self.block_depth,
+            kind: AssignmentEventKind::Write {
+                correction: None,
+                consumes_previous: true,
+                suffix: " Use `||` instead of `||=`.".into(),
+            },
+        });
     }
-    fn visit_local_variable_and_write_node(&mut self, node: &ruby_prism::LocalVariableAndWriteNode<'pr>) {
-        let group=self.next_branch;self.next_branch+=1;self.with_branch(group,0,|this|this.visit(&node.value()));self.events.push(AssignmentEvent{scope:self.scope,name:String::from_utf8_lossy(node.name().as_slice()).into_owned(),offense:node.name_loc().start_offset()..node.name_loc().end_offset(),end:node.location().end_offset(),target:AssignmentTarget::Normal,branches:self.branches.clone(),loops:self.loops.clone(),interrupts:self.interrupts.clone(),block_depth:self.block_depth,kind:AssignmentEventKind::Write{correction:None,consumes_previous:true,suffix:" Use `&&` instead of `&&=`.".into()}});
+    fn visit_local_variable_and_write_node(
+        &mut self,
+        node: &ruby_prism::LocalVariableAndWriteNode<'pr>,
+    ) {
+        let group = self.next_branch;
+        self.next_branch += 1;
+        self.with_branch(group, 0, |this| this.visit(&node.value()));
+        self.events.push(AssignmentEvent {
+            scope: self.scope_for_depth(node.depth()),
+            name: String::from_utf8_lossy(node.name().as_slice()).into_owned(),
+            offense: node.name_loc().start_offset()..node.name_loc().end_offset(),
+            end: node.location().end_offset(),
+            target: AssignmentTarget::Normal,
+            branches: self.branches.clone(),
+            loops: self.loops.clone(),
+            interrupts: self.interrupts.clone(),
+            block_depth: self.block_depth,
+            kind: AssignmentEventKind::Write {
+                correction: None,
+                consumes_previous: true,
+                suffix: " Use `&&` instead of `&&=`.".into(),
+            },
+        });
     }
-    fn visit_local_variable_target_node(&mut self, node: &ruby_prism::LocalVariableTargetNode<'pr>) { if self.ignore_targets==0{self.write(node.name().as_slice(), node.location(), None, false);}else{self.read(node.name().as_slice(),node.location());} }
-    fn visit_forwarding_super_node(&mut self,node:&ruby_prism::ForwardingSuperNode<'pr>){if let Some(names)=self.parameter_stack.last().cloned(){for name in names{self.read(name.as_bytes(),node.location());}}}
-    fn visit_match_write_node(&mut self,node:&ruby_prism::MatchWriteNode<'pr>){let call=node.call();if let Some(arguments)=call.arguments(){self.visit(&arguments.as_node());}
-        if let Some(receiver)=call.receiver(){let offense=receiver.location().start_offset()..receiver.location().end_offset();let receiver_source=&self.source[offense.clone()];for target in node.targets().iter(){if let Some(local)=target.as_local_variable_target_node(){let name=String::from_utf8_lossy(local.name().as_slice());let needle=format!("(?<{name}>");if let Some(position)=receiver_source.find(&needle){let start=offense.start+position+1;let end=start+needle.len()-1;let correction=AssignmentCorrection{range:start..end,replacement:"?:"};let saved=self.target;self.target=AssignmentTarget::Normal;self.write(local.name().as_slice(),receiver.location(),Some(correction),false);if let Some(event)=self.events.last_mut(){event.offense=offense.clone();}self.target=saved;}}}}}
-    fn visit_retry_node(&mut self,_node:&ruby_prism::RetryNode<'pr>){for id in &self.loops{self.retry_loops.insert(*id);}}
+    fn visit_local_variable_target_node(
+        &mut self,
+        node: &ruby_prism::LocalVariableTargetNode<'pr>,
+    ) {
+        if self.ignore_targets == 0 {
+            self.write(
+                node.name().as_slice(),
+                node.location(),
+                None,
+                false,
+                node.depth(),
+            );
+        } else {
+            self.read(node.name().as_slice(), node.location(), node.depth());
+        }
+    }
+    fn visit_forwarding_super_node(&mut self, node: &ruby_prism::ForwardingSuperNode<'pr>) {
+        if let Some(names) = self.parameter_stack.last().cloned() {
+            for name in names {
+                self.read(
+                    name.as_bytes(),
+                    node.location(),
+                    self.block_scopes.len() as u32,
+                );
+            }
+        }
+        ruby_prism::visit_forwarding_super_node(self, node);
+    }
+    fn visit_match_write_node(&mut self, node: &ruby_prism::MatchWriteNode<'pr>) {
+        let call = node.call();
+        if let Some(arguments) = call.arguments() {
+            self.visit(&arguments.as_node());
+        }
+        if let Some(receiver) = call.receiver() {
+            let offense = receiver.location().start_offset()..receiver.location().end_offset();
+            let receiver_source = &self.source[offense.clone()];
+            for target in node.targets().iter() {
+                if let Some(local) = target.as_local_variable_target_node() {
+                    let name = String::from_utf8_lossy(local.name().as_slice());
+                    let needle = format!("(?<{name}>");
+                    if let Some(position) = receiver_source.find(&needle) {
+                        let start = offense.start + position + 1;
+                        let end = start + needle.len() - 1;
+                        let correction = AssignmentCorrection {
+                            range: start..end,
+                            replacement: "?:",
+                        };
+                        let saved = self.target;
+                        self.target = AssignmentTarget::Normal;
+                        self.write(
+                            local.name().as_slice(),
+                            receiver.location(),
+                            Some(correction),
+                            false,
+                            local.depth(),
+                        );
+                        if let Some(event) = self.events.last_mut() {
+                            event.offense = offense.clone();
+                        }
+                        self.target = saved;
+                    }
+                }
+            }
+        }
+    }
+    fn visit_retry_node(&mut self, _node: &ruby_prism::RetryNode<'pr>) {
+        for id in &self.loops {
+            self.retry_loops.insert(*id);
+        }
+    }
 }
 
 struct MethodName;
@@ -1712,9 +2702,7 @@ fn method_identifier_message(name: &str, context: &CopContext<'_, '_>) -> Option
             }
         }) || characters.any(|character| {
             if character.is_ascii() {
-                !character.is_ascii_lowercase()
-                    && !character.is_ascii_digit()
-                    && character != '_'
+                !character.is_ascii_lowercase() && !character.is_ascii_digit() && character != '_'
             } else {
                 !character.is_alphanumeric()
             }
