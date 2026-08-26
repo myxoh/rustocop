@@ -90,10 +90,6 @@ entries:
   pipeline: legacy_text
   source: crates/rustocop/src/cops/text/mod.rs
   review: temporary_text
-- cop: Style/Documentation
-  pipeline: legacy_text
-  source: crates/rustocop/src/cops/text/mod.rs
-  review: temporary_text
 - cop: Style/FrozenStringLiteralComment
   pipeline: legacy_text
   source: crates/rustocop/src/cops/text/mod.rs
@@ -218,6 +214,10 @@ entries:
   pipeline: prism_source
   source: crates/rustocop/src/cops/prism/additional_rules_more.rs
   review: unreviewed
+- cop: Layout/MultilineAssignmentLayout
+  pipeline: prism_source
+  source: crates/rustocop/src/cops/prism/layout_qualification.rs
+  review: unreviewed
 - cop: Layout/SpaceAfterComma
   pipeline: prism_source
   source: crates/rustocop/src/cops/prism/source_rules_layout.rs
@@ -338,10 +338,6 @@ entries:
   pipeline: prism_source
   source: crates/rustocop/src/cops/prism/lexical_rules.rs
   review: unreviewed
-- cop: Naming/BlockParameterName
-  pipeline: prism_source
-  source: crates/rustocop/src/cops/prism/metrics_naming_completion.rs
-  review: unreviewed
 - cop: Naming/ClassAndModuleCamelCase
   pipeline: prism_source
   source: crates/rustocop/src/cops/prism/source_rules.rs
@@ -453,6 +449,10 @@ entries:
 - cop: Style/IfInsideElse
   pipeline: prism_source
   source: crates/rustocop/src/cops/prism/structural_next_completion.rs
+  review: unreviewed
+- cop: Style/IfUnlessModifier
+  pipeline: prism_source
+  source: crates/rustocop/src/cops/prism/if_unless_modifier_rules.rs
   review: unreviewed
 - cop: Style/InlineComment
   pipeline: prism_source

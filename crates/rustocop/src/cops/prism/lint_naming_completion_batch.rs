@@ -403,14 +403,6 @@ fn redundant_enable(context: &mut CopContext<'_, '_>) {
         let list = list.split("--").next().unwrap_or_default().trim_end();
         let list_start = line.find(list).unwrap_or(line.len());
         let listed_cops = list.split(',').map(str::trim).collect::<Vec<_>>();
-        let restores_disabled_cop = listed_cops.iter().any(|cop| {
-            disabled.contains(*cop)
-                || (*cop == "all" && !disabled.is_empty())
-                || disabled.iter().any(|disabled| {
-                    cop.split_once('/')
-                        .is_some_and(|(department, _)| department == disabled)
-                })
-        });
         let mut redundant = Vec::new();
         let mut necessary = Vec::new();
         let mut preserve_department_line = false;
@@ -430,13 +422,6 @@ fn redundant_enable(context: &mut CopContext<'_, '_>) {
             if cop
                 .split_once('/')
                 .is_some_and(|(department, _)| disabled.contains(department))
-            {
-                necessary.push(cop);
-                continue;
-            }
-            if context.related_config_value("AllCops", "DisabledByDefault") == Some("true")
-                && restores_disabled_cop
-                && known_cops.contains(&cop)
             {
                 necessary.push(cop);
                 continue;
@@ -542,7 +527,7 @@ fn redundant_enable_known(
         || known_departments.contains(name)
         || name
             .split_once('/')
-            .is_some_and(|(department, _)| known_departments.contains(department))
+            .is_some_and(|(department, cop)| !department.is_empty() && !cop.is_empty())
     {
         return true;
     }

@@ -64,7 +64,7 @@ fn prism_offense(source: &str, index: &SourceIndex, finding: prism::Finding) -> 
                 || finding.cop_name == "Layout/IndentationWidth"
                     && finding.message.ends_with(" spaces for indentation.")
             {
-                (line, column.saturating_sub(1).max(1))
+                (line, column.saturating_sub(1))
             } else {
                 (line, column)
             }

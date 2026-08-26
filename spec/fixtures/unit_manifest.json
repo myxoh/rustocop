@@ -1,12 +1,12 @@
 {
   "version": 1,
   "rubocop_version": "1.87.0",
-  "updated_at": "2026-08-26T08:06:50.176Z",
+  "updated_at": "2026-08-26T17:20:15-04:00",
   "raw_capture_sha256": "aec260b35238542dafa044aad90dfe5c873b6c91019d3708f870fdc8b2453666",
   "raw_cases": 28606,
   "lsp_exclusions": 5,
-  "controlled_cases": 29526,
-  "imported_cases": 1477,
+  "controlled_cases": 29585,
+  "imported_cases": 1536,
   "exact_duplicates_removed": 552,
   "distribution": {
     "minimum": 1,
@@ -207,7 +207,7 @@
       "cases": "cops/Layout/ClosingParenthesisIndentation/unit/cases.jsonl",
       "configs": "cops/Layout/ClosingParenthesisIndentation/unit/configs.json",
       "count": 45,
-      "sha256": "3b32827e2bb34e579403e2cde697f4ee39fdfbc2cbde28725d69df85232fa025",
+      "sha256": "075d77c782e9d84ce57817dd71fd31e1d0515337d1dfc5f80c6c4ea6c82fa0d3",
       "configs_sha256": "97cf55c35d53d60164642faf16174344c299f7afe7566e973245a3c283175962"
     },
     "Layout/CommentIndentation": {
@@ -431,7 +431,7 @@
       "cases": "cops/Layout/FirstParameterIndentation/unit/cases.jsonl",
       "configs": "cops/Layout/FirstParameterIndentation/unit/configs.json",
       "count": 22,
-      "sha256": "2b68121af8329368e158514fc07beca85f159a71f20f8c79c3888ca7b91062db",
+      "sha256": "2742b719f69c3bc3f0004884cd99de8f3d985a8d0a70314a21011a5e57777eef",
       "configs_sha256": "ac74c4f08f2115e473412d140db476d5982e9d98a068c3581f2d1cebca3262c6"
     },
     "Layout/HashAlignment": {
@@ -445,7 +445,7 @@
       "cases": "cops/Layout/HeredocArgumentClosingParenthesis/unit/cases.jsonl",
       "configs": "cops/Layout/HeredocArgumentClosingParenthesis/unit/configs.json",
       "count": 82,
-      "sha256": "1bf6af8d90464f884d5ba4e1f643e75d36f50b97f4718115c3c7b7cfab955f0e",
+      "sha256": "21089c0d80d51d1bae331b1e7e2e3495bc74be003367592ba0946495f237ea30",
       "configs_sha256": "9e05f912353f1fd7b44b6bafeb169d0772588b00a6720219520d4de89d31d8ed"
     },
     "Layout/HeredocIndentation": {
@@ -514,8 +514,8 @@
     "Layout/LineEndStringConcatenationIndentation": {
       "cases": "cops/Layout/LineEndStringConcatenationIndentation/unit/cases.jsonl",
       "configs": "cops/Layout/LineEndStringConcatenationIndentation/unit/configs.json",
-      "count": 59,
-      "sha256": "239bcc57eda403c755537e09ab65b329845c3edde0742954d9dccf750927d3bc",
+      "count": 63,
+      "sha256": "a5c267d3cdedb5ea687fdd22ffaefe285338d01d268e714e979cf575297be433",
       "configs_sha256": "23530c8739cf5a19719b81a0d660db5349183a3b8dab6b467a4f700fbffb4e04"
     },
     "Layout/LineLength": {
@@ -542,8 +542,8 @@
     "Layout/MultilineAssignmentLayout": {
       "cases": "cops/Layout/MultilineAssignmentLayout/unit/cases.jsonl",
       "configs": "cops/Layout/MultilineAssignmentLayout/unit/configs.json",
-      "count": 36,
-      "sha256": "1d5dbbd69d31a5be8e32cdf75032d59d560b0de218b82d69a37401af6e5519da",
+      "count": 41,
+      "sha256": "4f3b0b943731751883e094b50d2b3a3ea40c8d7bf2f66fdb95a0aaff6114d8a8",
       "configs_sha256": "9ba2bcb8edcb3ecceea655590bfa1c9fd442d485ae8033e93cbde483fee9c1b6"
     },
     "Layout/MultilineBlockLayout": {
@@ -619,15 +619,15 @@
     "Layout/RedundantLineBreak": {
       "cases": "cops/Layout/RedundantLineBreak/unit/cases.jsonl",
       "configs": "cops/Layout/RedundantLineBreak/unit/configs.json",
-      "count": 118,
-      "sha256": "f9f1b523f52fe49493dc707f427c16dfe3a0d869874942565f738c6e45671e80",
+      "count": 121,
+      "sha256": "dcc7d1f48acfe54542f95a54a6a2420e3eca793950c4fdbbbe40a6a125028de1",
       "configs_sha256": "c44bf08924bf3f49ef5c036d4cfe57b39e8aa69e097dd02eb724f0e031f5af65"
     },
     "Layout/RescueEnsureAlignment": {
       "cases": "cops/Layout/RescueEnsureAlignment/unit/cases.jsonl",
       "configs": "cops/Layout/RescueEnsureAlignment/unit/configs.json",
       "count": 107,
-      "sha256": "e9ea472b5fee33e4c77c85f276cf52357de89a665369718929af85002dff83f6",
+      "sha256": "8468750f21642d8ce23ad0434072cf0240159f242c8b2819d1c07374551aa3b1",
       "configs_sha256": "c906692c8c25660ae2e81c16cdc2ac0023f7327a1fdb0ca482e732e5d3798c7f"
     },
     "Layout/SingleLineBlockChain": {
@@ -704,7 +704,7 @@
       "cases": "cops/Layout/SpaceAroundOperators/unit/cases.jsonl",
       "configs": "cops/Layout/SpaceAroundOperators/unit/configs.json",
       "count": 109,
-      "sha256": "e7ee8e0bfa1e73c493dde97fb06f71b74ee17e8d89e6afbb9b454936fae99554",
+      "sha256": "8c42c55ec7ca8bf33b83e0a426d8ac01243d2a74013488554b48646d84973833",
       "configs_sha256": "48cde81622b313c5be57bacf0b11405e062e277df2437af7d99718cf84c9777e"
     },
     "Layout/SpaceBeforeBlockBraces": {
@@ -788,7 +788,7 @@
       "cases": "cops/Layout/SpaceInsideParens/unit/cases.jsonl",
       "configs": "cops/Layout/SpaceInsideParens/unit/configs.json",
       "count": 36,
-      "sha256": "19cea5f3b6b2e27512ebbbd0efe4869c03d2a1b6889480f1948aa782bc60de89",
+      "sha256": "c584283579bf016d229c0a9431f42b003dd80385a3c9108ce56e33d4ae9fb9bc",
       "configs_sha256": "0293adae654c9ec65c6363c42d7b7579343e2d5828f61331855f2b864c52ae10"
     },
     "Layout/SpaceInsidePercentLiteralDelimiters": {
@@ -864,15 +864,15 @@
     "Lint/AmbiguousRange": {
       "cases": "cops/Lint/AmbiguousRange/unit/cases.jsonl",
       "configs": "cops/Lint/AmbiguousRange/unit/configs.json",
-      "count": 60,
-      "sha256": "3c792aeabd6ea32f945661a951f1eac1af1adca3cd370bd8e8fa30549a682df8",
+      "count": 63,
+      "sha256": "dcd3922823364e85bd6853474ce46a8369bbd8bf3291c4f8c822e6ca86c6b9be",
       "configs_sha256": "2f14b419df486fe26da90c6c9afeb683f09c54304a836fbd19ea6221fe821a51"
     },
     "Lint/AmbiguousRegexpLiteral": {
       "cases": "cops/Lint/AmbiguousRegexpLiteral/unit/cases.jsonl",
       "configs": "cops/Lint/AmbiguousRegexpLiteral/unit/configs.json",
-      "count": 30,
-      "sha256": "61f5e5e60d37a7cdc3f38cf68db35546c2349300db950859e67cdff2d46c66ce",
+      "count": 32,
+      "sha256": "26e051ee59a891e66dac936fa6046e6f781d8880a2e618c5e8b848fe6c05582a",
       "configs_sha256": "d90674f56f658518e6816101e4ccc59d6d61941974b38ccb214198112f64986a"
     },
     "Lint/ArrayLiteralInRegexp": {
@@ -942,7 +942,7 @@
       "cases": "cops/Lint/ConstantResolution/unit/cases.jsonl",
       "configs": "cops/Lint/ConstantResolution/unit/configs.json",
       "count": 25,
-      "sha256": "233f0a8fc2ae462ce4f58a11f1dc80c0ce4cfe5a7cba63ab46c81e4074cf2883",
+      "sha256": "b912a9a36ef893c7246604c6be4fe0add7b90696eeaf75e5eb412a665fc88186",
       "configs_sha256": "d76ebea7adcf8891942323c3ad721f6540d96ea56e6a481a8745b140337ef540"
     },
     "Lint/CopDirectiveSyntax": {
@@ -1159,7 +1159,7 @@
       "cases": "cops/Lint/ErbNewArguments/unit/cases.jsonl",
       "configs": "cops/Lint/ErbNewArguments/unit/configs.json",
       "count": 11,
-      "sha256": "f2e0e3ef6c6939c2127c0c8a235edd1cc357b65dd0868757721ba2a91d3f018a",
+      "sha256": "57ac2fbebb054c0d6fe717860f968d89caa3dd85d1a722dbbcc72c6410ec3372",
       "configs_sha256": "2b76de88347e275eee75e678527aaf43dd94d3df30b0560f1d6caf60463df2c5"
     },
     "Lint/FlipFlop": {
@@ -1298,8 +1298,8 @@
     "Lint/MissingCopEnableDirective": {
       "cases": "cops/Lint/MissingCopEnableDirective/unit/cases.jsonl",
       "configs": "cops/Lint/MissingCopEnableDirective/unit/configs.json",
-      "count": 19,
-      "sha256": "f63fe40f10e8eb38e668d979628dbfec7731c2c40956892d8caaad8124531cf0",
+      "count": 21,
+      "sha256": "23bc056769c0a440dc030948c0c54970b56b0e8110779f9c88cb2a9eac5610e2",
       "configs_sha256": "f48022f3ac0dd17a439eaf5b75b94b0780b5a1da027139ca145c7b7e97ebd164"
     },
     "Lint/MissingSuper": {
@@ -1404,7 +1404,7 @@
       "cases": "cops/Lint/OrAssignmentToConstant/unit/cases.jsonl",
       "configs": "cops/Lint/OrAssignmentToConstant/unit/configs.json",
       "count": 12,
-      "sha256": "c28577f4b1fbad25d0d71ec797105050455a1fb7c52c07c38cf09cb79d0212b5",
+      "sha256": "d04138130adf2c49d7b30282b995ec01a49d186baf13347658861a03489168ff",
       "configs_sha256": "26b8e1028a25392669bdb0c9e184a20bfda13f3725e877281ef7a12c57479de7"
     },
     "Lint/OrderedMagicComments": {
@@ -1467,7 +1467,7 @@
       "cases": "cops/Lint/RedundantCopEnableDirective/unit/cases.jsonl",
       "configs": "cops/Lint/RedundantCopEnableDirective/unit/configs.json",
       "count": 33,
-      "sha256": "4a0b04c12c168cceaffa42cbd2f4f1ba4614b7dce3830728566b03a48c869636",
+      "sha256": "cc53d88315dc34b563f47678ce30676df0059d3f6f77f358e8ed522614f0ba18",
       "configs_sha256": "b5afd7ee54d649f72c34a727f4167c1c84b06fca3783646801dad693fed072dc"
     },
     "Lint/RedundantDirGlobSort": {
@@ -1621,7 +1621,7 @@
       "cases": "cops/Lint/SelfAssignment/unit/cases.jsonl",
       "configs": "cops/Lint/SelfAssignment/unit/configs.json",
       "count": 61,
-      "sha256": "403d6cf62717ba50b379bd13db65f57151761947a26385195c68f0cf18bc6191",
+      "sha256": "f76637f254fd6bd1b073dcb1aa8d3a13bea78f9bcab4d164eb97e29d311d9b88",
       "configs_sha256": "cf67cae5abe663cc3e669a12bf4ec4b15d95e842e5d484fa5c516df38f9e3fa8"
     },
     "Lint/SendWithMixinArgument": {
@@ -1677,7 +1677,7 @@
       "cases": "cops/Lint/SuppressedExceptionInNumberConversion/unit/cases.jsonl",
       "configs": "cops/Lint/SuppressedExceptionInNumberConversion/unit/configs.json",
       "count": 28,
-      "sha256": "ed1ea768036162a927e8acd70b1d75433c57490dc4809db95d1fd4ab91da7ae2",
+      "sha256": "194dccd2168d55490cdabf2a4df92c00201a36f941dce6fc2939e06d9d90e5c4",
       "configs_sha256": "226fded8850424d06265f814836c98b7712149fe872abf7a9038c94a8feb2100"
     },
     "Lint/SymbolConversion": {
@@ -1732,8 +1732,8 @@
     "Lint/UnderscorePrefixedVariableName": {
       "cases": "cops/Lint/UnderscorePrefixedVariableName/unit/cases.jsonl",
       "configs": "cops/Lint/UnderscorePrefixedVariableName/unit/configs.json",
-      "count": 19,
-      "sha256": "6438d962c61c230f3be96ceb023d1ef278e9a0ef0a8fb064cf5c13400f742a1a",
+      "count": 21,
+      "sha256": "e403e155ac3093cae16e246c586080341e3cf9e4a9af35889aa65d72972d64c0",
       "configs_sha256": "1b7e5c21a4fd6785fc3420f461c7a94ddcd04d940925442bfbe1537c00e6354c"
     },
     "Lint/UnescapedBracketInRegexp": {
@@ -1830,9 +1830,9 @@
     "Lint/UselessConstantScoping": {
       "cases": "cops/Lint/UselessConstantScoping/unit/cases.jsonl",
       "configs": "cops/Lint/UselessConstantScoping/unit/configs.json",
-      "count": 15,
-      "sha256": "fd46a3b2588601d7ecf9695d913ec29a17b7fdb6bed1cf37d7a99106c83327e0",
-      "configs_sha256": "827758b5bf3f8701316c99b5dc3475b975ed5439b3065a73c925ef3d87c6b159"
+      "count": 17,
+      "sha256": "3cfde0c293790bfa436278f0c086b9a472574f61cae5f44594e9728dd867e747",
+      "configs_sha256": "a97f3ba1c4e28b38ac4921714ef57fc903fc1109cf6e42d246d8798f84e656c7"
     },
     "Lint/UselessDefaultValueArgument": {
       "cases": "cops/Lint/UselessDefaultValueArgument/unit/cases.jsonl",
@@ -1928,8 +1928,8 @@
     "Metrics/BlockNesting": {
       "cases": "cops/Metrics/BlockNesting/unit/cases.jsonl",
       "configs": "cops/Metrics/BlockNesting/unit/configs.json",
-      "count": 26,
-      "sha256": "5a0a90fb2903ad892b50a4c88a0efc24f25fa977e55e9d2a0ef7f9b31694cc08",
+      "count": 27,
+      "sha256": "ed0136eef2e0ddb4bda0092c7a98ccdc0511d8240b46ca68546f6fc1c7631a9e",
       "configs_sha256": "5dada769d57325a37729cf5ed764f4601460e9346ab0b7937ddf267bf714b80b"
     },
     "Metrics/ClassLength": {
@@ -2054,8 +2054,8 @@
     "Naming/HeredocDelimiterNaming": {
       "cases": "cops/Naming/HeredocDelimiterNaming/unit/cases.jsonl",
       "configs": "cops/Naming/HeredocDelimiterNaming/unit/configs.json",
-      "count": 22,
-      "sha256": "e27630d6013548ea9dcd14cec41a0cdafd626474b2bec51d1798c579c9157a6d",
+      "count": 25,
+      "sha256": "e4c34cbee03e1d37fb8a927d021f541d8799f782b8cb087f2b153a232462163b",
       "configs_sha256": "cf7e063edc6fe4d4dbb9bdf74dec932d5eeafc8232dc8229c35486abe9a565f7"
     },
     "Naming/InclusiveLanguage": {
@@ -2110,8 +2110,8 @@
     "Naming/VariableName": {
       "cases": "cops/Naming/VariableName/unit/cases.jsonl",
       "configs": "cops/Naming/VariableName/unit/configs.json",
-      "count": 118,
-      "sha256": "1a5d4302e30ffcbf91159a7918a4f08b5a080d06d1ab817ae59bef86fd5cc112",
+      "count": 121,
+      "sha256": "4f0ec0e14ed7ccb2496eed34d63b9a63575d585d41c6d896ea4310b6af221ef3",
       "configs_sha256": "7cf2f3e0ddc8733019bbf46fb7e9da0ab6a11a5078c9cf33877745c487100181"
     },
     "Naming/VariableNumber": {
@@ -2181,7 +2181,7 @@
       "cases": "cops/Style/AccessorGrouping/unit/cases.jsonl",
       "configs": "cops/Style/AccessorGrouping/unit/configs.json",
       "count": 39,
-      "sha256": "18e03ad0a3fca2be7bc94ac5e13a3be7ca65b2f3f3f110dc6caa9631275f5059",
+      "sha256": "31ea809f308f7619295a0af79e27d43079cc471b6e0ad00a6e2230b1ec34047c",
       "configs_sha256": "e5814e06aeabfd79956c46f1130d9f905f167f168818b2a131a52627940ace77"
     },
     "Style/Alias": {
@@ -2264,8 +2264,8 @@
     "Style/AutoResourceCleanup": {
       "cases": "cops/Style/AutoResourceCleanup/unit/cases.jsonl",
       "configs": "cops/Style/AutoResourceCleanup/unit/configs.json",
-      "count": 13,
-      "sha256": "04eb1140282fce042ac1fa8fd6ad6bd139dbbce1d8771bb850d770ad72809e9a",
+      "count": 16,
+      "sha256": "f1629e2f7d3d5852f8e393d36c7bae7eea8c800c9913d717c00e5d421ba48e44",
       "configs_sha256": "e9c06293f53dfc73730cb6c2de5a2be14a8ab187e6f5fc1de545f39f7478a6b1"
     },
     "Style/BarePercentLiterals": {
@@ -2356,7 +2356,7 @@
       "cases": "cops/Style/ClassMethods/unit/cases.jsonl",
       "configs": "cops/Style/ClassMethods/unit/configs.json",
       "count": 7,
-      "sha256": "7c9f5ef19cb5435c54846789300fed8b77a1615cf10e05e135d6497e12caafd1",
+      "sha256": "b2302375831a788e24a6490bcabf83f08daab2536699a7003e8f4defafbc6550",
       "configs_sha256": "5fa34e50b568a63ae5bc0fa922e6a9726f673bc2cc0b8432d04bb103083ac408"
     },
     "Style/ClassMethodsDefinitions": {
@@ -2419,7 +2419,7 @@
       "cases": "cops/Style/CombinableLoops/unit/cases.jsonl",
       "configs": "cops/Style/CombinableLoops/unit/configs.json",
       "count": 25,
-      "sha256": "e2af3f0f89960282a7c797ea03c51c4d6d792688937740501e74cf10db014b81",
+      "sha256": "97cf5a25459c3e19919cae491dd22eb064cc3a8661306b3a1d831b88c4890223",
       "configs_sha256": "c0941f2e8369cc497b0107cfaad401440bb8f1d233fc41b1b6c745f05b45b38c"
     },
     "Style/CommandLiteral": {
@@ -2433,7 +2433,7 @@
       "cases": "cops/Style/CommentAnnotation/unit/cases.jsonl",
       "configs": "cops/Style/CommentAnnotation/unit/configs.json",
       "count": 36,
-      "sha256": "6ae2260f4ab0216056d03efdfad54c026cd7eaa652e9439040d3e8414b37ff47",
+      "sha256": "5f0552e3e37a41e4f8edc0e736f6d67e9d2ca1b9296a5c870c2174f80f6e9129",
       "configs_sha256": "df4bd427083f92066a87bc1b50233d61dfe6f57f0c7093abcadb329a2c73e993"
     },
     "Style/CommentedKeyword": {
@@ -2551,8 +2551,8 @@
     "Style/DocumentationMethod": {
       "cases": "cops/Style/DocumentationMethod/unit/cases.jsonl",
       "configs": "cops/Style/DocumentationMethod/unit/configs.json",
-      "count": 86,
-      "sha256": "f1b9b5f992ce8586f2304358b6afd8e3fe98706be19549886d1719b7a0bab9d1",
+      "count": 99,
+      "sha256": "3848f80d9a0db7746ae086783a1093738632812185b06cf049be89d1fceab756",
       "configs_sha256": "2fd86dff4af2d495a7040c7c27dd66e83976e8d4d277696633f1dc26fd86cd02"
     },
     "Style/DoubleCopDisableDirective": {
@@ -2615,7 +2615,7 @@
       "cases": "cops/Style/EmptyHeredoc/unit/cases.jsonl",
       "configs": "cops/Style/EmptyHeredoc/unit/configs.json",
       "count": 9,
-      "sha256": "958683b53a5d9191221051f14a5cef18a27aa63d24963b8cc993210ffdd7700c",
+      "sha256": "6a1c8ee545479f5abc069052bd450d3eb915a2431ffcfbadd1173872165fb69a",
       "configs_sha256": "94bde56d8f2e64c8fd439f2abfd0d95ad7298f0bcbf924c80397b8e0c65e69b0"
     },
     "Style/EmptyLambdaParameter": {
@@ -2629,7 +2629,7 @@
       "cases": "cops/Style/EmptyLiteral/unit/cases.jsonl",
       "configs": "cops/Style/EmptyLiteral/unit/configs.json",
       "count": 51,
-      "sha256": "85a96b65c3723b9949f04b1cb361a27218729e84ee0da5e5ba5bda185e73adb9",
+      "sha256": "61660afc9c7d98b4a02ef78ae13dcf21870148897fd683dd5919da0d60ca298e",
       "configs_sha256": "56aa26e2c08dc792fb28c602b36b60e223f5eb9eb060ba409311fdb7b790d37e"
     },
     "Style/EmptyMethod": {
@@ -2664,21 +2664,21 @@
       "cases": "cops/Style/EndlessMethod/unit/cases.jsonl",
       "configs": "cops/Style/EndlessMethod/unit/configs.json",
       "count": 66,
-      "sha256": "73300cc719509212fd2c90790e07cad6da10dc5d43f5b93935c83b581e8fb802",
+      "sha256": "9329fbb1dffc647de79d6dd9ccf34c6aec6b1f06c5b9668c0af2c6608937a0fe",
       "configs_sha256": "52bc9638eeb37a9aea657320f989c6c2be4f67bede63b381082c5f661dc1e668"
     },
     "Style/EnvHome": {
       "cases": "cops/Style/EnvHome/unit/cases.jsonl",
       "configs": "cops/Style/EnvHome/unit/configs.json",
       "count": 12,
-      "sha256": "a13bc05c638ee0f7cc41bda17f1136b9c338cc40469c4164756f3ed833b3148b",
+      "sha256": "a15e429696f2fef28f9f02d5ab78c056d1e8f3d05d1408f47b955906e0e3a408",
       "configs_sha256": "6541ad187d6ae63d13e697713d2e0b199e7145c5e565cf284bfe5f99a780bae0"
     },
     "Style/EvalWithLocation": {
       "cases": "cops/Style/EvalWithLocation/unit/cases.jsonl",
       "configs": "cops/Style/EvalWithLocation/unit/configs.json",
       "count": 39,
-      "sha256": "900c6a789b321299b0c4cf97db21e8dd45e6029415ec9648d2559fabd657db77",
+      "sha256": "c5ce4cc13fcc098249ee993267f861ea11db29526603e6ad27d241dbbf2c719a",
       "configs_sha256": "75bb4553f32601eef2b92b7f5ce632d9901d26bac37eee802ebee4bf3c100cf1"
     },
     "Style/EvenOdd": {
@@ -2706,7 +2706,7 @@
       "cases": "cops/Style/ExplicitBlockArgument/unit/cases.jsonl",
       "configs": "cops/Style/ExplicitBlockArgument/unit/configs.json",
       "count": 32,
-      "sha256": "8296c83a04b35af1f282ea308dce27426cfb45b5ccf2d22f2a28214b13bfcc57",
+      "sha256": "8066e2f3ad0ca6614cd6d6dedc9fcd1cdd0bd72eb67f3b724bff79d3bfd7c3a1",
       "configs_sha256": "f0fab1f0c117eaa13ef2e21afc383783f7710176e17681aad78252da025b62e0"
     },
     "Style/ExponentialNotation": {
@@ -2719,8 +2719,8 @@
     "Style/FetchEnvVar": {
       "cases": "cops/Style/FetchEnvVar/unit/cases.jsonl",
       "configs": "cops/Style/FetchEnvVar/unit/configs.json",
-      "count": 49,
-      "sha256": "7314466654fe9de2cdae5c794aa6232023b0ddf64186940602d29d65bb8066f7",
+      "count": 51,
+      "sha256": "66f27966fc13d3dd190a274f2504f91c8327b2f59b2942d6e677357d48efdd4c",
       "configs_sha256": "46f79ce9e42dfc12855d4d5bc77650afeda278146aff9f54d1df8b151343eba2"
     },
     "Style/FileEmpty": {
@@ -2790,7 +2790,7 @@
       "cases": "cops/Style/FormatStringToken/unit/cases.jsonl",
       "configs": "cops/Style/FormatStringToken/unit/configs.json",
       "count": 269,
-      "sha256": "a6e53cb4faec0fa327f57642cc8d1cf2c2c1d668ad62a56cdbe8e5cf0dafdce3",
+      "sha256": "2e108173f3a09557636dcff96558ec8a32ba62eac73889cf53277c347b7ad167",
       "configs_sha256": "5ac7e28e2cf33c9a98b570e02ea9a116a8e498c66a513df7c1d1af9cb0d14fe7"
     },
     "Style/FrozenStringLiteralComment": {
@@ -2915,9 +2915,9 @@
     "Style/IfUnlessModifier": {
       "cases": "cops/Style/IfUnlessModifier/unit/cases.jsonl",
       "configs": "cops/Style/IfUnlessModifier/unit/configs.json",
-      "count": 148,
-      "sha256": "5d32a80379d1ef598e9ffc4aae031f76e5fcf755670dd4470ed3d723aac91aba",
-      "configs_sha256": "8149256b6c4622393080952f6a071b53a8579cf570ada33c5b5175f6361fa6db"
+      "count": 154,
+      "sha256": "64cd76d4bc104a8fb22754cfe90292ba72c45df72710d5d06d7ab212c3546da8",
+      "configs_sha256": "c32b0e375cec3e9de90807838daee1a91284dd0d1bcb25d03712d369588065ba"
     },
     "Style/IfUnlessModifierOfIfUnless": {
       "cases": "cops/Style/IfUnlessModifierOfIfUnless/unit/cases.jsonl",
@@ -3000,7 +3000,7 @@
       "cases": "cops/Style/ItBlockParameter/unit/cases.jsonl",
       "configs": "cops/Style/ItBlockParameter/unit/configs.json",
       "count": 35,
-      "sha256": "4beb057abcfba4b9b4c3d14392b42f1f6c220c8a4d0fb71700c89f219ebd8fd2",
+      "sha256": "45971917f1361256032c7700e1d7db68cd80589992648918e9b1fe8484ec6434",
       "configs_sha256": "d0137e1cf913789720198756de71c782d86343c6bbb35f2656fa9c9c1d93b2f7"
     },
     "Style/KeywordArgumentsMerging": {
@@ -3084,7 +3084,7 @@
       "cases": "cops/Style/MethodCallWithArgsParentheses/unit/cases.jsonl",
       "configs": "cops/Style/MethodCallWithArgsParentheses/unit/configs.json",
       "count": 190,
-      "sha256": "d218e7444a58bf2e79adca9a3a12798137bac387383670c2eea601d85b562d9b",
+      "sha256": "6ba05a2de42e50319aec231d070e6f60b326ac5ecf9e2f15bdd16cfcce05c985",
       "configs_sha256": "0d047b663d7280db008812c92f5b75e459b20a33cbd3907cb0136a9024745749"
     },
     "Style/MethodCallWithoutArgsParentheses": {
@@ -3546,7 +3546,7 @@
       "cases": "cops/Style/RedundantAssignment/unit/cases.jsonl",
       "configs": "cops/Style/RedundantAssignment/unit/configs.json",
       "count": 22,
-      "sha256": "50583d3a954dd51e7d4c06dcc1c1fe6c8d0b46b9f6be57bc951ad39be4ac72d6",
+      "sha256": "6fe850fe52cd77e5e9289c369d658aae7371a13328b3ffb6f07cf6d7b1fe4344",
       "configs_sha256": "98ed56f102c5b7527ef83b125293bb9580746cf50ea6f30744a861423b53a1c9"
     },
     "Style/RedundantBegin": {
@@ -3560,7 +3560,7 @@
       "cases": "cops/Style/RedundantCapitalW/unit/cases.jsonl",
       "configs": "cops/Style/RedundantCapitalW/unit/configs.json",
       "count": 16,
-      "sha256": "50d23551d7fc73812bbf522a93afc16c5f873f5299d3bd72e7ae6e45236e7cd1",
+      "sha256": "552cd537436b4a32f12321470b08f7dec397307242aa58ea709277f2dea3ce4a",
       "configs_sha256": "94a7031bb8ce1d5544378797b0197d7e813c8bf70fa025f37b463f15db10a3b2"
     },
     "Style/RedundantCondition": {
@@ -3644,7 +3644,7 @@
       "cases": "cops/Style/RedundantFreeze/unit/cases.jsonl",
       "configs": "cops/Style/RedundantFreeze/unit/configs.json",
       "count": 65,
-      "sha256": "e48f2016416505292a5af4e3c987ef2913795b2763c606b314f3d7d8969234b6",
+      "sha256": "5e63a9bfed1df770c1f4f9ba50daee5cd96d062b46d6c214eb1a9f3d7a6c7b2d",
       "configs_sha256": "80a7318266dfc0b23c80f15e9cc7741225f9ad84ed051f27d928862b4978ddc7"
     },
     "Style/RedundantHeredocDelimiterQuotes": {
@@ -3692,8 +3692,8 @@
     "Style/RedundantParentheses": {
       "cases": "cops/Style/RedundantParentheses/unit/cases.jsonl",
       "configs": "cops/Style/RedundantParentheses/unit/configs.json",
-      "count": 358,
-      "sha256": "b8fdc3d6311077f81157d9f005f0abe48ffc71f7eab23303685b9814820de8a0",
+      "count": 363,
+      "sha256": "c0f426434121d29c617b5060b201707cb3ee0ff14f878ae37968751404b1e769",
       "configs_sha256": "43240b53732fae34f0b4e06c2364bf9cecac1fe6b36711cc6d6212cab9f6eeaa"
     },
     "Style/RedundantPercentQ": {
@@ -3889,7 +3889,7 @@
       "cases": "cops/Style/Semicolon/unit/cases.jsonl",
       "configs": "cops/Style/Semicolon/unit/configs.json",
       "count": 38,
-      "sha256": "7c2d9d6635527501630815b4ab1cdf82ded4146e5d26961432536c3332951407",
+      "sha256": "ba3e17cde0b7bb23cd3a37dd84076ffe2210748aaa92fe0ca69a48cce0c7d1f6",
       "configs_sha256": "0fc46a78ae1b1ef8b2e11a83bc587bcc8a38a306d1c7f37ac31dd6bc3a9a8222"
     },
     "Style/Send": {
@@ -3994,14 +3994,14 @@
       "cases": "cops/Style/StringConcatenation/unit/cases.jsonl",
       "configs": "cops/Style/StringConcatenation/unit/configs.json",
       "count": 34,
-      "sha256": "45517b243504e0d25d8a36a4258bd12dfd4b0cb9dd5c3dfd30a032d988b04db1",
+      "sha256": "4ef4e7da10159d90e707537182621173d5994325b7f44e55db78e5e1c01cf0af",
       "configs_sha256": "961510c75793c902315a7915ad141491f5f9b80ce47d84aa9bcb2b1de6e88db5"
     },
     "Style/StringHashKeys": {
       "cases": "cops/Style/StringHashKeys/unit/cases.jsonl",
       "configs": "cops/Style/StringHashKeys/unit/configs.json",
       "count": 13,
-      "sha256": "38edaa3226f82d5b1a27a0da0bb762803db46128edc8eb5c449a152d43f2ba86",
+      "sha256": "6f9b41d3d15411a09227cf2dc373ab889c2ce7fbacfd46cba0d28f296f8d02b6",
       "configs_sha256": "c143a7330a8089e8af80a7489dc3e46d23e39d1646c8d89faebbcc4aad3f73af"
     },
     "Style/StringLiterals": {

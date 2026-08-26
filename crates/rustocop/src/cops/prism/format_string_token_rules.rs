@@ -35,16 +35,14 @@ impl FormatStringTokenRule<'_, '_, '_> {
             _ => TokenStyle::Annotated,
         };
         let conservative = self.config_value("Mode").is_some_and(|mode| mode == "conservative");
-        let nonstandard_delimiter = node.opening_loc().is_some_and(|opening| {
-            opening.as_slice().starts_with(b"%") || opening.as_slice().starts_with(b"<<")
-        });
         let nested_in_interpolation = self
             .ancestors()
             .iter()
             .any(|ancestor| ancestor.as_interpolated_string_node().is_some());
         let prism_opaque_unannotated = self.related_config_value("AllCops", "ParserEngine")
             == Some("parser_prism")
-            && (nonstandard_delimiter || nested_in_interpolation && !directly_typical);
+            && nested_in_interpolation
+            && !directly_typical;
         return_if!(conservative && !typical);
         let max = self.config_usize("MaxUnannotatedPlaceholdersAllowed", 1);
         return_if!(tokens.iter().all(|token| token.style == TokenStyle::Unannotated) && tokens.len() <= max);

@@ -25,11 +25,10 @@ fn string_hash_keys(node: &ruby_prism::AssocNode<'_>, context: &mut CopContext<'
     let Some(key) = node.key().as_string_node() else {
         return;
     };
-    if key
+    let heredoc = key
         .opening_loc()
-        .is_some_and(|opening| opening.as_slice().starts_with(b"<<"))
-        || context.source_file().node(&key.as_node()).contains('\n')
-    {
+        .is_some_and(|opening| opening.as_slice().starts_with(b"<<"));
+    if context.source_file().node(&key.as_node()).contains('\n') && !heredoc {
         return;
     }
     if environment_or_replacement_hash(context) {

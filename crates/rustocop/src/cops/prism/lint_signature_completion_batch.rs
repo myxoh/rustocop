@@ -1579,7 +1579,6 @@ fn documentation_method(context: &mut CopContext<'_, '_>) {
         definitions: HashMap<usize, std::ops::Range<usize>>,
         modifiers: HashMap<usize, std::ops::Range<usize>>,
         public: HashMap<usize, bool>,
-        explicit_begin_definitions: std::collections::HashSet<usize>,
         postfix_definitions: std::collections::HashSet<usize>,
     }
 
@@ -1735,19 +1734,6 @@ fn documentation_method(context: &mut CopContext<'_, '_>) {
             ruby_prism::visit_unless_node(self, node);
         }
 
-        fn visit_begin_node(&mut self, node: &ruby_prism::BeginNode<'pr>) {
-            if let Some(statements) = node.statements() {
-                if let Some(definition) = statements
-                    .body()
-                    .iter()
-                    .next()
-                    .and_then(|statement| statement.as_def_node())
-                {
-                    self.explicit_begin_definitions.insert(definition.location().start_offset());
-                }
-            }
-            ruby_prism::visit_begin_node(self, node);
-        }
     }
 
     let parsed = parse(context.source().as_bytes());
@@ -1807,8 +1793,7 @@ fn documentation_method(context: &mut CopContext<'_, '_>) {
         }
         let modifier_uses_parent = matches!(prefix, "module_function" | "ruby2_keywords");
         let postfix_definition = definition_ranges.postfix_definitions.contains(&definition_start);
-        let documented = if definition_ranges.explicit_begin_definitions.contains(&definition_start)
-            || postfix_definition
+        let documented = if postfix_definition
             || !prefix.is_empty() && !modifier_uses_parent
         {
             false
