@@ -61,7 +61,10 @@ impl RedundantLineContinuationRule<'_, '_, '_> {
         {
             return false;
         }
-        if before.ends_with('=') && next.contains('.') && next.contains('{') {
+        if before.ends_with('=')
+            && next.trim_end().ends_with(['+', '-', '*', '/', '%'])
+            && (next.contains('{') || next.contains(" do"))
+        {
             return true;
         }
         starts_with_arithmetic_operator(next)
@@ -105,7 +108,7 @@ fn interpolation_begins_next_line(source: &str, slash: usize) -> bool {
 fn line_has_comment(line: &str) -> bool {
     let mut quote = None;
     let mut escaped = false;
-    for character in line.chars() {
+    for (position, character) in line.char_indices() {
         if escaped {
             escaped = false;
             continue;
@@ -116,7 +119,10 @@ fn line_has_comment(line: &str) -> bool {
             quote = None;
         } else if quote.is_none() && matches!(character, '\'' | '"') {
             quote = Some(character);
-        } else if quote.is_none() && character == '#' {
+        } else if quote.is_none()
+            && character == '#'
+            && !inline_literal_contains(line, position)
+        {
             return true;
         }
     }
@@ -180,9 +186,11 @@ fn leading_dot_method_chain_with_blank_line(line: &str, next: &str) -> bool {
 
 fn inside_literal(source: &str, offset: usize) -> bool {
     let mut quote = None;
+    let mut percent_literal = None::<(char, char, usize)>;
     let mut escaped = false;
     let mut comment = false;
-    for character in source[..offset].chars() {
+    let mut characters = source[..offset].char_indices().peekable();
+    while let Some((_, character)) = characters.next() {
         if comment {
             if character == '\n' {
                 comment = false;
@@ -193,17 +201,84 @@ fn inside_literal(source: &str, offset: usize) -> bool {
             escaped = false;
         } else if character == '\\' {
             escaped = true;
+        } else if let Some((opening, closing, depth)) = percent_literal.as_mut() {
+            if opening != closing && character == *opening {
+                *depth += 1;
+            } else if character == *closing {
+                if *depth == 1 {
+                    percent_literal = None;
+                } else {
+                    *depth -= 1;
+                }
+            }
         } else if quote == Some(character) {
             quote = None;
         } else if quote.is_none() && matches!(character, '\'' | '"' | '`') {
             quote = Some(character);
         } else if quote.is_none() && character == '#' {
             comment = true;
+        } else if quote.is_none() && character == '%' {
+            let mut lookahead = characters.clone();
+            let Some((_, mut delimiter)) = lookahead.next() else {
+                continue;
+            };
+            if matches!(delimiter, 'q' | 'Q' | 'w' | 'W' | 'i' | 'I' | 'x' | 'r' | 's') {
+                let Some((_, next_delimiter)) = lookahead.next() else {
+                    continue;
+                };
+                delimiter = next_delimiter;
+                characters.next();
+            }
+            if delimiter.is_ascii_alphanumeric() || delimiter.is_whitespace() {
+                continue;
+            }
+            characters.next();
+            let closing = match delimiter {
+                '(' => ')',
+                '[' => ']',
+                '{' => '}',
+                '<' => '>',
+                other => other,
+            };
+            percent_literal = Some((delimiter, closing, 1));
         } else if character == '\n' && quote == Some('\'') {
             quote = None;
         }
     }
-    quote.is_some()
+    quote.is_some() || percent_literal.is_some()
+}
+
+fn inline_literal_contains(line: &str, offset: usize) -> bool {
+    let before = &line[..offset];
+    let after = &line[offset..];
+    if let Some(percent) = before.rfind('%') {
+        let tail = &before[percent + 1..];
+        let mut chars = tail.chars();
+        let first = chars.next();
+        let delimiter = if first.is_some_and(|character| {
+            matches!(character, 'q' | 'Q' | 'w' | 'W' | 'i' | 'I' | 'x' | 'r' | 's')
+        }) {
+            chars.next()
+        } else {
+            first
+        };
+        if let Some(delimiter) = delimiter {
+            let closing = match delimiter {
+                '(' => ')',
+                '[' => ']',
+                '{' => '}',
+                '<' => '>',
+                other => other,
+            };
+            if !delimiter.is_ascii_alphanumeric()
+                && !delimiter.is_whitespace()
+                && after.contains(closing)
+            {
+                return true;
+            }
+        }
+    }
+    before.matches('/').count() % 2 == 1 && after.contains('/')
 }
 
 fn inside_heredoc(source: &str, offset: usize) -> bool {
@@ -275,7 +350,7 @@ fn inside_regexp(source: &str, offset: usize) -> bool {
             quote = Some(character);
             continue;
         }
-        if quote.is_none() && character == '#' {
+        if quote.is_none() && !in_regexp && character == '#' {
             break;
         }
         if quote.is_none() && character == '/' {

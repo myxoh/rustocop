@@ -40,7 +40,7 @@ impl InfiniteLoopRule<'_, '_, '_> {
         predicate: Node<'_>,
     ) {
         let range = location.start_offset()..location.end_offset();
-        return_if!(changes_local_scope(self.source(), range.clone()));
+        return_if!(changes_local_scope(range.clone(), self.ancestors()));
         let modifier = keyword.start_offset() > location.start_offset();
         let source = self.source_file().slice(range.clone()).unwrap_or_default();
         let post_condition = modifier && source.trim_start().starts_with("begin");
@@ -110,90 +110,82 @@ fn truthy_literal(node: &Node<'_>) -> bool {
         || node.as_regular_expression_node().is_some()
 }
 
-fn changes_local_scope(source: &str, loop_range: std::ops::Range<usize>) -> bool {
-    let loop_source = &source[loop_range.clone()];
-    let file = SourceFile::new(source);
-    let scope_start = file
-        .lines()
-        .take_while(|(offset, _)| *offset < loop_range.start)
-        .filter(|(_, line)| line.trim_start().starts_with("def "))
-        .map(|(offset, _)| offset)
-        .last()
-        .unwrap_or(0);
-    let definition_line = source[scope_start..]
-        .lines()
-        .next()
-        .unwrap_or_default();
-    let definition_indent = definition_line.len() - definition_line.trim_start().len();
-    let scope_end = file
-        .lines()
-        .skip_while(|(offset, _)| *offset < loop_range.end)
-        .find_map(|(offset, line)| {
-            let trimmed = line.trim_start();
-            let indentation = line.len() - trimmed.len();
-            (trimmed == "end" && indentation == definition_indent).then_some(offset)
-        })
-        .unwrap_or(source.len());
-    let before = &source[scope_start..loop_range.start];
-    let after = &source[loop_range.end..scope_end];
-    assigned_local_names(loop_source).into_iter().any(|name| {
-        !contains_assignment(before, &name) && contains_word(after, &name)
+fn changes_local_scope(loop_range: std::ops::Range<usize>, ancestors: &[Node<'_>]) -> bool {
+    let Some(body) = ancestors.iter().rev().find_map(|ancestor| {
+        ancestor
+            .as_def_node()
+            .and_then(|definition| definition.body())
+            .or_else(|| ancestor.as_block_node().and_then(|block| block.body()))
+            .or_else(|| ancestor.as_lambda_node().and_then(|lambda| lambda.body()))
+            .or_else(|| ancestor.as_class_node().and_then(|class| class.body()))
+            .or_else(|| ancestor.as_module_node().and_then(|module| module.body()))
+            .or_else(|| {
+                ancestor
+                    .as_program_node()
+                    .map(|program| program.statements().as_node())
+            })
+    }) else {
+        return false;
+    };
+    let mut uses = LocalVariableUses::default();
+    uses.visit(&body);
+    uses.assignments.iter().any(|(name, assignment)| {
+        loop_range.contains(assignment)
+            && !uses
+                .assignments
+                .iter()
+                .any(|(candidate, offset)| candidate == name && *offset < loop_range.start)
+            && uses
+                .references
+                .iter()
+                .any(|(candidate, offset)| candidate == name && *offset > loop_range.end)
     })
 }
 
-fn assigned_local_names(source: &str) -> Vec<String> {
-    let mut names = Vec::new();
-    let mut block_depth = 0_usize;
-    for line in source.lines() {
-        let code = line.split('#').next().unwrap_or_default();
-        let trimmed = code.trim();
-        if trimmed == "end" && block_depth > 0 {
-            block_depth -= 1;
-            continue;
-        }
-        let opens_block = trimmed.ends_with(" do")
-            || trimmed.contains(" do |")
-            || trimmed.contains(" do|");
-        if block_depth > 0 {
-            block_depth += usize::from(opens_block);
-            continue;
-        }
-        if opens_block {
-            block_depth = 1;
-            continue;
-        }
-        let Some((left, right)) = code.split_once('=') else {
-            continue;
-        };
-        if right.starts_with('=') || left.trim_end().ends_with(['!', '<', '>', '=']) {
-            continue;
-        }
-        names.extend(
-            left.split(',')
-                .map(str::trim)
-                .filter(|name| {
-                    !name.is_empty()
-                        && !name.starts_with(['@', '$'])
-                        && name
-                            .bytes()
-                            .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
-                })
-                .map(str::to_string),
-        );
+#[derive(Default)]
+struct LocalVariableUses {
+    assignments: Vec<(Vec<u8>, usize)>,
+    references: Vec<(Vec<u8>, usize)>,
+}
+
+impl LocalVariableUses {
+    fn assignment(&mut self, name: &[u8], location: Location<'_>) {
+        self.assignments
+            .push((name.to_vec(), location.start_offset()));
     }
-    names
 }
 
-fn contains_assignment(source: &str, name: &str) -> bool {
-    source.lines().any(|line| {
-        line.split_once('=').is_some_and(|(left, right)| {
-            !right.starts_with('=') && left.split(',').any(|candidate| candidate.trim() == name)
-        })
-    })
-}
+impl<'pr> ruby_prism::Visit<'pr> for LocalVariableUses {
+    fn visit_local_variable_write_node(&mut self, node: &ruby_prism::LocalVariableWriteNode<'pr>) {
+        self.assignment(node.name().as_slice(), node.location());
+        ruby_prism::visit_local_variable_write_node(self, node);
+    }
 
-fn contains_word(source: &str, name: &str) -> bool {
-    source
-        .split(|character: char| !character.is_ascii_alphanumeric() && character != '_')
-        .any(|word| word == name)
+    fn visit_local_variable_or_write_node(&mut self, node: &ruby_prism::LocalVariableOrWriteNode<'pr>) {
+        self.assignment(node.name().as_slice(), node.location());
+        ruby_prism::visit_local_variable_or_write_node(self, node);
+    }
+
+    fn visit_local_variable_and_write_node(&mut self, node: &ruby_prism::LocalVariableAndWriteNode<'pr>) {
+        self.assignment(node.name().as_slice(), node.location());
+        ruby_prism::visit_local_variable_and_write_node(self, node);
+    }
+
+    fn visit_local_variable_operator_write_node(&mut self, node: &ruby_prism::LocalVariableOperatorWriteNode<'pr>) {
+        self.assignment(node.name().as_slice(), node.location());
+        ruby_prism::visit_local_variable_operator_write_node(self, node);
+    }
+
+    fn visit_local_variable_target_node(&mut self, node: &ruby_prism::LocalVariableTargetNode<'pr>) {
+        self.assignment(node.name().as_slice(), node.location());
+    }
+
+    fn visit_local_variable_read_node(&mut self, node: &ruby_prism::LocalVariableReadNode<'pr>) {
+        self.references
+            .push((node.name().as_slice().to_vec(), node.location().start_offset()));
+    }
+
+    fn visit_def_node(&mut self, _node: &ruby_prism::DefNode<'pr>) {}
+    fn visit_class_node(&mut self, _node: &ruby_prism::ClassNode<'pr>) {}
+    fn visit_module_node(&mut self, _node: &ruby_prism::ModuleNode<'pr>) {}
 }

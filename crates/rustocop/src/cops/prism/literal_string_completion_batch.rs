@@ -744,11 +744,12 @@ impl WordArrayRule<'_, '_, '_> {
         };
         let opening_source = self.source_file().at(&opening);
         let elements = node.elements().iter().collect::<Vec<_>>();
-        let minimum = self.config_usize("MinSize", 0);
-        return_unless!(elements.len() >= minimum);
 
         if opening_source == "[" {
+            let minimum = self.config_usize("MinSize", 0);
             return_if!(
+                elements.len() < minimum
+                    ||
                 elements.iter().any(|element| element.as_string_node().is_none())
                     || complex_content(&elements, self)
                     || self.within_matrix_of_complex_content()
@@ -787,7 +788,7 @@ impl WordArrayRule<'_, '_, '_> {
     ) {
         return_if!(
             self.policy().enforced_style("percent") == "percent"
-                && !invalid_percent_array_contents(elements)
+                && !invalid_percent_array_contents(elements, self)
         );
         let replacement = build_bracketed_array(node, elements, self);
         let message = bracketed_word_array_message(&replacement);
@@ -820,10 +821,15 @@ fn complex_content(elements: &[Node<'_>], context: &CopContext<'_, '_>) -> bool 
         .any(|element| !simple_word(element, context))
 }
 
-fn invalid_percent_array_contents(elements: &[Node<'_>]) -> bool {
+fn invalid_percent_array_contents(
+    elements: &[Node<'_>],
+    context: &CopContext<'_, '_>,
+) -> bool {
     elements.iter().any(|element| {
         element.as_string_node().is_some_and(|string| {
-            !valid_utf8(string.unescaped()) || string.unescaped().contains(&b' ')
+            !valid_utf8(string.unescaped())
+                || string.unescaped().contains(&b' ')
+                || context.source_file().node(element).contains("\\ ")
         })
     })
 }
@@ -912,7 +918,11 @@ fn bracket_array_has_comment(
         .source_file()
         .node(&node.as_node())
         .lines()
-        .any(|line| line.trim_start().starts_with('#') || line.contains(" #"))
+        .any(|line| {
+            line.trim_start().starts_with('#')
+                || line.trim_start().starts_with("[#")
+                || line.contains(" #")
+        })
 }
 
 fn matrix_of_complex_content(
@@ -1123,7 +1133,7 @@ fn build_bracketed_array(
 
 fn bracketed_word(node: &Node<'_>, context: &CopContext<'_, '_>) -> String {
     if let Some(string) = node.as_string_node() {
-        let value = String::from_utf8_lossy(string.unescaped());
+        let value = String::from_utf8_lossy(string.unescaped()).replace("\\ ", " ");
         if value.contains('\'') || value.chars().any(char::is_control) {
             return format!("\"{}\"", escape_double_quoted(&value));
         }

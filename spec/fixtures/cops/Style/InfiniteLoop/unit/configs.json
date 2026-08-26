@@ -1,5 +1,6 @@
 {
   "2bfc4c3eb33f154e": "---\nLayout/IndentationWidth:\n  Width: 4\nStyle/InfiniteLoop:\n  Enabled: true\n",
   "4713eb164c920e52": "---\nLayout/IndentationWidth:\n  Width: 2\nStyle/InfiniteLoop:\n  Enabled: true\n",
-  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n"
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
+  "6f1616c5ef015896": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nLayout/LineLength:\n  Enabled: true\n  Max: 100\nMetrics/AbcSize:\n  Enabled: true\n  Max: 10\nMetrics/MethodLength:\n  Enabled: true\n  Max: 10\nStyle/Documentation:\n  Enabled: true\nStyle/Copyright:\n  Notice: \"^Copyright (\\\\(c\\\\) )?2[0-9]{3} .+\"\n  AutocorrectNotice: \"# Copyright (c) 2026 Rustocop project parity corpus.\"\nStyle/HashSyntax:\n  Enabled: true\nStyle/RedundantReturn:\n  Enabled: true\nStyle/Semicolon:\n  Enabled: true\nStyle/StringLiterals:\n  Enabled: true\n  EnforcedStyle: double_quotes\n"
 }

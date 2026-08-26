@@ -4543,7 +4543,10 @@ fn safe_navigation_conditional(
 ) {
     let strict_project_config =
         context.related_config_value("AllCops", "DisabledByDefault") == Some("true");
-    if strict_project_config && safe_navigation_in_chained_block(context.ancestors()) {
+    if strict_project_config
+        && (safe_navigation_in_chained_block(context.ancestors())
+            || safe_navigation_in_outer_call_before_scope(context.ancestors()))
+    {
         return;
     }
     let checked_source = context.source_file().node(checked).to_string();
@@ -4569,6 +4572,23 @@ fn safe_navigation_conditional(
         offense,
         replacement,
     );
+}
+
+fn safe_navigation_in_outer_call_before_scope(ancestors: &[Node<'_>]) -> bool {
+    for ancestor in ancestors.iter().rev() {
+        if ancestor.as_def_node().is_some()
+            || ancestor.as_block_node().is_some()
+            || ancestor.as_lambda_node().is_some()
+            || ancestor.as_class_node().is_some()
+            || ancestor.as_module_node().is_some()
+        {
+            return false;
+        }
+        if ancestor.as_call_node().is_some() {
+            return true;
+        }
+    }
+    false
 }
 
 fn safe_navigation_and(node: &ruby_prism::AndNode<'_>, context: &mut CopContext<'_, '_>) {

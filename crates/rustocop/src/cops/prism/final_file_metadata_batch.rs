@@ -35,6 +35,12 @@ fn script_permission(context: &mut CopContext<'_, '_>) {
 }
 
 fn redundant_disable(context: &mut CopContext<'_, '_>) {
+    // RuboCop's selected-only compatibility path has no companion offenses to
+    // evaluate when every cop is disabled by default, so no directive can be
+    // proven redundant in that mode.
+    if context.related_config_value("AllCops", "DisabledByDefault") == Some("true") {
+        return;
+    }
     let mut explicitly_enabled = HashSet::new();
     for (offset, line) in context.source_file().lines() {
         let Some(directive) = parse_cop_directive(line) else {

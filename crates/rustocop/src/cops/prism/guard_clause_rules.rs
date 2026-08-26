@@ -175,9 +175,9 @@ impl GuardClauseRule<'_, '_, '_> {
         return_if!(condition_source.contains('\n') || assignment_parent(self.ancestors()));
         return_if!(assigned_local_used(&condition, if_statements.as_ref()));
         let if_guard = guard_clause(if_statements.as_ref(), self.source_file())
-            .filter(|guard| !guard.source.contains('\n'));
+            .filter(|guard| guard.logical || !guard.source.contains('\n'));
         let else_guard = guard_clause(else_statements.as_ref(), self.source_file())
-            .filter(|guard| !guard.source.contains('\n'));
+            .filter(|guard| guard.logical || !guard.source.contains('\n'));
         let (guard, guard_keyword, branch_range, keep_statements) = if let Some(guard) = if_guard {
             (guard, conditional_keyword, if_statements.as_ref().map(|statements| statements.location()), else_statements.as_ref())
         } else if let Some(guard) = else_guard {
@@ -283,7 +283,11 @@ fn branch_trivial(statements: Option<&StatementsNode<'_>>) -> bool {
     let Some(statements) = statements else { return true };
     if statements.body().len() != 1 { return false }
     statements.body().first().is_some_and(|node| {
-        node.as_if_node().is_none() && node.as_unless_node().is_none() && node.as_begin_node().is_none()
+        node.as_if_node().is_none()
+            && node.as_unless_node().is_none()
+            && node
+                .as_begin_node()
+                .is_none_or(|begin| begin.begin_keyword_loc().is_some())
     })
 }
 
@@ -358,12 +362,39 @@ fn assigned_local_used(condition: &Node<'_>, statements: Option<&StatementsNode<
             self.read.push(node.name().as_slice().to_vec());
             ruby_prism::visit_local_variable_read_node(self, node);
         }
+        fn visit_multi_write_node(&mut self, node: &ruby_prism::MultiWriteNode<'pr>) {
+            #[derive(Default)]
+            struct TargetNames(Vec<Vec<u8>>);
+            impl<'pr> Visit<'pr> for TargetNames {
+                fn visit_local_variable_target_node(
+                    &mut self,
+                    target: &ruby_prism::LocalVariableTargetNode<'pr>,
+                ) {
+                    self.0.push(target.name().as_slice().to_vec());
+                }
+            }
+            let mut targets = TargetNames::default();
+            for target in node
+                .lefts()
+                .iter()
+                .chain(node.rest())
+                .chain(node.rights().iter())
+            {
+                targets.visit(&target);
+            }
+            self.assigned.extend(targets.0);
+            self.visit(&node.value());
+        }
     }
     let mut names = LocalNames::default();
     names.visit(condition);
     let Some(statements) = statements else { return false };
     let mut branch = LocalNames::default();
-    branch.visit(&statements.as_node());
+    for statement in statements.body().iter() {
+        if statement.as_local_variable_read_node().is_none() {
+            branch.visit(&statement);
+        }
+    }
     names
         .assigned
         .iter()

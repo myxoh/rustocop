@@ -1,7 +1,7 @@
 # Current project-parity gaps
 
 Generated from the same complete audit as [the evidence matrix](cop-support.md).
-Evidence updated at `2026-08-25T17:24:07-04:00`.
+Evidence updated at `2026-08-25T22:40:03-04:00`.
 This queue contains only failures from that 50-project audit; it does not use the old
 Verified/Heuristic qualification labels or captured-case pass counts.
 
@@ -9,8 +9,8 @@ The gap is unmatched complete diagnostic signatures, not the difference
 between aggregate offense counts. A cop can have equal counts and still have a
 nonzero gap because its message, severity, path, or source range differs.
 
-- Rust source: `commit 3360b7ab3bc13f1fdd138c47a275cd7190c989ea`
-- Unresolved cops: 109
+- Rust source: `cop source 5bb6d38ac57fa534c2133a3069b04cf47c28dca36743e79ab4d6cde8e990345b`
+- Unresolved cops: 99
 
 | Cop | Status | Rustocop | RuboCop | Exact | Signature gap | Project regression evidence |
 | --- | --- | ---: | ---: | ---: | ---: | --- |
@@ -113,13 +113,3 @@ nonzero gap because its message, severity, path, or source range differs.
 | `Naming/InclusiveLanguage` | Mismatch | 476 | 480 | 474 | 8 | Project-derived |
 | `Layout/BlockAlignment` | Mismatch | 218 | 215 | 213 | 7 | Project-derived |
 | `Lint/DuplicateSetElement` | Mismatch | 9 | 2 | 2 | 7 | Project-derived |
-| `Style/SafeNavigation` | Mismatch | 1174 | 1167 | 1167 | 7 | Project-derived |
-| `Style/TrivialAccessors` | Mismatch | 151 | 152 | 148 | 7 | No |
-| `Lint/ShadowingOuterLocalVariable` | Mismatch | 380 | 386 | 380 | 6 | Project-derived |
-| `Style/RedundantLineContinuation` | Mismatch | 84 | 88 | 83 | 6 | Project-derived |
-| `Style/GuardClause` | Mismatch | 4326 | 4327 | 4324 | 5 | Project-derived |
-| `Style/InfiniteLoop` | Mismatch | 545 | 546 | 543 | 5 | Project-derived |
-| `Style/WordArray` | Mismatch | 3510 | 3513 | 3509 | 5 | No |
-| `Lint/RedundantCopDisableDirective` | RuboCop gate error | — | — | — | — | No |
-| `Style/ClassAndModuleChildren` | RuboCop gate error | — | — | — | — | Project-derived |
-| `Style/FileWrite` | RuboCop gate error | — | — | — | — | No |

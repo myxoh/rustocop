@@ -537,7 +537,7 @@ impl<'pr> ruby_prism::Visit<'pr> for OuterTargetNames {
 
 fn declaration_in_same_conditional_branch(
     declaration: usize,
-    _target: usize,
+    target: usize,
     context: &CopContext<'_, '_>,
 ) -> bool {
     let Some(root) = context
@@ -561,7 +561,7 @@ fn declaration_in_same_conditional_branch(
     };
     let mut conditionals = ConditionalRegions::default();
     ruby_prism::Visit::visit(&mut conditionals, &root);
-    let Some(outer) = conditionals
+    let Some(region) = conditionals
         .regions
         .iter()
         .filter(|region| region.range.contains(&declaration))
@@ -569,25 +569,48 @@ fn declaration_in_same_conditional_branch(
     else {
         return true;
     };
-    let Some(variable_node) = shadowing_variable_node(context) else {
-        return true;
-    };
-
-    // This is RuboCop's same_conditions_node_different_branch? contract:
-    // compare the block's semantic parent with the nearest conditional around
-    // the outer declaration, not merely the branches containing both offsets.
-    if variable_node == outer.range {
-        return false;
-    }
-    if outer.if_type
-        && outer
+    let target_conditional = conditionals
+        .regions
+        .iter()
+        .filter(|candidate| {
+            candidate
+                .branches
+                .iter()
+                .any(|branch| branch.single_statement && branch.range.contains(&target))
+        })
+        .min_by_key(|candidate| candidate.range.end - candidate.range.start);
+    if region.if_type
+        && region
             .else_branch
             .as_ref()
-            .is_some_and(|branch| *branch == variable_node)
+            .is_some_and(|else_branch| else_branch.contains(&target))
+        && shadowing_block_is_direct_statement(context)
     {
         return false;
     }
+    let Some(target_conditional) = target_conditional else {
+        return true;
+    };
+    if target_conditional.range == region.range {
+        return false;
+    }
     true
+}
+
+fn shadowing_block_is_direct_statement(context: &CopContext<'_, '_>) -> bool {
+    context
+        .ancestors()
+        .iter()
+        .rev()
+        .find(|ancestor| ancestor.as_call_node().is_none())
+        .is_some_and(|ancestor| {
+            ancestor.as_statements_node().is_some()
+                || ancestor.as_if_node().is_some()
+                || ancestor.as_unless_node().is_some()
+                || ancestor.as_else_node().is_some()
+                || ancestor.as_when_node().is_some()
+                || ancestor.as_in_node().is_some()
+        })
 }
 
 #[derive(Default)]
@@ -597,16 +620,79 @@ struct ConditionalRegions {
 
 struct ConditionalRegion {
     range: std::ops::Range<usize>,
-    else_branch: Option<std::ops::Range<usize>>,
+    branches: Vec<ConditionalBranch>,
     if_type: bool,
+    else_branch: Option<std::ops::Range<usize>>,
+}
+
+struct ConditionalBranch {
+    range: std::ops::Range<usize>,
+    single_statement: bool,
+}
+
+fn conditional_branch(node: Node<'_>) -> ConditionalBranch {
+    let single_statement = node
+        .as_statements_node()
+        .is_some_and(|statements| statements.body().len() == 1)
+        || node
+            .as_else_node()
+            .and_then(|branch| branch.statements())
+            .is_some_and(|statements| statements.body().len() == 1)
+        || node
+            .as_when_node()
+            .and_then(|branch| branch.statements())
+            .is_some_and(|statements| statements.body().len() == 1)
+        || node.as_if_node().is_some();
+    ConditionalBranch {
+        range: location_offsets(node.location()),
+        single_statement,
+    }
+}
+
+fn conditional_branch_range(node: Node<'_>) -> std::ops::Range<usize> {
+    node.as_else_node()
+        .and_then(|branch| branch.statements())
+        .map(|statements| location_offsets(statements.location()))
+        .unwrap_or_else(|| location_offsets(node.location()))
 }
 
 impl<'pr> ruby_prism::Visit<'pr> for ConditionalRegions {
+    fn visit_and_node(&mut self, node: &ruby_prism::AndNode<'pr>) {
+        self.regions.push(ConditionalRegion {
+            range: location_offsets(node.location()),
+            branches: Vec::new(),
+            if_type: false,
+            else_branch: None,
+        });
+        ruby_prism::visit_and_node(self, node);
+    }
+
+    fn visit_or_node(&mut self, node: &ruby_prism::OrNode<'pr>) {
+        self.regions.push(ConditionalRegion {
+            range: location_offsets(node.location()),
+            branches: Vec::new(),
+            if_type: false,
+            else_branch: None,
+        });
+        ruby_prism::visit_or_node(self, node);
+    }
+
     fn visit_if_node(&mut self, node: &ruby_prism::IfNode<'pr>) {
         self.regions.push(ConditionalRegion {
             range: location_offsets(node.location()),
-            else_branch: node.subsequent().map(|branch| location_offsets(branch.location())),
             if_type: true,
+            else_branch: node
+                .subsequent()
+                .map(conditional_branch_range),
+            branches: node
+                .statements()
+                .map(|branch| conditional_branch(branch.as_node()))
+                .into_iter()
+                .chain(
+                    node.subsequent()
+                        .map(|branch| conditional_branch(branch)),
+                )
+                .collect(),
         });
         ruby_prism::visit_if_node(self, node);
     }
@@ -614,8 +700,19 @@ impl<'pr> ruby_prism::Visit<'pr> for ConditionalRegions {
     fn visit_unless_node(&mut self, node: &ruby_prism::UnlessNode<'pr>) {
         self.regions.push(ConditionalRegion {
             range: location_offsets(node.location()),
-            else_branch: node.else_clause().map(|branch| location_offsets(branch.location())),
             if_type: true,
+            else_branch: node
+                .else_clause()
+                .map(|branch| conditional_branch_range(branch.as_node())),
+            branches: node
+                .statements()
+                .map(|branch| conditional_branch(branch.as_node()))
+                .into_iter()
+                .chain(
+                    node.else_clause()
+                        .map(|branch| conditional_branch(branch.as_node())),
+                )
+                .collect(),
         });
         ruby_prism::visit_unless_node(self, node);
     }
@@ -623,8 +720,12 @@ impl<'pr> ruby_prism::Visit<'pr> for ConditionalRegions {
     fn visit_while_node(&mut self, node: &ruby_prism::WhileNode<'pr>) {
         self.regions.push(ConditionalRegion {
             range: location_offsets(node.location()),
-            else_branch: None,
             if_type: false,
+            else_branch: None,
+            branches: node
+                .statements()
+                .map(|branch| vec![conditional_branch(branch.as_node())])
+                .unwrap_or_default(),
         });
         ruby_prism::visit_while_node(self, node);
     }
@@ -632,8 +733,12 @@ impl<'pr> ruby_prism::Visit<'pr> for ConditionalRegions {
     fn visit_until_node(&mut self, node: &ruby_prism::UntilNode<'pr>) {
         self.regions.push(ConditionalRegion {
             range: location_offsets(node.location()),
-            else_branch: None,
             if_type: false,
+            else_branch: None,
+            branches: node
+                .statements()
+                .map(|branch| vec![conditional_branch(branch.as_node())])
+                .unwrap_or_default(),
         });
         ruby_prism::visit_until_node(self, node);
     }
@@ -641,8 +746,17 @@ impl<'pr> ruby_prism::Visit<'pr> for ConditionalRegions {
     fn visit_case_node(&mut self, node: &ruby_prism::CaseNode<'pr>) {
         self.regions.push(ConditionalRegion {
             range: location_offsets(node.location()),
-            else_branch: None,
             if_type: false,
+            else_branch: None,
+            branches: node
+                .conditions()
+                .iter()
+                .map(conditional_branch)
+                .chain(
+                    node.else_clause()
+                        .map(|branch| conditional_branch(branch.as_node())),
+                )
+                .collect(),
         });
         ruby_prism::visit_case_node(self, node);
     }
@@ -650,32 +764,19 @@ impl<'pr> ruby_prism::Visit<'pr> for ConditionalRegions {
     fn visit_case_match_node(&mut self, node: &ruby_prism::CaseMatchNode<'pr>) {
         self.regions.push(ConditionalRegion {
             range: location_offsets(node.location()),
-            else_branch: None,
             if_type: false,
+            else_branch: None,
+            branches: node
+                .conditions()
+                .iter()
+                .map(conditional_branch)
+                .chain(
+                    node.else_clause()
+                        .map(|branch| conditional_branch(branch.as_node())),
+                )
+                .collect(),
         });
         ruby_prism::visit_case_match_node(self, node);
-    }
-}
-
-fn shadowing_variable_node(context: &CopContext<'_, '_>) -> Option<std::ops::Range<usize>> {
-    let ancestors = context.ancestors();
-    let mut index = ancestors.len().checked_sub(1)?;
-    if ancestors[index].as_call_node().is_some() {
-        index = index.checked_sub(1)?;
-    }
-    loop {
-        let node = ancestors.get(index)?;
-        if let Some(statements) = node.as_statements_node() {
-            if statements.body().len() == 1 {
-                index = index.checked_sub(1)?;
-                continue;
-            }
-        }
-        if node.as_when_node().is_some() {
-            index = index.checked_sub(1)?;
-            continue;
-        }
-        return Some(location_offsets(node.location()));
     }
 }
 

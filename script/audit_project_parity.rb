@@ -24,6 +24,7 @@ ROOT = LAYOUT.root
 DEFAULT_CONFIG = LAYOUT.benchmark_config
 DEFAULT_NATIVE = LAYOUT.native_binary
 DEFAULT_RUBOCOP_REFERENCE = LAYOUT.compatibility_evidence("project_rubocop_reference.json.gz")
+RUBOCOP_REFERENCE_COMPATIBILITY = File.join(ROOT, "lib/rustocop/rubocop_reference_compatibility.rb")
 RUBOCOP_REFERENCE_VERSION = 2
 
 options = {
@@ -140,6 +141,7 @@ abort "loaded RuboCop #{rubocop_version}, expected #{Rustocop::ProjectCorpus::RU
   rubocop_version == Rustocop::ProjectCorpus::RUBOCOP_VERSION
 rubocop = [
   RbConfig.ruby,
+  "-r", RUBOCOP_REFERENCE_COMPATIBILITY,
   Gem.bin_path("rubocop", "rubocop", "=#{Rustocop::ProjectCorpus::RUBOCOP_VERSION}")
 ].freeze
 
@@ -167,6 +169,50 @@ def rubocop_command(rubocop, common, corpus, cops)
     *rubocop, "--cache", "false", "--no-server", "--format", "json",
     "--only", cops.join(","), *common, corpus
   ]
+end
+
+def capture_rubocop(rubocop, common, corpus, cops)
+  special = "Lint/RedundantCopDisableDirective"
+  return capture(rubocop_command(rubocop, common, corpus, cops)) unless cops.include?(special) && cops.length > 1
+
+  results = [cops - [special], [special]].map do |selection|
+    capture(rubocop_command(rubocop, common, corpus, selection))
+  end
+  failed = results.find { |result| !accepted?(result) }
+  return failed if failed
+
+  selections = [cops - [special], [special]]
+  reports = results.map { |result| JSON.parse(result.fetch("stdout")) }
+  files = reports
+    .zip(selections)
+    .flat_map do |report, selection|
+      report.fetch("files").map do |file|
+        file.merge(
+          "offenses" => file.fetch("offenses").select do |offense|
+            selection.include?(offense.fetch("cop_name"))
+          end
+        )
+      end
+    end
+    .group_by { |file| file.fetch("path") }
+    .map do |path, entries|
+      { "path" => path, "offenses" => entries.flat_map { |entry| entry.fetch("offenses") } }
+    end
+  offense_count = files.sum { |file| file.fetch("offenses").length }
+  {
+    "stdout" => JSON.generate(
+      "metadata" => reports.fetch(0).fetch("metadata"),
+      "files" => files,
+      "summary" => {
+        "offense_count" => offense_count,
+        "target_file_count" => files.length,
+        "inspected_file_count" => files.length
+      }
+    ),
+    "stderr" => results.map { |result| result.fetch("stderr") }.join,
+    "exitstatus" => offense_count.zero? ? 0 : 1,
+    "seconds" => results.sum { |result| result.fetch("seconds") }
+  }
 end
 
 def validate_reference!(reference, path, rubocop_version:, config_sha256:, projects:, cops:)
@@ -254,7 +300,7 @@ if options[:refresh_rubocop_reference]
   probe_rubocop_result = nil
   loop do
     warn "RuboCop engine gate: #{projects.fetch(0).fetch('name')} (#{rubocop_survivors.length} cops)"
-    result = capture(rubocop_command(rubocop, common, probe_corpus, rubocop_survivors))
+    result = capture_rubocop(rubocop, common, probe_corpus, rubocop_survivors)
     if accepted?(result)
       probe_rubocop_result = result
       break
@@ -263,7 +309,7 @@ if options[:refresh_rubocop_reference]
       cop_inspection_error?(result)
 
     culprit = isolate_crash(rubocop_survivors) do |subset|
-      probe = capture(rubocop_command(rubocop, common, probe_corpus, subset))
+      probe = capture_rubocop(rubocop, common, probe_corpus, subset)
       !accepted?(probe)
     end
     abort "could not isolate interacting RuboCop error among: #{culprit.join(', ')}" unless culprit.one?
@@ -283,14 +329,14 @@ if options[:refresh_rubocop_reference]
     result = if project == projects.fetch(0)
                probe_rubocop_result
              else
-               capture(rubocop_command(rubocop, common, project.fetch("corpus"), rubocop_survivors))
+               capture_rubocop(rubocop, common, project.fetch("corpus"), rubocop_survivors)
              end
     until accepted?(result)
       abort "RuboCop could not parse the #{project.fetch('name')} corpus: #{result.fetch('stderr')}" unless
         cop_inspection_error?(result)
 
       culprit = isolate_crash(rubocop_survivors) do |subset|
-        probe = capture(rubocop_command(rubocop, common, project.fetch("corpus"), subset))
+        probe = capture_rubocop(rubocop, common, project.fetch("corpus"), subset)
         !accepted?(probe)
       end
       abort "could not isolate interacting RuboCop error among: #{culprit.join(', ')}" unless culprit.one?
@@ -305,7 +351,7 @@ if options[:refresh_rubocop_reference]
       abort "every selected cop failed a RuboCop reference gate" if rubocop_survivors.empty?
 
       warn "RuboCop reference retry: #{project.fetch('name')} (#{rubocop_survivors.length} cops)"
-      result = capture(rubocop_command(rubocop, common, project.fetch("corpus"), rubocop_survivors))
+      result = capture_rubocop(rubocop, common, project.fetch("corpus"), rubocop_survivors)
     end
 
     offenses = Rustocop::DiagnosticSignatures.hashes_from_report(

@@ -450,14 +450,18 @@ fn class_module_children(context: &mut CopContext<'_, '_>) {
     let definitions = definition_offsets(context.source());
     let mut compact_covered_until = 0usize;
     for (index, (offset, line)) in lines.iter().copied().enumerate() {
-        let trimmed = line.trim_start();
-        let (keyword, override_key) = if trimmed.starts_with("class ") {
-            ("class ", "EnforcedStyleForClasses")
-        } else if trimmed.starts_with("module ") {
-            ("module ", "EnforcedStyleForModules")
-        } else {
+        let declaration = [("class ", "EnforcedStyleForClasses"), ("module ", "EnforcedStyleForModules")]
+            .into_iter()
+            .flat_map(|(keyword, override_key)| {
+                line.match_indices(keyword)
+                    .map(move |(column, _)| (column, keyword, override_key))
+            })
+            .filter(|(column, _, _)| definitions.all.contains(&(offset + column)))
+            .min_by_key(|(column, _, _)| *column);
+        let Some((indent, keyword, override_key)) = declaration else {
             continue;
         };
+        let trimmed = &line[indent..];
         let configured = context.config_value(override_key);
         let style = configured
             .filter(|style| !matches!(*style, "nil" | "null" | "~" | ""))
@@ -468,11 +472,7 @@ fn class_module_children(context: &mut CopContext<'_, '_>) {
         if name.is_empty() || name.contains('(') {
             continue;
         }
-        let indent = line.len() - trimmed.len();
         let declaration_start = offset + indent;
-        if !definitions.all.contains(&declaration_start) {
-            continue;
-        }
         let name_start = offset + indent + keyword.len();
         let name_range = name_start..name_start + name.len();
         if style == "nested" {
@@ -503,47 +503,132 @@ fn class_module_children(context: &mut CopContext<'_, '_>) {
                 .config_value("IndentationWidth")
                 .and_then(|value| value.parse::<usize>().ok())
                 .unwrap_or(2);
-            let unit = if lines[index + 1..end_index]
-                .iter()
-                .any(|(_, line)| line.starts_with('\t'))
-            {
+            let body_uses_tabs = index + 1 < end_index
+                && lines[index + 1..end_index]
+                    .iter()
+                    .any(|(_, line)| line.starts_with('\t'));
+            let unit = if body_uses_tabs {
                 "\t".to_string()
             } else {
                 " ".repeat(width)
             };
+            let namespace = parts[..parts.len() - 1].join("::");
+            let follows_single_line_namespace = context.source()[..offset]
+                .lines()
+                .any(|prior_line| {
+                    prior_line
+                        .trim_start()
+                        .starts_with(&format!("module {namespace};"))
+                });
             let mut replacement = String::new();
             let base = &line[..indent];
+            let nested_base = if base.trim().is_empty() {
+                base.to_string()
+            } else {
+                " ".repeat(indent + if keyword == "class " { 6 } else { 2 })
+            };
+            let outer_base = base
+                .chars()
+                .take_while(|character| character.is_whitespace())
+                .collect::<String>();
+            if end_index == index {
+                let suffix = &rest[name.len()..];
+                for (part_index, part) in parts.iter().enumerate() {
+                    let part = if part_index == 0 && name.starts_with("::") {
+                        format!("::{part}")
+                    } else {
+                        (*part).to_string()
+                    };
+                    let depth = if part_index + 1 == parts.len() {
+                        part_index.saturating_sub(1)
+                    } else {
+                        part_index
+                    };
+                    let declaration = if part_index + 1 == parts.len() {
+                        let suffix = suffix.replace("; end", ";   end");
+                        format!("{}{keyword}{part}{suffix}", unit.repeat(depth))
+                    } else {
+                        let namespace = &parts[..=part_index].join("::");
+                        let namespace_kind = prior_namespace_kind(context.source(), offset, namespace)
+                            .unwrap_or("module");
+                        format!("{}{namespace_kind} {part}", unit.repeat(depth))
+                    };
+                    replacement.push_str(if part_index == 0 { base } else { &nested_base });
+                    replacement.push_str(&declaration);
+                    replacement.push('\n');
+                }
+                for close_depth in (0..parts.len() - 1).rev() {
+                    replacement.push_str(&nested_base);
+                    replacement.push_str(&unit.repeat(close_depth));
+                    replacement.push_str("end\n");
+                }
+                let edit_end = lines
+                    .get(index + 1)
+                    .map_or(context.source().len(), |(offset, _)| *offset);
+                context.replace(
+                    "Use nested module/class definitions instead of compact style.",
+                    name_range.clone(),
+                    offset..edit_end,
+                    replacement,
+                );
+                continue;
+            }
             for (part_index, part) in parts.iter().enumerate() {
                 let part = if part_index == 0 && name.starts_with("::") {
                     format!("::{part}")
                 } else {
                     (*part).to_string()
                 };
+                let depth = if !base.trim().is_empty() {
+                    0
+                } else if follows_single_line_namespace {
+                    part_index.min(1)
+                } else {
+                    part_index
+                };
                 let declaration = if part_index + 1 == parts.len() {
                     let suffix = &rest[name.len()..];
-                    format!("{}{keyword}{part}{suffix}", unit.repeat(part_index))
+                    format!("{}{keyword}{part}{suffix}", unit.repeat(depth))
                 } else {
                     let namespace = &parts[..=part_index].join("::");
                     let namespace_kind = prior_namespace_kind(context.source(), offset, namespace)
                         .unwrap_or("module");
-                    format!("{}{namespace_kind} {part}", unit.repeat(part_index))
+                    format!("{}{namespace_kind} {part}", unit.repeat(depth))
                 };
-                replacement.push_str(base);
+                replacement.push_str(if part_index == 0 { base } else { &nested_base });
                 replacement.push_str(&declaration);
                 replacement.push('\n');
             }
             let added_depth = parts.len() - 1;
-            for (_, body_line) in &lines[index + 1..end_index] {
-                replacement.push_str(body_line);
-                replacement.push('\n');
+            if index + 1 < end_index {
+                for (_, body_line) in &lines[index + 1..end_index] {
+                    replacement.push_str(body_line);
+                    replacement.push('\n');
+                }
             }
-            replacement.push_str(base);
-            replacement.push_str(&unit.repeat(added_depth));
+            replacement.push_str(&nested_base);
+            replacement.push_str(&unit.repeat(if !base.trim().is_empty() {
+                0
+            } else if follows_single_line_namespace {
+                added_depth.min(1)
+            } else {
+                added_depth
+            }));
             replacement.push_str(lines[end_index].1.trim_start());
             replacement.push('\n');
             for close_depth in (0..added_depth).rev() {
-                replacement.push_str(base);
-                replacement.push_str(&unit.repeat(close_depth));
+                replacement.push_str(if !base.trim().is_empty() && close_depth == 0 {
+                    &outer_base
+                } else {
+                    &nested_base
+                });
+                replacement.push_str(&unit.repeat(if !base.trim().is_empty() {
+                    0
+                } else if follows_single_line_namespace {
+                    close_depth.min(1)
+                } else {
+                    close_depth
+                }));
                 replacement.push_str("end\n");
             }
             let edit_end = lines
