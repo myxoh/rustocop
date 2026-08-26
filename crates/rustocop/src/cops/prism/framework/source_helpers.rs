@@ -14,7 +14,3 @@ pub(super) fn all_offsets<'source>(
 ) -> impl Iterator<Item = usize> + 'source {
     source.match_indices(needle).map(|(offset, _)| offset)
 }
-
-pub(super) fn identifier_byte(byte: u8) -> bool {
-    byte.is_ascii_alphanumeric() || byte == b'_'
-}

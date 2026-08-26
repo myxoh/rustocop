@@ -1,38 +1,43 @@
 use super::*;
 
-declare_source_cops! {
-    EnvHome => "Style/EnvHome" => env_home,
-    AsciiComments => "Style/AsciiComments" => ascii_comments,
+define_cops! {
+    EnvHome => "Style/EnvHome" => call(env_home),
+    AsciiComments => "Style/AsciiComments" => source(ascii_comments),
 }
 
-fn env_home(source: &str, context: &mut Reporter<'_>) {
-    for (offset, line) in source_lines(source) {
-        let trimmed = line.trim();
-        let expression = trimmed
-            .rsplit_once('=')
-            .map_or(trimmed, |(_, right)| right.trim());
-        let normalized = expression.strip_prefix("::").unwrap_or(expression);
-        if matches!(
-            normalized,
-            "ENV['HOME']"
-                | "ENV[\"HOME\"]"
-                | "ENV.fetch('HOME')"
-                | "ENV.fetch(\"HOME\")"
-                | "ENV.fetch('HOME', nil)"
-                | "ENV.fetch(\"HOME\", nil)"
-        ) {
-            let start = offset + line.find(expression).unwrap_or(0);
-            context.replace(
-                "Use `Dir.home` instead.",
-                start..start + expression.len(),
-                start..start + expression.len(),
-                "Dir.home",
-            );
+fn env_home(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
+    if !root_constant(node.receiver(), b"ENV") {
+        return;
+    }
+    let arguments = node
+        .arguments()
+        .map(|arguments| arguments.arguments().iter().collect::<Vec<_>>())
+        .unwrap_or_default();
+    let home = arguments
+        .first()
+        .and_then(static_string)
+        .is_some_and(|value| value == b"HOME");
+    let supported = match call_name(node) {
+        b"[]" => arguments.len() == 1 && home,
+        b"fetch" => {
+            home && (arguments.len() == 1
+                || arguments.len() == 2 && arguments[1].as_nil_node().is_some())
         }
+        _ => false,
+    };
+    if supported {
+        let range = context.source_file().node_range(&node.as_node());
+        context.replace(
+            "Use `Dir.home` instead.",
+            range.clone(),
+            range,
+            "Dir.home",
+        );
     }
 }
 
-fn ascii_comments(source: &str, context: &mut Reporter<'_>) {
+fn ascii_comments(context: &mut CopContext<'_, '_>) {
+    let source = context.source();
     let allowed = context.config_values("AllowedChars").to_vec();
     let parsed = ruby_prism::parse(source.as_bytes());
     for comment in parsed.comments() {
@@ -62,12 +67,4 @@ fn ascii_comments(source: &str, context: &mut Reporter<'_>) {
             });
         context.report("Use only ascii symbols in comments.", start..end);
     }
-}
-
-fn source_lines(source: &str) -> impl Iterator<Item = (usize, &str)> {
-    source.split_inclusive('\n').scan(0, |offset, line| {
-        let start = *offset;
-        *offset += line.len();
-        Some((start, line.strip_suffix('\n').unwrap_or(line)))
-    })
 }

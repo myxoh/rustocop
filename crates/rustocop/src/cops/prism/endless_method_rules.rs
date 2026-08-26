@@ -13,12 +13,21 @@ fn endless_method(context: &mut CopContext<'_, '_>) {
     if style == "allow_always" {
         return;
     }
-    let lines = context.source_file().lines().collect::<Vec<_>>();
+    let source_file = context.source_file();
+    let lines = source_file.lines().collect::<Vec<_>>();
+    let literal_ranges = source_file.literal_ranges();
+    let comment_ranges = source_file.comment_ranges();
     for (index, (offset, line)) in lines.iter().copied().enumerate() {
         let Some(def_column) = line.find("def ") else {
             continue;
         };
-        if line[..def_column].trim_start().starts_with('#') {
+        let definition_start = offset + def_column;
+        if line[..def_column].trim_start().starts_with('#')
+            || literal_ranges
+                .iter()
+                .chain(&comment_ranges)
+                .any(|range| range.contains(&definition_start))
+        {
             continue;
         }
         let definition = &line[def_column..];
@@ -34,7 +43,7 @@ fn endless_method(context: &mut CopContext<'_, '_>) {
             if !multiline && style != "disallow" {
                 continue;
             }
-            let start = offset + def_column;
+            let start = definition_start;
             let end = lines[last].0 + lines[last].1.len();
             let message = if multiline {
                 "Avoid endless method definitions with multiple lines."
@@ -114,7 +123,7 @@ fn endless_method(context: &mut CopContext<'_, '_>) {
         if line_length_enabled && def_column + proposed.chars().count() > max {
             continue;
         }
-        let start = offset + def_column;
+        let start = definition_start;
         let end = lines[end_index].0 + lines[end_index].1.len();
         let mut replacement = proposed;
         for (_, continuation) in &lines[first_body_index + 1..end_index] {

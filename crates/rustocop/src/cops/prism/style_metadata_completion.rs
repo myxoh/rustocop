@@ -194,48 +194,18 @@ fn commented_keyword(context: &mut CopContext<'_, '_>) {
     }
 }
 
-fn ruby_comment_offset(line: &str) -> Option<usize> {
-    let mut quote = None;
-    let mut escaped = false;
-    for (index, byte) in line.bytes().enumerate() {
-        if let Some(delimiter) = quote {
-            if escaped {
-                escaped = false;
-            } else if byte == b'\\' {
-                escaped = true;
-            } else if byte == delimiter {
-                quote = None;
-            }
-        } else if matches!(byte, b'\'' | b'"') {
-            quote = Some(byte);
-        } else if byte == b'#' {
-            return Some(index);
-        }
-    }
-    None
-}
-
 fn comment_annotation(context: &mut CopContext<'_, '_>) {
     let keywords = context.config_values("Keywords").to_vec();
     let require_colon = context.config_bool("RequireColon", true);
     let mut previous_comment_line = None;
-    let mut embedded_document = false;
-    for (line_number, (offset, line)) in context.source_file().lines().enumerate() {
-        if line.trim_end_matches('\r') == "=begin" {
-            embedded_document = true;
-            previous_comment_line = None;
+    for comment_range in context.source_file().comment_ranges() {
+        if context.source().as_bytes().get(comment_range.start) != Some(&b'#') {
             continue;
         }
-        if embedded_document {
-            if line.trim_end_matches('\r') == "=end" {
-                embedded_document = false;
-            }
-            continue;
-        }
-        let Some(hash) = ruby_comment_offset(line) else {
-            previous_comment_line = None;
-            continue;
-        };
+        let line_number = context.line_index(comment_range.start);
+        let offset = context.line_start_at(line_number);
+        let line = context.line_at(line_number);
+        let hash = comment_range.start - offset;
         let comment_only = line[..hash].trim().is_empty();
         if comment_only && previous_comment_line == Some(line_number.saturating_sub(1)) {
             previous_comment_line = Some(line_number);

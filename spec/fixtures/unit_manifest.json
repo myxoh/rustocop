@@ -1,12 +1,12 @@
 {
   "version": 1,
   "rubocop_version": "1.87.0",
-  "updated_at": "2026-08-25T23:12:34-04:00",
+  "updated_at": "2026-08-26T01:22:45-04:00",
   "raw_capture_sha256": "aec260b35238542dafa044aad90dfe5c873b6c91019d3708f870fdc8b2453666",
   "raw_cases": 28606,
   "lsp_exclusions": 5,
-  "controlled_cases": 29458,
-  "imported_cases": 1409,
+  "controlled_cases": 29472,
+  "imported_cases": 1423,
   "exact_duplicates_removed": 552,
   "distribution": {
     "minimum": 1,
@@ -2432,8 +2432,8 @@
     "Style/CommentAnnotation": {
       "cases": "cops/Style/CommentAnnotation/unit/cases.jsonl",
       "configs": "cops/Style/CommentAnnotation/unit/configs.json",
-      "count": 32,
-      "sha256": "1243d8f89eac012dcfad1ba06f3e072353d67c626a25b386a696b80d0d354166",
+      "count": 36,
+      "sha256": "6ae2260f4ab0216056d03efdfad54c026cd7eaa652e9439040d3e8414b37ff47",
       "configs_sha256": "df4bd427083f92066a87bc1b50233d61dfe6f57f0c7093abcadb329a2c73e993"
     },
     "Style/CommentedKeyword": {
@@ -2614,8 +2614,8 @@
     "Style/EmptyHeredoc": {
       "cases": "cops/Style/EmptyHeredoc/unit/cases.jsonl",
       "configs": "cops/Style/EmptyHeredoc/unit/configs.json",
-      "count": 8,
-      "sha256": "d721678c853675ae50098fbe86c41917a7c12aa7cfe49aba3e6a756cb567267a",
+      "count": 9,
+      "sha256": "958683b53a5d9191221051f14a5cef18a27aa63d24963b8cc993210ffdd7700c",
       "configs_sha256": "94bde56d8f2e64c8fd439f2abfd0d95ad7298f0bcbf924c80397b8e0c65e69b0"
     },
     "Style/EmptyLambdaParameter": {
@@ -2663,15 +2663,15 @@
     "Style/EndlessMethod": {
       "cases": "cops/Style/EndlessMethod/unit/cases.jsonl",
       "configs": "cops/Style/EndlessMethod/unit/configs.json",
-      "count": 65,
-      "sha256": "b7d8b9c350890cd9933336821a1a4637814f57ca1cb05523668da91d8e427fa0",
+      "count": 66,
+      "sha256": "73300cc719509212fd2c90790e07cad6da10dc5d43f5b93935c83b581e8fb802",
       "configs_sha256": "52bc9638eeb37a9aea657320f989c6c2be4f67bede63b381082c5f661dc1e668"
     },
     "Style/EnvHome": {
       "cases": "cops/Style/EnvHome/unit/cases.jsonl",
       "configs": "cops/Style/EnvHome/unit/configs.json",
-      "count": 9,
-      "sha256": "b89832c520e80368970f4cf67736e7325ffbe4d0f00686f1b4df07ac760fed06",
+      "count": 12,
+      "sha256": "a13bc05c638ee0f7cc41bda17f1136b9c338cc40469c4164756f3ed833b3148b",
       "configs_sha256": "6541ad187d6ae63d13e697713d2e0b199e7145c5e565cf284bfe5f99a780bae0"
     },
     "Style/EvalWithLocation": {
@@ -3559,8 +3559,8 @@
     "Style/RedundantCapitalW": {
       "cases": "cops/Style/RedundantCapitalW/unit/cases.jsonl",
       "configs": "cops/Style/RedundantCapitalW/unit/configs.json",
-      "count": 14,
-      "sha256": "fa15f16d67a4f02f0a7790e713d910ed301b98d80d2b2dcf58ac0765f4b298e1",
+      "count": 16,
+      "sha256": "50d23551d7fc73812bbf522a93afc16c5f873f5299d3bd72e7ae6e45236e7cd1",
       "configs_sha256": "94a7031bb8ce1d5544378797b0197d7e813c8bf70fa025f37b463f15db10a3b2"
     },
     "Style/RedundantCondition": {
@@ -3643,8 +3643,8 @@
     "Style/RedundantFreeze": {
       "cases": "cops/Style/RedundantFreeze/unit/cases.jsonl",
       "configs": "cops/Style/RedundantFreeze/unit/configs.json",
-      "count": 62,
-      "sha256": "99ff35061507c90d1e6fd0812951186368e1a197b925d9c0dd363c415ed615fa",
+      "count": 65,
+      "sha256": "e48f2016416505292a5af4e3c987ef2913795b2763c606b314f3d7d8969234b6",
       "configs_sha256": "80a7318266dfc0b23c80f15e9cc7741225f9ad84ed051f27d928862b4978ddc7"
     },
     "Style/RedundantHeredocDelimiterQuotes": {

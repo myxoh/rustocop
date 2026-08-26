@@ -9,7 +9,6 @@ declare_source_cops! {
     AddRuntimeDependency => "Gemspec/AddRuntimeDependency" => add_runtime_dependency,
     ClassAndModuleCamelCase => "Naming/ClassAndModuleCamelCase" => camel_case,
     ClassMethods => "Style/ClassMethods" => class_methods,
-    RedundantCapitalW => "Style/RedundantCapitalW" => redundant_capital_w,
     DuplicateElsifCondition => "Lint/DuplicateElsifCondition" => duplicate_elsif,
     DuplicatedGem => "Bundler/DuplicatedGem" => duplicated_gem,
 }
@@ -128,52 +127,6 @@ fn class_methods(source: &str, context: &mut Reporter<'_>) {
     }
 }
 
-fn redundant_capital_w(source: &str, context: &mut Reporter<'_>) {
-    for start in find_all(source, "%W") {
-        let Some(open) = source.as_bytes().get(start + 2).copied() else {
-            continue;
-        };
-        let close = match open {
-            b'(' => ')',
-            b'[' => ']',
-            b'{' => '}',
-            _ => continue,
-        };
-        let Some(end) = percent_literal_end(source, start + 2, open, close as u8) else {
-            continue;
-        };
-        let body = &source[start + 3..end - 1];
-        if !body.contains("#{") && !body.contains('\\') {
-            context.replace(
-                "Do not use `%W` unless interpolation is needed. If not, use `%w`.",
-                start..end,
-                start + 1..start + 2,
-                "w",
-            );
-        }
-    }
-}
-
-fn percent_literal_end(source: &str, open: usize, left: u8, right: u8) -> Option<usize> {
-    let mut depth = 0_usize;
-    let mut escaped = false;
-    for (index, byte) in source.as_bytes().iter().copied().enumerate().skip(open) {
-        if escaped {
-            escaped = false;
-        } else if byte == b'\\' {
-            escaped = true;
-        } else if byte == left {
-            depth += 1;
-        } else if byte == right {
-            depth -= 1;
-            if depth == 0 {
-                return Some(index + 1);
-            }
-        }
-    }
-    None
-}
-
 fn duplicate_elsif(source: &str, context: &mut Reporter<'_>) {
     struct DuplicateElsifVisitor<'source> {
         source: &'source str,
@@ -221,13 +174,6 @@ fn duplicate_elsif(source: &str, context: &mut Reporter<'_>) {
     for range in visitor.offenses {
         context.report("Duplicate `elsif` condition detected.", range);
     }
-}
-
-fn find_all(source: &str, needle: &str) -> Vec<usize> {
-    source
-        .match_indices(needle)
-        .map(|(offset, _)| offset)
-        .collect()
 }
 
 fn source_lines(source: &str) -> impl Iterator<Item = (usize, &str)> {

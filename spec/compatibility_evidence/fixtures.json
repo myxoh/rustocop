@@ -1,11 +1,11 @@
 {
   "version": 1,
   "kind": "fixture_compatibility",
-  "updated_at": "2026-08-26T01:03:49-04:00",
+  "updated_at": "2026-08-26T01:34:54-04:00",
   "rust_commit": null,
-  "cop_source_sha256": "2d402c0b6b599ec52de6db2fe51aa50717e74e87d68218cfee642ab10381de9d",
-  "native_sha256": "4db840d691bf1060412a300384fa4f747c7ba63d5fe0ab384651a8e445f1bb6c",
-  "fixture_corpus_sha256": "6204b4296f5cda57d3189ac82668526ebe7d523aca530c3b8a26a59201f7afba",
+  "cop_source_sha256": "8195a6f5ca5191a72a3834530a9dd4ce4875532acd0964ecc3c68bbd0aa22242",
+  "native_sha256": "38bbed6513061084ec66c05690200b45b21e09416a1f4dddf67eb2b3b5876ca7",
+  "fixture_corpus_sha256": "13598c30597fb2461f57ddda3c43dfa0731aef74570b018e1410ae93677081a8",
   "rubocop_version": "1.87.0",
   "results": {
     "Bundler/DuplicatedGem": {
@@ -1734,8 +1734,8 @@
       "status": "compatible"
     },
     "Style/CommentAnnotation": {
-      "passed": 32,
-      "total": 32,
+      "passed": 36,
+      "total": 36,
       "status": "compatible"
     },
     "Style/CommentedKeyword": {
@@ -1864,8 +1864,8 @@
       "status": "compatible"
     },
     "Style/EmptyHeredoc": {
-      "passed": 8,
-      "total": 8,
+      "passed": 9,
+      "total": 9,
       "status": "compatible"
     },
     "Style/EmptyLambdaParameter": {
@@ -1899,13 +1899,13 @@
       "status": "compatible"
     },
     "Style/EndlessMethod": {
-      "passed": 65,
-      "total": 65,
+      "passed": 66,
+      "total": 66,
       "status": "compatible"
     },
     "Style/EnvHome": {
-      "passed": 9,
-      "total": 9,
+      "passed": 12,
+      "total": 12,
       "status": "compatible"
     },
     "Style/EvalWithLocation": {
@@ -2539,8 +2539,8 @@
       "status": "compatible"
     },
     "Style/RedundantCapitalW": {
-      "passed": 14,
-      "total": 14,
+      "passed": 16,
+      "total": 16,
       "status": "compatible"
     },
     "Style/RedundantCondition": {
@@ -2599,8 +2599,8 @@
       "status": "compatible"
     },
     "Style/RedundantFreeze": {
-      "passed": 62,
-      "total": 62,
+      "passed": 65,
+      "total": 65,
       "status": "compatible"
     },
     "Style/RedundantHeredocDelimiterQuotes": {

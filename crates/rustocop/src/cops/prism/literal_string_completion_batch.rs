@@ -10,10 +10,31 @@ define_stateful_rule!(WordArrayRule, WordArrayState);
 const PERCENT_MSG: &str = "Use `%w` or `%W` for an array of words.";
 
 define_cops! {
+    RedundantCapitalW => "Style/RedundantCapitalW" => node(as_array_node, redundant_capital_w),
     SymbolArray => "Style/SymbolArray" => node(as_array_node, symbol_array),
     FetchEnvVar => "Style/FetchEnvVar" => source(fetch_env_var),
     StringConcatenation => "Style/StringConcatenation" => call(string_concatenation),
     WordArray => "Style/WordArray" => stateful_node_rule(as_array_node, WordArrayRule, WordArrayState, on_array),
+}
+
+fn redundant_capital_w(node: &ruby_prism::ArrayNode<'_>, context: &mut CopContext<'_, '_>) {
+    let Some(opening) = node.opening_loc() else {
+        return;
+    };
+    if !context.source_file().at(&opening).starts_with("%W") {
+        return;
+    }
+    let range = context.source_file().node_range(&node.as_node());
+    let literal = &context.source()[range.clone()];
+    if literal.contains("#{") || literal.contains('\\') {
+        return;
+    }
+    context.replace(
+        "Do not use `%W` unless interpolation is needed. If not, use `%w`.",
+        range,
+        opening.start_offset() + 1..opening.start_offset() + 2,
+        "w",
+    );
 }
 
 fn symbol_array(node: &ruby_prism::ArrayNode<'_>, context: &mut CopContext<'_, '_>) {

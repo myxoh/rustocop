@@ -14,7 +14,6 @@ mod source_registry {
         RubyVersionGlobalsUsage => "Gemspec/RubyVersionGlobalsUsage" => super::ruby_version_globals,
         AttributeAssignment => "Gemspec/AttributeAssignment" => super::attribute_assignment,
         AutoResourceCleanup => "Style/AutoResourceCleanup" => super::auto_resource_cleanup,
-        EmptyHeredoc => "Style/EmptyHeredoc" => super::empty_heredoc,
         SpaceAfterMethodName => "Layout/SpaceAfterMethodName" => super::space_after_method_name,
     }
 }
@@ -24,6 +23,7 @@ define_call_cop!(EachWithObjectArgument => "Lint/EachWithObjectArgument" => each
 define_call_cop!(RefinementImportMethods => "Lint/RefinementImportMethods" => refinement_import_methods);
 define_node_cop!(DisjunctiveAssignmentInConstructor => "Lint/DisjunctiveAssignmentInConstructor" => as_def_node => disjunctive_assignment);
 define_node_cop!(UselessDefined => "Lint/UselessDefined" => as_defined_node => useless_defined);
+define_node_cop!(EmptyHeredoc => "Style/EmptyHeredoc" => as_string_node => empty_heredoc);
 
 pub(super) fn cops() -> Vec<Box<dyn Cop>> {
     let mut cops = source_registry::cops();
@@ -32,6 +32,7 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
     cops.push(Box::new(RefinementImportMethods));
     cops.push(Box::new(DisjunctiveAssignmentInConstructor));
     cops.push(Box::new(UselessDefined));
+    cops.push(Box::new(EmptyHeredoc));
     cops
 }
 
