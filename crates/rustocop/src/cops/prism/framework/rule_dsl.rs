@@ -286,9 +286,19 @@ macro_rules! dispatch_rubocop_callback {
             $rule.on_case_match(&typed_node);
         }
     };
+    ($rule:ident, $node:ident, on_program) => {
+        if let Some(typed_node) = $node.as_program_node() {
+            $rule.on_program(&typed_node);
+        }
+    };
     ($rule:ident, $node:ident, on_resbody) => {
         if let Some(typed_node) = $node.as_rescue_node() {
             $rule.on_resbody(&typed_node);
+        }
+    };
+    ($rule:ident, $node:ident, on_statements) => {
+        if let Some(typed_node) = $node.as_statements_node() {
+            $rule.on_statements(&typed_node);
         }
     };
     ($rule:ident, $node:ident, on_irange) => {
@@ -304,6 +314,13 @@ macro_rules! dispatch_rubocop_callback {
     ($rule:ident, $node:ident, on_yield) => {
         if let Some(typed_node) = $node.as_yield_node() {
             $rule.on_yield(&typed_node);
+        }
+    };
+    ($rule:ident, $node:ident, on_regexp) => {
+        if $node.as_regular_expression_node().is_some()
+            || $node.as_interpolated_regular_expression_node().is_some()
+        {
+            $rule.on_regexp($node);
         }
     };
     ($rule:ident, $node:ident, on_casgn) => {
@@ -373,6 +390,12 @@ macro_rules! rubocop_callback_matches {
     ($node:ident, on_case_match) => {
         $node.as_case_match_node().is_some()
     };
+    ($node:ident, on_statements) => {
+        $node.as_statements_node().is_some()
+    };
+    ($node:ident, on_program) => {
+        $node.as_program_node().is_some()
+    };
     ($node:ident, on_resbody) => {
         $node.as_rescue_node().is_some()
     };
@@ -384,6 +407,10 @@ macro_rules! rubocop_callback_matches {
     };
     ($node:ident, on_yield) => {
         $node.as_yield_node().is_some()
+    };
+    ($node:ident, on_regexp) => {
+        $node.as_regular_expression_node().is_some()
+            || $node.as_interpolated_regular_expression_node().is_some()
     };
     ($node:ident, on_casgn) => {
         $node.as_constant_write_node().is_some()

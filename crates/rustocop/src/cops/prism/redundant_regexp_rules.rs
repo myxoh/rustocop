@@ -22,10 +22,7 @@ define_cops! {
         on_send,
         restrict [b"new", b"compile"]
     ),
-    RedundantRegexpCharacterClass => "Style/RedundantRegexpCharacterClass" => node_rule_aliases(
-        RedundantRegexpCharacterClassRule,
-        on_regexp => [as_regular_expression_node, as_interpolated_regular_expression_node]
-    ),
+    RedundantRegexpCharacterClass => "Style/RedundantRegexpCharacterClass" => rubocop_callbacks(RedundantRegexpCharacterClassRule, [on_regexp]),
     RedundantRegexpArgument => "Style/RedundantRegexpArgument" => call_rule(
         RedundantRegexpArgumentRule,
         on_send,

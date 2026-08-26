@@ -1,9 +1,11 @@
 use super::*;
 
+define_rule!(EmptyLinesAroundAttributeAccessorRule);
+
 define_cops! {
     EmptyLinesAroundBeginBody => "Layout/EmptyLinesAroundBeginBody" => node(as_begin_node, empty_begin_body),
     EmptyLinesAroundMethodBody => "Layout/EmptyLinesAroundMethodBody" => node(as_def_node, empty_method_body),
-    EmptyLinesAroundAttributeAccessor => "Layout/EmptyLinesAroundAttributeAccessor" => call(empty_around_accessor),
+    EmptyLinesAroundAttributeAccessor => "Layout/EmptyLinesAroundAttributeAccessor" => rubocop_callbacks(EmptyLinesAroundAttributeAccessorRule, [on_send restrict [b"attr_reader", b"attr_writer", b"attr_accessor", b"attr"]]),
     EmptyLinesAroundBlockBody => "Layout/EmptyLinesAroundBlockBody" => node(as_block_node, empty_block_body),
     EmptyLinesAroundArguments => "Layout/EmptyLinesAroundArguments" => call(empty_around_arguments),
     EmptyLinesAroundExceptionHandlingKeywords => "Layout/EmptyLinesAroundExceptionHandlingKeywords" => node(as_begin_node, empty_exception_keywords),
@@ -114,72 +116,74 @@ fn empty_around_arguments(node: &CallNode<'_>, context: &mut CopContext<'_, '_>)
     }
 }
 
-fn empty_around_accessor(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
-    if node.receiver().is_some()
-        || !matches!(
-            node.name().as_slice(),
-            b"attr_reader" | b"attr_writer" | b"attr_accessor" | b"attr"
-        )
-    {
-        return;
-    }
-    let source = context.source();
-    let location = node.location();
-    let accessor_line_start = line_start(source, line_index(source, location.start_offset()));
-    if !source[accessor_line_start..location.start_offset()]
-        .trim()
-        .is_empty()
-        || node
-            .arguments()
-            .is_none_or(|arguments| arguments.arguments().is_empty())
-    {
-        return;
-    }
-    if context
-        .ancestors()
-        .iter()
-        .rev()
-        .take(2)
-        .any(|ancestor| ancestor.as_if_node().is_some() || ancestor.as_unless_node().is_some())
-    {
-        return;
-    }
+impl EmptyLinesAroundAttributeAccessorRule<'_, '_, '_> {
+    fn on_send(&mut self, node: &CallNode<'_>) {
+        if node.receiver().is_some()
+            || !matches!(
+                node.name().as_slice(),
+                b"attr_reader" | b"attr_writer" | b"attr_accessor" | b"attr"
+            )
+        {
+            return;
+        }
+        let source = self.source();
+        let location = node.location();
+        let accessor_line_start = line_start(source, line_index(source, location.start_offset()));
+        if !source[accessor_line_start..location.start_offset()]
+            .trim()
+            .is_empty()
+            || node
+                .arguments()
+                .is_none_or(|arguments| arguments.arguments().is_empty())
+        {
+            return;
+        }
+        if self
+            .ancestors()
+            .iter()
+            .rev()
+            .take(2)
+            .any(|ancestor| ancestor.as_if_node().is_some() || ancestor.as_unless_node().is_some())
+        {
+            return;
+        }
 
-    let current_line = line_index(source, node.location().end_offset());
-    if is_enable_directive(line(source, current_line + 1))
-        && line(source, current_line + 2).is_empty()
-    {
-        return;
-    }
-    let Some(next_code_line) = next_code_line(source, current_line + 1) else {
-        return;
-    };
-    if next_code_line > current_line + 1 && line(source, current_line + 1).trim().is_empty() {
-        return;
-    }
+        let current_line = line_index(source, node.location().end_offset());
+        if is_enable_directive(line(source, current_line + 1))
+            && line(source, current_line + 2).is_empty()
+        {
+            return;
+        }
+        let Some(next_code_line) = next_code_line(source, current_line + 1) else {
+            return;
+        };
+        if next_code_line > current_line + 1 && line(source, current_line + 1).trim().is_empty() {
+            return;
+        }
 
-    let next = line(source, next_code_line).trim_start();
-    if next == "end"
-        || next.starts_with("end.")
-        || next == "}"
-        || next.starts_with("}.")
-        || is_accessor(next)
-        || allowed_accessor_follower(context, next)
-        || allow_alias_syntax(context, next)
-    {
-        return;
-    }
+        let next = line(source, next_code_line).trim_start();
+        if next == "end"
+            || next.starts_with("end.")
+            || next == "}"
+            || next.starts_with("}.")
+            || is_accessor(next)
+            || allowed_accessor_follower(self, next)
+            || allow_alias_syntax(self, next)
+        {
+            return;
+        }
 
-    let mut insertion_line = current_line + 1;
-    if is_enable_directive(line(source, insertion_line)) {
-        insertion_line += 1;
+        let mut insertion_line = current_line + 1;
+        if is_enable_directive(line(source, insertion_line)) {
+            insertion_line += 1;
+        }
+        self.insert(
+            "Add an empty line after attribute accessor.",
+            &location,
+            line_start(source, insertion_line),
+            "\n",
+        );
     }
-    context.insert(
-        "Add an empty line after attribute accessor.",
-        &location,
-        line_start(source, insertion_line),
-        "\n",
-    );
 }
 
 fn is_accessor(source: &str) -> bool {

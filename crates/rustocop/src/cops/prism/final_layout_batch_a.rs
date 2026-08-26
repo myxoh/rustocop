@@ -1,11 +1,13 @@
 use super::catalog_cop::custom;
 use super::*;
+define_rule!(LineContinuationSpacingRule);
+define_rubocop_callback_rule_cop!(LayoutLineContinuationSpacing => "Layout/LineContinuationSpacing" => LineContinuationSpacingRule [on_program]);
 
 mod registry;
 
 pub(super) fn cops() -> Vec<Box<dyn Cop>> {
     let mut cops = vec![
-        custom("Layout/LineContinuationSpacing", line_continuation_spacing),
+        Box::new(LayoutLineContinuationSpacing),
         Box::new(MultilineMethodDefinitionBraceLayout),
         custom("Layout/SpaceInsideParens", space_inside_parens),
         Box::new(ClosingParenthesisIndentation),
@@ -18,6 +20,65 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
     ];
     cops.extend(registry::cops());
     cops
+}
+
+impl LineContinuationSpacingRule<'_, '_, '_> {
+    fn on_program(&mut self, _node: &ruby_prism::ProgramNode<'_>) {
+        self.check_line_continuation_spacing();
+    }
+
+    fn check_line_continuation_spacing(&mut self) {
+        let source = self.source();
+        let trimmed_source = source.trim_start();
+        if ["%i", "%I", "%q", "%Q", "%r", "%x", "%W", "%w", "/", "`"]
+            .iter()
+            .any(|prefix| trimmed_source.starts_with(prefix))
+        {
+            return;
+        }
+        let space_style = self.policy().enforced_style("space") == "space";
+        let heredoc_ranges = self.source_file().heredoc_ranges();
+        for (offset, line) in self.source_file().lines() {
+            if line.trim() == "__END__" {
+                break;
+            }
+            if !line.trim_end().ends_with('\\') || line.trim_start().starts_with('#') {
+                continue;
+            }
+            let slash = line.rfind('\\').unwrap_or(0);
+            if slash >= 2 && line.as_bytes()[slash - 2..slash] == *b"?\\" {
+                continue;
+            }
+            if heredoc_ranges
+                .iter()
+                .any(|range| range.start <= offset + slash && offset + slash < range.end)
+            {
+                continue;
+            }
+            if !self
+                .source_file()
+                .code_offsets("\\")
+                .contains(&(offset + slash))
+            {
+                continue;
+            }
+            let spaces = line[..slash].len() - line[..slash].trim_end().len();
+            if space_style && spaces != 1 {
+                self.replace(
+                    "Use one space in front of backslash.",
+                    offset + slash - spaces..offset + slash + 1,
+                    offset + slash - spaces..offset + slash,
+                    " ",
+                );
+            } else if !space_style && spaces > 0 {
+                self.remove(
+                    "Use zero spaces in front of backslash.",
+                    offset + slash - spaces..offset + slash + 1,
+                    offset + slash - spaces..offset + slash,
+                );
+            }
+        }
+    }
 }
 
 fn leading_comment_space(context: &mut CopContext<'_, '_>) {

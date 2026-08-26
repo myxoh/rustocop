@@ -2,13 +2,14 @@ use ruby_prism::{ElseNode, InNode, WhenNode};
 
 use super::*;
 
+define_rule!(EmptyWhenRule);
 define_rule!(WhenThenRule);
 
 const WHEN_THEN_MSG: &str =
     "Do not use `when {expression};`. Use `when {expression} then` instead.";
 
 define_cops!(
-    EmptyWhen => "Lint/EmptyWhen" => node(as_when_node, empty_when),
+    EmptyWhen => "Lint/EmptyWhen" => rubocop_callbacks(EmptyWhenRule, [on_when]),
     ElseLayout => "Lint/ElseLayout" => node(as_else_node, else_layout),
     MultilineInPatternThen => "Style/MultilineInPatternThen" => node(as_in_node, multiline_in_pattern_then),
     MultilineIfModifier => "Style/MultilineIfModifier" => any_node(multiline_if_modifier),
@@ -16,41 +17,43 @@ define_cops!(
     WhenThen => "Style/WhenThen" => node_rule(as_when_node, WhenThenRule, on_when),
 );
 
-fn empty_when(node: &WhenNode<'_>, context: &mut CopContext<'_, '_>) {
-    if node
-        .statements()
-        .is_some_and(|statements| !statements.body().is_empty())
-    {
-        return;
-    }
-    let Some(last_condition) = node.conditions().last() else {
-        return;
-    };
-    if context.config_bool("AllowComments", false) {
-        let tail = &context.source()[last_condition.location().end_offset()..];
-        let mut has_comment = false;
-        for (index, line) in tail.lines().enumerate() {
-            let trimmed = line.trim_start();
-            if index > 0
-                && matches!(
-                    trimmed.split_whitespace().next(),
-                    Some("when" | "else" | "end")
-                )
-            {
-                break;
-            }
-            if trimmed.starts_with('#') || line.contains('#') {
-                has_comment = true;
-            }
-        }
-        if has_comment {
+impl EmptyWhenRule<'_, '_, '_> {
+    fn on_when(&mut self, node: &WhenNode<'_>) {
+        if node
+            .statements()
+            .is_some_and(|statements| !statements.body().is_empty())
+        {
             return;
         }
+        let Some(last_condition) = node.conditions().last() else {
+            return;
+        };
+        if self.config_bool("AllowComments", false) {
+            let tail = &self.source()[last_condition.location().end_offset()..];
+            let mut has_comment = false;
+            for (index, line) in tail.lines().enumerate() {
+                let trimmed = line.trim_start();
+                if index > 0
+                    && matches!(
+                        trimmed.split_whitespace().next(),
+                        Some("when" | "else" | "end")
+                    )
+                {
+                    break;
+                }
+                if trimmed.starts_with('#') || line.contains('#') {
+                    has_comment = true;
+                }
+            }
+            if has_comment {
+                return;
+            }
+        }
+        self.report(
+            "Avoid `when` branches without a body.",
+            node.keyword_loc().start_offset()..last_condition.location().end_offset(),
+        );
     }
-    context.report(
-        "Avoid `when` branches without a body.",
-        node.keyword_loc().start_offset()..last_condition.location().end_offset(),
-    );
 }
 
 fn else_layout(node: &ElseNode<'_>, context: &mut CopContext<'_, '_>) {

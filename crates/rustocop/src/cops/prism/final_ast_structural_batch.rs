@@ -3,6 +3,8 @@ use super::*;
 use crate::rubocop::ast::node::core::NodeRef as RubocopNodeRef;
 use crate::rubocop::ast::prism::convert as convert_rubocop_ast;
 use std::collections::{HashMap, HashSet};
+define_rule!(LiteralInInterpolationRule);
+define_rubocop_callback_rule_cop!(LiteralInInterpolation => "Lint/LiteralInInterpolation" => LiteralInInterpolationRule [on_program]);
 
 mod registry;
 
@@ -18,7 +20,7 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
         custom("Lint/DuplicateRequire", duplicate_require),
         Box::new(ArgumentsForwarding),
         Box::new(Void),
-        custom("Lint/LiteralInInterpolation", literal_in_interpolation),
+        Box::new(LiteralInInterpolation),
     ];
     cops.extend(registry::cops());
     cops
@@ -83,55 +85,57 @@ impl<'pr> Visit<'pr> for DuplicateRequireCollector<'_> {
     }
 }
 
-fn literal_in_interpolation(context: &mut CopContext<'_, '_>) {
-    let source = context.source();
-    for (opening, closing) in interpolation_ranges(source) {
-        let Some((start, end)) = final_interpolation_expression(source, opening + 2, closing)
-        else {
-            continue;
-        };
-        let expression = &source[start..end];
-        if !literal_interpolation_expression(expression) {
-            continue;
+impl LiteralInInterpolationRule<'_, '_, '_> {
+    fn on_program(&mut self, _node: &ruby_prism::ProgramNode<'_>) {
+        let source = self.source();
+        for (opening, closing) in interpolation_ranges(source) {
+            let Some((start, end)) = final_interpolation_expression(source, opening + 2, closing)
+            else {
+                continue;
+            };
+            let expression = &source[start..end];
+            if !literal_interpolation_expression(expression) {
+                continue;
+            }
+            if array_percent_interpolation(source, opening, expression) {
+                continue;
+            }
+            if heredoc_trailing_space_interpolation(source, closing, expression)
+                || regexp_array_interpolation(source, opening, expression)
+            {
+                continue;
+            }
+            let direct_regexp = {
+                let line_start = source[..opening].rfind('\n').map_or(0, |at| at + 1);
+                source[line_start..opening].trim_start().starts_with('/')
+            };
+            let replacement = if direct_regexp {
+                decoded_string_literal(expression)
+                    .map(|value| escape_regexp_slashes(&value))
+                    .unwrap_or_else(|| {
+                        interpolation_literal_value(
+                            expression,
+                            interpolation_outer_delimiter(source, opening),
+                        )
+                    })
+            } else if expression.starts_with('"')
+                && expression.ends_with('"')
+                && expression
+                    .as_bytes()
+                    .windows(2)
+                    .any(|pair| pair[0] == b'\\' && pair[1].is_ascii_digit())
+            {
+                expression[1..expression.len() - 1].to_string()
+            } else {
+                interpolation_literal_value(expression, interpolation_outer_delimiter(source, opening))
+            };
+            self.replace(
+                "Literal interpolation detected.",
+                start..end,
+                opening..closing + 1,
+                replacement,
+            );
         }
-        if array_percent_interpolation(source, opening, expression) {
-            continue;
-        }
-        if heredoc_trailing_space_interpolation(source, closing, expression)
-            || regexp_array_interpolation(source, opening, expression)
-        {
-            continue;
-        }
-        let direct_regexp = {
-            let line_start = source[..opening].rfind('\n').map_or(0, |at| at + 1);
-            source[line_start..opening].trim_start().starts_with('/')
-        };
-        let replacement = if direct_regexp {
-            decoded_string_literal(expression)
-                .map(|value| escape_regexp_slashes(&value))
-                .unwrap_or_else(|| {
-                    interpolation_literal_value(
-                        expression,
-                        interpolation_outer_delimiter(source, opening),
-                    )
-                })
-        } else if expression.starts_with('"')
-            && expression.ends_with('"')
-            && expression
-                .as_bytes()
-                .windows(2)
-                .any(|pair| pair[0] == b'\\' && pair[1].is_ascii_digit())
-        {
-            expression[1..expression.len() - 1].to_string()
-        } else {
-            interpolation_literal_value(expression, interpolation_outer_delimiter(source, opening))
-        };
-        context.replace(
-            "Literal interpolation detected.",
-            start..end,
-            opening..closing + 1,
-            replacement,
-        );
     }
 }
 

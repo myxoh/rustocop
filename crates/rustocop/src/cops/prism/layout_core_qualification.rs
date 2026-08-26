@@ -1,10 +1,13 @@
 use super::*;
 use unicode_width::UnicodeWidthChar;
 
+define_rule!(DotPositionRule);
+define_rule!(EmptyLineBetweenDefsRule);
+
 define_cops! {
     BlockAlignment => "Layout/BlockAlignment" => any_node(block_alignment_node),
-    DotPosition => "Layout/DotPosition" => call(dot_position),
-    EmptyLineBetweenDefs => "Layout/EmptyLineBetweenDefs" => node(as_statements_node, empty_line_between_defs),
+    DotPosition => "Layout/DotPosition" => rubocop_callbacks(DotPositionRule, [on_send]),
+    EmptyLineBetweenDefs => "Layout/EmptyLineBetweenDefs" => rubocop_callbacks(EmptyLineBetweenDefsRule, [on_statements]),
     EmptyLinesAfterModuleInclusion => "Layout/EmptyLinesAfterModuleInclusion" => call(empty_lines_after_module_inclusion),
     EmptyLinesAroundAccessModifier => "Layout/EmptyLinesAroundAccessModifier" => call(empty_lines_around_access_modifier),
     FirstArgumentIndentation => "Layout/FirstArgumentIndentation" => any_node(first_argument_indentation),
@@ -18,68 +21,70 @@ fn block_alignment_node(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
     }
 }
 
-fn dot_position(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
-    let (Some(receiver), Some(dot)) = (node.receiver(), node.call_operator_loc()) else {
-        return;
-    };
-    let selector = node.message_loc().or_else(|| node.opening_loc());
-    let Some(selector) = selector else { return };
-    let file = context.source_file();
-    let heredoc_receiver = context.source()
-        [receiver.location().start_offset()..receiver.location().end_offset()]
-        .contains("<<");
-    if file.same_line(selector.start_offset(), receiver.location().end_offset())
-        && !heredoc_receiver
-    {
-        return;
-    }
+impl DotPositionRule<'_, '_, '_> {
+    fn on_send(&mut self, node: &CallNode<'_>) {
+        let (Some(receiver), Some(dot)) = (node.receiver(), node.call_operator_loc()) else {
+            return;
+        };
+        let selector = node.message_loc().or_else(|| node.opening_loc());
+        let Some(selector) = selector else { return };
+        let file = self.source_file();
+        let heredoc_receiver = self.source()
+            [receiver.location().start_offset()..receiver.location().end_offset()]
+            .contains("<<");
+        if file.same_line(selector.start_offset(), receiver.location().end_offset())
+            && !heredoc_receiver
+        {
+            return;
+        }
 
-    let selector_line = line_index(context.source(), selector.start_offset());
-    let receiver_line = line_index(context.source(), receiver.location().end_offset());
-    let dot_line = line_index(context.source(), dot.start_offset());
-    if heredoc_receiver
-        && dot_line == selector_line
-        && dot_line == line_index(context.source(), receiver.location().start_offset())
-    {
-        return;
-    }
-    if !heredoc_receiver && selector_line.saturating_sub(receiver_line.max(dot_line)) > 1 {
-        return;
-    }
-    let style = context.policy().enforced_style("leading").to_string();
-    let proper = if style == "leading" {
-        dot_line == selector_line
-    } else {
-        dot_line != selector_line
-    };
-    if proper {
-        return;
-    }
+        let selector_line = line_index(self.source(), selector.start_offset());
+        let receiver_line = line_index(self.source(), receiver.location().end_offset());
+        let dot_line = line_index(self.source(), dot.start_offset());
+        if heredoc_receiver
+            && dot_line == selector_line
+            && dot_line == line_index(self.source(), receiver.location().start_offset())
+        {
+            return;
+        }
+        if !heredoc_receiver && selector_line.saturating_sub(receiver_line.max(dot_line)) > 1 {
+            return;
+        }
+        let style = self.policy().enforced_style("leading").to_string();
+        let proper = if style == "leading" {
+            dot_line == selector_line
+        } else {
+            dot_line != selector_line
+        };
+        if proper {
+            return;
+        }
 
-    let operator = String::from_utf8_lossy(dot.as_slice()).into_owned();
-    let message = if style == "leading" {
-        format!("Place the {operator} on the next line, together with the method name.")
-    } else {
-        format!(
-            "Place the {operator} on the previous line, together with the method call receiver."
-        )
-    };
-    let dot_line_source = line(context.source(), dot_line);
-    let removal = if dot_line_source.trim() == operator {
-        line_start(context.source(), dot_line)..line_start(context.source(), dot_line + 1)
-    } else {
-        dot.start_offset()..dot.end_offset()
-    };
-    let insertion = if style == "leading" {
-        selector.start_offset()
-    } else {
-        receiver.location().end_offset()
-    };
-    context.replace_many(
-        message,
-        &dot,
-        vec![(removal, String::new()), (insertion..insertion, operator)],
-    );
+        let operator = String::from_utf8_lossy(dot.as_slice()).into_owned();
+        let message = if style == "leading" {
+            format!("Place the {operator} on the next line, together with the method name.")
+        } else {
+            format!(
+                "Place the {operator} on the previous line, together with the method call receiver."
+            )
+        };
+        let dot_line_source = line(self.source(), dot_line);
+        let removal = if dot_line_source.trim() == operator {
+            line_start(self.source(), dot_line)..line_start(self.source(), dot_line + 1)
+        } else {
+            dot.start_offset()..dot.end_offset()
+        };
+        let insertion = if style == "leading" {
+            selector.start_offset()
+        } else {
+            receiver.location().end_offset()
+        };
+        self.replace_many(
+            message,
+            &dot,
+            vec![(removal, String::new()), (insertion..insertion, operator)],
+        );
+    }
 }
 
 fn empty_lines_after_module_inclusion(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
@@ -657,19 +662,18 @@ fn assignment_lhs_target(
     ))
 }
 
-fn empty_line_between_defs(
-    statements: &ruby_prism::StatementsNode<'_>,
-    context: &mut CopContext<'_, '_>,
-) {
-    let children = statements.body().iter().collect::<Vec<_>>();
-    for pair in children.windows(2) {
-        let (Some(previous), Some(current)) = (
-            definition_candidate(&pair[0], context),
-            definition_candidate(&pair[1], context),
-        ) else {
-            continue;
-        };
-        check_definition_pair(context, previous, current);
+impl EmptyLineBetweenDefsRule<'_, '_, '_> {
+    fn on_statements(&mut self, statements: &ruby_prism::StatementsNode<'_>) {
+        let children = statements.body().iter().collect::<Vec<_>>();
+        for pair in children.windows(2) {
+            let (Some(previous), Some(current)) = (
+                definition_candidate(&pair[0], self),
+                definition_candidate(&pair[1], self),
+            ) else {
+                continue;
+            };
+            check_definition_pair(self, previous, current);
+        }
     }
 }
 
