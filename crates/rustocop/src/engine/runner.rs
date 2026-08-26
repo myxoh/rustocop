@@ -118,6 +118,8 @@ mod tests {
             parallelism,
             rubocop_loaders: Vec::new(),
             config_path: None,
+            include_non_native_cops: false,
+            non_native_cops: Vec::new(),
             force_exclusion: false,
             inspection: InspectionConfig {
                 autocorrect: AutocorrectMode::None,

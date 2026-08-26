@@ -24,6 +24,8 @@ pub(crate) struct RunOptions {
     pub(crate) parallelism: Parallelism,
     pub(crate) rubocop_loaders: Vec<(String, String)>,
     pub(crate) config_path: Option<String>,
+    pub(crate) include_non_native_cops: bool,
+    pub(crate) non_native_cops: Vec<String>,
     pub(crate) force_exclusion: bool,
     pub(crate) inspection: InspectionConfig,
 }
@@ -102,6 +104,13 @@ enum ConfigValue {
 impl CopConfig {
     pub(crate) fn from_source(source: &str) -> Self {
         Self::from_sources([(source, HashSet::new())], None)
+    }
+
+    pub(crate) fn from_resolved_source(source: &str, config_path: Option<&str>) -> Self {
+        let root = config_path
+            .map(PathBuf::from)
+            .and_then(|path| path.parent().map(PathBuf::from));
+        Self::from_sources([(source, HashSet::new())], root)
     }
 
     #[cfg(test)]

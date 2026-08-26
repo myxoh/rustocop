@@ -16,15 +16,23 @@ every inspected file.
 
 ## Decision
 
-Rustocop supports a mixed execution mode when all of the following are true:
+Rustocop supports a mixed execution mode in either of these cases:
 
-1. At least one `--require` or `--plugin` option is present.
-2. The run has an explicit `--only` list.
-3. At least one selected name is not in Rustocop's advertised cop inventory.
+1. At least one `--require` or `--plugin` option is present, the run has an
+   explicit `--only` list, and at least one selected name is not in Rustocop's
+   advertised cop inventory.
+2. RuboCop's resolved project configuration enables cops outside the base
+   RuboCop package and the user passes `--included-non-native-cops`.
 
 Names advertised by `rustocop --show-cops` remain native. Unknown selections
 are passed to RuboCop together with the loader options, configuration path, and
 file targets.
+
+For implicit project configuration, the base RuboCop registry is captured
+before project plugins and custom requires are loaded. The enabled base cops run
+natively. Enabled names added by plugins or project requires are ignored with a
+warning unless the user opts in, at which point RuboCop runs those names and its
+JSON report is merged with the native report.
 
 The native process starts RuboCop before beginning native inspection, allowing
 both engines to work concurrently. RuboCop runs only the custom selections,
@@ -82,6 +90,9 @@ Positive consequences:
 
 Negative consequences:
 
+- Resolving an effective project configuration loads RuboCop before native
+  inspection and can add several hundred milliseconds to short runs. Explicit
+  `--only` runs without a project or user configuration bypass this work.
 - A single Ruby custom cop forfeits most of Rustocop's startup advantage.
 - Every file is read and parsed independently by both engines.
 - Concurrent processes increase CPU and peak-memory pressure compared with a
@@ -92,8 +103,9 @@ Negative consequences:
 
 ## Current limitations
 
-- Mixed execution requires an explicit `--only` list. Rustocop does not load
-  Ruby code merely to discover custom cops enabled implicitly by configuration.
+- The automatic effective-config path is provided by the Ruby entrypoint.
+  Direct execution of `libexec/rustocop-native` does not load RuboCop's Ruby
+  configuration subsystem.
 - Mixed autocorrection is rejected. Independent native and Ruby correction
   passes do not currently have a safe or RuboCop-compatible ordering contract.
 - Mixed `--stdin` inspection is rejected because both processes would need the
