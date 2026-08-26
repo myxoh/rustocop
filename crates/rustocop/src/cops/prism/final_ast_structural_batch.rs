@@ -90,10 +90,14 @@ impl LiteralInInterpolationRule<'_, '_, '_> {
         let source = self.source();
         for (opening, closing) in interpolation_ranges(source) {
             let Some((start, end)) = final_interpolation_expression(source, opening + 2, closing)
-            else {
-                continue;
-            };
+                else {
+                    continue;
+                };
             let expression = &source[start..end];
+            let expression_is_nested_interpolation = expression_is_dynamic_string(expression);
+            if expression_is_nested_interpolation {
+                continue;
+            }
             if !literal_interpolation_expression(expression) {
                 continue;
             }
@@ -393,6 +397,24 @@ fn interpolation_literal_value(expression: &str, outer_delimiter: Option<u8>) ->
         }
     }
     expression.to_string()
+}
+
+fn expression_is_dynamic_string(expression: &str) -> bool {
+    let expression = expression.trim();
+    if expression.is_empty() {
+        return false;
+    }
+    let parsed = ruby_prism::parse(expression.as_bytes());
+    if parsed.errors().count() != 0 {
+        return false;
+    }
+    let Some(node) = parsed.node().as_program_node().and_then(|program| {
+        let body = program.statements().body();
+        (body.len() == 1).then(|| body.first()).flatten()
+    }) else {
+        return false;
+    };
+    node.as_interpolated_string_node().is_some()
 }
 
 fn decoded_string_literal(expression: &str) -> Option<String> {
