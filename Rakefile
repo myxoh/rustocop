@@ -42,7 +42,7 @@ namespace :fixtures do
   desc "Audit sequential per-cop cached-contract timings (set REPORT=path for JSON)"
   task :benchmark do
     environment = { "RUSTOCOP_UNIT_BENCHMARK" => "1" }
-    environment["RUSTOCOP_UNIT_REPORT"] = ENV.fetch("REPORT") if ENV["REPORT"]
+    environment["RUSTOCOP_UNIT_REPORT"] = File.expand_path(ENV.fetch("REPORT")) if ENV["REPORT"]
     sh environment,
        "cargo", "test", "--manifest-path", "crates/rustocop/Cargo.toml",
        "--release", "cached_unit_contracts_match", "--", "--ignored", "--nocapture"

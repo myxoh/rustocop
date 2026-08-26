@@ -118,19 +118,25 @@ bound to a deterministic SHA-256 of every native cop source file as well as the
 compiled binary, so unrelated edits do not invalidate it and cop changes cannot
 silently reuse stale results.
 
+A warm complete audit measured on 2026-08-26 took 66.4 seconds wall-clock with
+50/50 native cache hits and no mismatches. Caching avoids both linter runs, but
+the runner must still load and exactly compare the large stored diagnostic
+inventories. Focused cop audits remain the fast development path; the complete
+audit is the final corpus gate.
+
 ## Performance
 
 <!-- generated:rubocop-prism:start -->
 On the pinned 500-file, 20-cop benchmark corpus, rustocop is currently
-about 42 times faster than RuboCop with Prism. Both tools produced identical
+about 36 times faster than RuboCop with Prism. Both tools produced identical
 normalized JSON before measurement.
 
 | Files | rustocop | RuboCop (Prism) | Speedup |
 | ---: | ---: | ---: | ---: |
-| 1 | 5.41 ms | 417.51 ms | 77.20× |
-| 25 | 6.01 ms | 432.35 ms | 71.96× |
-| 100 | 6.92 ms | 438.53 ms | 63.40× |
-| 500 | 11.66 ms | 494.82 ms | 42.44× |
+| 1 | 8.54 ms | 497.19 ms | 58.22× |
+| 25 | 9.24 ms | 566.01 ms | 61.28× |
+| 100 | 15.02 ms | 722.40 ms | 48.09× |
+| 500 | 18.00 ms | 646.75 ms | 35.92× |
 <!-- generated:rubocop-prism:end -->
 
 This uses RuboCop 1.87.0 with Prism, caching disabled, and server mode disabled.

@@ -25,15 +25,15 @@ warmups followed by 7–30 measured runs depending on corpus size.
 
 | Files | Runs | Rustocop median / p95 | RuboCop Prism median / p95 | Speedup |
 | ---: | ---: | ---: | ---: | ---: |
-| 1 | 30 | 5.408 / 6.301 ms | 417.507 / 429.053 ms | 77.20× |
-| 25 | 20 | 6.008 / 9.205 ms | 432.348 / 459.978 ms | 71.96× |
-| 100 | 12 | 6.917 / 7.538 ms | 438.527 / 444.987 ms | 63.40× |
-| 500 | 7 | 11.660 / 11.838 ms | 494.815 / 512.014 ms | 42.44× |
+| 1 | 30 | 8.540 / 12.894 ms | 497.190 / 564.462 ms | 58.22× |
+| 25 | 20 | 9.236 / 10.385 ms | 566.014 / 636.020 ms | 61.28× |
+| 100 | 12 | 15.021 / 22.767 ms | 722.395 / 988.842 ms | 48.09× |
+| 500 | 7 | 18.004 / 19.445 ms | 646.752 / 780.971 ms | 35.92× |
 
 ## Interpretation
 
 The one-file result is dominated by process startup. At 500 files, rustocop is
-about 42 times faster than RuboCop. This tiny corpus measures the complete CLI,
+about 36 times faster than RuboCop. This tiny corpus measures the complete CLI,
 configuration, file, traversal, and formatting paths together—not parsing alone.
 <!-- generated:rubocop-prism-results:end -->
 
@@ -104,13 +104,13 @@ project methodology.
 xychart-beta
     title "End-to-end speedup over RuboCop + Prism"
     x-axis "Ruby files" [1, 25, 100, 500]
-    y-axis "Speedup (times)" 0 --> 80
-    bar [77.20, 71.96, 63.40, 42.44]
+    y-axis "Speedup (times)" 0 --> 70
+    bar [58.22, 61.28, 48.09, 35.92]
 ```
 
 At 500 files, median throughput was approximately
-42,882 files/second for Rustocop and
-1,010 for RuboCop with Prism.
+27,772 files/second for Rustocop and
+773 for RuboCop with Prism.
 <!-- generated:rubocop-prism-throughput:end -->
 The corpus is deliberately small—500 files totaling 9,110 bytes—so these figures primarily measure CLI startup,
 configuration, parsing, dispatch, and formatter overhead rather than sustained

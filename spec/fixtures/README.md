@@ -12,10 +12,11 @@ Each `cops/<Department>/<Cop>/unit/` directory contains:
 
 `unit_manifest.json` maps all 606 built-in cops to their unit files and records
 counts, SHA-256 digests, the RuboCop version, and an ISO 8601 `updated_at`
-timestamp. The current corpus has 28,788 controlled cases: 28,049 unique
-upstream-spec inputs, 720 unique cases retained from the audited legacy
-collections, and 19 minimized current-project cases covering 20 pending
-mismatch directions across 10 cops.
+timestamp. The current corpus has 29,526 controlled, cop-owned fixture rows.
+The strict runner performs 29,616 cached checks after accounting for every
+diagnostic and applicable safe (`-a`) and all-cop (`-A`) correction contract.
+Project-isolation origins are retained as regression evidence after their
+mismatches are fixed; they are not a queue of currently failing cases.
 
 Exact duplicate inputs share one case and retain all provenance entries. A
 normal refresh rebuilds upstream expectations with RuboCop and preserves the
@@ -29,13 +30,13 @@ ruby script/verify_cop.rb Security/Eval
 
 Focused runs use Cargo's incremental `fixture` profile: it omits debug symbols
 to reduce relinking work while leaving the full corpus on the optimized release
-profile. On the audit machine, a one-line cop edit followed by a focused run
-dropped from 10.7 seconds in the ordinary test profile (22.9 seconds in release)
-to 2.5 seconds, including a roughly 50 ms contract check. A no-change run is
-about 0.4 seconds. The first focused run builds and caches this profile once.
-The remaining edit latency is compilation and linking of the single native
-crate; splitting every cop into a separate binary or dynamic library is not
-currently justified.
+profile. On the audit machine on 2026-08-26, three warm runs of a representative
+32-case cop took 0.42-0.77 seconds inside the test process and 0.71-1.32 seconds
+wall-clock. Touching that cop's Rust source to simulate an implementation edit
+took 4.11 seconds to compile and 5.33 seconds end to end. The first focused run
+builds and caches this profile once. Compilation and linking of the single
+native crate remain the dominant edit-cycle cost; the previous 2.5-second
+one-file rebuild measurement no longer describes the current crate.
 
 Run the complete cached corpus:
 
@@ -43,13 +44,13 @@ Run the complete cached corpus:
 bundle exec rake fixtures:unit
 ```
 
-The warm release run checks all 28,788 cases in about 1.9-2.3 seconds on the
-audit machine. A sequential audit of all 606 cops measured a 3.4 ms median:
-448 cops completed within 5 ms, 543 within 10 ms, and the 95th percentile was
-16.1 ms. A few size-sensitive contracts intentionally exercise source files as
-large as 100-400 KB, so they cannot have single-digit-millisecond isolated
-runtimes without weakening or first minimizing those cases. Cargo process
-startup is separate from these in-run measurements.
+Three warm release runs checked all 29,616 cases in 2.75-2.87 seconds inside the
+test process and 2.96-3.20 seconds wall-clock. The intentionally sequential
+per-cop timing audit measured a 10.592 ms median, 46.641 ms p95, 113.803 ms p99,
+and 11.35 seconds for its complete run. Of 606 cops, 85 completed within 5 ms,
+270 within 10 ms, 525 within 25 ms, and 580 within 50 ms. A few size-sensitive
+contracts intentionally exercise source files as large as 100-400 KB. Cargo
+process startup is separate from these in-run measurements.
 
 Reproduce the per-cop timing audit without cross-cop parallelism:
 
