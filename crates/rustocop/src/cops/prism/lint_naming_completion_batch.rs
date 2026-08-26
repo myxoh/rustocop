@@ -298,25 +298,61 @@ fn deprecated_constants(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
 }
 
 fn redundant_enable(context: &mut CopContext<'_, '_>) {
+    let known_cops = crate::cops::cop_names();
+    let known_departments = known_cops
+        .iter()
+        .filter_map(|cop| cop.split_once('/').map(|(department, _)| department))
+        .collect::<HashSet<_>>();
     let mut disabled = HashSet::new();
     let mut configured_enable_edits = HashMap::new();
-    for (offset, line) in context.source_file().lines() {
-        if let Some(list) = line.split("rubocop:disable ").nth(1) {
+    for comment_range in context.source_file().comment_ranges() {
+        let comment = &context.source()[comment_range.clone()];
+        let line_start = context.source()[..comment_range.start]
+            .rfind('\n')
+            .map_or(0, |newline| newline + 1);
+        let line_end = context.source()[comment_range.end..]
+            .find('\n')
+            .map_or(context.source().len(), |newline| comment_range.end + newline);
+        let line = &context.source()[line_start..line_end];
+        let directive = comment.trim_start_matches('#').trim_start();
+
+        if let Some(list) = redundant_directive_list(directive, "disable")
+            .or_else(|| redundant_directive_list(directive, "todo"))
+        {
             let list = list.split("--").next().unwrap_or_default();
-            disabled.extend(list.split(',').map(|cop| cop.trim().to_string()));
+            disabled.extend(
+                list.split(',')
+                    .map(str::trim)
+                    .filter(|cop| {
+                        redundant_enable_known(cop, &known_cops, &known_departments)
+                    })
+                    .map(str::to_string),
+            );
         }
-        let Some(marker) = line.find("rubocop:enable ") else {
+        let Some(list) = redundant_directive_list(directive, "enable") else {
             continue;
         };
-        if offset == 0 {
+        if line_start == 0 {
             continue;
         }
-        let list_start = marker + "rubocop:enable ".len();
-        let list = &line[list_start..];
+        let list = list.split("--").next().unwrap_or_default().trim_end();
+        let list_start = line.find(list).unwrap_or(line.len());
+        let listed_cops = list.split(',').map(str::trim).collect::<Vec<_>>();
+        let restores_disabled_cop = listed_cops.iter().any(|cop| {
+            disabled.contains(*cop)
+                || (*cop == "all" && !disabled.is_empty())
+                || disabled.iter().any(|disabled| {
+                    cop.split_once('/')
+                        .is_some_and(|(department, _)| department == disabled)
+                })
+        });
         let mut redundant = Vec::new();
         let mut necessary = Vec::new();
         let mut preserve_department_line = false;
-        for cop in list.split(',').map(str::trim) {
+        for cop in listed_cops {
+            if !redundant_enable_known(cop, &known_cops, &known_departments) {
+                continue;
+            }
             if cop == "all" && !disabled.is_empty() {
                 disabled.clear();
                 necessary.push(cop);
@@ -326,11 +362,25 @@ fn redundant_enable(context: &mut CopContext<'_, '_>) {
                 necessary.push(cop);
                 continue;
             }
+            if cop
+                .split_once('/')
+                .is_some_and(|(department, _)| disabled.contains(department))
+            {
+                necessary.push(cop);
+                continue;
+            }
+            if context.related_config_value("AllCops", "DisabledByDefault") == Some("true")
+                && restores_disabled_cop
+                && known_cops.contains(&cop)
+            {
+                necessary.push(cop);
+                continue;
+            }
             if context.related_config_value(cop, "Enabled") == Some("false")
                 && !configured_enable_edits.contains_key(cop)
             {
-                let start = offset + line.find('#').unwrap_or_default();
-                let mut end = offset + line.len();
+                let start = line_start + line.find('#').unwrap_or_default();
+                let mut end = line_start + line.len();
                 if context.source().as_bytes().get(end) == Some(&b'\n') {
                     end += 1;
                 }
@@ -362,12 +412,12 @@ fn redundant_enable(context: &mut CopContext<'_, '_>) {
             .unwrap_or(", ");
         let replacement = necessary.join(separator);
         for (index, cop) in redundant.iter().enumerate() {
-            let start = offset + line.find(cop).unwrap_or(list_start);
+            let start = line_start + line.find(cop).unwrap_or(list_start);
             let label = if *cop == "all" { "all cops" } else { cop };
             let message = format!("Unnecessary enabling of {label}.");
             if index == 0 {
                 if necessary.is_empty() {
-                    let mut edit_end = offset + line.len();
+                    let mut edit_end = line_start + line.len();
                     if context.source().as_bytes().get(edit_end) == Some(&b'\n') {
                         edit_end += 1;
                         if context.source().as_bytes().get(edit_end) == Some(&b'\n') {
@@ -375,7 +425,7 @@ fn redundant_enable(context: &mut CopContext<'_, '_>) {
                         }
                     }
                     let replacement = if preserve_department_line { "\n" } else { "" };
-                    let edit_start = offset + line.find('#').unwrap_or_default();
+                    let edit_start = line_start + line.find('#').unwrap_or_default();
                     if let Some(first_edit) = configured_enable_edits.get(*cop) {
                         context.replace_many(
                             message,
@@ -397,7 +447,7 @@ fn redundant_enable(context: &mut CopContext<'_, '_>) {
                     context.replace(
                         message,
                         start..start + cop.len(),
-                        offset + list_start..offset + line.len(),
+                        line_start + list_start..line_start + list_start + list.len(),
                         replacement.clone(),
                     );
                 }
@@ -406,6 +456,39 @@ fn redundant_enable(context: &mut CopContext<'_, '_>) {
             }
         }
     }
+}
+
+fn redundant_directive_list<'a>(comment: &'a str, action: &str) -> Option<&'a str> {
+    let directive = comment.strip_prefix("rubocop:")?.trim_start();
+    let list = directive.strip_prefix(action)?;
+    list.as_bytes()
+        .first()
+        .is_some_and(u8::is_ascii_whitespace)
+        .then(|| list.trim_start())
+}
+
+fn redundant_enable_known(
+    name: &str,
+    known_cops: &[&str],
+    known_departments: &HashSet<&str>,
+) -> bool {
+    if name == "all"
+        || known_cops.contains(&name)
+        || known_departments.contains(name)
+        || name
+            .split_once('/')
+            .is_some_and(|(department, _)| known_departments.contains(department))
+    {
+        return true;
+    }
+
+    // These are the official RuboCop extension departments represented in the
+    // cached project corpus. Their registries are loaded by RuboCop itself but
+    // are intentionally not part of RustOcop's built-in cop inventory.
+    matches!(
+        name.split('/').next(),
+        Some("Capybara" | "FactoryBot" | "Performance" | "Rails" | "Require" | "RSpec")
+    )
 }
 
 fn unreachable_pattern(context: &mut CopContext<'_, '_>) {

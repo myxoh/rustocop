@@ -1,6 +1,8 @@
 use super::catalog_cop::custom;
 use super::source_syntax::top_level_elements;
 use super::*;
+use crate::rubocop::ast::node::core::NodeRef as RubocopNodeRef;
+use crate::rubocop::ast::prism::convert as convert_rubocop_ast;
 use regex::Regex;
 use std::sync::OnceLock;
 
@@ -986,200 +988,201 @@ fn enforce_bracket_spacing(
 
 #[allow(clippy::too_many_lines)]
 fn end_alignment(context: &mut CopContext<'_, '_>) {
-    #[derive(Clone)]
-    struct Opening {
-        line: usize,
-        column: usize,
-        correction_column: usize,
-        source: String,
-        relevant: bool,
-    }
-
-    let start_of_line = context
+    let parsed = ruby_prism::parse(context.source().as_bytes());
+    let (ast, root) = convert_rubocop_ast(context.source(), &parsed.node());
+    let Some(root) = root.map(|root| ast.node(root)) else {
+        return;
+    };
+    let align_start_of_line = context
         .related_config_value("Layout/BeginEndAlignment", "EnforcedStyleAlignWith")
         == Some("start_of_line")
         && context.related_config_explicit("Layout/BeginEndAlignment", "EnforcedStyleAlignWith")
         && context.related_config_value("Layout/BeginEndAlignment", "Enabled") != Some("false");
-    let comment_ranges = context.source_file().comment_ranges();
-    let excluded = context
-        .source_file()
-        .literal_ranges()
-        .into_iter()
-        .chain(comment_ranges.iter().cloned())
-        .collect::<Vec<_>>();
-    let lines = context.source_file().lines().collect::<Vec<_>>();
-    let mut stack: Vec<Opening> = Vec::new();
-    for (line_index, &(offset, line)) in lines.iter().enumerate() {
-        let trimmed = line.trim_start();
-        let indentation = line.len() - trimmed.len();
-        if trimmed == "end"
-            || trimmed.starts_with("end ")
-            || trimmed.starts_with("end.")
-            || trimmed.starts_with("end&.")
-        {
-            stack.pop();
+    for clause in root.each_node(&["resbody", "ensure"]) {
+        let Some((keyword_chars, keyword)) = clause.loc("keyword") else {
+            continue;
+        };
+        if clause.kind() == "resbody" && rescue_alignment_modifier(clause) {
             continue;
         }
-
-        for keyword in ["rescue", "ensure"] {
-            let relative = line.match_indices(keyword).find_map(|(relative, _)| {
-                let before = &line[..relative];
-                let boundary_before = before.as_bytes().last();
-                let boundary_after = line.as_bytes().get(relative + keyword.len());
-                let token = boundary_before
-                    .is_none_or(|byte| !byte.is_ascii_alphanumeric() && *byte != b'_')
-                    && boundary_after
-                        .is_none_or(|byte| !byte.is_ascii_alphanumeric() && *byte != b'_');
-                let clause = before.trim().is_empty() || before.trim_end().ends_with(';');
-                let absolute = offset + relative;
-                (token
-                    && clause
-                    && !excluded
-                        .iter()
-                        .any(|range| range.start <= absolute && absolute < range.end))
-                .then_some(relative)
-            });
-            let Some(relative) = relative else {
-                continue;
-            };
-            let before = &line[..relative];
-            let Some(opening) = stack.iter().rev().find(|opening| {
-                opening.relevant
-                    && !lines[opening.line..line_index]
-                        .iter()
-                        .any(|(_, candidate)| {
-                            candidate.trim() == "end"
-                                && candidate.len() - candidate.trim_start().len() == opening.column
-                        })
-            }) else {
-                continue;
-            };
-            if opening.line == line_index + 1 || opening.column == relative {
-                continue;
-            }
-            let message = format!(
-                "`{keyword}` at {}, {relative} is not aligned with `{}` at {}, {}.",
-                line_index + 1,
-                opening.source,
-                opening.line,
-                opening.column
-            );
-            let offense = offset + relative..offset + relative + keyword.len();
-            if before.trim().is_empty() {
-                context.replace(
-                    message,
-                    offense,
-                    offset..offset + relative,
-                    " ".repeat(opening.correction_column),
-                );
-            } else {
-                context.report(message, offense);
-            }
-        }
-
-        let comment_at = comment_ranges
-            .iter()
-            .filter(|range| offset <= range.start && range.start < offset + line.len())
-            .map(|range| range.start - offset)
-            .min();
-        let code = line[..comment_at.unwrap_or(line.len())].trim_end();
-        let relevant = if let Some(begin_at) = code.find("begin") {
-            let boundary = code.as_bytes().get(begin_at.wrapping_sub(1));
-            let after = code.as_bytes().get(begin_at + "begin".len());
-            if (begin_at == 0
-                || boundary.is_some_and(|byte| !byte.is_ascii_alphanumeric() && *byte != b'_'))
-                && after.is_none_or(|byte| !byte.is_ascii_alphanumeric() && *byte != b'_')
-            {
-                let column = if start_of_line { indentation } else { begin_at };
-                let source = if start_of_line {
-                    code[indentation..begin_at + "begin".len()].to_string()
-                } else {
-                    "begin".to_string()
-                };
-                Some((column, source))
-            } else {
-                None
-            }
-        } else if let Some(def_at) = code.find("def ") {
-            let name_start = def_at + 4;
-            let name_end = code[name_start..]
-                .find(|character: char| {
-                    character.is_ascii_whitespace() || character == '(' || character == ';'
-                })
-                .map_or(code.len(), |at| name_start + at);
-            Some((indentation, code[indentation..name_end].to_string()))
-        } else if trimmed.starts_with("class <<") {
-            Some((indentation, trimmed.to_string()))
-        } else if trimmed.starts_with("class ") || trimmed.starts_with("module ") {
-            let end = code[indentation..]
-                .find(['<', ';'])
-                .map_or(code.len(), |at| indentation + at);
-            Some((indentation, code[indentation..end].trim_end().to_string()))
-        } else if code.ends_with(" do") || code.contains(" do |") {
-            if let Some(assignment) = rescue_assignment_lhs(&code[indentation..]) {
-                Some((indentation, assignment))
-            } else {
-                let through_do = code.rfind(" do").map_or(code.len(), |at| at + 3);
-                Some((indentation, code[indentation..through_do].to_string()))
-            }
-        } else {
-            None
+        let Some(mut alignment) = clause
+            .each_ancestor(&[
+                "kwbegin", "def", "defs", "class", "module", "sclass", "block", "numblock",
+                "itblock", "super", "zsuper",
+            ])
+            .into_iter()
+            .next()
+        else {
+            continue;
         };
-        if let Some((column, source)) = relevant {
-            let chained_call = (code.ends_with(" do") || code.contains(" do |"))
-                && (trimmed.starts_with('.')
-                    || line_index > 0 && lines[line_index - 1].1.trim_end().ends_with('.'));
-            let correction_column = if chained_call && line_index > 0 {
-                let previous = lines[line_index - 1].1;
-                previous.len() - previous.trim_start().len()
-            } else {
-                column
-            };
-            stack.push(Opening {
-                line: line_index + 1,
-                column,
-                correction_column,
-                source,
-                relevant: true,
-            });
-        } else if starts_end_delimited_construct(trimmed) {
-            stack.push(Opening {
-                line: line_index + 1,
-                column: indentation,
-                correction_column: indentation,
-                source: String::new(),
-                relevant: false,
-            });
+        if alignment.kind() != "kwbegin" && rescue_block_line_break_aligned(alignment, clause) {
+            continue;
+        }
+        if alignment.kind() != "kwbegin" {
+            if let Some(parent) = alignment.parent().filter(|parent| parent.assignment()) {
+                if parent.first_line() == alignment.first_line() {
+                    alignment = parent;
+                }
+            } else if let Some(parent) = alignment.parent().filter(|parent| {
+                parent.call_type()
+                    && parent.method_name().is_some_and(|name| name.ends_with('='))
+                    && parent.first_line() == alignment.first_line()
+            }) {
+                alignment = parent;
+            } else if matches!(alignment.kind(), "def" | "defs") {
+                if let Some(parent) = alignment.parent().filter(|parent| {
+                    matches!(parent.method_name(), Some("private" | "protected" | "public" | "private_class_method" | "public_class_method"))
+                }) {
+                    alignment = parent;
+                }
+            }
+        }
+        let Some((alignment_chars, correction_column)) =
+            rescue_alignment_location(context.source(), alignment, align_start_of_line)
+        else {
+            continue;
+        };
+        let keyword_byte = character_offset_to_byte(context.source(), keyword_chars.start);
+        let alignment_byte = character_offset_to_byte(context.source(), alignment_chars.start);
+        let file = context.source_file();
+        if file.same_line(keyword_byte, alignment_byte)
+            || file.column(keyword_byte) == file.column(alignment_byte)
+        {
+            continue;
+        }
+        let ending_chars = rescue_alignment_source_end(context.source(), alignment)
+            .unwrap_or(alignment_chars.end);
+        let ending_byte = character_offset_to_byte(context.source(), ending_chars);
+        let beginning = context
+            .source()
+            .get(alignment_byte..ending_byte)
+            .unwrap_or_default();
+        let keyword_end = character_offset_to_byte(context.source(), keyword_chars.end);
+        let message = format!(
+            "`{keyword}` at {}, {} is not aligned with `{beginning}` at {}, {}.",
+            context.source()[..keyword_byte].bytes().filter(|byte| *byte == b'\n').count() + 1,
+            file.column(keyword_byte),
+            context.source()[..alignment_byte].bytes().filter(|byte| *byte == b'\n').count() + 1,
+            file.column(alignment_byte)
+        );
+        let line_start = file.line_start(keyword_byte);
+        let preceding = &context.source()[line_start..keyword_byte];
+        if preceding.trim().is_empty() {
+            context.replace(
+                message,
+                keyword_byte..keyword_end,
+                line_start..keyword_byte,
+                " ".repeat(correction_column),
+            );
+        } else {
+            context.report(message, keyword_byte..keyword_end);
         }
     }
 }
 
-fn rescue_assignment_lhs(line: &str) -> Option<String> {
-    const OPERATORS: [&str; 7] = ["||=", "&&=", "+=", "-=", "*=", "/=", "="];
-    let (at, _) = OPERATORS
-        .iter()
-        .filter_map(|operator| line.find(operator).map(|at| (at, *operator)))
-        .min_by_key(|(at, _)| *at)?;
-    let lhs = line[..at].trim_end();
-    if lhs.is_empty() {
-        return None;
-    }
-    Some(
-        lhs.split_once('.')
-            .map_or(lhs, |(receiver, _)| receiver)
-            .to_string(),
-    )
+fn rescue_alignment_modifier(node: RubocopNodeRef<'_>) -> bool {
+    node.loc("modifier").is_some()
 }
 
-fn starts_end_delimited_construct(line: &str) -> bool {
-    ["if ", "unless ", "case ", "while ", "until ", "for "]
-        .iter()
-        .any(|keyword| {
-            line.starts_with(keyword)
-                || line.contains(&format!("= {keyword}"))
-                || line.contains(&format!("||= {keyword}"))
-                || line.contains(&format!("&&= {keyword}"))
+fn rescue_block_line_break_aligned(alignment: RubocopNodeRef<'_>, clause: RubocopNodeRef<'_>) -> bool {
+    if !matches!(alignment.kind(), "block" | "numblock" | "itblock") {
+        return false;
+    }
+    let Some(send) = alignment.send_node() else {
+        return false;
+    };
+    let Some((begin, _)) = alignment.loc("begin") else {
+        return false;
+    };
+    let keyword_column = clause.loc_column("keyword").unwrap_or(0);
+    ["dot", "selector"].into_iter().any(|name| {
+        send.loc(name).is_some_and(|(range, _)| {
+            source_line_for_character(range.start, send) == source_line_for_character(begin.start, send)
+                && send.loc_column(name) == Some(keyword_column)
         })
+    })
+}
+
+fn source_line_for_character(offset: usize, node: RubocopNodeRef<'_>) -> usize {
+    let base = node.source_range().map_or(0, |range| range.start);
+    node.first_line() + node.source().unwrap_or_default()[..offset.saturating_sub(base).min(node.source_length())].matches('\n').count()
+}
+
+fn rescue_alignment_location(
+    source: &str,
+    node: RubocopNodeRef<'_>,
+    start_of_line: bool,
+) -> Option<(std::ops::Range<usize>, usize)> {
+    let range = node.source_range()?;
+    let start = if start_of_line {
+        line_nonspace_character(source, range.start)
+    } else if matches!(node.kind(), "block" | "numblock" | "itblock") {
+        line_nonspace_character(source, node.loc("begin")?.0.start)
+    } else {
+        range.start
+    };
+    let byte = character_offset_to_byte(source, start);
+    let line_start = source[..byte].rfind('\n').map_or(0, |at| at + 1);
+    let column = source[line_start..byte].chars().count();
+    let correction = if matches!(node.kind(), "block" | "numblock" | "itblock") {
+        let current_line = &source[line_start..source[byte..].find('\n').map_or(source.len(), |at| byte + at)];
+        if line_start > 0
+            && (current_line.trim_start().starts_with('.')
+                || source[..line_start - 1].trim_end().ends_with('.'))
+        {
+            let previous_end = line_start - 1;
+            let previous_start = source[..previous_end].rfind('\n').map_or(0, |at| at + 1);
+            source[previous_start..previous_end].chars().take_while(|c| c.is_whitespace()).count()
+        } else {
+            column
+        }
+    } else {
+        column
+    };
+    Some((start..range.end, correction))
+}
+
+fn line_nonspace_character(source: &str, offset: usize) -> usize {
+    let byte = character_offset_to_byte(source, offset);
+    let line_start = source[..byte].rfind('\n').map_or(0, |at| at + 1);
+    source[..line_start].chars().count()
+        + source[line_start..]
+            .chars()
+            .take_while(|character| character.is_whitespace() && *character != '\n')
+            .count()
+}
+
+fn rescue_alignment_source_end(_source: &str, node: RubocopNodeRef<'_>) -> Option<usize> {
+    match node.kind() {
+        "block" | "numblock" | "itblock" | "kwbegin" => node.loc("begin").map(|(range, _)| range.end),
+        "super" | "zsuper" => {
+            let range = node.source_range()?;
+            let through_do = node.source()?.find("do")? + 2;
+            Some(range.start + node.source()?[..through_do].chars().count())
+        }
+        "def" | "defs" => {
+            node.loc("name").map(|(range, _)| range.end)
+        }
+        "class" | "module" => node.node_child(0)?.source_range().map(|range| range.end),
+        "lvasgn" | "ivasgn" | "cvasgn" | "gvasgn" | "casgn" | "masgn" | "op_asgn" | "or_asgn" | "and_asgn" => {
+            let range = node.source_range()?;
+            let text = node.source()?;
+            let equals = text.find('=')?;
+            let lhs = text[..equals]
+                .trim_end_matches(|character: char| character.is_whitespace() || matches!(character, '+' | '-' | '*' | '/' | '%' | '|' | '&' | '^'));
+            Some(range.start + lhs.chars().count())
+        }
+        "sclass" => node.node_child(0)?.source_range().map(|range| range.end),
+        _ => node.receiver().and_then(|receiver| receiver.source_range()).map(|range| range.end)
+            .or_else(|| node.child_nodes().first().and_then(|child| child.loc("name")).map(|(range, _)| range.end)),
+    }
+}
+
+fn character_offset_to_byte(source: &str, offset: usize) -> usize {
+    source
+        .char_indices()
+        .nth(offset)
+        .map_or(source.len(), |(byte, _)| byte)
 }
 
 struct MultilineMethodCallIndentationCop;
@@ -2780,10 +2783,10 @@ fn operator_spacing(context: &mut CopContext<'_, '_>) {
     // regexp arguments). RuboCop's previous scanner selected the narrowest
     // containing range. Keep that exact choice with a sweep-line heap instead of
     // testing every source byte against every literal.
-    let mut literal_events = context
-        .source_file()
-        .literal_ranges()
-        .into_iter()
+    let literal_ranges = context.source_file().literal_ranges();
+    let mut literal_events = literal_ranges
+        .iter()
+        .cloned()
         .enumerate()
         .map(|(order, range)| (range.start, order, range.end))
         .collect::<Vec<_>>();
@@ -2793,6 +2796,8 @@ fn operator_spacing(context: &mut CopContext<'_, '_>) {
     comment_ranges.sort_by_key(|range| range.start);
     let unary_operator_offsets = unary_operator_offsets(&source);
     let hash_pair_starts = hash_pair_starts(&source);
+    let (structural_operator_offsets, ternary_operator_offsets) =
+        spacing_structural_operator_offsets(&source);
     let mut literal_index = 0;
     let mut comment_index = 0;
 
@@ -2803,14 +2808,19 @@ fn operator_spacing(context: &mut CopContext<'_, '_>) {
         // ERB-backed generator templates are not Ruby syntax at the template
         // delimiters. RuboCop's Ruby parser does not expose those delimiters
         // as operator nodes, so source-oriented scanning must ignore the line.
-        if line.contains("<%") || line.contains("%>") {
-            continue;
+        if let Some(relative) = line.find("<%").or_else(|| line.find("%>")) {
+            let delimiter = line_offset + relative;
+            if !literal_ranges
+                .iter()
+                .any(|range| range.start <= delimiter && delimiter < range.end)
+            {
+                continue;
+            }
         }
         let code_end = line.len();
         let code = &line[..code_end];
         let mut index = 0;
         let mut quote = None;
-        let mut ternary_depth = 0usize;
         while index < code.len() {
             let absolute = line_offset + index;
             while comment_ranges
@@ -2848,18 +2858,46 @@ fn operator_spacing(context: &mut CopContext<'_, '_>) {
                     && line_offset <= range.start
                     && range.start < line_offset + line.len()
                     && literal.find('\n').is_some();
-                if heredoc_tail {
-                    let marker_end = range.start
-                        + literal
+                if structural_operator_offsets.contains(&absolute) {
+                    // Embedded Ruby inside interpolated literals is still code.
+                } else if heredoc_tail {
+                    let mut marker_length = 2;
+                    if literal.as_bytes().get(marker_length).is_some_and(|byte| matches!(byte, b'-' | b'~')) {
+                        marker_length += 1;
+                    }
+                    let marker_end = if let Some(quote) = literal
+                        .as_bytes()
+                        .get(marker_length)
+                        .copied()
+                        .filter(|byte| matches!(byte, b'\'' | b'"' | b'`'))
+                    {
+                        literal[marker_length + 1..]
                             .bytes()
-                            .take_while(|byte| {
-                                !byte.is_ascii_whitespace() && !matches!(byte, b',' | b')')
+                            .position(|byte| byte == quote)
+                            .map_or(range.start + marker_length + 1, |closing| {
+                                range.start + marker_length + closing + 2
                             })
-                            .count();
+                    } else {
+                        range.start
+                            + literal
+                                .bytes()
+                                .take_while(|byte| {
+                                    !byte.is_ascii_whitespace() && !matches!(byte, b',' | b')')
+                                })
+                                .count()
+                    };
                     if absolute < marker_end {
                         index = marker_end.saturating_sub(line_offset).min(code.len());
                         continue;
                     }
+                } else if let Some(next_operator) = structural_operator_offsets
+                    .iter()
+                    .copied()
+                    .filter(|offset| absolute < *offset && *offset < range.end)
+                    .min()
+                {
+                    index = next_operator.saturating_sub(line_offset).min(code.len());
+                    continue;
                 } else {
                     index = range.end.saturating_sub(line_offset).min(code.len());
                     continue;
@@ -2871,7 +2909,8 @@ fn operator_spacing(context: &mut CopContext<'_, '_>) {
             }
             let byte = code.as_bytes()[index];
             let character_width = code[index..].chars().next().map_or(1, char::len_utf8);
-            if let Some(delimiter) = quote {
+            if quote.is_some() && !structural_operator_offsets.contains(&absolute) {
+                let delimiter = quote.unwrap_or_default();
                 if byte == b'\\' {
                     index += 1;
                     if index < code.len() {
@@ -2906,11 +2945,17 @@ fn operator_spacing(context: &mut CopContext<'_, '_>) {
                 continue;
             };
             let end = index + operator.len();
+            if matches!(operator, "and" | "or")
+                && !structural_operator_offsets.contains(&absolute)
+            {
+                index = end;
+                continue;
+            }
             if unary_operator_offsets.contains(&absolute) {
                 index = end;
                 continue;
             }
-            if operator == ":" && ternary_depth == 0 {
+            if matches!(operator, "?" | ":") && !ternary_operator_offsets.contains(&absolute) {
                 index = end;
                 continue;
             }
@@ -2918,12 +2963,6 @@ fn operator_spacing(context: &mut CopContext<'_, '_>) {
                 index = end;
                 continue;
             }
-            if operator == "?" {
-                ternary_depth += 1;
-            } else if operator == ":" {
-                ternary_depth = ternary_depth.saturating_sub(1);
-            }
-
             let left_start = code[..index]
                 .rfind(|character: char| !character.is_ascii_whitespace())
                 .map_or(index, |at| {
@@ -2966,10 +3005,26 @@ fn operator_spacing(context: &mut CopContext<'_, '_>) {
             } else if left_space.is_empty() || right_space.is_empty() {
                 // A line break immediately after an operator is accepted.
                 if right_end == code.len() && right_space.is_empty() && !left_space.is_empty() {
-                    index = end;
-                    continue;
+                    if left_space.len() == 1
+                        || allow_alignment
+                            && operator_alignment_is_allowed(
+                                &source,
+                                line_offset,
+                                index,
+                                end,
+                                left_start,
+                                right_end,
+                                operator,
+                                hash_pair_starts.get(&(line_offset + index)).copied(),
+                            )
+                    {
+                        index = end;
+                        continue;
+                    }
+                    format!("Operator `{operator}` should be surrounded by a single space.")
+                } else {
+                    format!("Surrounding space missing for operator `{operator}`.")
                 }
-                format!("Surrounding space missing for operator `{operator}`.")
             } else if left_space.len() > 1 || right_space.len() > 1 {
                 if comment_ranges
                     .iter()
@@ -2982,8 +3037,7 @@ fn operator_spacing(context: &mut CopContext<'_, '_>) {
                     index = end;
                     continue;
                 }
-                if allow_alignment
-                    && operator_alignment_is_allowed(
+                let alignment_allowed = operator_alignment_is_allowed(
                         &source,
                         line_offset,
                         index,
@@ -2992,8 +3046,8 @@ fn operator_spacing(context: &mut CopContext<'_, '_>) {
                         right_end,
                         operator,
                         hash_pair_starts.get(&(line_offset + index)).copied(),
-                    )
-                {
+                    );
+                if allow_alignment && alignment_allowed {
                     index = end;
                     continue;
                 }
@@ -3026,19 +3080,92 @@ fn operator_spacing(context: &mut CopContext<'_, '_>) {
     }
 }
 
+fn spacing_structural_operator_offsets(
+    source: &str,
+) -> (
+    std::collections::HashSet<usize>,
+    std::collections::HashSet<usize>,
+) {
+    let parsed = ruby_prism::parse(source.as_bytes());
+    let (ast, root) = convert_rubocop_ast(source, &parsed.node());
+    let Some(root) = root.map(|root| ast.node(root)) else {
+        return Default::default();
+    };
+    let mut offsets = std::collections::HashSet::new();
+    let mut ternary_offsets = std::collections::HashSet::new();
+    for node in root.each_node(&[]) {
+        for name in ["operator", "selector", "question", "colon", "assoc"] {
+            let eligible = match name {
+                "selector" => matches!(node.kind(), "send" | "csend"),
+                "question" | "colon" => node.kind() == "if" && node.ternary(),
+                "assoc" => node.kind() == "resbody",
+                _ => matches!(
+                    node.kind(),
+                    "lvasgn" | "ivasgn" | "cvasgn" | "gvasgn" | "casgn" | "masgn"
+                        | "op_asgn" | "and_asgn" | "or_asgn" | "and" | "or" | "pair"
+                        | "resbody" | "class" | "sclass" | "match_pattern" | "match_alt"
+                        | "match_as"
+                ),
+            };
+            if !eligible {
+                continue;
+            }
+            let Some((range, token)) = node.loc(name) else {
+                continue;
+            };
+            if spacing_operator_at(token, 0).is_some_and(|operator| operator == token) {
+                let offset = character_offset_to_byte(source, range.start);
+                offsets.insert(offset);
+                if matches!(name, "question" | "colon") {
+                    ternary_offsets.insert(offset);
+                }
+            }
+        }
+    }
+    (offsets, ternary_offsets)
+}
+
 fn unary_operator_offsets(source: &str) -> std::collections::HashSet<usize> {
     #[derive(Default)]
     struct UnaryOperators(std::collections::HashSet<usize>);
 
     impl<'pr> ruby_prism::Visit<'pr> for UnaryOperators {
+        fn visit_pinned_expression_node(&mut self, node: &ruby_prism::PinnedExpressionNode<'pr>) {
+            self.0.insert(node.operator_loc().start_offset());
+            ruby_prism::visit_pinned_expression_node(self, node);
+        }
+
+        fn visit_pinned_variable_node(&mut self, node: &ruby_prism::PinnedVariableNode<'pr>) {
+            self.0.insert(node.operator_loc().start_offset());
+            ruby_prism::visit_pinned_variable_node(self, node);
+        }
+
         fn visit_splat_node(&mut self, node: &ruby_prism::SplatNode<'pr>) {
             self.0.insert(node.operator_loc().start_offset());
             ruby_prism::visit_splat_node(self, node);
         }
 
+        fn visit_assoc_splat_node(&mut self, node: &ruby_prism::AssocSplatNode<'pr>) {
+            self.0.insert(node.operator_loc().start_offset());
+            ruby_prism::visit_assoc_splat_node(self, node);
+        }
+
+        fn visit_optional_parameter_node(
+            &mut self,
+            node: &ruby_prism::OptionalParameterNode<'pr>,
+        ) {
+            self.0.insert(node.operator_loc().start_offset());
+            ruby_prism::visit_optional_parameter_node(self, node);
+        }
+
         fn visit_block_argument_node(&mut self, node: &ruby_prism::BlockArgumentNode<'pr>) {
             self.0.insert(node.operator_loc().start_offset());
             ruby_prism::visit_block_argument_node(self, node);
+        }
+
+        fn visit_block_parameter_node(&mut self, node: &ruby_prism::BlockParameterNode<'pr>) {
+            self.0.insert(node.operator_loc().start_offset());
+            ruby_prism::visit_block_parameter_node(self, node);
         }
 
         fn visit_block_parameters_node(&mut self, node: &ruby_prism::BlockParametersNode<'pr>) {
@@ -3068,6 +3195,22 @@ fn unary_operator_offsets(source: &str) -> std::collections::HashSet<usize> {
             if matches!(node.name().as_slice(), b"+@" | b"-@" | b"!" | b"~") {
                 if let Some(operator) = node.message_loc() {
                     self.0.insert(operator.start_offset());
+                }
+            }
+            let name = node.name();
+            let name = name.as_slice();
+            let setter = name == b"[]="
+                || name.strip_suffix(b"=").is_some_and(|stem| {
+                    stem.last().is_some_and(|byte| {
+                        byte.is_ascii_alphanumeric() || matches!(byte, b'_' | b'?' | b'!')
+                    })
+                });
+            if setter {
+                if let Some(selector) = node.message_loc() {
+                    if let Some(relative) = selector.as_slice().iter().position(|byte| *byte == b'=')
+                    {
+                        self.0.insert(selector.start_offset() + relative);
+                    }
                 }
             }
             ruby_prism::visit_call_node(self, node);
@@ -3167,10 +3310,10 @@ fn ruby_comment_start(line: &str) -> Option<usize> {
 }
 
 fn spacing_operator_at(source: &str, index: usize) -> Option<&str> {
-    const OPERATORS: [&str; 40] = [
+    const OPERATORS: [&str; 42] = [
         "<=>", "||=", "&&=", "===", "**=", "<<=", ">>=", "==", "!=", "=~", "!~", "<=", ">=", "=>",
         "+=", "-=", "*=", "/=", "%=", "^=", "|=", "&=", "<<", ">>", "&&", "||", "**", "+", "-",
-        "*", "/", "%", "^", "&", "|", "<", ">", "?", ":", "=",
+        "*", "/", "%", "^", "&", "|", "<", ">", "?", ":", "=", "and", "or",
     ];
     OPERATORS
         .iter()
@@ -3212,13 +3355,25 @@ fn operator_is_non_binary(source: &str, start: usize, end: usize, operator: &str
     if before.is_empty() {
         return true;
     }
+    if matches!(operator, "and" | "or")
+        && (source[..start]
+            .chars()
+            .next_back()
+            .is_some_and(|character| character.is_alphanumeric() || character == '_')
+            || source[end..]
+                .chars()
+                .next()
+                .is_some_and(|character| character.is_alphanumeric() || character == '_'))
+    {
+        return true;
+    }
     if operator_is_method_name(source, start) {
         return true;
     }
-    if source.trim_start().starts_with("def ") && matches!(operator, "*" | "**" | "&") {
-        return true;
-    }
-    if before.ends_with("def") || before.ends_with("def self.") || before.ends_with('.') {
+    if before.split_ascii_whitespace().next_back() == Some("def")
+        || before.ends_with("def self.")
+        || before.ends_with('.')
+    {
         return true;
     }
     if operator == "<<" && source[end..].starts_with(['~', '-']) {
@@ -3396,11 +3551,11 @@ fn operator_alignment_is_allowed(
                 operator,
             )
         };
-    let (alignment_column, alignment_start) = operand_alignment_start
+    let operand_alignment = operand_alignment_start
         .filter(|absolute| {
             (line_offset..=line_offset + current_line_source.len()).contains(absolute)
         })
-        .map_or((rhs_start_column, rhs_start), |absolute| {
+        .map(|absolute| {
             (
                 current_line_source[..absolute - line_offset]
                     .chars()
@@ -3409,7 +3564,18 @@ fn operator_alignment_is_allowed(
             )
         });
     let trailing_aligned = !trailing_excess
-        || generic_rhs_alignment_is_allowed(source, line_offset, alignment_column, alignment_start);
+        || operand_alignment.map_or_else(
+            || generic_rhs_alignment_is_allowed(source, line_offset, rhs_start_column, rhs_start),
+            |(column, start)| {
+                generic_rhs_alignment_is_allowed(source, line_offset, column, start)
+                    || generic_same_rhs_alignment_is_allowed(
+                        source,
+                        line_offset,
+                        rhs_start_column,
+                        rhs_start,
+                    )
+            },
+        );
 
     leading_aligned && trailing_aligned
 }
@@ -3456,6 +3622,14 @@ fn generic_operator_alignment_is_allowed(
     operator: &str,
 ) -> bool {
     alignment_search(source, line_offset, |line| {
+        let identical = line
+            .char_indices()
+            .nth(operator_start_column)
+            .and_then(|(byte, _)| line.get(byte..byte + operator.len()))
+            == Some(operator);
+        if identical {
+            return true;
+        }
         operator_layouts(line).into_iter().any(|layout| {
             let candidate = &line[layout.0..layout.1];
             candidate == operator && line[..layout.0].chars().count() == operator_start_column
@@ -3484,6 +3658,38 @@ fn generic_rhs_alignment_is_allowed(
     let current = &source[line_offset..line_end];
     alignment_search(source, line_offset, |line| {
         aligned_word_at_column(line, current, rhs_start_column, rhs_start)
+    })
+}
+
+fn generic_same_rhs_alignment_is_allowed(
+    source: &str,
+    line_offset: usize,
+    rhs_start_column: usize,
+    rhs_start: usize,
+) -> bool {
+    let line_end = source[line_offset..]
+        .find('\n')
+        .map_or(source.len(), |end| line_offset + end);
+    let remainder = source[line_offset + rhs_start..line_end].trim_end();
+    let token_length = remainder
+        .char_indices()
+        .take_while(|(_, character)| {
+            character.is_alphanumeric() || matches!(character, '_' | '.' | ':' | '@' | '$')
+        })
+        .last()
+        .map_or_else(
+            || remainder.chars().next().map_or(0, char::len_utf8),
+            |(byte, character)| byte + character.len_utf8(),
+        );
+    let operand = &remainder[..token_length];
+    if operand.is_empty() {
+        return false;
+    }
+    alignment_search(source, line_offset, |line| {
+        line.char_indices()
+            .nth(rhs_start_column)
+            .and_then(|(byte, _)| line.get(byte..))
+            .is_some_and(|candidate| candidate.starts_with(operand))
     })
 }
 
@@ -3542,9 +3748,13 @@ fn assignment_leading_alignment_is_allowed(
                 break;
             }
             if indent == current_indent {
-                if let Some(layout) = operator_layouts(line)
-                    .into_iter()
-                    .find(|layout| line[layout.0..layout.1].ends_with('='))
+                if let Some(layout) = operator_layouts(line).into_iter().find(|layout| {
+                    matches!(
+                        &line[layout.0..layout.1],
+                        "=" | "||=" | "&&=" | "+=" | "-=" | "*=" | "/=" | "%="
+                            | "^=" | "|=" | "&=" | "<<=" | ">>=" | "**="
+                    )
+                })
                 {
                     matches.push(line[..layout.1].chars().count());
                 }

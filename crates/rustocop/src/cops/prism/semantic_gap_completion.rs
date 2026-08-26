@@ -1,11 +1,13 @@
 use super::*;
+use crate::rubocop::ast::node::core::NodeRef as RubocopNodeRef;
+use crate::rubocop::ast::prism::convert as convert_rubocop_ast;
 use std::collections::HashSet;
 
 define_cops! {
     UnusedMethodArgument => "Lint/UnusedMethodArgument" => node(as_def_node, unused_method_argument),
     UselessMethodDefinition => "Lint/UselessMethodDefinition" => node(as_def_node, useless_method_definition),
     ConstantOverwrittenInRescue => "Lint/ConstantOverwrittenInRescue" => node(as_rescue_node, constant_overwritten_in_rescue),
-    RedundantAssignment => "Style/RedundantAssignment" => node(as_def_node, redundant_assignment),
+    RedundantAssignment => "Style/RedundantAssignment" => source(redundant_assignment),
     ConstantResolution => "Lint/ConstantResolution" => any_node(constant_resolution),
     ReturnInVoidContext => "Lint/ReturnInVoidContext" => node(as_return_node, return_in_void_context),
     AmbiguousEndlessMethodDefinition => "Style/AmbiguousEndlessMethodDefinition" => node(as_def_node, ambiguous_endless_method_definition),
@@ -233,190 +235,83 @@ fn constant_overwritten_in_rescue(
     );
 }
 
-#[allow(clippy::too_many_lines)]
-fn redundant_assignment(node: &ruby_prism::DefNode<'_>, context: &mut CopContext<'_, '_>) {
-    let location = node.location();
-    let ensure_start = context
-        .source_file()
-        .lines()
-        .find(|(offset, line)| {
-            location.start_offset() <= *offset
-                && *offset < location.end_offset()
-                && line.trim_start().starts_with("ensure")
-        })
-        .map(|(offset, _)| offset);
-    let lines = context
-        .source_file()
-        .lines()
-        .filter(|(offset, _)| location.start_offset() <= *offset && *offset < location.end_offset())
-        .filter(|(offset, _)| ensure_start.is_none_or(|ensure| *offset > ensure))
-        .filter(|(_, line)| !line.trim().is_empty() && !line.trim_start().starts_with('#'))
-        .collect::<Vec<_>>();
-    for (pair_index, pair) in lines.windows(2).enumerate() {
-        let (assignment_start, assignment) = pair[0];
-        let (return_start, returned) = pair[1];
-        let Some((left, right)) = assignment.trim().split_once(" = ") else {
-            continue;
-        };
-        if assignment.contains(" if ") || assignment.contains(" unless ") {
-            continue;
-        }
-        let assignment_indent = assignment.len() - assignment.trim_start().len();
-        let enclosing = lines[..=pair_index].iter().rev().find(|(_, previous)| {
-            previous.len() - previous.trim_start().len() < assignment_indent
-        });
-        if enclosing.is_some_and(|(_, previous)| {
-            previous.trim_end().ends_with(" do") || previous.contains(" do |")
-        }) {
-            continue;
-        }
-        if returned.trim() != left
-            || left.is_empty()
-            || !left
-                .bytes()
-                .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
-        {
-            continue;
-        }
-        if lines
-            .get(pair_index + 2)
-            .is_some_and(|(_, following)| following.trim_start().starts_with('.'))
-        {
-            continue;
-        }
-        let indent = assignment.len() - assignment.trim_start().len();
-        let offense = assignment_start + indent..assignment_start + assignment.len();
-        let returned_start = return_start + returned.len() - returned.trim_start().len();
-        context.replace_many(
-            "Redundant assignment before returning detected.",
-            offense.clone(),
-            vec![
-                (offense, right.to_string()),
-                (returned_start..returned_start + left.len(), String::new()),
-            ],
-        );
+fn redundant_assignment(context: &mut CopContext<'_, '_>) {
+    let parsed = ruby_prism::parse(context.source().as_bytes());
+    let (ast, root) = convert_rubocop_ast(context.source(), &parsed.node());
+    let Some(root) = root.map(|root| ast.node(root)) else { return };
+    for definition in root.each_node(&["def", "defs"]) {
+        check_redundant_assignment_branch(definition.body(), context);
     }
-    for (index, (assignment_start, assignment)) in lines.iter().enumerate() {
-        let trimmed = assignment.trim();
-        let Some((left, right)) = trimmed.split_once(" = ") else {
-            continue;
-        };
-        if !left
-            .bytes()
-            .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
-        {
-            continue;
-        }
-        let mut balance = delimiter_balance(right);
-        if balance <= 0 {
-            continue;
-        }
-        let mut end_index = None;
-        for (candidate_index, (_, candidate)) in lines.iter().enumerate().skip(index + 1) {
-            balance += delimiter_balance(candidate);
-            if balance == 0 {
-                end_index = Some(candidate_index);
-                break;
+}
+
+fn check_redundant_assignment_branch(
+    node: Option<RubocopNodeRef<'_>>,
+    context: &mut CopContext<'_, '_>,
+) {
+    let Some(node) = node else { return };
+    match node.kind() {
+        "case" | "case_match" => {
+            for branch in node.branches() {
+                check_redundant_assignment_branch(branch, context);
             }
         }
-        let Some(end_index) = end_index else { continue };
-        let Some((return_start, returned)) = lines.get(end_index + 1).copied() else {
-            continue;
-        };
-        if returned.trim() != left {
-            continue;
+        "if" if !node.modifier_form() && !node.ternary() => {
+            check_redundant_assignment_branch(node.if_branch(), context);
+            check_redundant_assignment_branch(node.else_branch(), context);
         }
-        let indentation = assignment.len() - assignment.trim_start().len();
-        let expression_start = *assignment_start + assignment.find(" = ").unwrap_or(0) + 3;
-        let expression_end = lines[end_index].0 + lines[end_index].1.len();
-        let offense = *assignment_start + indentation..expression_end;
-        let returned_start = return_start + returned.len() - returned.trim_start().len();
-        context.replace_many(
-            "Redundant assignment before returning detected.",
-            offense.clone(),
-            vec![
-                (offense, context.source()[expression_start..expression_end].to_string()),
-                (returned_start..returned_start + left.len(), String::new()),
-            ],
-        );
-    }
-    for (index, (assignment_start, assignment)) in lines.iter().enumerate() {
-        let trimmed = assignment.trim();
-        let Some((left, right)) = trimmed.split_once(" = ") else { continue };
-        if !left.bytes().all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
-            || !matches!(right, "if" | "unless" | "case" | "begin")
-                && !right.starts_with("if ")
-                && !right.starts_with("unless ")
-                && !right.starts_with("case ")
-        {
-            continue;
+        "rescue" | "resbody" => {
+            for child in node.child_nodes() {
+                check_redundant_assignment_branch(Some(child), context);
+            }
         }
-        let indentation = assignment.len() - assignment.trim_start().len();
-        let Some(end_index) = lines.iter().enumerate().skip(index + 1).find_map(|(candidate_index, (_, candidate))| {
-            (candidate.trim() == "end" && candidate.len() - candidate.trim_start().len() == indentation).then_some(candidate_index)
-        }) else { continue };
-        let Some((return_start, returned)) = lines.get(end_index + 1) else { continue };
-        if returned.trim() != left { continue; }
-        let expression_end = lines[end_index].0 + lines[end_index].1.len();
-        let offense = *assignment_start + indentation..expression_end;
-        let expression_start = *assignment_start + assignment.find(" = ").unwrap_or(0) + 3;
-        let returned_start = *return_start + returned.len() - returned.trim_start().len();
-        context.replace_many(
-            "Redundant assignment before returning detected.",
-            offense.clone(),
-            vec![
-                (offense, context.source()[expression_start..expression_end].to_string()),
-                (returned_start..returned_start + left.len(), String::new()),
-            ],
-        );
-    }
-    for (index, (assignment_start, assignment)) in lines.iter().enumerate() {
-        let trimmed = assignment.trim();
-        let Some((left, _)) = trimmed.split_once(" = ") else {
-            continue;
-        };
-        if !trimmed.ends_with(" do") && !trimmed.contains(" do |") {
-            continue;
-        }
-        let indentation = assignment.len() - assignment.trim_start().len();
-        let Some(end_index) = lines.iter().enumerate().skip(index + 1).find_map(
-            |(candidate_index, (_, candidate))| {
-                (candidate.trim() == "end"
-                    && candidate.len() - candidate.trim_start().len() == indentation)
-                    .then_some(candidate_index)
-            },
-        ) else {
-            continue;
-        };
-        let Some((return_start, returned)) = lines.get(end_index + 1).copied() else {
-            continue;
-        };
-        if returned.trim() != left {
-            continue;
-        }
-        let end = lines[end_index].0 + lines[end_index].1.len();
-        let offense = *assignment_start + indentation..end;
-        let expression_start = *assignment_start + assignment.find(" = ").unwrap_or(0) + 3;
-        let returned_start = return_start + returned.len() - returned.trim_start().len();
-        context.replace_many(
-            "Redundant assignment before returning detected.",
-            offense.clone(),
-            vec![
-                (offense, context.source()[expression_start..end].to_string()),
-                (returned_start..returned_start + left.len(), String::new()),
-            ],
-        );
+        "ensure" => check_redundant_assignment_branch(node.ensure_branch(), context),
+        "begin" | "kwbegin" => check_redundant_assignment_begin(node, context),
+        _ => {}
     }
 }
 
-fn delimiter_balance(source: &str) -> isize {
-    source.bytes().fold(0, |balance, byte| match byte {
-        b'(' | b'[' | b'{' => balance + 1,
-        b')' | b']' | b'}' => balance - 1,
-        _ => balance,
-    })
+fn check_redundant_assignment_begin(
+    node: RubocopNodeRef<'_>,
+    context: &mut CopContext<'_, '_>,
+) {
+    let children = node.child_nodes();
+    if let [.., assignment, returned] = children.as_slice() {
+        let same_name = assignment.kind() == "lvasgn"
+            && returned.kind() == "lvar"
+            && assignment.symbol_child(0) == returned.symbol_child(0);
+        if same_name {
+            let Some(expression) = assignment.expression() else { return };
+            let Some(assignment_chars) = assignment.source_range() else { return };
+            let Some(returned_chars) = returned.source_range() else { return };
+            let Some(expression_source) = expression.source() else { return };
+            let assignment_range = semantic_character_range_to_byte(context.source(), assignment_chars);
+            let returned_range = semantic_character_range_to_byte(context.source(), returned_chars);
+            context.replace_many(
+                "Redundant assignment before returning detected.",
+                assignment_range.clone(),
+                vec![
+                    (assignment_range, expression_source.to_string()),
+                    (returned_range, String::new()),
+                ],
+            );
+            return;
+        }
+    }
+    check_redundant_assignment_branch(children.last().copied(), context);
 }
 
+fn semantic_character_range_to_byte(
+    source: &str,
+    range: std::ops::Range<usize>,
+) -> std::ops::Range<usize> {
+    let byte = |offset| {
+        source
+            .char_indices()
+            .nth(offset)
+            .map_or(source.len(), |(byte, _)| byte)
+    };
+    byte(range.start)..byte(range.end)
+}
 fn constant_resolution(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
     let Some(constant) = node.as_constant_read_node() else {
         return;
@@ -427,7 +322,9 @@ fn constant_resolution(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
         .is_some_and(|parent| {
             parent.as_class_node().is_some()
                 || parent.as_module_node().is_some()
-                || parent.as_constant_path_write_node().is_some()
+                || parent
+                    .as_constant_path_write_node()
+                    .is_some_and(|write| module_constructor(&write.value()))
         });
     let ancestors = context.ancestors();
     let prism_single_body_defined_module = ancestors.last().is_some_and(|parent| {
@@ -454,6 +351,18 @@ fn constant_resolution(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
         "Fully qualify this constant to avoid possibly ambiguous resolution.",
         location,
     );
+}
+
+fn module_constructor(node: &Node<'_>) -> bool {
+    let Some(call) = node.as_call_node() else {
+        return false;
+    };
+    call.name().as_slice() == b"new"
+        && call.receiver().is_some_and(|receiver| {
+            receiver.as_constant_read_node().is_some_and(|constant| {
+                matches!(constant.name().as_slice(), b"Class" | b"Module")
+            })
+        })
 }
 
 fn return_in_void_context(node: &ruby_prism::ReturnNode<'_>, context: &mut CopContext<'_, '_>) {

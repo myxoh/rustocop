@@ -1,10 +1,11 @@
+use super::source_syntax::top_level_elements;
 use super::*;
 
 define_cops! {
     AssignmentIndentation => "Layout/AssignmentIndentation" => any_node(assignment_indentation),
     BeginEndAlignment => "Layout/BeginEndAlignment" => node(as_begin_node, begin_end_alignment),
     EndOfLine => "Layout/EndOfLine" => source(end_of_line),
-    FirstParameterIndentation => "Layout/FirstParameterIndentation" => source(first_parameter_indentation),
+    FirstParameterIndentation => "Layout/FirstParameterIndentation" => node(as_def_node, first_parameter_indentation),
     SpaceBeforeBrackets => "Layout/SpaceBeforeBrackets" => call(space_before_brackets),
     SpaceBeforeFirstArg => "Layout/SpaceBeforeFirstArg" => call(space_before_first_arg),
     SpaceInsideStringInterpolation => "Layout/SpaceInsideStringInterpolation" => node(as_embedded_statements_node, space_inside_string_interpolation),
@@ -244,45 +245,53 @@ fn end_of_line(context: &mut CopContext<'_, '_>) {
     context.report(message, first.0..end);
 }
 
-fn first_parameter_indentation(context: &mut CopContext<'_, '_>) {
-    let lines = context.source_file().lines().collect::<Vec<_>>();
-    for pair in lines.windows(2) {
-        let (_, signature) = pair[0];
-        let (parameter_start, parameter) = pair[1];
-        let Some(opening) = signature.find('(') else {
-            continue;
-        };
-        if !signature.trim_start().starts_with("def ")
-            || !signature[opening + 1..].trim().is_empty()
-        {
-            continue;
-        }
-        let current = parameter.len() - parameter.trim_start().len();
-        let style = context.policy().enforced_style("consistent");
-        let width = context.config_usize("IndentationWidth", 2);
-        let base = signature.len() - signature.trim_start().len();
-        let expected = if style == "align_parentheses" {
-            opening + 2
-        } else {
-            base + width
-        };
-        if current == expected {
-            continue;
-        }
-        let start = parameter_start + current;
-        let message = if style == "align_parentheses" {
-            format!("Use {width} spaces for indentation in method args, relative to the position of the opening parenthesis.")
-        } else {
-            format!("Use {width} spaces for indentation in method args, relative to the start of the line where the left parenthesis is.")
-        };
-        let offense_end = parameter_start + parameter.trim_end_matches(',').trim_end().len();
-        context.replace(
-            message,
-            start..offense_end,
-            parameter_start..start,
-            " ".repeat(expected),
-        );
+fn first_parameter_indentation(
+    definition: &ruby_prism::DefNode<'_>,
+    context: &mut CopContext<'_, '_>,
+) {
+    let (Some(opening), Some(parameters)) = (definition.lparen_loc(), definition.parameters())
+    else {
+        return;
+    };
+    let parameter_location = parameters.location();
+    let Some(first_parameter) = top_level_elements(
+        context.source(),
+        parameter_location.start_offset(),
+        parameter_location.end_offset(),
+    )
+    .into_iter()
+    .next()
+    else {
+        return;
+    };
+    let file = context.source_file();
+    if file.same_line(opening.start_offset(), first_parameter.start) {
+        return;
     }
+
+    let parameter_line_start = file.line_start(first_parameter.start);
+    let current = first_parameter.start - parameter_line_start;
+    let style = context.policy().enforced_style("consistent");
+    let width = context.config_usize("IndentationWidth", 2);
+    let expected = if style == "align_parentheses" {
+        opening.start_offset() - file.line_start(opening.start_offset()) + width
+    } else {
+        file.indentation(definition.def_keyword_loc().start_offset()).len() + width
+    };
+    if current == expected {
+        return;
+    }
+    let message = if style == "align_parentheses" {
+        format!("Use {width} spaces for indentation in method args, relative to the position of the opening parenthesis.")
+    } else {
+        format!("Use {width} spaces for indentation in method args, relative to the start of the line where the left parenthesis is.")
+    };
+    context.replace(
+        message,
+        first_parameter.clone(),
+        parameter_line_start..first_parameter.start,
+        " ".repeat(expected),
+    );
 }
 
 fn space_before_brackets(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {

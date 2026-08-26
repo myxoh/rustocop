@@ -10,10 +10,20 @@ fn suppressed_exception_in_number_conversion(context: &mut CopContext<'_, '_>) {
         return;
     }
     let source = context.source();
+    let mut non_code_ranges = context.source_file().literal_ranges();
+    non_code_ranges.extend(context.source_file().heredoc_ranges());
+    non_code_ranges.extend(context.source_file().comment_ranges());
     for method in ["Integer", "Float", "BigDecimal", "Complex", "Rational"] {
         let mut search = 0;
         while let Some(relative) = source[search..].find(&format!("{method}(")) {
             let call_start = search + relative;
+            if non_code_ranges
+                .iter()
+                .any(|range| range.start <= call_start && call_start < range.end)
+            {
+                search = call_start + method.len();
+                continue;
+            }
             let constructor_start = ["::Kernel&.", "::Kernel::", "Kernel::"]
                 .into_iter()
                 .find_map(|prefix| {
@@ -100,341 +110,206 @@ fn suppressed_exception_in_number_conversion(context: &mut CopContext<'_, '_>) {
 }
 
 fn eval_with_location(context: &mut CopContext<'_, '_>) {
-    correct_existing_eval_location(context);
-    check_eval_calls(context);
+    eval_with_location_ast(context);
 }
 
-fn correct_existing_eval_location(context: &mut CopContext<'_, '_>) -> bool {
-    let source = context.source();
-    if let Some(eval_start) = source.find("eval(") {
-        if let Some(close_relative) = source[eval_start..].find(')') {
-            let close = eval_start + close_relative;
-            let call = &source[eval_start..=close];
-            if call.contains('\n') && call.contains("__FILE__") && call.contains("__LINE__") {
-                let line_at = eval_start + call.find("__LINE__").unwrap_or(0);
-                let delta = source[eval_start..line_at].matches('\n').count();
-                let actual_end = source[line_at..]
-                    .find([',', ')'])
-                    .map_or(source.len(), |at| line_at + at);
-                let actual = source[line_at..actual_end].trim_end();
-                let expected = if delta == 0 {
-                    "__LINE__".to_string()
-                } else {
-                    format!("__LINE__ - {delta}")
-                };
-                if actual != expected {
-                    context.replace(
-                        format!("Incorrect line number for `eval`; use `{expected}` instead of `{actual}`."),
-                        line_at..line_at + actual.len(),
-                        line_at..line_at + actual.len(),
-                        expected,
-                    );
-                    return true;
-                }
+fn eval_with_location_ast(context: &mut CopContext<'_, '_>) {
+    #[derive(Default)]
+    struct EvalCalls<'pr>(Vec<Node<'pr>>);
+    impl<'pr> ruby_prism::Visit<'pr> for EvalCalls<'pr> {
+        fn visit_call_node(&mut self, node: &ruby_prism::CallNode<'pr>) {
+            if matches!(node.name().as_slice(), b"eval" | b"class_eval" | b"module_eval" | b"instance_eval") {
+                self.0.push(node.as_node());
             }
+            ruby_prism::visit_call_node(self, node);
         }
     }
-    if let (Some(eval_start), Some(line_at)) = (source.find("eval"), source.find("__LINE__")) {
-        if line_at > eval_start
-            && source[eval_start..line_at].contains("binding")
-            && source[eval_start..line_at].contains("__FILE__")
-        {
-            let delta = source[eval_start..line_at].matches('\n').count();
-            let actual_end = source[line_at..]
-                .find([',', ')', '\n'])
-                .map_or(source.len(), |at| line_at + at);
-            let actual = source[line_at..actual_end].trim_end();
-            let expected = if source[eval_start..line_at].contains("<<") {
-                "__LINE__ + 1".to_string()
-            } else if delta == 0 {
-                "__LINE__".to_string()
-            } else {
-                format!("__LINE__ - {delta}")
-            };
-            if actual != expected {
-                context.replace(
-                    format!(
-                        "Incorrect line number for `eval`; use `{expected}` instead of `{actual}`."
-                    ),
-                    line_at..line_at + actual.len(),
-                    line_at..line_at + actual.len(),
-                    expected,
-                );
-                return true;
-            }
-        }
-    }
-    false
-}
 
-#[allow(clippy::cognitive_complexity, clippy::too_many_lines)]
-fn check_eval_calls(context: &mut CopContext<'_, '_>) {
-    let multiline_starts = check_multiline_eval_locations(context);
-    let excluded = context
-        .source_file()
-        .literal_ranges()
-        .into_iter()
-        .chain(context.source_file().comment_ranges())
-        .collect::<Vec<_>>();
-    for (line_number, (offset, line)) in context.source_file().lines().enumerate() {
-        if multiline_starts.contains(&line_number) {
-            continue;
+    let parsed = ruby_prism::parse(context.source().as_bytes());
+    let mut calls = EvalCalls::default();
+    ruby_prism::Visit::visit(&mut calls, &parsed.node());
+    for call in calls.0 {
+        if let Some(call) = call.as_call_node() {
+            check_eval_call_ast(context, &call);
         }
-        let trimmed = line.trim_start();
-        if trimmed.starts_with('#') {
-            continue;
-        }
-        let Some((method, at)) = eval_method(trimmed) else {
-            continue;
-        };
-        let method_absolute = offset + line.len() - trimmed.len() + at;
-        if excluded
-            .iter()
-            .any(|range| range.start <= method_absolute && method_absolute < range.end)
-        {
-            continue;
-        }
-        let call = &trimmed[at..];
-        if at == 0 && call.trim_end().ends_with(',') && !call.contains(')') {
-            continue;
-        }
-        if at == 0 && (call.trim_end().ends_with(" do") || call.contains(" do |")) {
-            continue;
-        }
-        let display_method = method.rsplit('.').next().unwrap_or(method);
-        let method_end = call
-            .find(display_method)
-            .map_or(display_method.len(), |at| at + display_method.len());
-        let argument = call[method_end..].trim_start_matches([' ', '(']);
-        if argument.starts_with("<<") && argument.contains(".lines") {
-            continue;
-        }
-        if !argument.starts_with(['\'', '"', '%', '<'])
-            || argument.starts_with('%')
-                && argument
-                    .as_bytes()
-                    .get(1)
-                    .is_some_and(|byte| matches!(byte, b'w' | b'W' | b'i' | b'I'))
-        {
-            continue;
-        }
-        if call.contains("__FILE__") && call.contains("__LINE__") {
-            if display_method == "eval" {
-                continue;
-            }
-            if let Some(line_at) = call.find("__LINE__") {
-                let expected = if call.contains("<<") {
-                    "__LINE__ + 1"
-                } else {
-                    "__LINE__"
-                };
-                let actual = call[line_at..]
-                    .split([',', ')'])
-                    .next()
-                    .unwrap_or("__LINE__")
-                    .trim();
-                if actual != expected {
-                    let start = offset + trimmed.len() - line.trim_start().len() + at + line_at;
-                    context.replace(
-                        format!("Incorrect line number for `{display_method}`; use `{expected}` instead of `{actual}`."),
-                        start..start + actual.len(),
-                        start..start + actual.len(),
-                        expected,
-                    );
-                }
-            }
-            continue;
-        }
-        if call.contains(',') {
-            let arguments = call.split(',').collect::<Vec<_>>();
-            let required = if method == "eval" { 4 } else { 3 };
-            if arguments.len() >= required {
-                let file = arguments[arguments.len() - 2].trim();
-                let line_value = arguments[arguments.len() - 1].trim().trim_end_matches(')');
-                let expected_line = if call.contains("<<") {
-                    "__LINE__ + 1"
-                } else {
-                    "__LINE__"
-                };
-                let display = method.trim_start_matches("::Kernel.");
-                let file_at = offset + line.find(file).unwrap_or(0);
-                let line_at = offset + line.rfind(line_value).unwrap_or(0);
-                if file != "__FILE__" {
-                    context.replace(
-                        format!(
-                            "Incorrect file for `{display}`; use `__FILE__` instead of `{file}`."
-                        ),
-                        file_at..file_at + file.len(),
-                        file_at..file_at + file.len(),
-                        "__FILE__",
-                    );
-                }
-                if line_value != expected_line
-                    && (line_value.starts_with(['\'', '"'])
-                        || line_value.starts_with("__LINE__")
-                        || line_value.bytes().all(|byte| byte.is_ascii_digit()))
-                {
-                    context.replace(
-                        format!("Incorrect line number for `{display}`; use `{expected_line}` instead of `{line_value}`."),
-                        line_at..line_at + line_value.len(),
-                        line_at..line_at + line_value.len(),
-                        expected_line,
-                    );
-                }
-                continue;
-            }
-        }
-        let receiver_at = if method == "eval" || method.contains("Kernel") {
-            at
-        } else {
-            0
-        };
-        let call_start = offset + line.len() - trimmed.len() + receiver_at;
-        let comment_at = context
-            .source_file()
-            .comment_ranges()
-            .into_iter()
-            .filter(|range| offset <= range.start && range.start < offset + line.len())
-            .map(|range| range.start - offset)
-            .min();
-        let code = line[..comment_at.unwrap_or(line.len())].trim_end();
-        let mut call_end = offset + code.len();
-        let display = if method.ends_with("eval") && method.contains("Kernel") {
-            "eval"
-        } else {
-            method
-        };
-        let message = if display == "eval" {
-            "Pass a binding, `__FILE__`, and `__LINE__` to `eval`.".to_string()
-        } else {
-            format!("Pass `__FILE__` and `__LINE__` to `{display}`.")
-        };
-        if display == "eval" && !call.contains("binding") {
-            if let Some(quote_relative) = call[method_end..].find(['\'', '"']) {
-                let quote = method_absolute + method_end + quote_relative;
-                if let Some(close) = closing_quote(context.source(), quote) {
-                    call_end = close
-                        + 1
-                        + usize::from(context.source().as_bytes().get(close + 1) == Some(&b')'));
-                }
-            }
-            context.report(message, call_start..call_end);
-            continue;
-        }
-        let line_expression = if call.contains("<<") {
-            "__LINE__ + 1"
-        } else {
-            "__LINE__"
-        };
-        let addition = if display == "eval" && call.contains("__FILE__") {
-            format!(", {line_expression}")
-        } else if display == "eval" {
-            format!(", __FILE__, {line_expression}")
-        } else {
-            let _ = line_number;
-            format!(", __FILE__, {line_expression}")
-        };
-        let insert = if call.ends_with(')') {
-            call_end - 1
-        } else {
-            call_end
-        };
-        context.insert(message, call_start..call_end, insert, addition);
     }
 }
 
-fn check_multiline_eval_locations(
-    context: &mut CopContext<'_, '_>,
-) -> std::collections::HashSet<usize> {
-    let source = context.source();
-    let lines = context.source_file().lines().collect::<Vec<_>>();
-    let mut handled = std::collections::HashSet::new();
-    for (line_number, (offset, line)) in lines.iter().enumerate() {
-        let trimmed = line.trim_start();
-        let Some((method, at)) = eval_method(trimmed) else {
-            continue;
-        };
-        if !matches!(method.rsplit('.').next(), Some("class_eval" | "module_eval" | "instance_eval")) {
-            continue;
-        }
-        let method_absolute = *offset + line.len() - trimmed.len() + at;
-        let method_end = method_absolute + method.rsplit('.').next().unwrap_or(method).len();
-        let Some(quote_relative) = source[method_end..].find(['\'', '"']) else {
-            continue;
-        };
-        let quote = method_end + quote_relative;
-        let Some(close) = closing_quote(source, quote) else {
-            continue;
-        };
-        if !source[quote..close].contains('\n') {
-            continue;
-        }
-        let closing_line_end = context.source_file().line_end(close);
-        let tail = &source[close + 1..closing_line_end];
-        let Some(arguments) = tail.strip_prefix(',') else {
-            continue;
-        };
-        let arguments = arguments.split(',').map(str::trim).collect::<Vec<_>>();
-        if arguments.len() < 2 {
-            continue;
-        }
-        let file = arguments[0];
-        let line_value = arguments[1].trim_end_matches(')');
-        let file_at = close + 1 + tail.find(file).unwrap_or(0);
-        let line_at = close + 1 + tail.rfind(line_value).unwrap_or(0);
-        let delta = source[*offset..line_at].matches('\n').count();
-        let expected_line = format!("__LINE__ - {delta}");
-        let display = method.rsplit('.').next().unwrap_or(method);
-        if file != "__FILE__" {
-            context.replace(
-                format!("Incorrect file for `{display}`; use `__FILE__` instead of `{file}`."),
-                file_at..file_at + file.len(),
-                file_at..file_at + file.len(),
-                "__FILE__",
-            );
-        }
-        if line_value != expected_line {
-            context.replace(
-                format!("Incorrect line number for `{display}`; use `{expected_line}` instead of `{line_value}`."),
-                line_at..line_at + line_value.len(),
-                line_at..line_at + line_value.len(),
-                expected_line,
-            );
-        }
-        handled.insert(line_number);
+fn check_eval_call_ast(context: &mut CopContext<'_, '_>, node: &ruby_prism::CallNode<'_>) {
+    let method = String::from_utf8_lossy(node.name().as_slice());
+    if method == "eval" && node.receiver().is_some_and(|receiver| {
+        !matches!(context.source_file().node(&receiver).trim_start_matches("::"), "Kernel")
+    }) {
+        return;
     }
-    handled
-}
-
-fn closing_quote(source: &str, opening: usize) -> Option<usize> {
-    let quote = *source.as_bytes().get(opening)?;
-    let mut escaped = false;
-    for (relative, byte) in source.as_bytes()[opening + 1..].iter().copied().enumerate() {
-        if escaped {
-            escaped = false;
-        } else if byte == b'\\' {
-            escaped = true;
-        } else if byte == quote {
-            return Some(opening + 1 + relative);
-        }
+    let arguments = node
+        .arguments()
+        .map(|arguments| arguments.arguments().iter().collect::<Vec<_>>())
+        .unwrap_or_default();
+    let Some(code) = arguments.first() else { return };
+    if code.as_string_node().is_none() && code.as_interpolated_string_node().is_none() {
+        return;
     }
-    None
-}
-
-fn eval_method(line: &str) -> Option<(&str, usize)> {
-    let (method, at) = [
-        "::Kernel.eval",
-        "Kernel.eval",
-        "class_eval",
-        "module_eval",
-        "instance_eval",
-        "eval",
-    ]
-    .into_iter()
-    .find_map(|name| line.find(name).map(|at| (name, at)))?;
-    if method == "eval" && at > 0 && line.as_bytes().get(at - 1) == Some(&b'.') {
-        None
+    let base = usize::from(method == "eval") + 1;
+    let file = arguments.get(base);
+    let line = arguments.get(base + 1);
+    if let Some(line) = line {
+        if let Some(file) = file {
+            check_eval_file_ast(context, &method, file);
+        }
+        check_eval_line_ast(context, &method, code, line);
+    } else if let Some(file) = file {
+        check_eval_file_ast(context, &method, file);
+        add_missing_eval_line_ast(context, node, &method, code, arguments.last().unwrap());
     } else {
-        Some((method, at))
+        add_missing_eval_location_ast(context, node, &method, code, &arguments);
     }
+}
+
+fn check_eval_file_ast(
+    context: &mut CopContext<'_, '_>,
+    method: &str,
+    file: &Node<'_>,
+) {
+    let actual = context.source_file().node(file);
+    if actual == "__FILE__" {
+        return;
+    }
+    context.replace(
+        format!("Incorrect file for `{method}`; use `__FILE__` instead of `{actual}`."),
+        file.location(),
+        file.location(),
+        "__FILE__",
+    );
+}
+
+fn check_eval_line_ast(
+    context: &mut CopContext<'_, '_>,
+    method: &str,
+    code: &Node<'_>,
+    line: &Node<'_>,
+) {
+    if eval_variable(line)
+        || line.as_call_node().is_some_and(|call| call.name().as_slice() != b"+")
+    {
+        return;
+    }
+    let difference = eval_code_first_line(context.source(), code) as isize
+        - eval_line_at(context.source(), line.location().start_offset()) as isize;
+    let expected = eval_expected_line(difference);
+    if eval_line_matches(context.source_file().node(line), difference) {
+        return;
+    }
+    let actual = context.source_file().node(line);
+    context.replace(
+        format!("Incorrect line number for `{method}`; use `{expected}` instead of `{actual}`."),
+        line.location(),
+        line.location(),
+        expected,
+    );
+}
+
+fn add_missing_eval_line_ast(
+    context: &mut CopContext<'_, '_>,
+    node: &ruby_prism::CallNode<'_>,
+    method: &str,
+    code: &Node<'_>,
+    last: &Node<'_>,
+) {
+    let difference = eval_code_first_line(context.source(), code) as isize
+        - eval_line_at(context.source(), last.location().start_offset()) as isize;
+    let message = eval_missing_message(method);
+    let offense = eval_call_range(node, code);
+    context.insert(
+        message,
+        offense,
+        last.location().end_offset(),
+        format!(", {}", eval_expected_line(difference)),
+    );
+}
+
+fn add_missing_eval_location_ast(
+    context: &mut CopContext<'_, '_>,
+    node: &ruby_prism::CallNode<'_>,
+    method: &str,
+    code: &Node<'_>,
+    arguments: &[Node<'_>],
+) {
+    let message = eval_missing_message(method);
+    let offense = eval_call_range(node, code);
+    if method == "eval" && arguments.len() < 2 {
+        context.report(message, offense);
+        return;
+    }
+    let last = arguments.last().expect("string argument checked");
+    let difference = eval_code_first_line(context.source(), code) as isize
+        - eval_line_at(context.source(), last.location().start_offset()) as isize;
+    context.insert(
+        message,
+        offense,
+        last.location().end_offset(),
+        format!(", __FILE__, {}", eval_expected_line(difference)),
+    );
+}
+
+fn eval_missing_message(method: &str) -> String {
+    if method == "eval" {
+        "Pass a binding, `__FILE__`, and `__LINE__` to `eval`.".to_string()
+    } else {
+        format!("Pass `__FILE__` and `__LINE__` to `{method}`.")
+    }
+}
+
+fn eval_call_range(node: &ruby_prism::CallNode<'_>, code: &Node<'_>) -> std::ops::Range<usize> {
+    let location = node.location();
+    let _ = code;
+    location.start_offset()..location.end_offset()
+}
+
+fn eval_code_first_line(source: &str, code: &Node<'_>) -> usize {
+    let opening = code
+        .as_string_node()
+        .and_then(|string| string.opening_loc())
+        .or_else(|| code.as_interpolated_string_node().and_then(|string| string.opening_loc()));
+    if opening.as_ref().is_some_and(|opening| opening.as_slice().starts_with(b"<<")) {
+        let opening = opening.unwrap();
+        return source[opening.end_offset()..]
+            .find('\n')
+            .map_or_else(
+                || eval_line_at(source, opening.start_offset()),
+                |newline| eval_line_at(source, opening.end_offset() + newline + 1),
+            );
+    }
+    eval_line_at(source, code.location().start_offset())
+}
+
+fn eval_line_at(source: &str, offset: usize) -> usize {
+    source[..offset.min(source.len())].bytes().filter(|byte| *byte == b'\n').count() + 1
+}
+
+fn eval_expected_line(difference: isize) -> String {
+    match difference.cmp(&0) {
+        std::cmp::Ordering::Equal => "__LINE__".to_string(),
+        std::cmp::Ordering::Greater => format!("__LINE__ + {difference}"),
+        std::cmp::Ordering::Less => format!("__LINE__ - {}", difference.unsigned_abs()),
+    }
+}
+
+fn eval_line_matches(source: &str, difference: isize) -> bool {
+    let compact = source.split_whitespace().collect::<String>();
+    match difference.cmp(&0) {
+        std::cmp::Ordering::Equal => compact == "__LINE__",
+        std::cmp::Ordering::Greater => {
+            compact == format!("__LINE__+{difference}")
+                || compact == format!("{difference}+__LINE__")
+        }
+        std::cmp::Ordering::Less => compact == format!("__LINE__-{}", difference.unsigned_abs()),
+    }
+}
+
+fn eval_variable(node: &Node<'_>) -> bool {
+    node.as_local_variable_read_node().is_some()
+        || node.as_instance_variable_read_node().is_some()
+        || node.as_class_variable_read_node().is_some()
+        || node.as_global_variable_read_node().is_some()
 }

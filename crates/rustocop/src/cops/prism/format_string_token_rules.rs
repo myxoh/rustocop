@@ -27,6 +27,7 @@ impl FormatStringTokenRule<'_, '_, '_> {
         return_if!(tokens.is_empty());
         let location = (node.location().start_offset(), node.location().end_offset());
         let typical = typical_context(location, self.ancestors());
+        let directly_typical = direct_typical_context(location, self.ancestors());
         return_if!(allowed_context(self, location));
         let target = match self.policy().enforced_style("annotated") {
             "template" => TokenStyle::Template,
@@ -34,12 +35,25 @@ impl FormatStringTokenRule<'_, '_, '_> {
             _ => TokenStyle::Annotated,
         };
         let conservative = self.config_value("Mode").is_some_and(|mode| mode == "conservative");
+        let nonstandard_delimiter = node.opening_loc().is_some_and(|opening| {
+            opening.as_slice().starts_with(b"%") || opening.as_slice().starts_with(b"<<")
+        });
+        let nested_in_interpolation = self
+            .ancestors()
+            .iter()
+            .any(|ancestor| ancestor.as_interpolated_string_node().is_some());
+        let prism_opaque_unannotated = self.related_config_value("AllCops", "ParserEngine")
+            == Some("parser_prism")
+            && (nonstandard_delimiter || nested_in_interpolation && !directly_typical);
         return_if!(conservative && !typical);
         let max = self.config_usize("MaxUnannotatedPlaceholdersAllowed", 1);
         return_if!(tokens.iter().all(|token| token.style == TokenStyle::Unannotated) && tokens.len() <= max);
 
         for token in tokens {
-            if token.style == target || (token.style == TokenStyle::Unannotated && !typical) {
+            if token.style == target
+                || (token.style == TokenStyle::Unannotated
+                    && (!typical || prism_opaque_unannotated))
+            {
                 continue;
             }
             return_if!(target == TokenStyle::Template && token.style != TokenStyle::Template && token.kind != b's');
@@ -66,11 +80,24 @@ fn parse_tokens(source: &str) -> Vec<Token> {
     while index + 1 < bytes.len() {
         if bytes[index] != b'%' { index += 1; continue; }
         if bytes[index + 1] == b'%' { index += 2; continue; }
+        if bytes[index + 1] == b'#' && bytes.get(index + 2) == Some(&b'{') {
+            index += 2;
+            continue;
+        }
         let mut opening = index + 1;
+        let mut interpolation = false;
         while opening < bytes.len()
             && matches!(bytes[opening], b'#' | b'0' | b'-' | b'+' | b' ' | b'1'..=b'9' | b'.' | b'*')
         {
+            if bytes[opening] == b'#' && bytes.get(opening + 1) == Some(&b'{') {
+                interpolation = true;
+                break;
+            }
             opening += 1;
+        }
+        if interpolation {
+            index += 1;
+            continue;
         }
         if bytes.get(opening) == Some(&b'<') {
             let Some(close) = bytes[opening + 1..].iter().position(|byte| *byte == b'>').map(|at| opening + 1 + at) else { index += 1; continue };
@@ -145,6 +172,21 @@ fn typical_context(location: (usize, usize), ancestors: &[Node<'_>]) -> bool {
         } else if call.name().as_slice() == b"%" {
             call.receiver().is_some_and(|receiver| subjects.iter().any(|subject| same_location(receiver.location(), *subject)))
         } else { false }
+    })
+}
+
+fn direct_typical_context(location: (usize, usize), ancestors: &[Node<'_>]) -> bool {
+    ancestors.iter().filter_map(Node::as_call_node).any(|call| {
+        if matches!(call.name().as_slice(), b"format" | b"sprintf" | b"printf") {
+            call.arguments()
+                .and_then(|args| args.arguments().iter().next())
+                .is_some_and(|argument| same_location(argument.location(), location))
+        } else if call.name().as_slice() == b"%" {
+            call.receiver()
+                .is_some_and(|receiver| same_location(receiver.location(), location))
+        } else {
+            false
+        }
     })
 }
 

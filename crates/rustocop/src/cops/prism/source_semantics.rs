@@ -10,7 +10,7 @@ use parameters::*;
 define_cops! {
     GemVersion => "Bundler/GemVersion" => source(gem_version),
     MultilineArrayLineBreaks => "Layout/MultilineArrayLineBreaks" => any_node(multiline_array_line_breaks),
-    ErbNewArguments => "Lint/ErbNewArguments" => source(erb_new_arguments),
+    ErbNewArguments => "Lint/ErbNewArguments" => call(erb_new_arguments),
     HashNewWithKeywordArgumentsAsDefault => "Lint/HashNewWithKeywordArgumentsAsDefault" => source(hash_new_with_keyword_arguments_as_default),
     LambdaWithoutLiteralBlock => "Lint/LambdaWithoutLiteralBlock" => call(lambda_without_literal_block),
     RequireRelativeSelfPath => "Lint/RequireRelativeSelfPath" => source(require_relative_self_path),
@@ -126,74 +126,67 @@ fn multiline_array_line_breaks(node: &Node<'_>, context: &mut CopContext<'_, '_>
     }
 }
 
-fn erb_new_arguments(context: &mut CopContext<'_, '_>) {
+fn erb_new_arguments(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     const SAFE: &str = "Passing safe_level with the 2nd argument of `ERB.new` is deprecated. Do not use it, and specify other arguments as keyword arguments.";
-    if !context.target_ruby_version().at_least(2, 6) {
+    if !context.target_ruby_version().at_least(2, 6)
+        || !match_call(node).named(b"new").on_root_constant(b"ERB").matches()
+    {
         return;
     }
-    let source = context.source();
-    for call in call_ranges(source, "ERB.new(") {
-        let args = split_arguments(source, call.start + "ERB.new(".len(), call.end - 1);
-        if args.len() < 2 {
+    let Some(arguments) = node.arguments() else { return };
+    let args = arguments.arguments().iter().collect::<Vec<_>>();
+    if args.len() == 1 || args.len() == 2 && erb_hash_argument(&args[1]) {
+        return;
+    }
+    let Some(first) = args.first() else { return };
+    let last = args.last().expect("first argument checked");
+    let correction_range = first.location().start_offset()..last.location().end_offset();
+    let correction = erb_keyword_arguments(&args, context.source_file());
+    for (index, argument) in args.iter().enumerate().skip(1).take(3) {
+        if erb_hash_argument(argument) {
             continue;
         }
-        let has_trim = args
-            .iter()
-            .any(|arg| source[arg.clone()].trim_start().starts_with("trim_mode:"));
-        let has_eout = args
-            .iter()
-            .any(|arg| source[arg.clone()].trim_start().starts_with("eoutvar:"));
-        let optional = args
-            .iter()
-            .take_while(|arg| !source[(*arg).clone()].contains(':'))
-            .count();
-        if optional >= 2 {
-            let argument = args[1].clone();
-            context.remove(
-                SAFE,
-                trim_range(source, argument.clone()),
-                args[0].end..argument.end,
-            );
-        }
-        if optional >= 3 {
-            let argument = args[2].clone();
-            let value = source[argument.clone()].trim();
-            let message = format!("Passing trim_mode with the 3rd argument of `ERB.new` is deprecated. Use keyword argument like `ERB.new(str, trim_mode: {value})` instead.");
-            if has_trim {
-                context.remove(
-                    message,
-                    trim_range(source, argument.clone()),
-                    args[1].end..argument.end,
-                );
-            } else {
-                context.replace(
-                    message,
-                    trim_range(source, argument.clone()),
-                    trim_range(source, argument),
-                    format!("trim_mode: {value}"),
-                );
-            }
-        }
-        if optional >= 4 {
-            let argument = args[3].clone();
-            let value = source[argument.clone()].trim();
-            let message = format!("Passing eoutvar with the 4th argument of `ERB.new` is deprecated. Use keyword argument like `ERB.new(str, eoutvar: {value})` instead.");
-            if has_eout {
-                context.remove(
-                    message,
-                    trim_range(source, argument.clone()),
-                    args[2].end..argument.end,
-                );
-            } else {
-                context.replace(
-                    message,
-                    trim_range(source, argument.clone()),
-                    trim_range(source, argument),
-                    format!("eoutvar: {value}"),
-                );
+        let value = context.source_file().node(argument).trim();
+        let message = match index {
+            1 => SAFE.to_string(),
+            2 => format!("Passing trim_mode with the 3rd argument of `ERB.new` is deprecated. Use keyword argument like `ERB.new(str, trim_mode: {value})` instead."),
+            3 => format!("Passing eoutvar with the 4th argument of `ERB.new` is deprecated. Use keyword argument like `ERB.new(str, eoutvar: {value})` instead."),
+            _ => unreachable!(),
+        };
+        context.replace(message, argument.location(), correction_range.clone(), correction.clone());
+    }
+}
+
+fn erb_hash_argument(node: &Node<'_>) -> bool {
+    node.as_hash_node().is_some() || node.as_keyword_hash_node().is_some()
+}
+
+fn erb_keyword_arguments(args: &[Node<'_>], file: SourceFile<'_>) -> String {
+    let mut trim_mode = None;
+    let mut eoutvar = None;
+    if let Some(hash) = args.last().and_then(Node::as_keyword_hash_node) {
+        for element in hash.elements().iter() {
+            let Some(pair) = element.as_assoc_node() else { continue };
+            let Some(key) = pair.key().as_symbol_node() else { continue };
+            let value = file.node(&pair.value()).trim();
+            match key.unescaped() {
+                b"trim_mode" => trim_mode = Some(format!("trim_mode: {value}")),
+                b"eoutvar" => eoutvar = Some(format!("eoutvar: {value}")),
+                _ => {}
             }
         }
     }
+    if let Some(argument) = args.get(2) {
+        trim_mode = Some(format!("trim_mode: {}", file.node(argument).trim()));
+    }
+    if let Some(argument) = args.get(3).filter(|argument| !erb_hash_argument(argument)) {
+        eoutvar = Some(format!("eoutvar: {}", file.node(argument).trim()));
+    }
+    std::iter::once(file.node(&args[0]).trim().to_string())
+        .chain(trim_mode)
+        .chain(eoutvar)
+        .collect::<Vec<_>>()
+        .join(", ")
 }
 
 fn hash_new_with_keyword_arguments_as_default(context: &mut CopContext<'_, '_>) {

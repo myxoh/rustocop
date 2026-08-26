@@ -89,41 +89,61 @@ fn camel_case(source: &str, context: &mut Reporter<'_>) {
 }
 
 fn class_methods(source: &str, context: &mut Reporter<'_>) {
-    let mut owner: Option<String> = None;
-    for (offset, line) in source_lines(source) {
-        let trimmed = line.trim();
-        if let Some(name) = trimmed
-            .strip_prefix("class ")
-            .or_else(|| trimmed.strip_prefix("module "))
-        {
-            owner = Some(
-                name.split_whitespace()
-                    .next()
-                    .unwrap_or_default()
-                    .to_string(),
-            );
-            continue;
+    struct ClassMethodVisitor<'source> {
+        source: &'source str,
+        offenses: Vec<(std::ops::Range<usize>, String, String)>,
+    }
+
+    impl ClassMethodVisitor<'_> {
+        fn check_scope(&mut self, owner: &Node<'_>, body: Option<Node<'_>>) {
+            let Some(statements) = body.and_then(|body| body.as_statements_node()) else {
+                return;
+            };
+            let owner_source = source_at(self.source, &owner.location());
+            for statement in statements.body().iter() {
+                let Some(definition) = statement.as_def_node() else {
+                    continue;
+                };
+                let Some(receiver) = definition.receiver() else {
+                    continue;
+                };
+                if source_at(self.source, &receiver.location()) != owner_source {
+                    continue;
+                }
+                self.offenses.push((
+                    receiver.location().start_offset()..receiver.location().end_offset(),
+                    owner_source.to_string(),
+                    String::from_utf8_lossy(definition.name().as_slice()).into_owned(),
+                ));
+            }
         }
-        let Some(owner_name) = owner.as_deref() else {
-            continue;
-        };
-        let needle = format!("def {owner_name}.");
-        if let Some(start) = line.find(&needle) {
-            let receiver = offset + start + 4..offset + start + 4 + owner_name.len();
-            let method = line[start + needle.len()..]
-                .split_whitespace()
-                .next()
-                .unwrap_or_default()
-                .split('(')
-                .next()
-                .unwrap_or_default();
-            context.replace(
-                format!("Use `self.{method}` instead of `{owner_name}.{method}`."),
-                receiver.clone(),
-                receiver,
-                "self",
-            );
+    }
+
+    impl<'pr> Visit<'pr> for ClassMethodVisitor<'_> {
+        fn visit_class_node(&mut self, node: &ruby_prism::ClassNode<'pr>) {
+            self.check_scope(&node.constant_path(), node.body());
+            ruby_prism::visit_class_node(self, node);
         }
+
+        fn visit_module_node(&mut self, node: &ruby_prism::ModuleNode<'pr>) {
+            self.check_scope(&node.constant_path(), node.body());
+            ruby_prism::visit_module_node(self, node);
+        }
+    }
+
+    let parsed = ruby_prism::parse(source.as_bytes());
+    let mut visitor = ClassMethodVisitor {
+        source,
+        offenses: Vec::new(),
+    };
+    visitor.visit(&parsed.node());
+    for (receiver, owner, method) in visitor.offenses {
+        context.replace(
+            format!("Use `self.{method}` instead of `{owner}.{method}`."),
+            receiver.clone(),
+            receiver,
+            "self",
+        );
     }
 }
 

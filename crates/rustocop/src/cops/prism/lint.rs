@@ -377,7 +377,18 @@ fn report_compound_self_assignments(source: &str, context: &mut Context, cop: &'
         let cop_context = context.cop_context(cop, source, &[]);
         cop_context.config_bool("AllowRBSInlineAnnotation", false)
     };
-    for (offset, line) in SourceFile::new(source).lines() {
+    let file = SourceFile::new(source);
+    let mut non_code_ranges = file.literal_ranges();
+    non_code_ranges.extend(file.heredoc_ranges());
+    non_code_ranges.extend(file.comment_ranges());
+    for (offset, line) in file.lines() {
+        let code_start = offset + line.len() - line.trim_start().len();
+        if non_code_ranges
+            .iter()
+            .any(|range| range.start <= code_start && code_start < range.end)
+        {
+            continue;
+        }
         if allow_rbs_annotation && line.contains("#:") {
             continue;
         }

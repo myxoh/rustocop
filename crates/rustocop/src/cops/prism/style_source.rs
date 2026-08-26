@@ -173,6 +173,12 @@ fn semicolon_offsets(root: &Node<'_>, source: &str, allow_separators: bool) -> V
     if let Some(start) = embedded_document {
         literals.ranges.push(start..source.len());
     }
+    if let Some(start) = SourceFile::new(source).data_section_start() {
+        literals.ranges.push(start..source.len());
+    }
+    literals
+        .ranges
+        .extend(super::source_rules_layout::lexical_heredoc_body_ranges(source));
     literals.ranges.sort_by_key(|range| range.start);
 
     struct MultiExpressionLines<'src> {
@@ -240,7 +246,13 @@ fn semicolon_offsets(root: &Node<'_>, source: &str, allow_separators: bool) -> V
                     .map_or(source.len(), |at| index + at);
                 let prefix = &source[start..index];
                 let suffix = &source[index + 1..end];
-                let trailing = suffix.trim().is_empty() || suffix.trim_start().starts_with('#');
+                let trimmed_prefix = prefix.trim();
+                let syntax_separator = matches!(trimmed_prefix, "begin" | "end");
+                if syntax_separator {
+                    index += 1;
+                    continue;
+                }
+                let trailing = suffix.trim().is_empty();
                 let leading = prefix.trim().is_empty();
                 let before_closing_brace = suffix.trim_start().starts_with('}')
                     && suffix
@@ -280,6 +292,11 @@ fn semicolon_offsets(root: &Node<'_>, source: &str, allow_separators: bool) -> V
     }
     offsets.sort_unstable();
     offsets.dedup();
+    offsets.retain(|offset| {
+        let start = line_start(source, *offset);
+        let prefix = source[start..*offset].trim();
+        !matches!(prefix, "begin" | "end")
+    });
     offsets
 }
 

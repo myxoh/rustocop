@@ -8,12 +8,12 @@ use std::ops::Range;
 use ruby_prism::{
     AndNode, AssocNode, AssocSplatNode, BeginNode, BlockNode, BlockParametersNode, BreakNode,
     CallNode, CallOperatorWriteNode, CallTargetNode, CaseMatchNode, CaseNode, ClassNode,
-    ConstantPathNode, ConstantPathWriteNode, DefNode, ForNode, IfNode, InNode, IndexTargetNode,
-    InterpolatedRegularExpressionNode, InterpolatedStringNode, LambdaNode, MatchWriteNode,
-    ModuleNode, MultiTargetNode, MultiWriteNode, NextNode, Node, OrNode, ParametersNode,
-    RangeNode as PrismRangeNode, RegularExpressionNode, RescueModifierNode, RescueNode, ReturnNode,
-    SingletonClassNode, SplatNode, StatementsNode, StringNode, SuperNode, SymbolNode, UnlessNode,
-    UntilNode, Visit, WhenNode, WhileNode, XStringNode, YieldNode,
+    ConstantPathNode, ConstantPathWriteNode, DefNode, ForNode, ForwardingSuperNode, IfNode, InNode,
+    IndexTargetNode, InterpolatedRegularExpressionNode, InterpolatedStringNode, LambdaNode,
+    MatchWriteNode, ModuleNode, MultiTargetNode, MultiWriteNode, NextNode, Node, OrNode,
+    ParametersNode, RangeNode as PrismRangeNode, RegularExpressionNode, RescueModifierNode,
+    RescueNode, ReturnNode, SingletonClassNode, SplatNode, StatementsNode, StringNode, SuperNode,
+    SymbolNode, UnlessNode, UntilNode, Visit, WhenNode, WhileNode, XStringNode, YieldNode,
 };
 
 use super::node::core::{Ast, NodeId, NodeValue};
@@ -186,6 +186,14 @@ impl Converter<'_> {
         if let Some(call) = node.as_call_node() {
             let range = self.location(&node);
             if let Some(block) = call.block().and_then(|block| block.as_block_node()) {
+                let mut send_end = block.opening_loc().start_offset();
+                while send_end > node.location().start_offset()
+                    && self.source.as_bytes()[send_end - 1].is_ascii_whitespace()
+                {
+                    send_end -= 1;
+                }
+                let send_range =
+                    byte_range_to_character(self.source, node.location().start_offset()..send_end);
                 let outer = self.ast.add_node(
                     implicit_block_kind(block.parameters()),
                     Vec::new(),
@@ -199,7 +207,7 @@ impl Converter<'_> {
                         "send"
                     },
                     Vec::new(),
-                    Some(range),
+                    Some(send_range),
                 );
                 self.ast.append_child(outer, NodeValue::Node(send));
                 self.frames.push(Frame::Call { outer, send });
@@ -463,6 +471,14 @@ impl<'pr> Visit<'pr> for Converter<'_> {
             Frame::Node(send) => self.populate_call(node, send),
             Frame::Transparent => unreachable!("calls are never transparent"),
         }
+    }
+
+    fn visit_block_node(&mut self, node: &BlockNode<'pr>) {
+        let Frame::Node(block) = *self.frames.last().expect("block frame") else {
+            unreachable!()
+        };
+        self.ast.clear_children(block);
+        self.populate_block(node, block);
     }
 
     fn visit_call_operator_write_node(&mut self, node: &CallOperatorWriteNode<'pr>) {
@@ -755,6 +771,16 @@ impl<'pr> Visit<'pr> for Converter<'_> {
         let Frame::Node(begin) = *self.frames.last().expect("begin frame") else {
             unreachable!()
         };
+        // Parser/rubocop-ast reserve `kwbegin` for an explicit `begin ... end`.
+        // Prism also uses BeginNode for implicit rescue/ensure wrappers.
+        self.ast.replace_kind(
+            begin,
+            if node.begin_keyword_loc().is_some() {
+                "kwbegin"
+            } else {
+                "begin"
+            },
+        );
         if node.rescue_clause().is_none() && node.ensure_clause().is_none() {
             self.ast.clear_children(begin);
             if let Some(statements) = node.statements() {
@@ -855,6 +881,9 @@ impl<'pr> Visit<'pr> for Converter<'_> {
         );
         self.ast.append_child(rescue, NodeValue::Node(resbody));
         self.set_location(resbody, "keyword", node.keyword_loc());
+        // Preserve Prism's structural distinction so consumers that mirror
+        // Parser token callbacks can exclude rescue modifiers exactly.
+        self.set_location(resbody, "modifier", node.keyword_loc());
         self.with_parent(resbody, |this| this.visit(&node.rescue_expression()));
     }
 
@@ -1060,7 +1089,11 @@ impl<'pr> Visit<'pr> for Converter<'_> {
         }
         if let Some(subsequent) = node.subsequent() {
             if let Some(otherwise) = subsequent.as_else_node() {
-                self.set_location(conditional, "else", otherwise.else_keyword_loc());
+                if node.if_keyword_loc().is_none() {
+                    self.set_location(conditional, "colon", otherwise.else_keyword_loc());
+                } else {
+                    self.set_location(conditional, "else", otherwise.else_keyword_loc());
+                }
             } else if let Some(elsif) = subsequent.as_if_node() {
                 if let Some(keyword) = elsif.if_keyword_loc() {
                     self.set_location(conditional, "else", keyword);
@@ -1074,34 +1107,14 @@ impl<'pr> Visit<'pr> for Converter<'_> {
             self.set_location(conditional, "keyword", location);
         }
         if let Some(location) = node.then_keyword_loc() {
-            self.set_location(conditional, "begin", location);
+            if node.if_keyword_loc().is_none() {
+                self.set_location(conditional, "question", location);
+            } else {
+                self.set_location(conditional, "begin", location);
+            }
         }
         if let Some(location) = node.end_keyword_loc() {
             self.set_location(conditional, "end", location);
-        }
-        if node.if_keyword_loc().is_none() {
-            let bytes = node.location().start_offset()..node.location().end_offset();
-            let source = self.source.get(bytes.clone()).unwrap_or("");
-            if let (Some(question), Some(colon)) = (source.find('?'), source.rfind(':')) {
-                self.ast.set_location(
-                    conditional,
-                    "question",
-                    byte_range_to_character(
-                        self.source,
-                        bytes.start + question..bytes.start + question + 1,
-                    ),
-                    "?",
-                );
-                self.ast.set_location(
-                    conditional,
-                    "colon",
-                    byte_range_to_character(
-                        self.source,
-                        bytes.start + colon..bytes.start + colon + 1,
-                    ),
-                    ":",
-                );
-            }
         }
     }
 
@@ -1576,6 +1589,23 @@ impl<'pr> Visit<'pr> for Converter<'_> {
         if let Some(location) = node.rparen_loc() {
             self.set_location(super_node, "end", location);
         }
+    }
+
+    fn visit_forwarding_super_node(&mut self, node: &ForwardingSuperNode<'pr>) {
+        let Frame::Node(super_node) = *self.frames.last().expect("forwarding-super frame") else {
+            unreachable!()
+        };
+        self.ast.clear_children(super_node);
+        if let Some(block) = node.block() {
+            self.visit(&block.as_node());
+        }
+        let start = node.location().start_offset();
+        self.ast.set_location(
+            super_node,
+            "keyword",
+            byte_range_to_character(self.source, start..start + "super".len()),
+            "super",
+        );
     }
 
     fn visit_yield_node(&mut self, node: &YieldNode<'pr>) {

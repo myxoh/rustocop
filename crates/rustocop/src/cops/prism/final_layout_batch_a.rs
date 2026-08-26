@@ -233,9 +233,21 @@ fn space_inside_parens(context: &mut CopContext<'_, '_>) {
     let file = context.source_file();
     let literal_ranges = file.literal_ranges();
     let heredoc_ranges = file.heredoc_ranges();
+    let embedded_code_ranges = embedded_code_ranges(source);
     let comment_ranges = file.comment_ranges();
     let data_section_start = file.data_section_start();
     let inside_literal = |offset| {
+        let embedded = embedded_code_ranges
+            .iter()
+            .find(|range| range.start <= offset && offset < range.end);
+        let nested_literal = embedded.is_some_and(|embedded| {
+            literal_ranges.iter().any(|literal| {
+                embedded.start <= literal.start
+                    && literal.end <= embedded.end
+                    && literal.start <= offset
+                    && offset < literal.end
+            })
+        });
         data_section_start.is_some_and(|start| start <= offset)
             || comment_ranges
                 .iter()
@@ -243,14 +255,33 @@ fn space_inside_parens(context: &mut CopContext<'_, '_>) {
             || literal_ranges
                 .iter()
                 .any(|range| range.start <= offset && offset < range.end)
+                && (embedded.is_none() || nested_literal)
                 && !heredoc_ranges.iter().any(|range| {
                     range.start <= offset
                         && offset < range.end
                         && file.same_line(offset, range.start)
                 })
     };
-    for opening in file.code_offsets("(") {
+    for opening in source.match_indices('(').map(|(offset, _)| offset) {
         if inside_literal(opening) {
+            continue;
+        }
+        // Parser's `tLPAREN_ARG` token (a command call followed by a spaced
+        // argument group) is not an ordinary left-parenthesis token to this
+        // cop. Its matching right parenthesis remains eligible.
+        if source.as_bytes().get(opening.wrapping_sub(1)).is_some_and(u8::is_ascii_whitespace)
+            && source[..opening].trim_end().bytes().last().is_some_and(|byte| {
+                byte.is_ascii_alphanumeric() || matches!(byte, b'_' | b'?' | b'!')
+            })
+            && !matches!(
+                source[..opening]
+                    .trim_end()
+                    .rsplit(|character: char| !(character.is_ascii_alphanumeric() || character == '_'))
+                    .next()
+                    .unwrap_or_default(),
+                "if" | "unless" | "while" | "until" | "case" | "when" | "for" | "return" | "yield"
+            )
+        {
             continue;
         }
         let whitespace_end = opening
@@ -285,7 +316,7 @@ fn space_inside_parens(context: &mut CopContext<'_, '_>) {
             );
         }
     }
-    for closing in file.code_offsets(")") {
+    for closing in source.match_indices(')').map(|(offset, _)| offset) {
         if inside_literal(closing) {
             continue;
         }
@@ -321,6 +352,29 @@ fn space_inside_parens(context: &mut CopContext<'_, '_>) {
             );
         }
     }
+}
+
+fn embedded_code_ranges(source: &str) -> Vec<std::ops::Range<usize>> {
+    #[derive(Default)]
+    struct EmbeddedCode(Vec<std::ops::Range<usize>>);
+
+    impl<'pr> ruby_prism::Visit<'pr> for EmbeddedCode {
+        fn visit_embedded_statements_node(
+            &mut self,
+            node: &ruby_prism::EmbeddedStatementsNode<'pr>,
+        ) {
+            let location = node.location();
+            if location.as_slice().starts_with(b"#{") && location.as_slice().ends_with(b"}") {
+                self.0.push(location.start_offset() + 2..location.end_offset() - 1);
+            }
+            ruby_prism::visit_embedded_statements_node(self, node);
+        }
+    }
+
+    let parsed = ruby_prism::parse(source.as_bytes());
+    let mut embedded = EmbeddedCode::default();
+    ruby_prism::Visit::visit(&mut embedded, &parsed.node());
+    embedded.0
 }
 
 pub(super) struct SpaceInsideBlockBraces;
@@ -482,12 +536,18 @@ impl Cop for ClosingParenthesisIndentation {
         let inspected = if let Some(call) = node.as_call_node() {
             call.opening_loc()
                 .zip(call.closing_loc())
+                .filter(|(left, right)| left.as_slice() == b"(" && right.as_slice() == b")")
                 .map(|(left, right)| {
                     let elements = call
                         .arguments()
                         .map(|arguments| arguments.arguments().iter().collect())
                         .unwrap_or_default();
-                    (left, right, elements, call.location())
+                    (
+                        left.start_offset()..left.end_offset(),
+                        right.start_offset()..right.end_offset(),
+                        elements,
+                        call.location().start_offset()..call.location().end_offset(),
+                    )
                 })
         } else if let Some(parentheses) = node.as_parentheses_node() {
             let elements = parentheses.body().map_or_else(Vec::new, |body| {
@@ -497,10 +557,21 @@ impl Cop for ClosingParenthesisIndentation {
                 )
             });
             Some((
-                parentheses.opening_loc(),
-                parentheses.closing_loc(),
+                parentheses.opening_loc().start_offset()..parentheses.opening_loc().end_offset(),
+                parentheses.closing_loc().start_offset()..parentheses.closing_loc().end_offset(),
                 elements,
-                parentheses.location(),
+                parentheses.location().start_offset()..parentheses.location().end_offset(),
+            ))
+        } else if let Some(embedded) = node.as_embedded_statements_node() {
+            let location = embedded.location();
+            let elements = embedded.statements().map_or_else(Vec::new, |statements| {
+                statements.body().iter().collect()
+            });
+            Some((
+                location.start_offset()..location.start_offset() + 1,
+                location.end_offset().saturating_sub(1)..location.end_offset(),
+                elements,
+                location.start_offset()..location.end_offset(),
             ))
         } else if let Some(definition) = node.as_def_node() {
             definition
@@ -511,7 +582,12 @@ impl Cop for ClosingParenthesisIndentation {
                         .parameters()
                         .map(parameter_nodes)
                         .unwrap_or_default();
-                    (left, right, elements, definition.location())
+                    (
+                        left.start_offset()..left.end_offset(),
+                        right.start_offset()..right.end_offset(),
+                        elements,
+                        definition.location().start_offset()..definition.location().end_offset(),
+                    )
                 })
         } else {
             None
@@ -520,17 +596,17 @@ impl Cop for ClosingParenthesisIndentation {
             return;
         };
         let file = SourceFile::new(source);
-        let right_indentation = file.indentation(right.start_offset());
-        if right_indentation.end != right.start_offset() {
+        let right_indentation = file.indentation(right.start);
+        if right_indentation.end != right.start {
             return;
         }
         let actual = right_indentation.len();
-        let left_column = left.start_offset() - file.line_start(left.start_offset());
+        let left_column = left.start - file.line_start(left.start);
         let node_column =
-            node_location.start_offset() - file.line_start(node_location.start_offset());
+            node_location.start - file.line_start(node_location.start);
         let mut reporter = context.cop_context(self.name(), source, ancestors);
         let expected = if elements.is_empty() {
-            let line_indentation = file.indentation(left.start_offset()).len();
+            let line_indentation = file.indentation(left.start).len();
             let candidates = [line_indentation, left_column, node_column];
             if candidates.contains(&actual) {
                 return;
@@ -539,10 +615,18 @@ impl Cop for ClosingParenthesisIndentation {
         } else {
             let first = elements[0].location();
             let first_indentation = file.indentation(first.start_offset()).len();
-            if !file.same_line(left.start_offset(), first.start_offset()) {
+            if !file.same_line(left.start, first.start_offset()) {
                 first_indentation.saturating_sub(configured_indentation_width(&reporter))
             } else {
-                let columns = if let Some(hash) = elements[0].as_keyword_hash_node() {
+                let columns = if let Some(hash) = elements[0].as_hash_node() {
+                    hash.elements()
+                        .iter()
+                        .map(|element| {
+                            let location = element.location();
+                            location.start_offset() - file.line_start(location.start_offset())
+                        })
+                        .collect::<std::collections::HashSet<_>>()
+                } else if let Some(hash) = elements[0].as_keyword_hash_node() {
                     hash.elements()
                         .iter()
                         .map(|element| {
@@ -574,7 +658,7 @@ impl Cop for ClosingParenthesisIndentation {
         } else {
             format!("Indent `)` to column {expected} (not {actual})")
         };
-        reporter.replace(message, &right, right_indentation, " ".repeat(expected));
+        reporter.replace(message, right, right_indentation, " ".repeat(expected));
     }
 }
 

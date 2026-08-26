@@ -127,34 +127,46 @@ fn triple_quotes(source: &str, reporter: &mut Reporter<'_>) {
 }
 
 fn or_assignment_to_constant(source: &str, reporter: &mut Reporter<'_>) {
-    for operator in all_offsets(source, "||=") {
-        let line_start = source[..operator]
-            .rfind('\n')
-            .map_or(0, |offset| offset + 1);
-        let left = source[line_start..operator].trim();
-        if left.is_empty()
-            || !left
-                .bytes()
-                .last()
-                .is_some_and(|byte| byte.is_ascii_uppercase())
-        {
-            continue;
+    #[derive(Default)]
+    struct ConstantOrAssignments {
+        def_depth: usize,
+        operators: Vec<(std::ops::Range<usize>, bool)>,
+    }
+
+    impl<'pr> ruby_prism::Visit<'pr> for ConstantOrAssignments {
+        fn visit_def_node(&mut self, node: &ruby_prism::DefNode<'pr>) {
+            self.def_depth += 1;
+            ruby_prism::visit_def_node(self, node);
+            self.def_depth -= 1;
         }
-        let inside_def = source[..line_start]
-            .lines()
-            .rev()
-            .take_while(|line| line.trim() != "end")
-            .any(|line| line.trim_start().starts_with("def "));
-        if inside_def && left.contains("::") {
-            reporter.report(
-                "Avoid using or-assignment with constants.",
-                operator..operator + 3,
-            );
+
+        fn visit_constant_or_write_node(&mut self, node: &ruby_prism::ConstantOrWriteNode<'pr>) {
+            let operator = node.operator_loc();
+            self.operators.push((operator.start_offset()..operator.end_offset(), self.def_depth > 0));
+            ruby_prism::visit_constant_or_write_node(self, node);
+        }
+
+        fn visit_constant_path_or_write_node(
+            &mut self,
+            node: &ruby_prism::ConstantPathOrWriteNode<'pr>,
+        ) {
+            let operator = node.operator_loc();
+            self.operators.push((operator.start_offset()..operator.end_offset(), self.def_depth > 0));
+            ruby_prism::visit_constant_path_or_write_node(self, node);
+        }
+    }
+
+    let parsed = ruby_prism::parse(source.as_bytes());
+    let mut assignments = ConstantOrAssignments::default();
+    ruby_prism::Visit::visit(&mut assignments, &parsed.node());
+    for (operator, inside_def) in assignments.operators {
+        if inside_def {
+            reporter.report("Avoid using or-assignment with constants.", operator);
         } else {
             reporter.replace(
                 "Avoid using or-assignment with constants.",
-                operator..operator + 3,
-                operator..operator + 3,
+                operator.clone(),
+                operator,
                 "=",
             );
         }

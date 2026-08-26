@@ -25,6 +25,13 @@ fn string_hash_keys(node: &ruby_prism::AssocNode<'_>, context: &mut CopContext<'
     let Some(key) = node.key().as_string_node() else {
         return;
     };
+    if key
+        .opening_loc()
+        .is_some_and(|opening| opening.as_slice().starts_with(b"<<"))
+        || context.source_file().node(&key.as_node()).contains('\n')
+    {
+        return;
+    }
     if environment_or_replacement_hash(context) {
         return;
     }
@@ -50,6 +57,17 @@ fn environment_or_replacement_hash(context: &CopContext<'_, '_>) -> bool {
         if ancestor.as_array_node().is_some() {
             array_depth += 1;
             continue;
+        }
+        if ancestor.as_statements_node().is_some()
+            || ancestor.as_block_node().is_some()
+            || ancestor.as_def_node().is_some()
+            || ancestor.as_local_variable_write_node().is_some()
+            || ancestor.as_instance_variable_write_node().is_some()
+            || ancestor.as_class_variable_write_node().is_some()
+            || ancestor.as_global_variable_write_node().is_some()
+            || ancestor.as_constant_write_node().is_some()
+        {
+            return false;
         }
         let Some(call) = ancestor.as_call_node() else {
             continue;

@@ -528,14 +528,7 @@ fn env_keys(line: &str) -> Vec<String> {
 }
 
 fn string_concatenation(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
-    if node.is_safe_navigation()
-        || !plus_call(node)
-        || context.parent().is_some_and(|parent| {
-            parent
-                .as_call_node()
-                .is_some_and(|parent| plus_call(&parent))
-        })
-    {
+    if node.is_safe_navigation() || !plus_call(node) {
         return;
     }
     let Some(receiver) = node.receiver() else {
@@ -544,17 +537,36 @@ fn string_concatenation(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     let Some(argument) = only_argument(node) else {
         return;
     };
+    let receiver_string = rubocop_plain_string(&receiver, context);
+    let argument_string = rubocop_plain_string(&argument, context);
+    if !(receiver_string || argument_string) {
+        return;
+    }
     let between =
         &context.source()[receiver.location().end_offset()..argument.location().start_offset()];
-    if receiver.as_string_node().is_some()
-        && argument.as_string_node().is_some()
-        && between.contains('\n')
+    if receiver_string && argument_string && between.contains('\n')
     {
         return;
     }
 
+    let mut topmost = node.as_node();
+    for ancestor in context.ancestors().iter().rev() {
+        let Some(call) = ancestor.as_call_node().filter(plus_call) else {
+            break;
+        };
+        topmost = call.as_node();
+        let ancestor_matches = call.receiver().is_some_and(|part| rubocop_plain_string(&part, context))
+            || only_argument(&call).is_some_and(|part| rubocop_plain_string(&part, context));
+        if ancestor_matches {
+            // The ancestor callback owns the one offense for this chain.
+            return;
+        }
+    }
+
+    let topmost_location = topmost.location();
+    let topmost_range = topmost_location.start_offset()..topmost_location.end_offset();
     let mut parts = Vec::new();
-    collect_concatenation_parts(node.as_node(), &mut parts);
+    collect_concatenation_parts(topmost, &mut parts);
     if !parts.iter().any(|part| part.as_string_node().is_some()) {
         return;
     }
@@ -565,18 +577,18 @@ fn string_concatenation(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
         return;
     }
     let message = "Prefer string interpolation to string concatenation.";
-    if let Some((outer, replacement)) = context.ancestors().iter().find_map(|ancestor| {
-        let call = ancestor.as_call_node().filter(plus_call)?;
-        nested_concatenation_replacement(&call, context).map(|replacement| (call, replacement))
+    if context.ancestors().iter().any(|ancestor| {
+        ancestor.as_call_node().is_some_and(|call| plus_call(&call))
+            && ancestor.location().start_offset() < topmost_range.start
     }) {
-        context.replace_indirectly(message, node.location(), outer.location(), replacement);
+        context.report(message, topmost_range);
         return;
     }
     if parts
         .iter()
         .any(|part| uncorrectable_concatenation_part(part, context))
     {
-        context.report(message, node.location());
+        context.report(message, topmost_range);
         return;
     }
     let mut body = String::new();
@@ -585,10 +597,25 @@ fn string_concatenation(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     }
     context.replace(
         message,
-        node.location(),
-        node.location(),
+        topmost_range.clone(),
+        topmost_range,
         format!("\"{body}\""),
     );
+}
+
+fn rubocop_plain_string(node: &Node<'_>, context: &CopContext<'_, '_>) -> bool {
+    let Some(string) = node.as_string_node() else {
+        return false;
+    };
+    // RuboCop's Prism translation represents a physical multiline literal as
+    // `dstr` (one string child per source line), even without interpolation.
+    // `StringConcatenation` deliberately matches only Parser `str` nodes.
+    context
+        .source_file()
+        .at(&string.content_loc())
+        .lines()
+        .count()
+        <= 1
 }
 
 fn plus_call(node: &CallNode<'_>) -> bool {

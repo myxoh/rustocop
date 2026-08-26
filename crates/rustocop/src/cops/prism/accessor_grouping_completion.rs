@@ -1,4 +1,6 @@
 use super::*;
+use crate::rubocop::ast::node::core::NodeRef as RubocopNodeRef;
+use crate::rubocop::ast::prism::convert as convert_rubocop_ast;
 
 define_cops! {
     AccessorGrouping => "Style/AccessorGrouping" => source(accessor_grouping),
@@ -298,6 +300,117 @@ fn flush_accessor_group(group: &mut Vec<AccessorLine>, context: &mut CopContext<
 }
 
 fn grouped_accessors(context: &mut CopContext<'_, '_>, lines: &[(usize, &str)]) {
+    let parsed = ruby_prism::parse(context.source().as_bytes());
+    let (ast, root) = convert_rubocop_ast(context.source(), &parsed.node());
+    let Some(root) = root.map(|root| ast.node(root)) else { return };
+    for scope in root.each_node(&["class", "module", "sclass"]) {
+        let Some(body) = scope.body() else { continue };
+        let sends = if body.kind() == "begin" {
+            body.each_child_node(&["send"])
+        } else if body.kind() == "send" {
+            vec![body]
+        } else {
+            Vec::new()
+        };
+        for accessor in ["attr_reader", "attr_writer", "attr_accessor", "attr"] {
+            for visibility in 0..=2 {
+                let group = sends
+                    .iter()
+                    .copied()
+                    .filter(|node| {
+                        node.attribute_accessor()
+                            && node.method_name() == Some(accessor)
+                            && accessor_visibility(*node) == visibility
+                            && accessor_groupable(*node, context.source())
+                            && !accessor_previous_line_comment(*node, lines)
+                    })
+                    .collect::<Vec<_>>();
+                if group.len() < 2 {
+                    continue;
+                }
+                let mut entries = group
+                    .into_iter()
+                    .filter_map(|node| {
+                        let (offset, line) = *lines.get(node.first_line().checked_sub(1)?)?;
+                        Some(accessor_line(
+                            offset,
+                            line,
+                            line.trim_start(),
+                            accessor,
+                            true,
+                        ))
+                    })
+                    .collect::<Vec<AccessorLine>>();
+                flush_accessor_group(&mut entries, context);
+            }
+        }
+    }
+}
+
+fn accessor_previous_line_comment(node: RubocopNodeRef<'_>, lines: &[(usize, &str)]) -> bool {
+    node.first_line() >= 2
+        && lines
+            .get(node.first_line() - 2)
+            .is_some_and(|(_, line)| line.trim_start().starts_with('#'))
+}
+
+fn accessor_visibility(node: RubocopNodeRef<'_>) -> u8 {
+    node.left_siblings()
+        .into_iter()
+        .rev()
+        .find_map(|sibling| {
+            (sibling.kind() == "send"
+                && sibling.receiver().is_none()
+                && sibling.arguments().is_empty())
+            .then(|| match sibling.method_name() {
+                Some("protected") => Some(1),
+                Some("private") => Some(2),
+                Some("public") => Some(0),
+                _ => None,
+            })
+            .flatten()
+        })
+        .unwrap_or(0)
+}
+
+fn accessor_groupable(node: RubocopNodeRef<'_>, source: &str) -> bool {
+    let Some(mut previous) = node.left_siblings().into_iter().last() else {
+        return true;
+    };
+    if matches!(previous.kind(), "block" | "numblock" | "itblock") {
+        if let Some(send) = previous
+            .child_nodes()
+            .into_iter()
+            .find(|child| child.kind() == "send")
+        {
+            previous = send;
+        }
+    }
+    if previous.kind() != "send" {
+        return true;
+    }
+    if previous.source_range().is_some_and(|range| {
+        let line_end = source[range.end..]
+            .find('\n')
+            .map_or(source.len(), |end| range.end + end);
+        source[range.end..line_end]
+            .trim_start()
+            .starts_with("#:")
+    }) {
+        return false;
+    }
+    previous.attribute_accessor()
+        || (previous.receiver().is_none()
+            && previous.arguments().is_empty()
+            && matches!(
+                previous.method_name(),
+                Some("public" | "protected" | "private" | "module_function")
+            ))
+        || node.first_line().saturating_sub(previous.last_line()) > 1
+}
+
+#[allow(dead_code)]
+fn grouped_accessors_legacy(context: &mut CopContext<'_, '_>, lines: &[(usize, &str)]) {
     let mut groups = std::collections::BTreeMap::<
         (usize, usize, usize, &'static str),
         Vec<AccessorLine>,

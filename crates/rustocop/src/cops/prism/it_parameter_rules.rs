@@ -1,10 +1,18 @@
 use super::*;
 
 define_cops! {
-    ItBlockParameter => "Style/ItBlockParameter" => node(as_block_node, it_block_parameter),
+    ItBlockParameter => "Style/ItBlockParameter" => any_node(it_block_parameter),
 }
 
-fn it_block_parameter(node: &ruby_prism::BlockNode<'_>, context: &mut CopContext<'_, '_>) {
+fn it_block_parameter(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
+    if let Some(block) = node.as_block_node() {
+        check_block_it_parameter(&block, context);
+    } else if let Some(lambda) = node.as_lambda_node() {
+        check_lambda_it_parameter(&lambda, context);
+    }
+}
+
+fn check_block_it_parameter(node: &ruby_prism::BlockNode<'_>, context: &mut CopContext<'_, '_>) {
     if !context.target_ruby_version().at_least(3, 4) {
         return;
     }
@@ -17,7 +25,7 @@ fn it_block_parameter(node: &ruby_prism::BlockNode<'_>, context: &mut CopContext
         .to_string();
     let mut reads = ParameterReads::default();
     if let Some(body) = node.body() {
-        reads.visit(&body);
+        visit_body_descendants(&body, &mut reads);
     }
 
     if parameters.as_it_parameters_node().is_some() {
@@ -27,7 +35,7 @@ fn it_block_parameter(node: &ruby_prism::BlockNode<'_>, context: &mut CopContext
         .is_some_and(|parameters| parameters.maximum() == 1)
     {
         if style != "disallow" {
-            correct_parameter_reads(node, &reads.numbered, None, context);
+            correct_parameter_reads(node.location(), &reads.numbered, None, context);
         }
     } else if style == "always" {
         let Some(parameters) = parameters.as_block_parameters_node() else {
@@ -43,8 +51,70 @@ fn it_block_parameter(node: &ruby_prism::BlockNode<'_>, context: &mut CopContext
             .map(|(_, range)| range.clone())
             .collect::<Vec<_>>();
         if !matching.is_empty() {
-            correct_parameter_reads(node, &matching, Some(parameters.location()), context);
+            correct_parameter_reads(node.location(), &matching, Some(parameters.location()), context);
         }
+    }
+}
+
+fn check_lambda_it_parameter(
+    node: &ruby_prism::LambdaNode<'_>,
+    context: &mut CopContext<'_, '_>,
+) {
+    if !context.target_ruby_version().at_least(3, 4) {
+        return;
+    }
+    let Some(parameters) = node.parameters() else {
+        return;
+    };
+    let style = context.policy().enforced_style("allow_single_line");
+    let mut reads = ParameterReads::default();
+    if let Some(body) = node.body() {
+        visit_body_descendants(&body, &mut reads);
+    }
+    if parameters
+        .as_numbered_parameters_node()
+        .is_some_and(|parameters| parameters.maximum() == 1)
+    {
+        if style != "disallow" {
+            correct_parameter_reads(node.location(), &reads.numbered, None, context);
+        }
+    } else if style == "always" {
+        let Some(parameters) = parameters.as_block_parameters_node() else {
+            return;
+        };
+        let Some(name) = single_named_parameter(&parameters) else {
+            return;
+        };
+        let matching = reads
+            .named
+            .iter()
+            .filter(|(read_name, _)| read_name == &name)
+            .map(|(_, range)| range.clone())
+            .collect::<Vec<_>>();
+        if !matching.is_empty() {
+            correct_parameter_reads(
+                node.location(),
+                &matching,
+                Some(parameters.location()),
+                context,
+            );
+        }
+    }
+}
+
+fn visit_body_descendants<'pr>(body: &Node<'pr>, reads: &mut ParameterReads) {
+    if let Some(statements) = body.as_statements_node() {
+        for statement in statements.body().iter() {
+            if statement.as_local_variable_read_node().is_none()
+                && statement.as_it_local_variable_read_node().is_none()
+            {
+                reads.visit(&statement);
+            }
+        }
+    } else if body.as_local_variable_read_node().is_none()
+        && body.as_it_local_variable_read_node().is_none()
+    {
+        reads.visit(body);
     }
 }
 
@@ -73,7 +143,7 @@ fn check_it_parameter(
 }
 
 fn correct_parameter_reads(
-    block: &ruby_prism::BlockNode<'_>,
+    location: ruby_prism::Location<'_>,
     reads: &[std::ops::Range<usize>],
     parameters: Option<ruby_prism::Location<'_>>,
     context: &mut CopContext<'_, '_>,
@@ -81,7 +151,6 @@ fn correct_parameter_reads(
     if reads.is_empty() {
         return;
     }
-    let location = block.location();
     let block_range = location.start_offset()..location.end_offset();
     let file = context.source_file();
     let mut edits = reads

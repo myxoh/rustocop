@@ -20,6 +20,12 @@ fn on_send(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     };
     let file = context.source_file();
     if file.same_line(heredoc.opening.start_offset(), closing.start_offset())
+        || {
+            let suffix = context.source()
+                [closing.end_offset()..file.line_end(closing.end_offset())]
+                .trim_start();
+            suffix.starts_with("do") || suffix.starts_with('{')
+        }
         || context
             .ancestors()
             .iter()

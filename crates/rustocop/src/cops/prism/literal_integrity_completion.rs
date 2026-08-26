@@ -1,6 +1,8 @@
 use std::collections::HashSet;
 
 use super::*;
+use crate::rubocop::ast::node::core::NodeRef as RubocopNodeRef;
+use crate::rubocop::ast::prism::convert as convert_rubocop_ast;
 
 mod helpers;
 use helpers::*;
@@ -737,7 +739,6 @@ fn line_at(source: &str, offset: usize) -> usize {
     source[..offset].bytes().filter(|byte| *byte == b'\n').count()
 }
 
-#[allow(clippy::too_many_lines)]
 fn empty_literal(context: &mut CopContext<'_, '_>) {
     let source = context.source();
     let string_literal = if context.related_config_value("Style/StringLiterals", "EnforcedStyle")
@@ -758,134 +759,111 @@ fn empty_literal(context: &mut CopContext<'_, '_>) {
             _ => {
                 context.related_config_value("Style/FrozenStringLiteralComment", "Enabled")
                     == Some("true")
+                    && (context.related_config_explicit(
+                        "Style/FrozenStringLiteralComment",
+                        "Enabled",
+                    ) || context.related_config_value("AllCops", "DisabledByDefault")
+                        != Some("true"))
             }
         }
     });
-    for (constructor, literal, kind) in [
-        ("Array.new", "[]", "array"),
-        ("Hash.new", "{}", "hash"),
-        ("String.new", string_literal, "string"),
-    ] {
-        let mut search = 0;
-        while let Some(relative) = source[search..].find(constructor) {
-            let start = search + relative;
-            let root_qualified = source.get(start.saturating_sub(2)..start) == Some("::")
-                && (start == 2
-                    || source.as_bytes().get(start - 3).is_none_or(|byte| {
-                        !byte.is_ascii_alphanumeric() && !matches!(byte, b'_' | b':' | b'@')
-                    }));
-            let bare_constant = start == 0
-                || source.as_bytes().get(start - 1).is_some_and(|byte| {
-                    !byte.is_ascii_alphanumeric()
-                        && !matches!(byte, b'_' | b':' | b'.' | b'@')
-                });
-            if !root_qualified && !bare_constant {
-                search = start + constructor.len();
-                continue;
-            }
-            let offense_start = if root_qualified {
-                start - 2
+    let parsed = ruby_prism::parse(source.as_bytes());
+    let (ast, root) = convert_rubocop_ast(source, &parsed.node());
+    let Some(root) = root.map(|root| ast.node(root)) else { return };
+    for node in root.each_node(&["send"]) {
+        let Some((kind, literal)) = empty_literal_kind(node, frozen_strings, string_literal) else {
+            continue;
+        };
+        let current = node.source().unwrap_or_default();
+        let message = if kind == "string" {
+            format!("Use string literal `{literal}` instead of `String.new`.")
+        } else {
+            format!("Use {kind} literal `{literal}` instead of `{current}`.")
+        };
+        let Some(chars) = node.source_range() else { continue };
+        let offense = empty_literal_character_range_to_byte(source, chars);
+        if kind == "hash" && empty_literal_unparenthesized_first_argument(node) {
+            let Some(parent) = node.parent() else { continue };
+            let arguments = parent.arguments();
+            let Some(first) = arguments.first().and_then(|argument| argument.source_range()) else { continue };
+            let Some(last) = arguments.last().and_then(|argument| argument.source_range()) else { continue };
+            let replacement_chars = first.start.saturating_sub(1)..last.end;
+            let replacement_range = empty_literal_character_range_to_byte(source, replacement_chars);
+            let tail = arguments
+                .iter()
+                .skip(1)
+                .filter_map(|argument| argument.source())
+                .collect::<Vec<_>>();
+            let replacement = if tail.is_empty() {
+                "({})".to_string()
             } else {
-                start
+                format!("({{}}, {})", tail.join(", "))
             };
-            if kind == "string" && frozen_strings {
-                search = start + constructor.len();
-                continue;
-            }
-            let mut end = start + constructor.len();
-            let same_line_tail = source[end..]
-                .split_once('\n')
-                .map_or(&source[end..], |(line, _)| line)
-                .trim_start();
-            let unparenthesized_argument = same_line_tail
-                .as_bytes()
-                .first()
-                .is_some_and(|byte| {
-                    !matches!(
-                        byte,
-                        b',' | b')' | b']' | b'}' | b'.' | b'&' | b';' | b'#' | b'?'
-                    )
-                })
-                && !same_line_tail.starts_with("if ")
-                && !same_line_tail.starts_with("unless ")
-                && !same_line_tail.starts_with(": ");
-            if source.get(end..end + 2) == Some("()") {
-                end += 2;
-            } else if kind == "array"
-                && source
-                .get(end..end + literal.len() + 2)
-                .is_some_and(|arguments| arguments == format!("({literal})"))
-            {
-                end += literal.len() + 2;
-            } else if source.as_bytes().get(end) == Some(&b'(')
-                || source[end..].trim_start().starts_with(['{'])
-                || source[end..].trim_start().starts_with("do")
-                || unparenthesized_argument
-            {
-                search = end + 1;
-                continue;
-            }
-            let message = format!(
-                "Use {kind} literal `{literal}` instead of `{}`.",
-                if kind == "string" {
-                    constructor
-                } else {
-                    &source[offense_start..end]
-                }
-            );
-            let wraps_unparenthesized_hash = kind == "hash"
-                && source.as_bytes().get(offense_start.wrapping_sub(1)) == Some(&b' ')
-                && !source[..offense_start].trim_end().ends_with('=')
-                && !source[..offense_start].trim_end().ends_with('{');
-            if wraps_unparenthesized_hash && source.as_bytes().get(end) == Some(&b',') {
-                let line_end = source[end..].find('\n').map_or(source.len(), |at| end + at);
-                context.replace_many(
-                    message,
-                    offense_start..end,
-                    vec![
-                        (offense_start - 1..end, "({}".to_string()),
-                        (line_end..line_end, ")".to_string()),
-                    ],
-                );
-            } else {
-                context.replace(
-                    message,
-                    offense_start..end,
-                    if wraps_unparenthesized_hash {
-                        offense_start - 1..end
-                    } else {
-                        offense_start..end
-                    },
-                    if wraps_unparenthesized_hash {
-                        "({})"
-                    } else {
-                        literal
-                    },
-                );
-            }
-            search = end;
+            context.replace(message, offense, replacement_range, replacement);
+        } else {
+            context.replace(message, offense.clone(), offense, literal);
         }
     }
-    for (constructor, literal, kind) in [
-        ("Array[]", "[]", "array"),
-        ("Array([])", "[]", "array"),
-        ("Hash[]", "{}", "hash"),
-        ("Hash([])", "{}", "hash"),
-    ] {
-        for (start, _) in source.match_indices(constructor) {
-            if start > 0
-                && source.as_bytes().get(start - 1).is_some_and(|byte| {
-                    byte.is_ascii_alphanumeric() || matches!(byte, b'_' | b':' | b'.' | b'@')
-                })
-            {
-                continue;
-            }
-            context.replace(
-                format!("Use {kind} literal `{literal}` instead of `{constructor}`."),
-                start..start + constructor.len(),
-                start..start + constructor.len(),
-                literal,
-            );
+}
+
+fn empty_literal_kind(
+    node: RubocopNodeRef<'_>,
+    frozen_strings: bool,
+    string_literal: &'static str,
+) -> Option<(&'static str, &'static str)> {
+    let method = node.method_name()?;
+    let receiver = node.receiver();
+    let arguments = node.arguments();
+    let parent_is_block = node.parent().is_some_and(|parent| {
+        matches!(parent.kind(), "block" | "numblock" | "itblock")
+            && parent.send_node() == Some(node)
+    });
+    let empty_array = |argument: RubocopNodeRef<'_>| {
+        argument.kind() == "array" && argument.child_nodes().is_empty()
+    };
+    if receiver.is_some_and(|receiver| receiver.global_const("Array")) {
+        if method == "new"
+            && !parent_is_block
+            && (arguments.is_empty()
+                || arguments.len() == 1 && empty_array(arguments[0]))
+            || method == "[]" && arguments.is_empty()
+        {
+            return Some(("array", "[]"));
         }
+    } else if receiver.is_none() && method == "Array" && arguments.len() == 1 && empty_array(arguments[0]) {
+        return Some(("array", "[]"));
     }
+    if receiver.is_some_and(|receiver| receiver.global_const("Hash")) {
+        if method == "new" && !parent_is_block && arguments.is_empty()
+            || method == "[]" && arguments.is_empty()
+        {
+            return Some(("hash", "{}"));
+        }
+    } else if receiver.is_none() && method == "Hash" && arguments.len() == 1 && empty_array(arguments[0]) {
+        return Some(("hash", "{}"));
+    }
+    if !frozen_strings
+        && receiver.is_some_and(|receiver| receiver.global_const("String"))
+        && method == "new"
+        && !parent_is_block
+        && arguments.is_empty()
+    {
+        return Some(("string", string_literal));
+    }
+    None
+}
+
+fn empty_literal_unparenthesized_first_argument(node: RubocopNodeRef<'_>) -> bool {
+    let Some(parent) = node.parent() else { return false };
+    matches!(parent.kind(), "send" | "super" | "zsuper")
+        && parent.first_argument() == Some(node)
+        && !parent.parenthesized_call()
+}
+
+fn empty_literal_character_range_to_byte(
+    source: &str,
+    range: std::ops::Range<usize>,
+) -> std::ops::Range<usize> {
+    let byte = |offset| source.char_indices().nth(offset).map_or(source.len(), |(byte, _)| byte);
+    byte(range.start)..byte(range.end)
 }
