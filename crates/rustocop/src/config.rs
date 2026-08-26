@@ -1,8 +1,11 @@
 use std::collections::{HashMap, HashSet};
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use regex::Regex;
 
+mod loader;
+mod path_policy;
 mod selection;
 pub(crate) use selection::{CopSelection, RubyVersion, SourceEncoding};
 
@@ -21,6 +24,7 @@ pub(crate) struct RunOptions {
     pub(crate) parallelism: Parallelism,
     pub(crate) rubocop_loaders: Vec<(String, String)>,
     pub(crate) config_path: Option<String>,
+    pub(crate) force_exclusion: bool,
     pub(crate) inspection: InspectionConfig,
 }
 
@@ -32,6 +36,7 @@ pub(crate) struct InspectionConfig {
     pub(crate) target_ruby_version: RubyVersion,
     pub(crate) source_encoding: SourceEncoding,
     pub(crate) cop_config: Arc<CopConfig>,
+    pub(crate) inspected_path: Option<Arc<str>>,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -77,6 +82,8 @@ pub(crate) struct CopConfig {
     // Precompiled once per run for the authoring policy API.
     #[allow(dead_code)]
     patterns: HashMap<String, HashMap<String, Vec<Regex>>>,
+    path_globs: HashMap<String, HashMap<String, Vec<Regex>>>,
+    root: Option<PathBuf>,
 }
 
 const RUBOCOP_DEFAULT_CONFIG: &str =
@@ -94,26 +101,48 @@ enum ConfigValue {
 
 impl CopConfig {
     pub(crate) fn from_source(source: &str) -> Self {
+        Self::from_sources([(source, HashSet::new())], None)
+    }
+
+    pub(crate) fn from_path(path: &str) -> Result<Self, String> {
+        loader::load(path)
+    }
+
+    fn from_sources<'a>(
+        sources: impl IntoIterator<Item = (&'a str, HashSet<String>)>,
+        root: Option<PathBuf>,
+    ) -> Self {
         let mut values = Self::parse_values(RUBOCOP_DEFAULT_CONFIG);
-        let overrides = Self::parse_values(source);
-        let explicit_sections = overrides.keys().cloned().collect();
-        let explicit_values = overrides
-            .iter()
-            .flat_map(|(cop, entries)| entries.keys().map(|key| (cop.clone(), key.clone())))
-            .collect();
-        Self::merge_values(&mut values, overrides);
+        let mut explicit_sections = HashSet::new();
+        let mut explicit_values = HashSet::new();
+        let mut inherited_merge_keys = HashSet::new();
+        for (source, merge_keys) in sources {
+            inherited_merge_keys.extend(merge_keys);
+            let overrides = Self::parse_values(source);
+            explicit_sections.extend(overrides.keys().cloned());
+            explicit_values.extend(
+                overrides.iter().flat_map(|(cop, entries)| {
+                    entries.keys().map(|key| (cop.clone(), key.clone()))
+                }),
+            );
+            Self::merge_values(&mut values, overrides, &inherited_merge_keys);
+        }
         let patterns = Self::compile_patterns(&values);
+        let path_globs = path_policy::compile_path_globs(&values);
         Self {
             values,
             explicit_sections,
             explicit_values,
             patterns,
+            path_globs,
+            root,
         }
     }
 
     fn merge_values(
         base: &mut HashMap<String, HashMap<String, ConfigValue>>,
         overrides: HashMap<String, HashMap<String, ConfigValue>>,
+        merge_keys: &HashSet<String>,
     ) {
         for (cop, entries) in overrides {
             let percent_literal_delimiters = cop == "Style/PercentLiteralDelimiters";
@@ -138,6 +167,15 @@ impl CopConfig {
                         }
                         values.extend(override_values);
                         symbol_values.extend(override_symbols);
+                    }
+                    (Some(ConfigValue::List(values)), ConfigValue::List(override_values))
+                        if merge_keys.contains(&key) =>
+                    {
+                        for value in override_values {
+                            if !values.contains(&value) {
+                                values.push(value);
+                            }
+                        }
                     }
                     (_, value) => {
                         target.insert(key, value);
@@ -473,7 +511,11 @@ fn config_scalar_source(value: &str) -> &str {
 
 fn config_section(line: &str) -> Option<String> {
     line.strip_suffix(':')
-        .filter(|name| name.contains('/') || *name == "AllCops")
+        .filter(|name| {
+            name.contains('/')
+                || *name == "AllCops"
+                || name.as_bytes().first().is_some_and(u8::is_ascii_uppercase)
+        })
         .map(str::to_string)
 }
 
@@ -484,6 +526,16 @@ fn clean_config_scalar(value: &str) -> String {
 impl InspectionConfig {
     pub(crate) fn cop_enabled(&self, cop: &str) -> bool {
         self.cops.enabled(cop, &self.cop_config)
+            && self
+                .inspected_path
+                .as_deref()
+                .is_none_or(|path| self.cop_config.cop_applies_to_path(cop, path))
+    }
+
+    pub(crate) fn scoped_to_path(&self, path: &str) -> Self {
+        let mut scoped = self.clone();
+        scoped.inspected_path = Some(Arc::from(path));
+        scoped
     }
 }
 

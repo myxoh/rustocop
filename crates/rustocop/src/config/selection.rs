@@ -67,6 +67,7 @@ impl Default for RubyVersion {
 #[derive(Clone, Debug)]
 pub(crate) struct CopSelection {
     requested: Option<Vec<String>>,
+    excluded: Vec<String>,
 }
 
 impl CopSelection {
@@ -74,20 +75,46 @@ impl CopSelection {
         Self::from_only(None)
     }
 
+    #[cfg(test)]
     pub(crate) fn only(value: &str) -> Self {
         let requested: Vec<_> = value.split(',').map(str::trim).collect();
         Self::from_only(Some(&requested))
     }
 
+    pub(crate) fn select_only(&mut self, value: &str) {
+        self.requested = Some(
+            value
+                .split(',')
+                .map(str::trim)
+                .filter(|value| !value.is_empty())
+                .map(str::to_string)
+                .collect(),
+        );
+    }
+
+    pub(crate) fn except(&mut self, value: &str) {
+        self.excluded.extend(
+            value
+                .split(',')
+                .map(str::trim)
+                .filter(|value| !value.is_empty())
+                .map(str::to_string),
+        );
+    }
+
     pub(crate) fn enabled(&self, cop: &str, config: &CopConfig) -> bool {
+        if self
+            .excluded
+            .iter()
+            .any(|selection| selection_matches(selection, cop))
+        {
+            return false;
+        }
         match &self.requested {
             None => normally_enabled(cop, config),
             Some(requested) => requested.iter().any(|selection| {
                 selection == cop
-                    || (normally_enabled(cop, config)
-                        && cop
-                            .strip_prefix(selection)
-                            .is_some_and(|suffix| suffix.starts_with('/')))
+                    || (normally_enabled(cop, config) && selection_matches(selection, cop))
             }),
         }
     }
@@ -100,8 +127,16 @@ impl CopSelection {
         Self {
             requested: requested
                 .map(|values| values.iter().map(|value| (*value).to_string()).collect()),
+            excluded: Vec::new(),
         }
     }
+}
+
+fn selection_matches(selection: &str, cop: &str) -> bool {
+    selection == cop
+        || cop
+            .strip_prefix(selection)
+            .is_some_and(|suffix| suffix.starts_with('/'))
 }
 
 fn normally_enabled(cop: &str, config: &CopConfig) -> bool {
@@ -115,6 +150,14 @@ fn normally_enabled(cop: &str, config: &CopConfig) -> bool {
 
     if config.bool("AllCops", "EnabledByDefault") == Some(true) {
         return true;
+    }
+
+    if let Some((department, _)) = cop.split_once('/') {
+        if config.explicitly_contains(department, "Enabled")
+            && config.bool(department, "Enabled") != Some(true)
+        {
+            return false;
+        }
     }
 
     match config.value(cop, "Enabled") {

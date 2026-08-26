@@ -1,12 +1,12 @@
 {
   "version": 1,
   "rubocop_version": "1.87.0",
-  "updated_at": "2026-08-25T19:10:14-04:00",
+  "updated_at": "2026-08-25T20:00:07-04:00",
   "raw_capture_sha256": "aec260b35238542dafa044aad90dfe5c873b6c91019d3708f870fdc8b2453666",
   "raw_cases": 28606,
   "lsp_exclusions": 5,
-  "controlled_cases": 29230,
-  "imported_cases": 1181,
+  "controlled_cases": 29248,
+  "imported_cases": 1199,
   "exact_duplicates_removed": 552,
   "distribution": {
     "minimum": 1,
@@ -654,9 +654,9 @@
     "Layout/SpaceAfterMethodName": {
       "cases": "cops/Layout/SpaceAfterMethodName/unit/cases.jsonl",
       "configs": "cops/Layout/SpaceAfterMethodName/unit/configs.json",
-      "count": 10,
-      "sha256": "6970169fe547c5762db872c1677a090c746370a93c3fea99a7538ee3422dd986",
-      "configs_sha256": "eb84bc051da5fd023b73cadee4e0fa7cb350762872409a4595781ed01002d808"
+      "count": 12,
+      "sha256": "e34d0d005d0a81903141bb90d436e412fe1afc7c2aa1a8696edc1248cccf677d",
+      "configs_sha256": "6f262f32f14fe7d0d4c8e4e41839405d731a1d22257a046e888a7bcb82f08429"
     },
     "Layout/SpaceAfterNot": {
       "cases": "cops/Layout/SpaceAfterNot/unit/cases.jsonl",
@@ -1011,9 +1011,9 @@
     "Lint/DuplicateElsifCondition": {
       "cases": "cops/Lint/DuplicateElsifCondition/unit/cases.jsonl",
       "configs": "cops/Lint/DuplicateElsifCondition/unit/configs.json",
-      "count": 7,
-      "sha256": "3d3a224b47394e3cae87bc9cc8ef7632dd9c40a56aa239eef23b367e1fc19b6b",
-      "configs_sha256": "34ccd3df86b20459767bbfa66695d1d193a154767d42ca3a359e2966f0424962"
+      "count": 10,
+      "sha256": "1aac0f7af2ff178c329a4d4eff970e385ceeafa173e9a3029766835cd31e80e2",
+      "configs_sha256": "1b8eb17ef518d74e6fb21d7845314a00759cf5b513deb1dc751cfad16fef3607"
     },
     "Lint/DuplicateHashKey": {
       "cases": "cops/Lint/DuplicateHashKey/unit/cases.jsonl",
@@ -3055,9 +3055,9 @@
     "Style/MapIntoArray": {
       "cases": "cops/Style/MapIntoArray/unit/cases.jsonl",
       "configs": "cops/Style/MapIntoArray/unit/configs.json",
-      "count": 64,
-      "sha256": "31911b64f508becf705a502447e3f501c287a9c15e2d179220082d86ce205230",
-      "configs_sha256": "a3b746d66be9dae4e36e6a2bfcf9a09cd449d50fb28f917de50736572979cec3"
+      "count": 77,
+      "sha256": "38e255ce0514d45608c4acf1f4d1e76e642b83ffe15abddb940c59ae6f989189",
+      "configs_sha256": "a2f19bd54f48b1affbcf05f1854091c064a05b9c01515f7ae4a16a44b3fdb920"
     },
     "Style/MapJoin": {
       "cases": "cops/Style/MapJoin/unit/cases.jsonl",

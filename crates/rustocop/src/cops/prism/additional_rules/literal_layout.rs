@@ -49,29 +49,31 @@ pub(super) fn empty_heredoc(source: &str, reporter: &mut Reporter<'_>) {
 }
 
 pub(super) fn space_after_method_name(source: &str, reporter: &mut Reporter<'_>) {
-    for (offset, line) in source_lines(source) {
-        let trimmed = line.trim_start();
-        if trimmed.starts_with("def ") {
-            if let Some(paren) = line.find(" (") {
-                let def_start = line.len() - trimmed.len();
-                let identity_start = def_start + "def ".len();
-                if paren < identity_start {
-                    continue;
+    #[derive(Default)]
+    struct SpaceAfterMethodNameVisitor {
+        offenses: Vec<std::ops::Range<usize>>,
+    }
+    impl<'pr> Visit<'pr> for SpaceAfterMethodNameVisitor {
+        fn visit_def_node(&mut self, node: &ruby_prism::DefNode<'pr>) {
+            if let Some(opening) = node.lparen_loc() {
+                let name = node.name_loc();
+                if name.end_offset() < opening.start_offset() {
+                    self.offenses
+                        .push(name.end_offset()..opening.start_offset());
                 }
-                let identity = line[identity_start..paren].trim();
-                if identity.is_empty()
-                    || identity.chars().any(char::is_whitespace)
-                    || identity.contains(['(', ')'])
-                {
-                    continue;
-                }
-                let start = offset + paren;
-                reporter.remove(
-                    "Do not put a space between a method name and the opening parenthesis.",
-                    start..start + 1,
-                    start..start + 1,
-                );
             }
+            ruby_prism::visit_def_node(self, node);
         }
+    }
+
+    let parsed = ruby_prism::parse(source.as_bytes());
+    let mut visitor = SpaceAfterMethodNameVisitor::default();
+    visitor.visit(&parsed.node());
+    for range in visitor.offenses {
+        reporter.remove(
+            "Do not put a space between a method name and the opening parenthesis.",
+            range.clone(),
+            range,
+        );
     }
 }

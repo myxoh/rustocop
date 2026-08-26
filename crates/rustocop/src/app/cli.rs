@@ -1,5 +1,3 @@
-use std::fs;
-
 use std::sync::Arc;
 
 use crate::config::{
@@ -8,7 +6,7 @@ use crate::config::{
 };
 
 pub(super) enum Command {
-    Run(RunOptions),
+    Run(Box<RunOptions>),
     Version,
     VerboseVersion,
     ShowCops,
@@ -22,6 +20,7 @@ pub(super) fn parse_args(mut args: Vec<String>) -> Result<Command, String> {
         parallelism: Parallelism::Sequential,
         rubocop_loaders: Vec::new(),
         config_path: None,
+        force_exclusion: false,
         inspection: InspectionConfig {
             autocorrect: AutocorrectMode::None,
             ignore_disable_comments: false,
@@ -29,6 +28,7 @@ pub(super) fn parse_args(mut args: Vec<String>) -> Result<Command, String> {
             target_ruby_version: RubyVersion::default(),
             source_encoding: SourceEncoding::Utf8,
             cop_config: Arc::new(CopConfig::default()),
+            inspected_path: None,
         },
     };
 
@@ -46,8 +46,15 @@ pub(super) fn parse_args(mut args: Vec<String>) -> Result<Command, String> {
             }
             "--format" | "-f" => options.format = take_value(&mut args, &arg)?,
             "--only" => {
-                options.inspection.cops = CopSelection::only(&take_value(&mut args, &arg)?);
+                options
+                    .inspection
+                    .cops
+                    .select_only(&take_value(&mut args, &arg)?);
             }
+            "--except" => options
+                .inspection
+                .cops
+                .except(&take_value(&mut args, &arg)?),
             "--stdin" => options.stdin_path = Some(take_value(&mut args, &arg)?),
             "--parallel" => options.parallelism = Parallelism::Automatic,
             "--no-parallel" => options.parallelism = Parallelism::Sequential,
@@ -64,7 +71,8 @@ pub(super) fn parse_args(mut args: Vec<String>) -> Result<Command, String> {
                 let value = take_value(&mut args, &arg)?;
                 options.rubocop_loaders.push((arg, value));
             }
-            "--force-exclusion" | "--no-server" | "--display-cop-names" | "--extra-details" => {}
+            "--force-exclusion" => options.force_exclusion = true,
+            "--no-server" | "--display-cop-names" | "--extra-details" => {}
             "--cache" => {
                 if args.first().is_some_and(|value| !value.starts_with('-')) {
                     args.remove(0);
@@ -81,9 +89,15 @@ pub(super) fn parse_args(mut args: Vec<String>) -> Result<Command, String> {
                     .to_string();
             }
             _ if arg.starts_with("--only=") => {
-                options.inspection.cops =
-                    CopSelection::only(arg.strip_prefix("--only=").unwrap_or_default());
+                options
+                    .inspection
+                    .cops
+                    .select_only(arg.strip_prefix("--only=").unwrap_or_default());
             }
+            _ if arg.starts_with("--except=") => options
+                .inspection
+                .cops
+                .except(arg.strip_prefix("--except=").unwrap_or_default()),
             _ if arg.starts_with("--stdin=") => {
                 options.stdin_path =
                     Some(arg.strip_prefix("--stdin=").unwrap_or_default().to_string());
@@ -111,7 +125,7 @@ pub(super) fn parse_args(mut args: Vec<String>) -> Result<Command, String> {
     if options.format != "json" && options.format != "simple" {
         return Err(format!("unsupported formatter {}", options.format));
     }
-    Ok(Command::Run(options))
+    Ok(Command::Run(Box::new(options)))
 }
 
 fn take_value(args: &mut Vec<String>, option: &str) -> Result<String, String> {
@@ -130,13 +144,16 @@ fn parse_jobs(value: &str) -> Result<usize, String> {
 }
 
 fn apply_config(config: &mut InspectionConfig, path: &str) -> Result<(), String> {
-    let source = fs::read_to_string(path)
-        .map_err(|error| format!("could not read config {path}: {error}"))?;
-    config.target_ruby_version = target_ruby_version_from_source(&source).unwrap_or_default();
-    config.cop_config = Arc::new(CopConfig::from_source(&source));
+    let cop_config = CopConfig::from_path(path)?;
+    config.target_ruby_version = cop_config
+        .value("AllCops", "TargetRubyVersion")
+        .and_then(RubyVersion::parse)
+        .unwrap_or_default();
+    config.cop_config = Arc::new(cop_config);
     Ok(())
 }
 
+#[cfg(test)]
 fn target_ruby_version_from_source(source: &str) -> Option<RubyVersion> {
     source.lines().find_map(|line| {
         let value = line.trim().strip_prefix("TargetRubyVersion:")?;
@@ -216,6 +233,22 @@ mod tests {
                 ("--plugin".to_string(), "custom-plugin".to_string())
             ]
         );
+    }
+
+    #[test]
+    fn parses_except_and_force_exclusion() {
+        let Command::Run(options) = parse_args(vec![
+            "--except=Style,Layout/LineLength".to_string(),
+            "--only=Style/StringLiterals,Layout/LineLength".to_string(),
+            "--force-exclusion".to_string(),
+        ])
+        .unwrap() else {
+            panic!("expected run command");
+        };
+
+        assert!(options.force_exclusion);
+        assert!(!options.inspection.cop_enabled("Style/StringLiterals"));
+        assert!(!options.inspection.cop_enabled("Layout/LineLength"));
     }
 
     #[test]

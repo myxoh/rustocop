@@ -36,6 +36,15 @@ fn new_cops_setting_enables_pending_but_not_disabled_cops() {
 }
 
 #[test]
+fn enabling_a_department_does_not_override_disabled_cop_defaults() {
+    let selection = CopSelection::default_enabled();
+    let config = CopConfig::from_source("Lint:\n  Enabled: true\n");
+
+    assert!(selection.enabled("Lint/Debugger", &config));
+    assert!(!selection.enabled("Lint/ConstantResolution", &config));
+}
+
+#[test]
 fn explicit_cop_enabled_setting_overrides_pinned_defaults() {
     let selection = CopSelection::default_enabled();
     let config = CopConfig::from_source(

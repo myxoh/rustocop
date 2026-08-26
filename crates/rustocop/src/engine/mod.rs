@@ -84,6 +84,16 @@ impl InspectionPlan {
         content: &str,
         options: &InspectionConfig,
     ) -> (Vec<Offense>, String) {
+        let scoped_options = options.scoped_to_path(path);
+        self.inspect_content_scoped(path, content, &scoped_options)
+    }
+
+    fn inspect_content_scoped(
+        &self,
+        path: &str,
+        content: &str,
+        options: &InspectionConfig,
+    ) -> (Vec<Offense>, String) {
         if !self.text_cops_enabled {
             return self.inspect_prism_only(path, content, options);
         }

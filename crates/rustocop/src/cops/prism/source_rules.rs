@@ -175,33 +175,52 @@ fn percent_literal_end(source: &str, open: usize, left: u8, right: u8) -> Option
 }
 
 fn duplicate_elsif(source: &str, context: &mut Reporter<'_>) {
-    let mut seen = HashSet::new();
-    for (offset, line) in source_lines(source) {
-        let trimmed = line.trim_start();
-        if let Some(condition) = trimmed.strip_prefix("if ") {
-            seen.clear();
-            if !multiline_condition(condition) {
-                seen.insert(condition.to_string());
+    struct DuplicateElsifVisitor<'source> {
+        source: &'source str,
+        offenses: Vec<std::ops::Range<usize>>,
+    }
+    impl<'pr> Visit<'pr> for DuplicateElsifVisitor<'_> {
+        fn visit_if_node(&mut self, node: &ruby_prism::IfNode<'pr>) {
+            if node
+                .if_keyword_loc()
+                .is_some_and(|keyword| keyword.as_slice() == b"if")
+            {
+                let predicate = node.predicate().location();
+                let mut seen = HashSet::from([self.source
+                    [predicate.start_offset()..predicate.end_offset()]
+                    .to_string()]);
+                let mut subsequent = node.subsequent();
+                while let Some(elsif) = subsequent.and_then(|branch| branch.as_if_node()) {
+                    if !elsif
+                        .if_keyword_loc()
+                        .is_some_and(|keyword| keyword.as_slice() == b"elsif")
+                    {
+                        break;
+                    }
+                    let predicate = elsif.predicate().location();
+                    let source = self.source[predicate.start_offset()..predicate.end_offset()]
+                        .to_string();
+                    if !seen.insert(source) {
+                        self.offenses
+                            .push(predicate.start_offset()..predicate.end_offset());
+                    }
+                    subsequent = elsif.subsequent();
+                }
             }
-        } else if let Some(condition) = trimmed.strip_prefix("elsif ") {
-            if multiline_condition(condition) {
-                continue;
-            }
-            let start = offset + line.len() - trimmed.len() + 6;
-            if !seen.insert(condition.to_string()) {
-                context.report(
-                    "Duplicate `elsif` condition detected.",
-                    start..start + condition.len(),
-                );
-            }
-        } else if trimmed == "end" {
-            seen.clear();
+            ruby_prism::visit_if_node(self, node);
         }
     }
-}
 
-fn multiline_condition(condition: &str) -> bool {
-    condition.trim_end().ends_with("&&") || condition.trim_end().ends_with("||")
+    let parsed = ruby_prism::parse(source.as_bytes());
+    let mut visitor = DuplicateElsifVisitor {
+        source,
+        offenses: Vec::new(),
+    };
+    visitor.visit(&parsed.node());
+    visitor.offenses.sort_by_key(|range| range.start);
+    for range in visitor.offenses {
+        context.report("Duplicate `elsif` condition detected.", range);
+    }
 }
 
 fn find_all(source: &str, needle: &str) -> Vec<usize> {

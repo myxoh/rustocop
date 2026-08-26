@@ -355,6 +355,7 @@ pub(super) fn inspection_options(
         target_ruby_version: RubyVersion::parse(ruby_version).unwrap(),
         source_encoding: SourceEncoding::parse(external_encoding),
         cop_config: config,
+        inspected_path: None,
     }
 }
 

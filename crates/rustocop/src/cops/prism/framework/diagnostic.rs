@@ -210,6 +210,9 @@ impl Context {
         correction: Option<Vec<Edit>>,
         correctable: bool,
     ) {
+        if !self.cop_config.cop_applies_to_path(cop_name, &self.path) {
+            return;
+        }
         if self.findings.iter().any(|finding| {
             finding.cop_name == cop_name
                 && finding.message == message

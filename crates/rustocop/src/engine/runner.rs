@@ -118,6 +118,7 @@ mod tests {
             parallelism,
             rubocop_loaders: Vec::new(),
             config_path: None,
+            force_exclusion: false,
             inspection: InspectionConfig {
                 autocorrect: AutocorrectMode::None,
                 ignore_disable_comments: false,
@@ -125,6 +126,7 @@ mod tests {
                 target_ruby_version: RubyVersion::default(),
                 source_encoding: SourceEncoding::Utf8,
                 cop_config: Arc::new(CopConfig::default()),
+                inspected_path: None,
             },
         }
     }
