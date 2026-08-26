@@ -1,9 +1,6 @@
 use super::*;
 use unicode_width::UnicodeWidthChar;
 
-define_rule!(DotPositionRule);
-define_rule!(EmptyLineBetweenDefsRule);
-
 define_cops! {
     BlockAlignment => "Layout/BlockAlignment" => any_node(block_alignment_node),
     DotPosition => "Layout/DotPosition" => rubocop_callbacks(DotPositionRule, [on_send]),

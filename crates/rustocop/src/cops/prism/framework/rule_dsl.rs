@@ -211,6 +211,11 @@ macro_rules! dispatch_rubocop_callback {
             $rule.on_if(&typed_node);
         }
     };
+    ($rule:ident, $node:ident, on_when) => {
+        if let Some(typed_node) = $node.as_when_node() {
+            $rule.on_when(&typed_node);
+        }
+    };
     ($rule:ident, $node:ident, on_unless) => {
         if let Some(typed_node) = $node.as_unless_node() {
             $rule.on_unless(&typed_node);
@@ -344,6 +349,9 @@ macro_rules! rubocop_callback_matches {
     };
     ($node:ident, on_if) => {
         $node.as_if_node().is_some()
+    };
+    ($node:ident, on_when) => {
+        $node.as_when_node().is_some()
     };
     ($node:ident, on_unless) => {
         $node.as_unless_node().is_some()

@@ -1,7 +1,5 @@
 use super::*;
 
-define_rule!(EmptyLinesAroundAttributeAccessorRule);
-
 define_cops! {
     EmptyLinesAroundBeginBody => "Layout/EmptyLinesAroundBeginBody" => node(as_begin_node, empty_begin_body),
     EmptyLinesAroundMethodBody => "Layout/EmptyLinesAroundMethodBody" => node(as_def_node, empty_method_body),

@@ -6,7 +6,7 @@ define_rubocop_callback_rule_cop!(LayoutLineContinuationSpacing => "Layout/LineC
 mod registry;
 
 pub(super) fn cops() -> Vec<Box<dyn Cop>> {
-    let mut cops = vec![
+    let mut cops: Vec<Box<dyn Cop>> = vec![
         Box::new(LayoutLineContinuationSpacing),
         Box::new(MultilineMethodDefinitionBraceLayout),
         custom("Layout/SpaceInsideParens", space_inside_parens),

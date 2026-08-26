@@ -4,7 +4,6 @@ use super::*;
 
 define_rule!(RedundantRegexpEscapeRule);
 define_rule!(RedundantRegexpConstructorRule);
-define_rule!(RedundantRegexpCharacterClassRule);
 define_rule!(RedundantRegexpArgumentRule);
 
 const ESCAPE_MSG: &str = "Redundant escape inside regexp literal";

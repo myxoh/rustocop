@@ -2,7 +2,6 @@ use ruby_prism::{ElseNode, InNode, WhenNode};
 
 use super::*;
 
-define_rule!(EmptyWhenRule);
 define_rule!(WhenThenRule);
 
 const WHEN_THEN_MSG: &str =
