@@ -1,7 +1,7 @@
 # Current project-parity gaps
 
 Generated from the same complete audit as [the evidence matrix](cop-support.md).
-Evidence updated at `2026-08-25T22:40:03-04:00`.
+Evidence updated at `2026-08-25T23:10:34-04:00`.
 This queue contains only failures from that 50-project audit; it does not use the old
 Verified/Heuristic qualification labels or captured-case pass counts.
 
@@ -9,8 +9,8 @@ The gap is unmatched complete diagnostic signatures, not the difference
 between aggregate offense counts. A cop can have equal counts and still have a
 nonzero gap because its message, severity, path, or source range differs.
 
-- Rust source: `cop source 5bb6d38ac57fa534c2133a3069b04cf47c28dca36743e79ab4d6cde8e990345b`
-- Unresolved cops: 99
+- Rust source: `cop source 031d11646fcf0c831d2aa2a54d409bb09e982b0598a446836a6736668d1ebbe2`
+- Unresolved cops: 77
 
 | Cop | Status | Rustocop | RuboCop | Exact | Signature gap | Project regression evidence |
 | --- | --- | ---: | ---: | ---: | ---: | --- |
@@ -60,10 +60,8 @@ nonzero gap because its message, severity, path, or source range differs.
 | `Lint/OrAssignmentToConstant` | Mismatch | 159 | 172 | 136 | 59 | No |
 | `Layout/SpaceInsideParens` | Mismatch | 959 | 1012 | 958 | 55 | Project-derived |
 | `Style/MethodCallWithArgsParentheses` | Mismatch | 838151 | 838160 | 838129 | 53 | Pending unit |
-| `Gemspec/DependencyVersion` | Mismatch | 45 | 0 | 0 | 45 | No |
 | `Style/FormatStringToken` | Mismatch | 7663 | 7619 | 7619 | 44 | Project-derived |
 | `Lint/ErbNewArguments` | Mismatch | 46 | 8 | 8 | 38 | No |
-| `Gemspec/AttributeAssignment` | Mismatch | 37 | 0 | 0 | 37 | No |
 | `Lint/ConstantResolution` | Mismatch | 849548 | 849583 | 849548 | 35 | Pending unit |
 | `Style/Semicolon` | Mismatch | 2726 | 2692 | 2692 | 34 | No |
 | `Layout/ClosingParenthesisIndentation` | Mismatch | 341 | 372 | 340 | 33 | No |
@@ -79,7 +77,6 @@ nonzero gap because its message, severity, path, or source range differs.
 | `Style/EnvHome` | Mismatch | 16 | 33 | 12 | 25 | Project-derived |
 | `Layout/HeredocArgumentClosingParenthesis` | Mismatch | 58 | 34 | 34 | 24 | Project-derived |
 | `Style/CombinableLoops` | Mismatch | 111 | 94 | 91 | 23 | Project-derived |
-| `Style/CommentAnnotation` | Mismatch | 564 | 544 | 543 | 22 | No |
 | `Style/RedundantCapitalW` | Mismatch | 55 | 35 | 34 | 22 | Project-derived |
 | `Style/CaseLikeIf` | Mismatch | 60 | 52 | 46 | 20 | Project-derived |
 | `Style/MultilineBlockChain` | Mismatch | 295 | 275 | 275 | 20 | Project-derived |
@@ -91,25 +88,6 @@ nonzero gap because its message, severity, path, or source range differs.
 | `Lint/SharedMutableDefault` | Mismatch | 23 | 11 | 8 | 18 | No |
 | `Lint/ShadowedException` | Mismatch | 22 | 39 | 22 | 17 | Project-derived |
 | `Layout/IndentationStyle` | Mismatch | 7 | 22 | 7 | 15 | Project-derived |
-| `Layout/SpaceAfterMethodName` | Mismatch | 15 | 1 | 1 | 14 | Project-derived |
-| `Style/MapIntoArray` | Mismatch | 119 | 129 | 117 | 14 | Project-derived |
 | `Style/MissingElse` | Mismatch | 40883 | 40883 | 40876 | 14 | Pending unit |
-| `Layout/SpaceInsideArrayPercentLiteral` | Mismatch | 121 | 112 | 110 | 13 | Project-derived |
-| `Lint/DuplicateElsifCondition` | Mismatch | 13 | 0 | 0 | 13 | Project-derived |
-| `Lint/UnreachablePatternBranch` | Mismatch | 13 | 0 | 0 | 13 | Project-derived |
-| `Style/EachForSimpleLoop` | Mismatch | 13 | 0 | 0 | 13 | Project-derived |
-| `Style/EmptyBlockParameter` | Mismatch | 15 | 4 | 3 | 13 | Project-derived |
-| `Style/IdenticalConditionalBranches` | Mismatch | 159 | 172 | 159 | 13 | Project-derived |
-| `Layout/FirstArrayElementIndentation` | Mismatch | 3443 | 3431 | 3431 | 12 | Project-derived |
-| `Lint/NumericOperationWithConstantResult` | Mismatch | 12 | 0 | 0 | 12 | No |
-| `Lint/UnreachableLoop` | Mismatch | 619 | 629 | 618 | 12 | Project-derived |
-| `Style/ArgumentsForwarding` | Mismatch | 7602 | 7614 | 7602 | 12 | Project-derived |
-| `Style/BlockDelimiters` | Mismatch | 7806 | 7814 | 7804 | 12 | Project-derived |
-| `Style/MultilineIfModifier` | Mismatch | 418 | 406 | 406 | 12 | Project-derived |
-| `Style/RedundantStringEscape` | Mismatch | 1864 | 1875 | 1864 | 11 | No |
-| `Layout/EmptyLineAfterGuardClause` | Mismatch | 4959 | 4964 | 4957 | 9 | Project-derived |
-| `Layout/SpaceAroundKeyword` | Mismatch | 237 | 232 | 230 | 9 | Project-derived |
-| `Lint/EmptyBlock` | Mismatch | 1633 | 1639 | 1632 | 8 | Project-derived |
-| `Naming/InclusiveLanguage` | Mismatch | 476 | 480 | 474 | 8 | Project-derived |
-| `Layout/BlockAlignment` | Mismatch | 218 | 215 | 213 | 7 | Project-derived |
-| `Lint/DuplicateSetElement` | Mismatch | 9 | 2 | 2 | 7 | Project-derived |
+| `Style/MapIntoArray` | Mismatch | 127 | 129 | 127 | 2 | Project-derived |
+| `Style/CommentAnnotation` | Mismatch | 543 | 544 | 543 | 1 | No |
