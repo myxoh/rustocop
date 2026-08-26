@@ -112,51 +112,99 @@ fn truthy_literal(node: &Node<'_>) -> bool {
 
 fn changes_local_scope(source: &str, loop_range: std::ops::Range<usize>) -> bool {
     let loop_source = &source[loop_range.clone()];
-    let before_source = &source[..loop_range.start];
-    let scope_start = ["\ndef ", "\nclass ", "\nmodule "]
-        .into_iter()
-        .filter_map(|marker| before_source.rfind(marker).map(|offset| offset + 1))
-        .max()
+    let file = SourceFile::new(source);
+    let scope_start = file
+        .lines()
+        .take_while(|(offset, _)| *offset < loop_range.start)
+        .filter(|(_, line)| line.trim_start().starts_with("def "))
+        .map(|(offset, _)| offset)
+        .last()
         .unwrap_or(0);
+    let definition_line = source[scope_start..]
+        .lines()
+        .next()
+        .unwrap_or_default();
+    let definition_indent = definition_line.len() - definition_line.trim_start().len();
+    let scope_end = file
+        .lines()
+        .skip_while(|(offset, _)| *offset < loop_range.end)
+        .find_map(|(offset, line)| {
+            let trimmed = line.trim_start();
+            let indentation = line.len() - trimmed.len();
+            (trimmed == "end" && indentation == definition_indent).then_some(offset)
+        })
+        .unwrap_or(source.len());
     let before = &source[scope_start..loop_range.start];
-    let after = &source[loop_range.end..];
+    let after = &source[loop_range.end..scope_end];
     assigned_local_names(loop_source).into_iter().any(|name| {
         !contains_assignment(before, &name) && contains_word(after, &name)
     })
 }
 
 fn assigned_local_names(source: &str) -> Vec<String> {
-    source
-        .lines()
-        .filter_map(|line| {
-            let line = line.split('#').next().unwrap_or_default();
-            let (left, right) = line.split_once('=')?;
-            if right.starts_with('=') || left.trim_end().ends_with(['!', '<', '>', '=']) {
-                return None;
-            }
-            Some(left)
-        })
-        .flat_map(|left| left.split(','))
-        .map(str::trim)
-        .filter(|name| {
-            !name.is_empty()
-                && !name.starts_with(['@', '$'])
-                && name.bytes().all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
-        })
-        .map(str::to_string)
-        .collect()
+    let mut names = Vec::new();
+    let mut block_depth = 0_usize;
+    for line in source.lines() {
+        let code = line.split('#').next().unwrap_or_default();
+        let trimmed = code.trim();
+        if trimmed == "end" && block_depth > 0 {
+            block_depth -= 1;
+            continue;
+        }
+        let opens_block = trimmed.ends_with(" do")
+            || trimmed.contains(" do |")
+            || trimmed.contains(" do|");
+        if block_depth > 0 {
+            block_depth += usize::from(opens_block);
+            continue;
+        }
+        if opens_block {
+            block_depth = 1;
+            continue;
+        }
+        let Some((left, right)) = code.split_once('=') else {
+            continue;
+        };
+        if right.starts_with('=') || left.trim_end().ends_with(['!', '<', '>', '=']) {
+            continue;
+        }
+        names.extend(left.split(',').filter_map(assignment_name));
+    }
+    names
 }
 
 fn contains_assignment(source: &str, name: &str) -> bool {
     source.lines().any(|line| {
         line.split_once('=').is_some_and(|(left, right)| {
-            !right.starts_with('=') && left.split(',').any(|candidate| candidate.trim() == name)
+            !right.starts_with('=')
+                && (left.split(',').filter_map(assignment_name).any(|candidate| candidate == name)
+                    || right
+                        .split_once('=')
+                        .and_then(|(nested, _)| assignment_name(nested))
+                        .is_some_and(|candidate| candidate == name))
         })
     })
 }
 
 fn contains_word(source: &str, name: &str) -> bool {
-    source
-        .split(|character: char| !character.is_ascii_alphanumeric() && character != '_')
-        .any(|word| word == name)
+    source.match_indices(name).any(|(offset, _)| {
+        let before = source[..offset].chars().next_back();
+        let after = source[offset + name.len()..].chars().next();
+        !before.is_some_and(|character| {
+            character.is_ascii_alphanumeric() || matches!(character, '_' | '.' | ':')
+        }) && !after.is_some_and(|character| character.is_ascii_alphanumeric() || character == '_')
+    })
+}
+
+fn assignment_name(source: &str) -> Option<String> {
+    let source = source.trim_end();
+    let name = source
+        .rsplit(|character: char| !character.is_ascii_alphanumeric() && character != '_')
+        .find(|part| !part.is_empty())?;
+    let prefix = &source[..source.len().saturating_sub(name.len())];
+    (!prefix.ends_with(['@', '$'])
+        && name
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_'))
+    .then(|| name.to_string())
 }

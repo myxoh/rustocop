@@ -29,6 +29,7 @@ impl MethodCallWithArgsParenthesesRule<'_, '_, '_> {
         } else {
             let Some(arguments) = node.arguments() else { return };
             return_if!(node.lparen_loc().is_some());
+            return_if!(ignored_macro_name(self, "yield", node.location()));
             let args = arguments.location();
             let keyword = node.keyword_loc();
             let offense = node.location();
@@ -42,22 +43,38 @@ impl MethodCallWithArgsParenthesesRule<'_, '_, '_> {
     fn require_parentheses(&mut self, node: &CallNode<'_>) {
         let method = String::from_utf8_lossy(node.name().as_slice()).to_string();
         return_if!(allowed_method(self, &method) || operator_or_setter(&method));
-        let Some(arguments) = node.arguments() else { return };
+        let arguments = node.arguments();
+        let block_argument = node.block().and_then(|block| block.as_block_argument_node());
+        return_if!(arguments.is_none() && block_argument.is_none());
         return_if!(node.opening_loc().is_some());
         return_if!(ignored_macro(self, node, &method));
-        let args = arguments.location();
+        let args = arguments.as_ref().map_or_else(
+            || block_argument.as_ref().expect("argument presence checked").location(),
+            |arguments| arguments.location(),
+        );
         let Some(selector) = node.message_loc() else { return };
-        let offense = node.location();
-        let only_parenthesized_argument = match arguments.arguments().iter().collect::<Vec<_>>().as_slice() {
-            [argument] => argument.as_parentheses_node().is_some(),
-            _ => false,
-        };
+        // Parser represents a block as the send's parent, while Prism stores it
+        // on the call node. RuboCop's offense therefore ends at the arguments,
+        // not at the end of an attached block.
+        let call = node.location();
+        let argument_end = block_argument
+            .as_ref()
+            .map_or(args.end_offset(), |block| {
+                block.location().end_offset()
+            });
+        let offense = call.start_offset()..argument_end;
+        let only_parenthesized_argument = arguments.as_ref().is_some_and(|arguments| {
+            match arguments.arguments().iter().collect::<Vec<_>>().as_slice() {
+                [argument] => argument.as_parentheses_node().is_some(),
+                _ => false,
+            }
+        });
         add_offense!(self, offense, message: "Use parentheses for method calls with arguments.", |corrector| {
             if only_parenthesized_argument {
                 corrector.remove(selector.end_offset()..args.start_offset());
             } else {
                 corrector.replace(selector.end_offset()..args.start_offset(), "(");
-                corrector.replace(args.end_offset()..args.end_offset(), ")");
+                corrector.replace(argument_end..argument_end, ")");
             }
         });
     }
@@ -101,8 +118,11 @@ fn operator_or_setter(method: &str) -> bool {
         || method.ends_with('=')
 }
 
-fn ignored_macro(context: &CopContext<'_, '_>, _node: &CallNode<'_>, method: &str) -> bool {
-    if !context.config_bool("IgnoreMacros", true) || !macro_context(context.ancestors()) {
+fn ignored_macro(context: &CopContext<'_, '_>, node: &CallNode<'_>, method: &str) -> bool {
+    if !context.config_bool("IgnoreMacros", true)
+        || node.receiver().is_some()
+        || !macro_context(context, context.ancestors(), node.location())
+    {
         return false;
     }
     let included = context.config_values("IncludedMacros").iter().any(|name| name == method)
@@ -110,16 +130,98 @@ fn ignored_macro(context: &CopContext<'_, '_>, _node: &CallNode<'_>, method: &st
     !included
 }
 
-fn macro_context(ancestors: &[Node<'_>]) -> bool {
+fn ignored_macro_name(
+    context: &CopContext<'_, '_>,
+    method: &str,
+    location: ruby_prism::Location<'_>,
+) -> bool {
+    if !context.config_bool("IgnoreMacros", true)
+        || !macro_context(context, context.ancestors(), location)
+    {
+        return false;
+    }
+    let included = context.config_values("IncludedMacros").iter().any(|name| name == method)
+        || context.config_values("IncludedMacroPatterns").iter().any(|pattern| Regex::new(pattern).is_ok_and(|pattern| pattern.is_match(method)));
+    !included
+}
+
+fn macro_context(
+    context: &CopContext<'_, '_>,
+    ancestors: &[Node<'_>],
+    location: ruby_prism::Location<'_>,
+) -> bool {
+    let mut block_owner = false;
     for ancestor in ancestors.iter().rev() {
-        if ancestor.as_def_node().is_some() || ancestor.as_block_node().is_some() {
-            return false;
+        if ancestor.as_statements_node().is_some()
+            || ancestor.as_arguments_node().is_some()
+            || ancestor.as_parentheses_node().is_some()
+            || ancestor.as_program_node().is_some()
+        {
+            continue;
         }
-        if ancestor.as_class_node().is_some() || ancestor.as_module_node().is_some() {
+        if ancestor.as_call_node().is_some_and(|call| class_constructor_call(context, &call)) {
             return true;
         }
+        if ancestor.as_block_node().is_some() {
+            block_owner = true;
+            continue;
+        }
+        if block_owner {
+            if let Some(call) = ancestor.as_call_node() {
+                if class_constructor_call(context, &call) {
+                    return true;
+                }
+                block_owner = false;
+                continue;
+            }
+        }
+        if ancestor.as_def_node().is_some() {
+            return false;
+        }
+        if ancestor.as_begin_node().is_some_and(|begin| {
+            begin.rescue_clause().is_some() || begin.ensure_clause().is_some()
+        }) {
+            return false;
+        }
+        if ancestor.as_if_node().is_some_and(|conditional| {
+            !range_contains(&conditional.predicate().location(), &location)
+        })
+            || ancestor.as_unless_node().is_some_and(|conditional| {
+                !range_contains(&conditional.predicate().location(), &location)
+            })
+            || ancestor.as_else_node().is_some()
+            || ancestor.as_lambda_node().is_some()
+            || ancestor.as_begin_node().is_some()
+        {
+            continue;
+        }
+        if ancestor.as_class_node().is_some()
+            || ancestor.as_module_node().is_some()
+            || ancestor.as_singleton_class_node().is_some()
+        {
+            return true;
+        }
+        return false;
     }
-    false
+    true
+}
+
+fn range_contains(outer: &ruby_prism::Location<'_>, inner: &ruby_prism::Location<'_>) -> bool {
+    outer.start_offset() <= inner.start_offset() && inner.end_offset() <= outer.end_offset()
+}
+
+fn class_constructor_call(context: &CopContext<'_, '_>, call: &CallNode<'_>) -> bool {
+    let method = call.name().as_slice();
+    if method != b"new" && method != b"define" {
+        return false;
+    }
+    let Some(receiver) = call.receiver() else {
+        return false;
+    };
+    let receiver = context.source_file().node(&receiver);
+    let receiver = receiver.strip_prefix("::").unwrap_or(receiver);
+    (method == b"new" && matches!(receiver, "Class" | "Module" | "Struct"))
+        || (method == b"define" && receiver == "Data")
 }
 
 fn omit_parentheses_is_unsafe(context: &CopContext<'_, '_>, node: &CallNode<'_>) -> bool {
@@ -189,7 +291,7 @@ fn configured_omit_exception(
     method: &str,
     arguments: &[Node<'_>],
 ) -> bool {
-    if operator_or_setter(&method) || node.message_loc().is_none() || method == "call" {
+    if operator_or_setter(method) || node.message_loc().is_none() || method == "call" {
         return true;
     }
     if method.as_bytes().first().is_some_and(u8::is_ascii_uppercase)

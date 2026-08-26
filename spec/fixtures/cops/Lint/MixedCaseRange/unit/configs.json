@@ -1,0 +1,3 @@
+{
+  "0fd6e2de8502f8dc": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/MixedCaseRange:\n  Description: Checks for mixed-case character ranges since they include likely unintended\n    characters.\n  Enabled: true\n  SafeAutoCorrect: false\n  VersionAdded: '1.53'\n  AutoCorrect: always\n"
+}

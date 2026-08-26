@@ -2,10 +2,10 @@ use super::source_syntax::top_level_elements;
 use super::*;
 
 define_cops! {
-    ParameterLists => "Metrics/ParameterLists" => node(as_def_node, parameter_lists),
+    ParameterLists => "Metrics/ParameterLists" => any_node(parameter_lists),
     CollectionLiteralLength => "Metrics/CollectionLiteralLength" => any_node(collection_literal_length),
     BinaryOperatorParameterName => "Naming/BinaryOperatorParameterName" => node(as_def_node, binary_operator_parameter_name),
-    BlockParameterName => "Naming/BlockParameterName" => source(block_parameter_name),
+    BlockParameterName => "Naming/BlockParameterName" => any_node(block_parameter_name),
     PredicatePrefix => "Naming/PredicatePrefix" => any_node(predicate_prefix),
 }
 
@@ -16,6 +16,9 @@ fn predicate_prefix(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
             definition.name_loc(),
         )
     } else if let Some(call) = node.as_call_node() {
+        if call.receiver().is_some() {
+            return;
+        }
         let method = String::from_utf8_lossy(call_name(&call));
         if !context
             .config_values("MethodDefinitionMacros")
@@ -37,7 +40,7 @@ fn predicate_prefix(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
     } else {
         return;
     };
-    if name.ends_with(['=', '?'])
+    if name.ends_with('=')
         || context
             .config_values("AllowedMethods")
             .iter()
@@ -78,6 +81,9 @@ fn predicate_prefix(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
         .config_values("ForbiddenPrefixes")
         .iter()
         .any(|forbidden| forbidden == prefix);
+    if !forbidden && name.ends_with('?') {
+        return;
+    }
     let replacement = if forbidden {
         format!("{base}?")
     } else {
@@ -86,7 +92,18 @@ fn predicate_prefix(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
     context.report(format!("Rename `{name}` to `{replacement}`."), location);
 }
 
-fn parameter_lists(node: &ruby_prism::DefNode<'_>, context: &mut CopContext<'_, '_>) {
+fn parameter_lists(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
+    if let Some(definition) = node.as_def_node() {
+        parameter_lists_definition(&definition, context);
+    } else if let Some(block) = node.as_block_node() {
+        parameter_lists_block(&block, context);
+    }
+}
+
+fn parameter_lists_definition(
+    node: &ruby_prism::DefNode<'_>,
+    context: &mut CopContext<'_, '_>,
+) {
     if node.name().as_slice() == b"initialize"
         && context.ancestors().iter().any(|ancestor| {
             let source = context.source_file().at(&ancestor.location()).trim_start();
@@ -94,6 +111,14 @@ fn parameter_lists(node: &ruby_prism::DefNode<'_>, context: &mut CopContext<'_, 
                 .iter()
                 .any(|prefix| source.starts_with(prefix))
         })
+        && context
+            .ancestors()
+            .iter()
+            .rev()
+            .find_map(Node::as_block_node)
+            .and_then(|block| block.body())
+            .and_then(|body| body.as_statements_node())
+            .is_some_and(|statements| statements.body().len() == 1)
     {
         return;
     }
@@ -117,16 +142,23 @@ fn parameter_lists(node: &ruby_prism::DefNode<'_>, context: &mut CopContext<'_, 
         .count();
     let maximum = context.config_usize("Max", 5);
     if count > maximum {
-        let raw_start = parameters.location().start_offset();
-        let raw_end = parameters.location().end_offset();
-        let start = raw_start.saturating_sub(usize::from(
-            context.source().as_bytes().get(raw_start.saturating_sub(1)) == Some(&b'('),
-        ));
-        let end = raw_end + usize::from(context.source().as_bytes().get(raw_end) == Some(&b')'));
-        context.report(
-            format!("Avoid parameter lists longer than {maximum} parameters. [{count}/{maximum}]"),
-            start..end,
-        );
+        let start = node
+            .lparen_loc()
+            .map_or(parameters.location().start_offset(), |left| {
+                left.start_offset()
+            });
+        let end = node
+            .rparen_loc()
+            .map_or(parameters.location().end_offset(), |right| {
+                right.end_offset()
+            });
+        let message =
+            format!("Avoid parameter lists longer than {maximum} parameters. [{count}/{maximum}]");
+        if context.source()[start..end].contains("# rubocop:disable Metrics/ParameterLists") {
+            context.add_offense(start..end, message, |_| {});
+        } else {
+            context.report(message, start..end);
+        }
     }
     let optional = ranges
         .iter()
@@ -144,11 +176,54 @@ fn parameter_lists(node: &ruby_prism::DefNode<'_>, context: &mut CopContext<'_, 
     }
 }
 
+fn parameter_lists_block(node: &ruby_prism::BlockNode<'_>, context: &mut CopContext<'_, '_>) {
+    let Some(parameters) = node
+        .parameters()
+        .and_then(|parameters| parameters.as_block_parameters_node())
+    else {
+        return;
+    };
+    if context.parent().and_then(Node::as_call_node).is_some_and(|call| {
+        matches!(call_name(&call), b"lambda" | b"proc")
+            || call_name(&call) == b"new"
+                && call
+                    .receiver()
+                    .is_some_and(|receiver| root_constant(Some(receiver), b"Proc"))
+    }) {
+        return;
+    }
+    let location = parameters.location();
+    let source = context.source_file().at(&location);
+    let inner = source
+        .strip_prefix('|')
+        .and_then(|value| value.strip_suffix('|'))
+        .unwrap_or(source);
+    let base = location.start_offset() + usize::from(source.starts_with('|'));
+    let ranges = top_level_elements(context.source(), base, base + inner.len());
+    let count_keywords = context.config_bool("CountKeywordArgs", true);
+    let count = ranges
+        .iter()
+        .filter(|range| {
+            let parameter = context.source()[(*range).clone()].trim();
+            !parameter.starts_with('&') && (count_keywords || !parameter.contains(':'))
+        })
+        .count();
+    let maximum = context.config_usize("Max", 5);
+    if count > maximum {
+        context.report(
+            format!("Avoid parameter lists longer than {maximum} parameters. [{count}/{maximum}]"),
+            location,
+        );
+    }
+}
+
 fn collection_literal_length(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
     let threshold = context.config_usize("LengthThreshold", 250);
     let count = if let Some(array) = node.as_array_node() {
         array.elements().len()
     } else if let Some(hash) = node.as_hash_node() {
+        hash.elements().len()
+    } else if let Some(hash) = node.as_keyword_hash_node() {
         hash.elements().len()
     } else if let Some(call) = node.as_call_node() {
         if call_name(&call) == b"[]" && root_constant(call.receiver(), b"Set") {
@@ -156,6 +231,18 @@ fn collection_literal_length(node: &Node<'_>, context: &mut CopContext<'_, '_>) 
         } else {
             return;
         }
+    } else if let Some(rescue) = node.as_rescue_node() {
+        let exceptions = rescue.exceptions().iter().collect::<Vec<_>>();
+        if exceptions.len() >= threshold {
+            let Some((first, last)) = exceptions.first().zip(exceptions.last()) else {
+                return;
+            };
+            context.report(
+                "Avoid hard coding large quantities of data in code. Prefer reading the data from an external source.",
+                first.location().start_offset()..last.location().end_offset(),
+            );
+        }
+        return;
     } else {
         return;
     };
@@ -171,24 +258,29 @@ fn binary_operator_parameter_name(
     node: &ruby_prism::DefNode<'_>,
     context: &mut CopContext<'_, '_>,
 ) {
-    const OPERATORS: &[&[u8]] = &[
-        b"+", b"-", b"*", b"/", b"%", b"**", b"==", b"!=", b">", b"<", b">=", b"<=", b"<=>",
-        b"eql?", b"equal?", b"|", b"&", b"^",
-    ];
-    if !OPERATORS.contains(&node.name().as_slice()) {
+    if node.receiver().is_some() || !checked_binary_operator(node.name().as_slice()) {
         return;
     }
     let Some(parameters) = node.parameters() else {
         return;
     };
-    let parameter_source = context.source_file().at(&parameters.location());
-    let old = parameter_source.trim_matches(['(', ')', ' ', '\n']);
-    if old.is_empty() || old.contains(',') || matches!(old, "other" | "_other") {
+    if parameters.requireds().len() != 1
+        || !parameters.optionals().is_empty()
+        || parameters.rest().is_some()
+        || !parameters.posts().is_empty()
+        || !parameters.keywords().is_empty()
+        || parameters.keyword_rest().is_some()
+        || parameters.block().is_some()
+    {
         return;
     }
-    let parameter_start =
-        parameters.location().start_offset() + parameter_source.find(old).unwrap_or(0);
-    let offense = parameter_start..parameter_start + old.len();
+    let Some(parameter) = parameters.requireds().iter().next()
+        .and_then(|parameter| parameter.as_required_parameter_node()) else { return };
+    let old = String::from_utf8_lossy(parameter.name().as_slice());
+    if matches!(old.as_ref(), "other" | "_other") {
+        return;
+    }
+    let offense = parameter.location().start_offset()..parameter.location().end_offset();
     let mut edits = vec![(offense.clone(), "other".to_string())];
     let location = node.location();
     edits.extend(
@@ -196,7 +288,7 @@ fn binary_operator_parameter_name(
             context.source(),
             location.start_offset(),
             location.end_offset(),
-            old,
+            &old,
         )
         .filter(|range| *range != offense)
         .map(|range| (range, "other".to_string())),
@@ -207,6 +299,19 @@ fn binary_operator_parameter_name(
         offense,
         edits,
     );
+}
+
+fn checked_binary_operator(name: &[u8]) -> bool {
+    if matches!(name, b"eql?" | b"equal?") {
+        return true;
+    }
+    if matches!(name, b"+@" | b"-@" | b"[]" | b"[]=" | b"<<" | b"===" | b"`" | b"=~") {
+        return false;
+    }
+    std::str::from_utf8(name)
+        .ok()
+        .and_then(|name| name.chars().next())
+        .is_some_and(|character| !character.is_alphanumeric() && character != '_')
 }
 
 fn identifier_ranges<'a>(
@@ -227,74 +332,151 @@ fn identifier_ranges<'a>(
         })
 }
 
-fn block_parameter_name(context: &mut CopContext<'_, '_>) {
-    let source = context.source();
-    let minimum = context.config_usize("MinNameLength", 2);
+fn block_parameter_name(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
+    let parameters = if let Some(block) = node.as_block_node() {
+        block
+            .parameters()
+            .and_then(|parameters| parameters.as_block_parameters_node())
+            .and_then(|parameters| parameters.parameters())
+    } else if let Some(lambda) = node.as_lambda_node() {
+        lambda
+            .parameters()
+            .and_then(|parameters| parameters.as_parameters_node())
+    } else {
+        return;
+    };
+    let Some(parameters) = parameters else { return };
+    let minimum = context.config_usize("MinNameLength", 1);
     let allow_numbers = context.config_bool("AllowNamesEndingInNumbers", false);
     let allowed = context.config_values("AllowedNames").to_vec();
     let forbidden = context.config_values("ForbiddenNames").to_vec();
-    let mut search = 0;
-    while let Some(first_relative) = source[search..].find('|') {
-        let first = search + first_relative;
-        let Some(second_relative) = source[first + 1..].find('|') else {
-            break;
-        };
-        let second = first + 1 + second_relative;
-        if source[first + 1..second].contains('\n') {
-            search = second + 1;
+    for parameter in block_name_parameters(&parameters) {
+        if parameter.name == "_" {
             continue;
         }
-        for (relative, raw) in split_parameters(&source[first + 1..second]) {
-            let name = raw.trim_start_matches(['*', '&']);
-            let bare = name.trim_start_matches('_');
-            if allowed.iter().any(|allowed| allowed == bare) {
-                continue;
-            }
-            let start = first + 1 + relative;
-            let range = start..start + raw.len();
-            let message = if forbidden.iter().any(|forbidden| forbidden == bare) {
-                Some(format!(
-                    "Do not use {bare} as a name for a block parameter."
-                ))
-            } else if bare.len() < minimum {
-                Some(format!(
-                    "Block parameter must be at least {minimum} characters long."
-                ))
-            } else if bare.bytes().any(|byte| byte.is_ascii_uppercase()) {
-                Some("Only use lowercase characters for block parameter.".to_string())
-            } else if !allow_numbers
-                && bare
-                    .bytes()
-                    .next_back()
-                    .is_some_and(|byte| byte.is_ascii_digit())
-            {
-                Some("Do not end block parameter with a number.".to_string())
-            } else {
-                None
-            };
-            if let Some(message) = message {
-                context.report(message, range);
-            }
+        let bare = parameter.name.trim_start_matches('_');
+        if allowed.iter().any(|allowed| allowed == bare) {
+            continue;
         }
-        search = second + 1;
+        if forbidden.iter().any(|forbidden| forbidden == bare) {
+            context.report(
+                format!("Do not use {bare} as a name for a block parameter."),
+                parameter.range.clone(),
+            );
+        }
+        if bare.chars().any(char::is_uppercase) {
+            context.report(
+                "Only use lowercase characters for block parameter.",
+                parameter.range.clone(),
+            );
+        }
+        if bare.chars().count() < minimum {
+            context.report(
+                format!("Block parameter must be at least {minimum} characters long."),
+                parameter.range.clone(),
+            );
+        }
+        if !allow_numbers && bare.ends_with(|character: char| character.is_ascii_digit()) {
+            context.report(
+                "Do not end block parameter with a number.",
+                parameter.range,
+            );
+        }
     }
 }
 
-fn split_parameters(source: &str) -> Vec<(usize, &str)> {
-    let mut start = 0;
+struct BlockNameParameter {
+    name: String,
+    range: std::ops::Range<usize>,
+}
+
+fn block_name_parameters(parameters: &ruby_prism::ParametersNode<'_>) -> Vec<BlockNameParameter> {
     let mut result = Vec::new();
-    for (at, character) in source.char_indices() {
-        if character == ',' {
-            let raw = source[start..at].trim();
-            if !raw.is_empty() {
-                result.push((start + source[start..at].find(raw).unwrap_or(0), raw));
-            }
-            start = at + 1;
+    for parameter in parameters
+        .requireds()
+        .iter()
+        .chain(parameters.posts().iter())
+    {
+        if let Some(parameter) = parameter.as_required_parameter_node() {
+            push_block_name_parameter(
+                &mut result,
+                parameter.name().as_slice(),
+                parameter.location().start_offset(),
+                0,
+            );
         }
     }
-    let raw = source[start..].trim();
-    if !raw.is_empty() {
-        result.push((start + source[start..].find(raw).unwrap_or(0), raw));
+    for parameter in parameters.optionals().iter() {
+        if let Some(parameter) = parameter.as_optional_parameter_node() {
+            push_block_name_parameter(
+                &mut result,
+                parameter.name().as_slice(),
+                parameter.name_loc().start_offset(),
+                0,
+            );
+        }
+    }
+    for parameter in parameters.keywords().iter() {
+        let name_and_location = parameter
+            .as_required_keyword_parameter_node()
+            .map(|parameter| (parameter.name(), parameter.name_loc()))
+            .or_else(|| {
+                parameter
+                    .as_optional_keyword_parameter_node()
+                    .map(|parameter| (parameter.name(), parameter.name_loc()))
+            });
+        if let Some((name, location)) = name_and_location {
+            push_block_name_parameter(&mut result, name.as_slice(), location.start_offset(), 0);
+        }
+    }
+    if let Some(parameter) = parameters
+        .rest()
+        .and_then(|parameter| parameter.as_rest_parameter_node())
+    {
+        if let Some(name) = parameter.name() {
+            push_block_name_parameter(
+                &mut result,
+                name.as_slice(),
+                parameter.location().start_offset(),
+                1,
+            );
+        }
+    }
+    if let Some(parameter) = parameters
+        .keyword_rest()
+        .and_then(|parameter| parameter.as_keyword_rest_parameter_node())
+    {
+        if let Some(name) = parameter.name() {
+            push_block_name_parameter(
+                &mut result,
+                name.as_slice(),
+                parameter.location().start_offset(),
+                2,
+            );
+        }
+    }
+    if let Some(parameter) = parameters.block() {
+        if let Some(name) = parameter.name() {
+            push_block_name_parameter(
+                &mut result,
+                name.as_slice(),
+                parameter.location().start_offset(),
+                0,
+            );
+        }
     }
     result
+}
+
+fn push_block_name_parameter(
+    parameters: &mut Vec<BlockNameParameter>,
+    name: &[u8],
+    start: usize,
+    prefix_length: usize,
+) {
+    let name = String::from_utf8_lossy(name).into_owned();
+    parameters.push(BlockNameParameter {
+        range: start..start + name.len() + prefix_length,
+        name,
+    });
 }

@@ -1,0 +1,5 @@
+{
+  "3e48250210565bb0": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/RedundantCopEnableDirective:\n  Description: Checks for rubocop:enable comments that can be removed.\n  Enabled: true\n  VersionAdded: '0.76'\n  AutoCorrect: always\n",
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
+  "b28adc7605e2fd5f": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/RedundantCopEnableDirective:\n  Description: Checks for rubocop:enable comments that can be removed.\n  Enabled: true\n  VersionAdded: '0.76'\n  AutoCorrect: always\nLayout/LineLength:\n  Enabled: false\n"
+}

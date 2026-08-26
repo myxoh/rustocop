@@ -1,0 +1,6 @@
+---
+version: 1
+rubocop_version: 1.87.0
+updated_at: '2026-08-24T06:23:45-04:00'
+reason: All built-in cops are currently registered; future withdrawals must document a scalable reimplementation requirement.
+cops: []

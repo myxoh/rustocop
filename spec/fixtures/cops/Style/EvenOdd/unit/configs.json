@@ -1,0 +1,3 @@
+{
+  "f1b8934ae492e42b": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/EvenOdd:\n  Description: Favor the use of `Integer#even?` && `Integer#odd?`.\n  StyleGuide: \"#predicate-methods\"\n  Enabled: true\n  VersionAdded: '0.12'\n  VersionChanged: '0.29'\n  AutoCorrect: always\n"
+}

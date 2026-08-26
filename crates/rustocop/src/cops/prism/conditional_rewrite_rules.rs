@@ -62,7 +62,12 @@ impl RedundantConditionalRule<'_, '_, '_> {
 }
 
 fn comparison_condition(node: &Node<'_>) -> bool {
-    node.as_call_node().is_some_and(|call| matches!(call.name().as_slice(), b"==" | b"!=" | b"===" | b"<" | b">" | b"<=" | b">=" | b"<=>" | b"=~" | b"!~"))
+    node.as_call_node().is_some_and(|call| {
+        matches!(
+            call.name().as_slice(),
+            b"==" | b"!=" | b"===" | b"<" | b">" | b"<=" | b">="
+        )
+    })
 }
 
 impl ParenthesesAroundConditionRule<'_, '_, '_> {
@@ -129,7 +134,7 @@ impl RedundantConditionRule<'_, '_, '_> {
 
         let redundant = else_branch.is_none();
         let message = if redundant { "This condition is not needed." } else { "Use double pipes `||` instead." };
-        let comments = self.source_file().node(&node).contains('#');
+        let comments = self.source_file().node(node).contains('#');
         let offense = redundant_condition_offense(&condition, ternary, method.is_some());
         if comments {
             self.report(message, offense);
@@ -193,6 +198,7 @@ impl RedundantConditionRule<'_, '_, '_> {
 
 fn predicate_call(node: &Node<'_>, context: &CopContext<'_, '_>) -> bool {
     let Some(call) = node.as_call_node() else { return false };
+    if call.block().is_some() { return false; }
     let name = String::from_utf8_lossy(call.name().as_slice());
     if !name.ends_with('?') { return false; }
     let allowed = context.config_values("AllowedMethods");
@@ -350,7 +356,8 @@ fn modifier_expression(node: &Node<'_>) -> bool {
 }
 
 fn safe_assignment(node: &Node<'_>) -> bool {
-    node.as_local_variable_write_node().is_some()
+    node.as_multi_write_node().is_some()
+        || node.as_local_variable_write_node().is_some()
         || node.as_instance_variable_write_node().is_some()
         || node.as_class_variable_write_node().is_some()
         || node.as_global_variable_write_node().is_some()

@@ -5,11 +5,11 @@ define_cops! {
 }
 
 fn numeric_predicate(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
-    if context.policy().allows_method(call_name(node))
+    if allowed_method_name(context, call_name(node))
         || context.ancestors().iter().rev().any(|ancestor| {
             ancestor
                 .as_call_node()
-                .is_some_and(|call| context.policy().allows_method(call_name(&call)))
+                .is_some_and(|call| allowed_method_name(context, call_name(&call)))
         })
     {
         return;
@@ -21,9 +21,41 @@ fn numeric_predicate(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     }
 }
 
+fn allowed_method_name(context: &CopContext<'_, '_>, name: &[u8]) -> bool {
+    use crate::rubocop::cop::mixin::allowed_methods::AllowedMethods;
+    use crate::rubocop::cop::mixin::allowed_pattern::{AllowedPattern, PatternValue};
+
+    let Ok(name) = std::str::from_utf8(name) else {
+        return false;
+    };
+    let methods = AllowedMethods::new(
+        context.config_values("AllowedMethods").to_vec(),
+        Vec::new(),
+        Vec::new(),
+    );
+    let patterns = AllowedPattern::new(
+        context
+            .config_values("AllowedPatterns")
+            .iter()
+            .cloned()
+            .map(PatternValue::Source)
+            .collect(),
+        Vec::new(),
+        Vec::new(),
+        Vec::new(),
+    );
+    methods.allowed_method(name) || patterns.matches_allowed_pattern(name)
+}
+
 fn predicate_style(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     let operator = call_name(node);
     if !matches!(operator, b"==" | b">" | b"<") {
+        return;
+    }
+    if node
+        .call_operator_loc()
+        .is_some_and(|operator| operator.as_slice() == b"&.")
+    {
         return;
     }
     let (Some(left), Some(right)) = (node.receiver(), only_argument(node)) else {
@@ -103,12 +135,39 @@ fn value(node: &Node<'_>) -> Option<i32> {
 }
 
 fn simple_receiver(node: &Node<'_>) -> bool {
-    node.as_local_variable_read_node().is_some()
-        || node.as_instance_variable_read_node().is_some()
-        || node.as_class_variable_read_node().is_some()
-        || node.as_constant_read_node().is_some()
-        || node.as_constant_path_node().is_some()
-        || node.as_call_node().is_some_and(|call| {
-            call.receiver().is_none() && argument_count(&call) == 0 && call.block().is_none()
-        })
+    if node.as_parentheses_node().is_some() || node.as_self_node().is_some() {
+        return true;
+    }
+    node.as_call_node().is_none_or(|call| {
+        call_name(&call) != b"[]"
+            && !binary_operation(call_name(&call))
+            && (argument_count(&call) == 0
+                || call.call_operator_loc().is_some()
+                || call.opening_loc().is_some()
+                || call.block().is_some())
+    })
+}
+
+fn binary_operation(name: &[u8]) -> bool {
+    matches!(
+        name,
+        b"|" | b"^"
+            | b"&"
+            | b"<=>"
+            | b"=="
+            | b"==="
+            | b"=~"
+            | b">"
+            | b">="
+            | b"<"
+            | b"<="
+            | b"<<"
+            | b">>"
+            | b"+"
+            | b"-"
+            | b"*"
+            | b"/"
+            | b"%"
+            | b"**"
+    )
 }

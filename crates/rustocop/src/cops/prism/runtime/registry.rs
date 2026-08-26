@@ -2,21 +2,38 @@ use super::*;
 
 pub(super) struct Registry {
     pub(super) cops: Vec<Box<dyn Cop>>,
-    pub(super) source_cops: Vec<usize>,
-    pub(super) node_cops: Vec<usize>,
-    pub(super) parse_error_cops: Vec<usize>,
+    pub(super) phases: PhasePlan,
+}
+
+pub(super) struct PhasePlan {
+    pub(super) source: Vec<usize>,
+    pub(super) nodes: Vec<usize>,
+    pub(super) parse_errors: Vec<usize>,
+    pub(super) recovered_nodes: Vec<usize>,
 }
 
 impl Registry {
     pub(super) fn new(cops: Vec<Box<dyn Cop>>) -> Self {
-        let source_cops = cop_indices(&cops, |phase| phase.visits_source());
-        let node_cops = cop_indices(&cops, |phase| phase.visits_nodes());
-        let parse_error_cops = cop_indices(&cops, |phase| phase.visits_parse_errors());
+        let phases = PhasePlan::new(&cops);
+        Self { cops, phases }
+    }
+}
+
+impl PhasePlan {
+    fn new(cops: &[Box<dyn Cop>]) -> Self {
+        let source = cop_indices(cops, |phase| phase.visits_source());
+        let nodes = cop_indices(cops, |phase| phase.visits_nodes());
+        let parse_errors = cop_indices(cops, |phase| phase.visits_parse_errors());
+        let recovered_nodes = cops
+            .iter()
+            .enumerate()
+            .filter_map(|(index, cop)| cop.visits_recovered_nodes().then_some(index))
+            .collect();
         Self {
-            cops,
-            source_cops,
-            node_cops,
-            parse_error_cops,
+            source,
+            nodes,
+            parse_errors,
+            recovered_nodes,
         }
     }
 }

@@ -8,23 +8,25 @@ require "tmpdir"
 
 require_relative "../lib/rustocop"
 
-ROOT = File.expand_path("..", __dir__)
+ROOT = Rustocop::RepositoryLayout.default.root
 
-CommandResult = Struct.new(:stdout, :stderr, :status, keyword_init: true)
+RSpec.configure do |config|
+  config.filter_run_excluding project_audit: true unless ENV["PROJECT_AUDIT"] == "1"
+end
 
 def run_rustocop(*args, stdin: nil, env: {}, chdir: nil)
-  options = { stdin_data: stdin }
-  options[:chdir] = chdir if chdir
-  stdout, stderr, status = Open3.capture3(env, RbConfig.ruby, File.join(ROOT, "exe", "rustocop"), *args, options)
-  CommandResult.new(stdout:, stderr:, status:)
+  Rustocop::ProcessRunner.capture(
+    RbConfig.ruby, File.join(ROOT, "exe", "rustocop"), *args,
+    env:, chdir:, stdin_data: stdin
+  )
 end
 
 def run_rubocop(*args, stdin: nil, chdir: nil, env: {})
   args = ["--cache", "false", *args] unless args.any? { |arg| arg == "--cache" || arg.start_with?("--cache=") }
-  options = { stdin_data: stdin }
-  options[:chdir] = chdir if chdir
-  stdout, stderr, status = Open3.capture3(env, RbConfig.ruby, Gem.bin_path("rubocop", "rubocop"), *args, options)
-  CommandResult.new(stdout:, stderr:, status:)
+  Rustocop::ProcessRunner.capture(
+    RbConfig.ruby, Gem.bin_path("rubocop", "rubocop"), *args,
+    env:, chdir:, stdin_data: stdin
+  )
 end
 
 def parsed_json(result)

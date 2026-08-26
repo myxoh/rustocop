@@ -109,4 +109,40 @@ RSpec.describe RuboCop::Cop::Style::RedundantConstantBase, :config do
       end
     end
   end
+
+
+  context 'with adversarial nesting boundaries' do
+    it 'registers at top level inside a method and block' do
+      expect_offense(<<~RUBY)
+        def lookup
+          ::Value
+          ^^ Remove redundant `::`.
+        end
+        items.each { ::Other }
+                     ^^ Remove redundant `::`.
+      RUBY
+    end
+
+    it 'does not register inside a lexically nested module method' do
+      expect_no_offenses(<<~RUBY)
+        module Namespace
+          def lookup
+            ::Value
+          end
+        end
+      RUBY
+    end
+
+
+    it 'registers a root constant assignment target' do
+      expect_offense(<<~RUBY)
+        ::AVAILABLE = enabled?
+        ^^ Remove redundant `::`.
+      RUBY
+
+      expect_correction(<<~RUBY)
+        AVAILABLE = enabled?
+      RUBY
+    end
+  end
 end

@@ -1,0 +1,4 @@
+{
+  "7b19cd0cc0f8fbb3": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/RedundantConstantBase:\n  Description: Avoid redundant `::` prefix on constant.\n  Enabled: true\n  VersionAdded: '1.40'\n  AutoCorrect: always\nLint/ConstantResolution:\n  Enabled: true\n",
+  "e9925fb90cf84a41": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/RedundantConstantBase:\n  Description: Avoid redundant `::` prefix on constant.\n  Enabled: true\n  VersionAdded: '1.40'\n  AutoCorrect: always\nLint/ConstantResolution:\n  Enabled: false\n"
+}

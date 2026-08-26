@@ -1,4 +1,0 @@
-== input.rb ==
-C:  2:  3: [Correctable] Style/RedundantReturn: Redundant return detected.
-
-1 file inspected, 1 offense detected, 1 offense autocorrectable

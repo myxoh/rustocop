@@ -23,62 +23,135 @@ Maybe enough interest, use, and scrutiny will eventually turn this into a real
 linter. Until then, expect incomplete cop and configuration compatibility,
 false positives, false negatives, and breaking changes.
 
-The repository contains native registry entries for all 606 RuboCop built-in
-cops, but that is an implementation inventory, not a correctness claim. The old
-**verified**, **heuristic**, and **missing** labels describe captured-suite
-results only. They do not count toward the qualification ledger below.
+The active native registry contains all 606 RuboCop 1.87 built-in cops, and the
+intentionally-pending dataset is empty. Public support evidence comes from
+RuboCop-derived fixtures and complete project signatures; the old
+Verified/Heuristic qualification scoreboard is not used. The configured and
+audited real-project corpus contains 50 pinned repositories.
 
-## Cop qualification progress
+The binary also advertises 21 extension cops outside that built-in evidence
+denominator. Five `rubocop-performance` cops form a rigorously cached native
+authoring example: all 39 controlled contracts pass and all five are exact on
+the 50-project corpus. See the measured
+[cop-authoring workflow](docs/cop-authoring-performance.md).
 
-<!-- generated:qualification-progress:start -->
-Qualification restarted from zero on 2026-08-19; the table now reflects the
-authoritative records under `qualification/work/`. "Recorded evidence" means
-a record contains all required evidence. "Current-source credit" additionally
-requires the recorded Rust files to be unchanged from that record's pinned SHA.
+The separate [RuboCop compatibility layer](docs/rubocop-compatibility-layer.md)
+tracks all 228 shared components from RuboCop 1.87.0 and rubocop-ast
+1.49.1. The strict generated ledger accounts for all of them: 191 translated,
+30 native equivalents, and 7 facilities that do not apply in Rust, with no
+partial or pending components. It is also the authority for all 2,586 APIs
+discovered from both Ruby syntax and the pinned gems' runtime-defined method
+surface, including `attr_*`, `Struct`, delegation, `define_method`, and
+`class_eval` generation. Source-shaped Rust functions, explicit ownership for
+ambiguous operations in consolidated files, and source-reviewed,
+destination-checked equivalences are counted. A public translated function is
+also rejected as incomplete until it is exercised outside its own definition;
+the ledger currently has zero unexercised public targets. All 3,139
+expanded examples from the 83 shared upstream RSpec suites are recorded in a
+cached inventory. Each individual RSpec ID is bound to a named executable Rust
+test, its upstream description hash, and reviewable semantic terms or an
+explicit source rule; the complete binding is digest-checked. Its
+[generated progress ledger](docs/rubocop-compatibility-progress.md) tracks the
+source hashes and upstream spec ports. Ten cops now consume the layer through
+reviewed Prism adapters; all 649 of their cached unit contracts pass and all ten
+are exact on the 50-project corpus. Shared-layer completion and cop parity
+remain separate claims.
 
-| Check | Recorded evidence | Current-source credit | Current progress |
-| --- | ---: | ---: | ---: |
-| 1. Manual source verification | 185 / 606 | 167 / 606 | 27.6% |
-| 2. Ported upstream unit tests | 185 / 606 | 167 / 606 | 27.6% |
-| 3. Edge-case fixtures | 185 / 606 | 167 / 606 | 27.6% |
-| 4. Real-world true positives | 185 / 606 | 167 / 606 | 27.6% |
-| 5. Real-world true negatives | 185 / 606 | 167 / 606 | 27.6% |
-| **Fully qualified** | **185 / 606** | **167 / 606** | **27.6%** |
+## Validation standard
 
-185 cops have complete five-check records. 18 of those
-records are currently invalidated by later changes to their Rust source, leaving
-**167 currently qualified cops**. The RuboCop reference is
-`e5b788dba181ad94de30cfbad661c5d6aa08a4e5`; the current native Rust source is `15032c62724a1bfcd1d7199a9342188ff3b96ee4`.
+The gold standard is executable behavior checked against RuboCop 1.87.0:
 
-| Department | Currently qualified | Complete records | Stale records |
-| --- | ---: | ---: | ---: |
-| `Bundler` | 0 / 7 | 0 | 0 |
-| `Gemspec` | 0 / 10 | 0 | 0 |
-| `Layout` | 0 / 100 | 0 | 0 |
-| `Lint` | 0 / 154 | 0 | 0 |
-| `Metrics` | 0 / 10 | 0 | 0 |
-| `Migration` | 0 / 1 | 0 | 0 |
-| `Naming` | 0 / 19 | 0 | 0 |
-| `Security` | 0 / 7 | 0 | 0 |
-| `Style` | 167 / 298 | 185 | 18 |
+1. RuboCop-derived upstream, adversarial, autocorrection, and minimized
+   real-project unit contracts must pass with matching diagnostics and corrected
+   source.
+2. Complete diagnostic signatures must match across all 50 pinned real
+   projects: path, cop, severity, message, and complete source range.
 
-See [the detailed qualification ledger](docs/qualification-progress.md) for
-batch totals, every recorded cop, pinned SHAs, and the records needing revalidation.
-<!-- generated:qualification-progress:end -->
+A registered cop with no exercised fixture is unvalidated. A cop with exact
+output on every pinned project is **project-exact** for that corpus and
+configuration. Neither offense-count similarity, a captured-case label, nor an
+old manual review record is accepted as compatibility evidence.
+
+The controlled corpus currently contains 29,526 cop-owned fixture rows across
+all 606 cops. The strict differential runner executes 29,616 cached cases,
+including diagnostics plus the applicable `-a` and `-A` correction contracts,
+and all of them pass. Whole projects remain transient and are not a substitute
+for this focused coverage: real-project failures are minimized into cop-owned
+fixtures before implementations change.
+
+## Fifty-project output parity
+
+The real-project matrix asks whether each cop emits the same path, severity,
+message, and source range as RuboCop across 85,471 Ruby files in 50 projects.
+
+The complete audit updated at `2026-08-26T14:47:18-04:00` covers all 606 built-in
+cops. All 531 cops exercised by the corpus are project-exact. The remaining 75
+cops are dormant in these projects; there are no mismatches, native crashes, or
+RuboCop gate errors.
+
+| Real-project classification | Complete checkpoint |
+| --- | ---: |
+| Project-exact | 531 / 606 (100% of 531 exercised cops) |
+| Exact but dormant | 75 / 606 |
+| Mismatching | 0 / 606 |
+| Rust crashes | 0 / 606 |
+| RuboCop gate errors | 0 / 606 |
+
+The dirty-worktree checkpoint is bound to cop-source SHA-256
+`3e72741c0ea482dfb92beb24594d784c1c1862ed67dbec53a5b93c3ec97352b1` and
+native binary SHA-256
+`d06f7ed679bd43ff8212ff12da956473ba552014ab416b4f9a993fdd64efa4d3`.
+Its RuboCop reference SHA-256 is
+`d9f16acf805c8a76b324447497ec18c5acbd3e917b5dd24656c5eaf878a5620c`.
+Project-exact status is the strongest current diagnostic evidence. Unexercised
+configuration and autocorrection branches still require RuboCop-derived
+fixtures.
+
+See [the compatibility evidence table](docs/compatibility.md) for fixture and
+project matching by cop, and [the real-project parity report](docs/real-project-parity.md)
+for the pinned projects, limitations, and reproduction commands. Fixture parity
+and project parity are deliberately separate: upstream examples prove the
+captured contract, while the 50-project run exposes unrepresented syntax,
+configuration, and negative cases. The related
+[non-scalable implementation catalog](docs/non-scalable-implementations.md)
+tracks the cops whose present design appears too narrow to generalize.
+
+Complete project audits reuse a checked-in, input-validated RuboCop diagnostic
+reference, so routine compatibility refreshes run only Rustocop. The reference
+is regenerated explicitly when RuboCop, the audit configuration, selected cops,
+or pinned project revisions change. Evidence produced from a dirty worktree is
+bound to a deterministic SHA-256 of every native cop source file as well as the
+compiled binary. This prevents cop changes from silently reusing stale results,
+but the current fingerprint is coarse: even an unrelated extension-cop edit
+invalidates all built-in rows. The
+[cop-authoring performance review](docs/cop-authoring-performance.md) records
+the required per-cop plus shared-runtime fingerprint follow-up.
+
+A steady warm complete audit measured on 2026-08-26 took 17.96 seconds
+wall-clock with 50/50 native cache hits and no mismatches. The same default
+command took 33.86 seconds after touching a cop source file and forcing a
+release rebuild. The compact cache stores only the eight fields in a parity
+signature, with dictionaries for repeated paths, cops, and messages. A changed
+native binary still causes a safe cold cache miss: the measured 606-cop,
+85,471-file cold audit took 13 minutes 13 seconds. The runner announces its
+warm/cold cache state before starting. Focused cop audits remain the development
+path after implementation changes; two historically expensive cops completed a
+cold exact audit across all 50 projects in 40 seconds. The complete cached audit
+is the final corpus gate.
 
 ## Performance
 
 <!-- generated:rubocop-prism:start -->
 On the pinned 500-file, 20-cop benchmark corpus, rustocop is currently
-about 60 times faster than RuboCop with Prism. Both tools produced identical
+about 26 times faster than RuboCop with Prism. Both tools produced identical
 normalized JSON before measurement.
 
 | Files | rustocop | RuboCop (Prism) | Speedup |
 | ---: | ---: | ---: | ---: |
-| 1 | 3.04 ms | 402.38 ms | 132.45× |
-| 25 | 3.49 ms | 400.83 ms | 114.72× |
-| 100 | 4.50 ms | 412.80 ms | 91.65× |
-| 500 | 7.79 ms | 467.51 ms | 60.02× |
+| 1 | 12.64 ms | 459.80 ms | 36.37× |
+| 25 | 13.46 ms | 472.63 ms | 35.12× |
+| 100 | 14.88 ms | 506.49 ms | 34.03× |
+| 500 | 20.73 ms | 539.93 ms | 26.04× |
 <!-- generated:rubocop-prism:end -->
 
 This uses RuboCop 1.87.0 with Prism, caching disabled, and server mode disabled.
@@ -94,17 +167,22 @@ bundle exec ruby script/benchmark_rubocop_prism.rb
 
 ### Ruby custom cops
 
+Frequently used extension cops can instead be translated into native example
+packs. The pinned [`rubocop-performance` pack](examples/native_custom_cops/README.md)
+shows the controlled-oracle, cached-unit, and focused-project workflow without
+inflating built-in RuboCop compatibility claims.
+
 <!-- generated:mixed-custom:start -->
 Rustocop can keep recognized built-in cops native while delegating explicitly
 selected Ruby custom cops to RuboCop. On the same 500 files, 20 native cops plus
-one custom cop took 455.44 ms, versus 8.98 ms for pure native Rustocop and
-474.89 ms for pure RuboCop.
+one custom cop took 545.39 ms, versus 17.54 ms for pure native Rustocop and
+555.00 ms for pure RuboCop.
 
 | 500-file mode | Median |
 | --- | ---: |
-| Pure native, 20 built-in cops | **8.98 ms** |
-| Mixed, 20 native + 1 Ruby custom cop | **455.44 ms** |
-| Pure RuboCop, all 21 cops | **474.89 ms** |
+| Pure native, 20 built-in cops | **17.54 ms** |
+| Mixed, 20 native + 1 Ruby custom cop | **545.39 ms** |
+| Pure RuboCop, all 21 cops | **555.00 ms** |
 <!-- generated:mixed-custom:end -->
 
 The mixed report exactly matched RuboCop, but the Ruby custom cop still imposed
@@ -112,23 +190,13 @@ almost all of RuboCop's startup and parsing cost. See the [mixed custom-cop
 benchmark](benchmark/mixed-custom-cops.md) for entrypoint overhead, p95 results,
 and methodology.
 
-### Real Rails projects
+### Real-project performance
 
-The sustained-workload benchmark runs deliberately strict built-in rules over
-three pinned open-source Rails projects. Unlike the small compatibility corpus,
-these reports are not yet identical: the exact-match column is the new
-correctness target, matching path, cop, severity, message, and source range.
-
-| Project | Ruby files | rustocop, 4 workers | RuboCop Prism | Speedup | Exact matches / RuboCop offenses |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| [Chatwoot](https://github.com/chatwoot/chatwoot/tree/8d93d69e8e356216e85c28de7c4240e66b8e83fa) | 1,842 | **104 ms** | 5.72 s | **54.9×** | 429 / 48,951 |
-| [RubyGems.org](https://github.com/rubygems/rubygems.org/tree/3201f8831866f82eb9acd7f66287a978d0e59079) | 1,337 | **50 ms** | 2.69 s | **53.4×** | 273 / 4,195 |
-| [GitLab CE](https://github.com/gitlabhq/gitlabhq/tree/67a526442c20d20b6e80ebf916bd766b54018c5e) | 30,894 | **1.82 s** | 106.18 s | **58.5×** | 6,780 / 698,393 |
-
-All timings are medians from five measured runs after warmup, with RuboCop's
-cache and server disabled. The configuration intentionally forces offenses
-using eight core cops; no custom cops or extensions are loaded. See the
-[project benchmark methodology and full median/p95 results](benchmark/project-benchmarks.md).
+The repository also has a sustained-workload runner for all 50 pinned
+projects. The checked-in timing table is a dated 2026-08-19 three-project
+baseline and is no longer presented as current correctness evidence. See the
+[project benchmark note](benchmark/project-benchmarks.md) for those historical
+timings and the stronger requirements for publishing a replacement run.
 
 ## Using it locally
 
@@ -173,7 +241,10 @@ exe/rustocop --included-non-native-cops /path/to/project
 exe/rustocop --require ./lib/rubocop/cop/custom/no_foo.rb \
   --only Style/ArrayJoin,Custom/NoFoo /path/to/project
 
-# Apply available corrections; use this on a clean working tree
+# Apply only corrections RuboCop marks safe; use this on a clean working tree
+exe/rustocop -a /path/to/project
+
+# Apply safe and unsafe corrections
 exe/rustocop -A /path/to/project
 
 # Produce RuboCop-style JSON
@@ -218,8 +289,8 @@ bundle exec rubocop
 ```
 
 Do not remove RuboCop from CI just because rustocop is fast on your machine.
-Check the [support matrix](docs/cop-support.md) before depending on a cop, and be
-especially cautious with anything marked heuristic.
+Check the [compatibility evidence table](docs/compatibility.md) and the
+[real-project parity report](docs/real-project-parity.md) before depending on a cop.
 
 ## Current support
 
@@ -227,74 +298,103 @@ especially cautious with anything marked heuristic.
 - Native binary contract: `libexec/rustocop-native`
 - Development fallback: `libexec/rustocop-ruby`
 - Rust source: `crates/rustocop`
-- Compatibility coverage: `Layout/TrailingWhitespace` JSON output and exit
-  status for file and stdin input
-- Native checks for the RuboCop, Rails, RSpec, Bundler, Layout, Metrics, Naming,
-  Style, and Lint cops listed in the project seed config. Singulate-specific
-  cops are intentionally excluded.
-- A shared Prism parse and AST visitor powers the native cop registry. The
-  previous captured-suite classification reported 361 cops as verified and 245
-  as heuristic, but those historical labels grant no credit in the new
-  five-check qualification ledger.
+- All 606 RuboCop 1.87 built-in cops are registered natively. RuboCop extension
+  departments and project-specific cops are not native.
+- A shared Prism parse and AST visitor powers the native cop registry.
 - `--show-cops` prints the native support registry.
-- [The legacy captured-suite support matrix](docs/cop-support.md) records the
-  old verified, heuristic, and missing classification. It is retained as
-  engineering evidence, not as the current qualification record.
+- [The built-in cop evidence matrix](docs/cop-support.md) records current
+  project status and whether a minimized project regression exists.
 - [The RuboCop + Prism performance verification](docs/performance.md) records
   reproducible end-to-end timings and JSON parity checks for the shared
   500-file, 20-cop corpus.
-
-Current qualification totals and invalidated records are reported in the
-[generated qualification ledger](docs/qualification-progress.md).
 
 ## Native architecture
 
 Every inspected file is parsed once with Prism. Enabled AST cops are registered
 with a shared visitor, receive typed nodes plus ancestor context, and report
 byte-accurate source ranges. Compatible edits are collected during the traversal
-and applied as one batch. The differential compatibility suite runs 20 cops
-against 500 generated and committed Ruby fixture files, both cop-by-cop and as a
-single corpus, and compares their JSON reports directly with RuboCop.
+and applied as one batch. Every committed example is owned by its target cop
+under `spec/fixtures/cops/<Department>/<Cop>/unit/`; whole-project artifacts
+remain transient under ignored `tmp/` paths.
 
-The native registry contains entries for all 606 RuboCop 1.87 built-ins. The
-qualification ledger intentionally started at zero regardless of previous
-captured diagnostic or correction results; current progress is generated from
-the new five-check records above.
+The intentionally-pending manifest is currently empty. A cop remains registered
+only after a scalable implementation passes the fixture gate; registration by
+itself is never compatibility evidence, and only an exact full-project result is
+project parity.
 
 ## Upstream RuboCop contract
 
 The official RuboCop 1.87.0 cop specs are vendored under
 `spec/upstream/rubocop-1.87.0` at tag `v1.87.0`, commit
-`e5b788dba181ad94de30cfbad661c5d6aa08a4e5`. The unchanged public suite contains
-28,479 RSpec examples. It currently runs with zero failures and six pendings
-declared by RuboCop itself.
+`e5b788dba181ad94de30cfbad661c5d6aa08a4e5`. The intentionally-pending manifest
+is empty, so no built-in cop specs are excluded from the active fixture corpus.
 
 The capture harness executes RuboCop's test DSL and records the resulting
-source, configuration, path, Ruby version, offenses, and correction. It does
-not infer expectations by scraping spec source. All 606 registered built-in
-cops have executable captured cases. This is useful historical evidence, but it
-does not satisfy any new qualification check until that cop is explicitly
-reviewed and recorded under the five-check process.
+source, configuration, path, Ruby version, parser, encodings, offenses, and
+correction. It does not infer expectations by scraping spec source. The
+committed cache contains 29,526 cop-owned rows and stores exact diagnostics plus
+distinct safe `-a` and all-cop `-A` results. The strict runner currently checks
+29,616 cached cases. These cases become compatibility evidence only when
+Rustocop matches the cache.
+Project-exact output is the broader guard against cases absent from unit
+contracts.
 
 ```sh
 bundle exec ruby script/extract_upstream_cop_specs.rb
-bundle exec ruby script/compare_upstream_cop_specs.rb
+bundle exec ruby script/generate_unit_fixtures.rb
 ```
 
-Generated corpora and reports live under `tmp/` and are intentionally ignored.
-The comparison command is diagnostic-only for now; correction parity remains a
-separate required gate before a cop can be marked fully upstream-compatible.
+The raw capture lives under ignored `tmp/`; the deduplicated per-cop cache is
+committed under `spec/fixtures/cops/`. Routine Rustocop work reads the cache and
+does not invoke RuboCop.
+
+Prepare or restore the pinned 50-project corpus without running either linter:
+
+```sh
+PROJECT_BENCHMARK_PREPARE_ONLY=1 \
+  bundle exec ruby script/benchmark_projects.rb
+```
+
+The immutable archives and filtered corpora are cached under
+`tmp/project-benchmarks/`; a repeated preparation reuses them.
+
+Project-derived regressions and configuration variations are part of the same
+cached unit contracts. Only complete repository audits start the project-scale
+comparison workflow.
 
 ## Development
 
-Read [Building a cop](docs/building-a-cop.md), the
-[Prism cop DSL reference](docs/adding-a-prism-cop.md),
-[the architecture](docs/architecture.md), and
-[the rules of engagement](CONTRIBUTING.md) before adding cops. The
-[substantial-work roadmap](docs/substantial-work.md) records the shared
-correctness and architecture work that does not belong in the generated
-per-cop queue. The default spec task enforces the documented module and function
-complexity ceilings.
+The maintained documentation is intentionally small:
+
+- [Building a cop](docs/building-a-cop.md) is the end-to-end implementation and
+  promotion workflow; the [Prism cop DSL reference](docs/adding-a-prism-cop.md)
+  documents its callback and correction APIs.
+- [Architecture](docs/architecture.md) and the
+  [rules of engagement](CONTRIBUTING.md) define repository boundaries and
+  validation requirements.
+- [Compatibility](docs/compatibility.md), [cop support](docs/cop-support.md),
+  [remaining cops](docs/remaining-cops.md), and
+  [real-project parity](docs/real-project-parity.md) are the current generated
+  or evidence-backed status sources.
+- [Non-scalable implementations](docs/non-scalable-implementations.md) and the
+  [substantial-work roadmap](docs/substantial-work.md) contain the active manual
+  backlog. Historical checkpoints and completed review notes live in Git
+  history instead of permanent Markdown files.
+
+The canonical repository gate is:
+
+```sh
+bundle exec rake
+```
+
+It builds the release binary, rejects Clippy warnings, checks generated
+inventories and compatibility contracts, enforces architecture boundaries, and
+runs the complete spec suite. Existing oversized Rust modules are recorded with
+exact, non-increasing ceilings in
+[the architecture-debt manifest](spec/architecture_debt.yml): growth fails the
+gate, while reductions must lower or remove the corresponding ceiling. New
+modules receive no architecture-debt allowance. Run Rust formatting separately
+with `cargo fmt --manifest-path crates/rustocop/Cargo.toml --all -- --check`.
 
 Install dependencies:
 
@@ -302,44 +402,54 @@ Install dependencies:
 bundle install
 ```
 
-Run specs:
+The explicit spec task is equivalent to the default task:
 
 ```sh
 bundle exec rake spec
 ```
 
-Regenerate the compatibility corpus after changing its case templates:
+Run the cached controlled unit contract for only the cops being changed:
 
 ```sh
-bundle exec ruby script/generate_compatibility_corpus.rb
-bundle exec ruby script/generate_compatibility_corpus.rb --check
+ruby script/verify_cop.rb Style/StringLiterals Layout/TrailingWhitespace
 ```
 
-The correctness corpus is status-checked and may contain only Verified cops.
+Run all 29,616 cached checks, or explicitly refresh the slow RuboCop cache:
+
+```sh
+bundle exec rake fixtures:unit
+bundle exec rake fixtures:refresh_unit
+```
+
+The ownership gate rejects orphaned and cross-cop fixture paths:
+
+```sh
+bundle exec ruby script/check_fixture_ownership.rb
+```
+
+See [`spec/fixtures/README.md`](spec/fixtures/README.md) for the unit corpus.
 Benchmarks use the separate pinned `benchmark/corpus.json`, so improving a
 correctness fixture does not silently redefine historical performance work.
 
-Run the complete upstream differential with its non-regression gate, then
-regenerate the prioritized remaining-cop queue:
+Run the complete upstream differential. The command fails if any retained case
+differs:
 
 ```sh
 RUSTOCOP_NATIVE_PATH=crates/rustocop/target/debug/rustocop \
   bundle exec ruby script/compare_upstream_cop_specs.rb \
-  --baseline spec/upstream/rubocop-1.87.0/status.yml \
   --report tmp/full-compatibility.json
-
-RUSTOCOP_NATIVE_PATH=crates/rustocop/target/debug/rustocop \
-  bundle exec ruby script/generate_remaining_cop_plan.rb \
-  tmp/full-compatibility.json
-
-bundle exec ruby script/report_compatibility_drift.rb \
-  tmp/full-compatibility.json \
-  --output tmp/compatibility-promotion-drift.md
 ```
 
-The generated [remaining-cop plan](docs/remaining-cops.md) distinguishes partial
-implementations, quick structural additions, and cops blocked on shared engine
-capabilities.
+Generate the public per-cop matrix and current gap queue only from a complete
+50-project audit:
+
+```sh
+ruby script/generate_project_parity_docs.rb \
+  tmp/project-parity/all-cops-current.json
+```
+
+The generated [gap queue](docs/remaining-cops.md) is ordered by unmatched
+complete signatures and deliberately ignores the retired qualification labels.
 
 Build the native binary when Rust is installed:
 

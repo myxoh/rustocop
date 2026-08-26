@@ -67,7 +67,8 @@ module Rustocop
         "RUSTOCOP_RUBY_ENGINE" => RUBY_ENGINE,
         "RUSTOCOP_RUBY_VERSION" => RUBY_VERSION,
         "RUSTOCOP_RUBY_PATCHLEVEL" => RUBY_PATCHLEVEL.to_s,
-        "RUSTOCOP_RUBY_PLATFORM" => RUBY_PLATFORM
+        "RUSTOCOP_RUBY_PLATFORM" => RUBY_PLATFORM,
+        "RUSTOCOP_RUBY_PATH" => RbConfig.ruby
       }
       environment["RUSTOCOP_RUBOCOP_PATH"] = Gem.bin_path("rubocop", "rubocop")
       environment

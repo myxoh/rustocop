@@ -1,0 +1,6 @@
+{
+  "114aba824c08d698": "---\nLayout/MultilineOperationIndentation:\n  Description: Checks indentation of binary operations that span more than one line.\n  Enabled: true\n  VersionAdded: '0.49'\n  EnforcedStyle: indented\n  SupportedStyles:\n  - aligned\n  - indented\n  IndentationWidth:\nLayout/IndentationWidth:\n  Width: 2\n",
+  "17e8411b6ba6c7bc": "---\nLayout/MultilineOperationIndentation:\n  Description: Checks indentation of binary operations that span more than one line.\n  Enabled: true\n  VersionAdded: '0.49'\n  EnforcedStyle: aligned\n  SupportedStyles:\n  - aligned\n  - indented\n  IndentationWidth:\nLayout/IndentationWidth:\n  Width: 2\n",
+  "32c78632dedb9aeb": "---\nLayout/MultilineOperationIndentation:\n  Description: Checks indentation of binary operations that span more than one line.\n  Enabled: true\n  VersionAdded: '0.49'\n  EnforcedStyle: indented\n  SupportedStyles:\n  - aligned\n  - indented\n  IndentationWidth: 6\nLayout/IndentationWidth:\n  Width: 2\n",
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n"
+}

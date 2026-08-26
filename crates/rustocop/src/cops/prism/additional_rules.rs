@@ -2,35 +2,51 @@ use std::collections::HashSet;
 
 use super::source_helpers::*;
 use super::*;
+use crate::rubocop::ast::prism::convert as convert_rubocop_ast;
 
 mod literal_layout;
 use literal_layout::*;
 
-declare_source_cops! {
-    RubyVersionGlobalsUsage => "Gemspec/RubyVersionGlobalsUsage" => ruby_version_globals,
-    BlockComments => "Style/BlockComments" => block_comments,
-    InsecureProtocolSource => "Bundler/InsecureProtocolSource" => insecure_protocol_source,
-    DisjunctiveAssignmentInConstructor => "Lint/DisjunctiveAssignmentInConstructor" => disjunctive_assignment,
-    RefinementImportMethods => "Lint/RefinementImportMethods" => refinement_import_methods,
-    AttributeAssignment => "Gemspec/AttributeAssignment" => attribute_assignment,
-    EachWithObjectArgument => "Lint/EachWithObjectArgument" => each_with_object_argument,
-    UselessDefined => "Lint/UselessDefined" => useless_defined,
-    AutoResourceCleanup => "Style/AutoResourceCleanup" => auto_resource_cleanup,
-    InPatternThen => "Style/InPatternThen" => in_pattern_then,
-    EmptyHeredoc => "Style/EmptyHeredoc" => empty_heredoc,
-    SpaceInsideRangeLiteral => "Layout/SpaceInsideRangeLiteral" => space_inside_range,
-    SpaceAfterMethodName => "Layout/SpaceAfterMethodName" => space_after_method_name,
-    RedundantConstantBase => "Style/RedundantConstantBase" => redundant_constant_base,
+mod source_registry {
+    use super::*;
+
+    declare_source_cops! {
+        RubyVersionGlobalsUsage => "Gemspec/RubyVersionGlobalsUsage" => super::ruby_version_globals,
+        AttributeAssignment => "Gemspec/AttributeAssignment" => super::attribute_assignment,
+        AutoResourceCleanup => "Style/AutoResourceCleanup" => super::auto_resource_cleanup,
+        SpaceAfterMethodName => "Layout/SpaceAfterMethodName" => super::space_after_method_name,
+    }
+}
+
+define_call_cop!(InsecureProtocolSource => "Bundler/InsecureProtocolSource" => insecure_protocol_source);
+define_call_cop!(EachWithObjectArgument => "Lint/EachWithObjectArgument" => each_with_object_argument);
+define_call_cop!(RefinementImportMethods => "Lint/RefinementImportMethods" => refinement_import_methods);
+define_node_cop!(DisjunctiveAssignmentInConstructor => "Lint/DisjunctiveAssignmentInConstructor" => as_def_node => disjunctive_assignment);
+define_node_cop!(UselessDefined => "Lint/UselessDefined" => as_defined_node => useless_defined);
+define_node_cop!(EmptyHeredoc => "Style/EmptyHeredoc" => as_string_node => empty_heredoc);
+
+pub(super) fn cops() -> Vec<Box<dyn Cop>> {
+    let mut cops = source_registry::cops();
+    cops.push(Box::new(InsecureProtocolSource));
+    cops.push(Box::new(EachWithObjectArgument));
+    cops.push(Box::new(RefinementImportMethods));
+    cops.push(Box::new(DisjunctiveAssignmentInConstructor));
+    cops.push(Box::new(UselessDefined));
+    cops.push(Box::new(EmptyHeredoc));
+    cops
 }
 
 fn ruby_version_globals(source: &str, reporter: &mut Reporter<'_>) {
+    if !reporter.path().ends_with("(string)") && !reporter.path().ends_with(".gemspec") {
+        return;
+    }
     for name in [
         "::Ruby::VERSION",
         "Ruby::VERSION",
         "::RUBY_VERSION",
         "RUBY_VERSION",
     ] {
-        for start in all_offsets(source, name) {
+        for start in code_offsets(source, name) {
             let prefixed =
                 start > 0 && matches!(source.as_bytes()[start - 1], b':' | b'_' | b'A'..=b'Z');
             if !prefixed {
@@ -43,149 +59,170 @@ fn ruby_version_globals(source: &str, reporter: &mut Reporter<'_>) {
     }
 }
 
-fn block_comments(source: &str, reporter: &mut Reporter<'_>) {
-    let mut cursor = 0;
-    while let Some(relative_start) = source[cursor..].find("=begin\n") {
-        let start = cursor + relative_start;
-        let Some(relative_end) = source[start + 7..].find("=end") else {
-            break;
-        };
-        let marker_end = start + 7 + relative_end + 4;
-        let end = if source.as_bytes().get(marker_end) == Some(&b'\n') {
-            marker_end + 1
-        } else {
-            marker_end
-        };
-        let body = &source[start + 7..start + 7 + relative_end];
-        let replacement = body
-            .lines()
-            .map(|line| {
-                if line.is_empty() {
-                    "#".to_string()
-                } else {
-                    format!("# {line}")
-                }
-            })
-            .collect::<Vec<_>>()
-            .join("\n");
-        let replacement = if replacement.is_empty() {
-            String::new()
-        } else {
-            format!("{replacement}\n")
-        };
-        reporter.replace(
-            "Do not use block comments.",
-            start..end,
-            start..end,
-            replacement,
+fn code_offsets(source: &str, needle: &str) -> Vec<usize> {
+    let bytes = source.as_bytes();
+    let needle = needle.as_bytes();
+    let mut offsets = Vec::new();
+    let mut quote = None;
+    let mut escaped = false;
+    let mut comment = false;
+    let mut index = 0;
+    while index < bytes.len() {
+        let byte = bytes[index];
+        if comment {
+            comment = byte != b'\n';
+        } else if let Some(delimiter) = quote {
+            if escaped {
+                escaped = false;
+            } else if byte == b'\\' {
+                escaped = true;
+            } else if byte == delimiter {
+                quote = None;
+            }
+        } else if byte == b'#' {
+            comment = true;
+        } else if matches!(byte, b'\'' | b'"') {
+            quote = Some(byte);
+        } else if bytes[index..].starts_with(needle) {
+            offsets.push(index);
+            index += needle.len().saturating_sub(1);
+        }
+        index += 1;
+    }
+    offsets
+}
+
+fn insecure_protocol_source(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
+    if node.receiver().is_some() || call_name(node) != b"source" || argument_count(node) != 1 {
+        return;
+    }
+    let Some(argument) = only_argument(node) else {
+        return;
+    };
+    let (message, insecure) = if let Some(symbol) = argument.as_symbol_node() {
+        let source = symbol.unescaped();
+        if !matches!(source, b"gemcutter" | b"rubygems" | b"rubyforge") {
+            return;
+        }
+        let source = String::from_utf8_lossy(source);
+        (
+            format!("The source `:{source}` is deprecated because HTTP requests are insecure. Please change your source to 'https://rubygems.org' if possible, or 'http://rubygems.org' if not."),
+            true,
+        )
+    } else if argument.as_string_node().is_some_and(|string| {
+        string.unescaped() == b"http://rubygems.org"
+    }) {
+        (
+            "Use `https://rubygems.org` instead of `http://rubygems.org`.".to_string(),
+            !context.config_bool("AllowHttpProtocol", true),
+        )
+    } else {
+        return;
+    };
+    if insecure {
+        context.replace(
+            message,
+            argument.location(),
+            argument.location(),
+            "'https://rubygems.org'",
         );
-        cursor = end;
     }
 }
 
-fn insecure_protocol_source(source: &str, reporter: &mut Reporter<'_>) {
-    for (offset, line) in source_lines(source) {
-        let trimmed = line.trim_start();
-        let Some(argument) = trimmed
-            .strip_prefix("source ")
-            .or_else(|| trimmed.strip_prefix("source("))
-        else {
-            continue;
-        };
-        let leading = line.len() - trimmed.len();
-        for symbol in [":gemcutter", ":rubygems", ":rubyforge"] {
-            if !argument.starts_with(symbol) {
-                continue;
-            }
-            let start = offset + leading + trimmed.find(symbol).unwrap_or(0);
-            let end = start + symbol.len();
-            reporter.replace(
-                format!("The source `{symbol}` is deprecated because HTTP requests are insecure. Please change your source to 'https://rubygems.org' if possible, or 'http://rubygems.org' if not."),
-                start..end,
-                start..end,
-                "'https://rubygems.org'",
-            );
-        }
-        if !reporter.config_bool("AllowHttpProtocol", true) {
-            for literal in ["'http://rubygems.org'", "\"http://rubygems.org\""] {
-                if !argument.starts_with(literal) {
-                    continue;
-                }
-                let start = offset + leading + trimmed.find(literal).unwrap_or(0);
-                let end = start + literal.len();
-                reporter.replace(
-                    "Use `https://rubygems.org` instead of `http://rubygems.org`.",
-                    start..end,
-                    start..end,
-                    "'https://rubygems.org'",
-                );
+fn disjunctive_assignment(
+    node: &ruby_prism::DefNode<'_>,
+    context: &mut CopContext<'_, '_>,
+) {
+    if node.name().as_slice() != b"initialize" {
+        return;
+    }
+    let Some(body) = node.body() else {
+        return;
+    };
+    if let Some(statements) = body.as_statements_node() {
+        for expression in statements.body().iter() {
+            if !check_constructor_assignment(&expression, context) {
+                break;
             }
         }
+    } else {
+        check_constructor_assignment(&body, context);
     }
 }
 
-fn disjunctive_assignment(source: &str, reporter: &mut Reporter<'_>) {
-    let mut in_initialize = false;
-    let mut unsafe_call_seen = false;
-    for (offset, line) in source_lines(source) {
-        let trimmed = line.trim();
-        if trimmed.starts_with("def initialize") {
-            in_initialize = true;
-            unsafe_call_seen = false;
-            continue;
-        }
-        if in_initialize && trimmed == "end" {
-            in_initialize = false;
-        } else if in_initialize
-            && (trimmed == "super"
-                || (!trimmed.starts_with('@') && !trimmed.starts_with('#') && !trimmed.is_empty()))
-        {
-            unsafe_call_seen = true;
-        }
-        if in_initialize && !unsafe_call_seen && trimmed.starts_with('@') {
-            if let Some(operator) = line.find("||=") {
-                let start = offset + operator;
-                reporter.replace(
-                    "Unnecessary disjunctive assignment. Use plain assignment.",
-                    start..start + 3,
-                    start..start + 3,
-                    "=",
-                );
-            }
-        }
+fn check_constructor_assignment(node: &Node<'_>, context: &mut CopContext<'_, '_>) -> bool {
+    if let Some(write) = node.as_instance_variable_or_write_node() {
+        let operator = write.operator_loc();
+        context.replace(
+            "Unnecessary disjunctive assignment. Use plain assignment.",
+            &operator,
+            &operator,
+            "=",
+        );
+        true
+    } else {
+        node.as_local_variable_or_write_node().is_some()
+            || node.as_class_variable_or_write_node().is_some()
+            || node.as_global_variable_or_write_node().is_some()
+            || node.as_constant_or_write_node().is_some()
+            || node.as_constant_path_or_write_node().is_some()
+            || node.as_call_or_write_node().is_some()
+            || node.as_index_or_write_node().is_some()
     }
 }
 
-fn refinement_import_methods(source: &str, reporter: &mut Reporter<'_>) {
-    if !reporter.target_ruby_version().at_least(3, 1)
-        || !source.contains("refine ")
-        || !source.contains(" do\n")
+fn refinement_import_methods(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
+    if !context.target_ruby_version().at_least(3, 1)
+        || node.receiver().is_some()
+        || !matches!(node.name().as_slice(), b"include" | b"prepend")
     {
         return;
     }
-    for (offset, line) in source_lines(source) {
-        let trimmed = line.trim_start();
-        let method = if trimmed.starts_with("include ") {
-            "include"
-        } else if trimmed.starts_with("prepend ") {
-            "prepend"
-        } else {
-            continue;
-        };
-        let start = offset + line.len() - trimmed.len();
-        reporter.report(
-            format!(
-                "Use `import_methods` instead of `{method}` because it is deprecated in Ruby 3.1."
-            ),
-            start..start + method.len(),
-        );
+    let mut ancestors = context.ancestors().iter().rev();
+    let Some(statements) = ancestors.next().and_then(Node::as_statements_node) else {
+        return;
+    };
+    if statements.body().len() != 1 {
+        return;
     }
+    let Some(block) = ancestors.find_map(Node::as_block_node) else {
+        return;
+    };
+    let Some(refine_call) = context.ancestors().iter().rev().find_map(|ancestor| {
+        let call = ancestor.as_call_node()?;
+        call.block()
+            .and_then(|candidate| candidate.as_block_node())
+            .filter(|candidate| candidate.location().start_offset() == block.location().start_offset())?;
+        Some(call)
+    }) else {
+        return;
+    };
+    if refine_call.name().as_slice() != b"refine" {
+        return;
+    }
+    let method = String::from_utf8_lossy(node.name().as_slice());
+    context.report(
+        format!(
+            "Use `import_methods` instead of `{method}` because it is deprecated in Ruby 3.1."
+        ),
+        node.message_loc().expect("include/prepend selector"),
+    );
 }
 
 fn attribute_assignment(source: &str, reporter: &mut Reporter<'_>) {
+    let Some(specification) = source_lines(source).find_map(|(_, line)| {
+        line.contains("Gem::Specification.new")
+            .then(|| line.split('|').nth(1).map(str::trim))
+            .flatten()
+    }) else {
+        return;
+    };
     let mut direct = HashSet::new();
     for (_, line) in source_lines(source) {
-        if let Some(rest) = line.trim().strip_prefix("spec.") {
+        if let Some(rest) = line
+            .trim()
+            .strip_prefix(&format!("{specification}."))
+        {
             if let Some((name, _)) = rest.split_once(" = ") {
                 direct.insert(name.to_string());
             }
@@ -193,7 +230,7 @@ fn attribute_assignment(source: &str, reporter: &mut Reporter<'_>) {
     }
     for (offset, line) in source_lines(source) {
         let trimmed = line.trim_start();
-        let Some(rest) = trimmed.strip_prefix("spec.") else {
+        let Some(rest) = trimmed.strip_prefix(&format!("{specification}.")) else {
             continue;
         };
         let Some(bracket) = rest.find('[') else {
@@ -209,80 +246,87 @@ fn attribute_assignment(source: &str, reporter: &mut Reporter<'_>) {
     }
 }
 
-fn each_with_object_argument(source: &str, reporter: &mut Reporter<'_>) {
-    for start in all_offsets(source, "each_with_object(") {
-        let argument_start = start + "each_with_object(".len();
-        let Some(close) = source[argument_start..].find(')') else {
-            continue;
-        };
-        let argument = &source[argument_start..argument_start + close];
-        if !argument.contains(',') && argument.parse::<f64>().is_ok() {
-            let line_start = source[..start].rfind('\n').map_or(0, |offset| offset + 1);
-            reporter.report(
-                "The argument to each_with_object cannot be immutable.",
-                line_start..argument_start + close + 1,
-            );
-        }
+fn each_with_object_argument(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
+    if call_name(node) != b"each_with_object" || argument_count(node) != 1 {
+        return;
+    }
+    if only_argument(node).is_some_and(|argument| immutable_literal(&argument)) {
+        let end = node
+            .closing_loc()
+            .map_or_else(|| node.arguments().map_or(node.location().end_offset(), |arguments| arguments.location().end_offset()), |closing| closing.end_offset());
+        context.report(
+            "The argument to each_with_object cannot be immutable.",
+            node.location().start_offset()..end,
+        );
     }
 }
 
-fn useless_defined(source: &str, reporter: &mut Reporter<'_>) {
-    for start in all_offsets(source, "defined?(") {
-        let Some(close) = source[start..].find(')') else {
-            continue;
-        };
-        let end = start + close + 1;
-        let argument = source[start + 9..end - 1].trim_start();
-        let kind = if argument.starts_with(['\'', '"']) {
-            "string"
-        } else if argument.starts_with(':') && !argument.contains(".to_proc") {
-            "symbol"
-        } else {
-            continue;
-        };
-        reporter.report(
-            format!("Calling `defined?` with a {kind} argument will always return a truthy value."),
-            start..end,
-        );
-    }
+fn useless_defined(node: &ruby_prism::DefinedNode<'_>, context: &mut CopContext<'_, '_>) {
+    let argument = node.value();
+    let kind = if argument.as_string_node().is_some()
+        || argument.as_interpolated_string_node().is_some()
+    {
+        "string"
+    } else if argument.as_symbol_node().is_some()
+        || argument.as_interpolated_symbol_node().is_some()
+    {
+        "symbol"
+    } else {
+        return;
+    };
+    context.report(
+        format!("Calling `defined?` with a {kind} argument will always return a truthy value."),
+        node.location(),
+    );
 }
 
 fn auto_resource_cleanup(source: &str, reporter: &mut Reporter<'_>) {
-    for receiver in ["::Tempfile", "Tempfile", "::File", "File"] {
-        let needle = format!("{receiver}.open(");
-        for start in all_offsets(source, &needle) {
-            if !receiver.starts_with("::") && start >= 2 && &source[start - 2..start] == "::" {
-                continue;
-            }
-            let end =
-                line_end(source, start).saturating_sub(usize::from(source[start..].contains('\n')));
-            let line = &source[start..end];
-            if !line.contains('{') && !line.contains("&:") && !line.ends_with(".close") {
-                reporter.report(
-                    format!("Use the block version of `{receiver}.open`."),
-                    start..end,
-                );
-            }
+    let parsed = ruby_prism::parse(source.as_bytes());
+    let (ast, root) = convert_rubocop_ast(source, &parsed.node());
+    let Some(root) = root.map(|root| ast.node(root)) else {
+        return;
+    };
+    for node in root.each_node(&["send"]) {
+        if node.method_name() != Some("open") {
+            continue;
         }
+        let Some(receiver) = node.receiver() else {
+            continue;
+        };
+        if !(receiver.global_const("File") || receiver.global_const("Tempfile")) {
+            continue;
+        }
+        if node
+            .arguments()
+            .last()
+            .is_some_and(|argument| argument.kind() == "block_pass")
+        {
+            continue;
+        }
+        if node.parent().is_some_and(|parent| {
+            parent.type_is(&["any_block"]) || parent.kind() != "lvasgn"
+        }) {
+            continue;
+        }
+        let (Some(range), Some(receiver_source)) = (node.source_range(), receiver.source()) else {
+            continue;
+        };
+        reporter.report(
+            format!("Use the block version of `{receiver_source}.open`."),
+            auto_resource_character_range_to_byte(source, range),
+        );
     }
 }
 
-fn in_pattern_then(source: &str, reporter: &mut Reporter<'_>) {
-    for (offset, line) in source_lines(source) {
-        let trimmed = line.trim_start();
-        if !trimmed.starts_with("in ") || trimmed.contains(" then ") {
-            continue;
-        }
-        let Some(semi) = line.find(';') else { continue };
-        let prefix = line[..=semi].trim_start();
-        reporter.replace(
-            format!(
-                "Do not use `{prefix}`. Use `{} then` instead.",
-                prefix.trim_end_matches(';')
-            ),
-            offset + semi..offset + semi + 1,
-            offset + semi..offset + semi + 1,
-            " then",
-        );
-    }
+fn auto_resource_character_range_to_byte(
+    source: &str,
+    range: std::ops::Range<usize>,
+) -> std::ops::Range<usize> {
+    let byte = |character: usize| {
+        source
+            .char_indices()
+            .nth(character)
+            .map_or(source.len(), |(offset, _)| offset)
+    };
+    byte(range.start)..byte(range.end)
 }

@@ -1,6 +1,15 @@
 use super::*;
 
 pub(super) fn if_inside_else(context: &mut CopContext<'_, '_>) {
+    let parsed = parse(context.source().as_bytes());
+    let mut collector = IfInsideElseCollector {
+        allow_modifier: context.config_bool("AllowIfModifier", false),
+        comments: context.source_file().comment_ranges(),
+        offsets: std::collections::HashSet::new(),
+    };
+    collector.visit(&parsed.node());
+    let valid = collector.offsets;
+    let mut reported_offsets = std::collections::HashSet::new();
     let lines = context.source_file().lines().collect::<Vec<_>>();
     let mut reported = false;
     for pair in lines.windows(2) {
@@ -10,8 +19,14 @@ pub(super) fn if_inside_else(context: &mut CopContext<'_, '_>) {
             continue;
         }
         let indent = if_line.len() - if_line.trim_start().len();
+        let keyword_offset = if_offset + indent;
+        if !valid.contains(&keyword_offset) {
+            continue;
+        }
         let condition = if_line.trim_start()[3..].trim_end();
-        if condition.contains(" then ") && correct_then_form(context, &lines, else_offset, if_offset, if_line, condition) {
+        if condition.contains(" then ")
+            && correct_then_form(context, &lines, else_offset, if_offset, if_line)
+        {
             return;
         }
         if condition.ends_with(" then") || condition.contains(" #") {
@@ -52,6 +67,7 @@ pub(super) fn if_inside_else(context: &mut CopContext<'_, '_>) {
             continue;
         }
         let offense = if_offset + indent..if_offset + indent + 2;
+        reported_offsets.insert(keyword_offset);
         let outer_indent = &else_line[..else_line.len() - else_line.trim_start().len()];
         let mut replacement = format!("{outer_indent}elsif {condition}");
         let nested_end = nested_end.expect("checked above");
@@ -91,10 +107,55 @@ pub(super) fn if_inside_else(context: &mut CopContext<'_, '_>) {
             reported = true;
         }
     }
-    correct_modifier_form(context, &lines);
+    correct_modifier_form(context, &lines, &valid, &mut reported_offsets);
+    for offset in valid.difference(&reported_offsets) {
+        context.report(
+            "Convert `if` nested inside `else` to `elsif`.",
+            *offset..*offset + 2,
+        );
+    }
 }
 
-fn correct_modifier_form(context: &mut CopContext<'_, '_>, lines: &[(usize, &str)]) {
+struct IfInsideElseCollector {
+    allow_modifier: bool,
+    comments: Vec<std::ops::Range<usize>>,
+    offsets: std::collections::HashSet<usize>,
+}
+
+impl<'pr> Visit<'pr> for IfInsideElseCollector {
+    fn visit_if_node(&mut self, node: &ruby_prism::IfNode<'pr>) {
+        if node.if_keyword_loc().is_none() {
+            ruby_prism::visit_if_node(self, node);
+            return;
+        }
+        if let Some(else_clause) = node.subsequent().and_then(|branch| branch.as_else_node()) {
+            if let Some(nested) = only_statement(else_clause.statements()).and_then(|body| body.as_if_node()) {
+                if let Some(keyword) = nested
+                    .if_keyword_loc()
+                    .filter(|keyword| keyword.as_slice() == b"if")
+                {
+                    let modifier = nested.end_keyword_loc().is_none();
+                    let else_end = else_clause.else_keyword_loc().end_offset();
+                    let commented = !modifier
+                        && self.comments.iter().any(|comment| {
+                            else_end < comment.start && comment.start < keyword.start_offset()
+                        });
+                    if !(commented || modifier && self.allow_modifier) {
+                        self.offsets.insert(keyword.start_offset());
+                    }
+                }
+            }
+        }
+        ruby_prism::visit_if_node(self, node);
+    }
+}
+
+fn correct_modifier_form(
+    context: &mut CopContext<'_, '_>,
+    lines: &[(usize, &str)],
+    valid: &std::collections::HashSet<usize>,
+    reported: &mut std::collections::HashSet<usize>,
+) {
     if context.config_bool("AllowIfModifier", false) {
         return;
     }
@@ -102,15 +163,36 @@ fn correct_modifier_form(context: &mut CopContext<'_, '_>, lines: &[(usize, &str
         if else_line.trim() != "else" {
             continue;
         }
-        let Some((body_offset, body_line)) = lines[else_index + 1..]
+        let Some((body_relative, (body_offset, body_line))) = lines[else_index + 1..]
             .iter()
-            .find(|(_, line)| !line.trim_start().starts_with('#'))
+            .enumerate()
+            .find(|(_, (_, line))| {
+                !line.trim().is_empty() && !line.trim_start().starts_with('#')
+            })
         else {
             continue;
         };
+        let body_index = else_index + 1 + body_relative;
+        let else_indent = else_line.len() - else_line.trim_start().len();
+        let sole_else_expression = lines[body_index + 1..]
+            .iter()
+            .find(|(_, line)| {
+                !line.trim().is_empty() && !line.trim_start().starts_with('#')
+            })
+            .is_some_and(|(_, line)| {
+                line.trim_start().starts_with("end")
+                    && line.len() - line.trim_start().len() == else_indent
+            });
+        if !sole_else_expression {
+            continue;
+        }
         let Some(if_at) = body_line.find(" if ") else {
             continue;
         };
+        let keyword_offset = body_offset + if_at + 1;
+        if !valid.contains(&keyword_offset) {
+            continue;
+        }
         if body_line[..if_at].trim().is_empty() {
             continue;
         }
@@ -141,6 +223,7 @@ fn correct_modifier_form(context: &mut CopContext<'_, '_>, lines: &[(usize, &str
                 ),
             ],
         );
+        reported.insert(keyword_offset);
     }
 }
 
@@ -150,7 +233,6 @@ fn correct_then_form(
     else_offset: usize,
     if_offset: usize,
     if_line: &str,
-    condition: &str,
 ) -> bool {
     let indent = &if_line[..if_line.len() - if_line.trim_start().len()];
     let nested_index = lines.iter().position(|(offset, _)| *offset == if_offset).unwrap_or(0);
@@ -180,21 +262,30 @@ fn correct_then_form(
         expanded.push_str(&line);
     }
     let offense = if_offset + indent.len()..if_offset + indent.len() + 2;
-    let has_final_else = !multiline && condition.contains(" else ");
-    if has_final_else {
-        let mut lines = expanded.lines();
-        let first = lines.next().unwrap_or_default().trim_start().strip_prefix("if ").unwrap_or_default();
-        let outer_line = context.source()[else_offset..if_offset].lines().next().unwrap_or("");
-        let outer_indent = &outer_line[..outer_line.len() - outer_line.trim_start().len()];
-        let mut replacement = format!("{outer_indent}elsif {first}");
-        let rest = lines.collect::<Vec<_>>();
-        for line in rest.iter().take(rest.len().saturating_sub(1)) {
-            replacement.push('\n');
-            replacement.push_str(line);
-        }
-        context.replace("Convert `if` nested inside `else` to `elsif`.", offense, else_offset..if_offset + if_line.len(), replacement);
-    } else {
-        context.replace("Convert `if` nested inside `else` to `elsif`.", offense, if_offset..lines[end_index].0 + lines[end_index].1.len(), expanded);
+    let correction_end = lines[end_index].0 + lines[end_index].1.len();
+    let mut expanded_lines = expanded.lines();
+    let first = expanded_lines
+        .next()
+        .unwrap_or_default()
+        .trim_start()
+        .strip_prefix("if ")
+        .unwrap_or_default();
+    let outer_line = context.source()[else_offset..if_offset]
+        .lines()
+        .next()
+        .unwrap_or("");
+    let outer_indent = &outer_line[..outer_line.len() - outer_line.trim_start().len()];
+    let mut replacement = format!("{outer_indent}elsif {first}");
+    let rest = expanded_lines.collect::<Vec<_>>();
+    for line in rest.iter().take(rest.len().saturating_sub(1)) {
+        replacement.push('\n');
+        replacement.push_str(line);
     }
+    context.replace(
+        "Convert `if` nested inside `else` to `elsif`.",
+        offense,
+        else_offset..correction_end,
+        replacement,
+    );
     true
 }

@@ -1,4 +1,5 @@
 use super::*;
+use regex::RegexBuilder;
 
 mod literals;
 use literals::*;
@@ -22,15 +23,40 @@ fn copyright(context: &mut CopContext<'_, '_>) {
             !line.is_empty() && !line.starts_with('#')
         })
         .map_or(context.source().len(), |(offset, _)| offset);
-    if context.source()[..first_code].contains("Copyright")
-        || context.source().starts_with("=begin") && context.source().contains("Copyright")
+    let mut comments = context.source_file().comment_ranges().into_iter().fold(
+        String::new(),
+        |mut text, range| {
+            if range.start >= first_code {
+                return text;
+            }
+            let comment = &context.source()[range];
+            text.push_str(comment.strip_prefix('#').unwrap_or(comment).trim_start());
+            text.push('\n');
+            text
+        },
+    );
+    if context.source().starts_with("=begin") {
+        if let Some(end) = context.source().find("\n=end") {
+            comments.push_str(&context.source()["=begin".len()..end]);
+        }
+    }
+    let pattern = copyright_notice_pattern(&visible_notice);
+    if RegexBuilder::new(pattern)
+        .multi_line(true)
+        .build()
+        .is_ok_and(|pattern| pattern.is_match(&comments))
     {
         return;
     }
     let message =
         format!("Include a copyright notice matching /{visible_notice}/ before any code.");
+    let offense = if context.source().starts_with('\n') && !context.source().trim().is_empty() {
+        0..1
+    } else {
+        0..0
+    };
     if context.source().is_empty() {
-        context.report(message, 0..0);
+        context.report(message, offense);
         return;
     }
     let correction = context
@@ -38,7 +64,7 @@ fn copyright(context: &mut CopContext<'_, '_>) {
         .map(unescape_config)
         .unwrap_or_default();
     if correction.is_empty() {
-        context.report(message, 0..1);
+        context.report(message, offense);
         return;
     }
     let correction = if correction.starts_with('#') {
@@ -75,10 +101,28 @@ fn copyright(context: &mut CopContext<'_, '_>) {
     };
     context.replace(
         message,
-        0..1,
+        offense,
         insertion..insertion,
         format!("{}\n{suffix}", correction.trim_end_matches('\n')),
     );
+}
+
+fn copyright_notice_pattern(notice: &str) -> &str {
+    let anchored = notice
+        .strip_prefix(r"\A")
+        .or_else(|| notice.strip_prefix('^'))
+        .unwrap_or(notice);
+    let Some(without_comment) = anchored.strip_prefix('#') else {
+        return notice;
+    };
+    let mut pattern = without_comment.trim_start();
+    for whitespace in [r"\s+", r"\s*", r"\s?", r"\s"] {
+        if let Some(rest) = pattern.strip_prefix(whitespace) {
+            pattern = rest.trim_start();
+            break;
+        }
+    }
+    pattern
 }
 
 fn unescape_config(value: &str) -> String {
@@ -89,21 +133,13 @@ fn unescape_config(value: &str) -> String {
 }
 
 fn commented_keyword(context: &mut CopContext<'_, '_>) {
-    let mut heredoc_end: Option<String> = None;
-    for (offset, line) in context.source_file().lines() {
-        if let Some(marker) = &heredoc_end {
-            if line.trim() == marker {
-                heredoc_end = None;
-            }
-            continue;
-        }
-        if let Some(at) = line.find("<<-").or_else(|| line.find("<<~")) {
-            let marker = line[at + 3..].trim().trim_matches(['\'', '"']).to_string();
-            if !marker.is_empty() {
-                heredoc_end = Some(marker);
-                continue;
-            }
-        }
+    let source = context.source();
+    for comment_range in context.source_file().comment_ranges() {
+        let offset = context.source_file().line_start(comment_range.start);
+        let line_end = source[offset..]
+            .find('\n')
+            .map_or(source.len(), |relative| offset + relative);
+        let line = &source[offset..line_end];
         let trimmed = line.trim_start();
         let Some(keyword) =
             ["begin", "class", "def", "end", "module"]
@@ -118,10 +154,8 @@ fn commented_keyword(context: &mut CopContext<'_, '_>) {
         else {
             continue;
         };
-        let Some(comment_at) = ruby_comment_offset(line) else {
-            continue;
-        };
-        let comment = &line[comment_at..];
+        let comment_at = comment_range.start - offset;
+        let comment = &source[comment_range.clone()];
         let compact_comment = comment.replace([' ', '\t'], "");
         let steep_annotation = comment
             .strip_prefix("# ")
@@ -139,7 +173,7 @@ fn commented_keyword(context: &mut CopContext<'_, '_>) {
         {
             continue;
         }
-        let offense = offset + comment_at..offset + line.len();
+        let offense = comment_range;
         let (edit, replacement) = if keyword == "end" {
             (
                 offset + line[..comment_at].trim_end().len()..offset + line.len(),
@@ -160,48 +194,18 @@ fn commented_keyword(context: &mut CopContext<'_, '_>) {
     }
 }
 
-fn ruby_comment_offset(line: &str) -> Option<usize> {
-    let mut quote = None;
-    let mut escaped = false;
-    for (index, byte) in line.bytes().enumerate() {
-        if let Some(delimiter) = quote {
-            if escaped {
-                escaped = false;
-            } else if byte == b'\\' {
-                escaped = true;
-            } else if byte == delimiter {
-                quote = None;
-            }
-        } else if matches!(byte, b'\'' | b'"') {
-            quote = Some(byte);
-        } else if byte == b'#' {
-            return Some(index);
-        }
-    }
-    None
-}
-
 fn comment_annotation(context: &mut CopContext<'_, '_>) {
     let keywords = context.config_values("Keywords").to_vec();
     let require_colon = context.config_bool("RequireColon", true);
     let mut previous_comment_line = None;
-    let mut embedded_document = false;
-    for (line_number, (offset, line)) in context.source_file().lines().enumerate() {
-        if line.trim_end_matches('\r') == "=begin" {
-            embedded_document = true;
-            previous_comment_line = None;
+    for comment_range in context.source_file().comment_ranges() {
+        if context.source().as_bytes().get(comment_range.start) != Some(&b'#') {
             continue;
         }
-        if embedded_document {
-            if line.trim_end_matches('\r') == "=end" {
-                embedded_document = false;
-            }
-            continue;
-        }
-        let Some(hash) = ruby_comment_offset(line) else {
-            previous_comment_line = None;
-            continue;
-        };
+        let line_number = context.line_index(comment_range.start);
+        let offset = context.line_start_at(line_number);
+        let line = context.line_at(line_number);
+        let hash = comment_range.start - offset;
         let comment_only = line[..hash].trim().is_empty();
         if comment_only && previous_comment_line == Some(line_number.saturating_sub(1)) {
             previous_comment_line = Some(line_number);

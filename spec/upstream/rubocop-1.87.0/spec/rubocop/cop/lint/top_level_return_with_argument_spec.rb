@@ -174,4 +174,36 @@ RSpec.describe RuboCop::Cop::Lint::TopLevelReturnWithArgument, :config do
       RUBY
     end
   end
+
+
+  context 'with adversarial scope boundaries' do
+    it 'does not register returns inside blocks, definitions, or lambdas' do
+      expect_no_offenses(<<~RUBY)
+        items.each { return 1 }
+        def example
+          return 2
+        end
+        -> { return 3 }
+      RUBY
+    end
+
+    it 'ignores return-shaped text but registers a nested top-level conditional return' do
+      expect_offense(<<~RUBY)
+        text = "return 1"
+        # return 2
+        if enabled?
+          return :value
+          ^^^^^^^^^^^^^ Top level return with argument detected.
+        end
+      RUBY
+
+      expect_correction(<<~RUBY)
+        text = "return 1"
+        # return 2
+        if enabled?
+          return
+        end
+      RUBY
+    end
+  end
 end

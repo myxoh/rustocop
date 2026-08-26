@@ -1,0 +1,6 @@
+{
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
+  "77c39c64bd272713": "---\nAllCops:\n  TargetRubyVersion: '2.7'\n",
+  "b848c16763135c60": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/DuplicateSetElement:\n  Description: Checks for duplicate elements in Set.\n  Enabled: true\n  VersionAdded: '1.67'\n  AutoCorrect: always\n",
+  "d3c49ac9191e4e84": "---\nAllCops:\n  DisabledByDefault: true\n  ParserEngine: parser_prism\n  TargetRubyVersion: 3.4\nLint/DuplicateSetElement:\n  Enabled: true\n"
+}

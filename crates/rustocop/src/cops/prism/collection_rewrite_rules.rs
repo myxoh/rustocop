@@ -1,4 +1,5 @@
 use ruby_prism::{BlockNode, CallNode, Node};
+use std::collections::HashMap;
 
 use super::*;
 
@@ -150,8 +151,27 @@ fn call_arguments_for_reduce<'pr>(node: &CallNode<'pr>) -> Vec<Node<'pr>> {
     node.arguments().map(|arguments| arguments.arguments().iter().collect()).unwrap_or_default()
 }
 
-fn references_name(node: &Node<'_>, name: &str, file: SourceFile<'_>) -> bool {
-    file.node(node).split(|character: char| !character.is_ascii_alphanumeric() && character != '_').any(|part| part == name)
+fn references_name(node: &Node<'_>, name: &str, _file: SourceFile<'_>) -> bool {
+    struct LocalReadFinder<'a> {
+        name: &'a [u8],
+        found: bool,
+    }
+
+    impl<'pr> ruby_prism::Visit<'pr> for LocalReadFinder<'_> {
+        fn visit_local_variable_read_node(
+            &mut self,
+            node: &ruby_prism::LocalVariableReadNode<'pr>,
+        ) {
+            self.found |= node.name().as_slice() == self.name;
+        }
+    }
+
+    let mut finder = LocalReadFinder {
+        name: name.as_bytes(),
+        found: false,
+    };
+    finder.visit(node);
+    finder.found
 }
 
 fn contains_nested_reduce(source: &str) -> bool {
@@ -161,7 +181,16 @@ fn contains_nested_reduce(source: &str) -> bool {
 #[derive(Default)]
 struct PartitionState {
     previous: Option<PartitionCandidate>,
+    statement_positions: Option<StatementPositions>,
 }
+
+type StatementPositions = HashMap<(usize, usize), (std::ops::Range<usize>, usize)>;
+type StatementContainer = (
+    std::ops::Range<usize>,
+    Option<String>,
+    std::ops::Range<usize>,
+    usize,
+);
 
 struct PartitionCandidate {
     method: String,
@@ -169,21 +198,25 @@ struct PartitionCandidate {
     predicate: String,
     symbol_method: Option<String>,
     negated: bool,
+    negated_predicate: Option<String>,
     call_source: String,
     selector: std::ops::Range<usize>,
     container: std::ops::Range<usize>,
     full_line: std::ops::Range<usize>,
     local_variable: Option<String>,
+    sibling_group: std::ops::Range<usize>,
+    sibling_index: usize,
 }
 
 impl PartitionRule<'_, '_, '_> {
     fn on_send(&mut self, node: &CallNode<'_>) {
-        let Some(candidate) = partition_candidate(node, self) else { return };
+        let Some(candidate) = self.partition_candidate(node) else { return };
         let Some(previous) = self.state.previous.take() else {
             self.state.previous = Some(candidate);
             return;
         };
-        if previous.full_line.end != candidate.full_line.start
+        if previous.sibling_group != candidate.sibling_group
+            || previous.sibling_index + 1 != candidate.sibling_index
             || previous.receiver != candidate.receiver
             || !partition_pair_matches(&previous, &candidate)
         {
@@ -227,33 +260,78 @@ impl PartitionRule<'_, '_, '_> {
             corrector.remove(candidate.full_line.clone());
         });
     }
+
+    fn partition_candidate(&mut self, node: &CallNode<'_>) -> Option<PartitionCandidate> {
+        if self.state.statement_positions.is_none() {
+            self.state.statement_positions = Some(statement_positions(self.source()));
+        }
+        let positions = self
+            .state
+            .statement_positions
+            .as_ref()
+            .expect("initialized statement positions");
+        partition_candidate(node, self.context, positions)
+    }
 }
 
-fn partition_candidate(node: &CallNode<'_>, context: &CopContext<'_, '_>) -> Option<PartitionCandidate> {
+fn partition_candidate(
+    node: &CallNode<'_>,
+    context: &CopContext<'_, '_>,
+    positions: &StatementPositions,
+) -> Option<PartitionCandidate> {
     let receiver = context.source_file().node(&node.receiver()?).to_string();
     let method = String::from_utf8_lossy(node.name().as_slice()).into_owned();
     let selector = node.message_loc()?;
-    let (predicate, symbol_method, negated, call_end) = if let Some(block) = node.block().and_then(|block| block.as_block_node()) {
-        let body = block.body().and_then(single_expression)?;
-        let mut body_source = context.source_file().node(&body).trim().to_string();
-        let negated = body_source.starts_with('!');
-        if negated { body_source = body_source[1..].trim().to_string(); }
-        let parameter = block_parameter_source(&block, context.source_file());
-        let symbol_method = parameter.as_ref().and_then(|parameter| {
-            body_source.strip_prefix(&format!("{parameter}.")).filter(|method| method.ends_with('?') || method.bytes().all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')).map(str::to_string)
-        });
-        let parameter_key = parameter.clone().unwrap_or_default();
-        (format!("{parameter_key}|{body_source}"), symbol_method, negated, block.closing_loc().end_offset())
-    } else {
-        let argument = node.block().or_else(|| node.arguments().and_then(|arguments| arguments.arguments().iter().last()))?;
-        let source = context.source_file().node(&argument);
-        let method_name = source.strip_prefix("&:")?.to_string();
-        (format!("symbol:{method_name}"), Some(method_name), false, node.location().end_offset())
-    };
+    let (predicate, symbol_method, negated, negated_predicate, call_end) =
+        if let Some(block) = node.block().and_then(|block| block.as_block_node()) {
+            let body = block.body().and_then(single_expression)?;
+            let body_source = context.source_file().node(&body).trim().to_string();
+            let negated_predicate = body.as_call_node().and_then(|call| {
+                (call.name().as_slice() == b"!")
+                    .then(|| call.receiver())
+                    .flatten()
+                    .map(|receiver| context.source_file().node(&receiver).trim().to_string())
+            });
+            let negated = negated_predicate.is_some();
+            let parameter = block_parameter_source(&block, context.source_file());
+            let symbol_method = parameter.as_ref().and_then(|parameter| {
+                body_source
+                    .strip_prefix(&format!("{parameter}."))
+                    .filter(|method| {
+                        method.ends_with('?')
+                            || method
+                                .bytes()
+                                .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
+                    })
+                    .map(str::to_string)
+            });
+            let parameter_key = parameter.clone().unwrap_or_default();
+            (
+                format!("{parameter_key}|{body_source}"),
+                symbol_method,
+                negated,
+                negated_predicate.map(|predicate| format!("{parameter_key}|{predicate}")),
+                block.closing_loc().end_offset(),
+            )
+        } else {
+            let argument = node.block().or_else(|| {
+                node.arguments()
+                    .and_then(|arguments| arguments.arguments().iter().last())
+            })?;
+            let source = context.source_file().node(&argument);
+            let method_name = source.strip_prefix("&:")?.to_string();
+            (
+                format!("symbol:{method_name}"),
+                Some(method_name),
+                false,
+                None,
+                node.location().end_offset(),
+            )
+        };
     let call_start = node.location().start_offset();
     let call_range = call_start..call_end;
-    let (container, local_variable) = assignment_container(context.ancestors(), &call_range, context.source_file())
-        .unwrap_or((call_range.clone(), None));
+    let (container, local_variable, sibling_group, sibling_index) =
+        statement_container(call_range.clone(), context, positions)?;
     let full_line = context.source_file().full_line_range(container.clone());
     let call_source = context.source()[call_range.clone()].to_string();
     Some(PartitionCandidate {
@@ -262,11 +340,14 @@ fn partition_candidate(node: &CallNode<'_>, context: &CopContext<'_, '_>) -> Opt
         predicate,
         symbol_method,
         negated,
+        negated_predicate,
         selector: selector.start_offset() - call_start..selector.end_offset() - call_start,
         call_source,
         container,
         full_line,
         local_variable,
+        sibling_group,
+        sibling_index,
     })
 }
 
@@ -284,31 +365,69 @@ fn block_parameter_source(block: &BlockNode<'_>, file: SourceFile<'_>) -> Option
     }
 }
 
-fn assignment_container(ancestors: &[Node<'_>], call: &std::ops::Range<usize>, file: SourceFile<'_>) -> Option<(std::ops::Range<usize>, Option<String>)> {
-    for ancestor in ancestors.iter().rev() {
-        let (location, name) = if let Some(write) = ancestor.as_local_variable_write_node() {
-            (write.location(), Some(file.at(&write.name_loc()).to_string()))
-        } else if let Some(write) = ancestor.as_instance_variable_write_node() {
-            (write.location(), None)
-        } else if let Some(write) = ancestor.as_class_variable_write_node() {
-            (write.location(), None)
-        } else if let Some(write) = ancestor.as_global_variable_write_node() {
-            (write.location(), None)
-        } else {
-            continue;
-        };
-        if location.start_offset() <= call.start && call.end <= location.end_offset() {
-            return Some((location.start_offset()..call.end.max(location.end_offset()), name));
+fn statement_container(
+    call_range: std::ops::Range<usize>,
+    context: &CopContext<'_, '_>,
+    positions: &StatementPositions,
+) -> Option<StatementContainer> {
+    if let Some((group, index)) = positions.get(&(call_range.start, call_range.end)) {
+        let container = call_range;
+        return Some((container, None, group.clone(), *index));
+    }
+
+    let parent = context.parent()?;
+    let file = context.source_file();
+    let (location, local_variable) = if let Some(write) = parent.as_local_variable_write_node() {
+        (write.location(), Some(file.at(&write.name_loc()).to_string()))
+    } else if let Some(write) = parent.as_instance_variable_write_node() {
+        (write.location(), None)
+    } else if let Some(write) = parent.as_class_variable_write_node() {
+        (write.location(), None)
+    } else if let Some(write) = parent.as_global_variable_write_node() {
+        (write.location(), None)
+    } else {
+        return None;
+    };
+    let container = location.start_offset()..location.end_offset();
+    let (group, index) = positions.get(&(container.start, container.end))?.clone();
+    Some((container, local_variable, group, index))
+}
+
+fn statement_positions(
+    source: &str,
+) -> HashMap<(usize, usize), (std::ops::Range<usize>, usize)> {
+    #[derive(Default)]
+    struct StatementPositions(
+        HashMap<(usize, usize), (std::ops::Range<usize>, usize)>,
+    );
+
+    impl<'pr> Visit<'pr> for StatementPositions {
+        fn visit_statements_node(&mut self, node: &ruby_prism::StatementsNode<'pr>) {
+            let location = node.location();
+            let group = location.start_offset()..location.end_offset();
+            for (index, statement) in node.body().iter().enumerate() {
+                let location = statement.location();
+                self.0.insert(
+                    (location.start_offset(), location.end_offset()),
+                    (group.clone(), index),
+                );
+            }
+            ruby_prism::visit_statements_node(self, node);
         }
     }
-    None
+
+    let parsed = ruby_prism::parse(source.as_bytes());
+    let mut positions = StatementPositions::default();
+    positions.visit(&parsed.node());
+    positions.0
 }
 
 fn partition_pair_matches(left: &PartitionCandidate, right: &PartitionCandidate) -> bool {
     let complementary = is_select_method(&left.method) != is_select_method(&right.method)
         && predicates_equivalent(left, right);
-    let negated = left.method == right.method && left.negated != right.negated
-        && left.predicate == right.predicate;
+    let negated = left.method == right.method
+        && (left.negated_predicate.as_ref() == Some(&right.predicate)
+            || right.negated_predicate.as_ref() == Some(&left.predicate));
     complementary || negated
 }
 

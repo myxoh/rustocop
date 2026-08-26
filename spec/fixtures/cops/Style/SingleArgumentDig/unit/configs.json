@@ -1,0 +1,7 @@
+{
+  "6a3ab555ed591ddb": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/SingleArgumentDig:\n  Description: Avoid using single argument dig method.\n  Enabled: true\n  VersionAdded: '0.89'\n  Safe: false\n  AutoCorrect: always\nStyle/DigChain:\n  Enabled: false\n",
+  "bf76b23818689118": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/SingleArgumentDig:\n  Description: Avoid using single argument dig method.\n  Enabled: true\n  VersionAdded: '0.89'\n  Safe: false\n  AutoCorrect: always\nStyle/DigChain:\n  Enabled: true\n",
+  "cce247ff63b2e4cd": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/SingleArgumentDig:\n  Description: Avoid using single argument dig method.\n  Enabled: true\n  VersionAdded: '0.89'\n  Safe: false\n  AutoCorrect: always\n",
+  "cff62ace53cd6e67": "---\nAllCops:\n  TargetRubyVersion: 3.2\nStyle/SingleArgumentDig:\n  Description: Avoid using single argument dig method.\n  Enabled: true\n  VersionAdded: '0.89'\n  Safe: false\n  AutoCorrect: always\n",
+  "d751b44bd13811c2": "---\nAllCops:\n  TargetRubyVersion: 3.1\nStyle/SingleArgumentDig:\n  Description: Avoid using single argument dig method.\n  Enabled: true\n  VersionAdded: '0.89'\n  Safe: false\n  AutoCorrect: always\n"
+}

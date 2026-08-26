@@ -1,0 +1,5 @@
+{
+  "4bc219e4f57dee64": "---\nAllCops:\n  DisabledByDefault: true\n  NewCops: disable\n  ParserEngine: parser_prism\n  TargetRubyVersion: 3.4\n",
+  "a6829b8b2c7776c4": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/UselessDefaultValueArgument:\n  Description: Checks for usage of `fetch` or `Array.new` with default value argument\n    and block.\n  Enabled: true\n  VersionAdded: '1.76'\n  Safe: false\n  AllowedReceivers:\n  - Rails.cache\n  AutoCorrect: always\n",
+  "afd6fd5b5c49bc67": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/UselessDefaultValueArgument:\n  Description: Checks for usage of `fetch` or `Array.new` with default value argument\n    and block.\n  Enabled: true\n  VersionAdded: '1.76'\n  Safe: false\n  AllowedReceivers: []\n  AutoCorrect: always\n"
+}

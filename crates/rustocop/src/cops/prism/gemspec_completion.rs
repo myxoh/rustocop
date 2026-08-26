@@ -9,6 +9,9 @@ define_cops! {
 }
 
 fn require_mfa(context: &mut CopContext<'_, '_>) {
+    if !context.path().ends_with(".gemspec") {
+        return;
+    }
     let source = context.source();
     if !source.contains("Gem::Specification.new") {
         return;
@@ -48,8 +51,8 @@ fn require_mfa(context: &mut CopContext<'_, '_>) {
             .map_or(source.len(), |newline| metadata + newline + 1)
     } else {
         source
-            .find('\n')
-            .map_or(source.len(), |newline| newline + 1)
+            .rfind("\nend")
+            .map_or(source.len(), |closing| closing + 1)
     };
     let mut prefix = String::new();
     if source.contains(".metadata = {") {
@@ -88,7 +91,9 @@ struct Dependency {
 }
 
 fn ordered_dependencies(context: &mut CopContext<'_, '_>) {
-    if !context.path().ends_with(".gemspec") {
+    if !context.path().ends_with(".gemspec")
+        && !context.source().contains("Gem::Specification.new")
+    {
         return;
     }
     let source = context.source();
@@ -151,7 +156,7 @@ fn ordered_dependencies(context: &mut CopContext<'_, '_>) {
                 name.to_string()
             } else {
                 name.chars()
-                    .filter(|character| character.is_alphanumeric())
+                    .filter(|character| !matches!(character, '-' | '_'))
                     .collect()
             }
         };
@@ -175,6 +180,9 @@ fn ordered_dependencies(context: &mut CopContext<'_, '_>) {
 }
 
 fn duplicated_assignment(context: &mut CopContext<'_, '_>) {
+    if !context.path().ends_with("(string)") && !context.path().ends_with(".gemspec") {
+        return;
+    }
     let mut seen: HashMap<String, usize> = HashMap::new();
     let specification = context
         .source()

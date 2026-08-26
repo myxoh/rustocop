@@ -1,0 +1,4 @@
+{
+  "27fa583db5a88e86": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/OutOfRangeRegexpRef:\n  Description: Checks for out of range reference for Regexp because it always returns\n    nil.\n  Enabled: true\n  Safe: false\n  VersionAdded: '0.89'\n  AutoCorrect: always\n",
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n"
+}

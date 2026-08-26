@@ -1,0 +1,5 @@
+{
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
+  "c3ad18329ea5ea74": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/StringLiteralsInInterpolation:\n  Description: Checks if uses of quotes inside expressions in interpolated strings\n    match the configured preference.\n  Enabled: true\n  VersionAdded: '0.27'\n  EnforcedStyle: double_quotes\n  SupportedStyles:\n  - single_quotes\n  - double_quotes\n  AutoCorrect: always\n",
+  "f2e2019733f5c883": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/StringLiteralsInInterpolation:\n  Description: Checks if uses of quotes inside expressions in interpolated strings\n    match the configured preference.\n  Enabled: true\n  VersionAdded: '0.27'\n  EnforcedStyle: single_quotes\n  SupportedStyles:\n  - single_quotes\n  - double_quotes\n  AutoCorrect: always\n"
+}

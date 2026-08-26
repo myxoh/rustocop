@@ -1,0 +1,4 @@
+{
+  "26ed0f129d03d5eb": "---\nStyle/TrailingUnderscoreVariable:\n  Enabled: true\n  AllowNamedUnderscoreVariables: false\n",
+  "89f793cb42e69766": "---\nStyle/TrailingUnderscoreVariable:\n  Enabled: true\n  AllowNamedUnderscoreVariables: true\n"
+}

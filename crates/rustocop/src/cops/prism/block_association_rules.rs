@@ -5,10 +5,13 @@ define_cops! {
 }
 
 fn ambiguous_block_association(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
-    if node.opening_loc().is_some() || argument_count(node) != 1 || operator_call(call_name(node)) {
+    if node.opening_loc().is_some() || argument_count(node) == 0 || operator_call(call_name(node)) {
         return;
     }
-    let Some(argument) = only_argument(node) else {
+    if call_name(node).ends_with(b"=") {
+        return;
+    }
+    let Some(argument) = node.arguments().and_then(|arguments| arguments.arguments().last()) else {
         return;
     };
     let Some(block_call) = argument.as_call_node() else {
@@ -17,20 +20,36 @@ fn ambiguous_block_association(node: &CallNode<'_>, context: &mut CopContext<'_,
     let Some(block) = block_call.block().and_then(|block| block.as_block_node()) else {
         return;
     };
-    if block_call.receiver().is_some()
-        || block_call.opening_loc().is_some()
+    if block_call.opening_loc().is_some()
         || block.opening_loc().as_slice() != b"{"
-        || context.policy().allows_method(call_name(&block_call))
+        || matches!(block_call.name().as_slice(), b"lambda" | b"proc")
+        || context
+            .source_file()
+            .node(&argument)
+            .trim_start()
+            .starts_with("Proc.new")
     {
         return;
     }
 
     let parameter = context.source_file().node(&argument);
-    let method = String::from_utf8_lossy(call_name(&block_call));
+    let method = context
+        .source()
+        .get(block_call.location().start_offset()..block.opening_loc().start_offset())
+        .unwrap_or_default()
+        .trim_end();
+    if context.policy().allows_method(call_name(&block_call))
+        || context.policy().allows_method(method.as_bytes())
+    {
+        return;
+    }
     let message = format!(
         "Parenthesize the param `{parameter}` to make sure that the block will be associated with the `{method}` method call."
     );
-    let Some(selector) = node.message_loc() else {
+    let (Some(selector), Some(first_argument)) = (
+        node.message_loc(),
+        node.arguments().and_then(|arguments| arguments.arguments().first()),
+    ) else {
         return;
     };
     context.replace_many(
@@ -38,7 +57,7 @@ fn ambiguous_block_association(node: &CallNode<'_>, context: &mut CopContext<'_,
         node.location(),
         vec![
             (
-                selector.end_offset()..argument.location().start_offset(),
+                selector.end_offset()..first_argument.location().start_offset(),
                 "(".to_string(),
             ),
             (

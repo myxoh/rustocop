@@ -12,23 +12,57 @@ fn safe_navigation_chain_length(node: &CallNode<'_>, context: &mut CopContext<'_
     {
         return;
     }
+    if node.block().is_some_and(|block| block.as_block_node().is_some()) {
+        return;
+    }
     let maximum = context.config_usize("Max", 2);
-    let chain = context
-        .ancestors()
-        .iter()
-        .rev()
-        .map_while(Node::as_call_node)
-        .take_while(|call| {
-            call.call_operator_loc()
-                .is_some_and(|operator| operator.as_slice() == b"&.")
-        })
-        .collect::<Vec<_>>();
+    let mut chain = Vec::new();
+    let node_location = node.location();
+    let mut child = node_location.start_offset()..node_location.end_offset();
+    for ancestor in context.ancestors().iter().rev() {
+        let Some(call) = ancestor.as_call_node() else {
+            break;
+        };
+        let receiver_contains_child = call.receiver().is_some_and(|receiver| {
+            let location = receiver.location();
+            location.start_offset() <= child.start && child.end <= location.end_offset()
+        });
+        if !receiver_contains_child {
+            break;
+        }
+        if call
+            .call_operator_loc()
+            .is_none_or(|operator| operator.as_slice() != b"&.")
+        {
+            break;
+        }
+        let attached_block = call
+            .block()
+            .is_some_and(|block| block.as_block_node().is_some());
+        let location = call.location();
+        child = location.start_offset()..location.end_offset();
+        chain.push(call);
+        if attached_block {
+            break;
+        }
+    }
     if chain.len() != maximum {
         return;
     }
-    let offense = chain
-        .last()
-        .map_or_else(|| node.location(), CallNode::location);
+    let outer = chain.last().expect("long safe-navigation chain");
+    let location = outer.location();
+    let offense = if outer
+        .block()
+        .is_some_and(|block| block.as_block_node().is_some())
+    {
+        location.start_offset()
+            ..outer
+                .closing_loc()
+                .or_else(|| outer.message_loc())
+                .map_or(location.end_offset(), |closing| closing.end_offset())
+    } else {
+        location.start_offset()..location.end_offset()
+    };
     context.report(
         format!("Avoid safe navigation chains longer than {maximum} calls."),
         offense,
@@ -36,7 +70,12 @@ fn safe_navigation_chain_length(node: &CallNode<'_>, context: &mut CopContext<'_
 }
 
 fn nested_parenthesized_calls(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
-    if node.opening_loc().is_none() {
+    if node.opening_loc().is_none()
+        || call_name(node) == b"[]"
+        || call_name(node) == b"[]="
+        || call_name(node).ends_with(b"=")
+        || operator_method(call_name(node))
+    {
         return;
     }
     let Some(arguments) = node.arguments() else {
@@ -51,6 +90,7 @@ fn nested_parenthesized_calls(node: &CallNode<'_>, context: &mut CopContext<'_, 
             continue;
         };
         if nested.opening_loc().is_some()
+            || nested.block().is_some()
             || call_name(&nested) == b"[]"
             || call_name(&nested).ends_with(b"=")
             || operator_method(call_name(&nested))

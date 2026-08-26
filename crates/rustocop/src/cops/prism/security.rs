@@ -80,34 +80,7 @@ impl Cop for CompoundHash {
     }
 
     fn phase(&self) -> CopPhase {
-        CopPhase::SourceAndNode
-    }
-
-    fn on_source(&self, source: &str, context: &mut Context) {
-        let mut inside_hash = false;
-        for (offset, line) in SourceFile::new(source).lines() {
-            let trimmed = line.trim();
-            if trimmed.starts_with("def hash") {
-                inside_hash = true;
-                continue;
-            }
-            if inside_hash && trimmed == "end" {
-                inside_hash = false;
-                continue;
-            }
-            if inside_hash
-                && [" ^= ", " += ", " *= ", " |= "]
-                    .iter()
-                    .any(|op| line.contains(op))
-            {
-                let indent = line.len() - line.trim_start().len();
-                context.report(
-                    self.name(),
-                    "Use `[...].hash` instead of combining hash values manually.",
-                    offset + indent..offset + line.len(),
-                );
-            }
-        }
+        CopPhase::Node
     }
 
     fn on_node<'pr>(
@@ -117,6 +90,23 @@ impl Cop for CompoundHash {
         source: &str,
         context: &mut Context,
     ) {
+        let inside_hash_method = ancestors.iter().rev().any(|ancestor| {
+            ancestor.as_def_node().is_some_and(|definition| {
+                definition.name().as_slice() == b"hash" && definition.parameters().is_none()
+            }) || ancestor.as_call_node().is_some_and(|call| {
+                matches!(call_name(&call), b"define_method" | b"define_singleton_method")
+                    && first_argument(&call)
+                        .is_some_and(|argument| node_source(source, &argument) == ":hash")
+            })
+        });
+        if inside_hash_method && compound_hash_operator_write(node, source) {
+            context.report(
+                self.name(),
+                "Use `[...].hash` instead of combining hash values manually.",
+                node.location(),
+            );
+            return;
+        }
         let Some(call) = node.as_call_node() else {
             return;
         };
@@ -140,17 +130,6 @@ impl Cop for CompoundHash {
             );
             return;
         }
-        let inside_hash_method = ancestors.iter().rev().any(|ancestor| {
-            ancestor.as_def_node().is_some_and(|definition| {
-                definition.name().as_slice() == b"hash" && definition.parameters().is_none()
-            }) || ancestor.as_call_node().is_some_and(|call| {
-                matches!(
-                    call_name(&call),
-                    b"define_method" | b"define_singleton_method"
-                ) && first_argument(&call)
-                    .is_some_and(|argument| node_source(source, &argument) == ":hash")
-            })
-        });
         if call_name(&call) == b"hash"
             && inside_hash_method
             && call
@@ -182,6 +161,21 @@ impl Cop for CompoundHash {
             );
         }
     }
+}
+
+fn compound_hash_operator_write(node: &Node<'_>, source: &str) -> bool {
+    let operator_write = node.as_local_variable_operator_write_node().is_some()
+        || node.as_instance_variable_operator_write_node().is_some()
+        || node.as_class_variable_operator_write_node().is_some()
+        || node.as_global_variable_operator_write_node().is_some()
+        || node.as_constant_operator_write_node().is_some()
+        || node.as_constant_path_operator_write_node().is_some()
+        || node.as_index_operator_write_node().is_some()
+        || node.as_call_operator_write_node().is_some();
+    operator_write
+        && ["^=", "+=", "*=", "|="]
+            .iter()
+            .any(|operator| node_source(source, node).contains(operator))
 }
 
 impl Cop for JsonLoad {
@@ -232,6 +226,12 @@ impl Cop for MarshalLoad {
             return;
         }
 
+        if node
+            .arguments()
+            .is_none_or(|arguments| arguments.arguments().len() != 1)
+        {
+            return;
+        }
         let Some(argument) = first_argument(node) else {
             return;
         };

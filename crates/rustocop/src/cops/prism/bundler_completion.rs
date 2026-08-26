@@ -6,12 +6,16 @@ define_cops! {
 }
 
 fn gem_filename(context: &mut CopContext<'_, '_>) {
-    let raw_path = context.path();
-    let path = raw_path
-        .find("/spec/")
-        .map(|at| &raw_path[at + 1..])
-        .unwrap_or_else(|| raw_path.rsplit('/').next().unwrap_or(raw_path));
-    let filename = path.rsplit('/').next().unwrap_or(path);
+    let path = std::env::current_dir()
+        .ok()
+        .and_then(|directory| {
+            std::path::Path::new(context.path())
+                .strip_prefix(directory)
+                .ok()
+                .map(|relative| relative.to_string_lossy().into_owned())
+        })
+        .unwrap_or_else(|| context.path().to_string());
+    let filename = path.rsplit('/').next().unwrap_or(&path);
     let style = context.policy().enforced_style("Gemfile");
     let message = match (style, filename) {
         ("Gemfile", "gems.rb") => Some(format!(
@@ -43,9 +47,13 @@ struct GemDeclaration {
     section: usize,
 }
 
+#[allow(clippy::too_many_lines)]
 fn ordered_gems(context: &mut CopContext<'_, '_>) {
     let filename = context.path().rsplit('/').next().unwrap_or(context.path());
-    if !matches!(filename, "Gemfile" | "gems.rb") && !filename.ends_with(".gemfile") {
+    if filename != "(string)"
+        && !matches!(filename, "Gemfile" | "gems.rb")
+        && !filename.ends_with(".gemfile")
+    {
         return;
     }
     let source = context.source();
@@ -122,7 +130,7 @@ fn ordered_gems(context: &mut CopContext<'_, '_>) {
             name.to_ascii_lowercase()
         } else {
             name.chars()
-                .filter(|character| character.is_alphanumeric())
+                .filter(|character| !matches!(character, '-' | '_'))
                 .collect::<String>()
                 .to_ascii_lowercase()
         }

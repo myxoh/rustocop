@@ -1,13 +1,24 @@
 use super::*;
+use crate::config::AutocorrectMode;
+use std::collections::HashSet;
 
 pub struct Engine {
     registry: Registry,
+    enabled_cops: HashSet<&'static str>,
 }
 
 impl Engine {
-    pub fn new(enabled: &dyn Fn(&str) -> bool) -> Self {
+    pub fn new(enabled: &dyn Fn(&str) -> bool, legacy_cops: &[&'static str]) -> Self {
+        let registry = Registry::enabled(enabled);
+        let enabled_cops = registry
+            .cops
+            .iter()
+            .map(|cop| cop.name())
+            .chain(legacy_cops.iter().copied().filter(|cop| enabled(cop)))
+            .collect();
         Self {
-            registry: Registry::enabled(enabled),
+            registry,
+            enabled_cops,
         }
     }
 
@@ -19,33 +30,53 @@ impl Engine {
         &self,
         path: &str,
         source: &str,
-        autocorrect: bool,
+        autocorrect: AutocorrectMode,
+        ignore_disable_comments: bool,
         target_ruby_version: RubyVersion,
+        source_encoding: SourceEncoding,
         cop_config: Arc<CopConfig>,
     ) -> Inspection {
         let parsed = parse(source.as_bytes());
-        let mut context = Context::new(autocorrect, path, target_ruby_version, cop_config);
-        let has_parse_errors = parsed.errors().next().is_some();
+        let mut context = Context::new(
+            autocorrect,
+            ignore_disable_comments,
+            path,
+            target_ruby_version,
+            source_encoding,
+            cop_config,
+        );
+        context.set_enabled_cops(self.enabled_cops.iter().copied());
+        context.set_parser_warnings(parsed.warnings());
+        let has_unrecoverable_parse_errors = parsed
+            .errors()
+            .any(|error| !is_context_only_parse_error(error.message()));
         for error in parsed.errors() {
             for cop in self
                 .registry
-                .parse_error_cops
+                .phases
+                .parse_errors
                 .iter()
                 .map(|index| &self.registry.cops[*index])
             {
                 cop.on_parse_error(&error, source, &mut context);
             }
         }
-        if has_parse_errors {
-            return context.finish(source);
-        }
         for cop in self
             .registry
-            .source_cops
+            .phases
+            .source
             .iter()
             .map(|index| &self.registry.cops[*index])
         {
+            if has_unrecoverable_parse_errors
+                && !matches!(cop.name(), "Lint/Syntax" | "Naming/HeredocDelimiterNaming")
+            {
+                continue;
+            }
             cop.on_source(source, &mut context);
+        }
+        if has_unrecoverable_parse_errors && self.registry.phases.recovered_nodes.is_empty() {
+            return context.finish(source);
         }
         let mut investigation_states: Vec<Box<dyn Any>> = self
             .registry
@@ -63,8 +94,24 @@ impl Engine {
             source,
             ancestors: Vec::new(),
             investigation_states: &mut investigation_states,
+            node_cops: if has_unrecoverable_parse_errors {
+                &self.registry.phases.recovered_nodes
+            } else {
+                &self.registry.phases.nodes
+            },
         };
         runner.visit(&parsed.node());
         context.finish(source)
     }
+}
+
+fn is_context_only_parse_error(message: &str) -> bool {
+    matches!(
+        message,
+        "Invalid break"
+            | "Invalid next"
+            | "Invalid redo"
+            | "Invalid retry without rescue"
+            | "Invalid yield"
+    )
 }

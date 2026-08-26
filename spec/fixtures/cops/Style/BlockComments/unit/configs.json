@@ -1,0 +1,5 @@
+{
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
+  "5f9ddb3ece779982": "---\nAllCops:\n  DisabledByDefault: true\n  ParserEngine: parser_prism\n  TargetRubyVersion: 3.4\nStyle/BlockComments:\n  Enabled: true\n",
+  "b6a483b6aa687c64": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/BlockComments:\n  Description: Do not use block comments.\n  StyleGuide: \"#no-block-comments\"\n  Enabled: true\n  VersionAdded: '0.9'\n  VersionChanged: '0.23'\n  AutoCorrect: always\n"
+}

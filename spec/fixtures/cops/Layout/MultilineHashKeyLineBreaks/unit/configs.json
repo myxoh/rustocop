@@ -1,0 +1,4 @@
+{
+  "a428c88c18240d7a": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/MultilineHashKeyLineBreaks:\n  Description: Checks that each item in a multi-line hash literal starts on a separate\n    line.\n  Enabled: true\n  VersionAdded: '0.67'\n  AllowMultilineFinalElement: true\n  AutoCorrect: always\n",
+  "b1f950cddc7cc2d8": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/MultilineHashKeyLineBreaks:\n  Description: Checks that each item in a multi-line hash literal starts on a separate\n    line.\n  Enabled: true\n  VersionAdded: '0.67'\n  AllowMultilineFinalElement: false\n  AutoCorrect: always\n"
+}

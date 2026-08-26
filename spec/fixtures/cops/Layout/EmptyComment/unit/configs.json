@@ -1,0 +1,7 @@
+{
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
+  "7e2dbc735a762819": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/EmptyComment:\n  Description: Checks empty comment.\n  Enabled: true\n  AutoCorrect: always\n  VersionAdded: '0.53'\n  VersionChanged: '1.61'\n  AllowBorderComment: true\n  AllowMarginComment: false\n",
+  "a7aa04bdc44c7c07": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/EmptyComment:\n  Description: Checks empty comment.\n  Enabled: true\n  AutoCorrect: always\n  VersionAdded: '0.53'\n  VersionChanged: '1.61'\n  AllowBorderComment: false\n  AllowMarginComment: true\n",
+  "f4c048040eedbf27": "---\nAllCops:\n  DisabledByDefault: true\n  ParserEngine: parser_prism\n  TargetRubyVersion: 3.4\nLayout/EmptyComment:\n  Enabled: true\n  AllowBorderComment: true\n  AllowMarginComment: true\n",
+  "f712efa66067489e": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/EmptyComment:\n  Description: Checks empty comment.\n  Enabled: true\n  AutoCorrect: always\n  VersionAdded: '0.53'\n  VersionChanged: '1.61'\n  AllowBorderComment: true\n  AllowMarginComment: true\n"
+}

@@ -1,4 +1,0 @@
-== input.rb ==
-C:  1:  1: [Correctable] Style/RedundantParentheses: Don't use parentheses around a method call.
-
-1 file inspected, 1 offense detected, 1 offense autocorrectable

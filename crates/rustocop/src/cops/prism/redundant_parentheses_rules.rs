@@ -32,13 +32,16 @@ impl RedundantParenthesesRule<'_, '_, '_> {
 
     fn on_parentheses(&mut self, node: &ParenthesesNode<'_>) {
         let expressions = parenthesized_expressions(node);
-        return_if!(expressions.is_empty() || self.parens_allowed(node, &expressions));
-        let Some(message) = self.find_offense_message(node, &expressions) else {
+        return_if!(expressions.is_empty());
+        return_if!(self.parens_allowed(node, &expressions));
+        let message = self.find_offense_message(node, &expressions);
+        let Some(message) = message else {
             return;
         };
         self.offense(node, message);
     }
 
+    #[allow(clippy::too_many_lines)]
     fn parens_allowed(&self, node: &ParenthesesNode<'_>, expressions: &[Node<'_>]) -> bool {
         let parent = semantic_parent(self.ancestors());
         let first = &expressions[0];
@@ -52,24 +55,13 @@ impl RedundantParenthesesRule<'_, '_, '_> {
             .unwrap_or_default();
         if (suffix.trim_start().starts_with('.') || suffix.trim_start().starts_with("&."))
             && first.as_call_node().is_some_and(|call| {
-                argument_count(&call) > 0 && operator_method(call.name().as_slice())
+                matches!(call.name().as_slice(), b"!" | b"~" | b"+@" | b"-@")
+                    || argument_count(&call) > 0 && operator_method(call.name().as_slice())
             })
         {
             return true;
         }
-        let whitespace_before = self.source()[..node.opening_loc().start_offset()]
-            .chars()
-            .last()
-            .is_some_and(char::is_whitespace);
-        let previous_code = self.source()[..node.opening_loc().start_offset()]
-            .trim_end()
-            .chars()
-            .last();
-        if inner_source.trim_start().starts_with("not ")
-            || inner_source.trim_start().starts_with('{')
-                && whitespace_before
-                && previous_code != Some(',')
-        {
+        if inner_source.trim_start().starts_with("not ") {
             return true;
         }
         if self.touches_keyword(node)
@@ -81,13 +73,38 @@ impl RedundantParenthesesRule<'_, '_, '_> {
         {
             return true;
         }
-        if first.as_call_node().is_some_and(|call| {
-            call.opening_loc().is_none()
-                && call
-                    .arguments()
-                    .is_some_and(|arguments| !arguments.arguments().is_empty())
-                && (call.receiver().is_none() || call.call_operator_loc().is_some())
-        }) && parent.is_some()
+        if parent.is_some_and(|ancestor| {
+            ancestor
+                .as_call_node()
+                .is_some_and(|call| {
+                    matches!(call.name().as_slice(), b"[]" | b"[]=")
+                        && call.receiver().is_none_or(|receiver| {
+                            !same_location(&receiver.location(), &node.location())
+                        })
+                })
+        }) {
+            return true;
+        }
+        if parent.is_some_and(|ancestor| {
+            ancestor.as_call_node().is_some_and(|call| {
+                !all_operator_method(call.name().as_slice())
+                    && call.opening_loc().is_some_and(|opening| {
+                        opening.start_offset() == node.opening_loc().start_offset()
+                    })
+                    && call.closing_loc().is_some_and(|closing| {
+                        closing.end_offset() == node.closing_loc().end_offset()
+                    })
+            })
+        }) {
+            return true;
+        }
+        if redundant_parentheses_unary_can_stay(first)
+            && parent.is_some_and(|ancestor| ancestor.as_parentheses_node().is_none())
+        {
+            return true;
+        }
+        if method_chain_begins_with_hash_literal(first)
+            && self.first_argument_through_ancestors(node)
         {
             return true;
         }
@@ -115,9 +132,7 @@ impl RedundantParenthesesRule<'_, '_, '_> {
         if parent.is_some_and(|ancestor| ancestor.as_range_node().is_some()) {
             return true;
         }
-        if parent.is_some_and(|ancestor| {
-            ancestor.as_splat_node().is_some() || ancestor.as_assoc_splat_node().is_some()
-        }) {
+        if assignment_node(first) && parent.is_some_and(assignment_node) {
             return true;
         }
         let opening_offset = node.opening_loc().start_offset();
@@ -132,26 +147,19 @@ impl RedundantParenthesesRule<'_, '_, '_> {
             .split('\n')
             .next()
             .unwrap_or_default();
-        if inner_source.trim_start().starts_with('!')
-            && (prefix_line.contains("&&")
-                || prefix_line.contains("||")
-                || suffix_line.contains("&&")
-                || suffix_line.contains("||")
-                || suffix_line.trim_start().starts_with('.'))
-        {
-            return true;
-        }
-        if first.as_call_node().is_some()
-            && self.source()[..opening_offset]
-                .chars()
-                .last()
-                .is_some_and(|character| matches!(character, '+' | '-'))
-        {
-            return true;
-        }
         if first.as_call_node().is_some_and(|call| {
             matches!(call.name().as_slice(), b"&" | b"|" | b"^")
         }) && suffix.trim_start().starts_with('.')
+        {
+            return true;
+        }
+        if first
+            .as_call_node()
+            .is_some_and(|call| call_chain_starts_with_integer(&call))
+            && self.source()[..opening_offset]
+            .chars()
+            .last()
+            .is_some_and(|character| matches!(character, '+' | '-'))
         {
             return true;
         }
@@ -196,12 +204,16 @@ impl RedundantParenthesesRule<'_, '_, '_> {
         {
             return true;
         }
-        if parent.is_some_and(|ancestor| ancestor.as_if_node().is_some())
-            && self.ternary_parentheses_required(node)
+        if assignment_node(first)
+            && parent.is_some_and(|ancestor| {
+                ancestor.as_and_node().is_some() || ancestor.as_or_node().is_some()
+            })
         {
             return true;
         }
-        if self.inside_ternary_branch(node) {
+        if parent.is_some_and(|ancestor| ancestor.as_if_node().is_some())
+            && self.ternary_parentheses_required(node)
+        {
             return true;
         }
         if first.as_rescue_modifier_node().is_some()
@@ -221,6 +233,18 @@ impl RedundantParenthesesRule<'_, '_, '_> {
             }
         }
         false
+    }
+
+    fn first_argument_through_ancestors(&self, node: &ParenthesesNode<'_>) -> bool {
+        let location = node.location();
+        self.ancestors().iter().rev().any(|ancestor| {
+            ancestor.as_call_node().is_some_and(|call| {
+                call.opening_loc().is_none()
+                    && call.arguments().and_then(|arguments| arguments.arguments().first()).is_some_and(
+                        |argument| location_contains(&argument.location(), &location),
+                    )
+            })
+        })
     }
 
     fn rescue_parentheses_allowed(
@@ -247,20 +271,16 @@ impl RedundantParenthesesRule<'_, '_, '_> {
         {
             return true;
         }
-        parent.and_then(Node::as_if_node).is_some_and(|conditional| {
+        if parent.and_then(Node::as_if_node).is_some_and(|conditional| {
             let ternary = conditional.if_keyword_loc().is_none()
                 && conditional.then_keyword_loc().is_some()
                 && conditional.end_keyword_loc().is_none();
-            ternary || same_location(&conditional.predicate().location(), &node.location())
-        })
-    }
-
-    fn inside_ternary_branch(&self, node: &ParenthesesNode<'_>) -> bool {
-        self.ancestors().iter().find_map(Node::as_if_node).is_some_and(|conditional| {
-            let ternary = conditional.if_keyword_loc().is_none()
-                && conditional.then_keyword_loc().is_some()
-                && conditional.end_keyword_loc().is_none();
-            ternary && !same_location(&conditional.predicate().location(), &node.location())
+            ternary || location_contains(&node.location(), &conditional.predicate().location())
+        }) {
+            return true;
+        }
+        parent.and_then(Node::as_unless_node).is_some_and(|conditional| {
+            location_contains(&node.location(), &conditional.predicate().location())
         })
     }
 
@@ -334,29 +354,19 @@ impl RedundantParenthesesRule<'_, '_, '_> {
     }
 
     fn like_method_argument_parentheses(&self, node: &ParenthesesNode<'_>) -> bool {
-        let opening = node.opening_loc().start_offset();
-        let closing = node.closing_loc().end_offset();
-        let prefix = &self.source()[..opening];
-        let whitespace_before = prefix
-            .chars()
-            .last()
-            .is_some_and(char::is_whitespace);
-        if !whitespace_before {
-            return false;
-        }
-        let token = prefix
-            .trim_end()
-            .split(|character: char| !(character.is_ascii_alphanumeric() || "_?!".contains(character)))
-            .next_back()
-            .unwrap_or_default();
-        if token.is_empty()
-            || matches!(token, "return" | "break" | "next" | "yield" | "super" | "rescue" | "when")
-        {
-            return false;
-        }
-        let after = self.source().get(closing..).unwrap_or_default();
-        semantic_parent(self.ancestors()).is_some_and(|parent| parent.as_call_node().is_some())
-            && (after.starts_with([',', '{']) || after.trim_start().starts_with('{') || after.is_empty())
+        semantic_parent(self.ancestors()).is_some_and(|parent| {
+            parent.as_call_node().is_some_and(|call| {
+                call.opening_loc().is_none()
+                    && !all_operator_method(call.name().as_slice())
+                    && call.arguments().is_some_and(|arguments| {
+                        let arguments = arguments.arguments();
+                        arguments.len() == 1
+                            && arguments.first().is_some_and(|argument| {
+                                same_location(&argument.location(), &node.location())
+                            })
+                    })
+            })
+        })
     }
 
     fn first_arg_begins_with_hash_literal(&self, node: &ParenthesesNode<'_>, first: &Node<'_>) -> bool {
@@ -431,11 +441,10 @@ impl RedundantParenthesesRule<'_, '_, '_> {
         if constant_node(first) {
             return Some("a constant");
         }
-        if parent.is_some_and(|ancestor| ancestor.as_block_node().is_some()) {
-            if self.parentheses_are_only_statement(node) || first.as_range_node().is_some() {
+        if parent.is_some_and(|ancestor| ancestor.as_block_node().is_some())
+            && (self.parentheses_are_only_statement(node) || first.as_range_node().is_some()) {
                 return Some("block body");
             }
-        }
         if assignment_node(first)
             && parent.is_none_or(|ancestor| ancestor.as_parentheses_node().is_some())
         {
@@ -450,7 +459,7 @@ impl RedundantParenthesesRule<'_, '_, '_> {
             }
             return Some("an expression");
         }
-        if self.ancestors().iter().rev().any(interpolation_parent) {
+        if parentheses_in_string_interpolation(parent, self.ancestors()) {
             return Some("an interpolated expression");
         }
         if argument_of_parenthesized_method_call(node, first, parent) {
@@ -465,15 +474,43 @@ impl RedundantParenthesesRule<'_, '_, '_> {
         if first.as_and_node().is_some() || first.as_or_node().is_some() {
             return self.logical_expression_message(first, parent);
         }
+        if assignment_node(first) {
+            return None;
+        }
         if let Some(call) = first.as_call_node() {
             let name = call.name().as_slice();
             if matches!(name, b"!" | b"~" | b"+@" | b"-@") {
-                return parent.is_none().then_some("a unary operation");
+                return Some("a unary operation");
             }
             if comparison_method(name) {
-                return parent.is_none().then_some("a comparison expression");
+                if parent.is_none() {
+                    return Some("a comparison expression");
+                }
+                return parent.is_some_and(|ancestor| {
+                    ancestor.as_return_node().is_some()
+                        || ancestor.as_next_node().is_some()
+                        || ancestor.as_break_node().is_some()
+                        || ancestor.as_yield_node().is_some()
+                }).then_some("a method call");
             }
             if self.do_end_block_in_method_chain(inner_source, parent) {
+                return None;
+            }
+            if operator_method(name) {
+                if name == b"/" {
+                    return None;
+                }
+                return singular_expression_parent(parent)
+                    .then_some("a method call");
+            }
+            if parent.is_some()
+                && call.opening_loc().is_none()
+                && argument_count(&call) > 0
+                && (call.receiver().is_none()
+                    || call.call_operator_loc().is_some_and(|operator| {
+                        matches!(operator.as_slice(), b"." | b"&.")
+                    }))
+            {
                 return None;
             }
             return Some("a method call");
@@ -534,6 +571,15 @@ impl RedundantParenthesesRule<'_, '_, '_> {
             conditional.if_keyword_loc().is_none()
                 && conditional.then_keyword_loc().is_some()
                 && conditional.end_keyword_loc().is_none()
+        }) {
+            return None;
+        }
+        if self.ancestors().iter().rev().find_map(Node::as_if_node).is_some_and(|conditional| {
+            let ternary = conditional.if_keyword_loc().is_none()
+                && conditional.then_keyword_loc().is_some()
+                && conditional.end_keyword_loc().is_none();
+            ternary
+                && !location_contains(&conditional.predicate().location(), &node.location())
         }) {
             return None;
         }
@@ -626,6 +672,31 @@ fn parenthesized_expressions<'pr>(node: &ParenthesesNode<'pr>) -> Vec<Node<'pr>>
         .unwrap_or_default()
 }
 
+fn redundant_parentheses_unary_can_stay(node: &Node<'_>) -> bool {
+    let Some(mut call) = node.as_call_node() else {
+        return false;
+    };
+    if !matches!(call.name().as_slice(), b"!" | b"~" | b"+@" | b"-@") {
+        return false;
+    }
+    loop {
+        let Some(receiver) = call.receiver() else {
+            return true;
+        };
+        let Some(inner) = receiver.as_call_node() else {
+            return true;
+        };
+        if matches!(inner.name().as_slice(), b"!" | b"~" | b"+@" | b"-@") {
+            call = inner;
+            continue;
+        }
+        let arguments = inner
+            .arguments()
+            .map_or(0, |arguments| arguments.arguments().len());
+        return arguments > 0 && inner.opening_loc().is_none() && inner.name().as_slice() != b"[]";
+    }
+}
+
 fn literal_node(node: &Node<'_>) -> bool {
     node.as_string_node().is_some()
         || node.as_interpolated_string_node().is_some()
@@ -642,6 +713,8 @@ fn literal_node(node: &Node<'_>) -> bool {
         || node.as_false_node().is_some()
         || node.as_regular_expression_node().is_some()
         || node.as_interpolated_regular_expression_node().is_some()
+        || node.as_x_string_node().is_some()
+        || node.as_interpolated_x_string_node().is_some()
 }
 
 fn variable_node(node: &Node<'_>) -> bool {
@@ -673,6 +746,13 @@ fn assignment_node(node: &Node<'_>) -> bool {
         || node.as_instance_variable_and_write_node().is_some()
         || node.as_class_variable_and_write_node().is_some()
         || node.as_global_variable_and_write_node().is_some()
+        || node
+            .as_call_node()
+            .is_some_and(|call| {
+                let name = call.name().as_slice();
+                name.ends_with(b"=")
+                    && !matches!(name, b"==" | b"===" | b"!=" | b"<=" | b">=" | b"=~" | b"!~")
+            })
 }
 
 fn keyword_node(node: &Node<'_>, source: &str) -> bool {
@@ -705,10 +785,25 @@ fn lambda_or_proc(node: &Node<'_>) -> bool {
         })
 }
 
-fn interpolation_parent(node: &Node<'_>) -> bool {
-    node.as_embedded_statements_node().is_some()
-        || node.as_interpolated_string_node().is_some()
-        || node.as_interpolated_symbol_node().is_some()
+fn parentheses_in_string_interpolation(parent: Option<&Node<'_>>, ancestors: &[Node<'_>]) -> bool {
+    let Some(parent) = parent else {
+        return false;
+    };
+    parent.as_embedded_statements_node().is_some()
+        && ancestors
+            .iter()
+            .rev()
+            .any(|ancestor| ancestor.as_interpolated_string_node().is_some())
+}
+
+fn call_chain_starts_with_integer(call: &ruby_prism::CallNode<'_>) -> bool {
+    let Some(receiver) = call.receiver() else {
+        return false;
+    };
+    receiver.as_integer_node().is_some()
+        || receiver
+            .as_call_node()
+            .is_some_and(|receiver| call_chain_starts_with_integer(&receiver))
 }
 
 fn argument_of_parenthesized_method_call(
@@ -725,8 +820,7 @@ fn argument_of_parenthesized_method_call(
         return false;
     }
     if expression.as_call_node().is_some_and(|call| {
-        call.opening_loc().is_none()
-            && call.arguments().is_some_and(|arguments| !arguments.arguments().is_empty())
+        call.arguments().is_some_and(|arguments| !arguments.arguments().is_empty())
             && (call.receiver().is_none() || call.call_operator_loc().is_some())
     }) || expression.as_rescue_modifier_node().is_some()
         || expression.as_match_predicate_node().is_some()
@@ -774,6 +868,34 @@ fn operator_method(name: &[u8]) -> bool {
     )
 }
 
+fn all_operator_method(name: &[u8]) -> bool {
+    operator_method(name)
+        || comparison_method(name)
+        || matches!(name, b"!" | b"~" | b"+@" | b"-@" | b"[]" | b"[]=")
+}
+
+fn singular_expression_parent(parent: Option<&Node<'_>>) -> bool {
+    let Some(parent) = parent else {
+        return true;
+    };
+    if let Some(array) = parent.as_array_node() {
+        return array.elements().len() == 1;
+    }
+    if let Some(node) = parent.as_return_node() {
+        return node.arguments().is_some_and(|arguments| arguments.arguments().len() == 1);
+    }
+    if let Some(node) = parent.as_next_node() {
+        return node.arguments().is_some_and(|arguments| arguments.arguments().len() == 1);
+    }
+    if let Some(node) = parent.as_break_node() {
+        return node.arguments().is_some_and(|arguments| arguments.arguments().len() == 1);
+    }
+    if let Some(node) = parent.as_yield_node() {
+        return node.arguments().is_some_and(|arguments| arguments.arguments().len() == 1);
+    }
+    false
+}
+
 fn pattern_matching_node(node: &Node<'_>) -> bool {
     node.as_match_predicate_node().is_some() || node.as_match_required_node().is_some()
 }
@@ -788,4 +910,8 @@ fn semantic_parent<'a>(ancestors: &'a [Node<'a>]) -> Option<&'a Node<'a>> {
 
 fn same_location(left: &ruby_prism::Location<'_>, right: &ruby_prism::Location<'_>) -> bool {
     left.start_offset() == right.start_offset() && left.end_offset() == right.end_offset()
+}
+
+fn location_contains(outer: &ruby_prism::Location<'_>, inner: &ruby_prism::Location<'_>) -> bool {
+    outer.start_offset() <= inner.start_offset() && outer.end_offset() >= inner.end_offset()
 }

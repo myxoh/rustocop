@@ -1,0 +1,4 @@
+{
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
+  "5d8549a5bdc59e45": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/KeywordArgumentsMerging:\n  Description: When passing an existing hash as keyword arguments, provide additional\n    arguments directly rather than using `merge`.\n  StyleGuide: \"#merging-keyword-arguments\"\n  Enabled: true\n  VersionAdded: '1.68'\n  AutoCorrect: always\n"
+}

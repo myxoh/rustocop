@@ -2421,3 +2421,4 @@ RSpec.describe RuboCop::Cop::Layout::LineLength, :config do
     end
   end
 end
+

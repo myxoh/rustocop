@@ -1,0 +1,7 @@
+{
+  "2c63ea8e4c0da2b0": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/NestedMethodDefinition:\n  Description: Do not use nested method definitions.\n  StyleGuide: \"#no-nested-methods\"\n  Enabled: true\n  AllowedMethods: []\n  AllowedPatterns: []\n  VersionAdded: '0.32'\n  AutoCorrect: always\n",
+  "3a9b66e35a2149a4": "---\nAllCops:\n  TargetRubyVersion: 3.2\nLint/NestedMethodDefinition:\n  Description: Do not use nested method definitions.\n  StyleGuide: \"#no-nested-methods\"\n  Enabled: true\n  AllowedMethods: []\n  AllowedPatterns: []\n  VersionAdded: '0.32'\n  AutoCorrect: always\n",
+  "3ec851a3640bda8b": "---\nAllCops:\n  TargetRubyVersion: 3.4\nLint/NestedMethodDefinition:\n  Description: Do not use nested method definitions.\n  StyleGuide: \"#no-nested-methods\"\n  Enabled: true\n  AllowedMethods: []\n  AllowedPatterns: []\n  VersionAdded: '0.32'\n  AutoCorrect: always\n",
+  "7b108b864c8759bb": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/NestedMethodDefinition:\n  Description: Do not use nested method definitions.\n  StyleGuide: \"#no-nested-methods\"\n  Enabled: true\n  AllowedMethods: []\n  AllowedPatterns:\n  - baz\n  VersionAdded: '0.32'\n  AutoCorrect: always\n",
+  "f23b8d44b5d86de2": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/NestedMethodDefinition:\n  Description: Do not use nested method definitions.\n  StyleGuide: \"#no-nested-methods\"\n  Enabled: true\n  AllowedMethods:\n  - has_many\n  AllowedPatterns: []\n  VersionAdded: '0.32'\n  AutoCorrect: always\n"
+}

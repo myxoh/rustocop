@@ -140,8 +140,9 @@ heredoc, or a particular expression, use `call`, typed `node`, or `any_node`.
 Implement `Cop` directly only for genuinely unusual traversal behavior.
 
 Cop names are discovered from the actual registry. Do not edit a separate
-Prism or supported-cop inventory. `--show-cops` and the support-document
-generator read the runtime registry.
+Prism or supported-cop inventory. `--show-cops` reads the runtime registry;
+the public evidence matrix combines that registry with a complete project
+parity report.
 
 ## Cop context
 
@@ -283,9 +284,9 @@ ruby script/verify_cop.rb Style/Example
 ```
 
 It builds the current native binary, checks every captured diagnostic and
-correction case for that cop, writes a categorized JSON report, and regenerates
-the support matrix from the runtime registry. It does not promote a cop to
-Verified until the full upstream comparison has also passed. Changes to
+correction case for that cop, and writes a categorized JSON report. A focused
+pass does not update public support status: the user-facing evidence matrix is
+generated only from a complete SHA-bound 50-project audit. Changes to
 traversal, diagnostics, correction ordering, or the registry still require the
 full upstream suite described in `CONTRIBUTING.md`.
 

@@ -1,7 +1,6 @@
 use ruby_prism::{parse, CallNode, Diagnostic, Node, Visit};
 use std::any::Any;
 use std::sync::Arc;
-
 #[path = "framework/catalog_cop.rs"]
 mod catalog_cop;
 #[path = "framework/context_node_facade.rs"]
@@ -38,10 +37,6 @@ mod source_file;
 mod source_helpers;
 #[path = "framework/source_syntax.rs"]
 mod source_syntax;
-#[path = "framework/ternary_conversion.rs"]
-mod ternary_conversion;
-use ternary_conversion::*;
-
 macro_rules! cop_modules {
     ($($module:ident),+ $(,)?) => {
         $(mod $module;)+
@@ -59,12 +54,15 @@ cop_modules!(
     additional_rules,
     additional_rules_literals,
     additional_rules_more,
+    uri_escape_unescape_rules,
     alias_rules,
     argument_and_inheritance_rules,
     argument_default_rules,
+    array_intersect_single_element_rules,
     assignment_completion_rules,
     assignment_rewrite_rules,
     block_association_rules,
+    block_comments_rules,
     block_parameter_rules,
     block_chain_rules,
     block_arity_rules,
@@ -73,8 +71,10 @@ cop_modules!(
     bundler_completion,
     call_conversion_rules,
     class_comparison_rules,
+    class_check_rules,
     class_definition_rules,
     class_methods_completion,
+    class_vars_rules,
     compact_syntax_completion,
     compatibility_lexical_rules,
     comparable_clamp_rules,
@@ -92,8 +92,13 @@ cop_modules!(
     deprecated_api_rules,
     directive_completion,
     dig_rules,
+    dir_rules,
     double_splat_rules,
     empty_method_rules,
+    empty_lambda_parameter_rules,
+    empty_else_rules,
+    empty_class_rules,
+    endless_method_rules,
     enum_argument_rules,
     exception_argument_rules,
     exception_rewrite_rules,
@@ -122,6 +127,7 @@ cop_modules!(
     hash_subset_rules,
     hash_syntax_rules,
     hash_transform_rules,
+    heredoc_argument_closing_parenthesis_rules,
     heredoc_call_rules,
     iteration_redundancy_rules,
     interpolation_condition_rules,
@@ -145,7 +151,9 @@ cop_modules!(
     layout_spacing_completion,
     lambda_rules,
     layout_finalization_completion,
+    layout_qualification,
     layout_body_qualification,
+    layout_core_qualification,
     layout_geometry_completion,
     lexical_completion,
     line_concatenation_rules,
@@ -179,11 +187,13 @@ cop_modules!(
     number_conversion_rules,
     numeric_operation_rules,
     numeric_predicate_rules,
+    preferred_hash_methods_rules,
     one_line_conditional_rules,
     operator_ambiguity_rules,
     operator_method_call_rules,
     path_and_literal_rules,
     parameter_order_completion,
+    performance_extension_examples,
     percent_string_rules,
     predicate_conversion_rules,
     project_scope_completion,
@@ -207,6 +217,10 @@ cop_modules!(
     rescue_rules,
     rescue_modifier_rules,
     rescue_standard_error_rules,
+    restored_structural_cops,
+    restored_layout_indentation,
+    restored_layout_line_breaks,
+    restored_multiline_delimiters,
     return_nil_predicate_rules,
     ruby2_keywords_rules,
     lexical_rules,
@@ -238,6 +252,7 @@ cop_modules!(
     trailing_comma_completion,
     trailing_argument_comma_rules,
     trailing_underscore_rules,
+    uri_regexp_rules,
     while_until_do_rules,
     yoda_condition_rules,
     string_conversion_rules,
@@ -251,7 +266,7 @@ cop_modules!(
     gemspec_completion,
 );
 
-use crate::config::{CopConfig, RubyVersion};
+use crate::config::{CopConfig, RubyVersion, SourceEncoding};
 use context_node_facade::*;
 use cop_context::CopContext;
 use cop_policy::CopPolicy;
@@ -272,21 +287,20 @@ use source_file::{SourceEdit, SourceFile};
 pub(super) enum CopPhase {
     Source,
     Node,
-    ParseError,
-    SourceAndNode,
+    ParseErrorAndSource,
 }
 
 impl CopPhase {
     const fn visits_source(self) -> bool {
-        matches!(self, Self::Source | Self::SourceAndNode)
+        matches!(self, Self::Source | Self::ParseErrorAndSource)
     }
 
     const fn visits_nodes(self) -> bool {
-        matches!(self, Self::Node | Self::SourceAndNode)
+        matches!(self, Self::Node)
     }
 
     const fn visits_parse_errors(self) -> bool {
-        matches!(self, Self::ParseError)
+        matches!(self, Self::ParseErrorAndSource)
     }
 }
 
@@ -297,6 +311,9 @@ pub(super) trait Cop: Sync {
     }
     fn on_source(&self, _source: &str, _context: &mut Context) {}
     fn on_parse_error(&self, _error: &Diagnostic<'_>, _source: &str, _context: &mut Context) {}
+    fn visits_recovered_nodes(&self) -> bool {
+        false
+    }
     fn investigation_state(&self) -> Box<dyn Any> {
         Box::new(())
     }
@@ -336,7 +353,7 @@ impl Registry {
         let cops = COP_PROVIDERS
             .iter()
             .flat_map(|provide| provide())
-            .filter(|cop| enabled(cop.name()))
+            .filter(|cop| !crate::cops::intentionally_pending(cop.name()) && enabled(cop.name()))
             .collect();
 
         Self::new(cops)
@@ -350,11 +367,17 @@ fn inspect(
     target_ruby_version: RubyVersion,
     enabled: &dyn Fn(&str) -> bool,
 ) -> Inspection {
-    Engine::new(enabled).inspect(
+    Engine::new(enabled, &[]).inspect(
         "example.rb",
         source,
-        autocorrect,
+        if autocorrect {
+            crate::config::AutocorrectMode::All
+        } else {
+            crate::config::AutocorrectMode::None
+        },
+        false,
         target_ruby_version,
+        crate::config::SourceEncoding::Utf8,
         Arc::new(CopConfig::default()),
     )
 }

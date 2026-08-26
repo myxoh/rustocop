@@ -1,0 +1,5 @@
+{
+  "6759c1d137e37f38": "---\nAllCops:\n  TargetRubyVersion: 3.1\nStyle/DigChain:\n  Description: Use `dig` with multiple parameters instead of chaining multiple calls.\n  Enabled: true\n  Safe: false\n  VersionAdded: '1.69'\n  AutoCorrect: always\n",
+  "f5fbac4d538daa7b": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/DigChain:\n  Description: Use `dig` with multiple parameters instead of chaining multiple calls.\n  Enabled: true\n  Safe: false\n  VersionAdded: '1.69'\n  AutoCorrect: always\n",
+  "fe246aafce6607ac": "---\nAllCops:\n  TargetRubyVersion: 3.2\nStyle/DigChain:\n  Description: Use `dig` with multiple parameters instead of chaining multiple calls.\n  Enabled: true\n  Safe: false\n  VersionAdded: '1.69'\n  AutoCorrect: always\n"
+}

@@ -1,0 +1,6 @@
+{
+  "15dcdb35858e0734": "---\nAllCops:\n  TargetRubyVersion: 3.4\nStyle/CombinableLoops:\n  Description: Checks for places where multiple consecutive loops over the same data\n    can be combined into a single loop.\n  Enabled: true\n  Safe: false\n  VersionAdded: '0.90'\n  AutoCorrect: always\n",
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
+  "751f8cfb95644760": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/CombinableLoops:\n  Description: Checks for places where multiple consecutive loops over the same data\n    can be combined into a single loop.\n  Enabled: true\n  Safe: false\n  VersionAdded: '0.90'\n  AutoCorrect: always\n",
+  "77c39c64bd272713": "---\nAllCops:\n  TargetRubyVersion: '2.7'\n"
+}

@@ -32,7 +32,6 @@ impl RegexpLiteralRule<'_, '_, '_> {
             (!allowed).then_some(MSG_USE_PERCENT_R)
         } else {
             let allowed = style == "percent_r"
-                || style == "slashes" && disallowed_slash
                 || style == "mixed" && multiline
                 || disallowed_slash
                 || self.allowed_omit_parentheses(&regexp.body);
@@ -138,7 +137,7 @@ impl<'pr> RegexpView<'pr> {
                 regexp.location(),
                 regexp.opening_loc(),
                 regexp.closing_loc(),
-                vec![content.start_offset()..content.end_offset()],
+                std::iter::once(content.start_offset()..content.end_offset()).collect::<Vec<_>>(),
             )
         } else {
             let regexp = node.as_interpolated_regular_expression_node()?;

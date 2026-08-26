@@ -1,0 +1,5 @@
+{
+  "065a12b5031200c1": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\n",
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
+  "9e169fc66a53f350": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/DisjunctiveAssignmentInConstructor:\n  Description: In constructor, plain assignment is preferred over disjunctive.\n  Enabled: true\n  Safe: false\n  VersionAdded: '0.62'\n  VersionChanged: '0.88'\n  AutoCorrect: always\n"
+}

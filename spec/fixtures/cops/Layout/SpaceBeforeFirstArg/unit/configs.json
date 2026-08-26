@@ -1,0 +1,7 @@
+{
+  "47387526592cb2f4": "---\nAllCops:\n  DisabledByDefault: true\n  ParserEngine: parser_prism\n  TargetRubyVersion: 3.4\nLayout/SpaceBeforeFirstArg:\n  Enabled: true\n  AllowForAlignment: false\n",
+  "77c39c64bd272713": "---\nAllCops:\n  TargetRubyVersion: '2.7'\n",
+  "95aede8ab2304a19": "---\nAllCops:\n  DisabledByDefault: true\n  ParserEngine: parser_prism\n  TargetRubyVersion: 3.4\nLayout/SpaceBeforeFirstArg:\n  Enabled: true\n",
+  "9af8b04bed1b0878": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/SpaceBeforeFirstArg:\n  Description: Checks that exactly one space is used between a method name and the\n    first argument for method calls without parentheses.\n  Enabled: true\n  VersionAdded: '0.49'\n  AllowForAlignment: true\n  AutoCorrect: always\n",
+  "a18329d15799e60d": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/SpaceBeforeFirstArg:\n  Description: Checks that exactly one space is used between a method name and the\n    first argument for method calls without parentheses.\n  Enabled: true\n  VersionAdded: '0.49'\n  AllowForAlignment: false\n  AutoCorrect: always\n"
+}

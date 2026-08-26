@@ -1,0 +1,5 @@
+{
+  "4751ec0d9b04b942": "---\nAllCops:\n  TargetRubyVersion: '3.0'\n  ActiveSupportExtensionsEnabled: true\nStyle/HashExcept:\n  Enabled: true\n",
+  "c4a4e881c44bcba3": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/HashExcept:\n  Description: Checks for usages of `Hash#reject`, `Hash#select`, and `Hash#filter`\n    methods that can be replaced with `Hash#except` method.\n  Enabled: true\n  Safe: false\n  VersionAdded: '1.7'\n  VersionChanged: '1.39'\n  AutoCorrect: always\n",
+  "cae050979f2527a5": "---\nAllCops:\n  TargetRubyVersion: 3.0\nStyle/HashExcept:\n  Description: Checks for usages of `Hash#reject`, `Hash#select`, and `Hash#filter`\n    methods that can be replaced with `Hash#except` method.\n  Enabled: true\n  Safe: false\n  VersionAdded: '1.7'\n  VersionChanged: '1.39'\n  AutoCorrect: always\n"
+}

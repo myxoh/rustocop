@@ -1,122 +1,65 @@
 use super::*;
 
-pub(super) fn empty_heredoc(source: &str, reporter: &mut Reporter<'_>) {
-    for (offset, line) in source_lines(source) {
-        let Some(marker) = line.find("<<") else {
-            continue;
-        };
-        let token = line[marker + 2..].trim_start_matches(['~', '-']);
-        let identifier = token
-            .bytes()
-            .take_while(|byte| identifier_byte(*byte))
-            .count();
-        if identifier == 0 {
-            continue;
-        }
-        let label = &token[..identifier];
-        let header_end = marker
-            + 2
-            + usize::from(
-                line.as_bytes()
-                    .get(marker + 2)
-                    .is_some_and(|b| matches!(b, b'~' | b'-')),
-            )
-            + identifier;
-        let body_start = offset + line.len() + 1;
-        if source[body_start..].starts_with(&format!("{label}\n")) {
-            let full_end = body_start + label.len() + 1;
-            let quotes = if reporter.related_config_value("Style/StringLiterals", "EnforcedStyle")
-                == Some("double_quotes")
-            {
-                "\"\""
-            } else {
-                "''"
-            };
-            let replacement = format!("{quotes}{}\n", &line[header_end..]);
-            reporter.replace(
-                "Use an empty string literal instead of heredoc.",
-                offset + marker..offset + header_end,
-                offset + marker..full_end,
-                replacement,
-            );
-        }
-    }
-}
-
-pub(super) fn space_inside_range(source: &str, reporter: &mut Reporter<'_>) {
-    if let Some(dots) = source.find(" ..\n") {
-        let physical_line = source[..dots].rfind('\n').map_or(0, |offset| offset + 1);
-        let line_start = source[physical_line..dots]
-            .trim_end()
-            .rfind(char::is_whitespace)
-            .map_or(physical_line, |offset| physical_line + offset + 1);
-        let end = source[dots + 4..]
-            .find('\n')
-            .map_or(source.len(), |offset| dots + 4 + offset);
-        let replacement = source[line_start..end]
-            .replace(" ..\n", "..")
-            .replace("    ", "");
-        reporter.replace(
-            "Space inside range literal.",
-            line_start..end,
-            line_start..end,
-            replacement,
-        );
+pub(super) fn empty_heredoc(
+    node: &ruby_prism::StringNode<'_>,
+    context: &mut CopContext<'_, '_>,
+) {
+    let (Some(opening), Some(closing)) = (node.opening_loc(), node.closing_loc()) else {
+        return;
+    };
+    if !opening.as_slice().starts_with(b"<<") || !node.unescaped().is_empty() {
         return;
     }
-    for (offset, line) in source_lines(source) {
-        let Some(dots) = line.find("..") else {
-            continue;
-        };
-        let left = line[..dots].trim_end();
-        let dot_count = if line[dots..].starts_with("...") { 3 } else { 2 };
-        let right = line[dots + dot_count..].trim_start();
-        if left.len() != dots || right.len() != line.len() - dots - dot_count {
-            let start = offset + line.len() - line.trim_start().len();
-            reporter.replace(
-                "Space inside range literal.",
-                start..offset + line.len(),
-                start..offset + line.len(),
-                format!("{left}{}{right}", ".".repeat(dot_count)),
-            );
-        }
-    }
+    let source_file = context.source_file();
+    let header_end = source_file.line_end(opening.start_offset());
+    let full_end = (closing.end_offset()
+        + usize::from(context.source().as_bytes().get(closing.end_offset()) == Some(&b'\n')))
+    .min(context.source().len());
+    let quotes = if context.related_config_value("Style/StringLiterals", "EnforcedStyle")
+        == Some("double_quotes")
+    {
+        "\"\""
+    } else {
+        "''"
+    };
+    let replacement = format!(
+        "{quotes}{}\n",
+        &context.source()[opening.end_offset()..header_end]
+    );
+    context.replace(
+        "Use an empty string literal instead of heredoc.",
+        opening.start_offset()..opening.end_offset(),
+        opening.start_offset()..full_end,
+        replacement,
+    );
 }
 
 pub(super) fn space_after_method_name(source: &str, reporter: &mut Reporter<'_>) {
-    for (offset, line) in source_lines(source) {
-        let trimmed = line.trim_start();
-        if trimmed.starts_with("def ") {
-            if let Some(paren) = line.find(" (") {
-                let start = offset + paren;
-                reporter.remove(
-                    "Do not put a space between a method name and the opening parenthesis.",
-                    start..start + 1,
-                    start..start + 1,
-                );
+    #[derive(Default)]
+    struct SpaceAfterMethodNameVisitor {
+        offenses: Vec<std::ops::Range<usize>>,
+    }
+    impl<'pr> Visit<'pr> for SpaceAfterMethodNameVisitor {
+        fn visit_def_node(&mut self, node: &ruby_prism::DefNode<'pr>) {
+            if let Some(opening) = node.lparen_loc() {
+                let name = node.name_loc();
+                if name.end_offset() < opening.start_offset() {
+                    self.offenses
+                        .push(name.end_offset()..opening.start_offset());
+                }
             }
+            ruby_prism::visit_def_node(self, node);
         }
     }
-}
 
-pub(super) fn redundant_constant_base(source: &str, reporter: &mut Reporter<'_>) {
-    if reporter.related_config_value("Lint/ConstantResolution", "Enabled") == Some("true") {
-        return;
-    }
-    let nested_class = source.starts_with("class ") || source.starts_with("module ");
-    for start in all_offsets(source, "::") {
-        if start > 0
-            && (identifier_byte(source.as_bytes()[start - 1])
-                || source.as_bytes()[start - 1] == b':')
-        {
-            continue;
-        }
-        let line_start = source[..start].rfind('\n').map_or(0, |offset| offset + 1);
-        let prefix = source[line_start..start].trim();
-        let superclass = prefix.ends_with('<');
-        let singleton = source[..line_start].contains("class << self");
-        if start == 0 || superclass || singleton || !nested_class {
-            reporter.remove("Remove redundant `::`.", start..start + 2, start..start + 2);
-        }
+    let parsed = ruby_prism::parse(source.as_bytes());
+    let mut visitor = SpaceAfterMethodNameVisitor::default();
+    visitor.visit(&parsed.node());
+    for range in visitor.offenses {
+        reporter.remove(
+            "Do not put a space between a method name and the opening parenthesis.",
+            range.clone(),
+            range,
+        );
     }
 }

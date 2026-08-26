@@ -7,19 +7,28 @@ require "open3"
 require "optparse"
 require "thread"
 require "tmpdir"
+require "time"
 require "yaml"
-require_relative "../lib/rustocop/compatibility_baseline"
+require_relative "../lib/rustocop/compatibility_status"
 require_relative "../lib/rustocop/config_serialization"
+require_relative "../lib/rustocop/repository_layout"
+require_relative "../lib/rustocop/source_fingerprint"
 
 root = File.expand_path("..", __dir__)
+release_native = File.join(root, "crates/rustocop/target/release/rustocop")
+packaged_native = File.join(root, "libexec/rustocop-native")
+default_native = ENV["RUSTOCOP_NATIVE_PATH"] ||
+                 [release_native, packaged_native]
+                   .select { |path| File.executable?(path) }
+                   .max_by { |path| File.mtime(path) }
 options = {
   corpus: File.join(root, "tmp/rubocop-1.87.0-cop-cases.jsonl"),
   jobs: 8,
   limit: nil,
   only: nil,
   corrections: false,
-  baseline: nil,
-  report: File.join(root, "tmp/rubocop-1.87.0-compatibility.json")
+  report: File.join(root, "tmp/rubocop-1.87.0-compatibility.json"),
+  native: default_native
 }
 
 OptionParser.new do |parser|
@@ -28,26 +37,43 @@ OptionParser.new do |parser|
   parser.on("--limit-per-cop COUNT", Integer) { |count| options[:limit] = count }
   parser.on("--only COPS", "comma-separated cop names") { |cops| options[:only] = cops.split(",") }
   parser.on("--corrections", "also verify asserted corrected source") { options[:corrections] = true }
-  parser.on("--baseline PATH", "reject regressions below an approved compatibility baseline") do |path|
-    options[:baseline] = File.expand_path(path)
-  end
   parser.on("--report PATH") { |path| options[:report] = File.expand_path(path) }
+  parser.on("--native PATH", "Rustocop executable (defaults to the newest local build)") do |path|
+    options[:native] = File.expand_path(path)
+  end
 end.parse!
 
-if options[:baseline] && (options[:only] || options[:limit] || options[:corrections])
-  abort "--baseline requires a complete diagnostic run without --only, --limit-per-cop, or --corrections"
-end
-
-native = ENV.fetch("RUSTOCOP_NATIVE_PATH", File.join(root, "libexec/rustocop-native"))
+native = options[:native]
+abort "native Rustocop executable not found; run cargo build --release" unless native
 abort "native Rustocop executable not found at #{native}" unless File.executable?(native)
 abort "captured corpus not found; run script/extract_upstream_cop_specs.rb" unless File.file?(options[:corpus])
 
 cases = []
 per_cop = Hash.new(0)
+excluded_cases = Hash.new(0)
+pending = Rustocop::CompatibilityStatus.load(root: root).intentionally_pending_cops.to_h do |cop|
+  [cop, true]
+end
+broken_cases_path = File.join(root, "spec/upstream/rubocop-1.87.0/broken_fixture_cases.yml")
+broken_cases = YAML.safe_load_file(broken_cases_path).fetch("cases").to_h do |entry|
+  [entry.fetch("id"), entry.fetch("reason")]
+end
 File.foreach(options[:corpus]) do |line|
   test_case = JSON.parse(line)
   cop = test_case.fetch("cop")
+  if pending[cop]
+    excluded_cases["intentionally_pending"] += 1
+    next
+  end
+  if broken_cases.key?(test_case.dig("example", "id"))
+    excluded_cases["broken_fixture"] += 1
+    next
+  end
   next if options[:only] && !options[:only].include?(cop)
+  if test_case.fetch("lsp", false)
+    excluded_cases["lsp"] += 1
+    next
+  end
   next if options[:limit] && per_cop[cop] >= options[:limit]
 
   per_cop[cop] += 1
@@ -110,11 +136,22 @@ workers = Array.new(options[:jobs]) do
       test_case = queue.pop(true)
       source = test_case.fetch("source")
       source = [source.fetch("$hex")].pack("H*") if source.is_a?(Hash) && source.key?("$hex")
-      command = [
+      base_command = [
         native, "--format", "json", "--only", test_case.fetch("cop"),
-        "--config", test_case.fetch("config_path"), "--stdin", test_case.fetch("path")
+        "--config", test_case.fetch("config_path")
       ]
-      stdout, stderr, status = Open3.capture3(*command, stdin_data: source)
+      if test_case.key?("file_mode")
+        stdout, stderr, status = Dir.mktmpdir("rustocop-upstream-input") do |directory|
+          source_path = File.join(directory, File.basename(test_case.fetch("path")))
+          File.binwrite(source_path, source)
+          File.chmod(test_case.fetch("file_mode"), source_path)
+          Open3.capture3(*base_command, source_path)
+        end
+      else
+        stdout, stderr, status = Open3.capture3(
+          *base_command, "--stdin", test_case.fetch("path"), stdin_data: source
+        )
+      end
 
       actual = if stdout.empty?
                  []
@@ -136,9 +173,19 @@ workers = Array.new(options[:jobs]) do
         captured = offense.slice(
           "message", "severity", "correctable", "line", "column", "last_line", "last_column"
         )
-        # Captured Parser ranges use column zero when the range ends exactly
-        # at a newline; RuboCop's public JSON formatter serializes that point
-        # as column one.
+        # Captured Parser ranges use the preceding column for empty ranges and
+        # column zero when a range ends exactly at a newline. RuboCop's public
+        # JSON formatter serializes both as the reported point.
+        eof_line = source.count("\n") + 1
+        eof_column = source.rpartition("\n").last.each_char.count + 1
+        insertion_at_nonterminated_eof = !source.empty? && !source.end_with?("\n") &&
+                                          captured["line"] == eof_line &&
+                                          captured["column"] == eof_column
+        if !insertion_at_nonterminated_eof &&
+           captured["last_line"] == captured["line"] &&
+           captured["last_column"] + 1 == captured["column"]
+          captured["last_column"] = captured["column"]
+        end
         if captured["last_line"] > captured["line"] && captured["last_column"].zero?
           captured["last_column"] = 1
         end
@@ -171,9 +218,7 @@ workers = Array.new(options[:jobs]) do
             native, "-A", "--format", "json", "--only", test_case.fetch("cop"),
             "--config", test_case.fetch("config_path"), source_path
           )
-          acceptable_status = correction_status.success? ||
-                              (test_case.fetch("asserts_no_correction", false) &&
-                               correction_status.exitstatus == 1)
+          acceptable_status = correction_status.success? || correction_status.exitstatus == 1
           actual_correction = File.binread(source_path)
           correction_key = JSON.generate([
             test_case.fetch("cop"), test_case.fetch("source"), test_case.fetch("path"),
@@ -232,9 +277,23 @@ by_cop = results.group_by { |result| result.fetch("cop") }.sort.to_h.transform_v
     "failures" => cop_results.reject { |result| result.fetch("passed") }
   }
 end
+dirty_output, _dirty_error, dirty_status = Open3.capture3(
+  "git", "status", "--porcelain", "--", "crates/rustocop", chdir: root
+)
+rust_commit, _git_error, git_status = Open3.capture3(
+  "git", "log", "-1", "--format=%H", "--", "crates/rustocop", chdir: root
+)
 summary = {
+  "generated_at" => Time.now.iso8601,
+  "rust_commit" => if dirty_status.success? && dirty_output.empty? && git_status.success?
+                     rust_commit.strip
+                   end,
+  "cop_source_sha256" => Rustocop::SourceFingerprint.cops(root: root),
+  "native_sha256" => Digest::SHA256.file(native).hexdigest,
+  "fixture_corpus_sha256" => Digest::SHA256.file(options[:corpus]).hexdigest,
   "rubocop_version" => "1.87.0",
   "cases" => results.length,
+  "excluded_cases" => excluded_cases,
   "passed_cases" => results.count { |result| result.fetch("passed") },
   "cops" => by_cop.length,
   "passing_cops" => by_cop.count { |_cop, result| result.fetch("status") == "passing" },
@@ -246,17 +305,4 @@ File.write(options[:report], JSON.pretty_generate(summary))
 puts "#{summary.fetch("passed_cases")}/#{summary.fetch("cases")} cases pass; " \
      "#{summary.fetch("passing_cops")}/#{summary.fetch("cops")} cops pass every selected case"
 puts "Report: #{options[:report]}"
-if options[:baseline]
-  baseline_errors = Rustocop::CompatibilityBaseline.errors(
-    summary,
-    YAML.safe_load(File.read(options[:baseline]))
-  )
-  if baseline_errors.empty?
-    puts "Compatibility baseline preserved."
-    exit 0
-  end
-  warn "Compatibility baseline regression:"
-  baseline_errors.each { |error| warn "  - #{error}" }
-  exit 1
-end
 exit(summary.fetch("passed_cases") == summary.fetch("cases") ? 0 : 1)

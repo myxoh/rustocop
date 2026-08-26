@@ -1,0 +1,4 @@
+{
+  "7b38f88424392bcd": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/StabbyLambdaParentheses:\n  Description: Checks for the usage of parentheses around stabby lambda arguments.\n  StyleGuide: \"#stabby-lambda-with-args\"\n  Enabled: true\n  VersionAdded: '0.35'\n  EnforcedStyle: require_parentheses\n  SupportedStyles:\n  - require_parentheses\n  - require_no_parentheses\n  AutoCorrect: always\n",
+  "af8c087eb4e88ba3": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/StabbyLambdaParentheses:\n  Description: Checks for the usage of parentheses around stabby lambda arguments.\n  StyleGuide: \"#stabby-lambda-with-args\"\n  Enabled: true\n  VersionAdded: '0.35'\n  EnforcedStyle: require_no_parentheses\n  SupportedStyles:\n  - require_parentheses\n  - require_no_parentheses\n  AutoCorrect: always\n"
+}

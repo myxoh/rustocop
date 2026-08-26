@@ -1,0 +1,5 @@
+{
+  "33d01bed2effe0bf": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/EndOfLine:\n  Description: Use Unix-style line endings.\n  StyleGuide: \"#crlf\"\n  Enabled: true\n  VersionAdded: '0.49'\n  EnforcedStyle: native\n  SupportedStyles:\n  - native\n  - lf\n  - crlf\n  AutoCorrect: always\n",
+  "3ba8008dc0287097": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/EndOfLine:\n  Description: Use Unix-style line endings.\n  StyleGuide: \"#crlf\"\n  Enabled: true\n  VersionAdded: '0.49'\n  EnforcedStyle: lf\n  SupportedStyles:\n  - native\n  - lf\n  - crlf\n  AutoCorrect: always\n",
+  "6551719bbdc37437": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/EndOfLine:\n  Description: Use Unix-style line endings.\n  StyleGuide: \"#crlf\"\n  Enabled: true\n  VersionAdded: '0.49'\n  EnforcedStyle: crlf\n  SupportedStyles:\n  - native\n  - lf\n  - crlf\n  AutoCorrect: always\n"
+}

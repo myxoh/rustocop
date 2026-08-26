@@ -1,0 +1,4 @@
+{
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
+  "62e336e82b1524dd": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/DuplicateRequire:\n  Description: Checks for duplicate `require`s and `require_relative`s.\n  Enabled: true\n  SafeAutoCorrect: false\n  VersionAdded: '0.90'\n  VersionChanged: '1.28'\n  AutoCorrect: always\n"
+}

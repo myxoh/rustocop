@@ -1,0 +1,4 @@
+{
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
+  "657123991bb0e61e": "---\nAllCops:\n  TargetRubyVersion: 2.7\nGemspec/DeprecatedAttributeAssignment:\n  Description: Checks that deprecated attribute assignments are not set in a gemspec\n    file.\n  Enabled: true\n  Severity: warning\n  VersionAdded: '1.30'\n  VersionChanged: '1.40'\n  Include:\n  - \"**/*.gemspec\"\n  AutoCorrect: always\n"
+}

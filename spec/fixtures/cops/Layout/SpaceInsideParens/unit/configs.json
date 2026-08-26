@@ -1,0 +1,6 @@
+{
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
+  "b069e33c2cdd0ad1": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/SpaceInsideParens:\n  Description: No spaces after ( or before ).\n  StyleGuide: \"#spaces-braces\"\n  Enabled: true\n  VersionAdded: '0.49'\n  VersionChanged: '1.22'\n  EnforcedStyle: space\n  SupportedStyles:\n  - space\n  - compact\n  - no_space\n  AutoCorrect: always\n",
+  "d7ad10f1bd893e06": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/SpaceInsideParens:\n  Description: No spaces after ( or before ).\n  StyleGuide: \"#spaces-braces\"\n  Enabled: true\n  VersionAdded: '0.49'\n  VersionChanged: '1.22'\n  EnforcedStyle: compact\n  SupportedStyles:\n  - space\n  - compact\n  - no_space\n  AutoCorrect: always\n",
+  "f45a61b4882a4041": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/SpaceInsideParens:\n  Description: No spaces after ( or before ).\n  StyleGuide: \"#spaces-braces\"\n  Enabled: true\n  VersionAdded: '0.49'\n  VersionChanged: '1.22'\n  EnforcedStyle: no_space\n  SupportedStyles:\n  - space\n  - compact\n  - no_space\n  AutoCorrect: always\n"
+}

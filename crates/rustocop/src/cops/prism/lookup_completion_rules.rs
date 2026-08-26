@@ -34,10 +34,14 @@ fn fetch_to_brackets(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
 }
 
 fn bracket_convertible_fetch(node: &CallNode<'_>) -> bool {
-    node.name().as_slice() == b"fetch"
-        && node.receiver().is_some()
-        && node.block().is_none()
-        && argument_count(node) == 1
+    if node.name().as_slice() != b"fetch" || node.receiver().is_none() {
+        return false;
+    }
+    match (argument_count(node), node.block()) {
+        (1, None) => true,
+        (0, Some(block)) => block.as_block_argument_node().is_some(),
+        _ => false,
+    }
 }
 
 fn fetch_chain_to_brackets(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
@@ -51,7 +55,9 @@ fn fetch_chain_to_brackets(node: &CallNode<'_>, context: &mut CopContext<'_, '_>
 
 fn fetch_to_brackets_one(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     let selector = node.message_loc().expect("fetch has a selector");
-    let argument = only_argument(node).expect("checked above");
+    let argument = only_argument(node)
+        .or_else(|| node.block())
+        .expect("checked above");
     let operator = node.call_operator_loc();
     if operator
         .as_ref()
@@ -71,9 +77,16 @@ fn fetch_to_brackets_one(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) 
         );
         return;
     }
-    let (Some(operator), Some(opening), Some(closing)) =
-        (operator, node.opening_loc(), node.closing_loc())
-    else {
+    let Some(operator) = operator else {
+        return;
+    };
+    let (Some(opening), Some(closing)) = (node.opening_loc(), node.closing_loc()) else {
+        context.replace(
+            "Use `Hash#[]` instead of `Hash#fetch`.",
+            &selector,
+            operator.start_offset()..node.location().end_offset(),
+            format!("[{}]", context.source_file().node(&argument)),
+        );
         return;
     };
     context.replace_many(

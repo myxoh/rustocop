@@ -1,0 +1,5 @@
+{
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
+  "729fbdb469318d08": "---\nAllCops:\n  DisabledByDefault: true\n  ParserEngine: parser_prism\n  TargetRubyVersion: 3.4\nLint/NonAtomicFileOperation:\n  Enabled: true\n",
+  "b144f9e9b6f43fed": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/NonAtomicFileOperation:\n  Description: Checks for non-atomic file operations.\n  StyleGuide: \"#atomic-file-operations\"\n  Enabled: true\n  VersionAdded: '1.31'\n  SafeAutoCorrect: false\n  AutoCorrect: always\n"
+}

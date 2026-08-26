@@ -1,0 +1,3 @@
+{
+  "63b0243ec685af05": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/IncompatibleIoSelectWithFiberScheduler:\n  Description: Checks for `IO.select` that is incompatible with Fiber Scheduler.\n  Enabled: true\n  SafeAutoCorrect: false\n  VersionAdded: '1.21'\n  VersionChanged: '1.24'\n  AutoCorrect: always\n"
+}

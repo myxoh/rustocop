@@ -1,7 +1,0 @@
-cop	line	column	last_line	last_column	correctable	corrected	message
-Style/WordArray	2	7	2	29	true	true	Use `%w` or `%W` for an array of words.
-Style/WordArray	3	7	3	25	true	true	Use `%w` or `%W` for an array of words.
-Style/WordArray	4	7	4	26	true	true	Use `%w` or `%W` for an array of words.
-Style/WordArray	14	3	14	41	true	true	Use `['Controller tests',  'test/controllers']` for an array of words.
-Style/WordArray	15	3	15	37	true	true	Use `['Helper tests',      'test/helpers']` for an array of words.
-Style/WordArray	24	3	24	16	true	true	Use `%w` or `%W` for an array of words.

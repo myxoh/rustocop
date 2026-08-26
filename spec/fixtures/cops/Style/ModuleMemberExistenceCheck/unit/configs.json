@@ -1,0 +1,3 @@
+{
+  "4c3283a7a0bc4ba6": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/ModuleMemberExistenceCheck:\n  Description: Checks for usage of `Module` methods returning arrays that can be replaced\n    with equivalent predicates.\n  Enabled: true\n  VersionAdded: '1.82'\n  AutoCorrect: always\n"
+}

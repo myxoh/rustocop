@@ -1,2 +1,0 @@
-cop	line	column	last_line	last_column	correctable	corrected	message
-Layout/DefEndAlignment	4	4	4	6	true	true	`end` at 4, 3 is not aligned with `def` at 2, 2.

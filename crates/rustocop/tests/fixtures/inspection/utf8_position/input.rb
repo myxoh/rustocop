@@ -1,1 +1,0 @@
-résultat = eval(payload)

@@ -424,6 +424,24 @@ macro_rules! define_rubocop_callback_rule_cop {
     };
 }
 
+macro_rules! define_recovery_rubocop_callback_rule_cop {
+    ($type:ident => $name:literal => $rule:ident [$($callback:ident),+ $(,)?]) => {
+        struct $type;
+
+        impl Cop for $type {
+            fn name(&self) -> &'static str { $name }
+            fn visits_recovered_nodes(&self) -> bool { true }
+
+            fn on_node_with_state<'pr>(&self, node: &Node<'pr>, ancestors: &[Node<'pr>], source: &str, context: &mut Context, _state: &mut dyn Any) {
+                if !($(rubocop_callback_matches!(node, $callback))||+) { return; }
+                let mut context = context.cop_context(self.name(), source, ancestors);
+                let mut rule = $rule::new(&mut context);
+                $(dispatch_rubocop_callback!(rule, node, $callback);)+
+            }
+        }
+    };
+}
+
 macro_rules! define_stateful_rubocop_callback_rule_cop {
     ($type:ident => $name:literal => $rule:ident<$state:ident> [$($callback:ident),+ $(,)?]) => {
         struct $type;
@@ -447,7 +465,8 @@ macro_rules! define_stateful_rubocop_callback_rule_cop {
 
 pub(super) use {
     define_any_node_rule_cop, define_call_rule_cop, define_node_rule_cop,
-    define_rubocop_callback_rule_cop, define_rule, define_stateful_call_rule_cop,
-    define_stateful_node_rule_cop, define_stateful_rubocop_callback_rule_cop, define_stateful_rule,
-    dispatch_rubocop_callback, rubocop_callback_matches,
+    define_recovery_rubocop_callback_rule_cop, define_rubocop_callback_rule_cop, define_rule,
+    define_stateful_call_rule_cop, define_stateful_node_rule_cop,
+    define_stateful_rubocop_callback_rule_cop, define_stateful_rule, dispatch_rubocop_callback,
+    rubocop_callback_matches,
 };

@@ -5,14 +5,11 @@ RSpec.describe "cop authoring tools" do
     Open3.capture3(env, RbConfig.ruby, File.join(ROOT, "script", name), *arguments)
   end
 
-  it "previews any-node scaffolding and the complete fixture format" do
+  it "previews any-node scaffolding and the cached unit-contract destination" do
     stdout, stderr, status = run_script(
       "new_cop.rb",
       "Style/GeneratedExample",
       "any_node",
-      "--autocorrect",
-      "--fixture-path",
-      "/project/Gemfile",
       "--dry-run"
     )
 
@@ -21,10 +18,8 @@ RSpec.describe "cop authoring tools" do
     expect(stdout).to include(
       'GeneratedExample => "Style/GeneratedExample" => any_node(check)',
       "fn check(node: &Node<'_>",
-      "last_line\tlast_column\tcorrectable\tcorrected",
-      "checks_style_generated_example",
-      '"/project/Gemfile"',
-      "true"
+      "spec/fixtures/cops/Style/GeneratedExample/unit/cases.jsonl",
+      "generate_unit_fixtures.rb"
     )
     expect(File).not_to exist(File.join(ROOT, "crates/rustocop/src/cops/prism/style_generated_example.rs"))
   end
@@ -59,7 +54,7 @@ RSpec.describe "cop authoring tools" do
       "Append to the existing define_cops! block",
       'GeneratedFamilyExample => "Style/GeneratedFamilyExample" => call(generated_family_example)',
       "fn generated_family_example(node: &CallNode<'_>",
-      "checks_style_generated_family_example"
+      "spec/fixtures/cops/Style/GeneratedFamilyExample/unit/cases.jsonl"
     )
   end
 
@@ -85,29 +80,9 @@ RSpec.describe "cop authoring tools" do
     )
   end
 
-  it "prepares a pending qualification record without running external scans" do
+  it "previews a reverse-order real-project parity audit" do
     stdout, stderr, status = run_script(
-      "prepare_qualification_batch.rb",
-      "--cops",
-      "Style/Semicolon",
-      "--no-real-world",
-      "--no-verify-upstream",
-      "--dry-run"
-    )
-
-    expect(status).to be_success
-    expect(stderr).to eq("")
-    document = YAML.safe_load(stdout)
-    record = document.fetch("cops").fetch("Style/Semicolon")
-    expect(record.dig("manual_review", "status")).to eq("pending")
-    expect(record.fetch("edge_cases").length).to eq(4)
-    expect(record.dig("sources", "rubocop")).to end_with("style/semicolon.rb")
-    expect(record.dig("sources", "rustocop")).not_to be_empty
-  end
-
-  it "previews a reverse-order real-project qualification gate" do
-    stdout, stderr, status = run_script(
-      "audit_qualification_projects.rb",
+      "audit_project_parity.rb",
       "--from-position",
       "391",
       "--count",
@@ -121,5 +96,20 @@ RSpec.describe "cop authoring tools" do
       "391\tStyle/FileRead",
       "390\tStyle/FileOpen"
     ])
+  end
+
+  it "resolves cops supplied by an explicit RuboCop extension" do
+    stdout, stderr, status = run_script(
+      "audit_project_parity.rb",
+      "--extension",
+      "rubocop-performance",
+      "--cops",
+      "Performance/Size",
+      "--dry-run"
+    )
+
+    expect(status).to be_success
+    expect(stderr).to eq("")
+    expect(stdout).to match(/\d+\tPerformance\/Size\n/)
   end
 end

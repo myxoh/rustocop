@@ -14,13 +14,13 @@ impl MissingElseRule<'_, '_, '_> {
         let keyword = node.if_keyword_loc().expect("normal if has keyword");
         let offense = if self.source_file().at(&keyword) == "elsif" {
             let start = node.location().start_offset();
-            let mut finish = end.start_offset();
-            while finish > start && self.source().as_bytes()[finish - 1].is_ascii_whitespace() {
-                finish -= 1;
-            }
-            if finish > start && self.source().as_bytes()[finish - 1] == b';' {
-                finish -= 1;
-            }
+            let finish = node
+                .statements()
+                .and_then(|statements| statements.body().last())
+                .map_or_else(
+                    || node.predicate().location().end_offset(),
+                    |statement| statement.location().end_offset(),
+                );
             start..finish
         } else {
             node.location().start_offset()..node.location().end_offset()
@@ -30,7 +30,10 @@ impl MissingElseRule<'_, '_, '_> {
 
     fn on_unless(&mut self, node: &UnlessNode<'_>) {
         return_if!(self.policy().enforced_style("both") == "case");
-        return_if!(self.related_config_value("Style/UnlessElse", "Enabled") != Some("false"));
+        let unless_else_enabled = self.related_config_value("Style/UnlessElse", "Enabled") == Some("true")
+            && (self.related_config_value("AllCops", "DisabledByDefault") != Some("true")
+                || self.related_config_explicit("Style/UnlessElse", "Enabled"));
+        return_if!(unless_else_enabled);
         return_if!(node.end_keyword_loc().is_none() || node.else_clause().is_some());
         let location = node.location();
         self.add_missing_else(location.start_offset()..location.end_offset(), node.end_keyword_loc().expect("checked end"), "if");

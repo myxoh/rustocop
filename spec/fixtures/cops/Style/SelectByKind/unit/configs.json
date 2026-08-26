@@ -1,0 +1,4 @@
+{
+  "52a2d8b5d9308b77": "---\nAllCops:\n  TargetRubyVersion: 3.4\nStyle/SelectByKind:\n  Description: Prefer grep/grep_v to select/reject/find/detect with a kind check.\n  Enabled: true\n  SafeAutoCorrect: false\n  VersionAdded: '1.85'\n  AutoCorrect: always\n",
+  "95b4a7d47126dffb": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/SelectByKind:\n  Description: Prefer grep/grep_v to select/reject/find/detect with a kind check.\n  Enabled: true\n  SafeAutoCorrect: false\n  VersionAdded: '1.85'\n  AutoCorrect: always\n"
+}

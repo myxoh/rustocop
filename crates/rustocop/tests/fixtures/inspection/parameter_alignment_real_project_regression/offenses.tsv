@@ -1,2 +1,0 @@
-cop	line	column	last_line	last_column	correctable	corrected	message
-Layout/ParameterAlignment	5	9	5	15	true	true	Align the parameters of a method definition if they span more than one line.

@@ -1,9 +1,0 @@
-repository: chatwoot/chatwoot
-revision: 8d93d69e8e356216e85c28de7c4240e66b8e83fa
-path: lib/seeders/reports/report_data_seeder.rb
-source_line: 326
-additional_source:
-  repository: gitlabhq/gitlabhq
-  revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
-  path: app/models/concerns/integrations/base/integration.rb
-  source_line: 444

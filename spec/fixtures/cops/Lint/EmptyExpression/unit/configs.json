@@ -1,0 +1,4 @@
+{
+  "46a89e044620653b": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/EmptyExpression:\n  Description: Checks for empty expressions.\n  Enabled: true\n  VersionAdded: '0.45'\n  AutoCorrect: always\n",
+  "4bc219e4f57dee64": "---\nAllCops:\n  DisabledByDefault: true\n  NewCops: disable\n  ParserEngine: parser_prism\n  TargetRubyVersion: 3.4\n"
+}

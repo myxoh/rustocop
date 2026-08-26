@@ -1,0 +1,5 @@
+{
+  "4bc219e4f57dee64": "---\nAllCops:\n  DisabledByDefault: true\n  NewCops: disable\n  ParserEngine: parser_prism\n  TargetRubyVersion: 3.4\n",
+  "822ef5c871a47ff8": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/RedundantSortBy:\n  Description: Use `sort` instead of `sort_by { |x| x }`.\n  Enabled: true\n  VersionAdded: '0.36'\n  AutoCorrect: always\n",
+  "8b8de23b6920c1ed": "---\nAllCops:\n  TargetRubyVersion: 3.4\nStyle/RedundantSortBy:\n  Description: Use `sort` instead of `sort_by { |x| x }`.\n  Enabled: true\n  VersionAdded: '0.36'\n  AutoCorrect: always\n"
+}

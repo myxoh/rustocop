@@ -1,4 +1,0 @@
-== input.rb ==
-C:  1:  8: [Correctable] Style/RedundantInterpolation: Prefer to_s over string interpolation.
-
-1 file inspected, 1 offense detected, 1 offense autocorrectable

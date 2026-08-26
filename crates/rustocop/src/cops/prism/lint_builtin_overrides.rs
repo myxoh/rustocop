@@ -260,7 +260,11 @@ fn mixed_regexp_capture_types(
     node: &ruby_prism::RegularExpressionNode<'_>,
     context: &mut CopContext<'_, '_>,
 ) {
-    let (named, numbered) = capture_types(node.unescaped());
+    let literal = context.source_file().at(&node.location());
+    let extended = literal
+        .rsplit_once(['/', '}'])
+        .is_some_and(|(_, options)| options.contains('x'));
+    let (named, numbered) = capture_types(node.unescaped(), extended);
     if named && numbered {
         context.report(
             "Do not mix named captures and numbered captures in a Regexp literal.",
@@ -269,15 +273,20 @@ fn mixed_regexp_capture_types(
     }
 }
 
-fn capture_types(pattern: &[u8]) -> (bool, bool) {
+fn capture_types(pattern: &[u8], extended: bool) -> (bool, bool) {
     let mut named = false;
     let mut numbered = false;
     let mut escaped = false;
     let mut character_class = false;
+    let mut comment = false;
     let mut index = 0;
     while index < pattern.len() {
         let byte = pattern[index];
-        if escaped {
+        if comment {
+            if byte == b'\n' {
+                comment = false;
+            }
+        } else if escaped {
             escaped = false;
         } else if byte == b'\\' {
             escaped = true;
@@ -285,6 +294,8 @@ fn capture_types(pattern: &[u8]) -> (bool, bool) {
             character_class = true;
         } else if byte == b']' {
             character_class = false;
+        } else if extended && byte == b'#' && !character_class {
+            comment = true;
         } else if byte == b'(' && !character_class {
             if pattern.get(index + 1) != Some(&b'?') {
                 numbered = true;
@@ -306,10 +317,14 @@ mod tests {
 
     #[test]
     fn distinguishes_capture_group_kinds() {
-        assert_eq!(capture_types(br"(?<foo>bar)(baz)"), (true, true));
-        assert_eq!(capture_types(br"(?<foo>bar)(?:baz)"), (true, false));
-        assert_eq!(capture_types(br"(?<=foo)(bar)"), (false, true));
-        assert_eq!(capture_types(br"[(](?<foo>bar)"), (true, false));
-        assert_eq!(capture_types(br"\((?<foo>bar)"), (true, false));
+        assert_eq!(capture_types(br"(?<foo>bar)(baz)", false), (true, true));
+        assert_eq!(capture_types(br"(?<foo>bar)(?:baz)", false), (true, false));
+        assert_eq!(capture_types(br"(?<=foo)(bar)", false), (false, true));
+        assert_eq!(capture_types(br"[(](?<foo>bar)", false), (true, false));
+        assert_eq!(capture_types(br"\((?<foo>bar)", false), (true, false));
+        assert_eq!(
+            capture_types(b"(?<foo>bar) # not a (capture)\n", true),
+            (true, false)
+        );
     }
 }

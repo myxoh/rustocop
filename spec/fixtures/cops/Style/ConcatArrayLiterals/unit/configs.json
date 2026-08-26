@@ -1,0 +1,3 @@
+{
+  "12a7f655d9f56d69": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/ConcatArrayLiterals:\n  Description: Enforces the use of `Array#push(item)` instead of `Array#concat([item])`\n    to avoid redundant array literals.\n  Enabled: true\n  Safe: false\n  VersionAdded: '1.41'\n  AutoCorrect: always\n"
+}

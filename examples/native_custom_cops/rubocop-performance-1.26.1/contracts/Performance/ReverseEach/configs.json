@@ -1,0 +1,3 @@
+{
+  "ed800b9c8ee1d999": "---\nplugins:\n- rubocop-performance\nAllCops:\n  NewCops: enable\n  TargetRubyVersion: '3.4'\nPerformance/ReverseEach:\n  Description: Use `reverse_each` instead of `reverse.each`.\n  Reference: https://github.com/fastruby/fast-ruby#enumerablereverseeach-vs-enumerablereverse_each-code\n  Enabled: true\n  VersionAdded: '0.30'\n"
+}

@@ -50,4 +50,20 @@ RSpec.describe RuboCop::Cop::Style::ImplicitRuntimeError, :config do
   it 'does not register an offense for `fail` without arguments' do
     expect_no_offenses('fail')
   end
+
+  context 'with adversarial call shapes' do
+    it 'registers a parenthesized interpolated message' do
+      expect_offense(<<~'RUBY')
+        raise("bad #{value}")
+        ^^^^^^^^^^^^^^^^^^^^^ Use `raise` with an explicit exception class and message, rather than just a message.
+      RUBY
+    end
+
+    it 'does not register a receiver call or a dynamic message' do
+      expect_no_offenses(<<~RUBY)
+        handler.raise 'message'
+        raise message
+      RUBY
+    end
+  end
 end

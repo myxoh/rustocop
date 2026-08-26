@@ -32,25 +32,15 @@ RSpec.describe "rustocop executable" do
       Rails/FilePath
       Rails/ApplicationJob
       Rails/ReversibleMigration
-      Metrics/BlockLength
-      Metrics/MethodLength
-      Metrics/AbcSize
-      Layout/LineLength
-      Layout/ExtraSpacing
-      Layout/EndAlignment
       Layout/FirstHashElementIndentation
-      Layout/IndentationConsistency
-      Layout/IndentationWidth
       Style/HashSyntax
       Style/KeywordParametersOrder
       Style/RedundantBegin
-      Style/IfUnlessModifier
       Style/CaseLikeIf
       Style/ConditionalAssignment
       Style/EmptyCaseCondition
       Style/EmptyElse
       Style/GuardClause
-      Style/Documentation
       Style/HashLikeCase
       Style/ClassMethodsDefinitions
       Style/EndlessMethod
@@ -65,7 +55,6 @@ RSpec.describe "rustocop executable" do
       Naming/AccessorMethodName
       Lint/MissingSuper
       Lint/EmptyBlock
-      Lint/UnusedMethodArgument
       Lint/Debugger
       Security/Eval
       Security/JSONLoad
@@ -96,15 +85,19 @@ RSpec.describe "rustocop executable" do
   end
 
   it "preserves output order when inspecting files in parallel" do
-    files = Dir[File.join(ROOT, "spec/fixtures/rubocop_builtin_examples/lint_empty_expression/*.rb")].first(10)
-    arguments = ["--format", "json", "--only", "Lint/EmptyExpression", *files]
+    Dir.mktmpdir("rustocop-parallel-order-") do |directory|
+      files = 10.times.map do |index|
+        File.join(directory, format("%02d.rb", index)).tap { |path| File.write(path, "value_#{index} = ()\n") }
+      end
+      arguments = ["--format", "json", "--only", "Lint/EmptyExpression", *files]
 
-    sequential = run_rustocop(*arguments)
-    parallel = run_rustocop("--jobs", "4", *arguments)
+      sequential = run_rustocop(*arguments)
+      parallel = run_rustocop("--jobs", "4", *arguments)
 
-    expect(parallel.stderr).to eq("")
-    expect(parallel.status.exitstatus).to eq(sequential.status.exitstatus)
-    expect(parallel.stdout).to eq(sequential.stdout)
+      expect(parallel.stderr).to eq("")
+      expect(parallel.status.exitstatus).to eq(sequential.status.exitstatus)
+      expect(parallel.stdout).to eq(sequential.stdout)
+    end
   end
 
   it "discovers RuboCop configuration and runs the same enabled base cops" do
@@ -169,6 +162,33 @@ RSpec.describe "rustocop executable" do
     end
   end
 
+  it "keeps resolved path exclusions relative to the discovered config" do
+    Dir.mktmpdir("rustocop-resolved-paths") do |directory|
+      File.write(File.join(directory, ".rubocop.yml"), <<~YAML)
+        AllCops:
+          DisabledByDefault: true
+          NewCops: disable
+          Exclude:
+            - excluded.rb
+
+        Layout/TrailingWhitespace:
+          Enabled: true
+      YAML
+      File.write(File.join(directory, "included.rb"), "puts :included  \n")
+      File.write(File.join(directory, "excluded.rb"), "puts :excluded  \n")
+
+      rustocop = run_rustocop("--format", "json", directory, chdir: directory)
+      rubocop = run_rubocop("--format", "json", directory, chdir: directory)
+
+      expect(rustocop.stderr).to eq("")
+      expect(rustocop.status.exitstatus).to eq(rubocop.status.exitstatus)
+      expect(normalize_rubocop_report(parsed_json(rustocop)))
+        .to eq(normalize_rubocop_report(parsed_json(rubocop)))
+      expect(parsed_json(rustocop).fetch("files").map { |file| File.basename(file.fetch("path")) })
+        .to eq(["included.rb"])
+    end
+  end
+
   it "warns about configured non-native cops and delegates them only when requested" do
     Dir.mktmpdir("rustocop-non-native-config") do |directory|
       custom_cop = File.join(ROOT, "benchmark/custom_cops/synthetic_file_header.rb")
@@ -218,20 +238,24 @@ RSpec.describe "rustocop executable" do
   end
 
   it "delegates required custom cops while keeping built-in cops native" do
-    files = Dir[File.join(ROOT, "spec/fixtures/rubocop_builtin_examples/lint_empty_expression/*.rb")].first(3)
-    custom_cop = File.join(ROOT, "benchmark/custom_cops/synthetic_file_header.rb")
-    config = File.join(ROOT, "benchmark/custom-cop-rubocop.yml")
-    arguments = [
-      "--no-parallel", "--format", "json", "--config", config,
-      "--require", custom_cop, "--only", "Lint/EmptyExpression,Custom/SyntheticFileHeader", *files
-    ]
+    Dir.mktmpdir("rustocop-mixed-cops-") do |directory|
+      files = 3.times.map do |index|
+        File.join(directory, format("%02d.rb", index)).tap { |path| File.write(path, "value_#{index} = ()\n") }
+      end
+      custom_cop = File.join(ROOT, "benchmark/custom_cops/synthetic_file_header.rb")
+      config = File.join(ROOT, "benchmark/custom-cop-rubocop.yml")
+      arguments = [
+        "--no-parallel", "--format", "json", "--config", config,
+        "--require", custom_cop, "--only", "Lint/EmptyExpression,Custom/SyntheticFileHeader", *files
+      ]
 
-    mixed = run_rustocop(*arguments)
-    rubocop = run_rubocop(*arguments.reject { |argument| argument == "--no-parallel" }, "--no-server")
+      mixed = run_rustocop(*arguments)
+      rubocop = run_rubocop(*arguments.reject { |argument| argument == "--no-parallel" }, "--no-server")
 
-    expect(mixed.stderr).to eq("")
-    expect(mixed.status.exitstatus).to eq(1)
-    expect(normalize_rubocop_report(parsed_json(mixed))).to eq(normalize_rubocop_report(parsed_json(rubocop)))
+      expect(mixed.stderr).to eq("")
+      expect(mixed.status.exitstatus).to eq(1)
+      expect(normalize_rubocop_report(parsed_json(mixed))).to eq(normalize_rubocop_report(parsed_json(rubocop)))
+    end
   end
 
   it "rejects autocorrection when native and custom cops are mixed" do

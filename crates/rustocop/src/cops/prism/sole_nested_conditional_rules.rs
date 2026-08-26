@@ -360,19 +360,41 @@ fn assigned_condition_reused(
     inner: &Node<'_>,
     context: &CopContext<'_, '_>,
 ) -> bool {
-    let mut finder = AssignedNameFinder(Vec::new());
+    let mut finder = AssignedNameFinder {
+        names: Vec::new(),
+        multi_write_depth: 0,
+    };
     finder.visit(outer);
     let inner = context.source_file().node(inner).trim();
-    finder.0.iter().any(|name| name == inner)
+    finder.names.iter().any(|name| name == inner)
 }
 
-struct AssignedNameFinder(Vec<String>);
+struct AssignedNameFinder {
+    names: Vec<String>,
+    multi_write_depth: usize,
+}
 
 impl<'pr> Visit<'pr> for AssignedNameFinder {
     fn visit_local_variable_write_node(&mut self, node: &ruby_prism::LocalVariableWriteNode<'pr>) {
-        self.0
+        self.names
             .push(String::from_utf8_lossy(node.name().as_slice()).into_owned());
         ruby_prism::visit_local_variable_write_node(self, node);
+    }
+
+    fn visit_multi_write_node(&mut self, node: &ruby_prism::MultiWriteNode<'pr>) {
+        self.multi_write_depth += 1;
+        ruby_prism::visit_multi_write_node(self, node);
+        self.multi_write_depth -= 1;
+    }
+
+    fn visit_local_variable_target_node(
+        &mut self,
+        node: &ruby_prism::LocalVariableTargetNode<'pr>,
+    ) {
+        if self.multi_write_depth > 0 {
+            self.names
+                .push(String::from_utf8_lossy(node.name().as_slice()).into_owned());
+        }
     }
 }
 

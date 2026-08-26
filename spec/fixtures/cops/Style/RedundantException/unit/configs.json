@@ -1,0 +1,3 @@
+{
+  "7080c03d7bcbd255": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/RedundantException:\n  Description: Checks for an obsolete RuntimeException argument in raise/fail.\n  StyleGuide: \"#no-explicit-runtimeerror\"\n  Enabled: true\n  VersionAdded: '0.14'\n  VersionChanged: '0.29'\n  AutoCorrect: always\n"
+}

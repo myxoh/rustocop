@@ -1,0 +1,1356 @@
+schema: 1
+batch: project_cops
+rubocop_version: 1.87.0
+rubocop_commit: e5b788dba181ad94de30cfbad661c5d6aa08a4e5
+rustocop_commit: pending
+cops:
+  Bundler/DuplicatedGem:
+    matrix_position: 1
+    sources:
+      rubocop: lib/rubocop/cop/bundler/duplicated_gem.rb
+      rustocop:
+        - crates/rustocop/src/cops/prism/source_rules.rs
+        - crates/rustocop/src/cops/prism/source_rules/project_files.rs
+    manual_review:
+      status: failed
+      notes:
+        - RuboCop groups implicit-receiver gem calls by their first string AST argument and exempts duplicates wholly contained in one root conditional.
+        - Rustocop now models conditional branches and nested blocks, but its line-oriented parser does not cover every multiline or semicolon-separated call shape.
+    upstream_tests: { status: passed, passed: 10, total: 10, corrections: true }
+    edge_cases:
+      - id: duplicate_across_groups
+        description: Duplicate declarations in separate group blocks remain duplicates.
+        path: Gemfile
+        config: {}
+        source: |
+          group :development do
+            gem 'rack'
+          end
+          group :test do
+            gem 'rack'
+          end
+      - id: conditional_alternatives
+        description: Alternative versions in one if/else are not duplicates.
+        path: Gemfile
+        config: {}
+        source: |
+          if local?
+            gem 'rack', path: 'vendor/rack'
+          else
+            gem 'rack', '~> 3.0'
+          end
+      - id: mixed_quote_duplicate
+        description: Single and double quoted names identify the same gem.
+        path: Gemfile
+        config: {}
+        source: |
+          gem 'rack'
+          gem "rack"
+      - id: parenthesized_duplicate
+        description: Parenthesized implicit gem calls are included.
+        path: Gemfile
+        config: {}
+        source: |
+          gem('rack')
+          gem('rack', '~> 3.0')
+    real_world:
+      positives: []
+      negatives:
+        - repository: chatwoot/chatwoot
+          revision: 8d93d69e8e356216e85c28de7c4240e66b8e83fa
+          path: Gemfile
+          line: 7
+          source: |
+            gem 'rack-cors', '2.0.0', require: 'rack/cors'
+        - repository: rubygems/rubygems.org
+          revision: 3201f8831866f82eb9acd7f66287a978d0e59079
+          path: Gemfile
+          line: 7
+          source: |
+            gem "rails", "~> 8.1.3"
+
+  Bundler/DuplicatedGroup:
+    matrix_position: 2
+    sources:
+      rubocop: lib/rubocop/cop/bundler/duplicated_group.rb
+      rustocop:
+        - crates/rustocop/src/cops/prism/project_scope_completion.rs
+    manual_review:
+      status: failed
+      notes:
+        - RuboCop canonicalizes the complete set of group arguments, keyword pairs, and the nearest source/git/platforms/path ancestor.
+        - Rustocop now compares complete group sets and source scopes but still uses a textual block stack for complex Ruby expressions.
+    upstream_tests: { status: passed, passed: 21, total: 21, corrections: true }
+    edge_cases:
+      - id: reordered_group_set
+        description: A reordered set of group names is the same declaration.
+        path: Gemfile
+        config: {}
+        source: |
+          group :test, :development do
+          end
+          group :development, :test do
+          end
+      - id: overlapping_not_duplicate
+        description: Overlapping but unequal sets are not duplicates.
+        path: Gemfile
+        config: {}
+        source: |
+          group :development do
+          end
+          group :development, :test do
+          end
+      - id: reordered_keyword_options
+        description: Keyword pair order does not change group identity.
+        path: Gemfile
+        config: {}
+        source: |
+          group :test, foo: true, bar: false do
+          end
+          group :test, bar: false, foo: true do
+          end
+      - id: different_source_scopes
+        description: Equal groups in distinct source blocks are independent.
+        path: Gemfile
+        config: {}
+        source: |
+          source 'https://one.example' do
+            group :test do
+            end
+          end
+          source 'https://two.example' do
+            group :test do
+            end
+          end
+    real_world:
+      positives: []
+      negatives:
+        - repository: chatwoot/chatwoot
+          revision: 8d93d69e8e356216e85c28de7c4240e66b8e83fa
+          path: Gemfile
+          line: 220
+          source: |
+            group :production do
+            end
+        - repository: rubygems/rubygems.org
+          revision: 3201f8831866f82eb9acd7f66287a978d0e59079
+          path: Gemfile
+          line: 82
+          source: |
+            group :avo, optional: true do
+            end
+
+  Bundler/GemComment:
+    matrix_position: 3
+    sources:
+      rubocop: lib/rubocop/cop/bundler/gem_comment.rb
+      rustocop:
+        - crates/rustocop/src/cops/prism/final_project_context_batch.rs
+    manual_review:
+      status: failed
+      notes:
+        - RuboCop accepts adjacent, inline, or descendant comments and filters by IgnoredGems and the OnlyFor option vocabulary.
+        - Rustocop now implements the configuration vocabulary and adjacent/inline comments but does not yet associate comments inside multiline call descendants.
+    upstream_tests: { status: passed, passed: 26, total: 26, corrections: true }
+    edge_cases:
+      - id: ordinary_uncommented_gem
+        description: An ordinary uncommented declaration is checked when OnlyFor is empty.
+        path: Gemfile
+        config: { OnlyFor: [], IgnoredGems: [] }
+        source: |
+          gem 'rack'
+      - id: adjacent_description
+        description: A directly preceding comment describes the gem.
+        path: Gemfile
+        config: { OnlyFor: [], IgnoredGems: [] }
+        source: |
+          # HTTP server interface.
+          gem 'rack'
+      - id: ignored_gem
+        description: Explicitly ignored gem names do not require comments.
+        path: Gemfile
+        config: { OnlyFor: [], IgnoredGems: [rack] }
+        source: |
+          gem 'rack'
+      - id: restrictive_minimum_only
+        description: A minimum-only constraint is not restrictive.
+        path: Gemfile
+        config: { OnlyFor: [restrictive_version_specifiers], IgnoredGems: [] }
+        source: |
+          gem 'rack', '>= 3.0'
+    real_world:
+      positives:
+        - repository: chatwoot/chatwoot
+          revision: 8d93d69e8e356216e85c28de7c4240e66b8e83fa
+          path: Gemfile
+          line: 7
+          source: |
+            gem 'rack-cors', '2.0.0', require: 'rack/cors'
+        - repository: rubygems/rubygems.org
+          revision: 3201f8831866f82eb9acd7f66287a978d0e59079
+          path: Gemfile
+          line: 7
+          source: |
+            gem "rails", "~> 8.1.3"
+      negatives:
+        - repository: chatwoot/chatwoot
+          revision: 8d93d69e8e356216e85c28de7c4240e66b8e83fa
+          path: Gemfile
+          line: 10
+          source: |
+            # Reduces boot times through caching; required in config/boot.rb
+            gem 'bootsnap', require: false
+        - repository: gitlabhq/gitlabhq
+          revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+          path: Gemfile
+          line: 27
+          source: |
+            # Pin Zeitwerk until https://gitlab.com/gitlab-org/omnibus-gitlab/-/issues/9408 is fixed
+            gem 'zeitwerk', '= 2.6.18', feature_category: :rails_platform
+
+  Bundler/GemFilename:
+    matrix_position: 4
+    sources:
+      rubocop: lib/rubocop/cop/bundler/gem_filename.rb
+      rustocop:
+        - crates/rustocop/src/cops/prism/bundler_completion.rs
+    manual_review:
+      status: passed
+      notes:
+        - Both implementations compare the basename against Gemfile/Gemfile.lock or gems.rb/gems.locked according to EnforcedStyle.
+        - Rustocop now preserves the complete reported path and emits the same global messages and zero-width location as RuboCop.
+    upstream_tests: { status: passed, passed: 15, total: 15, corrections: true }
+    edge_cases:
+      - id: default_rejects_gems_rb
+        description: Default Gemfile style rejects gems.rb.
+        path: config/gems.rb
+        config: { EnforcedStyle: Gemfile }
+        source: |
+          source 'https://rubygems.org'
+      - id: default_accepts_nested_gemfile
+        description: Gemfile style accepts a nested Gemfile path.
+        path: config/Gemfile
+        config: { EnforcedStyle: Gemfile }
+        source: |
+          source 'https://rubygems.org'
+      - id: gems_rb_rejects_lock
+        description: gems.rb style rejects Gemfile.lock.
+        path: config/Gemfile.lock
+        config: { EnforcedStyle: gems.rb }
+        source: |
+          GEM
+      - id: gems_rb_accepts_locked
+        description: gems.rb style accepts gems.locked.
+        path: config/gems.locked
+        config: { EnforcedStyle: gems.rb }
+        source: |
+          GEM
+    real_world:
+      positives: []
+      negatives:
+        - repository: chatwoot/chatwoot
+          revision: 8d93d69e8e356216e85c28de7c4240e66b8e83fa
+          path: Gemfile
+          line: 1
+          source: |
+            source 'https://rubygems.org'
+        - repository: rubygems/rubygems.org
+          revision: 3201f8831866f82eb9acd7f66287a978d0e59079
+          path: Gemfile
+          line: 3
+          source: |
+            source "https://rubygems.org"
+
+  Bundler/GemVersion:
+    matrix_position: 5
+    sources:
+      rubocop: lib/rubocop/cop/bundler/gem_version.rb
+      rustocop:
+        - crates/rustocop/src/cops/prism/source_semantics.rs
+    manual_review:
+      status: failed
+      notes:
+        - RuboCop recognizes numeric version strings and static branch/ref/tag commit references on implicit gem calls, with AllowedGems filtering.
+        - Rustocop now distinguishes positional versions from quoted keyword values but remains line-oriented for parenthesized or multiline declarations.
+    upstream_tests: { status: passed, passed: 6, total: 6, corrections: true }
+    edge_cases:
+      - id: required_without_version
+        description: Required style reports a bare declaration.
+        path: Gemfile
+        config: { EnforcedStyle: required, AllowedGems: [] }
+        source: |
+          gem 'rack'
+      - id: required_commit_reference
+        description: A branch reference satisfies required style.
+        path: Gemfile
+        config: { EnforcedStyle: required, AllowedGems: [] }
+        source: |
+          gem 'rack', branch: 'main'
+      - id: forbidden_version
+        description: Forbidden style reports a numeric requirement.
+        path: Gemfile
+        config: { EnforcedStyle: forbidden, AllowedGems: [] }
+        source: |
+          gem 'rack', '~> 3.0'
+      - id: allowed_bare_gem
+        description: AllowedGems exempts a bare declaration.
+        path: Gemfile
+        config: { EnforcedStyle: required, AllowedGems: [rack] }
+        source: |
+          gem 'rack'
+    real_world:
+      positives:
+        - repository: chatwoot/chatwoot
+          revision: 8d93d69e8e356216e85c28de7c4240e66b8e83fa
+          path: Gemfile
+          line: 11
+          source: |
+            gem 'bootsnap', require: false
+        - repository: chatwoot/chatwoot
+          revision: 8d93d69e8e356216e85c28de7c4240e66b8e83fa
+          path: Gemfile
+          line: 14
+          source: |
+            gem 'acts-as-taggable-on'
+      negatives:
+        - repository: rubygems/rubygems.org
+          revision: 3201f8831866f82eb9acd7f66287a978d0e59079
+          path: Gemfile
+          line: 7
+          source: |
+            gem "rails", "~> 8.1.3"
+        - repository: gitlabhq/gitlabhq
+          revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+          path: Gemfile
+          line: 28
+          source: |
+            gem 'zeitwerk', '= 2.6.18', feature_category: :rails_platform
+
+  Bundler/InsecureProtocolSource:
+    matrix_position: 6
+    sources:
+      rubocop: lib/rubocop/cop/bundler/insecure_protocol_source.rb
+      rustocop:
+        - crates/rustocop/src/cops/prism/additional_rules.rs
+    manual_review:
+      status: failed
+      notes:
+        - RuboCop matches only implicit source calls whose argument is a legacy symbol or the exact HTTP rubygems URL and respects AllowHttpProtocol.
+        - Rustocop now restricts matching to source calls and supports both quote styles, but multiline call arguments remain outside its scanner.
+    upstream_tests: { status: passed, passed: 6, total: 6, corrections: true }
+    edge_cases:
+      - id: legacy_symbol
+        description: A legacy source symbol is always insecure.
+        path: Gemfile
+        config: { AllowHttpProtocol: true }
+        source: |
+          source :gemcutter
+      - id: allowed_http
+        description: The legacy HTTP URL is allowed when configured.
+        path: Gemfile
+        config: { AllowHttpProtocol: true }
+        source: |
+          source 'http://rubygems.org'
+      - id: forbidden_http_double_quotes
+        description: Disallowing HTTP also handles double-quoted URLs.
+        path: Gemfile
+        config: { AllowHttpProtocol: false }
+        source: |
+          source "http://rubygems.org"
+      - id: unrelated_symbol
+        description: A matching symbol outside a source call is ignored.
+        path: Gemfile
+        config: { AllowHttpProtocol: false }
+        source: |
+          mirror = :gemcutter
+    real_world:
+      positives:
+        - repository: gitlabhq/gitlabhq
+          revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+          path: vendor/gems/omniauth_crowd/Gemfile
+          line: 1
+          source: |
+            source 'http://rubygems.org'
+      negatives:
+        - repository: chatwoot/chatwoot
+          revision: 8d93d69e8e356216e85c28de7c4240e66b8e83fa
+          path: Gemfile
+          line: 1
+          source: |
+            source 'https://rubygems.org'
+        - repository: rubygems/rubygems.org
+          revision: 3201f8831866f82eb9acd7f66287a978d0e59079
+          path: Gemfile
+          line: 3
+          source: |
+            source "https://rubygems.org"
+
+  Bundler/OrderedGems:
+    matrix_position: 7
+    sources:
+      rubocop: lib/rubocop/cop/bundler/ordered_gems.rb
+      rustocop:
+        - crates/rustocop/src/cops/prism/bundler_completion.rs
+    manual_review:
+      status: failed
+      notes:
+        - RuboCop compares consecutive gem AST declarations and canonicalizes only hyphens and underscores unless ConsiderPunctuation is true.
+        - Rustocop now uses the same punctuation canonicalization but its source chunk grouping is not equivalent for every multiline call/comment layout.
+    upstream_tests: { status: passed, passed: 17, total: 17, corrections: true }
+    edge_cases:
+      - id: ordinary_out_of_order
+        description: Consecutive names are alphabetized case-insensitively.
+        path: Gemfile
+        config: { TreatCommentsAsGroupSeparators: true, ConsiderPunctuation: false }
+        source: |
+          gem 'zlib'
+          gem 'rack'
+      - id: comment_separator
+        description: A comment starts a new section when configured.
+        path: Gemfile
+        config: { TreatCommentsAsGroupSeparators: true, ConsiderPunctuation: false }
+        source: |
+          gem 'zlib'
+          # Web interface.
+          gem 'rack'
+      - id: comment_attached_to_gem
+        description: Comments travel with declarations when not separators.
+        path: Gemfile
+        config: { TreatCommentsAsGroupSeparators: false, ConsiderPunctuation: false }
+        source: |
+          gem 'zlib'
+          # Web interface.
+          gem 'rack'
+      - id: blank_line_separator
+        description: A blank line always separates sections.
+        path: Gemfile
+        config: { TreatCommentsAsGroupSeparators: false, ConsiderPunctuation: false }
+        source: |
+          gem 'zlib'
+
+          gem 'rack'
+    real_world:
+      positives:
+        - repository: chatwoot/chatwoot
+          revision: 8d93d69e8e356216e85c28de7c4240e66b8e83fa
+          path: Gemfile
+          line: 26
+          source: |
+            gem 'valid_email2'
+            gem 'email-provider-info'
+        - repository: rubygems/rubygems.org
+          revision: 3201f8831866f82eb9acd7f66287a978d0e59079
+          path: Gemfile
+          line: 18
+          source: |
+            gem "google-protobuf", "~> 4.35"
+            gem "faraday", "~> 2.14"
+      negatives:
+        - repository: chatwoot/chatwoot
+          revision: 8d93d69e8e356216e85c28de7c4240e66b8e83fa
+          path: Gemfile
+          line: 15
+          source: |
+            gem 'acts-as-taggable-on'
+            gem 'attr_extras'
+        - repository: rubygems/rubygems.org
+          revision: 3201f8831866f82eb9acd7f66287a978d0e59079
+          path: Gemfile
+          line: 11
+          source: |
+            gem "aws-sdk-s3", "~> 1.229"
+            gem "aws-sdk-sqs", "~> 1.117"
+
+  Gemspec/AddRuntimeDependency:
+    matrix_position: 8
+    sources:
+      rubocop: lib/rubocop/cop/gemspec/add_runtime_dependency.rb
+      rustocop:
+        - crates/rustocop/src/cops/prism/source_rules.rs
+    manual_review:
+      status: failed
+      notes:
+        - RuboCop reports the selector of add_runtime_dependency calls having both a receiver and at least one argument.
+        - Rustocop now covers parenthesized and command forms with the same correction, but lexical matching can still see call-like text inside unusual literals.
+    upstream_tests: { status: passed, passed: 5, total: 5, corrections: true }
+    edge_cases:
+      - id: parenthesized_call
+        description: Parenthesized calls with a receiver are corrected.
+        path: example.gemspec
+        config: {}
+        source: |
+          spec.add_runtime_dependency('rack')
+      - id: command_call
+        description: Command-form calls with a receiver are corrected.
+        path: example.gemspec
+        config: {}
+        source: |
+          spec.add_runtime_dependency 'rack'
+      - id: missing_receiver
+        description: Calls without a receiver are ignored.
+        path: example.gemspec
+        config: {}
+        source: |
+          add_runtime_dependency('rack')
+      - id: missing_argument
+        description: Calls without arguments are ignored.
+        path: example.gemspec
+        config: {}
+        source: |
+          spec.add_runtime_dependency
+    real_world:
+      positives:
+        - repository: gitlabhq/gitlabhq
+          revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+          path: gems/mail-smtp_pool/mail-smtp_pool.gemspec
+          line: 21
+          source: |
+            spec.add_runtime_dependency 'connection_pool', '~> 2.0'
+        - repository: gitlabhq/gitlabhq
+          revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+          path: gems/mail-smtp_pool/mail-smtp_pool.gemspec
+          line: 22
+          source: |
+            spec.add_runtime_dependency 'mail', '~> 2.8'
+      negatives:
+        - repository: gitlabhq/gitlabhq
+          revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+          path: gems/gitlab-configs/gitlab-configs.gemspec
+          line: 21
+          source: |
+            spec.add_dependency "activesupport", ">= 7", "< 9"
+        - repository: gitlabhq/gitlabhq
+          revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+          path: gems/gitlab-policy-store/gitlab-policy-store.gemspec
+          line: 24
+          source: |
+            spec.add_development_dependency "rspec", "~> 3.12"
+
+  Gemspec/AttributeAssignment:
+    matrix_position: 9
+    sources:
+      rubocop: lib/rubocop/cop/gemspec/attribute_assignment.rb
+      rustocop:
+        - crates/rustocop/src/cops/prism/additional_rules.rs
+    manual_review:
+      status: failed
+      notes:
+        - RuboCop intersects direct and indexed assignments for each attribute belonging to a Gem::Specification block variable.
+        - Rustocop now discovers the actual block variable but only recognizes conventional single-line assignments with spaced equals signs.
+    upstream_tests: { status: passed, passed: 7, total: 7, corrections: true }
+    edge_cases:
+      - id: mixed_metadata_styles
+        description: Direct and indexed metadata assignment styles conflict.
+        path: example.gemspec
+        config: {}
+        source: |
+          Gem::Specification.new do |gem|
+            gem.metadata = { 'one' => '1' }
+            gem.metadata['two'] = '2'
+          end
+      - id: indexed_only
+        description: Multiple indexed writes are consistent.
+        path: example.gemspec
+        config: {}
+        source: |
+          Gem::Specification.new do |gem|
+            gem.metadata['one'] = '1'
+            gem.metadata['two'] = '2'
+          end
+      - id: different_attributes
+        description: Different attributes may use different styles.
+        path: example.gemspec
+        config: {}
+        source: |
+          Gem::Specification.new do |gem|
+            gem.metadata = { 'one' => '1' }
+            gem.authors[0] = 'One'
+          end
+      - id: outside_specification
+        description: Ordinary object assignments outside a gemspec block are ignored.
+        path: example.gemspec
+        config: {}
+        source: |
+          object.metadata = { 'one' => '1' }
+          object.metadata['two'] = '2'
+    real_world:
+      positives: []
+      negatives:
+        - repository: gitlabhq/gitlabhq
+          revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+          path: gems/gitlab-configs/gitlab-configs.gemspec
+          line: 6
+          source: |
+            Gem::Specification.new do |spec|
+              spec.name = "gitlab-configs"
+            end
+        - repository: gitlabhq/gitlabhq
+          revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+          path: gems/gitlab-policy-store/gitlab-policy-store.gemspec
+          line: 18
+          source: |
+            Gem::Specification.new do |spec|
+              spec.metadata["rubygems_mfa_required"] = "true"
+            end
+
+  Gemspec/DependencyVersion:
+    matrix_position: 10
+    sources:
+      rubocop: lib/rubocop/cop/gemspec/dependency_version.rb
+      rustocop:
+        - crates/rustocop/src/cops/prism/final_project_context_batch.rs
+    manual_review:
+      status: failed
+      notes:
+        - RuboCop checks all three dependency methods on the gemspec block variable, recognizes numeric strings or branch/ref/tag strings, and applies AllowedGems.
+        - Rustocop now passes both enforced styles and all upstream cases, but its call extraction remains single-line rather than AST-structural.
+    upstream_tests: { status: passed, passed: 77, total: 77, corrections: true }
+    edge_cases:
+      - id: required_bare_dependency
+        description: Required style reports a dependency without a version.
+        path: example.gemspec
+        config: { EnforcedStyle: required, AllowedGems: [] }
+        source: |
+          Gem::Specification.new do |g|
+            g.add_dependency 'rack'
+          end
+      - id: required_reference
+        description: A static ref satisfies required style.
+        path: example.gemspec
+        config: { EnforcedStyle: required, AllowedGems: [] }
+        source: |
+          Gem::Specification.new do |g|
+            g.add_dependency 'rack', ref: 'abc123'
+          end
+      - id: forbidden_version
+        description: Forbidden style rejects a numeric requirement.
+        path: example.gemspec
+        config: { EnforcedStyle: forbidden, AllowedGems: [] }
+        source: |
+          Gem::Specification.new do |g|
+            g.add_development_dependency 'rack', '>= 3.0'
+          end
+      - id: allowed_dependency
+        description: AllowedGems exempts a bare dependency.
+        path: example.gemspec
+        config: { EnforcedStyle: required, AllowedGems: [rack] }
+        source: |
+          Gem::Specification.new do |g|
+            g.add_runtime_dependency 'rack'
+          end
+    real_world:
+      positives:
+        - repository: gitlabhq/gitlabhq
+          revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+          path: gems/csv_builder/csv_builder.gemspec
+          line: 21
+          source: |
+            Gem::Specification.new do |spec|
+              spec.name = "csv_builder"
+              spec.version = CsvBuilder::Version::VERSION
+              spec.authors = ["group::tenant-scale"]
+              spec.email = ["engineering@gitlab.com"]
+
+              spec.summary = "Provides enhancements to the CSV standard library"
+              spec.description = "Provides enhancements to the CSV standard library"
+              spec.homepage = "https://gitlab.com/gitlab-org/gitlab/-/tree/master/gems/csv_builder"
+              spec.license = 'MIT'
+              spec.required_ruby_version = ">= 3.0.0"
+              spec.metadata["rubygems_mfa_required"] = "true"
+
+              spec.files = Dir['lib/**/*.rb']
+              spec.require_paths = ["lib"]
+
+              spec.add_dependency "csv"
+
+              # base64, bigdecimal and mutex_m are former default gems that ActiveSupport
+              # 7.0 (pulled in by the gitlab-styles RuboCop toolchain) requires without
+              # declaring. Ruby 3.4 no longer ships them, so RuboCop's config load fails
+              # unless they are present.
+              spec.add_development_dependency "base64"
+              spec.add_development_dependency "bigdecimal"
+              spec.add_development_dependency "gitlab-styles", "~> 14.0"
+              spec.add_development_dependency "mutex_m"
+              spec.add_development_dependency "pry"
+              spec.add_development_dependency "rspec", "~> 3.0"
+              spec.add_development_dependency "rubocop", "~> 1.50"
+              spec.add_development_dependency "rubocop-rspec", "~> 3.0"
+            end
+        - repository: gitlabhq/gitlabhq
+          revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+          path: vendor/gems/gitlab-iam-grpc/gitlab-iam-grpc.gemspec
+          line: 16
+          source: |
+            Gem::Specification.new do |spec|
+              spec.name    = 'gitlab-iam-grpc'
+              spec.version = '0.1.0'
+              spec.authors = ['GitLab']
+              spec.summary = 'gRPC client stubs for the GitLab IAM service'
+              spec.description = 'Provides gRPC client stubs for communicating with the GitLab IAM service'
+              spec.homepage = 'https://gitlab.com/gitlab-org/auth/iam'
+              spec.license = 'MIT'
+              
+              spec.files = Dir['lib/**/*']
+
+              spec.require_paths = ['lib']
+
+              spec.add_dependency 'grpc'
+              spec.add_dependency 'google-protobuf'
+            end
+      negatives:
+        - repository: gitlabhq/gitlabhq
+          revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+          path: gems/mail-smtp_pool/mail-smtp_pool.gemspec
+          line: 21
+          source: |
+            Gem::Specification.new do |spec|
+              spec.add_runtime_dependency 'connection_pool', '~> 2.0'
+            end
+        - repository: gitlabhq/gitlabhq
+          revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+          path: gems/gitlab-policy-store/gitlab-policy-store.gemspec
+          line: 24
+          source: |
+            Gem::Specification.new do |spec|
+              spec.add_development_dependency "rspec", "~> 3.12"
+            end
+
+  Gemspec/DeprecatedAttributeAssignment:
+    matrix_position: 11
+    sources:
+      rubocop: lib/rubocop/cop/gemspec/deprecated_attribute_assignment.rb
+      rustocop:
+        - crates/rustocop/src/cops/prism/project_scope_completion.rs
+    manual_review:
+      status: failed
+      notes:
+        - RuboCop finds the first deprecated assignment within each Gem::Specification block and removes its complete line.
+        - Rustocop matches the four deprecated names and operator assignments but its textual block boundary handling is not fully AST-equivalent.
+    upstream_tests: { status: passed, passed: 18, total: 18, corrections: true }
+    edge_cases:
+      - id: test_files_assignment
+        description: Direct test_files assignment is deprecated and correctable.
+        path: example.gemspec
+        config: {}
+        source: |
+          Gem::Specification.new do |g|
+            g.test_files = Dir['spec/**/*']
+          end
+      - id: date_operator_assignment
+        description: Prism does not expose date operator assignment in the deprecated writer shape.
+        path: example.gemspec
+        config: {}
+        source: |
+          Gem::Specification.new do |g|
+            g.date += '2026-01-01'
+          end
+      - id: ordinary_attribute
+        description: A supported attribute remains valid.
+        path: example.gemspec
+        config: {}
+        source: |
+          Gem::Specification.new do |g|
+            g.name = 'example'
+          end
+      - id: outside_specification
+        description: A similarly named assignment outside a gemspec block is ignored.
+        path: example.gemspec
+        config: {}
+        source: |
+          object.test_files = []
+    real_world:
+      positives:
+        - repository: gitlabhq/gitlabhq
+          revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+          path: gems/error_tracking_open_api/error_tracking_open_api.gemspec
+          line: 35
+          source: |
+            Gem::Specification.new do |s|
+              s.name        = "error_tracking_open_api"
+              s.version     = ErrorTrackingOpenAPI::VERSION
+              s.platform    = Gem::Platform::RUBY
+              s.authors     = ["OpenAPI-Generator"]
+              s.email       = [""]
+              s.homepage    = "https://openapi-generator.tech"
+              s.summary     = "Error Tracking REST API Ruby Gem"
+              s.description = "This schema describes the API endpoints for the error tracking feature"
+              s.license     = "MIT"
+              s.required_ruby_version = ">= 2.4"
+
+              s.add_runtime_dependency 'typhoeus', '~> 1.0', '>= 1.0.1'
+
+
+
+              s.files         = Dir.glob("lib/**/*")
+              s.test_files    = []
+              s.executables   = []
+              s.require_paths = ["lib"]
+            end
+        - repository: gitlabhq/gitlabhq
+          revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+          path: gems/gitlab-http/gitlab-http.gemspec
+          line: 19
+          source: |
+            Gem::Specification.new do |spec|
+              spec.name = "gitlab-http"
+              spec.version = Gitlab::HTTP_V2::Version::VERSION
+              spec.authors = ["GitLab Engineers"]
+              spec.email = ["engineering@gitlab.com"]
+
+              spec.summary = "GitLab HTTP client"
+              spec.description = "GitLab HTTP client"
+              spec.homepage = "https://gitlab.com/gitlab-org/gitlab/-/tree/master/gems/gitlab-http"
+              spec.license = 'MIT'
+              spec.required_ruby_version = ">= 3.2"
+              spec.metadata["rubygems_mfa_required"] = "true"
+
+              spec.files = Dir['lib/**/*.rb']
+              spec.test_files = Dir['spec/**/*']
+              spec.require_paths = ["lib"]
+
+              spec.add_runtime_dependency 'activesupport', '>= 7.2', '< 9'
+              spec.add_runtime_dependency 'concurrent-ruby', '~> 1.2'
+              spec.add_runtime_dependency 'httparty', '~> 0.21'
+              spec.add_runtime_dependency 'ipaddress', '~> 0.8.3'
+              # See lib/net_http/connect_patch.rb
+              spec.add_runtime_dependency "net-http", "= 0.6.0"
+
+              spec.add_development_dependency 'gitlab-styles', '~> 13.0.1'
+              spec.add_development_dependency 'rspec-parameterized', '~> 1.0.2'
+              spec.add_development_dependency 'rspec-rails', '~> 6.0.3'
+              spec.add_development_dependency 'webmock', '~> 3.18.1'
+              spec.add_development_dependency 'webrick', '~> 1.8'
+            end
+      negatives:
+        - repository: gitlabhq/gitlabhq
+          revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+          path: gems/gitlab-configs/gitlab-configs.gemspec
+          line: 6
+          source: |
+            Gem::Specification.new do |spec|
+              spec.name = "gitlab-configs"
+            end
+        - repository: gitlabhq/gitlabhq
+          revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+          path: gems/gitlab-policy-store/gitlab-policy-store.gemspec
+          line: 20
+          source: |
+            Gem::Specification.new do |spec|
+              spec.files = Dir['lib/**/*.rb']
+            end
+
+  Gemspec/DevelopmentDependencies:
+    matrix_position: 12
+    sources:
+      rubocop: lib/rubocop/cop/gemspec/development_dependencies.rb
+      rustocop:
+        - crates/rustocop/src/cops/prism/project_scope_completion.rs
+    manual_review:
+      status: failed
+      notes:
+        - RuboCop selects gem or add_development_dependency calls according to EnforcedStyle and excludes AllowedGems.
+        - Rustocop reproduces the upstream paths and messages but its line parser does not cover all parenthesized/multiline gem call shapes.
+    upstream_tests: { status: passed, passed: 13, total: 13, corrections: true }
+    edge_cases:
+      - id: gemfile_style_rejects_gemspec
+        description: Gemfile style rejects a development dependency in a gemspec.
+        path: example.gemspec
+        config: { EnforcedStyle: Gemfile, AllowedGems: [] }
+        source: |
+          spec.add_development_dependency 'rspec'
+      - id: gems_rb_style_rejects_gemspec
+        description: gems.rb style names the configured preferred file.
+        path: example.gemspec
+        config: { EnforcedStyle: gems.rb, AllowedGems: [] }
+        source: |
+          spec.add_development_dependency 'rspec'
+      - id: gemspec_style_rejects_gemfile
+        description: gemspec style rejects a Gemfile gem declaration.
+        path: Gemfile
+        config: { EnforcedStyle: gemspec, AllowedGems: [] }
+        source: |
+          gem 'rspec'
+      - id: allowed_gem
+        description: AllowedGems exempts a declaration in the nonpreferred file.
+        path: example.gemspec
+        config: { EnforcedStyle: Gemfile, AllowedGems: [rspec] }
+        source: |
+          spec.add_development_dependency 'rspec'
+    real_world:
+      positives:
+        - repository: gitlabhq/gitlabhq
+          revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+          path: gems/gitlab-policy-store/gitlab-policy-store.gemspec
+          line: 23
+          source: |
+            spec.add_development_dependency "gitlab-styles"
+        - repository: gitlabhq/gitlabhq
+          revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+          path: gems/gitlab-configs/gitlab-configs.gemspec
+          line: 23
+          source: |
+            spec.add_development_dependency "gitlab-styles"
+      negatives:
+        - repository: gitlabhq/gitlabhq
+          revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+          path: gems/gitlab-configs/gitlab-configs.gemspec
+          line: 21
+          source: |
+            spec.add_dependency "activesupport", ">= 7", "< 9"
+        - repository: gitlabhq/gitlabhq
+          revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+          path: gems/mail-smtp_pool/mail-smtp_pool.gemspec
+          line: 21
+          source: |
+            spec.add_runtime_dependency 'connection_pool', '~> 2.0'
+
+  Gemspec/DuplicatedAssignment:
+    matrix_position: 13
+    sources:
+      rubocop: lib/rubocop/cop/gemspec/duplicated_assignment.rb
+      rustocop:
+        - crates/rustocop/src/cops/prism/gemspec_completion.rs
+    manual_review:
+      status: failed
+      notes:
+        - RuboCop separately groups direct assignment method names and indexed attribute/key AST pairs inside the gemspec block.
+        - Rustocop preserves string-versus-symbol metadata key identity but depends on conventional single-line assignment syntax.
+    upstream_tests: { status: passed, passed: 17, total: 17, corrections: true }
+    edge_cases:
+      - id: duplicate_direct_attribute
+        description: Repeating a direct assignment is reported.
+        path: example.gemspec
+        config: {}
+        source: |
+          Gem::Specification.new do |g|
+            g.name = 'one'
+            g.name = 'two'
+          end
+      - id: duplicate_string_metadata_key
+        description: Repeating the same string metadata key is reported.
+        path: example.gemspec
+        config: {}
+        source: |
+          Gem::Specification.new do |g|
+            g.metadata['key'] = 'one'
+            g.metadata['key'] = 'two'
+          end
+      - id: distinct_key_types
+        description: String and symbol keys are distinct AST values.
+        path: example.gemspec
+        config: {}
+        source: |
+          Gem::Specification.new do |g|
+            g.metadata['key'] = 'one'
+            g.metadata[:key] = 'two'
+          end
+      - id: distinct_attributes
+        description: Different direct attributes are not duplicates.
+        path: example.gemspec
+        config: {}
+        source: |
+          Gem::Specification.new do |g|
+            g.name = 'one'
+            g.summary = 'two'
+          end
+    real_world:
+      positives: []
+      negatives:
+        - repository: gitlabhq/gitlabhq
+          revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+          path: gems/gitlab-configs/gitlab-configs.gemspec
+          line: 6
+          source: |
+            Gem::Specification.new do |spec|
+              spec.name = "gitlab-configs"
+              spec.summary = "GitLab settings and configuration loading"
+            end
+        - repository: gitlabhq/gitlabhq
+          revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+          path: gems/gitlab-policy-store/gitlab-policy-store.gemspec
+          line: 17
+          source: |
+            Gem::Specification.new do |spec|
+              spec.required_ruby_version = ">= 3.0"
+              spec.metadata["rubygems_mfa_required"] = "true"
+            end
+
+  Gemspec/OrderedDependencies:
+    matrix_position: 14
+    sources:
+      rubocop: lib/rubocop/cop/gemspec/ordered_dependencies.rb
+      rustocop:
+        - crates/rustocop/src/cops/prism/gemspec_completion.rs
+    manual_review:
+      status: failed
+      notes:
+        - RuboCop compares consecutive calls only when dependency method names match, using shared ordered-gem comment and punctuation behavior.
+        - Rustocop now shares the exact hyphen/underscore normalization but remains textual for multiline declarations and attached comments.
+    upstream_tests: { status: passed, passed: 18, total: 18, corrections: true }
+    edge_cases:
+      - id: same_method_out_of_order
+        description: Consecutive dependencies using the same method are sorted.
+        path: example.gemspec
+        config: { TreatCommentsAsGroupSeparators: true, ConsiderPunctuation: false }
+        source: |
+          Gem::Specification.new do |spec|
+            spec.add_dependency 'zlib'
+            spec.add_dependency 'rack'
+          end
+      - id: different_methods
+        description: Runtime and development dependency sections are independent.
+        path: example.gemspec
+        config: { TreatCommentsAsGroupSeparators: true, ConsiderPunctuation: false }
+        source: |
+          Gem::Specification.new do |spec|
+            spec.add_dependency 'zlib'
+            spec.add_development_dependency 'rack'
+          end
+      - id: comment_separator
+        description: A comment separates sections when configured.
+        path: example.gemspec
+        config: { TreatCommentsAsGroupSeparators: true, ConsiderPunctuation: false }
+        source: |
+          Gem::Specification.new do |spec|
+            spec.add_dependency 'zlib'
+            # Web interface.
+            spec.add_dependency 'rack'
+          end
+      - id: blank_line_separator
+        description: A blank line separates dependency sections.
+        path: example.gemspec
+        config: { TreatCommentsAsGroupSeparators: false, ConsiderPunctuation: false }
+        source: |
+          Gem::Specification.new do |spec|
+            spec.add_dependency 'zlib'
+
+            spec.add_dependency 'rack'
+          end
+    real_world:
+      positives:
+        - repository: gitlabhq/gitlabhq
+          revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+          path: vendor/gems/gitlab-duo-workflow-service-client/gitlab-duo-workflow-service-client.gemspec
+          line: 24
+          source: |
+            Gem::Specification.new do |spec|
+              spec.name = "gitlab-duo-workflow-service-client"
+              spec.version = Gitlab::DuoWorkflowService::VERSION
+              spec.authors = ["group::ai framework"]
+              spec.email = ["engineering@gitlab.com"]
+
+              spec.summary = "Client library to interact with the Duo Workflow Service"
+              spec.homepage = "https://gitlab.com/gitlab-org/modelops/applied-ml/code-suggestions/ai-assist"
+              spec.license = "MIT"
+              spec.required_ruby_version = ">= 2.6.0"
+
+              spec.files = Dir['lib/**/*.rb']
+              spec.require_paths = ["lib"]
+
+              spec.add_dependency "grpc"
+              spec.add_development_dependency "gitlab-styles", "~> 10.1.0"
+              spec.add_development_dependency "rspec", "~> 3.0"
+              spec.add_development_dependency "rspec-parameterized", "~> 1.0.2"
+              spec.add_development_dependency "rubocop", "~> 1.21"
+              spec.add_development_dependency 'grpc-tools'
+            end
+        - repository: gitlabhq/gitlabhq
+          revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+          path: vendor/gems/gitlab-iam-grpc/gitlab-iam-grpc.gemspec
+          line: 17
+          source: |
+            Gem::Specification.new do |spec|
+              spec.name    = 'gitlab-iam-grpc'
+              spec.version = '0.1.0'
+              spec.authors = ['GitLab']
+              spec.summary = 'gRPC client stubs for the GitLab IAM service'
+              spec.description = 'Provides gRPC client stubs for communicating with the GitLab IAM service'
+              spec.homepage = 'https://gitlab.com/gitlab-org/auth/iam'
+              spec.license = 'MIT'
+              
+              spec.files = Dir['lib/**/*']
+
+              spec.require_paths = ['lib']
+
+              spec.add_dependency 'grpc'
+              spec.add_dependency 'google-protobuf'
+            end
+      negatives:
+        - repository: gitlabhq/gitlabhq
+          revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+          path: gems/gitlab-policy-store/gitlab-policy-store.gemspec
+          line: 24
+          source: |
+            spec.add_development_dependency "gitlab-styles"
+            spec.add_development_dependency "rspec", "~> 3.12"
+        - repository: gitlabhq/gitlabhq
+          revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+          path: gems/mail-smtp_pool/mail-smtp_pool.gemspec
+          line: 22
+          source: |
+            spec.add_runtime_dependency 'connection_pool', '~> 2.0'
+            spec.add_runtime_dependency 'mail', '~> 2.8'
+
+  Gemspec/RequireMFA:
+    matrix_position: 15
+    sources:
+      rubocop: lib/rubocop/cop/gemspec/require_mfa.rb
+      rustocop:
+        - crates/rustocop/src/cops/prism/gemspec_completion.rs
+    manual_review:
+      status: failed
+      notes:
+        - RuboCop reads direct or hash metadata values in each Gem::Specification block and inserts after the last metadata assignment when missing.
+        - Rustocop passes the complete captured correction suite but still locates metadata with source patterns rather than Prism node relationships.
+    upstream_tests: { status: passed, passed: 15, total: 15, corrections: true }
+    edge_cases:
+      - id: missing_metadata
+        description: A gemspec without MFA metadata receives a directive.
+        path: example.gemspec
+        config: {}
+        source: |
+          Gem::Specification.new do |spec|
+            spec.name = 'example'
+          end
+      - id: false_string
+        description: A false string is corrected to true.
+        path: example.gemspec
+        config: {}
+        source: |
+          Gem::Specification.new do |spec|
+            spec.metadata['rubygems_mfa_required'] = 'false'
+          end
+      - id: true_hash_value
+        description: A true value in assigned metadata is accepted.
+        path: example.gemspec
+        config: {}
+        source: |
+          Gem::Specification.new do |spec|
+            spec.metadata = { 'rubygems_mfa_required' => 'true' }
+          end
+      - id: true_indexed_value
+        description: A direct true indexed value is accepted.
+        path: example.gemspec
+        config: {}
+        source: |
+          Gem::Specification.new do |spec|
+            spec.metadata['rubygems_mfa_required'] = 'true'
+          end
+    real_world:
+      positives:
+        - repository: gitlabhq/gitlabhq
+          revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+          path: gems/ipynbdiff/ipynbdiff.gemspec
+          line: 7
+          source: |
+            Gem::Specification.new do |s|
+              s.name        = 'ipynbdiff'
+              s.version     = IpynbDiff::Version::VERSION
+              s.summary     = 'Human Readable diffs for Jupyter Notebooks'
+              s.description = 'Better diff for Jupyter Notebooks by first preprocessing them and removing clutter'
+              s.authors     = ['Eduardo Bonet']
+              s.email       = 'ebonet@gitlab.com'
+              # Specify which files should be added to the gem when it is released.
+              # The `git ls-files -z` loads the files in the RubyGem that have been added into git.
+              s.files = Dir['lib/**/*.rb']
+              s.require_paths = ["lib"]
+              s.required_ruby_version = ">= 3.0"
+              s.homepage = 'https://gitlab.com/gitlab-org/gitlab/-/tree/master/gems/ipynbdiff'
+              s.license = 'MIT'
+
+              s.add_dependency 'diffy', '~> 3.4'
+              s.add_dependency 'oj', '~> 3.16', '>=3.16.10'
+
+              s.add_development_dependency 'benchmark-memory', '~>0.2.0'
+              s.add_development_dependency 'bundler', '~> 4.0'
+              s.add_development_dependency 'gitlab-styles', '~> 14.0'
+              s.add_development_dependency 'pry', '~> 0.14'
+              s.add_development_dependency 'rake', '~> 13.0'
+              s.add_development_dependency 'rspec', '~> 3.10'
+              s.add_development_dependency 'rspec-parameterized', '~> 1.0'
+              s.add_development_dependency 'simplecov', '~> 0.22.0'
+            end
+        - repository: gitlabhq/gitlabhq
+          revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+          path: gems/mail-smtp_pool/mail-smtp_pool.gemspec
+          line: 6
+          source: |
+            Gem::Specification.new do |spec|
+              spec.name = 'mail-smtp_pool'
+              spec.version = '0.1.0'
+              spec.authors = ['Heinrich Lee Yu']
+              spec.email = ['heinrich@gitlab.com']
+
+              spec.summary = 'Mail extension for sending using an SMTP connection pool'
+              spec.homepage = 'https://gitlab.com/gitlab-org/gitlab/-/tree/master/gems/mail-smtp_pool'
+              spec.metadata = { 'source_code_uri' => 'https://gitlab.com/gitlab-org/gitlab/-/tree/master/gems/mail-smtp_pool' }
+              spec.license = 'MIT'
+
+              spec.files = Dir['lib/**/*.rb']
+              spec.require_paths = ['lib']
+
+              # Please maintain alphabetical order for dependencies
+              spec.add_runtime_dependency 'connection_pool', '~> 2.0'
+              spec.add_runtime_dependency 'mail', '~> 2.8'
+
+              # Please maintain alphabetical order for dev dependencies
+              spec.add_development_dependency 'rspec', '~> 3.10.0'
+            end
+      negatives:
+        - repository: gitlabhq/gitlabhq
+          revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+          path: gems/gitlab-deploy-driver-argo-rollouts/gitlab-deploy-driver-argo-rollouts.gemspec
+          line: 15
+          source: |
+            Gem::Specification.new do |spec|
+              spec.metadata["rubygems_mfa_required"] = "true"
+            end
+        - repository: gitlabhq/gitlabhq
+          revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+          path: gems/gitlab-database-lock_retries/gitlab-database-lock_retries.gemspec
+          line: 16
+          source: |
+            Gem::Specification.new do |spec|
+              spec.metadata["rubygems_mfa_required"] = "true"
+            end
+
+  Gemspec/RequiredRubyVersion:
+    matrix_position: 16
+    sources:
+      rubocop: lib/rubocop/cop/gemspec/required_ruby_version.rb
+      rustocop:
+        - crates/rustocop/src/cops/prism/project_structural_completion_batch.rs
+    manual_review:
+      status: failed
+      notes:
+        - RuboCop accepts dynamic values and extracts the lower version from supported strings, arrays, or Gem::Requirement calls before comparing TargetRubyVersion.
+        - Rustocop matches captured ranges and messages but uses line parsing and a simplified numeric requirement extraction.
+    upstream_tests: { status: passed, passed: 21, total: 21, corrections: true }
+    edge_cases:
+      - id: missing_requirement
+        description: A gemspec without the assignment gets a global offense.
+        path: example.gemspec
+        config: { AllCops: { TargetRubyVersion: 3.4 } }
+        source: |
+          Gem::Specification.new do |spec|
+            spec.name = 'example'
+          end
+      - id: matching_requirement
+        description: A matching lower requirement is accepted.
+        path: example.gemspec
+        config: { AllCops: { TargetRubyVersion: 3.4 } }
+        source: |
+          Gem::Specification.new do |spec|
+            spec.required_ruby_version = '>= 3.4'
+          end
+      - id: mismatched_requirement
+        description: A lower fixed requirement is reported.
+        path: example.gemspec
+        config: { AllCops: { TargetRubyVersion: 3.4 } }
+        source: |
+          Gem::Specification.new do |spec|
+            spec.required_ruby_version = '>= 3.2'
+          end
+      - id: dynamic_requirement
+        description: Dynamic variable values are intentionally accepted.
+        path: example.gemspec
+        config: { AllCops: { TargetRubyVersion: 3.4 } }
+        source: |
+          Gem::Specification.new do |spec|
+            requirement = '>= 3.2'
+            spec.required_ruby_version = requirement
+          end
+    real_world:
+      positives:
+        - repository: gitlabhq/gitlabhq
+          revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+          path: gems/gitlab-deploy-driver-argo-rollouts/gitlab-deploy-driver-argo-rollouts.gemspec
+          line: 14
+          config: { AllCops: { TargetRubyVersion: 3.4 } }
+          source: |
+            spec.required_ruby_version = ">= 3.0"
+        - repository: gitlabhq/gitlabhq
+          revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+          path: gems/gitlab-database-lock_retries/gitlab-database-lock_retries.gemspec
+          line: 15
+          config: { AllCops: { TargetRubyVersion: 3.4 } }
+          source: |
+            spec.required_ruby_version = ">= 3.0"
+      negatives:
+        - repository: gitlabhq/gitlabhq
+          revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+          path: gems/action_dispatch-draw_all/action_dispatch-draw_all.gemspec
+          line: 16
+          config: { AllCops: { TargetRubyVersion: 3.0 } }
+          source: |
+            spec.required_ruby_version = ">= 3.0"
+        - repository: gitlabhq/gitlabhq
+          revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+          path: gems/auto_freeze/auto_freeze.gemspec
+          line: 15
+          config: { AllCops: { TargetRubyVersion: 3.0 } }
+          source: |
+            spec.required_ruby_version = ">= 3.0"
+
+  Gemspec/RubyVersionGlobalsUsage:
+    matrix_position: 17
+    sources:
+      rubocop: lib/rubocop/cop/gemspec/ruby_version_globals_usage.rb
+      rustocop:
+        - crates/rustocop/src/cops/prism/additional_rules.rs
+    manual_review:
+      status: failed
+      notes:
+        - RuboCop matches four constant node forms only when a Gem::Specification exists in the parsed source.
+        - Rustocop gates on a gemspec block but textual constant scanning can still match strings/comments or constants outside that block.
+    upstream_tests: { status: passed, passed: 5, total: 5, corrections: true }
+    edge_cases:
+      - id: root_ruby_version
+        description: Root-qualified RUBY_VERSION is prohibited in a gemspec.
+        path: example.gemspec
+        config: {}
+        source: |
+          Gem::Specification.new do |spec|
+            ::RUBY_VERSION
+          end
+      - id: ruby_namespace_version
+        description: Ruby::VERSION is prohibited in a gemspec.
+        path: example.gemspec
+        config: {}
+        source: |
+          Gem::Specification.new do |spec|
+            Ruby::VERSION
+          end
+      - id: string_literal
+        description: Constant-like text inside a string is not a constant node.
+        path: example.gemspec
+        config: {}
+        source: |
+          Gem::Specification.new do |spec|
+            spec.summary = 'RUBY_VERSION'
+          end
+      - id: no_specification
+        description: RuboCop's source-wide matcher still checks a bare constant in a gemspec file.
+        path: example.gemspec
+        config: {}
+        source: |
+          RUBY_VERSION
+    real_world:
+      positives: []
+      negatives:
+        - repository: gitlabhq/gitlabhq
+          revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+          path: gems/gitlab-configs/gitlab-configs.gemspec
+          line: 7
+          source: |
+            Gem::Specification.new do |spec|
+              spec.version = Gitlab::Configs::VERSION
+            end
+        - repository: gitlabhq/gitlabhq
+          revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+          path: gems/gitlab-policy-store/gitlab-policy-store.gemspec
+          line: 7
+          source: |
+            Gem::Specification.new do |spec|
+              spec.version = Gitlab::PolicyStore::Version::VERSION
+            end

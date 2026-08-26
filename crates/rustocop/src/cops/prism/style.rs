@@ -19,7 +19,12 @@ define_node_cop!(CharacterLiteral => "Style/CharacterLiteral" => as_string_node 
 fn character_literal(string: &ruby_prism::StringNode<'_>, context: &mut CopContext<'_, '_>) {
     let location = string.location();
     let text = context.source_file().at(&location);
-    if !text.starts_with('?') || !(2..=3).contains(&text.len()) {
+    if string
+        .opening_loc()
+        .is_none_or(|opening| context.source_file().at(&opening) != "?")
+        || !text.starts_with('?')
+        || !(2..=3).contains(&text.len())
+    {
         return;
     }
     let content = &text[1..];
@@ -57,6 +62,18 @@ impl Cop for MethodCallWithoutArgsParentheses {
         let (Some(open), Some(close)) = (node.opening_loc(), node.closing_loc()) else {
             return;
         };
+        if context.source_file().at(&open) != "("
+            || context.source_file().at(&close) != ")"
+            || node
+                .block()
+                .is_some_and(|block| block.as_block_argument_node().is_some())
+            || context
+                .ancestors()
+                .iter()
+                .any(|ancestor| ancestor.as_optional_parameter_node().is_some())
+        {
+            return;
+        }
         if context
             .source()
             .as_bytes()
@@ -65,14 +82,15 @@ impl Cop for MethodCallWithoutArgsParentheses {
         {
             return;
         }
-        if context.source()[..open.start_offset()]
-            .trim_end()
-            .ends_with("not")
+        if call_name(&node) == b"!"
+            && context.source()[..open.start_offset()]
+                .trim_end()
+                .ends_with("not")
         {
             return;
         }
         let name = call_name(&node);
-        if node.arguments().is_some()
+        if argument_count(&node) > 0
             || name.is_empty()
             || name.first().is_some_and(u8::is_ascii_uppercase)
             || context.policy().allows_method(name)
@@ -95,20 +113,25 @@ impl Cop for MethodCallWithoutArgsParentheses {
                 .line_start(node.location().start_offset());
             let before = &context.source()[line_start..node.location().start_offset()];
             let name = String::from_utf8_lossy(name);
-            if before.trim_end().ends_with(&format!("{name} ="))
-                || before.trim_end().ends_with(&format!("{name} ||="))
-            {
-                return;
-            }
-            if before.split_once('=').is_some_and(|(assigned, _)| {
-                assigned.split(',').any(|variable| variable.trim() == name)
+            if before.rsplit_once('=').is_some_and(|(assigned, _)| {
+                assigned
+                    .trim_end_matches([' ', '\t', '|', '&', '+', '-', '*', '/', '%', '^'])
+                    .split(',')
+                    .any(|variable| variable.trim() == name)
+            }) || context.ancestors().iter().any(|ancestor| {
+                ancestor
+                    .as_local_variable_write_node()
+                    .is_some_and(|write| write.name().as_slice() == name.as_bytes())
+                    || ancestor
+                        .as_local_variable_or_write_node()
+                        .is_some_and(|write| write.name().as_slice() == name.as_bytes())
+                    || ancestor
+                        .as_local_variable_and_write_node()
+                        .is_some_and(|write| write.name().as_slice() == name.as_bytes())
+                    || ancestor
+                        .as_local_variable_operator_write_node()
+                        .is_some_and(|write| write.name().as_slice() == name.as_bytes())
             }) {
-                return;
-            }
-            if context.source()[..node.location().start_offset()]
-                .lines()
-                .any(|line| line.trim_start().starts_with(&format!("{name} =")))
-            {
                 return;
             }
         }

@@ -1,0 +1,3 @@
+{
+  "91d9aada4a25c595": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/RedundantDoubleSplatHashBraces:\n  Description: Checks for redundant uses of double splat hash braces.\n  Enabled: true\n  VersionAdded: '1.41'\n  AutoCorrect: always\n"
+}

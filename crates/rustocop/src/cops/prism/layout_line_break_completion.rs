@@ -2,15 +2,12 @@ use super::source_syntax::{matching_delimiter, top_level_elements};
 use super::*;
 
 define_cops! {
-    FirstArrayElementLineBreak => "Layout/FirstArrayElementLineBreak" => source(first_array_element_line_break),
-    FirstHashElementLineBreak => "Layout/FirstHashElementLineBreak" => source(first_hash_element_line_break),
-    FirstMethodArgumentLineBreak => "Layout/FirstMethodArgumentLineBreak" => source(first_method_argument_line_break),
-    FirstMethodParameterLineBreak => "Layout/FirstMethodParameterLineBreak" => source(first_method_parameter_line_break),
-    MultilineHashKeyLineBreaks => "Layout/MultilineHashKeyLineBreaks" => source(multiline_hash_key_line_breaks),
-    SingleLineBlockChain => "Layout/SingleLineBlockChain" => source(single_line_block_chain),
-    ConditionPosition => "Layout/ConditionPosition" => source(condition_position),
+    MultilineHashKeyLineBreaks => "Layout/MultilineHashKeyLineBreaks" => any_node(multiline_hash_key_line_breaks),
+    SingleLineBlockChain => "Layout/SingleLineBlockChain" => any_node(single_line_block_chain),
+    ConditionPosition => "Layout/ConditionPosition" => any_node(condition_position),
 }
 
+#[allow(dead_code)]
 fn first_array_element_line_break(context: &mut CopContext<'_, '_>) {
     first_literal_element(context, b'[', b']', "array", |source, opening| {
         opening == 0
@@ -25,6 +22,7 @@ fn first_array_element_line_break(context: &mut CopContext<'_, '_>) {
     implicit_array_assignment(context);
 }
 
+#[allow(dead_code)]
 fn first_hash_element_line_break(context: &mut CopContext<'_, '_>) {
     first_literal_element(context, b'{', b'}', "hash", |source, opening| {
         let rest = &source[opening + 1..];
@@ -136,12 +134,9 @@ fn implicit_array_assignment(context: &mut CopContext<'_, '_>) {
     }
 }
 
+#[allow(dead_code)]
 fn first_method_argument_line_break(context: &mut CopContext<'_, '_>) {
     first_parenthesized_list(context, false);
-}
-
-fn first_method_parameter_line_break(context: &mut CopContext<'_, '_>) {
-    first_parenthesized_list(context, true);
 }
 
 fn first_parenthesized_list(context: &mut CopContext<'_, '_>, definition: bool) {
@@ -186,6 +181,12 @@ fn first_parenthesized_list(context: &mut CopContext<'_, '_>, definition: bool) 
         if !source[opening..=closing].contains('\n') || source[opening + 1..].starts_with('\n') {
             continue;
         }
+        let first_line = source[opening + 1..closing]
+            .split_once('\n')
+            .map_or(&source[opening + 1..closing], |(line, _)| line);
+        if first_line.trim_start().starts_with('#') {
+            continue;
+        }
         let Some(first) = top_level_elements(source, opening + 1, closing)
             .first()
             .cloned()
@@ -200,8 +201,10 @@ fn first_parenthesized_list(context: &mut CopContext<'_, '_>, definition: bool) 
         {
             continue;
         }
-        let start =
-            first.start + source[first.clone()].len() - source[first.clone()].trim_start().len();
+        let start = leading_code_offset(source, first.start, first.end);
+        if source[opening + 1..start].contains('\n') {
+            continue;
+        }
         let end =
             first.end - (source[first.clone()].len() - source[first.clone()].trim_end().len());
         let kind = if definition { "parameter" } else { "argument" };
@@ -219,126 +222,168 @@ fn first_parenthesized_list(context: &mut CopContext<'_, '_>, definition: bool) 
     }
 }
 
-fn multiline_hash_key_line_breaks(context: &mut CopContext<'_, '_>) {
-    let source = context.source();
-    for opening in source
-        .bytes()
-        .enumerate()
-        .filter_map(|(offset, byte)| (byte == b'{').then_some(offset))
-        .collect::<Vec<_>>()
-    {
-        let Some(closing) = matching_delimiter(source, opening, b'{', b'}') else {
-            continue;
-        };
-        if !source[opening..=closing].contains('\n') {
-            continue;
+fn leading_code_offset(source: &str, mut start: usize, end: usize) -> usize {
+    while start < end {
+        let whitespace = source[start..end]
+            .len()
+            - source[start..end].trim_start().len();
+        start += whitespace;
+        if source.as_bytes().get(start) != Some(&b'#') {
+            break;
         }
-        let elements = top_level_elements(source, opening + 1, closing);
-        let element_lines = elements
-            .iter()
-            .map(|element| {
-                source[..element.start]
-                    .bytes()
-                    .filter(|byte| *byte == b'\n')
-                    .count()
-            })
-            .collect::<std::collections::BTreeSet<_>>();
-        if element_lines.len() <= 1 {
-            continue;
-        }
-        for (index, pair) in elements.windows(2).enumerate() {
-            let previous = &pair[0];
-            let current = &pair[1];
-            if context.config_bool("AllowMultilineFinalElement", false)
-                && index + 1 == elements.len() - 1
-            {
-                continue;
-            }
-            let start = current.start + source[current.clone()].len()
-                - source[current.clone()].trim_start().len();
-            if source[previous.end..start].contains('\n') {
-                continue;
-            }
-            let end = current.end
-                - (source[current.clone()].len() - source[current.clone()].trim_end().len());
-            let mut edits = vec![(start..start, "\n".to_string())];
-            if context.config_bool("AllowMultilineFinalElement", false)
-                && index + 2 == elements.len() - 1
-                && source[current.clone()].contains('\n')
-            {
-                let final_element = &elements[index + 2];
-                let final_start = final_element.start + source[final_element.clone()].len()
-                    - source[final_element.clone()].trim_start().len();
-                edits.push((final_start..final_start, "\n".to_string()));
-            }
-            context.replace_many(
-                "Each key in a multi-line hash must start on a separate line.",
-                start..end,
-                edits,
-            );
-        }
+        start = source[start..end]
+            .find('\n')
+            .map_or(end, |newline| start + newline + 1);
     }
+    start
 }
 
-fn single_line_block_chain(context: &mut CopContext<'_, '_>) {
-    let source = context.source();
-    for (closing, _) in source.match_indices('}') {
-        let tail = &source[closing + 1..];
-        let whitespace = tail.len() - tail.trim_start_matches([' ', '\t']).len();
-        let start = closing + 1 + whitespace;
-        if source[closing + 1..start].contains('\n') {
-            continue;
-        }
-        let rest = &source[start..];
-        if rest.starts_with(".\n") {
-            continue;
-        }
-        let length = if let Some(after_operator) = rest.strip_prefix("&.") {
-            2 + after_operator
-                .bytes()
-                .take_while(|byte| byte.is_ascii_alphanumeric() || *byte == b'_')
-                .count()
-        } else if rest.starts_with(".(") {
-            2
-        } else if let Some(after_dot) = rest.strip_prefix('.') {
-            1 + after_dot
-                .bytes()
-                .take_while(|byte| byte.is_ascii_alphanumeric() || *byte == b'_' || *byte == b'?')
-                .count()
+fn multiline_hash_key_line_breaks(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
+    let Some(hash) = node.as_hash_node() else {
+        return;
+    };
+    let location = hash.location();
+    let elements = hash.elements().iter().collect::<Vec<_>>();
+    let file = context.source_file();
+    if file.same_line(location.start_offset(), location.end_offset()) {
+        return;
+    }
+    let Some(first) = elements.first() else { return };
+    let Some(last) = elements.last() else { return };
+    let allow_multiline_final = context.config_bool("AllowMultilineFinalElement", false);
+    let first_line = file.line_start(first.location().start_offset());
+    let last_line = if allow_multiline_final {
+        file.line_start(last.location().start_offset())
+    } else {
+        file.line_start(last.location().end_offset().saturating_sub(1))
+    };
+    if first_line == last_line {
+        return;
+    }
+    let mut last_seen_line = None;
+    let element_count = elements.len();
+    for (index, element) in elements.iter().enumerate() {
+        let element_location = element.location();
+        let element_first_line = file.line_start(element_location.start_offset());
+        if last_seen_line.is_some_and(|line| line >= element_first_line) {
+            let message = "Each key in a multi-line hash must start on a separate line.";
+            if allow_multiline_final
+                && index + 2 == element_count
+                && element_first_line
+                    != file.line_start(element_location.end_offset().saturating_sub(1))
+            {
+                let final_start = elements[index + 1].location().start_offset();
+                context.replace_many(
+                    message,
+                    &element_location,
+                    vec![
+                        (
+                            element_location.start_offset()..element_location.start_offset(),
+                            "\n".to_string(),
+                        ),
+                        (final_start..final_start, "\n".to_string()),
+                    ],
+                );
+            } else {
+                context.insert(
+                    message,
+                    &element_location,
+                    element_location.start_offset(),
+                    "\n",
+                );
+            }
         } else {
-            0
-        };
-        if length > 0 {
-            context.insert(
-                "Put method call on a separate line if chained to a single line block.",
-                start..start + length,
-                start,
-                "\n",
-            );
+            last_seen_line = Some(file.line_start(
+                element_location.end_offset().saturating_sub(1),
+            ));
         }
     }
 }
 
-fn condition_position(context: &mut CopContext<'_, '_>) {
-    let lines = context.source_file().lines().collect::<Vec<_>>();
-    for pair in lines.windows(2) {
-        let (keyword_start, keyword_line) = pair[0];
-        let (condition_line_start, condition_line) = pair[1];
-        let keyword = keyword_line.trim();
-        if !matches!(keyword, "if" | "unless" | "while" | "until" | "elsif") {
-            continue;
-        }
-        let condition = condition_line.trim();
-        if condition.is_empty() {
-            continue;
-        }
-        let start = condition_line_start + condition_line.len() - condition_line.trim_start().len();
-        let end = start + condition.len();
-        context.replace(
-            format!("Place the condition on the same line as `{keyword}`."),
-            start..end,
-            keyword_start + keyword_line.len()..start,
-            " ",
-        );
+fn single_line_block_chain(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
+    let Some(call) = node.as_call_node() else {
+        return;
+    };
+    let Some(operator) = call.call_operator_loc() else {
+        return;
+    };
+    let Some(receiver) = call.receiver() else {
+        return;
+    };
+    let block_location = if let Some(receiver) = receiver.as_call_node() {
+        let Some(block) = receiver.block().and_then(|block| block.as_block_node()) else {
+            return;
+        };
+        block.location()
+    } else if let Some(lambda) = receiver.as_lambda_node() {
+        lambda.location()
+    } else {
+        return;
+    };
+    let file = context.source_file();
+    if !file.same_line(block_location.start_offset(), block_location.end_offset())
+        || !file.same_line(
+            block_location.end_offset().saturating_sub(1),
+            operator.start_offset(),
+        )
+    {
+        return;
     }
+    let end = call
+        .message_loc()
+        .map_or_else(|| call.opening_loc().map(|loc| loc.end_offset()), |loc| Some(loc.end_offset()));
+    let Some(end) = end else {
+        return;
+    };
+    if !file.same_line(operator.start_offset(), end.saturating_sub(1)) {
+        return;
+    }
+    context.insert(
+        "Put method call on a separate line if chained to a single line block.",
+        operator.start_offset()..end,
+        operator.start_offset(),
+        "\n",
+    );
+}
+
+fn condition_position(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
+    let (keyword, predicate) = if let Some(condition) = node.as_if_node() {
+        let Some(keyword) = condition.if_keyword_loc() else {
+            return;
+        };
+        (keyword, condition.predicate())
+    } else if let Some(condition) = node.as_unless_node() {
+        (condition.keyword_loc(), condition.predicate())
+    } else if let Some(condition) = node.as_while_node() {
+        (condition.keyword_loc(), condition.predicate())
+    } else if let Some(condition) = node.as_until_node() {
+        (condition.keyword_loc(), condition.predicate())
+    } else {
+        return;
+    };
+    let predicate_location = predicate.location();
+    if keyword.start_offset() != node.location().start_offset()
+        || context
+            .source_file()
+            .same_line(keyword.start_offset(), predicate_location.start_offset())
+    {
+        return;
+    }
+
+    let keyword_source = context.source_file().at(&keyword);
+    let predicate_source = context.source_file().node(&predicate);
+    let removal = context.source_file().full_line_range(
+        predicate_location.start_offset()..predicate_location.end_offset(),
+    );
+    context.replace_many(
+        format!("Place the condition on the same line as `{keyword_source}`."),
+        &predicate_location,
+        vec![
+            (
+                keyword.end_offset()..keyword.end_offset(),
+                format!(" {predicate_source}"),
+            ),
+            (removal, String::new()),
+        ],
+    );
 }

@@ -130,25 +130,25 @@ fn perl_backrefs(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
         "$'" | "$POSTMATCH" => ".post_match".to_string(),
         "$+" | "$LAST_PAREN_MATCH" => "(-1)".to_string(),
         name if name.strip_prefix('$').is_some_and(|digits| {
-            !digits.is_empty() && digits.bytes().all(|byte| byte.is_ascii_digit())
+            !digits.is_empty()
+                && digits != "0"
+                && digits.bytes().all(|byte| byte.is_ascii_digit())
         }) =>
         {
             format!("({})", &name[1..])
         }
         _ => return,
     };
-    let qualified = context
+    let root = if context
         .ancestors()
         .iter()
-        .any(|ancestor| ancestor.as_module_node().is_some())
-        && context
-            .source()
-            .lines()
-            .any(|line| line.trim_start().starts_with("class Regexp"));
-    let replacement = format!(
-        "{}Regexp.last_match{suffix}",
-        if qualified { "::" } else { "" }
-    );
+        .any(|ancestor| ancestor.as_class_node().is_some() || ancestor.as_module_node().is_some())
+    {
+        "::"
+    } else {
+        ""
+    };
+    let replacement = format!("{root}Regexp.last_match{suffix}");
     let message = format!("Prefer `{replacement}` over `{name}`.");
     if let Some(embedded) = context.parent().and_then(Node::as_embedded_variable_node) {
         context.replace(

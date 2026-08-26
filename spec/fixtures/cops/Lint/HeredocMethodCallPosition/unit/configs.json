@@ -1,0 +1,5 @@
+{
+  "065a12b5031200c1": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\n",
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
+  "e91e3e36716cf223": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/HeredocMethodCallPosition:\n  Description: Checks for the ordering of a method call where the receiver of the\n    call is a HEREDOC.\n  Enabled: true\n  StyleGuide: \"#heredoc-method-calls\"\n  VersionAdded: '0.68'\n  AutoCorrect: always\n"
+}

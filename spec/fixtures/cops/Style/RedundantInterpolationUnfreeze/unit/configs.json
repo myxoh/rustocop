@@ -1,0 +1,5 @@
+{
+  "4475a6af9e23f0a0": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/RedundantInterpolationUnfreeze:\n  Description: Checks for redundant unfreezing of interpolated strings.\n  Enabled: true\n  VersionAdded: '1.66'\n  AutoCorrect: always\n",
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
+  "ffd9bfab97ea065d": "---\nAllCops:\n  TargetRubyVersion: 3.0\nStyle/RedundantInterpolationUnfreeze:\n  Description: Checks for redundant unfreezing of interpolated strings.\n  Enabled: true\n  VersionAdded: '1.66'\n  AutoCorrect: always\n"
+}

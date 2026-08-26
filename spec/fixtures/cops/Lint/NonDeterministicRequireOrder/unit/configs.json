@@ -1,0 +1,4 @@
+{
+  "05972f451d648660": "---\nAllCops:\n  TargetRubyVersion: 3.0\nLint/NonDeterministicRequireOrder:\n  Description: Always sort arrays returned by Dir.glob when requiring files.\n  Enabled: true\n  VersionAdded: '0.78'\n  Safe: false\n  AutoCorrect: always\n",
+  "bf87ec5f88ed3875": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/NonDeterministicRequireOrder:\n  Description: Always sort arrays returned by Dir.glob when requiring files.\n  Enabled: true\n  VersionAdded: '0.78'\n  Safe: false\n  AutoCorrect: always\n"
+}

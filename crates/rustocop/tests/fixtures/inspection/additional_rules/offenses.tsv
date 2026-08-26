@@ -1,5 +1,0 @@
-cop	line	column	last_line	last_column	correctable	corrected	message
-Style/PreferredHashMethods	1	8	1	15	true	true	Use `Hash#key?` instead of `Hash#has_key?`.
-Style/EmptyBlockParameter	2	15	2	16	true	true	Omit pipes for the empty block parameters.
-Lint/UriEscapeUnescape	4	1	4	15	false	false	`URI.escape` method is obsolete and should not be used. Instead, use `CGI.escape`, `URI.encode_www_form` or `URI.encode_www_form_component` depending on your specific use case.
-Style/OpenStructUse	5	1	5	10	false	false	Avoid using `OpenStruct`; use `Struct`, `Hash`, a class or test doubles instead.

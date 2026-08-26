@@ -1,0 +1,3 @@
+{
+  "7bf2d4b89b38c8f1": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/RaiseException:\n  Description: Checks for `raise` or `fail` statements which are raising `Exception`\n    class.\n  StyleGuide: \"#raise-exception\"\n  Enabled: true\n  Safe: false\n  VersionAdded: '0.81'\n  VersionChanged: '0.86'\n  AllowedImplicitNamespaces:\n  - Gem\n  AutoCorrect: always\n"
+}

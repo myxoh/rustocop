@@ -7,7 +7,7 @@ const YAML_FILE_READ_MSG: &str = "Use `{prefer}` instead.";
 define_cops! {
     CircularArgumentReference => "Lint/CircularArgumentReference" => any_node(circular_argument_reference),
     InheritException => "Lint/InheritException" => any_node(inherit_exception),
-    NumberedParameterAssignment => "Lint/NumberedParameterAssignment" => node(as_local_variable_write_node, numbered_parameter_assignment),
+    NumberedParameterAssignment => "Lint/NumberedParameterAssignment" => recovered_node(as_local_variable_write_node, numbered_parameter_assignment),
     RaiseException => "Lint/RaiseException" => call(raise_exception),
     DateTime => "Style/DateTime" => call(date_time),
     YAMLFileRead => "Style/YAMLFileRead" => call_rule(YamlFileReadRule, on_send, restrict [b"load", b"safe_load", b"parse"]),
@@ -186,7 +186,6 @@ fn preceding_exception_class(
 
 fn date_time(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     if call_name(node) == b"to_datetime"
-        && node.receiver().is_some()
         && argument_count(node) == 0
         && !context.config_bool("AllowCoercion", false)
     {
@@ -203,22 +202,35 @@ fn date_time(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
         .as_constant_path_node()
         .map(|path| path.name_loc())
         .unwrap_or_else(|| receiver.location());
-    context.replace(
-        "Prefer `Time` over `DateTime`.",
-        node.location(),
-        edit,
-        "Time",
-    );
+    let offense = if node
+        .block()
+        .and_then(|block| block.as_block_node())
+        .is_some()
+    {
+        let end = node
+            .closing_loc()
+            .map(|closing| closing.end_offset())
+            .or_else(|| {
+                node.arguments()
+                    .map(|arguments| arguments.location().end_offset())
+            })
+            .or_else(|| node.message_loc().map(|message| message.end_offset()))
+            .unwrap_or_else(|| node.location().end_offset());
+        node.location().start_offset()..end
+    } else {
+        node.location().start_offset()..node.location().end_offset()
+    };
+    context.replace("Prefer `Time` over `DateTime`.", offense, edit, "Time");
 }
 
 fn historic_date(node: &CallNode<'_>) -> bool {
     let Some(arguments) = node.arguments() else {
         return false;
     };
-    arguments.arguments().iter().skip(1).any(|argument| {
-        constant_path(&argument)
+    let arguments = arguments.arguments().iter().collect::<Vec<_>>();
+    arguments.len() == 2
+        && constant_path(&arguments[1])
             .is_some_and(|path| path.first() == Some(&b"Date".as_slice()) && path.len() >= 2)
-    })
 }
 
 impl YamlFileReadRule<'_, '_, '_> {

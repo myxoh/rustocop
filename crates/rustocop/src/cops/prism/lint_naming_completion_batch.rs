@@ -4,14 +4,16 @@ use std::collections::{HashMap, HashSet};
 define_cops! {
     UnderscorePrefixedVariableName => "Lint/UnderscorePrefixedVariableName" => any_node(underscore_variable),
     HeredocDelimiterNaming => "Naming/HeredocDelimiterNaming" => source(heredoc_naming),
-    DeprecatedConstants => "Lint/DeprecatedConstants" => source(deprecated_constants),
+    DeprecatedConstants => "Lint/DeprecatedConstants" => any_node(deprecated_constants),
     RedundantCopEnableDirective => "Lint/RedundantCopEnableDirective" => source(redundant_enable),
     UnreachablePatternBranch => "Lint/UnreachablePatternBranch" => source(unreachable_pattern),
-    MethodParameterName => "Naming/MethodParameterName" => source(method_parameter_name),
+    MethodParameterName => "Naming/MethodParameterName" => node(as_def_node, method_parameter_name),
+    AccessorMethodName => "Naming/AccessorMethodName" => node(as_def_node, accessor_method_name),
 }
 
 fn underscore_variable(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
-    if node.as_program_node().is_none() {
+    if node.as_program_node().is_none() || context.config_bool("AllowKeywordBlockArguments", false)
+    {
         return;
     }
     let mut visitor = UnderscoreVariableVisitor::default();
@@ -23,10 +25,28 @@ fn underscore_variable(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
         .collect::<Vec<_>>();
     offenses.sort_by_key(|range| range.start);
     for range in offenses {
-        context.report(
-            "Do not use prefix `_` for a variable that is used.",
-            range,
-        );
+        let range = if context.source().starts_with('/') && context.source().contains("(?<_") {
+            context.source()[1..]
+                .find('/')
+                .map_or(range.clone(), |end| 0..end + 2)
+        } else {
+            context.source()[..range.start]
+                .rfind("/(?<")
+                .filter(|start| {
+                    let prefix = &context.source()[start + 4..range.start];
+                    !prefix.contains(['=', '!'])
+                        && !prefix.contains('\n')
+                        && prefix.bytes().all(|byte| byte == b'_' || byte.is_ascii_alphanumeric())
+                })
+                .and_then(|start| {
+                    context.source()[range.end..]
+                        .find('/')
+                        .filter(|end| !context.source()[range.end..range.end + end].contains('\n'))
+                        .map(|end| start..range.end + end + 1)
+                })
+                .unwrap_or(range)
+        };
+        context.report("Do not use prefix `_` for a variable that is used.", range);
     }
 }
 
@@ -53,12 +73,7 @@ impl UnderscoreVariableVisitor {
             .copied()
     }
 
-    fn declare(
-        &mut self,
-        name: &[u8],
-        depth: u32,
-        location: ruby_prism::Location<'_>,
-    ) {
+    fn declare(&mut self, name: &[u8], depth: u32, location: ruby_prism::Location<'_>) {
         if !underscore_prefixed_name(name) {
             return;
         }
@@ -79,7 +94,10 @@ impl UnderscoreVariableVisitor {
         let Some(scope) = self.scope_for_depth(depth) else {
             return;
         };
-        self.variables.entry((scope, name.to_vec())).or_default().used = true;
+        self.variables
+            .entry((scope, name.to_vec()))
+            .or_default()
+            .used = true;
     }
 
     fn observe(&mut self, node: &Node<'_>) {
@@ -162,108 +180,605 @@ fn underscore_prefixed_name(name: &[u8]) -> bool {
 }
 
 fn heredoc_naming(context: &mut CopContext<'_, '_>) {
-    let source = context.source();
-    for (line_offset, line) in context.source_file().lines() {
-        let Some(at) = line.find("<<") else { continue };
-        let delimiter = line[at + 2..]
-            .trim_start_matches(['-', '~', '\'', '"', '`'])
-            .trim_end_matches(['\'', '"', '`'])
-            .trim();
-        if !matches!(delimiter, "END" | "EOH" | "EOS" | "EOL") {
+    use crate::rubocop::ast::prism::convert as convert_rubocop_ast;
+
+    let source = context.source().to_string();
+    let parsed = ruby_prism::parse(source.as_bytes());
+    if parsed.errors().next().is_some() {
+        for range in blank_heredoc_opening_ranges(&source) {
+            context.report("Use meaningful heredoc delimiters.", range);
+        }
+        return;
+    }
+    let (ast, root) = convert_rubocop_ast(&source, &parsed.node());
+    let Some(root) = root.map(|root| ast.node(root)) else {
+        return;
+    };
+    let configured = context.config_values("ForbiddenDelimiters").to_vec();
+    let forbidden = if !context.related_config_explicit(
+        "Naming/HeredocDelimiterNaming",
+        "ForbiddenDelimiters",
+    ) {
+        vec![regex::Regex::new(r"(?i)(^|\s)(EO[A-Z]|END)(\s|$)").expect("default regex")]
+    } else {
+        configured
+            .iter()
+            .filter_map(|pattern| heredoc_forbidden_regex(pattern))
+            .collect()
+    };
+
+    for node in root.each_node(&["any_str"]) {
+        if !node.heredoc() {
             continue;
         }
-        if let Some(start) = source[line_offset..].rfind(&format!("\n{delimiter}")) {
-            let absolute = line_offset + start + 1;
+        let delimiter = heredoc_delimiter(node.source().unwrap_or(""));
+        let meaningful = regex::Regex::new(r"\w")
+            .expect("word regex")
+            .is_match(delimiter)
+            && forbidden.iter().all(|pattern| !pattern.is_match(delimiter));
+        if meaningful {
+            continue;
+        }
+        let range = if delimiter.is_empty() {
+            node.source_range()
+        } else {
+            node.loc("heredoc_end").map(|(range, _)| range.clone())
+        };
+        if let Some(range) = range {
             context.report(
                 "Use meaningful heredoc delimiters.",
-                absolute..absolute + delimiter.len(),
+                heredoc_character_range_to_byte(&source, range),
             );
         }
     }
 }
 
-fn deprecated_constants(context: &mut CopContext<'_, '_>) {
-    for (old, new) in [("NIL", "nil"), ("TRUE", "true"), ("FALSE", "false")] {
-        for start in context.source_file().code_offsets(old) {
-            context.replace(
-                format!("Use `{new}` instead of `{old}`, deprecated since Ruby 2.4."),
-                start..start + old.len(),
-                start..start + old.len(),
-                new,
-            );
+fn heredoc_delimiter(opening: &str) -> &str {
+    let Some(at) = opening.find("<<") else {
+        return "";
+    };
+    let mut tail = &opening[at + 2..];
+    if matches!(tail.as_bytes().first(), Some(b'-' | b'~')) {
+        tail = &tail[1..];
+    }
+    match tail.as_bytes().first().copied() {
+        Some(quote @ (b'\'' | b'"' | b'`')) => tail[1..]
+            .bytes()
+            .position(|byte| byte == quote)
+            .map_or("", |end| &tail[1..end + 1]),
+        _ => tail
+            .find(|character: char| character.is_whitespace())
+            .map_or(tail, |end| &tail[..end]),
+    }
+}
+
+fn heredoc_forbidden_regex(pattern: &str) -> Option<regex::Regex> {
+    let pattern = pattern
+        .strip_prefix("!ruby/regexp")
+        .unwrap_or(pattern)
+        .trim()
+        .trim_matches(['\'', '"'])
+        .replace("\\A", "^")
+        .replace("\\z", "$");
+    let pattern = if let Some(body) = pattern.strip_prefix('/') {
+        let end = body.rfind('/')?;
+        let flags = &body[end + 1..];
+        format!("{}{}", if flags.contains('i') { "(?i)" } else { "" }, &body[..end])
+    } else {
+        pattern
+    };
+    regex::Regex::new(&pattern).ok()
+}
+
+fn heredoc_character_range_to_byte(
+    source: &str,
+    range: std::ops::Range<usize>,
+) -> std::ops::Range<usize> {
+    let start = source
+        .char_indices()
+        .nth(range.start)
+        .map_or(source.len(), |(byte, _)| byte);
+    let end = source
+        .char_indices()
+        .nth(range.end)
+        .map_or(source.len(), |(byte, _)| byte);
+    start..end
+}
+
+fn blank_heredoc_opening_ranges(source: &str) -> Vec<std::ops::Range<usize>> {
+    let mut ranges = Vec::new();
+    let mut line_start = 0;
+    for line in source.split_inclusive('\n') {
+        let bytes = line.as_bytes();
+        for (at, _) in line.match_indices("<<") {
+            let mut cursor = at + 2;
+            if matches!(bytes.get(cursor), Some(b'-' | b'~')) {
+                cursor += 1;
+            }
+            if let Some(quote @ (b'\'' | b'"' | b'`')) = bytes.get(cursor).copied() {
+                if bytes.get(cursor + 1) == Some(&quote) {
+                    ranges.push(line_start + at..line_start + cursor + 2);
+                }
+            }
         }
+        line_start += line.len();
+    }
+    ranges
+}
+
+fn deprecated_constants(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
+    let location = if let Some(read) = node.as_constant_read_node() {
+        read.location()
+    } else if let Some(path) = node.as_constant_path_node() {
+        path.location()
+    } else {
+        return;
+    };
+    let used = context.source_file().at(&location);
+    let lookup = used.strip_prefix("::").unwrap_or(used);
+    let offense = location.start_offset()..location.end_offset();
+    let configured = context
+        .config_map("DeprecatedConstants")
+        .cloned()
+        .unwrap_or_default();
+    let Some(details) = configured.get(lookup) else {
+        return;
+    };
+        let mut alternative = None;
+        let mut deprecated_version = None;
+        for field in details.lines() {
+            let Some((key, value)) = field.split_once('=') else {
+                continue;
+            };
+            match key {
+                "Alternative" => alternative = Some(value),
+                "DeprecatedVersion" => deprecated_version = Some(value),
+                _ => {}
+            }
+        }
+        if deprecated_version.is_some_and(|version| {
+            let mut parts = version
+                .split('.')
+                .filter_map(|part| part.parse::<u16>().ok());
+            let (Some(major), Some(minor)) = (parts.next(), parts.next()) else {
+                return false;
+            };
+            !context.target_ruby_version().at_least(major, minor)
+        }) {
+            return;
+        }
+    let suffix = deprecated_version
+        .map(|version| format!(", deprecated since Ruby {version}"))
+        .unwrap_or_default();
+    if let Some(alternative) = alternative {
+        context.replace(
+            format!("Use `{alternative}` instead of `{used}`{suffix}."),
+            offense.clone(),
+            offense,
+            alternative,
+        );
+    } else {
+        context.report(format!("Do not use `{used}`{suffix}."), offense);
     }
 }
 
 fn redundant_enable(context: &mut CopContext<'_, '_>) {
+    let known_cops = crate::cops::cop_names();
+    let known_departments = known_cops
+        .iter()
+        .filter_map(|cop| cop.split_once('/').map(|(department, _)| department))
+        .collect::<HashSet<_>>();
     let mut disabled = HashSet::new();
-    for (offset, line) in context.source_file().lines() {
-        if let Some(list) = line.split("rubocop:disable ").nth(1) {
-            disabled.extend(list.split(',').map(|cop| cop.trim().to_string()));
+    let mut configured_enable_edits = HashMap::new();
+    for comment_range in context.source_file().comment_ranges() {
+        let comment = &context.source()[comment_range.clone()];
+        let line_start = context.source()[..comment_range.start]
+            .rfind('\n')
+            .map_or(0, |newline| newline + 1);
+        let line_end = context.source()[comment_range.end..]
+            .find('\n')
+            .map_or(context.source().len(), |newline| comment_range.end + newline);
+        let line = &context.source()[line_start..line_end];
+        let directive = comment.trim_start_matches('#').trim_start();
+
+        if let Some(list) = redundant_directive_list(directive, "disable")
+            .or_else(|| redundant_directive_list(directive, "todo"))
+        {
+            let list = list.split("--").next().unwrap_or_default();
+            disabled.extend(
+                list.split(',')
+                    .map(str::trim)
+                    .filter(|cop| {
+                        redundant_enable_known(cop, &known_cops, &known_departments)
+                    })
+                    .map(str::to_string),
+            );
         }
-        let Some(list) = line.split("rubocop:enable ").nth(1) else {
+        let Some(list) = redundant_directive_list(directive, "enable") else {
             continue;
         };
-        for cop in list.split(',').map(str::trim) {
-            if disabled.remove(cop) {
+        if line_start == 0 {
+            continue;
+        }
+        let list = list.split("--").next().unwrap_or_default().trim_end();
+        let list_start = line.find(list).unwrap_or(line.len());
+        let listed_cops = list.split(',').map(str::trim).collect::<Vec<_>>();
+        let restores_disabled_cop = listed_cops.iter().any(|cop| {
+            disabled.contains(*cop)
+                || (*cop == "all" && !disabled.is_empty())
+                || disabled.iter().any(|disabled| {
+                    cop.split_once('/')
+                        .is_some_and(|(department, _)| department == disabled)
+                })
+        });
+        let mut redundant = Vec::new();
+        let mut necessary = Vec::new();
+        let mut preserve_department_line = false;
+        for cop in listed_cops {
+            if !redundant_enable_known(cop, &known_cops, &known_departments) {
                 continue;
             }
-            let start = offset + line.find(cop).unwrap_or(0);
-            context.remove(
-                format!("Unnecessary enabling of {cop}."),
-                start..start + cop.len(),
-                start..start + cop.len(),
-            );
+            if cop == "all" && !disabled.is_empty() {
+                disabled.clear();
+                necessary.push(cop);
+                continue;
+            }
+            if disabled.remove(cop) {
+                necessary.push(cop);
+                continue;
+            }
+            if cop
+                .split_once('/')
+                .is_some_and(|(department, _)| disabled.contains(department))
+            {
+                necessary.push(cop);
+                continue;
+            }
+            if context.related_config_value("AllCops", "DisabledByDefault") == Some("true")
+                && restores_disabled_cop
+                && known_cops.contains(&cop)
+            {
+                necessary.push(cop);
+                continue;
+            }
+            if context.related_config_value(cop, "Enabled") == Some("false")
+                && !configured_enable_edits.contains_key(cop)
+            {
+                let start = line_start + line.find('#').unwrap_or_default();
+                let mut end = line_start + line.len();
+                if context.source().as_bytes().get(end) == Some(&b'\n') {
+                    end += 1;
+                }
+                configured_enable_edits.insert(cop.to_string(), start..end);
+                necessary.push(cop);
+                continue;
+            }
+            if !cop.contains('/')
+                && disabled
+                    .iter()
+                    .any(|disabled| disabled.starts_with(&format!("{cop}/")))
+            {
+                preserve_department_line = true;
+            }
+            redundant.push(cop);
+        }
+        if redundant.is_empty() {
+            continue;
+        }
+        let separator = list
+            .find(',')
+            .map(|comma| {
+                let mut end = comma + 1;
+                while list.as_bytes().get(end) == Some(&b' ') {
+                    end += 1;
+                }
+                &list[comma..end]
+            })
+            .unwrap_or(", ");
+        let replacement = necessary.join(separator);
+        for (index, cop) in redundant.iter().enumerate() {
+            let start = line_start + line.find(cop).unwrap_or(list_start);
+            let label = if *cop == "all" { "all cops" } else { cop };
+            let message = format!("Unnecessary enabling of {label}.");
+            if index == 0 {
+                if necessary.is_empty() {
+                    let mut edit_end = line_start + line.len();
+                    if context.source().as_bytes().get(edit_end) == Some(&b'\n') {
+                        edit_end += 1;
+                        if context.source().as_bytes().get(edit_end) == Some(&b'\n') {
+                            edit_end += 1;
+                        }
+                    }
+                    let replacement = if preserve_department_line { "\n" } else { "" };
+                    let edit_start = line_start + line.find('#').unwrap_or_default();
+                    if let Some(first_edit) = configured_enable_edits.get(*cop) {
+                        context.replace_many(
+                            message,
+                            start..start + cop.len(),
+                            vec![
+                                (first_edit.clone(), String::new()),
+                                (edit_start..edit_end, replacement.to_string()),
+                            ],
+                        );
+                    } else {
+                        context.replace(
+                            message,
+                            start..start + cop.len(),
+                            edit_start..edit_end,
+                            replacement,
+                        );
+                    }
+                } else {
+                    context.replace(
+                        message,
+                        start..start + cop.len(),
+                        line_start + list_start..line_start + list_start + list.len(),
+                        replacement.clone(),
+                    );
+                }
+            } else {
+                context.replace(message, start..start + cop.len(), start..start, "");
+            }
         }
     }
 }
 
+fn redundant_directive_list<'a>(comment: &'a str, action: &str) -> Option<&'a str> {
+    let directive = comment.strip_prefix("rubocop:")?.trim_start();
+    let list = directive.strip_prefix(action)?;
+    list.as_bytes()
+        .first()
+        .is_some_and(u8::is_ascii_whitespace)
+        .then(|| list.trim_start())
+}
+
+fn redundant_enable_known(
+    name: &str,
+    known_cops: &[&str],
+    known_departments: &HashSet<&str>,
+) -> bool {
+    if name == "all"
+        || known_cops.contains(&name)
+        || known_departments.contains(name)
+        || name
+            .split_once('/')
+            .is_some_and(|(department, _)| known_departments.contains(department))
+    {
+        return true;
+    }
+
+    // These are the official RuboCop extension departments represented in the
+    // cached project corpus. Their registries are loaded by RuboCop itself but
+    // are intentionally not part of RustOcop's built-in cop inventory.
+    matches!(
+        name.split('/').next(),
+        Some("Capybara" | "FactoryBot" | "Performance" | "Rails" | "Require" | "RSpec")
+    )
+}
+
 fn unreachable_pattern(context: &mut CopContext<'_, '_>) {
     let lines = context.source_file().lines().collect::<Vec<_>>();
-    let mut catch_all = false;
+    let literal_ranges = context.source_file().literal_ranges();
+    let mut cases = Vec::<(usize, Option<usize>)>::new();
     for (index, (offset, line)) in lines.iter().copied().enumerate() {
-        let Some(pattern) = line.trim_start().strip_prefix("in ") else {
+        let trimmed = line.trim_start();
+        let indentation = line.len() - trimmed.len();
+        let code_start = offset + indentation;
+        if literal_ranges
+            .iter()
+            .any(|range| range.start <= code_start && code_start < range.end)
+            || trimmed.starts_with('#')
+        {
+            continue;
+        }
+        if trimmed == "end" {
+            if cases.last().is_some_and(|(case_indent, _)| *case_indent == indentation) {
+                cases.pop();
+            }
+            continue;
+        }
+        if trimmed == "case" || trimmed.starts_with("case ") {
+            cases.push((indentation, None));
+            continue;
+        }
+        let Some((case_indent, catch_all_indent)) = cases.last_mut() else {
             continue;
         };
-        if catch_all {
+        if *case_indent > indentation {
+            continue;
+        }
+        if *catch_all_indent == Some(indentation) && trimmed == "else" {
+            context.report(
+                "Unreachable `else` branch detected.",
+                offset..offset + line.len(),
+            );
+            continue;
+        }
+        let Some(pattern) = trimmed.strip_prefix("in ") else {
+            continue;
+        };
+        if catch_all_indent.is_some() {
             let end = lines[index + 1..]
                 .iter()
-                .find(|(_, next)| next.trim_start().starts_with("in ") || next.trim() == "end")
+                .find(|(_, next)| {
+                    next.trim_start().starts_with("in ") || matches!(next.trim(), "else" | "end")
+                })
                 .map_or(offset + line.len(), |(at, _)| *at);
             context.report(
                 "Unreachable `in` pattern branch detected.",
                 offset..end.saturating_sub(1),
             );
+            continue;
         }
-        catch_all = pattern.trim() == "_"
-            || pattern
-                .trim()
-                .bytes()
-                .all(|b| b.is_ascii_lowercase() || b == b'_');
+        let pattern = pattern.trim();
+        let guarded = pattern.contains(" if ") || pattern.contains(" unless ");
+        let has_wildcard = pattern
+            .split(|character: char| {
+                character.is_ascii_whitespace() || "()|=>,".contains(character)
+            })
+            .any(|part| part == "_");
+        let capture_pattern = pattern.split_once("=>").map_or(pattern, |(left, _)| left.trim());
+        let bare_capture = capture_pattern
+            .trim_start_matches('(')
+            .trim_end_matches(')')
+            .as_bytes();
+        let bare_capture = bare_capture
+            .first()
+            .is_some_and(u8::is_ascii_lowercase)
+            && bare_capture
+                .iter()
+                .all(|byte| byte.is_ascii_alphanumeric() || *byte == b'_')
+            && !matches!(bare_capture, b"nil" | b"true" | b"false" | b"self");
+        if !guarded && (has_wildcard || bare_capture) {
+            *catch_all_indent = Some(indentation);
+        }
     }
 }
 
-fn method_parameter_name(context: &mut CopContext<'_, '_>) {
-    for (offset, line) in context.source_file().lines() {
-        let trimmed = line.trim_start();
-        if !trimmed.starts_with("def ") {
+fn method_parameter_name(definition: &ruby_prism::DefNode<'_>, context: &mut CopContext<'_, '_>) {
+    let minimum = context.config_usize("MinNameLength", 3);
+    let allow_numbers = context.config_bool("AllowNamesEndingInNumbers", false);
+    let allowed = context.config_values("AllowedNames").to_vec();
+    let forbidden = context.config_values("ForbiddenNames").to_vec();
+    let Some(parameters) = definition.parameters() else {
+        return;
+    };
+    for (name, range) in named_method_parameters(&parameters) {
+        let normalized = name.trim_start_matches('_');
+        if normalized.is_empty() || allowed.iter().any(|allowed| allowed == normalized) {
             continue;
         }
-        let Some(open) = line.find('(') else { continue };
-        let Some(close) = line[open..].find(')').map(|at| open + at) else {
-            continue;
-        };
-        for parameter in line[open + 1..close]
-            .split(',')
-            .map(|p| p.trim().trim_start_matches(['*', '&']))
+        let message = if forbidden.iter().any(|forbidden| forbidden == normalized) {
+            Some(format!(
+                "Do not use {normalized} as a name for a method parameter."
+            ))
+        } else if normalized.len() < minimum {
+            Some(format!(
+                "Method parameter must be at least {minimum} characters long."
+            ))
+        } else if normalized.bytes().any(|byte| byte.is_ascii_uppercase()) {
+            Some("Only use lowercase characters for method parameter.".to_string())
+        } else if !allow_numbers
+            && normalized
+                .bytes()
+                .last()
+                .is_some_and(|byte| byte.is_ascii_digit())
         {
-            if parameter.chars().last().is_some_and(|c| c.is_ascii_digit()) {
-                let start = offset + line.find(parameter).unwrap_or(0);
-                context.report(
-                    "Do not end method parameter with a number.",
-                    start..start + parameter.len(),
-                );
-            }
+            Some("Do not end method parameter with a number.".to_string())
+        } else {
+            None
+        };
+        if let Some(message) = message {
+            context.report(message, range);
         }
+    }
+}
+
+fn named_method_parameters(
+    parameters: &ruby_prism::ParametersNode<'_>,
+) -> Vec<(String, std::ops::Range<usize>)> {
+    let mut result = Vec::new();
+    for parameter in parameters
+        .requireds()
+        .iter()
+        .chain(parameters.posts().iter())
+    {
+        if let Some(parameter) = parameter.as_required_parameter_node() {
+            result.push((
+                String::from_utf8_lossy(parameter.name().as_slice()).into_owned(),
+                parameter.location().start_offset()..parameter.location().end_offset(),
+            ));
+        }
+    }
+    for parameter in parameters.optionals().iter() {
+        if let Some(parameter) = parameter.as_optional_parameter_node() {
+            let location = parameter.name_loc();
+            result.push((
+                String::from_utf8_lossy(parameter.name().as_slice()).into_owned(),
+                location.start_offset()..location.end_offset(),
+            ));
+        }
+    }
+    for parameter in parameters.keywords().iter() {
+        if let Some(parameter) = parameter.as_required_keyword_parameter_node() {
+            let location = parameter.name_loc();
+            result.push((
+                String::from_utf8_lossy(parameter.name().as_slice()).into_owned(),
+                location.start_offset()..location.end_offset().saturating_sub(1),
+            ));
+        } else if let Some(parameter) = parameter.as_optional_keyword_parameter_node() {
+            let location = parameter.name_loc();
+            result.push((
+                String::from_utf8_lossy(parameter.name().as_slice()).into_owned(),
+                location.start_offset()..location.end_offset().saturating_sub(1),
+            ));
+        }
+    }
+    if let Some(parameter) = parameters
+        .rest()
+        .and_then(|node| node.as_rest_parameter_node())
+    {
+        if let (Some(name), Some(_)) = (parameter.name(), parameter.name_loc()) {
+            result.push((
+                String::from_utf8_lossy(name.as_slice()).into_owned(),
+                parameter.location().start_offset()..parameter.location().end_offset(),
+            ));
+        }
+    }
+    if let Some(parameter) = parameters
+        .keyword_rest()
+        .and_then(|node| node.as_keyword_rest_parameter_node())
+    {
+        if let (Some(name), Some(_)) = (parameter.name(), parameter.name_loc()) {
+            result.push((
+                String::from_utf8_lossy(name.as_slice()).into_owned(),
+                parameter.location().start_offset()..parameter.location().end_offset(),
+            ));
+        }
+    }
+    if let Some(parameter) = parameters.block() {
+        if let (Some(name), Some(_)) = (parameter.name(), parameter.name_loc()) {
+            let start = parameter.location().start_offset();
+            result.push((
+                String::from_utf8_lossy(name.as_slice()).into_owned(),
+                start..start + name.as_slice().len(),
+            ));
+        }
+    }
+    result
+}
+
+fn accessor_method_name(definition: &ruby_prism::DefNode<'_>, context: &mut CopContext<'_, '_>) {
+    let name = String::from_utf8_lossy(definition.name().as_slice());
+    if name.ends_with(['!', '?', '=']) {
+        return;
+    }
+    let parameter_count = definition.parameters().map_or(0, |parameters| {
+        parameters.requireds().len()
+            + parameters.optionals().len()
+            + usize::from(parameters.rest().is_some())
+            + parameters.posts().len()
+            + parameters.keywords().len()
+            + usize::from(parameters.keyword_rest().is_some())
+            + usize::from(parameters.block().is_some())
+    });
+    let single_required = definition.parameters().is_some_and(|parameters| {
+        parameters.requireds().len() == 1
+            && parameters
+                .requireds()
+                .first()
+                .is_some_and(|node| node.as_required_parameter_node().is_some())
+            && parameter_count == 1
+    });
+    let message = if name.starts_with("get_") && parameter_count == 0 {
+        Some("Do not prefix reader method names with `get_`.")
+    } else if name.starts_with("set_") && single_required {
+        Some("Do not prefix writer method names with `set_`.")
+    } else {
+        None
+    };
+    if let Some(message) = message {
+        let location = definition.name_loc();
+        context.report(message, location.start_offset()..location.end_offset());
     }
 }

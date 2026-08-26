@@ -107,8 +107,11 @@ fn ranges_overlap(left: &Range<usize>, right: &Range<usize>) -> bool {
 
 pub(super) fn apply_edits(source: &str, mut edits: Vec<Edit>) -> String {
     edits.sort_by_key(|edit| (edit.range.start, edit.range.end));
-    edits
-        .dedup_by(|right, left| left.range == right.range && left.replacement == right.replacement);
+    edits.dedup_by(|right, left| {
+        left.range.start != left.range.end
+            && left.range == right.range
+            && left.replacement == right.replacement
+    });
     let mut corrected = source.to_string();
     for edit in edits.into_iter().rev() {
         corrected.replace_range(edit.range, &edit.replacement);

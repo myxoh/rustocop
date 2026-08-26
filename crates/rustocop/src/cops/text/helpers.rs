@@ -1,5 +1,3 @@
-use crate::model::SourceLine;
-
 pub(super) fn trailing_whitespace_len(value: &str) -> usize {
     value
         .chars()
@@ -18,136 +16,10 @@ pub(super) fn strip_comment(line: &str) -> &str {
     line.split('#').next().unwrap_or(line)
 }
 
-pub(super) fn find_extra_spacing(line: &str) -> Option<usize> {
-    let bytes = line.as_bytes();
-    for index in 1..bytes.len().saturating_sub(1) {
-        if bytes[index] == b' ' && bytes[index + 1] == b' ' {
-            let previous = bytes[index - 1] as char;
-            let next = bytes.get(index + 2).copied().unwrap_or_default() as char;
-            if previous.is_ascii_alphanumeric() && (next.is_ascii_alphanumeric() || next == '=') {
-                return Some(index + 1);
-            }
-        }
-    }
-    None
-}
-
 pub(super) fn leading_spaces(line: &str) -> usize {
     line.chars()
         .take_while(|character| *character == ' ')
         .count()
-}
-
-pub(super) fn starts_block(trimmed: &str) -> bool {
-    trimmed.starts_with("def ")
-        || trimmed.starts_with("class ")
-        || trimmed.starts_with("module ")
-        || trimmed.starts_with("if ")
-        || trimmed.starts_with("unless ")
-        || trimmed.starts_with("case")
-        || trimmed.starts_with("begin")
-        || trimmed.ends_with(" do")
-        || trimmed.contains(" do |")
-}
-
-pub(super) fn assignment_name(trimmed: &str) -> Option<String> {
-    if trimmed.contains("==")
-        || trimmed.contains("!=")
-        || trimmed.contains(">=")
-        || trimmed.contains("<=")
-    {
-        return None;
-    }
-
-    let position = trimmed.find('=')?;
-    let name = trimmed[..position].trim();
-    if name
-        .chars()
-        .all(|character| character == '_' || character.is_ascii_alphanumeric())
-    {
-        Some(name.to_string())
-    } else {
-        None
-    }
-}
-
-pub(super) fn find_numbered_parameter(line: &str) -> Option<usize> {
-    let bytes = line.as_bytes();
-    for index in 0..bytes.len().saturating_sub(1) {
-        if bytes[index] == b'_'
-            && bytes[index + 1].is_ascii_digit()
-            && (index == 0 || !bytes[index - 1].is_ascii_alphanumeric())
-        {
-            return Some(index + 1);
-        }
-    }
-
-    None
-}
-
-pub(super) fn first_identifier(value: &str) -> Option<&str> {
-    let end = value
-        .find(|character: char| {
-            !(character == '_'
-                || character == '?'
-                || character == '!'
-                || character.is_ascii_alphanumeric())
-        })
-        .unwrap_or(value.len());
-    let name = &value[..end];
-    (!name.is_empty()).then_some(name)
-}
-
-pub(super) fn method_arguments(signature: &str) -> Vec<String> {
-    let Some(start) = signature.find('(') else {
-        return Vec::new();
-    };
-    let Some(end) = signature.rfind(')') else {
-        return Vec::new();
-    };
-
-    signature[start + 1..end]
-        .split(',')
-        .filter_map(|arg| {
-            let arg = arg
-                .trim()
-                .trim_start_matches('*')
-                .trim_start_matches('&')
-                .split(':')
-                .next()
-                .unwrap_or_default()
-                .split('=')
-                .next()
-                .unwrap_or_default()
-                .trim();
-
-            if arg.is_empty() {
-                None
-            } else {
-                Some(arg.to_string())
-            }
-        })
-        .collect()
-}
-
-pub(super) fn find_matching_end(lines: &[SourceLine], start: usize) -> Option<usize> {
-    let mut depth = 0usize;
-
-    for (index, line) in lines.iter().enumerate().skip(start) {
-        let trimmed = line.body.trim();
-        if starts_block(trimmed) {
-            depth += 1;
-        }
-
-        if trimmed == "end" {
-            depth = depth.saturating_sub(1);
-            if depth == 0 {
-                return Some(index);
-            }
-        }
-    }
-
-    None
 }
 
 pub(super) fn is_rspec_group_start(trimmed: &str) -> bool {

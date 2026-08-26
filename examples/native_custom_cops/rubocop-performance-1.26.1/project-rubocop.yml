@@ -1,0 +1,21 @@
+---
+plugins:
+  - rubocop-performance
+AllCops:
+  DisabledByDefault: true
+  Exclude: []
+  NewCops: enable
+  ParserEngine: parser_prism
+  SuggestExtensions: false
+  TargetRubyVersion: 3.4
+Performance/RedundantSortBlock:
+  Enabled: true
+Performance/ReverseEach:
+  Enabled: true
+Performance/ReverseFirst:
+  Enabled: true
+Performance/Size:
+  Enabled: true
+Performance/StringBytesize:
+  Enabled: true
+  Safe: false

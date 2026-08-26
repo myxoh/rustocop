@@ -1,0 +1,5 @@
+{
+  "72ca4da6bc180b16": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/EmptyLinesAroundBlockBody:\n  Description: Keeps track of empty lines around block bodies.\n  StyleGuide: \"#empty-lines-around-bodies\"\n  Enabled: true\n  VersionAdded: '0.49'\n  EnforcedStyle: no_empty_lines\n  SupportedStyles:\n  - empty_lines\n  - no_empty_lines\n  AutoCorrect: always\n",
+  "d349522222dd5492": "---\nAllCops:\n  TargetRubyVersion: 3.4\nLayout/EmptyLinesAroundBlockBody:\n  Description: Keeps track of empty lines around block bodies.\n  StyleGuide: \"#empty-lines-around-bodies\"\n  Enabled: true\n  VersionAdded: '0.49'\n  EnforcedStyle: no_empty_lines\n  SupportedStyles:\n  - empty_lines\n  - no_empty_lines\n  AutoCorrect: always\n",
+  "fac63fd60f4f9cf9": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/EmptyLinesAroundBlockBody:\n  Description: Keeps track of empty lines around block bodies.\n  StyleGuide: \"#empty-lines-around-bodies\"\n  Enabled: true\n  VersionAdded: '0.49'\n  EnforcedStyle: empty_lines\n  SupportedStyles:\n  - empty_lines\n  - no_empty_lines\n  AutoCorrect: always\n"
+}

@@ -1,0 +1,5 @@
+{
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
+  "91f171b8d759484b": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/StringConcatenation:\n  Description: Checks for places where string concatenation can be replaced with string\n    interpolation.\n  StyleGuide: \"#string-interpolation\"\n  Enabled: true\n  Safe: false\n  VersionAdded: '0.89'\n  VersionChanged: '1.18'\n  Mode: conservative\n  AutoCorrect: always\n",
+  "aa26ddac54025bc1": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/StringConcatenation:\n  Description: Checks for places where string concatenation can be replaced with string\n    interpolation.\n  StyleGuide: \"#string-interpolation\"\n  Enabled: true\n  Safe: false\n  VersionAdded: '0.89'\n  VersionChanged: '1.18'\n  Mode: aggressive\n  AutoCorrect: always\n"
+}

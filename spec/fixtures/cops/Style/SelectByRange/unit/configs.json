@@ -1,0 +1,4 @@
+{
+  "b778d0be8db86cd6": "---\nAllCops:\n  TargetRubyVersion: 3.4\nStyle/SelectByRange:\n  Description: Prefer grep/grep_v to select/reject/find/detect with a range check.\n  Enabled: true\n  SafeAutoCorrect: false\n  VersionAdded: '1.85'\n  AutoCorrect: always\n",
+  "eeda3272ce083787": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/SelectByRange:\n  Description: Prefer grep/grep_v to select/reject/find/detect with a range check.\n  Enabled: true\n  SafeAutoCorrect: false\n  VersionAdded: '1.85'\n  AutoCorrect: always\n"
+}

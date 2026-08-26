@@ -1,0 +1,6 @@
+{
+  "169a3c9e971c6745": "---\nAllCops:\n  TargetRubyVersion: 3.1\nStyle/WhileUntilModifier:\n  Description: Favor modifier while/until usage when you have a single-line body.\n  StyleGuide: \"#while-as-a-modifier\"\n  Enabled: true\n  VersionAdded: '0.9'\n  VersionChanged: '0.30'\n  AutoCorrect: always\nLayout/LineLength:\n  Max: 80\n",
+  "224b1206bcd7a010": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/WhileUntilModifier:\n  Description: Favor modifier while/until usage when you have a single-line body.\n  StyleGuide: \"#while-as-a-modifier\"\n  Enabled: true\n  VersionAdded: '0.9'\n  VersionChanged: '0.30'\n  AutoCorrect: always\nLayout/LineLength:\n  Enabled: false\n",
+  "6a681d8f0134686e": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/WhileUntilModifier:\n  Description: Favor modifier while/until usage when you have a single-line body.\n  StyleGuide: \"#while-as-a-modifier\"\n  Enabled: true\n  VersionAdded: '0.9'\n  VersionChanged: '0.30'\n  AutoCorrect: always\nLayout/LineLength:\n  Max: 80\n",
+  "e9bb9d128d6e6a8e": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/WhileUntilModifier:\n  Description: Favor modifier while/until usage when you have a single-line body.\n  StyleGuide: \"#while-as-a-modifier\"\n  Enabled: true\n  VersionAdded: '0.9'\n  VersionChanged: '0.30'\n  AutoCorrect: always\n"
+}

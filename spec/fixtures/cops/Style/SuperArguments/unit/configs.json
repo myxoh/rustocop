@@ -1,0 +1,6 @@
+{
+  "2f3c12e8e2ccc57e": "---\nAllCops:\n  TargetRubyVersion: 3.2\nStyle/SuperArguments:\n  Description: Call `super` without arguments and parentheses when the signature is\n    identical.\n  Enabled: true\n  VersionAdded: '1.64'\n  AutoCorrect: always\n",
+  "645d9ad151983e4c": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/SuperArguments:\n  Description: Call `super` without arguments and parentheses when the signature is\n    identical.\n  Enabled: true\n  VersionAdded: '1.64'\n  AutoCorrect: always\n",
+  "71d37435844256bf": "---\nAllCops:\n  TargetRubyVersion: 3.1\nStyle/SuperArguments:\n  Description: Call `super` without arguments and parentheses when the signature is\n    identical.\n  Enabled: true\n  VersionAdded: '1.64'\n  AutoCorrect: always\n",
+  "83def38ddb0d0cf4": "---\nAllCops:\n  DisabledByDefault: true\n  ParserEngine: parser_prism\n  TargetRubyVersion: 3.4\nStyle/SuperArguments:\n  Enabled: true\n"
+}

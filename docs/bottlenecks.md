@@ -1,10 +1,15 @@
 # Known performance bottlenecks
 
-This is the measured, still-actionable performance backlog. Addressed
-investigations have been removed; their tests and implementation history live
-in git. Optimizations must preserve normalized JSON and correction parity, one
-Prism parse per file, deterministic parallel output, architecture checks, and
-the full upstream compatibility baseline.
+This is the measured performance backlog. The measurements are dated
+2026-08-19 baselines, so reprofile current `main` before implementing an
+optimization. Addressed investigations have been removed; their tests and
+implementation history live in git. Optimizations must preserve normalized JSON
+and correction parity, one Prism parse per file, deterministic parallel output,
+architecture checks, and the complete project-parity contract.
+
+Cop implementation workflow timings, third-party oracle costs, and the
+per-project reference-cache design are tracked separately in
+[Cop authoring performance](cop-authoring-performance.md).
 
 ## Prism node dispatch
 
@@ -63,8 +68,9 @@ atomicity if this is changed.
 
 Confidence: measured on an Apple M5 Pro with 15 CPU cores and 24 GB RAM.
 
-With warm filesystem caches and 20 verified cops, complete-file workers scale
-well until CPU saturation and then plateau. Extra workers do not create more
+With warm filesystem caches and 20 fixed benchmark cops whose output was
+checked before timing, complete-file workers scale well until CPU saturation
+and then plateau. Extra workers do not create more
 disk throughput on this workload; measured physical block input was zero.
 
 | Project | Files / source | 1 job | 8 jobs | 15 jobs | 24 jobs | 48 jobs | 96 jobs |

@@ -8,9 +8,13 @@ define_cops! {
 
 impl HashConversionRule<'_, '_, '_> {
     fn on_send(&mut self, node: &CallNode<'_>) {
-        return_if!(self.parent().and_then(ruby_prism::Node::as_call_node).is_some_and(|parent| {
-            parent.name().as_slice() == b"[]"
-                && parent.receiver().is_some_and(|receiver| matches!(self.source_file().node(&receiver), "Hash" | "::Hash"))
+        return_if!(self.ancestors().iter().rev().any(|ancestor| {
+            ancestor.as_call_node().is_some_and(|parent| {
+                parent.name().as_slice() == b"[]"
+                    && parent.receiver().is_some_and(|receiver| {
+                        matches!(self.source_file().node(&receiver), "Hash" | "::Hash")
+                    })
+            })
         }));
         let Some(receiver) = node.receiver() else { return };
         return_unless!(matches!(self.source_file().node(&receiver), "Hash" | "::Hash"));

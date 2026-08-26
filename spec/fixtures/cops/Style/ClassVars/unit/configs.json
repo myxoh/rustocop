@@ -1,0 +1,4 @@
+{
+  "21dfee99f9f1c62f": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/ClassVars:\n  Description: Avoid the use of class variables.\n  StyleGuide: \"#no-class-vars\"\n  Enabled: true\n  VersionAdded: '0.13'\n  AutoCorrect: always\n",
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n"
+}

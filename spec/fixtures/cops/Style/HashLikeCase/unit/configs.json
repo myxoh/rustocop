@@ -1,0 +1,6 @@
+{
+  "157dd796c2099e13": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/HashLikeCase:\n  Description: Checks for places where `case-when` represents a simple 1:1 mapping\n    and can be replaced with a hash lookup.\n  Enabled: true\n  VersionAdded: '0.88'\n  MinBranchesCount: 2\n  AutoCorrect: always\n",
+  "4bc219e4f57dee64": "---\nAllCops:\n  DisabledByDefault: true\n  NewCops: disable\n  ParserEngine: parser_prism\n  TargetRubyVersion: 3.4\n",
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
+  "c1f904d3b0c12075": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/HashLikeCase:\n  Description: Checks for places where `case-when` represents a simple 1:1 mapping\n    and can be replaced with a hash lookup.\n  Enabled: true\n  VersionAdded: '0.88'\n  MinBranchesCount: 3\n  AutoCorrect: always\n"
+}

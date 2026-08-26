@@ -1,0 +1,4 @@
+{
+  "3e2699fa04fc5594": "---\nAllCops:\n  TargetRubyVersion: 3.1\nStyle/DataInheritance:\n  Description: Checks for inheritance from Data.define.\n  StyleGuide: \"#no-extend-data-define\"\n  Enabled: true\n  SafeAutoCorrect: false\n  VersionAdded: '1.49'\n  VersionChanged: '1.51'\n  AutoCorrect: always\n",
+  "f07712dabf7e68a4": "---\nAllCops:\n  TargetRubyVersion: 3.2\nStyle/DataInheritance:\n  Description: Checks for inheritance from Data.define.\n  StyleGuide: \"#no-extend-data-define\"\n  Enabled: true\n  SafeAutoCorrect: false\n  VersionAdded: '1.49'\n  VersionChanged: '1.51'\n  AutoCorrect: always\n"
+}

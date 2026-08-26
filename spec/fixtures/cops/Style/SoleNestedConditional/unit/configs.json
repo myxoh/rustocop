@@ -1,0 +1,6 @@
+{
+  "065a12b5031200c1": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\n",
+  "158c7cf233a1b966": "---\nStyle/IfUnlessModifier:\n  Enabled: false\nStyle/SoleNestedConditional:\n  Enabled: true\n",
+  "46cee41efe0d5f6a": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/SoleNestedConditional:\n  Description: Finds sole nested conditional nodes which can be merged into outer\n    conditional node.\n  Enabled: true\n  VersionAdded: '0.89'\n  VersionChanged: '1.5'\n  AllowModifier: false\n  AutoCorrect: always\n",
+  "a73834f6f7b9ffec": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/SoleNestedConditional:\n  Description: Finds sole nested conditional nodes which can be merged into outer\n    conditional node.\n  Enabled: true\n  VersionAdded: '0.89'\n  VersionChanged: '1.5'\n  AllowModifier: true\n  AutoCorrect: always\n"
+}

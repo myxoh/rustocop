@@ -1,0 +1,4 @@
+{
+  "34773d57ee0deaa5": "---\nAllCops:\n  TargetRubyVersion: 3.4\nStyle/CollectionMethods:\n  Description: Preferred collection methods.\n  StyleGuide: \"#map-find-select-reduce-include-size\"\n  Enabled: true\n  VersionAdded: '0.9'\n  VersionChanged: '1.7'\n  Safe: false\n  PreferredMethods:\n    collect: map\n    inject: reduce\n    detect: find\n    find_all: select\n    member?: include?\n  MethodsAcceptingSymbol:\n  - inject\n  - reduce\n  AutoCorrect: always\n",
+  "8c39885e9121a5db": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/CollectionMethods:\n  Description: Preferred collection methods.\n  StyleGuide: \"#map-find-select-reduce-include-size\"\n  Enabled: true\n  VersionAdded: '0.9'\n  VersionChanged: '1.7'\n  Safe: false\n  PreferredMethods:\n    collect: map\n    inject: reduce\n    detect: find\n    find_all: select\n    member?: include?\n  MethodsAcceptingSymbol:\n  - inject\n  - reduce\n  AutoCorrect: always\n"
+}

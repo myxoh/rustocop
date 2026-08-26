@@ -60,5 +60,11 @@ fn next_line_starts_string(source: &str, line_end: usize) -> bool {
         return false;
     }
     let trailing = line[closing + 1..].trim_start();
-    trailing.is_empty() || trailing.starts_with('+') || trailing.starts_with("<<")
+    trailing.is_empty()
+        || trailing.starts_with('+')
+        || trailing.starts_with("<<")
+        || trailing == "do"
+        || trailing.starts_with("do ")
+        || trailing.starts_with('{')
+        || trailing.starts_with([')', ']', '}', ',', ';'])
 }

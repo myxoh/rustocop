@@ -1,0 +1,4 @@
+{
+  "a4307edd393ea4ae": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/EmptyWhen:\n  Description: Checks for `when` branches with empty bodies.\n  Enabled: true\n  AllowComments: false\n  VersionAdded: '0.45'\n  VersionChanged: '0.83'\n  AutoCorrect: always\n",
+  "cff2b0e25bab4608": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/EmptyWhen:\n  Description: Checks for `when` branches with empty bodies.\n  Enabled: true\n  AllowComments: true\n  VersionAdded: '0.45'\n  VersionChanged: '0.83'\n  AutoCorrect: always\n"
+}

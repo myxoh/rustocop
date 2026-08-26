@@ -1,0 +1,4 @@
+{
+  "2d5b9c06473d67d3": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/BarePercentLiterals:\n  Description: Checks if usage of %() or %Q() matches configuration.\n  StyleGuide: \"#percent-q-shorthand\"\n  Enabled: true\n  VersionAdded: '0.25'\n  EnforcedStyle: bare_percent\n  SupportedStyles:\n  - percent_q\n  - bare_percent\n  AutoCorrect: always\n",
+  "31efda1d755066c2": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/BarePercentLiterals:\n  Description: Checks if usage of %() or %Q() matches configuration.\n  StyleGuide: \"#percent-q-shorthand\"\n  Enabled: true\n  VersionAdded: '0.25'\n  EnforcedStyle: percent_q\n  SupportedStyles:\n  - percent_q\n  - bare_percent\n  AutoCorrect: always\n"
+}

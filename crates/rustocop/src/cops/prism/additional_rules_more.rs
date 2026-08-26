@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use super::source_helpers::*;
 use super::*;
 
@@ -7,12 +5,8 @@ declare_source_cops! {
     LeadingEmptyLines => "Layout/LeadingEmptyLines" => leading_empty_lines,
     EmptyBlockParameter => "Style/EmptyBlockParameter" => empty_block_parameter,
     TripleQuotes => "Lint/TripleQuotes" => triple_quotes,
-    PreferredHashMethods => "Style/PreferredHashMethods" => preferred_hash_methods,
-    UriEscapeUnescape => "Lint/UriEscapeUnescape" => uri_escape_unescape,
     OrAssignmentToConstant => "Lint/OrAssignmentToConstant" => or_assignment_to_constant,
     OrderedMagicComments => "Lint/OrderedMagicComments" => ordered_magic_comments,
-    DuplicateRequire => "Lint/DuplicateRequire" => duplicate_require,
-    UriRegexp => "Lint/UriRegexp" => uri_regexp,
 }
 
 fn leading_empty_lines(source: &str, reporter: &mut Reporter<'_>) {
@@ -36,17 +30,39 @@ fn leading_empty_lines(source: &str, reporter: &mut Reporter<'_>) {
 }
 
 fn empty_block_parameter(source: &str, reporter: &mut Reporter<'_>) {
-    for start in all_offsets(source, "||") {
+    let file = SourceFile::new(source);
+    let heredocs = file.heredoc_ranges();
+    let pipe_offsets = file.code_offsets("|");
+    for (index, start) in pipe_offsets.iter().copied().enumerate() {
+        if heredocs
+            .iter()
+            .any(|range| range.start <= start && start < range.end)
+        {
+            continue;
+        }
+        let Some(end) = pipe_offsets[index + 1..].iter().copied().find(|end| {
+            source[start + 1..*end]
+                .bytes()
+                .all(|byte| matches!(byte, b' ' | b'\t'))
+        }) else {
+            continue;
+        };
         let before = source[..start].trim_end();
-        if before.ends_with("do") || before.ends_with('{') {
-            let edit = if before.ends_with("do") {
-                start.saturating_sub(1)..start + 2
+        let do_block = before.strip_suffix("do").is_some_and(|prefix| {
+            prefix
+                .chars()
+                .last()
+                .is_none_or(|character| !character.is_alphanumeric() && character != '_')
+        });
+        if do_block || before.ends_with('{') {
+            let edit = if do_block {
+                start.saturating_sub(1)..end + 1
             } else {
-                start..start + 2 + usize::from(source.as_bytes().get(start + 2) == Some(&b' '))
+                start..end + 1 + usize::from(source.as_bytes().get(end + 1) == Some(&b' '))
             };
             reporter.remove(
                 "Omit pipes for the empty block parameters.",
-                start..start + 2,
+                start..end + 1,
                 edit,
             );
         }
@@ -55,12 +71,26 @@ fn empty_block_parameter(source: &str, reporter: &mut Reporter<'_>) {
 
 fn triple_quotes(source: &str, reporter: &mut Reporter<'_>) {
     let bytes = source.as_bytes();
+    let literal_ranges = SourceFile::new(source).literal_ranges();
+    let triple_starts = literal_ranges
+        .iter()
+        .filter_map(|range| {
+            let literal = &source[range.clone()];
+            ((literal.starts_with("\"\"\"") && literal.ends_with("\"\"\""))
+                || (literal.starts_with("'''") && literal.ends_with("'''")))
+                .then_some(range.start)
+        })
+        .collect::<std::collections::HashSet<_>>();
     let mut start = 0;
     while start + 2 < bytes.len() {
         let quote = bytes[start];
         if !matches!(quote, b'\'' | b'"') || bytes[start + 1] != quote || bytes[start + 2] != quote
         {
             start += 1;
+            continue;
+        }
+        if !triple_starts.contains(&start) {
+            start += 3;
             continue;
         }
         let run = bytes[start..]
@@ -96,96 +126,47 @@ fn triple_quotes(source: &str, reporter: &mut Reporter<'_>) {
     }
 }
 
-fn preferred_hash_methods(source: &str, reporter: &mut Reporter<'_>) {
-    let rules = if reporter.policy().enforced_style("short") == "verbose" {
-        [
-            (
-                "key?",
-                "has_key?",
-                "Use `Hash#has_key?` instead of `Hash#key?`.",
-            ),
-            (
-                "value?",
-                "has_value?",
-                "Use `Hash#has_value?` instead of `Hash#value?`.",
-            ),
-        ]
-    } else {
-        [
-            (
-                "has_key?",
-                "key?",
-                "Use `Hash#key?` instead of `Hash#has_key?`.",
-            ),
-            (
-                "has_value?",
-                "value?",
-                "Use `Hash#value?` instead of `Hash#has_value?`.",
-            ),
-        ]
-    };
-    for (old, new, message) in rules {
-        for start in all_offsets(source, old) {
-            let end = start + old.len();
-            if source.as_bytes().get(end) == Some(&b'(') {
-                reporter.replace(message, start..end, start..end, new);
-            }
-        }
-    }
-}
-
-fn uri_escape_unescape(source: &str, reporter: &mut Reporter<'_>) {
-    for method in ["escape", "encode", "unescape", "decode"] {
-        for prefix in ["::URI.", "URI."] {
-            let needle = format!("{prefix}{method}(");
-            for start in all_offsets(source, &needle) {
-                if prefix == "URI." && start >= 2 && &source[start - 2..start] == "::" {
-                    continue;
-                }
-                let Some(close) = source[start..].find(')') else {
-                    continue;
-                };
-                let end = start + close + 1;
-                let alternatives = if matches!(method, "escape" | "encode") {
-                    "`CGI.escape`, `URI.encode_www_form` or `URI.encode_www_form_component`"
-                } else {
-                    "`CGI.unescape`, `URI.decode_www_form` or `URI.decode_www_form_component`"
-                };
-                reporter.report(format!("`{prefix}{method}` method is obsolete and should not be used. Instead, use {alternatives} depending on your specific use case."), start..end);
-            }
-        }
-    }
-}
-
 fn or_assignment_to_constant(source: &str, reporter: &mut Reporter<'_>) {
-    for operator in all_offsets(source, "||=") {
-        let line_start = source[..operator]
-            .rfind('\n')
-            .map_or(0, |offset| offset + 1);
-        let left = source[line_start..operator].trim();
-        if left.is_empty()
-            || !left
-                .bytes()
-                .last()
-                .is_some_and(|byte| byte.is_ascii_uppercase())
-        {
-            continue;
+    #[derive(Default)]
+    struct ConstantOrAssignments {
+        def_depth: usize,
+        operators: Vec<(std::ops::Range<usize>, bool)>,
+    }
+
+    impl<'pr> ruby_prism::Visit<'pr> for ConstantOrAssignments {
+        fn visit_def_node(&mut self, node: &ruby_prism::DefNode<'pr>) {
+            self.def_depth += 1;
+            ruby_prism::visit_def_node(self, node);
+            self.def_depth -= 1;
         }
-        let inside_def = source[..line_start]
-            .lines()
-            .rev()
-            .take_while(|line| line.trim() != "end")
-            .any(|line| line.trim_start().starts_with("def "));
-        if inside_def && left.contains("::") {
-            reporter.report(
-                "Avoid using or-assignment with constants.",
-                operator..operator + 3,
-            );
+
+        fn visit_constant_or_write_node(&mut self, node: &ruby_prism::ConstantOrWriteNode<'pr>) {
+            let operator = node.operator_loc();
+            self.operators.push((operator.start_offset()..operator.end_offset(), self.def_depth > 0));
+            ruby_prism::visit_constant_or_write_node(self, node);
+        }
+
+        fn visit_constant_path_or_write_node(
+            &mut self,
+            node: &ruby_prism::ConstantPathOrWriteNode<'pr>,
+        ) {
+            let operator = node.operator_loc();
+            self.operators.push((operator.start_offset()..operator.end_offset(), self.def_depth > 0));
+            ruby_prism::visit_constant_path_or_write_node(self, node);
+        }
+    }
+
+    let parsed = ruby_prism::parse(source.as_bytes());
+    let mut assignments = ConstantOrAssignments::default();
+    ruby_prism::Visit::visit(&mut assignments, &parsed.node());
+    for (operator, inside_def) in assignments.operators {
+        if inside_def {
+            reporter.report("Avoid using or-assignment with constants.", operator);
         } else {
             reporter.replace(
                 "Avoid using or-assignment with constants.",
-                operator..operator + 3,
-                operator..operator + 3,
+                operator.clone(),
+                operator,
                 "=",
             );
         }
@@ -194,7 +175,13 @@ fn or_assignment_to_constant(source: &str, reporter: &mut Reporter<'_>) {
 
 fn ordered_magic_comments(source: &str, reporter: &mut Reporter<'_>) {
     let lines = source_lines(source).collect::<Vec<_>>();
-    let encoding = lines.iter().position(|(_, line)| {
+    let leading = lines.iter().take_while(|(offset, line)| {
+        let trimmed = line.trim();
+        trimmed.is_empty()
+            || trimmed.starts_with('#')
+            || (*offset == 0 && trimmed.starts_with("#!"))
+    });
+    let encoding = leading.clone().position(|(_, line)| {
         let trimmed = line.trim();
         trimmed.starts_with("# encoding:")
             || trimmed.starts_with("# coding:")
@@ -202,6 +189,12 @@ fn ordered_magic_comments(source: &str, reporter: &mut Reporter<'_>) {
     });
     let frozen = lines
         .iter()
+        .take_while(|(offset, line)| {
+            let trimmed = line.trim();
+            trimmed.is_empty()
+                || trimmed.starts_with('#')
+                || (*offset == 0 && trimmed.starts_with("#!"))
+        })
         .position(|(_, line)| line.trim().starts_with("# frozen_string_literal:"));
     let (Some(encoding), Some(frozen)) = (encoding, frozen) else {
         return;
@@ -219,58 +212,4 @@ fn ordered_magic_comments(source: &str, reporter: &mut Reporter<'_>) {
         frozen_offset..end,
         replacement,
     );
-}
-
-fn duplicate_require(source: &str, reporter: &mut Reporter<'_>) {
-    let mut seen = HashMap::<(&str, &str), usize>::new();
-    for (offset, line) in source_lines(source) {
-        let trimmed = line.trim_start();
-        let normalized = trimmed.strip_prefix("Kernel.").unwrap_or(trimmed);
-        let method = if normalized.starts_with("require_relative ") {
-            "require_relative"
-        } else if normalized.starts_with("require ") {
-            "require"
-        } else {
-            continue;
-        };
-        let argument = normalized[method.len()..].trim();
-        if seen.insert((method, argument), offset).is_some() {
-            let start = offset + line.len() - trimmed.len();
-            reporter.remove(
-                format!("Duplicate `{method}` detected."),
-                start..offset + line.len(),
-                offset..line_end(source, offset),
-            );
-        }
-    }
-}
-
-fn uri_regexp(source: &str, reporter: &mut Reporter<'_>) {
-    let parser = if reporter.target_ruby_version().at_least(3, 4) {
-        "RFC2396_PARSER"
-    } else {
-        "DEFAULT_PARSER"
-    };
-    for prefix in ["::URI", "URI"] {
-        let needle = format!("{prefix}.regexp");
-        for start in all_offsets(source, &needle) {
-            if prefix == "URI" && start >= 2 && &source[start - 2..start] == "::" {
-                continue;
-            }
-            let operator = start + prefix.len();
-            let selector = operator + 1;
-            let end =
-                line_end(source, start).saturating_sub(usize::from(source[start..].contains('\n')));
-            let old = &source[start..end];
-            let replacement = old.replacen(&needle, &format!("{prefix}::{parser}.make_regexp"), 1);
-            reporter.replace(
-                format!(
-                    "`{old}` is obsolete and should not be used. Instead, use `{replacement}`."
-                ),
-                selector..selector + 6,
-                operator..selector + 6,
-                format!("::{parser}.make_regexp"),
-            );
-        }
-    }
 }

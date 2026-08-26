@@ -1,0 +1,6 @@
+{
+  "065a12b5031200c1": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\n",
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
+  "961335e2f3e3092b": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/DateTime:\n  Description: Use Time over DateTime.\n  StyleGuide: \"#date-time\"\n  Enabled: true\n  VersionAdded: '0.51'\n  VersionChanged: '0.92'\n  SafeAutoCorrect: false\n  AllowCoercion: false\n  AutoCorrect: always\n",
+  "a085c654dafc4d74": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/DateTime:\n  Description: Use Time over DateTime.\n  StyleGuide: \"#date-time\"\n  Enabled: true\n  VersionAdded: '0.51'\n  VersionChanged: '0.92'\n  SafeAutoCorrect: false\n  AllowCoercion: true\n  AutoCorrect: always\n"
+}

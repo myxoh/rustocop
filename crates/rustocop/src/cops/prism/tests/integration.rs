@@ -19,14 +19,14 @@ fn partitions_cops_by_the_work_they_perform() {
     };
 
     assert_eq!(
-        indices_for(&registry.source_cops),
-        ["Lint/DuplicateMagicComment", "Security/CompoundHash"]
+        indices_for(&registry.phases.source),
+        ["Lint/Syntax", "Lint/DuplicateMagicComment"]
     );
     assert_eq!(
-        indices_for(&registry.node_cops),
+        indices_for(&registry.phases.nodes),
         ["Security/Eval", "Security/CompoundHash"]
     );
-    assert_eq!(indices_for(&registry.parse_error_cops), ["Lint/Syntax"]);
+    assert_eq!(indices_for(&registry.phases.parse_errors), ["Lint/Syntax"]);
 }
 
 #[test]
@@ -52,6 +52,31 @@ fn ordinary_cops_do_not_investigate_recovered_syntax_trees() {
     );
 
     assert!(inspection.findings.is_empty());
+}
+
+#[test]
+fn ordinary_source_cops_do_not_investigate_syntax_errors() {
+    let inspection = inspect(
+        "def broken(; end\n",
+        false,
+        RubyVersion::default(),
+        &|cop| cop == "Style/Copyright",
+    );
+
+    assert!(inspection.findings.is_empty());
+}
+
+#[test]
+fn ordinary_cops_investigate_trees_with_context_only_parse_errors() {
+    let ternary = inspect(
+        "foo = (yield) ? a : b\n",
+        true,
+        RubyVersion::default(),
+        &|cop| cop == "Style/TernaryParentheses",
+    );
+
+    assert_eq!(ternary.findings.len(), 1);
+    assert_eq!(ternary.corrected_source, "foo = yield ? a : b\n");
 }
 
 #[test]
@@ -263,22 +288,19 @@ fn runs_verified_suspicious_call_and_control_flow_cops() {
 }
 
 #[test]
-fn registers_the_twenty_cop_parity_batch() {
+fn registers_the_active_parity_batch() {
     let names = cop_names();
     for cop in [
         "Bundler/GemVersion",
         "Layout/InitialIndentation",
-        "Layout/MultilineArrayLineBreaks",
         "Lint/DuplicateMagicComment",
         "Lint/EmptyInterpolation",
         "Lint/ErbNewArguments",
         "Lint/HashNewWithKeywordArgumentsAsDefault",
-        "Lint/InterpolationCheck",
         "Lint/LambdaWithoutLiteralBlock",
         "Lint/RequireRangeParentheses",
         "Lint/RequireRelativeSelfPath",
         "Lint/SharedMutableDefault",
-        "Lint/TopLevelReturnWithArgument",
         "Naming/AsciiIdentifiers",
         "Style/MultilineIfThen",
         "Style/OptionalArguments",

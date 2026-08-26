@@ -1,0 +1,5 @@
+{
+  "221e0809fac10674": "---\nAllCops:\n  TargetRubyVersion: 2.5\nStyle/HashSlice:\n  Description: Checks for usages of `Hash#reject`, `Hash#select`, and `Hash#filter`\n    methods that can be replaced with `Hash#slice` method.\n  Enabled: true\n  Safe: false\n  VersionAdded: '1.71'\n  AutoCorrect: always\n",
+  "6b4b08fbffe7c640": "---\nAllCops:\n  TargetRubyVersion: 2.4\nStyle/HashSlice:\n  Description: Checks for usages of `Hash#reject`, `Hash#select`, and `Hash#filter`\n    methods that can be replaced with `Hash#slice` method.\n  Enabled: true\n  Safe: false\n  VersionAdded: '1.71'\n  AutoCorrect: always\n",
+  "fe3eb5e93ee1edf4": "---\nAllCops:\n  TargetRubyVersion: '3.0'\n  ActiveSupportExtensionsEnabled: true\nStyle/HashSlice:\n  Enabled: true\n"
+}

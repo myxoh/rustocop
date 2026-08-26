@@ -28,12 +28,22 @@ fn multiline_method_signature(node: &ruby_prism::DefNode<'_>, context: &mut CopC
     } else {
         format!("def {identity}({parameters})")
     };
-    if context
+    if let Some(maximum) = context
         .related_config_value("Layout/LineLength", "Max")
         .and_then(|maximum| maximum.parse::<usize>().ok())
-        .is_some_and(|maximum| replacement.lines().any(|line| line.len() > maximum))
     {
-        return;
+        // RuboCop measures the original source range from `def` through the
+        // final argument, including embedded newlines, rather than the compact
+        // replacement. Preserve that behavior because it deliberately avoids
+        // autocorrecting especially long signatures when LineLength is active.
+        let line_start = context.source()[..keyword.start_offset()]
+            .rfind('\n')
+            .map_or(0, |newline| newline + 1);
+        let indentation = keyword.start_offset() - line_start;
+        let definition_width = right.end_offset() - keyword.start_offset();
+        if indentation + definition_width > maximum {
+            return;
+        }
     }
     context.replace(
         "Avoid multi-line method signatures.",

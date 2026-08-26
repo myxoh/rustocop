@@ -1,0 +1,5 @@
+{
+  "04e079839a662ac6": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/LineContinuationLeadingSpace:\n  Description: Use trailing spaces instead of leading spaces in strings broken over\n    multiple lines (by a backslash).\n  Enabled: true\n  VersionAdded: '1.31'\n  VersionChanged: '1.45'\n  EnforcedStyle: trailing\n  SupportedStyles:\n  - leading\n  - trailing\n  AutoCorrect: always\n",
+  "065a12b5031200c1": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\n",
+  "a76974af1f58161a": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/LineContinuationLeadingSpace:\n  Description: Use trailing spaces instead of leading spaces in strings broken over\n    multiple lines (by a backslash).\n  Enabled: true\n  VersionAdded: '1.31'\n  VersionChanged: '1.45'\n  EnforcedStyle: leading\n  SupportedStyles:\n  - leading\n  - trailing\n  AutoCorrect: always\n"
+}

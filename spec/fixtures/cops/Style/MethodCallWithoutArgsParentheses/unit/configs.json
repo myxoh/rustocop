@@ -1,0 +1,5 @@
+{
+  "09de683425845adf": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/MethodCallWithoutArgsParentheses:\n  Description: Do not use parentheses for method calls with no arguments.\n  StyleGuide: \"#method-invocation-parens\"\n  Enabled: true\n  AllowedMethods: []\n  AllowedPatterns: []\n  VersionAdded: '0.47'\n  VersionChanged: '0.55'\n  AutoCorrect: always\n",
+  "5d21584a1abd547f": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/MethodCallWithoutArgsParentheses:\n  Description: Do not use parentheses for method calls with no arguments.\n  StyleGuide: \"#method-invocation-parens\"\n  Enabled: true\n  AllowedMethods:\n  - s\n  AllowedPatterns: []\n  VersionAdded: '0.47'\n  VersionChanged: '0.55'\n  AutoCorrect: always\n",
+  "df1088f33d0cc75b": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/MethodCallWithoutArgsParentheses:\n  Description: Do not use parentheses for method calls with no arguments.\n  StyleGuide: \"#method-invocation-parens\"\n  Enabled: true\n  AllowedMethods: []\n  AllowedPatterns:\n  - test\n  VersionAdded: '0.47'\n  VersionChanged: '0.55'\n  AutoCorrect: always\n"
+}

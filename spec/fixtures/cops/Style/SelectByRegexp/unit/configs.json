@@ -1,0 +1,8 @@
+{
+  "8a619d74b81cda2b": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/SelectByRegexp:\n  Description: Prefer grep/grep_v to select/reject/find/detect with a regexp match.\n  Enabled: true\n  SafeAutoCorrect: false\n  VersionAdded: '1.22'\n  AutoCorrect: always\n",
+  "8ec7949e9eb2eb54": "---\nAllCops:\n  TargetRubyVersion: 2.5\nStyle/SelectByRegexp:\n  Description: Prefer grep/grep_v to select/reject/find/detect with a regexp match.\n  Enabled: true\n  SafeAutoCorrect: false\n  VersionAdded: '1.22'\n  AutoCorrect: always\n",
+  "aac26cce4c2ddc24": "---\nAllCops:\n  TargetRubyVersion: 3.4\nStyle/SelectByRegexp:\n  Description: Prefer grep/grep_v to select/reject/find/detect with a regexp match.\n  Enabled: true\n  SafeAutoCorrect: false\n  VersionAdded: '1.22'\n  AutoCorrect: always\n",
+  "d33148217eb922a1": "---\nAllCops:\n  TargetRubyVersion: 2.6\nStyle/SelectByRegexp:\n  Description: Prefer grep/grep_v to select/reject/find/detect with a regexp match.\n  Enabled: true\n  SafeAutoCorrect: false\n  VersionAdded: '1.22'\n  AutoCorrect: always\n",
+  "ea8b19bbbc341768": "---\nAllCops:\n  TargetRubyVersion: 2.2\nStyle/SelectByRegexp:\n  Description: Prefer grep/grep_v to select/reject/find/detect with a regexp match.\n  Enabled: true\n  SafeAutoCorrect: false\n  VersionAdded: '1.22'\n  AutoCorrect: always\n",
+  "f4a6d8f0cec164f0": "---\nAllCops:\n  TargetRubyVersion: 2.3\nStyle/SelectByRegexp:\n  Description: Prefer grep/grep_v to select/reject/find/detect with a regexp match.\n  Enabled: true\n  SafeAutoCorrect: false\n  VersionAdded: '1.22'\n  AutoCorrect: always\n"
+}

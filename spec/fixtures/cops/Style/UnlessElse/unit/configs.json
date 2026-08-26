@@ -1,0 +1,3 @@
+{
+  "34c91dd2d6df84f4": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/UnlessElse:\n  Description: Do not use unless with else. Rewrite these with the positive case first.\n  StyleGuide: \"#no-else-with-unless\"\n  Enabled: true\n  VersionAdded: '0.9'\n  AutoCorrect: always\n"
+}

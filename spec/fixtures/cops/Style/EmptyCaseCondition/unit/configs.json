@@ -1,0 +1,5 @@
+{
+  "03fa40c7638640cf": "---\nAllCops:\n  TargetRubyVersion: 3.2\nStyle/EmptyCaseCondition:\n  Description: Avoid empty condition in case statements.\n  Enabled: true\n  VersionAdded: '0.40'\n  AutoCorrect: always\n",
+  "594f355da0e06450": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/EmptyCaseCondition:\n  Description: Avoid empty condition in case statements.\n  Enabled: true\n  VersionAdded: '0.40'\n  AutoCorrect: always\n",
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n"
+}

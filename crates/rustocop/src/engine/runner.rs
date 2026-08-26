@@ -13,7 +13,8 @@ pub(crate) fn inspect_files(
     options: &RunOptions,
     plan: &InspectionPlan,
 ) -> io::Result<Vec<InspectionResult>> {
-    let parallelism = if options.inspection.autocorrect && contains_duplicate_files(files) {
+    let parallelism = if options.inspection.autocorrect_enabled() && contains_duplicate_files(files)
+    {
         Parallelism::Sequential
     } else {
         options.parallelism
@@ -80,8 +81,34 @@ fn contains_duplicate_files(files: &[String]) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::{CopConfig, CopSelection, InspectionConfig, RubyVersion};
+    use crate::config::{
+        AutocorrectMode, CopConfig, CopSelection, InspectionConfig, RubyVersion, SourceEncoding,
+    };
     use std::sync::Arc;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    fn temporary_ruby_files() -> (PathBuf, [String; 3]) {
+        let nonce = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let directory =
+            std::env::temp_dir().join(format!("rustocop-runner-{}-{nonce}", std::process::id()));
+        fs::create_dir_all(&directory).unwrap();
+        let files = [
+            "empty_expression_03.rb",
+            "empty_expression_01.rb",
+            "empty_expression_02.rb",
+        ]
+        .map(|name| directory.join(name));
+        for path in &files {
+            fs::write(path, ";\n").unwrap();
+        }
+        (
+            directory,
+            files.map(|path| path.to_string_lossy().into_owned()),
+        )
+    }
 
     fn options(parallelism: Parallelism) -> RunOptions {
         RunOptions {
@@ -93,11 +120,15 @@ mod tests {
             config_path: None,
             include_non_native_cops: false,
             non_native_cops: Vec::new(),
+            force_exclusion: false,
             inspection: InspectionConfig {
-                autocorrect: false,
+                autocorrect: AutocorrectMode::None,
+                ignore_disable_comments: false,
                 cops: CopSelection::only("Lint/EmptyExpression"),
                 target_ruby_version: RubyVersion::default(),
+                source_encoding: SourceEncoding::Utf8,
                 cop_config: Arc::new(CopConfig::default()),
+                inspected_path: None,
             },
         }
     }
@@ -111,12 +142,7 @@ mod tests {
 
     #[test]
     fn parallel_inspection_preserves_sequential_output_order() {
-        let fixture_root = format!(
-            "{}/../../spec/fixtures/rubocop_builtin_examples/lint_empty_expression",
-            env!("CARGO_MANIFEST_DIR")
-        );
-        let files = ["03_offense.rb", "01_offense.rb", "02_offense.rb"]
-            .map(|name| format!("{fixture_root}/{name}"));
+        let (directory, files) = temporary_ruby_files();
 
         let sequential_options = options(Parallelism::Sequential);
         let parallel_options = options(Parallelism::Fixed(3));
@@ -140,15 +166,15 @@ mod tests {
                 .collect::<Vec<_>>()
         };
         assert_eq!(snapshot(&sequential), snapshot(&parallel));
+        fs::remove_dir_all(directory).unwrap();
     }
 
     #[test]
     fn recognizes_duplicate_correction_targets() {
-        let path = format!(
-            "{}/../../spec/fixtures/rubocop_builtin_examples/lint_empty_expression/01_offense.rb",
-            env!("CARGO_MANIFEST_DIR")
-        );
+        let (directory, files) = temporary_ruby_files();
+        let path = files[0].clone();
 
         assert!(contains_duplicate_files(&[path.clone(), path]));
+        fs::remove_dir_all(directory).unwrap();
     }
 }

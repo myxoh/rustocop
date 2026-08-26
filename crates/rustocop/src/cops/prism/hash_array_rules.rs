@@ -12,6 +12,14 @@ fn hash_as_last_array_item(node: &ruby_prism::ArrayNode<'_>, context: &mut CopCo
     let Some(last) = elements.last() else {
         return;
     };
+    if elements.len() > 1
+        && (elements[elements.len() - 2].as_hash_node().is_some()
+            || elements[elements.len() - 2]
+                .as_keyword_hash_node()
+                .is_some())
+    {
+        return;
+    }
     let style = context.policy().enforced_style("braces").to_string();
     if style == "braces" {
         let Some(hash) = last.as_keyword_hash_node() else {

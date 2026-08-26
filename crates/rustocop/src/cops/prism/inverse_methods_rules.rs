@@ -38,6 +38,7 @@ impl InverseMethodsRule<'_, '_, '_> {
 
     fn on_block(&mut self, node: &BlockNode<'_>) {
         let Some(call) = self.parent().and_then(Node::as_call_node) else { return };
+        return_unless!(call.receiver().is_some());
         let enclosing_negations = self
             .ancestors()
             .iter()
@@ -109,7 +110,8 @@ fn inside_inverse_block(node: Node<'_>, ancestors: &[Node<'_>], inverse_blocks: 
         return false;
     }
     last_block_expression(&block).is_some_and(|last| {
-        last.location().start_offset() <= node.location().start_offset()
+        inverse_block_edit(&last).is_some()
+            && last.location().start_offset() <= node.location().start_offset()
             && node.location().end_offset() <= last.location().end_offset()
     })
 }

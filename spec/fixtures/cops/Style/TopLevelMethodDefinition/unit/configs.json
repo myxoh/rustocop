@@ -1,0 +1,4 @@
+{
+  "4f691ec7569a4ab0": "---\nAllCops:\n  TargetRubyVersion: 3.4\nStyle/TopLevelMethodDefinition:\n  Description: Looks for top-level method definitions.\n  StyleGuide: \"#top-level-methods\"\n  Enabled: true\n  VersionAdded: '1.15'\n  AutoCorrect: always\n",
+  "e19d0713f630b013": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/TopLevelMethodDefinition:\n  Description: Looks for top-level method definitions.\n  StyleGuide: \"#top-level-methods\"\n  Enabled: true\n  VersionAdded: '1.15'\n  AutoCorrect: always\n"
+}

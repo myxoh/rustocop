@@ -2493,3 +2493,4 @@ RSpec.describe RuboCop::Cop::Layout::MultilineMethodCallIndentation, :config do
     end
   end
 end
+

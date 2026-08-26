@@ -1,0 +1,6 @@
+{
+  "065a12b5031200c1": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\n",
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
+  "5b21130ed7194684": "---\nLayout/ClassStructure:\n  ExpectedOrder:\n  - module_inclusion\n  - constants\n  - attribute_macros\n  - delegate\n  - macros\n  - public_class_methods\n  - initializer\n  - public_methods\n  - protected_attribute_macros\n  - protected_methods\n  - private_attribute_macros\n  - private_delegate\n  - private_methods\n  Categories:\n    attribute_macros:\n    - attr_accessor\n    - attr_reader\n    - attr_writer\n    macros:\n    - validates\n    - validate\n    module_inclusion:\n    - prepend\n    - extend\n    - include\n  Enabled: true\n",
+  "8eefcaf6b7afd54a": "---\nLayout/ClassStructure:\n  ExpectedOrder:\n  - all_constants\n  - attribute_macros\n  Categories:\n    all_constants:\n    - constants\n    attribute_macros:\n    - attr_accessor\n  Enabled: true\n"
+}

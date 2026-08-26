@@ -1,0 +1,6 @@
+{
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
+  "77c39c64bd272713": "---\nAllCops:\n  TargetRubyVersion: '2.7'\n",
+  "c03563cef1050673": "---\nAllCops:\n  DisabledByDefault: true\n  ParserEngine: parser_prism\n  TargetRubyVersion: 3.4\nLint/ShadowedException:\n  Enabled: true\n",
+  "fb08c8d2de42ebd0": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/ShadowedException:\n  Description: Avoid rescuing a higher level exception before a lower level exception.\n  Enabled: true\n  VersionAdded: '0.41'\n  AutoCorrect: always\n"
+}

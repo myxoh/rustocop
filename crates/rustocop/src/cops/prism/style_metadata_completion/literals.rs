@@ -58,23 +58,37 @@ pub(super) fn numeric_literals(node: &Node<'_>, context: &mut CopContext<'_, '_>
     }
     let formatted = formatted.chars().rev().collect::<String>();
     let replacement = source.replacen(integer, &formatted, 1);
-    let extended_start = context.source()[..location.start_offset()]
-        .rfind('-')
-        .filter(|minus| {
-            context.source()[*minus + 1..location.start_offset()]
-                .bytes()
-                .all(|byte| byte.is_ascii_whitespace())
+    let offense = context
+        .parent()
+        .and_then(Node::as_call_node)
+        .filter(|call| {
+            call.name().as_slice() == b"-@"
+                && call.receiver().is_some_and(|receiver| {
+                    receiver.location().start_offset() == location.start_offset()
+                        && receiver.location().end_offset() == location.end_offset()
+                })
         })
-        .unwrap_or(location.start_offset());
+        .map_or_else(
+            || location.start_offset()..location.end_offset(),
+            |call| call.location().start_offset()..call.location().end_offset(),
+        );
+    let literal_range = location.start_offset()..location.end_offset();
+    let unary = offense != literal_range;
+    let edit = if unary {
+        offense.clone()
+    } else {
+        literal_range
+    };
+    let replacement = if unary {
+        format!("-{formatted}")
+    } else {
+        replacement
+    };
     context.replace(
         "Use underscores(_) as thousands separator and separate every 3 digits with them.",
-        extended_start..location.end_offset(),
-        extended_start..location.end_offset(),
-        if extended_start < location.start_offset() {
-            format!("-{replacement}")
-        } else {
-            replacement
-        },
+        offense,
+        edit,
+        replacement,
     );
 }
 

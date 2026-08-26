@@ -64,6 +64,9 @@ fn redundant_freeze_receiver(node: &Node<'_>, context: &CopContext<'_, '_>) -> b
         }
         return true;
     }
+    if node.as_interpolated_regular_expression_node().is_some() {
+        return context.target_ruby_version().at_least(3, 0);
+    }
     if node.as_string_node().is_some() {
         if context.source().contains("# frozen_string_literal: false") {
             return false;
@@ -72,7 +75,19 @@ fn redundant_freeze_receiver(node: &Node<'_>, context: &CopContext<'_, '_>) -> b
             || context.related_config_value("AllCops", "StringLiteralsFrozenByDefault")
                 == Some("true");
     }
-    if node.as_interpolated_string_node().is_some() {
+    if let Some(string) = node.as_interpolated_string_node() {
+        let static_heredoc = string
+            .parts()
+            .iter()
+            .all(|part| part.as_string_node().is_some());
+        if static_heredoc {
+            return !context.source().contains("# frozen_string_literal: false")
+                && (context.source().contains("# frozen_string_literal: true")
+                    || context.related_config_value(
+                        "AllCops",
+                        "StringLiteralsFrozenByDefault",
+                    ) == Some("true"));
+        }
         return !context.target_ruby_version().at_least(3, 0)
             && context.source().contains("# frozen_string_literal: true");
     }

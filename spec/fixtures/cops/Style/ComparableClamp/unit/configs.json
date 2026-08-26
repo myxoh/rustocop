@@ -1,0 +1,5 @@
+{
+  "28cbd16e24124103": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/ComparableClamp:\n  Description: Enforces the use of `Comparable#clamp` instead of comparison by minimum\n    and maximum.\n  Enabled: true\n  VersionAdded: '1.44'\n  AutoCorrect: always\n",
+  "bcaf72d6b439d574": "---\nAllCops:\n  TargetRubyVersion: 2.3\nStyle/ComparableClamp:\n  Description: Enforces the use of `Comparable#clamp` instead of comparison by minimum\n    and maximum.\n  Enabled: true\n  VersionAdded: '1.44'\n  AutoCorrect: always\n",
+  "eb7a3485b27f6814": "---\nAllCops:\n  TargetRubyVersion: 2.4\nStyle/ComparableClamp:\n  Description: Enforces the use of `Comparable#clamp` instead of comparison by minimum\n    and maximum.\n  Enabled: true\n  VersionAdded: '1.44'\n  AutoCorrect: always\n"
+}

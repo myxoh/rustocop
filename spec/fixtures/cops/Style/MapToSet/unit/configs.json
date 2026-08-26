@@ -1,0 +1,5 @@
+{
+  "48476f0023bad221": "---\nAllCops:\n  TargetRubyVersion: 3.4\nStyle/MapToSet:\n  Description: Prefer `to_set` with a block over `map.to_set`.\n  Enabled: true\n  Safe: false\n  VersionAdded: '1.42'\n  AutoCorrect: always\n",
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
+  "eb6c60c4865c8bdd": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/MapToSet:\n  Description: Prefer `to_set` with a block over `map.to_set`.\n  Enabled: true\n  Safe: false\n  VersionAdded: '1.42'\n  AutoCorrect: always\n"
+}

@@ -1,0 +1,5 @@
+{
+  "2fa315fb71058196": "---\nAllCops:\n  TargetRubyVersion: 2.7\nMetrics/CollectionLiteralLength:\n  Description: Checks for `Array` or `Hash` literals with many entries.\n  Enabled: true\n  VersionAdded: '1.47'\n  LengthThreshold: 10\n  AutoCorrect: always\n",
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
+  "859e1ff9eeacac61": "---\nAllCops:\n  DisabledByDefault: true\n  NewCops: disable\n  ParserEngine: parser_prism\n  TargetRubyVersion: 3.4\nStyle/MutableConstant:\n  EnforcedStyle: strict\nStyle/UnlessLogicalOperators:\n  EnforcedStyle: forbid_logical_operators\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 1\n"
+}

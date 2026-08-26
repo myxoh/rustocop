@@ -1,0 +1,4 @@
+{
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
+  "5cbaa5bbf50da774": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/SpaceBeforeComma:\n  Description: No spaces before commas.\n  Enabled: true\n  VersionAdded: '0.49'\n  AutoCorrect: always\n"
+}

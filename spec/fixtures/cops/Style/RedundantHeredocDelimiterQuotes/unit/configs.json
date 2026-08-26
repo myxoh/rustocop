@@ -1,0 +1,4 @@
+{
+  "28a9cc93842fcb6a": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/RedundantHeredocDelimiterQuotes:\n  Description: Checks for redundant heredoc delimiter quotes.\n  Enabled: true\n  VersionAdded: '1.45'\n  AutoCorrect: always\n",
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n"
+}

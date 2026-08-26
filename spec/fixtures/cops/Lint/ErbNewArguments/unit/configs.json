@@ -1,0 +1,4 @@
+{
+  "8625f7bb05baf629": "---\nAllCops:\n  TargetRubyVersion: 2.5\nLint/ErbNewArguments:\n  Description: Use `:trim_mode` and `:eoutvar` keyword arguments to `ERB.new`.\n  Enabled: true\n  VersionAdded: '0.56'\n  AutoCorrect: always\n",
+  "b3fd0775cc98320b": "---\nAllCops:\n  TargetRubyVersion: 2.6\nLint/ErbNewArguments:\n  Description: Use `:trim_mode` and `:eoutvar` keyword arguments to `ERB.new`.\n  Enabled: true\n  VersionAdded: '0.56'\n  AutoCorrect: always\n"
+}

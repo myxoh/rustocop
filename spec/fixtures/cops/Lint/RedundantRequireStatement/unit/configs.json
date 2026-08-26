@@ -1,0 +1,12 @@
+{
+  "32637054c7abcfff": "---\nAllCops:\n  TargetRubyVersion: 2.6\nLint/RedundantRequireStatement:\n  Description: Checks for unnecessary `require` statement.\n  Enabled: true\n  VersionAdded: '0.76'\n  VersionChanged: '1.73'\n  AutoCorrect: always\n",
+  "40642e0f3e0f1b5d": "---\nAllCops:\n  TargetRubyVersion: 2.5\nLint/RedundantRequireStatement:\n  Description: Checks for unnecessary `require` statement.\n  Enabled: true\n  VersionAdded: '0.76'\n  VersionChanged: '1.73'\n  AutoCorrect: always\n",
+  "4b9475db39da382a": "---\nAllCops:\n  TargetRubyVersion: 2.2\nLint/RedundantRequireStatement:\n  Description: Checks for unnecessary `require` statement.\n  Enabled: true\n  VersionAdded: '0.76'\n  VersionChanged: '1.73'\n  AutoCorrect: always\n",
+  "5114059b595a26d1": "---\nAllCops:\n  TargetRubyVersion: 3.2\nLint/RedundantRequireStatement:\n  Description: Checks for unnecessary `require` statement.\n  Enabled: true\n  VersionAdded: '0.76'\n  VersionChanged: '1.73'\n  AutoCorrect: always\n",
+  "8d653677306b5e18": "---\nAllCops:\n  TargetRubyVersion: 4.0\nLint/RedundantRequireStatement:\n  Description: Checks for unnecessary `require` statement.\n  Enabled: true\n  VersionAdded: '0.76'\n  VersionChanged: '1.73'\n  AutoCorrect: always\n",
+  "94b410df179685c8": "---\nAllCops:\n  TargetRubyVersion: 2.1\nLint/RedundantRequireStatement:\n  Description: Checks for unnecessary `require` statement.\n  Enabled: true\n  VersionAdded: '0.76'\n  VersionChanged: '1.73'\n  AutoCorrect: always\n",
+  "a05bb9a6eb3c9664": "---\nAllCops:\n  TargetRubyVersion: 3.1\nLint/RedundantRequireStatement:\n  Description: Checks for unnecessary `require` statement.\n  Enabled: true\n  VersionAdded: '0.76'\n  VersionChanged: '1.73'\n  AutoCorrect: always\n",
+  "b7cbaeb701f5104d": "---\nAllCops:\n  TargetRubyVersion: 2.0\nLint/RedundantRequireStatement:\n  Description: Checks for unnecessary `require` statement.\n  Enabled: true\n  VersionAdded: '0.76'\n  VersionChanged: '1.73'\n  AutoCorrect: always\n",
+  "cf9e0a0d22eaedd9": "---\nAllCops:\n  TargetRubyVersion: 3.0\nLint/RedundantRequireStatement:\n  Description: Checks for unnecessary `require` statement.\n  Enabled: true\n  VersionAdded: '0.76'\n  VersionChanged: '1.73'\n  AutoCorrect: always\n",
+  "f29a6ef68bb22433": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/RedundantRequireStatement:\n  Description: Checks for unnecessary `require` statement.\n  Enabled: true\n  VersionAdded: '0.76'\n  VersionChanged: '1.73'\n  AutoCorrect: always\n"
+}

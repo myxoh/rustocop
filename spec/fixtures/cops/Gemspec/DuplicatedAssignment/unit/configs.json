@@ -1,0 +1,5 @@
+{
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
+  "5aaf6e41745a2f7a": "---\nAllCops:\n  TargetRubyVersion: 3.4\nGemspec/DuplicatedAssignment:\n  Description: An attribute assignment method calls should be listed only once in\n    a gemspec.\n  Enabled: true\n  Severity: warning\n  VersionAdded: '0.52'\n  VersionChanged: '1.40'\n  Include:\n  - \"**/*.gemspec\"\n  AutoCorrect: always\n",
+  "76e94636acf6360c": "---\nAllCops:\n  TargetRubyVersion: 2.7\nGemspec/DuplicatedAssignment:\n  Description: An attribute assignment method calls should be listed only once in\n    a gemspec.\n  Enabled: true\n  Severity: warning\n  VersionAdded: '0.52'\n  VersionChanged: '1.40'\n  Include:\n  - \"**/*.gemspec\"\n  AutoCorrect: always\n"
+}

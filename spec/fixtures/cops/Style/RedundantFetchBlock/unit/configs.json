@@ -1,0 +1,5 @@
+{
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
+  "ae3778b6f452e1a2": "---\nStyle/RedundantFetchBlock:\n  SafeForConstants: true\n  Enabled: true\n",
+  "b5d4b1db2f446989": "---\nStyle/RedundantFetchBlock:\n  SafeForConstants: false\n  Enabled: true\n"
+}

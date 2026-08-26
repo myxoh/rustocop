@@ -11,7 +11,11 @@ impl LambdaRule<'_, '_, '_> {
         let Some(call) = self.parent().and_then(|parent| parent.as_call_node()) else {
             return;
         };
-        return_unless!(call.name().as_slice() == b"lambda" && call.receiver().is_none());
+        return_unless!(
+            call.name().as_slice() == b"lambda"
+                && call.receiver().is_none()
+                && call.opening_loc().is_none()
+        );
         let multiline = self.source_file().node(&node.as_node()).contains('\n');
         return_unless!(self.method_form_offends(multiline));
 

@@ -1,0 +1,4 @@
+{
+  "5f1ee0dfce41f135": "---\nAllCops:\n  DisabledByDefault: true\n  ParserEngine: parser_prism\n  TargetRubyVersion: 3.4\nLint/DuplicateMagicComment:\n  Enabled: true\n",
+  "c0afcc4c3fd56aab": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/DuplicateMagicComment:\n  Description: Checks for duplicated magic comments.\n  Enabled: true\n  VersionAdded: '1.37'\n  AutoCorrect: always\n"
+}

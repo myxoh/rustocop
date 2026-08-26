@@ -1,0 +1,6 @@
+{
+  "065a12b5031200c1": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\n",
+  "123f9df2b55b5cbd": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/AssignmentInCondition:\n  Description: Don't use assignment in conditions.\n  StyleGuide: \"#safe-assignment-in-condition\"\n  Enabled: true\n  SafeAutoCorrect: false\n  VersionAdded: '0.9'\n  VersionChanged: '1.45'\n  AllowSafeAssignment: true\n  AutoCorrect: always\n",
+  "538739ece5949cc4": "---\nAllCops:\n  TargetRubyVersion: 3.4\nLint/AssignmentInCondition:\n  Description: Don't use assignment in conditions.\n  StyleGuide: \"#safe-assignment-in-condition\"\n  Enabled: true\n  SafeAutoCorrect: false\n  VersionAdded: '0.9'\n  VersionChanged: '1.45'\n  AllowSafeAssignment: true\n  AutoCorrect: always\n",
+  "79b8f5a1d108efe1": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/AssignmentInCondition:\n  Description: Don't use assignment in conditions.\n  StyleGuide: \"#safe-assignment-in-condition\"\n  Enabled: true\n  SafeAutoCorrect: false\n  VersionAdded: '0.9'\n  VersionChanged: '1.45'\n  AllowSafeAssignment: false\n  AutoCorrect: always\n"
+}

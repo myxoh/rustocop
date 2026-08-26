@@ -1,0 +1,5 @@
+{
+  "77c39c64bd272713": "---\nAllCops:\n  TargetRubyVersion: '2.7'\n",
+  "a4f60619c2184868": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/NumericLiteralPrefix:\n  Description: Use smallcase prefixes for numeric literals.\n  StyleGuide: \"#numeric-literal-prefixes\"\n  Enabled: true\n  VersionAdded: '0.41'\n  EnforcedOctalStyle: zero_only\n  SupportedOctalStyles:\n  - zero_with_o\n  - zero_only\n  AutoCorrect: always\n",
+  "df055d92e381c2e9": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/NumericLiteralPrefix:\n  Description: Use smallcase prefixes for numeric literals.\n  StyleGuide: \"#numeric-literal-prefixes\"\n  Enabled: true\n  VersionAdded: '0.41'\n  EnforcedOctalStyle: zero_with_o\n  SupportedOctalStyles:\n  - zero_with_o\n  - zero_only\n  AutoCorrect: always\n"
+}

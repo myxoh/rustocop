@@ -1,0 +1,4 @@
+{
+  "1785db8cb15a7f0d": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/UnexpectedBlockArity:\n  Description: Looks for blocks that have fewer arguments that the calling method\n    expects.\n  Enabled: true\n  Safe: false\n  VersionAdded: '1.5'\n  Methods:\n    reduce: 2\n    inject: 2\n  AutoCorrect: always\n",
+  "5dfa4f5784257822": "---\nAllCops:\n  TargetRubyVersion: 3.4\nLint/UnexpectedBlockArity:\n  Description: Looks for blocks that have fewer arguments that the calling method\n    expects.\n  Enabled: true\n  Safe: false\n  VersionAdded: '1.5'\n  Methods:\n    reduce: 2\n    inject: 2\n  AutoCorrect: always\n"
+}

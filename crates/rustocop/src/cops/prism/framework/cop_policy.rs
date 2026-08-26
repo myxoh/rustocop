@@ -59,6 +59,9 @@ impl<'config> CopPolicy<'config> {
 }
 
 fn glob_matches(pattern: &str, path: &str) -> bool {
+    if matches!(pattern, "**" | "**/**") {
+        return true;
+    }
     let pattern = pattern.as_bytes();
     let path = path.as_bytes();
     let mut previous = vec![false; path.len() + 1];

@@ -13,18 +13,7 @@ fn class_methods_definitions(node: &Node<'_>, context: &mut CopContext<'_, '_>) 
             return;
         }
         let source = context.source_file().at(&singleton.location());
-        if source
-            .lines()
-            .any(|line| matches!(line.trim(), "private" | "protected"))
-        {
-            return;
-        }
-        let public_source = source.split("\n    private").next().unwrap_or(source);
-        let has_public_instance_method = public_source
-            .lines()
-            .map(str::trim_start)
-            .any(|line| line.starts_with("def ") && !line.starts_with("def self."));
-        if !has_public_instance_method {
+        if !all_direct_singleton_methods_public(&singleton) {
             return;
         }
         let replacement = def_self_correction(source);
@@ -49,6 +38,51 @@ fn class_methods_definitions(node: &Node<'_>, context: &mut CopContext<'_, '_>) 
         "Use `class << self` to define a class method.",
         definition.location(),
     );
+}
+
+fn all_direct_singleton_methods_public(
+    singleton: &ruby_prism::SingletonClassNode<'_>,
+) -> bool {
+    let Some(statements) = singleton.body().and_then(|body| body.as_statements_node()) else {
+        return false;
+    };
+    let mut visibility = b"public".as_slice();
+    let mut methods = Vec::<(Vec<u8>, bool)>::new();
+    let mut non_public_names = Vec::<Vec<u8>>::new();
+    for statement in statements.body().iter() {
+        if let Some(definition) = statement.as_def_node() {
+            if definition.receiver().is_none() {
+                methods.push((
+                    definition.name().as_slice().to_vec(),
+                    visibility == b"public",
+                ));
+            }
+            continue;
+        }
+        let Some(call) = statement.as_call_node() else {
+            continue;
+        };
+        if call.receiver().is_some() || !matches!(call_name(&call), b"public" | b"private" | b"protected") {
+            continue;
+        }
+        if argument_count(&call) == 0 {
+            visibility = call_name(&call);
+            continue;
+        }
+        if call_name(&call) != b"public" {
+            if let Some(arguments) = call.arguments() {
+                non_public_names.extend(arguments.arguments().iter().filter_map(|argument| {
+                    argument
+                        .as_symbol_node()
+                        .map(|symbol| symbol.unescaped().to_vec())
+                }));
+            }
+        }
+    }
+    !methods.is_empty()
+        && methods.iter().all(|(name, initially_public)| {
+            *initially_public && !non_public_names.iter().any(|private| private == name)
+        })
 }
 
 fn def_self_correction(source: &str) -> String {

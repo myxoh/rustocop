@@ -122,3 +122,4 @@ RSpec.describe RuboCop::Cop::Lint::NoReturnInBeginEndBlocks, :config do
     it_behaves_like 'accepts a block with no return', operator
   end
 end
+

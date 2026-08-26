@@ -1,4 +1,6 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+
+use ruby_prism::{CaseMatchNode, Node};
 
 use super::*;
 
@@ -8,10 +10,10 @@ define_cops! {
     DuplicatedGroup => "Bundler/DuplicatedGroup" => source(duplicated_group),
     DevelopmentDependencies => "Gemspec/DevelopmentDependencies" => source(development_dependencies),
     DeprecatedAttributeAssignment => "Gemspec/DeprecatedAttributeAssignment" => source(deprecated_gemspec_attribute),
-    DuplicateMatchPattern => "Lint/DuplicateMatchPattern" => source(duplicate_match_pattern),
-    ConstantName => "Naming/ConstantName" => source(constant_name),
+    DuplicateMatchPattern => "Lint/DuplicateMatchPattern" => rubocop_callbacks(DuplicateMatchPatternRule, [on_case_match]),
+    ConstantName => "Naming/ConstantName" => any_node(constant_name),
     ConstantVisibility => "Style/ConstantVisibility" => source(constant_visibility),
-    RedundantSelfAssignment => "Style/RedundantSelfAssignment" => source(scope_rules::redundant_self_assignment),
+    RedundantSelfAssignment => "Style/RedundantSelfAssignment" => any_node(scope_rules::redundant_self_assignment),
     TopLevelMethodDefinition => "Style/TopLevelMethodDefinition" => any_node(top_level_method_definition),
 }
 
@@ -30,46 +32,69 @@ fn top_level_method_definition(node: &Node<'_>, context: &mut CopContext<'_, '_>
     }
     context.report(
         "Do not define methods at the top-level.",
-        &node.location(),
+        node.location(),
     );
 }
 
 fn duplicated_group(context: &mut CopContext<'_, '_>) {
-    if !context.path().ends_with("Gemfile") {
+    if context.path() != "(string)" && !context.path().ends_with("Gemfile") {
         return;
     }
     let mut seen = HashMap::<String, usize>::new();
+    let mut scopes = Vec::<String>::new();
     for (line_number, (offset, line)) in context.source_file().lines().enumerate() {
         let trimmed = line.trim_start();
-        let Some(arguments) = trimmed
-            .strip_prefix("group ")
-            .and_then(|line| line.split_once(" do"))
-            .map(|p| p.0)
-        else {
+        if trimmed.trim() == "end" {
+            scopes.pop();
+            continue;
+        }
+        let Some((call, _)) = trimmed.split_once(" do") else { continue };
+        let (method, raw_arguments) = if let Some(arguments) = call.strip_prefix("group ") {
+            ("group", arguments)
+        } else if let Some(arguments) = call
+            .strip_prefix("group(")
+            .and_then(|arguments| arguments.strip_suffix(')'))
+        {
+            ("group", arguments)
+        } else {
+            let Some((method, arguments)) = call.split_once(' ') else { continue };
+            if matches!(method, "source" | "git" | "platforms" | "path") {
+                scopes.push(format!("{method}:{}", arguments.trim()));
+            }
             continue;
         };
+        debug_assert_eq!(method, "group");
+        let arguments = raw_arguments.trim();
         let parts = arguments.split(',').map(str::trim).collect::<Vec<_>>();
         let option_start = parts
             .iter()
             .position(|part| !part.starts_with(':') && !part.starts_with(['\'', '"']))
             .unwrap_or(parts.len());
-        let options = parts[option_start..].join(",");
-        for group in &parts[..option_start] {
-            let display = group.trim();
-            let name = display.trim_start_matches(':').trim_matches(['\'', '"']);
-            let identity = format!("{name}|{options}");
-            if let Some(first) = seen.get(&identity) {
-                let indent = line.len() - trimmed.len();
-                context.report(
-                    format!(
-                        "Gem group `{display}` already defined on line {first} of the Gemfile."
-                    ),
-                    offset + indent..offset + line.find(" do").unwrap_or(line.len()),
-                );
-            } else {
-                seen.insert(identity, line_number + 1);
-            }
+        let mut groups = parts[..option_start]
+            .iter()
+            .map(|group| group.trim_start_matches(':').trim_matches(['\'', '"']))
+            .collect::<Vec<_>>();
+        groups.sort_unstable();
+        let mut options = parts[option_start..].to_vec();
+        options.sort_unstable();
+        let identity = format!(
+            "{}|groups:{}|options:{}",
+            scopes.join("/"),
+            groups.join(","),
+            options.join(",")
+        );
+        if let Some(first) = seen.get(&identity) {
+            let indent = line.len() - trimmed.len();
+            context.report(
+                format!(
+                    "Gem group `{arguments}` already defined on line {first} of the Gemfile."
+                ),
+                offset + indent..offset + line.find(" do").unwrap_or(line.len()),
+            );
+        } else {
+            seen.insert(identity, line_number + 1);
         }
+        scopes.push(format!("group:{arguments}"));
     }
 }
 
@@ -127,6 +152,9 @@ fn development_dependencies(context: &mut CopContext<'_, '_>) {
 }
 
 fn deprecated_gemspec_attribute(context: &mut CopContext<'_, '_>) {
+    if !context.path().ends_with("(string)") && !context.path().ends_with(".gemspec") {
+        return;
+    }
     let mut in_specification = false;
     let mut block_variable = String::new();
     for (offset, line) in context.source_file().lines() {
@@ -148,9 +176,11 @@ fn deprecated_gemspec_attribute(context: &mut CopContext<'_, '_>) {
         if !in_specification {
             continue;
         }
-        let Some(left) = [" += ", " = "]
-            .into_iter()
-            .find_map(|operator| trimmed.split_once(operator).map(|parts| parts.0))
+        let Some((left, operator)) = [" += ", " = "].into_iter().find_map(|operator| {
+            trimmed
+                .split_once(operator)
+                .map(|parts| (parts.0, operator))
+        })
         else {
             continue;
         };
@@ -162,6 +192,9 @@ fn deprecated_gemspec_attribute(context: &mut CopContext<'_, '_>) {
             attribute,
             "date" | "rubygems_version" | "specification_version" | "test_files"
         ) {
+            continue;
+        }
+        if operator == " += " && attribute != "test_files" {
             continue;
         }
         let indent = line.len() - trimmed.len();
@@ -176,44 +209,54 @@ fn deprecated_gemspec_attribute(context: &mut CopContext<'_, '_>) {
     }
 }
 
-fn duplicate_match_pattern(context: &mut CopContext<'_, '_>) {
-    let mut seen = HashMap::<String, usize>::new();
-    for (offset, line) in context.source_file().lines() {
-        let trimmed = line.trim_start();
-        let Some(pattern) = trimmed.strip_prefix("in ") else {
-            continue;
-        };
-        let raw_pattern = pattern.trim();
-        let (pattern, guard) = raw_pattern
-            .split_once(" if ")
-            .map(|(pattern, guard)| (pattern, format!("if {guard}")))
-            .or_else(|| {
-                raw_pattern
-                    .split_once(" unless ")
-                    .map(|(pattern, guard)| (pattern, format!("unless {guard}")))
-            })
-            .unwrap_or((raw_pattern, String::new()));
-        let mut alternatives = pattern
-            .split('|')
-            .map(canonical_pattern)
-            .collect::<Vec<_>>();
-        alternatives.sort_unstable();
-        let identity = format!("{}|{guard}", alternatives.join(" | "));
-        if let std::collections::hash_map::Entry::Vacant(entry) = seen.entry(identity) {
-            entry.insert(offset);
-        } else {
-            let start = offset + line.find(pattern).unwrap_or(0);
-            context.report(
-                "Duplicate `in` pattern detected.",
-                start..start + pattern.len(),
-            );
+impl DuplicateMatchPatternRule<'_, '_, '_> {
+    fn on_case_match(&mut self, node: &CaseMatchNode<'_>) {
+        let mut seen = HashSet::new();
+        for branch in node
+            .conditions()
+            .iter()
+            .filter_map(|condition| condition.as_in_node())
+        {
+            let (pattern, identity) = match_pattern_identity(branch.pattern(), self.source_file());
+            if !seen.insert(identity) {
+                self.report("Duplicate `in` pattern detected.", pattern.location());
+            }
         }
     }
 }
 
+fn match_pattern_identity<'pr>(pattern: Node<'pr>, file: SourceFile<'_>) -> (Node<'pr>, String) {
+    if let Some(condition) = pattern.as_if_node() {
+        if let Some(body) = only_statement(condition.statements()) {
+            let identity = format!(
+                "{}if{}",
+                canonical_pattern(file.node(&body)),
+                file.node(&condition.predicate())
+            );
+            return (body, identity);
+        }
+    }
+    if let Some(condition) = pattern.as_unless_node() {
+        if let Some(body) = only_statement(condition.statements()) {
+            let identity = format!(
+                "{}unless{}",
+                canonical_pattern(file.node(&body)),
+                file.node(&condition.predicate())
+            );
+            return (body, identity);
+        }
+    }
+    let identity = canonical_pattern(file.node(&pattern));
+    (pattern, identity)
+}
+
 fn canonical_pattern(pattern: &str) -> String {
     let pattern = pattern.trim();
-    if pattern.contains(',') && !pattern.contains(['[', '(']) {
+    if pattern.contains('|') {
+        let mut alternatives = pattern.split('|').map(str::trim).collect::<Vec<_>>();
+        alternatives.sort_unstable();
+        alternatives.join(" | ")
+    } else if pattern.contains(',') && !pattern.contains(['[', '(']) {
         let mut elements = pattern.split(',').map(str::trim).collect::<Vec<_>>();
         elements.sort_unstable();
         elements.join(", ")
@@ -222,102 +265,206 @@ fn canonical_pattern(pattern: &str) -> String {
     }
 }
 
-fn constant_name(context: &mut CopContext<'_, '_>) {
-    for (offset, line) in context.source_file().lines() {
-        let trimmed = line.trim_start();
-        if trimmed.contains("||=") {
-            continue;
+fn constant_name(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
+    let (location, value) = if let Some(write) = node.as_constant_write_node() {
+        (write.name_loc(), write.value())
+    } else if let Some(write) = node.as_constant_path_write_node() {
+        let target = write.target();
+        (target.name_loc(), write.value())
+    } else if let Some(target) = node.as_constant_target_node() {
+        let Some(value) = context.parent().and_then(Node::as_multi_write_node).map(|write| write.value()) else {
+            return;
+        };
+        (target.location(), value)
+    } else {
+        return;
+    };
+    if constant_name_allowed_assignment(&value) {
+        return;
+    }
+    let name = context.source_file().at(&location);
+    if name.chars().all(|character| {
+        character.is_uppercase() || character.is_numeric() || character == '_'
+    }) {
+        return;
+    }
+    context.report("Use SCREAMING_SNAKE_CASE for constants.", location);
+}
+
+fn constant_name_allowed_assignment(value: &Node<'_>) -> bool {
+    if value.as_constant_read_node().is_some()
+        || value.as_constant_path_node().is_some()
+        || value.as_constant_write_node().is_some()
+        || value.as_constant_path_write_node().is_some()
+        || value.as_block_node().is_some()
+        || value.as_lambda_node().is_some()
+    {
+        return true;
+    }
+    if let Some(call) = value.as_call_node() {
+        if call.block().is_some() {
+            return true;
         }
-        let Some((left, _)) = trimmed.rsplit_once('=') else {
+        if call_name(&call) == b"new"
+            && (root_constant(call.receiver(), b"Class") || root_constant(call.receiver(), b"Struct"))
+        {
+            return true;
+        }
+        return call.receiver().is_none_or(|receiver| !literal_node(&receiver));
+    }
+    value.as_if_node().is_some_and(|conditional| {
+        let branch_has_constant = |statements: Option<ruby_prism::StatementsNode<'_>>| {
+            statements.is_some_and(|statements| {
+                statements.body().iter().any(|branch| {
+                    branch.as_constant_read_node().is_some()
+                        || branch.as_constant_path_node().is_some()
+                })
+            })
+        };
+        branch_has_constant(conditional.statements())
+            || conditional.subsequent().is_some_and(|subsequent| {
+                subsequent
+                    .as_else_node()
+                    .is_some_and(|branch| branch_has_constant(branch.statements()))
+            })
+    })
+}
+
+fn literal_node(node: &Node<'_>) -> bool {
+    if let Some(parentheses) = node.as_parentheses_node() {
+        return parentheses.body().is_some_and(|body| {
+            body.as_statements_node()
+                .is_some_and(|statements| only_statement(Some(statements)).is_some_and(|inner| literal_node(&inner)))
+        });
+    }
+    node.as_integer_node().is_some()
+        || node.as_float_node().is_some()
+        || node.as_rational_node().is_some()
+        || node.as_imaginary_node().is_some()
+        || node.as_string_node().is_some()
+        || node.as_interpolated_string_node().is_some()
+        || node.as_symbol_node().is_some()
+        || node.as_interpolated_symbol_node().is_some()
+        || node.as_array_node().is_some()
+        || node.as_hash_node().is_some()
+        || node.as_range_node().is_some()
+        || node.as_regular_expression_node().is_some()
+        || node.as_interpolated_regular_expression_node().is_some()
+        || node.as_true_node().is_some()
+        || node.as_false_node().is_some()
+        || node.as_nil_node().is_some()
+}
+
+fn constant_visibility(context: &mut CopContext<'_, '_>) {
+    #[derive(Default)]
+    struct ClassOrModuleBodies<'pr>(Vec<ruby_prism::StatementsNode<'pr>>);
+
+    impl<'pr> Visit<'pr> for ClassOrModuleBodies<'pr> {
+        fn visit_class_node(&mut self, node: &ruby_prism::ClassNode<'pr>) {
+            if let Some(body) = node.body().and_then(|body| body.as_statements_node()) {
+                self.0.push(body);
+            }
+            ruby_prism::visit_class_node(self, node);
+        }
+
+        fn visit_module_node(&mut self, node: &ruby_prism::ModuleNode<'pr>) {
+            if let Some(body) = node.body().and_then(|body| body.as_statements_node()) {
+                self.0.push(body);
+            }
+            ruby_prism::visit_module_node(self, node);
+        }
+    }
+
+    let parsed = parse(context.source().as_bytes());
+    let mut bodies = ClassOrModuleBodies::default();
+    bodies.visit(&parsed.node());
+    for statements in bodies.0 {
+        inspect_constant_visibility_scope(&statements, context);
+    }
+}
+
+fn inspect_constant_visibility_scope(
+    statements: &ruby_prism::StatementsNode<'_>,
+    context: &mut CopContext<'_, '_>,
+) {
+    let mut declared = HashSet::<String>::new();
+    for statement in statements.body().iter() {
+        let Some(call) = statement.as_call_node() else {
             continue;
         };
-        let rhs = trimmed.rsplit_once('=').map_or("", |(_, rhs)| rhs.trim());
-        let static_rhs = rhs.chars().next().is_some_and(|first| {
-            first.is_ascii_digit() || matches!(first, '\'' | '"' | '[' | '{' | '%')
-        }) || rhs.contains(".freeze")
-            || (rhs.starts_with("if ") && rhs.matches(['\'', '"']).count() >= 4);
-        if !static_rhs {
+        if !matches!(call_name(&call), b"private_constant" | b"public_constant")
+            || call.receiver().is_some()
+        {
             continue;
         }
-        let assigned = left.rsplit('=').next().unwrap_or(left);
-        for qualified_name in assigned.split(',').map(str::trim) {
-            let name = qualified_name.rsplit("::").next().unwrap_or(qualified_name);
-            if name.is_empty()
-                || !name.chars().next().is_some_and(char::is_uppercase)
-                || name.chars().all(|character| {
-                    character.is_uppercase() || character.is_numeric() || character == '_'
-                })
-            {
-                continue;
+        for argument in call
+            .arguments()
+            .into_iter()
+            .flat_map(|arguments| arguments.arguments().iter())
+        {
+            collect_constant_visibility_names(&argument, &mut declared);
+        }
+    }
+
+    for statement in statements.body().iter() {
+        let assignment = if let Some(write) = statement.as_constant_write_node() {
+            Some((
+                String::from_utf8_lossy(write.name().as_slice()).into_owned(),
+                write.value(),
+            ))
+        } else if let Some(write) = statement.as_constant_path_write_node() {
+            let target_location = write.target().location();
+            let target = context.source_file().at(&target_location);
+            Some((
+                target.rsplit("::").next().unwrap_or(target).to_string(),
+                write.value(),
+            ))
+        } else {
+            None
+        };
+        let Some((name, value)) = assignment else {
+            continue;
+        };
+        if declared.contains(&name)
+            || context.config_bool("IgnoreModules", false)
+                && constant_class_constructor(&value, context.source_file())
+        {
+            continue;
+        }
+        context.report(
+            format!("Explicitly make `{name}` public or private using either `#public_constant` or `#private_constant`."),
+            statement.location(),
+        );
+    }
+}
+
+fn collect_constant_visibility_names(node: &Node<'_>, names: &mut HashSet<String>) {
+    if let Some(symbol) = node.as_symbol_node() {
+        names.insert(String::from_utf8_lossy(symbol.unescaped()).into_owned());
+    } else if let Some(string) = node.as_string_node() {
+        names.insert(String::from_utf8_lossy(string.unescaped()).into_owned());
+    } else if let Some(splat) = node.as_splat_node() {
+        if let Some(expression) = splat.expression() {
+            if let Some(array) = expression.as_array_node() {
+                for element in array.elements().iter() {
+                    collect_constant_visibility_names(&element, names);
+                }
             }
-            let start = offset + line.find(name).unwrap_or(0);
-            context.report(
-                "Use SCREAMING_SNAKE_CASE for constants.",
-                start..start + name.len(),
-            );
         }
     }
 }
 
-fn constant_visibility(context: &mut CopContext<'_, '_>) {
-    let source = context.source();
-    let mut scope_depth = 0usize;
-    for (offset, line) in context.source_file().lines() {
-        let trimmed = line.trim();
-        if trimmed.starts_with("class ") || trimmed.starts_with("module ") {
-            scope_depth += 1;
-            continue;
-        }
-        if trimmed == "end" {
-            scope_depth = scope_depth.saturating_sub(1);
-            continue;
-        }
-        if scope_depth == 0 {
-            continue;
-        }
-        let Some((name, value)) = trimmed.split_once(" = ") else {
-            continue;
-        };
-        if context.config_bool("IgnoreModules", false)
-            && ["Class.new", "Module.new", "Struct.new"]
-                .iter()
-                .any(|constructor| value.starts_with(constructor))
-        {
-            continue;
-        }
-        if !name
-            .bytes()
-            .next()
-            .is_some_and(|byte| byte.is_ascii_uppercase())
-            || ["private_constant", "public_constant"]
-                .into_iter()
-                .any(|visibility| {
-                    source.lines().any(|line| {
-                        let line = line.trim();
-                        line.starts_with(visibility)
-                            && line[visibility.len()..].split(',').any(|argument| {
-                                argument
-                                    .trim()
-                                    .trim_start_matches(':')
-                                    .trim_matches(['\'', '"'])
-                                    == name
-                            })
-                    }) || source.contains(&format!("{visibility} :{name}"))
-                        || source.contains(&format!("{visibility} '{name}'"))
-                        || source.contains(&format!("{visibility} \"{name}\""))
-                })
-            || source.lines().any(|visibility| {
-                let visibility = visibility.trim();
-                visibility.starts_with("private_constant *")
-                    || visibility.starts_with("public_constant *")
-            })
-        {
-            continue;
-        }
-        let indent = line.len() - line.trim_start().len();
-        context.report(
-            format!("Explicitly make `{name}` public or private using either `#public_constant` or `#private_constant`."),
-            offset + indent..offset + line.len(),
-        );
+fn constant_class_constructor(node: &Node<'_>, source_file: SourceFile<'_>) -> bool {
+    let Some(call) = node.as_call_node() else {
+        return false;
+    };
+    if call_name(&call) != b"new" {
+        return false;
     }
+    call.receiver().is_some_and(|receiver| {
+        matches!(
+            source_file.node(&receiver),
+            "Class" | "Module" | "Struct" | "Data"
+        )
+    })
 }

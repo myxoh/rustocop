@@ -1,0 +1,5 @@
+{
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
+  "87c1e6c152cedd8f": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/DoubleNegation:\n  Description: Checks for uses of double negation (!!).\n  StyleGuide: \"#no-bang-bang\"\n  Enabled: true\n  VersionAdded: '0.19'\n  VersionChanged: '1.2'\n  EnforcedStyle: forbidden\n  SafeAutoCorrect: false\n  SupportedStyles:\n  - allowed_in_returns\n  - forbidden\n  AutoCorrect: always\n",
+  "8c2438d2ff00a68d": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/DoubleNegation:\n  Description: Checks for uses of double negation (!!).\n  StyleGuide: \"#no-bang-bang\"\n  Enabled: true\n  VersionAdded: '0.19'\n  VersionChanged: '1.2'\n  EnforcedStyle: allowed_in_returns\n  SafeAutoCorrect: false\n  SupportedStyles:\n  - allowed_in_returns\n  - forbidden\n  AutoCorrect: always\n"
+}

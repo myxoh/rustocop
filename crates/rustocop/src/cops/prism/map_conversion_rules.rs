@@ -77,22 +77,19 @@ fn map_before_conversion<'pr>(node: &CallNode<'pr>) -> Option<CallNode<'pr>> {
     if !matches!(map.name().as_slice(), b"map" | b"collect") {
         return None;
     }
-    if map.block().is_none() && !has_symbol_block_pass(&map) {
+    let literal_block = map
+        .block()
+        .is_some_and(|block| block.as_block_node().is_some());
+    if literal_block && argument_count(&map) != 0 || !literal_block && !has_symbol_block_pass(&map) {
         return None;
     }
     Some(map)
 }
 
 fn has_symbol_block_pass(node: &CallNode<'_>) -> bool {
-    let Some(arguments) = node.arguments() else {
-        return false;
-    };
-    let mut values = arguments.arguments().iter();
-    let Some(argument) = values.next() else {
-        return false;
-    };
-    values.next().is_none()
-        && argument.as_block_argument_node().is_some_and(|block| {
+    node.block()
+        .and_then(|block| block.as_block_argument_node())
+        .is_some_and(|block| {
             block
                 .expression()
                 .is_some_and(|expression| expression.as_symbol_node().is_some())

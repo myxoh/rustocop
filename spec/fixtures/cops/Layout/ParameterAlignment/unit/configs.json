@@ -1,0 +1,5 @@
+{
+  "579c14c0bb4cc0f3": "---\nLayout/ParameterAlignment:\n  EnforcedStyle: with_first_parameter\n  Enabled: true\nLayout/IndentationWidth:\n  Width: 2\n",
+  "77c39c64bd272713": "---\nAllCops:\n  TargetRubyVersion: '2.7'\n",
+  "b20be4a5c718ba4c": "---\nLayout/ParameterAlignment:\n  EnforcedStyle: with_fixed_indentation\n  Enabled: true\nLayout/IndentationWidth:\n  Width: 2\n"
+}

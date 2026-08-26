@@ -1,4 +1,6 @@
 use super::*;
+use crate::rubocop::ast::node::core::NodeRef as RubocopNodeRef;
+use crate::rubocop::ast::prism::convert as convert_rubocop_ast;
 
 #[derive(Default)]
 struct WordArrayState {
@@ -10,10 +12,31 @@ define_stateful_rule!(WordArrayRule, WordArrayState);
 const PERCENT_MSG: &str = "Use `%w` or `%W` for an array of words.";
 
 define_cops! {
+    RedundantCapitalW => "Style/RedundantCapitalW" => node(as_array_node, redundant_capital_w),
     SymbolArray => "Style/SymbolArray" => node(as_array_node, symbol_array),
     FetchEnvVar => "Style/FetchEnvVar" => source(fetch_env_var),
     StringConcatenation => "Style/StringConcatenation" => call(string_concatenation),
     WordArray => "Style/WordArray" => stateful_node_rule(as_array_node, WordArrayRule, WordArrayState, on_array),
+}
+
+fn redundant_capital_w(node: &ruby_prism::ArrayNode<'_>, context: &mut CopContext<'_, '_>) {
+    let Some(opening) = node.opening_loc() else {
+        return;
+    };
+    if !context.source_file().at(&opening).starts_with("%W") {
+        return;
+    }
+    let range = context.source_file().node_range(&node.as_node());
+    let literal = &context.source()[range.clone()];
+    if literal.contains("#{") || literal.contains('\\') {
+        return;
+    }
+    context.replace(
+        "Do not use `%W` unless interpolation is needed. If not, use `%w`.",
+        range,
+        opening.start_offset() + 1..opening.start_offset() + 2,
+        "w",
+    );
 }
 
 fn symbol_array(node: &ruby_prism::ArrayNode<'_>, context: &mut CopContext<'_, '_>) {
@@ -169,7 +192,7 @@ fn percent_symbol_array(
     let kind = if wide { "%I" } else { "%i" };
     let delimiters = context
         .related_config_map("Style/PercentLiteralDelimiters", "PreferredDelimiters")
-        .and_then(|values| values.get(kind).or_else(|| values.get("default")))
+        .and_then(|values| values.get(kind))
         .map(String::as_str)
         .unwrap_or("[]");
     let (open, close) = delimiters.split_at(1);
@@ -362,51 +385,180 @@ fn bare_symbol(value: &str) -> bool {
 
 fn fetch_env_var(context: &mut CopContext<'_, '_>) {
     let source = context.source().to_string();
-    for quote in ['\'', '"'] {
-        let needle = format!("ENV[{quote}");
-        let mut search = 0;
-        while let Some(relative) = source[search..].find(&needle) {
-            let start = search + relative;
-            let value_start = start + needle.len();
-            let Some(close) = source[value_start..].find(quote).map(|at| value_start + at) else {
-                break;
-            };
-            if source.as_bytes().get(close + 1) != Some(&b']') {
-                search = close + 1;
-                continue;
-            }
-            let key = &source[value_start..close];
-            let before = source[..start].trim_end().as_bytes().last().copied();
-            let after = source[close + 2..].trim_start();
-            if before == Some(b'!')
-                || after.starts_with(['.', '&'])
-                || after.starts_with("==")
-                || after.starts_with("!=")
-                || after.starts_with("||=")
-                || after.starts_with("&&=")
-            {
-                search = close + 2;
-                continue;
-            }
-            context.replace(
-                format!("Use `ENV.fetch({quote}{key}{quote}, nil)` instead of `ENV[{quote}{key}{quote}]`."),
-                start..close + 2,
-                start..close + 2,
-                format!("ENV.fetch({quote}{key}{quote}, nil)"),
-            );
-            search = close + 2;
+    let default_to_nil = context.config_bool("DefaultToNil", true);
+    let allowed = context.config_values("AllowedVars").to_vec();
+    let parsed = ruby_prism::parse(source.as_bytes());
+    let (ast, root) = convert_rubocop_ast(&source, &parsed.node());
+    let Some(root) = root.map(|root| ast.node(root)) else {
+        return;
+    };
+
+    for node in root.each_node(&["send"]) {
+        if node.method_name() != Some("[]") {
+            continue;
         }
+        let Some(receiver) = node.receiver() else {
+            continue;
+        };
+        if receiver.kind() != "const" || receiver.const_name().as_deref() != Some("ENV") {
+            continue;
+        }
+        let arguments = node.arguments();
+        let [name_node] = arguments.as_slice() else {
+            continue;
+        };
+        if name_node
+            .str_content()
+            .is_some_and(|name| allowed.iter().any(|allowed| allowed == name))
+            || fetch_env_allowable_use(node)
+        {
+            continue;
+        }
+        let (Some(node_range), Some(name_range)) = (node.source_range(), name_node.source_range())
+        else {
+            continue;
+        };
+        let key = source
+            .chars()
+            .skip(name_range.start)
+            .take(name_range.end - name_range.start)
+            .collect::<String>();
+        let original = source
+            .chars()
+            .skip(node_range.start)
+            .take(node_range.end - node_range.start)
+            .collect::<String>();
+        let default = if default_to_nil { ", nil" } else { "" };
+        let byte_range = fetch_env_character_range_to_byte(&source, node_range);
+        context.replace(
+            format!("Use `ENV.fetch({key}{default})` instead of `{original}`."),
+            byte_range.clone(),
+            byte_range,
+            format!("ENV.fetch({key}{default})"),
+        );
     }
 }
 
-fn string_concatenation(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
-    if !plus_call(node)
-        || context.parent().is_some_and(|parent| {
-            parent
-                .as_call_node()
-                .is_some_and(|parent| plus_call(&parent))
-        })
+fn fetch_env_allowable_use(node: RubocopNodeRef<'_>) -> bool {
+    fetch_env_used_as_flag(node)
+        || fetch_env_message_chained_with_dot(node)
+        || fetch_env_assigned(node)
+        || fetch_env_or_lhs(node)
+}
+
+fn fetch_env_used_as_flag(node: RubocopNodeRef<'_>) -> bool {
+    if node.root() {
+        return false;
+    }
+    if fetch_env_used_if_condition_in_body(node) {
+        return true;
+    }
+    node.parent().is_some_and(|parent| {
+        parent.kind() == "send" && (fetch_env_prefix_bang(parent, node) || parent.comparison_method())
+    })
+}
+
+fn fetch_env_prefix_bang(parent: RubocopNodeRef<'_>, node: RubocopNodeRef<'_>) -> bool {
+    parent.method_name() == Some("!")
+        && parent.receiver() == Some(node)
+        && parent.loc_is("selector", "!")
+}
+
+fn fetch_env_used_if_condition_in_body(node: RubocopNodeRef<'_>) -> bool {
+    let Some(condition) = node
+        .ancestors()
+        .into_iter()
+        .find(|ancestor| ancestor.kind() == "if")
+        .and_then(RubocopNodeRef::condition)
+    else {
+        return false;
+    };
+    if condition.kind() == "send"
+        && fetch_env_node_lists_equal(&condition.child_nodes(), &node.child_nodes())
     {
+        return true;
+    }
+    fetch_env_used_in_condition(node, condition)
+}
+
+fn fetch_env_used_in_condition(
+    node: RubocopNodeRef<'_>,
+    condition: RubocopNodeRef<'_>,
+) -> bool {
+    if condition.kind() == "send" {
+        if condition.assignment_method() && fetch_env_partial_match(node, condition) {
+            return true;
+        }
+        if !condition.comparison_method() && !condition.predicate_method() {
+            return false;
+        }
+    }
+    condition
+        .child_nodes()
+        .into_iter()
+        .any(|child| child.structurally_equal(node))
+}
+
+fn fetch_env_partial_match(node: RubocopNodeRef<'_>, condition: RubocopNodeRef<'_>) -> bool {
+    let condition_children = condition.child_nodes();
+    node.child_nodes()
+        .into_iter()
+        .all(|child| {
+            condition_children
+                .iter()
+                .any(|candidate| candidate.structurally_equal(child))
+        })
+}
+
+fn fetch_env_node_lists_equal(left: &[RubocopNodeRef<'_>], right: &[RubocopNodeRef<'_>]) -> bool {
+    left.len() == right.len()
+        && left
+            .iter()
+            .zip(right)
+            .all(|(left, right)| left.structurally_equal(*right))
+}
+
+fn fetch_env_message_chained_with_dot(node: RubocopNodeRef<'_>) -> bool {
+    let Some(parent) = node.parent() else {
+        return false;
+    };
+    parent.call_type()
+        && parent.receiver() == Some(node)
+        && (parent.loc("dot").is_some() || parent.kind() == "csend")
+}
+
+fn fetch_env_assigned(node: RubocopNodeRef<'_>) -> bool {
+    node.parent().is_some_and(|parent| {
+        matches!(parent.kind(), "op_asgn" | "and_asgn" | "or_asgn" | "masgn")
+            && parent.lhs() == Some(node)
+    })
+}
+
+fn fetch_env_or_lhs(node: RubocopNodeRef<'_>) -> bool {
+    node.parent().is_some_and(|parent| {
+        parent.kind() == "or"
+            && (parent.lhs() == Some(node)
+                || parent.parent().is_some_and(|grandparent| grandparent.kind() == "or"))
+    })
+}
+
+fn fetch_env_character_range_to_byte(
+    source: &str,
+    range: std::ops::Range<usize>,
+) -> std::ops::Range<usize> {
+    let start = source
+        .char_indices()
+        .nth(range.start)
+        .map_or(source.len(), |(byte, _)| byte);
+    let end = source
+        .char_indices()
+        .nth(range.end)
+        .map_or(source.len(), |(byte, _)| byte);
+    start..end
+}
+
+fn string_concatenation(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
+    if node.is_safe_navigation() || !plus_call(node) {
         return;
     }
     let Some(receiver) = node.receiver() else {
@@ -415,35 +567,58 @@ fn string_concatenation(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     let Some(argument) = only_argument(node) else {
         return;
     };
+    let receiver_string = rubocop_plain_string(&receiver, context);
+    let argument_string = rubocop_plain_string(&argument, context);
+    if !(receiver_string || argument_string) {
+        return;
+    }
     let between =
         &context.source()[receiver.location().end_offset()..argument.location().start_offset()];
-    if string_part(&receiver) && string_part(&argument) && between.contains('\n') {
+    if receiver_string && argument_string && between.contains('\n')
+    {
         return;
     }
 
+    let mut topmost = node.as_node();
+    for ancestor in context.ancestors().iter().rev() {
+        let Some(call) = ancestor.as_call_node().filter(plus_call) else {
+            break;
+        };
+        topmost = call.as_node();
+        let ancestor_matches = call.receiver().is_some_and(|part| rubocop_plain_string(&part, context))
+            || only_argument(&call).is_some_and(|part| rubocop_plain_string(&part, context));
+        if ancestor_matches {
+            // The ancestor callback owns the one offense for this chain.
+            return;
+        }
+    }
+
+    let topmost_location = topmost.location();
+    let topmost_range = topmost_location.start_offset()..topmost_location.end_offset();
     let mut parts = Vec::new();
-    collect_concatenation_parts(node.as_node(), &mut parts);
-    if !parts.iter().any(string_part) {
+    collect_concatenation_parts(topmost, &mut parts);
+    if !parts.iter().any(|part| part.as_string_node().is_some()) {
         return;
     }
     if context.config_value("Mode").unwrap_or("aggressive") == "conservative"
-        && !parts.first().is_some_and(|part| string_part(part))
+        && parts
+            .first().is_none_or(|part| part.as_string_node().is_none())
     {
         return;
     }
     let message = "Prefer string interpolation to string concatenation.";
-    if let Some((outer, replacement)) = context.ancestors().iter().find_map(|ancestor| {
-        let call = ancestor.as_call_node().filter(plus_call)?;
-        nested_concatenation_replacement(&call, context).map(|replacement| (call, replacement))
+    if context.ancestors().iter().any(|ancestor| {
+        ancestor.as_call_node().is_some_and(|call| plus_call(&call))
+            && ancestor.location().start_offset() < topmost_range.start
     }) {
-        context.replace_indirectly(message, node.location(), outer.location(), replacement);
+        context.report(message, topmost_range);
         return;
     }
     if parts
         .iter()
         .any(|part| uncorrectable_concatenation_part(part, context))
     {
-        context.report(message, node.location());
+        context.report(message, topmost_range);
         return;
     }
     let mut body = String::new();
@@ -452,10 +627,25 @@ fn string_concatenation(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     }
     context.replace(
         message,
-        node.location(),
-        node.location(),
+        topmost_range.clone(),
+        topmost_range,
         format!("\"{body}\""),
     );
+}
+
+fn rubocop_plain_string(node: &Node<'_>, context: &CopContext<'_, '_>) -> bool {
+    let Some(string) = node.as_string_node() else {
+        return false;
+    };
+    // RuboCop's Prism translation represents a physical multiline literal as
+    // `dstr` (one string child per source line), even without interpolation.
+    // `StringConcatenation` deliberately matches only Parser `str` nodes.
+    context
+        .source_file()
+        .at(&string.content_loc())
+        .lines()
+        .count()
+        <= 1
 }
 
 fn plus_call(node: &CallNode<'_>) -> bool {
@@ -632,10 +822,9 @@ impl WordArrayRule<'_, '_, '_> {
         };
         let opening_source = self.source_file().at(&opening);
         let elements = node.elements().iter().collect::<Vec<_>>();
-        let minimum = self.config_usize("MinSize", 0);
-        return_unless!(elements.len() >= minimum);
-
         if opening_source == "[" {
+            let minimum = self.config_usize("MinSize", 0);
+            return_unless!(elements.len() >= minimum);
             return_if!(
                 elements.iter().any(|element| element.as_string_node().is_none())
                     || complex_content(&elements, self)
@@ -675,7 +864,7 @@ impl WordArrayRule<'_, '_, '_> {
     ) {
         return_if!(
             self.policy().enforced_style("percent") == "percent"
-                && !invalid_percent_array_contents(elements)
+                && !invalid_percent_array_contents(elements, self)
         );
         let replacement = build_bracketed_array(node, elements, self);
         let message = bracketed_word_array_message(&replacement);
@@ -708,10 +897,18 @@ fn complex_content(elements: &[Node<'_>], context: &CopContext<'_, '_>) -> bool 
         .any(|element| !simple_word(element, context))
 }
 
-fn invalid_percent_array_contents(elements: &[Node<'_>]) -> bool {
+fn invalid_percent_array_contents(
+    elements: &[Node<'_>],
+    context: &CopContext<'_, '_>,
+) -> bool {
     elements.iter().any(|element| {
         element.as_string_node().is_some_and(|string| {
-            !valid_utf8(string.unescaped()) || string.unescaped().contains(&b' ')
+            !valid_utf8(string.unescaped())
+                || string.unescaped().contains(&b' ')
+                // Prism preserves the escape marker for whitespace in a `%w`
+                // element. RuboCop asks whether the semantic string contains
+                // whitespace, so inspect that spelling as well.
+                || context.source_file().node(element).contains("\\ ")
         })
     })
 }
@@ -796,11 +993,12 @@ fn bracket_array_has_comment(
     node: &ruby_prism::ArrayNode<'_>,
     context: &CopContext<'_, '_>,
 ) -> bool {
+    let location = node.location();
     context
         .source_file()
-        .node(&node.as_node())
-        .lines()
-        .any(|line| line.trim_start().starts_with('#') || line.contains(" #"))
+        .comment_ranges()
+        .iter()
+        .any(|comment| comment.start < location.end_offset() && comment.end > location.start_offset())
 }
 
 fn matrix_of_complex_content(
@@ -828,7 +1026,9 @@ fn percent_word_array(
     for element in elements {
         let string = element.as_string_node()?;
         let value = std::str::from_utf8(string.unescaped()).ok()?;
-        if value.chars().any(char::is_control) {
+        if value.chars().any(char::is_control)
+            || context.source_encoding() == SourceEncoding::UsAscii && !value.is_ascii()
+        {
             wide = true;
         }
         words.push(escape_percent_word(value, wide, context));
@@ -848,11 +1048,7 @@ fn percent_word_array(
     }
     let delimiters = context
         .related_config_map("Style/PercentLiteralDelimiters", "PreferredDelimiters")
-        .and_then(|values| {
-            values
-                .get(if wide { "%W" } else { "%w" })
-                .or_else(|| values.get("default"))
-        })
+        .and_then(|values| values.get(if wide { "%W" } else { "%w" }))
         .map(String::as_str)
         .unwrap_or("[]");
     let (open, close) = delimiters.split_at(1);
@@ -872,11 +1068,7 @@ fn percent_word_array(
 fn escape_percent_word(value: &str, wide: bool, context: &CopContext<'_, '_>) -> String {
     let delimiters = context
         .related_config_map("Style/PercentLiteralDelimiters", "PreferredDelimiters")
-        .and_then(|values| {
-            values
-                .get(if wide { "%W" } else { "%w" })
-                .or_else(|| values.get("default"))
-        })
+        .and_then(|values| values.get(if wide { "%W" } else { "%w" }))
         .map(String::as_str)
         .unwrap_or("[]");
     let (open, close) = delimiters.split_at(1);
@@ -891,6 +1083,16 @@ fn escape_percent_word(value: &str, wide: bool, context: &CopContext<'_, '_>) ->
             '\u{08}' if wide => "\\b".to_string(),
             '\u{0b}' if wide => "\\v".to_string(),
             '\u{0c}' if wide => "\\f".to_string(),
+            character
+                if context.source_encoding() == SourceEncoding::UsAscii
+                    && !character.is_ascii() =>
+            {
+                if character as u32 <= 0xffff {
+                    format!("\\u{:04X}", character as u32)
+                } else {
+                    format!("\\u{{{:X}}}", character as u32)
+                }
+            }
             character if character.is_control() => format!("\\u{:04X}", character as u32),
             character => character.to_string(),
         };

@@ -1,0 +1,4 @@
+{
+  "60bcd598212e44b2": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/NonLocalExitFromIterator:\n  Description: Do not use return in iterator to cause non-local exit.\n  Enabled: true\n  VersionAdded: '0.30'\n  AutoCorrect: always\n",
+  "9230c2c524bd1efd": "---\nAllCops:\n  TargetRubyVersion: 3.4\nLint/NonLocalExitFromIterator:\n  Description: Do not use return in iterator to cause non-local exit.\n  Enabled: true\n  VersionAdded: '0.30'\n  AutoCorrect: always\n"
+}

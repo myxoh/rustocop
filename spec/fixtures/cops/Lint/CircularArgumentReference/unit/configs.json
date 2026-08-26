@@ -1,0 +1,3 @@
+{
+  "7260e63adb950831": "---\nAllCops:\n  TargetRubyVersion: 3.4\nLint/CircularArgumentReference:\n  Description: Default values in optional keyword arguments and optional ordinal arguments\n    should not refer back to the name of the argument.\n  Enabled: true\n  VersionAdded: '0.33'\n  AutoCorrect: always\n"
+}

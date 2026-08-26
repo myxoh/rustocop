@@ -47,7 +47,15 @@ src/
       tests/       cross-family Prism integration tests
       *.rs         cohesive cop-family implementations
     text/          textual compatibility cops grouped by department
+  rubocop/         pinned shared RuboCop/rubocop-ast compatibility layer
 ```
+
+The compatibility layer's strict ledger accounts for all 228 pinned shared
+components and all 2,586 syntax- and runtime-discovered APIs. Its executable
+coverage gate also rejects public translations that appear only at their own
+definition; no such targets remain. It remains deliberately separate from the
+production cop registry: completing the translation layer does not imply that
+existing cops have been migrated to consume it.
 
 ## Inspection pipeline
 
@@ -96,16 +104,23 @@ coordinated edits without replacing an unnecessarily large source region.
   behavior.
 - `engine` may depend on cops and shared leaf modules. It owns ordering,
   concurrency, file writes, and the one-parse-per-file invariant.
-- `cops` may depend only on `config`, `model`, and sibling cop
-  modules. A cop cannot discover files, format reports, or invoke the engine.
+- `cops` may depend on `config`, `model`, sibling cop modules, and reviewed
+  RuboCop compatibility APIs. A cop cannot discover files, format reports, or
+  invoke the engine.
 - `config` and `model` are leaf modules. They cannot depend on the
   application, engine, or cop implementations.
-- Specs and the extracted upstream corpus are the compatibility contract. A cop
-  is not verified merely because it recognizes representative text.
+- `rubocop` mirrors the shared RuboCop 1.87.0 and rubocop-ast 1.49.1 source
+  boundaries. Production cops reach it only through separately reviewed,
+  fixture-then-project-validated adapters.
+- Differential fixtures and complete project signatures are the compatibility
+  contract. A cop is not compatible merely because it recognizes representative
+  text or passes the captured upstream examples.
 
 `script/check_architecture.rb` enforces the root layout, dependency direction,
-module line ceilings, and the 50-line limit on `main.rs`. Clippy owns
-function-level complexity and argument limits.
+module line ceilings, and the 50-line limit on `main.rs`. Legacy oversized
+modules are listed in [`spec/architecture_debt.yml`](../spec/architecture_debt.yml)
+with exact ceilings: growth fails, and reductions must lower or remove the
+entry. Clippy owns function-level complexity and argument limits.
 
 ## Cop authoring and parallelism
 
@@ -122,20 +137,44 @@ families keep the short `super::*` authoring surface. New reusable authoring
 APIs belong in `framework/`; parse/traversal/dispatch code belongs in
 `runtime/`; actual lint behavior stays in a named cop-family file.
 
+Within `runtime/`, `PhasePlan` owns the source, node, parse-error, and recovered
+node partitions. The AST runner has one diagnostic dispatch path shared by
+branch, leaf, and typed Prism callbacks. Keeping these mechanics centralized
+prevents callback-specific behavior from drifting as cop families are added.
+
 `--parallel` distributes complete files across scoped worker threads. Results
 are restored to discovery order before formatting, so parallel and sequential
 output must remain byte-identical. `--jobs N` sets an explicit worker count.
 Autocorrection falls back to sequential execution when requested paths resolve
 to the same file.
 
+## Ruby tooling infrastructure
+
+Compatibility and benchmark scripts share five small library boundaries:
+
+- `RepositoryLayout` owns paths to binaries, evidence, pinned projects, and
+  regression fixtures.
+- `ArtifactStore` owns validated JSON reads and deterministic atomic JSON/gzip
+  writes.
+- `ProcessRunner` owns subprocess result shape, timing, and exit-status checks.
+- `DiagnosticSignatures` owns complete RuboCop path/message/location
+  normalization.
+- `ProjectMismatchInventory` owns exhaustive unmatched-signature accounting,
+  compact storage rows, and bounded human-report previews.
+
+Scripts remain orchestration entrypoints; they should not independently rebuild
+these conventions. This keeps cached reference generation, full audits,
+benchmarks, and mismatch isolation on the same data model.
+
 ## Complexity limits
 
-Rust modules have an enforced 350-line ceiling, cop modules may declare at most
-16 cops, and the process entrypoint has a 50-line ceiling. There are no
-exceptions for cop-family or composition-root modules. Functions should
-normally remain below 60 lines, cognitive complexity 15, and five arguments.
-The enforced Clippy limits are 120 lines, cognitive complexity 25, and seven
-arguments. Do not raise a limit to land a feature.
+New Rust modules have an enforced 350-line ceiling, cop modules may declare at
+most 16 cops, and the process entrypoint has a 50-line ceiling. Existing modules
+above 350 lines are ratcheted at their exact current size in the architecture
+debt manifest; the ceiling may only move downward. Functions should normally
+remain below 60 lines, cognitive complexity 15, and five arguments. The enforced
+Clippy limits are 120 lines, cognitive complexity 25, and seven arguments. Do
+not raise a limit or debt ceiling to land a feature.
 
 Measured optimization opportunities and their invariants are tracked in
 [Known performance bottlenecks](bottlenecks.md).

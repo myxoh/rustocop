@@ -1,0 +1,6 @@
+{
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
+  "68aedeb0223a41a8": "---\nAllCops:\n  TargetRubyVersion: 2.6\nLint/AmbiguousRange:\n  Description: Checks for ranges with ambiguous boundaries.\n  Enabled: true\n  VersionAdded: '1.19'\n  SafeAutoCorrect: false\n  RequireParenthesesForMethodChains: false\n  AutoCorrect: always\n",
+  "e258363299567cfa": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/AmbiguousRange:\n  Description: Checks for ranges with ambiguous boundaries.\n  Enabled: true\n  VersionAdded: '1.19'\n  SafeAutoCorrect: false\n  RequireParenthesesForMethodChains: false\n  AutoCorrect: always\n",
+  "fb6936234a12a3ce": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/AmbiguousRange:\n  Description: Checks for ranges with ambiguous boundaries.\n  Enabled: true\n  VersionAdded: '1.19'\n  SafeAutoCorrect: false\n  RequireParenthesesForMethodChains: true\n  AutoCorrect: always\n"
+}

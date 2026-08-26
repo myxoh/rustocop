@@ -109,4 +109,47 @@ RSpec.describe RuboCop::Cop::Lint::InterpolationCheck, :config do
       'a "b" } #{c}'
     RUBY
   end
+
+  context 'with adversarial literal boundaries' do
+    it 'does not inspect interpolation-looking text in a single quoted heredoc' do
+      expect_no_offenses(<<~'RUBY')
+        <<~'TEXT'
+          #{not_interpolated}
+        TEXT
+      RUBY
+    end
+
+    it 'registers an offense for an unescaped interpolation after an escaped hash' do
+      expect_offense(<<~'RUBY')
+        '\#{literal} then #{dynamic}'
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Interpolation in single quoted string detected. Use double quoted strings if you need interpolation.
+      RUBY
+    end
+
+
+    it 'does not register when the interpolation marker is immediately escaped' do
+      expect_no_offenses(<<~'RUBY')
+        '"\\#{test}"'
+      RUBY
+    end
+
+    it 'does not register when changing multiline documentation to double quotes is not one string' do
+      expect_no_offenses(<<~'RUBY')
+        'command(
+          value: "#{example}",
+        )'
+      RUBY
+    end
+
+    it 'registers an interpolation containing `yield` in a block' do
+      expect_offense(<<~'RUBY')
+        layout { 'THIS. IS. #{yield.upcase}!' }
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Interpolation in single quoted string detected. Use double quoted strings if you need interpolation.
+      RUBY
+
+      expect_correction(<<~'RUBY')
+        layout { "THIS. IS. #{yield.upcase}!" }
+      RUBY
+    end
+  end
 end

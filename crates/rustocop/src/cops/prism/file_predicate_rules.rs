@@ -40,7 +40,10 @@ fn file_empty(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
         return;
     };
     let comparison = call_name(node);
-    let (constant, argument, negate) = if call_name(&operation) == b"size" && is_zero(&expected) {
+    let (constant, argument, negate) = if call_name(&operation) == b"size"
+        && matches!(comparison, b"==" | b">=")
+        && is_zero(&expected)
+    {
         let Some((constant, argument)) = direct_file_call(&operation, &[b"size"]) else {
             return;
         };

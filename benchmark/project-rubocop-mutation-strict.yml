@@ -1,0 +1,33 @@
+AllCops:
+  DisabledByDefault: true
+  Exclude: []
+  NewCops: disable
+  ParserEngine: parser_prism
+  SuggestExtensions: false
+  TargetRubyVersion: 3.4
+
+Metrics/CollectionLiteralLength:
+  LengthThreshold: 1
+
+Style/MutableConstant:
+  EnforcedStyle: strict
+
+Style/InverseMethods:
+  InverseMethods:
+    any?: none?
+    even?: odd?
+    blank?: present?
+    ==: "!="
+    =~: "!~"
+    <: ">="
+    ">": <=
+  InverseBlocks:
+    select: reject
+    select!: reject!
+    filter: reject
+
+Style/UnlessLogicalOperators:
+  EnforcedStyle: forbid_logical_operators
+
+Style/NegatedUnless:
+  EnforcedStyle: postfix

@@ -1,4 +1,0 @@
-cop	line	column	last_line	last_column	correctable	corrected	message
-Lint/BigDecimalNew	1	12	1	14	true	false	`BigDecimal.new()` is deprecated. Use `BigDecimal()` instead.
-Security/Eval	2	10	2	13	false	false	The use of `eval` is a serious security risk.
-Security/JSONLoad	3	6	3	9	true	false	Prefer `JSON.parse` over `JSON.load`.

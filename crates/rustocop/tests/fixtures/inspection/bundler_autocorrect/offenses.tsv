@@ -1,2 +1,0 @@
-cop	line	column	last_line	last_column	correctable	corrected	message
-Bundler/OrderedGems	4	1	4	10	true	true	Gems should be sorted in an alphabetical order within their section of the Gemfile. Gem `rake` should appear before `zeitwerk`.

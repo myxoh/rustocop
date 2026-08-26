@@ -45,13 +45,9 @@ fn integer_value(node: &Node<'_>) -> Option<i32> {
 }
 
 fn variable_read(node: &Node<'_>) -> bool {
-    node.as_local_variable_read_node().is_some()
-        || node.as_instance_variable_read_node().is_some()
-        || node.as_class_variable_read_node().is_some()
-        || node.as_global_variable_read_node().is_some()
-        || node.as_call_node().is_some_and(|call| {
-            call.receiver().is_none() && argument_count(&call) == 0 && call.block().is_none()
-        })
+    node.as_call_node().is_some_and(|call| {
+        call.receiver().is_none() && argument_count(&call) == 0 && call.block().is_none()
+    })
 }
 
 fn float_division(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {

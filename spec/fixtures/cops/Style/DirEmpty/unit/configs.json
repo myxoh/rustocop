@@ -1,0 +1,6 @@
+{
+  "50cd814d51139b1d": "---\nAllCops:\n  TargetRubyVersion: 2.3\nStyle/DirEmpty:\n  Description: Prefer to use `Dir.empty?('path/to/dir')` when checking if a directory\n    is empty.\n  Enabled: true\n  VersionAdded: '1.48'\n  AutoCorrect: always\n",
+  "55faaae23887add8": "---\nAllCops:\n  DisabledByDefault: true\n  ParserEngine: parser_prism\n  TargetRubyVersion: 3.4\nStyle/DirEmpty:\n  Enabled: true\n",
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
+  "a3f817fe6c60ad37": "---\nAllCops:\n  TargetRubyVersion: 2.4\nStyle/DirEmpty:\n  Description: Prefer to use `Dir.empty?('path/to/dir')` when checking if a directory\n    is empty.\n  Enabled: true\n  VersionAdded: '1.48'\n  AutoCorrect: always\n"
+}

@@ -79,6 +79,7 @@ impl<'call, 'pr> CallMatcher<'call, 'pr> {
         self
     }
 
+    #[allow(dead_code)]
     pub(super) fn with_block(mut self) -> Self {
         self.matches &= self.call.block().is_some();
         self

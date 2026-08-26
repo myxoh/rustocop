@@ -66,6 +66,16 @@ RSpec.describe RuboCop::Cop::Layout::FirstMethodParameterLineBreak, :config do
     RUBY
   end
 
+  # Regression: gitlabhq/gitlabhq@67a52644:qa/qa/tools/test_resources_handler.rb
+  it 'accepts a comment immediately after the opening parenthesis' do
+    expect_no_offenses(<<~RUBY)
+      def delete_resources( # the parameters are documented below
+        resources,
+        permanent = false)
+      end
+    RUBY
+  end
+
   it 'registers an offense and corrects params with default values' do
     expect_offense(<<~RUBY)
       def foo(bar = [],

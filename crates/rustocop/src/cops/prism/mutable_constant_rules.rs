@@ -1,5 +1,10 @@
 use ruby_prism::Node;
 
+use crate::rubocop::cop::mixin::advanced::{
+    frozen_string_literal as frozen_string_literal_magic_comment,
+    FrozenStringLiteral as FrozenStringLiteralSetting,
+};
+
 use super::*;
 
 define_cops! {
@@ -13,7 +18,11 @@ impl MutableConstantRule<'_, '_, '_> {
         };
         let strict = self.policy().enforced_style("literals") == "strict";
         if strict {
-            return_if!(immutable_literal(&value, self.target_ruby_version()));
+            return_if!(immutable_literal(
+                &value,
+                self.target_ruby_version(),
+                self.source()
+            ));
             return_if!(operation_produces_immutable_object(&value));
         } else {
             return_unless!(mutable_literal(&value, self.target_ruby_version()));
@@ -64,14 +73,26 @@ fn mutable_literal(node: &Node<'_>, ruby_version: RubyVersion) -> bool {
         || range_expression(node)
 }
 
-fn immutable_literal(node: &Node<'_>, ruby_version: RubyVersion) -> bool {
+fn immutable_literal(node: &Node<'_>, ruby_version: RubyVersion, source: &str) -> bool {
     node.as_integer_node().is_some()
         || node.as_float_node().is_some()
         || node.as_symbol_node().is_some()
         || node.as_true_node().is_some()
         || node.as_false_node().is_some()
         || node.as_nil_node().is_some()
-        || ruby_version.at_least(3, 0) && (regexp_literal(node) || range_expression(node))
+        || node.as_source_file_node().is_some()
+        || ruby_version.at_least(3, 0)
+            && (regexp_literal(node)
+                || range_expression(node) && !parenthesized_expression(node, source))
+}
+
+fn parenthesized_expression(node: &Node<'_>, source: &str) -> bool {
+    if node.as_parentheses_node().is_some() {
+        return true;
+    }
+    let location = node.location();
+    source[..location.start_offset()].trim_end().ends_with('(')
+        && source[location.end_offset()..].trim_start().starts_with(')')
 }
 
 fn regexp_literal(node: &Node<'_>) -> bool {
@@ -110,7 +131,7 @@ fn operation_produces_immutable_object(node: &Node<'_>) -> bool {
             .is_some_and(|receiver| numeric_literal(&receiver));
         let numeric_argument =
             only_argument(&call).is_some_and(|argument| numeric_literal(&argument));
-        return numeric_receiver || numeric_argument;
+        return numeric_receiver || call.name().as_slice() != b"<<" && numeric_argument;
     }
     false
 }
@@ -155,10 +176,7 @@ fn frozen_string_literal(node: &Node<'_>, source: &str, ruby_version: RubyVersio
         || node
             .as_interpolated_string_node()
             .is_some_and(|string| string.is_frozen() || !ruby_version.at_least(3, 0)))
-        && source
-            .lines()
-            .take(3)
-            .any(|line| line.trim() == "# frozen_string_literal: true")
+        && frozen_string_literal_magic_comment(source) == FrozenStringLiteralSetting::Enabled
 }
 
 fn shareable_constant_value(node: &Node<'_>, source: &str, ruby_version: RubyVersion) -> bool {

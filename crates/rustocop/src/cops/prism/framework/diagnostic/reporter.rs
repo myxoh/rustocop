@@ -9,7 +9,9 @@ pub(in super::super) struct Reporter<'context> {
 
 impl Reporter<'_> {
     pub(in super::super) fn autocorrect_enabled(&self) -> bool {
-        self.context.autocorrect
+        self.context
+            .autocorrect
+            .enabled_for(&self.context.cop_config, self.cop_name)
     }
 
     #[allow(dead_code)]
@@ -19,6 +21,22 @@ impl Reporter<'_> {
 
     pub(in super::super) fn target_ruby_version(&self) -> RubyVersion {
         self.context.target_ruby_version()
+    }
+
+    pub(in super::super) fn source_encoding(&self) -> SourceEncoding {
+        self.context.source_encoding()
+    }
+
+    pub(in super::super) fn cop_enabled(&self, cop_name: &str) -> bool {
+        self.context.cop_enabled(cop_name)
+    }
+
+    pub(in super::super) fn line_index(&self, offset: usize) -> usize {
+        self.context.line_index(offset)
+    }
+
+    pub(in super::super) fn line_start_at(&self, index: usize) -> usize {
+        self.context.line_start_at(index)
     }
 
     pub(in super::super) fn config_value(&self, key: &str) -> Option<&str> {
@@ -49,6 +67,12 @@ impl Reporter<'_> {
         self.context.cop_config.contains(self.cop_name, key)
     }
 
+    pub(in super::super) fn config_explicit(&self, key: &str) -> bool {
+        self.context
+            .cop_config
+            .explicitly_contains(self.cop_name, key)
+    }
+
     pub(in super::super) fn config_map(
         &self,
         key: &str,
@@ -69,6 +93,18 @@ impl Reporter<'_> {
 
     pub(in super::super) fn related_config_value(&self, cop_name: &str, key: &str) -> Option<&str> {
         self.context.config_value(cop_name, key)
+    }
+
+    pub(in super::super) fn related_config_values(&self, cop_name: &str, key: &str) -> &[String] {
+        self.context.cop_config.values(cop_name, key)
+    }
+
+    pub(in super::super) fn related_config_explicit(&self, cop_name: &str, key: &str) -> bool {
+        self.context.cop_config.explicitly_contains(cop_name, key)
+    }
+
+    pub(in super::super) fn related_cop_normally_enabled(&self, cop_name: &str) -> bool {
+        self.context.cop_config.normally_enables(cop_name)
     }
 
     pub(in super::super) fn related_config_map(

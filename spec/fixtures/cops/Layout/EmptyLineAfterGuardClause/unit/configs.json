@@ -1,0 +1,6 @@
+{
+  "329ce7a8b3562dfb": "---\nAllCops:\n  DisabledByDefault: true\n  ParserEngine: parser_prism\n  TargetRubyVersion: 3.4\nLayout/EmptyLineAfterGuardClause:\n  Enabled: true\n",
+  "48198105cc4da499": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/EmptyLineAfterGuardClause:\n  Description: Add empty line after guard clause.\n  Enabled: true\n  VersionAdded: '0.56'\n  VersionChanged: '0.59'\n  AutoCorrect: always\n",
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
+  "d3637b0fecd1338b": "---\nAllCops:\n  TargetRubyVersion: 3.2\nLayout/EmptyLineAfterGuardClause:\n  Description: Add empty line after guard clause.\n  Enabled: true\n  VersionAdded: '0.56'\n  VersionChanged: '0.59'\n  AutoCorrect: always\n"
+}

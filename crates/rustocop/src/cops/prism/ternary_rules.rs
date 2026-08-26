@@ -11,8 +11,8 @@ fn nested_ternary_operator(node: &ruby_prism::IfNode<'_>, context: &mut CopConte
     let Some(outer) = context
         .ancestors()
         .iter()
-        .find_map(Node::as_if_node)
-        .filter(is_ternary)
+        .filter_map(Node::as_if_node)
+        .find(is_ternary)
     else {
         return;
     };
@@ -67,28 +67,5 @@ fn unwrap_parenthesized_source(source: &str) -> &str {
 }
 
 fn render_direct_ternary_branch(node: &Node<'_>, file: SourceFile<'_>) -> String {
-    if file.node(node).starts_with('(') {
-        return unwrap_parenthesized_source(file.node(node)).to_string();
-    }
-    let Some(ternary) = node.as_if_node().filter(is_ternary) else {
-        return unwrap_parenthesized_source(file.node(node)).to_string();
-    };
-    let (Some(then_branch), Some(else_branch)) = (
-        ternary
-            .statements()
-            .and_then(|statements| statements.body().first()),
-        ternary
-            .subsequent()
-            .and_then(|node| node.as_else_node())
-            .and_then(|node| node.statements())
-            .and_then(|statements| statements.body().first()),
-    ) else {
-        return file.node(node).to_string();
-    };
-    format!(
-        "if {}\n{}\nelse\n{}\nend",
-        file.node(&ternary.predicate()),
-        unwrap_parenthesized_source(file.node(&then_branch)),
-        unwrap_parenthesized_source(file.node(&else_branch))
-    )
+    unwrap_parenthesized_source(file.node(node)).to_string()
 }

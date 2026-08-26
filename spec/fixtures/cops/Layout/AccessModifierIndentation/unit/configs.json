@@ -1,0 +1,7 @@
+{
+  "2293dd3a38fb29fa": "---\nLayout/AccessModifierIndentation:\n  EnforcedStyle: outdent\n  SupportedStyles:\n  - indent\n  - outdent\n  Enabled: true\nLayout/IndentationWidth:\n  Width: 2\n",
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
+  "661f539579c71a98": "---\nLayout/AccessModifierIndentation:\n  EnforcedStyle: indent\n  SupportedStyles:\n  - indent\n  - outdent\n  Enabled: true\nLayout/IndentationWidth:\n  Width: 2\n",
+  "944ffaaeedeac32e": "---\nLayout/AccessModifierIndentation:\n  EnforcedStyle: indent\n  SupportedStyles:\n  - indent\n  - outdent\n  Enabled: true\nLayout/IndentationWidth:\n  Width: 4\n",
+  "d595914f79bac93c": "---\nLayout/AccessModifierIndentation:\n  EnforcedStyle: indent\n  IndentationWidth: 4\n  SupportedStyles:\n  - indent\n  - outdent\n  Enabled: true\nLayout/IndentationWidth:\n  Width: 2\n"
+}

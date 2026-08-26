@@ -1,9 +1,9 @@
-use std::{env, fs};
-
+use std::env;
 use std::sync::Arc;
 
 use crate::config::{
-    CopConfig, CopSelection, InspectionConfig, Parallelism, RubyVersion, RunOptions,
+    AutocorrectMode, CopConfig, CopSelection, InspectionConfig, Parallelism, RubyVersion,
+    RunOptions, SourceEncoding,
 };
 
 pub(super) enum Command {
@@ -23,11 +23,15 @@ pub(super) fn parse_args(mut args: Vec<String>) -> Result<Command, String> {
         config_path: None,
         include_non_native_cops: false,
         non_native_cops: Vec::new(),
+        force_exclusion: false,
         inspection: InspectionConfig {
-            autocorrect: false,
+            autocorrect: AutocorrectMode::None,
+            ignore_disable_comments: false,
             cops: CopSelection::default_enabled(),
             target_ruby_version: RubyVersion::default(),
+            source_encoding: SourceEncoding::Utf8,
             cop_config: Arc::new(CopConfig::default()),
+            inspected_path: None,
         },
     };
 
@@ -37,12 +41,23 @@ pub(super) fn parse_args(mut args: Vec<String>) -> Result<Command, String> {
             "--version" => return Ok(Command::Version),
             "-V" => return Ok(Command::VerboseVersion),
             "--show-cops" => return Ok(Command::ShowCops),
-            "-A" | "-a" | "--autocorrect" | "--autocorrect-all" | "--auto-correct"
-            | "--auto-correct-all" => options.inspection.autocorrect = true,
+            "-a" | "--autocorrect" | "--auto-correct" => {
+                options.inspection.autocorrect = AutocorrectMode::Safe;
+            }
+            "-A" | "--autocorrect-all" | "--auto-correct-all" => {
+                options.inspection.autocorrect = AutocorrectMode::All;
+            }
             "--format" | "-f" => options.format = take_value(&mut args, &arg)?,
             "--only" => {
-                options.inspection.cops = CopSelection::only(&take_value(&mut args, &arg)?);
+                options
+                    .inspection
+                    .cops
+                    .select_only(&take_value(&mut args, &arg)?);
             }
+            "--except" => options
+                .inspection
+                .cops
+                .except(&take_value(&mut args, &arg)?),
             "--stdin" => options.stdin_path = Some(take_value(&mut args, &arg)?),
             "--parallel" => options.parallelism = Parallelism::Automatic,
             "--no-parallel" => options.parallelism = Parallelism::Sequential,
@@ -61,12 +76,16 @@ pub(super) fn parse_args(mut args: Vec<String>) -> Result<Command, String> {
             }
             "--included-non-native-cops" => options.include_non_native_cops = true,
             "--resolved-enabled-cops" => {
-                options.inspection.cops = CopSelection::only(&take_value(&mut args, &arg)?);
+                options
+                    .inspection
+                    .cops
+                    .select_only(&take_value(&mut args, &arg)?);
             }
             "--resolved-non-native-cops" => {
                 options.non_native_cops = cop_list(&take_value(&mut args, &arg)?);
             }
-            "--force-exclusion" | "--no-server" | "--display-cop-names" | "--extra-details" => {}
+            "--force-exclusion" => options.force_exclusion = true,
+            "--no-server" | "--display-cop-names" | "--extra-details" => {}
             "--cache" => {
                 if args.first().is_some_and(|value| !value.starts_with('-')) {
                     args.remove(0);
@@ -83,9 +102,15 @@ pub(super) fn parse_args(mut args: Vec<String>) -> Result<Command, String> {
                     .to_string();
             }
             _ if arg.starts_with("--only=") => {
-                options.inspection.cops =
-                    CopSelection::only(arg.strip_prefix("--only=").unwrap_or_default());
+                options
+                    .inspection
+                    .cops
+                    .select_only(arg.strip_prefix("--only=").unwrap_or_default());
             }
+            _ if arg.starts_with("--except=") => options
+                .inspection
+                .cops
+                .except(arg.strip_prefix("--except=").unwrap_or_default()),
             _ if arg.starts_with("--stdin=") => {
                 options.stdin_path =
                     Some(arg.strip_prefix("--stdin=").unwrap_or_default().to_string());
@@ -106,7 +131,7 @@ pub(super) fn parse_args(mut args: Vec<String>) -> Result<Command, String> {
                     .push((name.to_string(), value.to_string()));
             }
             _ if arg.starts_with("--resolved-enabled-cops=") => {
-                options.inspection.cops = CopSelection::only(
+                options.inspection.cops.select_only(
                     arg.strip_prefix("--resolved-enabled-cops=")
                         .unwrap_or_default(),
                 );
@@ -123,7 +148,11 @@ pub(super) fn parse_args(mut args: Vec<String>) -> Result<Command, String> {
     }
 
     if let Ok(source) = env::var("RUSTOCOP_RESOLVED_CONFIG_SOURCE") {
-        apply_config_source(&mut options.inspection, &source);
+        apply_config_source(
+            &mut options.inspection,
+            &source,
+            options.config_path.as_deref(),
+        );
     }
 
     if options.format != "json" && options.format != "simple" {
@@ -157,17 +186,25 @@ fn parse_jobs(value: &str) -> Result<usize, String> {
 }
 
 fn apply_config(config: &mut InspectionConfig, path: &str) -> Result<(), String> {
-    let source = fs::read_to_string(path)
-        .map_err(|error| format!("could not read config {path}: {error}"))?;
-    apply_config_source(config, &source);
+    let cop_config = CopConfig::from_path(path)?;
+    config.target_ruby_version = cop_config
+        .value("AllCops", "TargetRubyVersion")
+        .and_then(RubyVersion::parse)
+        .unwrap_or_default();
+    config.cop_config = Arc::new(cop_config);
     Ok(())
 }
 
-fn apply_config_source(config: &mut InspectionConfig, source: &str) {
-    config.target_ruby_version = target_ruby_version_from_source(source).unwrap_or_default();
-    config.cop_config = Arc::new(CopConfig::from_source(source));
+fn apply_config_source(config: &mut InspectionConfig, source: &str, config_path: Option<&str>) {
+    let cop_config = CopConfig::from_resolved_source(source, config_path);
+    config.target_ruby_version = cop_config
+        .value("AllCops", "TargetRubyVersion")
+        .and_then(RubyVersion::parse)
+        .unwrap_or_default();
+    config.cop_config = Arc::new(cop_config);
 }
 
+#[cfg(test)]
 fn target_ruby_version_from_source(source: &str) -> Option<RubyVersion> {
     source.lines().find_map(|line| {
         let value = line.trim().strip_prefix("TargetRubyVersion:")?;
@@ -207,6 +244,18 @@ mod tests {
         };
         assert_eq!(automatic.parallelism, Parallelism::Automatic);
         assert_eq!(fixed.parallelism, Parallelism::Fixed(4));
+    }
+
+    #[test]
+    fn distinguishes_safe_and_all_autocorrection() {
+        let Command::Run(safe) = parse_args(vec!["-a".to_string()]).unwrap() else {
+            panic!("expected run command");
+        };
+        let Command::Run(all) = parse_args(vec!["-A".to_string()]).unwrap() else {
+            panic!("expected run command");
+        };
+        assert_eq!(safe.inspection.autocorrect, AutocorrectMode::Safe);
+        assert_eq!(all.inspection.autocorrect, AutocorrectMode::All);
     }
 
     #[test]
@@ -253,8 +302,24 @@ mod tests {
             options.non_native_cops,
             ["RSpec/Focus".to_string(), "Custom/Example".to_string()]
         );
-        assert!(options.inspection.cops.enabled("Layout/LineLength"));
-        assert!(!options.inspection.cops.enabled("Lint/Debugger"));
+        assert!(options.inspection.cop_enabled("Layout/LineLength"));
+        assert!(!options.inspection.cop_enabled("Lint/Debugger"));
+    }
+
+    #[test]
+    fn parses_except_and_force_exclusion() {
+        let Command::Run(options) = parse_args(vec![
+            "--except=Style,Layout/LineLength".to_string(),
+            "--only=Style/StringLiterals,Layout/LineLength".to_string(),
+            "--force-exclusion".to_string(),
+        ])
+        .unwrap() else {
+            panic!("expected run command");
+        };
+
+        assert!(options.force_exclusion);
+        assert!(!options.inspection.cop_enabled("Style/StringLiterals"));
+        assert!(!options.inspection.cop_enabled("Layout/LineLength"));
     }
 
     #[test]

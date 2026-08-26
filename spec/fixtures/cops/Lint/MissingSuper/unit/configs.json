@@ -1,0 +1,6 @@
+{
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
+  "9c14a15678e0c8b1": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/MissingSuper:\n  Description: Checks for the presence of constructors and lifecycle callbacks without\n    calls to `super`.\n  Enabled: true\n  AllowedParentClasses: []\n  VersionAdded: '0.89'\n  VersionChanged: '1.4'\n  AutoCorrect: always\n",
+  "bf7d48cbe0b3e98b": "---\nAllCops:\n  TargetRubyVersion: 3.4\nLint/MissingSuper:\n  Description: Checks for the presence of constructors and lifecycle callbacks without\n    calls to `super`.\n  Enabled: true\n  AllowedParentClasses: []\n  VersionAdded: '0.89'\n  VersionChanged: '1.4'\n  AutoCorrect: always\n",
+  "e6df173b65ccef83": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/MissingSuper:\n  Description: Checks for the presence of constructors and lifecycle callbacks without\n    calls to `super`.\n  Enabled: true\n  AllowedParentClasses:\n  - Array\n  VersionAdded: '0.89'\n  VersionChanged: '1.4'\n  AutoCorrect: always\n"
+}

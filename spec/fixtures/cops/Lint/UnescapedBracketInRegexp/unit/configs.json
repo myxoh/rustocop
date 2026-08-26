@@ -1,0 +1,4 @@
+{
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
+  "62d1326a74fafa31": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/UnescapedBracketInRegexp:\n  Description: Checks for unescaped literal `]` in Regexp.\n  Enabled: true\n  VersionAdded: '1.68'\n  AutoCorrect: always\n"
+}

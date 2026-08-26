@@ -1,0 +1,5 @@
+{
+  "53f9068661fe05de": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/MultilineMemoization:\n  Description: Wrap multiline memoizations in a `begin` and `end` block.\n  Enabled: true\n  VersionAdded: '0.44'\n  VersionChanged: '0.48'\n  EnforcedStyle: braces\n  SupportedStyles:\n  - keyword\n  - braces\n  AutoCorrect: always\n",
+  "556e3291f19ea98c": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/MultilineMemoization:\n  Description: Wrap multiline memoizations in a `begin` and `end` block.\n  Enabled: true\n  VersionAdded: '0.44'\n  VersionChanged: '0.48'\n  EnforcedStyle: keyword\n  SupportedStyles:\n  - keyword\n  - braces\n  AutoCorrect: always\n",
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n"
+}

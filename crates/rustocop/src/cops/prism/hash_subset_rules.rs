@@ -33,6 +33,7 @@ fn check_subset(context: &mut CopContext<'_, '_>, node: &CallNode<'_>, slice: bo
         &key,
         &value,
         active_support,
+        slice,
         context.source_file(),
     ) else { return };
     let keeps = matches!(node.name().as_slice(), b"select" | b"filter");
@@ -59,8 +60,11 @@ fn subset_condition(
     key: &str,
     value: &str,
     active_support: bool,
+    slice: bool,
     file: SourceFile<'_>,
 ) -> Option<(String, bool)> {
+    use crate::rubocop::cop::mixin::hash_subset::{HashSubset, HashSubsetPreference};
+
     let (call, negated) = if let Some(outer) = body.as_call_node() {
         if outer.name().as_slice() == b"!" {
             (outer.receiver()?.as_call_node()?, true)
@@ -71,6 +75,18 @@ fn subset_condition(
         return None;
     };
     let method = call.name().as_slice();
+    let method_name = std::str::from_utf8(method).ok()?;
+    let subset = HashSubset {
+        active_support_extensions_enabled: active_support,
+        preference: if slice {
+            HashSubsetPreference::Slice
+        } else {
+            HashSubsetPreference::Except
+        },
+    };
+    if !subset.supported_subset_method(method_name) {
+        return None;
+    }
     let (keys, mut targeted) = match method {
         b"==" | b"!=" => {
             let receiver = call.receiver()?;

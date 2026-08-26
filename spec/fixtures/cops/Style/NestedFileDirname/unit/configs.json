@@ -1,0 +1,4 @@
+{
+  "ddca6d4e1fba3cda": "---\nAllCops:\n  TargetRubyVersion: 3.1\nStyle/NestedFileDirname:\n  Description: Checks for nested `File.dirname`.\n  Enabled: true\n  VersionAdded: '1.26'\n  AutoCorrect: always\n",
+  "fd0d155d89467ebe": "---\nAllCops:\n  TargetRubyVersion: 3.0\nStyle/NestedFileDirname:\n  Description: Checks for nested `File.dirname`.\n  Enabled: true\n  VersionAdded: '1.26'\n  AutoCorrect: always\n"
+}

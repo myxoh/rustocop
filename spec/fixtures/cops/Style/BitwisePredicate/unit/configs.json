@@ -1,0 +1,6 @@
+{
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
+  "9af10bbc4c1ef79a": "---\nAllCops:\n  TargetRubyVersion: 2.5\nStyle/BitwisePredicate:\n  Description: Prefer bitwise predicate methods over direct comparison operations.\n  StyleGuide: \"#bitwise-predicate-methods\"\n  Enabled: true\n  Safe: false\n  VersionAdded: '1.68'\n  AutoCorrect: always\n",
+  "9e90ffdacf759d65": "---\nAllCops:\n  TargetRubyVersion: 2.4\nStyle/BitwisePredicate:\n  Description: Prefer bitwise predicate methods over direct comparison operations.\n  StyleGuide: \"#bitwise-predicate-methods\"\n  Enabled: true\n  Safe: false\n  VersionAdded: '1.68'\n  AutoCorrect: always\n",
+  "d8730a0bf7a9fac3": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/BitwisePredicate:\n  Description: Prefer bitwise predicate methods over direct comparison operations.\n  StyleGuide: \"#bitwise-predicate-methods\"\n  Enabled: true\n  Safe: false\n  VersionAdded: '1.68'\n  AutoCorrect: always\n"
+}

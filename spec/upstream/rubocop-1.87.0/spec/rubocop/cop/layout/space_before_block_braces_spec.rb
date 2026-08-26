@@ -243,3 +243,4 @@ RSpec.describe RuboCop::Cop::Layout::SpaceBeforeBlockBraces, :config do
     end
   end
 end
+

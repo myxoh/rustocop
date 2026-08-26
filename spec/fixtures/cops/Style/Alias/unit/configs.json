@@ -1,0 +1,7 @@
+{
+  "04305a7e5b77022d": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/Alias:\n  Description: Use alias instead of alias_method.\n  StyleGuide: \"#alias-method-lexically\"\n  Enabled: true\n  VersionAdded: '0.9'\n  VersionChanged: '0.36'\n  EnforcedStyle: prefer_alias\n  SupportedStyles:\n  - prefer_alias\n  - prefer_alias_method\n  AutoCorrect: always\n",
+  "1405a8ed997e4eb4": "---\nAllCops:\n  DisabledByDefault: true\n  ParserEngine: parser_prism\n  TargetRubyVersion: 3.4\nStyle/Alias:\n  Enabled: true\n  EnforcedStyle: prefer_alias\n",
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
+  "5efdc6503d768d24": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/Alias:\n  Description: Use alias instead of alias_method.\n  StyleGuide: \"#alias-method-lexically\"\n  Enabled: true\n  VersionAdded: '0.9'\n  VersionChanged: '0.36'\n  EnforcedStyle: prefer_alias_method\n  SupportedStyles:\n  - prefer_alias\n  - prefer_alias_method\n  AutoCorrect: always\n",
+  "ab30971a5f8391a3": "---\nAllCops:\n  DisabledByDefault: true\n  ParserEngine: parser_prism\n  TargetRubyVersion: 3.4\nStyle/Alias:\n  Enabled: true\n  EnforcedStyle: prefer_alias_method\n"
+}

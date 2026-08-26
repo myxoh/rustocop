@@ -1,0 +1,4 @@
+{
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
+  "74d68905ef6a7471": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/OrderedMagicComments:\n  Description: Checks the proper ordering of magic comments and whether a magic comment\n    is not placed before a shebang.\n  Enabled: true\n  SafeAutoCorrect: false\n  VersionAdded: '0.53'\n  VersionChanged: '1.37'\n  AutoCorrect: always\n"
+}

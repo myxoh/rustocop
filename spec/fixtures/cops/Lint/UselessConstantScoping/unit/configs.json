@@ -1,0 +1,4 @@
+{
+  "491636fd99be6045": "AllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\n\nLayout/LineLength:\n  Enabled: true\n  Max: 100\n",
+  "35fe0ff2542081f9": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/UselessConstantScoping:\n  Description: Checks for useless constant scoping.\n  Enabled: true\n  VersionAdded: '1.72'\n  AutoCorrect: always\n"
+}

@@ -1,0 +1,5 @@
+{
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
+  "9004ccff4fd36984": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/UselessDefined:\n  Description: Checks for calls to `defined?` with strings and symbols. The result\n    of such a call will always be truthy.\n  Enabled: true\n  VersionAdded: '1.69'\n  AutoCorrect: always\n",
+  "df5d64d596120b47": "---\nAllCops:\n  DisabledByDefault: true\n  ParserEngine: parser_prism\n  TargetRubyVersion: 3.4\nLint/UselessDefined:\n  Enabled: true\n"
+}

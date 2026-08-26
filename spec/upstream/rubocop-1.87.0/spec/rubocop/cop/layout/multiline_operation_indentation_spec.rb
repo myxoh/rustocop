@@ -761,3 +761,4 @@ RSpec.describe RuboCop::Cop::Layout::MultilineOperationIndentation, :config do
     end
   end
 end
+

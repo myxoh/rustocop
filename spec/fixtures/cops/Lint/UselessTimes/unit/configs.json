@@ -1,0 +1,3 @@
+{
+  "52e2e0bd37d63879": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/UselessTimes:\n  Description: Checks for useless `Integer#times` calls.\n  Enabled: true\n  Safe: false\n  AutoCorrect: always\n  VersionAdded: '0.91'\n  VersionChanged: '1.61'\n"
+}

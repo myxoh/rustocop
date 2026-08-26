@@ -1,0 +1,5 @@
+{
+  "085c0d9d32e6e668": "---\nLayout/LineEndStringConcatenationIndentation:\n  Description: Checks the indentation of the next line after a line that ends with\n    a string literal and a backslash.\n  Enabled: true\n  VersionAdded: '1.18'\n  EnforcedStyle: aligned\n  SupportedStyles:\n  - aligned\n  - indented\n  IndentationWidth:\nLayout/IndentationWidth:\n  Width: 2\n",
+  "16dd85185c597c91": "---\nLayout/LineEndStringConcatenationIndentation:\n  Description: Checks the indentation of the next line after a line that ends with\n    a string literal and a backslash.\n  Enabled: true\n  VersionAdded: '1.18'\n  EnforcedStyle: indented\n  SupportedStyles:\n  - aligned\n  - indented\n  IndentationWidth:\nLayout/IndentationWidth:\n  Width: 2\n",
+  "d2a91b4229edfb0a": "---\nLayout/LineEndStringConcatenationIndentation:\n  Description: Checks the indentation of the next line after a line that ends with\n    a string literal and a backslash.\n  Enabled: true\n  VersionAdded: '1.18'\n  EnforcedStyle: indented\n  SupportedStyles:\n  - aligned\n  - indented\n  IndentationWidth: 1\nLayout/IndentationWidth:\n  Width: 2\n"
+}

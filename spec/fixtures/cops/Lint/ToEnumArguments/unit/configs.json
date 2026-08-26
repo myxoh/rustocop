@@ -1,0 +1,7 @@
+{
+  "16b6b9f64a469569": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/ToEnumArguments:\n  Description: Ensures that `to_enum`/`enum_for`, called for the current method, has\n    correct arguments.\n  Enabled: true\n  VersionAdded: '1.1'\n  AutoCorrect: always\n",
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
+  "a12d224822f0b412": "---\nAllCops:\n  TargetRubyVersion: 3.0\nLint/ToEnumArguments:\n  Description: Ensures that `to_enum`/`enum_for`, called for the current method, has\n    correct arguments.\n  Enabled: true\n  VersionAdded: '1.1'\n  AutoCorrect: always\n",
+  "b31bc914bd0f4181": "---\nAllCops:\n  TargetRubyVersion: 3.2\nLint/ToEnumArguments:\n  Description: Ensures that `to_enum`/`enum_for`, called for the current method, has\n    correct arguments.\n  Enabled: true\n  VersionAdded: '1.1'\n  AutoCorrect: always\n",
+  "c19078d83c165748": "---\nAllCops:\n  DisabledByDefault: true\n  ParserEngine: parser_prism\n  TargetRubyVersion: 3.4\nLint/ToEnumArguments:\n  Enabled: true\n"
+}

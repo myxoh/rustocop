@@ -95,4 +95,33 @@ RSpec.describe RuboCop::Cop::Lint::DuplicateHashKey, :config do
   it_behaves_like 'duplicated non literal key', '%r{abx#{foo}}ixo'
   it_behaves_like 'duplicated non literal key', 'some_method_call'
   it_behaves_like 'duplicated non literal key', 'some_method_call(x, y)'
+
+  context 'with adversarial structural near misses' do
+    it 'recognizes equivalent symbol spellings as the same literal key' do
+      expect_offense(<<~RUBY)
+        hash = { token: 1, :token => 2 }
+                           ^^^^^^ Duplicated key in hash literal.
+      RUBY
+    end
+
+    it 'keeps duplicate-looking keys isolated to their own hash nodes' do
+      expect_no_offenses(<<~RUBY)
+        outer = { token: { token: 1 }, other: { token: 2 } }
+      RUBY
+    end
+
+    it 'does not confuse calls with static literal keys' do
+      expect_no_offenses(<<~RUBY)
+        hash = { build_key(1) => :first, build_key(1) => :second }
+      RUBY
+    end
+
+    it 'recognizes duplicate recursively literal array keys' do
+      expect_offense(<<~RUBY)
+        hash = { ['Linux Kernel Module', 'AMPL'] => :first,
+                 ['Linux Kernel Module', 'AMPL'] => :second }
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Duplicated key in hash literal.
+      RUBY
+    end
+  end
 end

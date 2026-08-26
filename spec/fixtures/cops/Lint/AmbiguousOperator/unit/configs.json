@@ -1,0 +1,5 @@
+{
+  "1b1175c7f1299f8b": "---\nAllCops:\n  DisabledByDefault: true\n  ParserEngine: parser_prism\n  TargetRubyVersion: 3.4\nLint/AmbiguousOperator:\n  Enabled: true\n",
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
+  "9796f12cfe23efa6": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/AmbiguousOperator:\n  Description: Checks for ambiguous operators in the first argument of a method invocation\n    without parentheses.\n  StyleGuide: \"#method-invocation-parens\"\n  Enabled: true\n  VersionAdded: '0.17'\n  VersionChanged: '0.83'\n  AutoCorrect: always\n"
+}

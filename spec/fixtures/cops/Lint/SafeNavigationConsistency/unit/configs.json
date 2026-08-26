@@ -1,0 +1,4 @@
+{
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
+  "f97c0d259ae76247": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/SafeNavigationConsistency:\n  Description: Check to make sure that if safe navigation is used in an `&&` or `||`\n    condition, consistent and appropriate safe navigation, without excess or deficiency,\n    is used for all method calls on the same object.\n  Enabled: true\n  SafeAutoCorrect: false\n  VersionAdded: '0.55'\n  VersionChanged: '1.85'\n  AllowedMethods:\n  - present?\n  - blank?\n  - try\n  - presence\n  AutoCorrect: always\n"
+}

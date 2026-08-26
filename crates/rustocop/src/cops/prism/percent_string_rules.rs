@@ -67,34 +67,44 @@ fn percent_string_array(node: &ruby_prism::ArrayNode<'_>, context: &mut CopConte
     if source.len() <= opening_len + 1 {
         return;
     }
-    let content = &source[opening_len..source.len() - 1];
-    let quoted = content.split_ascii_whitespace().any(|token| {
-        let token = token.trim_end_matches(',');
-        token.len() > 2
-            && (token.starts_with('\'') && token.ends_with('\'')
-                || token.starts_with('"') && token.ends_with('"'))
+    let elements = node.elements().iter().collect::<Vec<_>>();
+    let unwanted = elements.iter().any(|element| {
+        let value = context.source_file().node(element);
+        let inspected = if element.as_interpolated_string_node().is_some() {
+            value.split("#{").next().unwrap_or(value)
+        } else {
+            value
+        };
+        let has_word = inspected.chars().any(char::is_alphanumeric);
+        has_word
+            && (inspected.ends_with(',')
+                || inspected.len() > 1
+                    && (inspected.starts_with('\'') && inspected.ends_with('\'')
+                        || inspected.starts_with('"') && inspected.ends_with('"')))
     });
-    let attached_comma = content.as_bytes().iter().enumerate().any(|(index, byte)| {
-        *byte == b',' && index > 0 && !content.as_bytes()[index - 1].is_ascii_whitespace()
-    });
-    if !quoted && !attached_comma {
+    if !unwanted {
         return;
     }
-    let clean = content
-        .chars()
-        .filter(|character| !matches!(character, '\'' | '"' | ','))
-        .collect::<String>();
-    let replacement = format!(
-        "{}{}{}",
-        context.source_file().at(&opening),
-        clean,
-        &source[source.len() - 1..]
-    );
-    context.replace(
+    let mut edits = Vec::new();
+    for element in elements {
+        let location = element.location();
+        let value = context.source_file().node(&element);
+        if value.starts_with(['\'', '"']) {
+            edits.push((location.start_offset()..location.start_offset() + 1, String::new()));
+        }
+        let mut trailing = usize::from(value.ends_with(','));
+        let without_comma = &value[..value.len() - trailing];
+        if without_comma.ends_with(['\'', '"']) {
+            trailing += 1;
+        }
+        if trailing > 0 {
+            edits.push((location.end_offset() - trailing..location.end_offset(), String::new()));
+        }
+    }
+    context.replace_many(
         "Within `%w`/`%W`, quotes and ',' are unnecessary and may be unwanted in the resulting strings.",
         node.location(),
-        node.location(),
-        replacement,
+        edits,
     );
 }
 
@@ -127,7 +137,7 @@ fn redundant_percent_q(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
     let allowed = if kind == 'q' {
         single && double || escaped_non_backslash || single && content.contains("#{")
     } else {
-        single && double || content.contains('\\') || dynamic && double
+        double && (single || dynamic || super::string_conversion_rules::double_quotes_required(source))
     };
     if allowed {
         return;

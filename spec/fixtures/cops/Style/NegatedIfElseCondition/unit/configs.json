@@ -1,0 +1,3 @@
+{
+  "6f7839faee36b525": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/NegatedIfElseCondition:\n  Description: Checks for uses of `if-else` and ternary operators with a negated condition\n    which can be simplified by inverting condition and swapping branches.\n  Enabled: true\n  VersionAdded: '1.2'\n  AutoCorrect: always\n"
+}

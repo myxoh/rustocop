@@ -1,0 +1,6 @@
+{
+  "2bfc4c3eb33f154e": "---\nLayout/IndentationWidth:\n  Width: 4\nStyle/InfiniteLoop:\n  Enabled: true\n",
+  "35ef29b31c86bf9b": "---\nAllCops:\n  DisabledByDefault: true\n  ParserEngine: parser_prism\n  TargetRubyVersion: 3.4\nStyle/InfiniteLoop:\n  Enabled: true\n",
+  "4713eb164c920e52": "---\nLayout/IndentationWidth:\n  Width: 2\nStyle/InfiniteLoop:\n  Enabled: true\n",
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n"
+}

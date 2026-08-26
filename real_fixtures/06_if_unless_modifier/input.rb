@@ -1,3 +1,0 @@
-if ready?
-  launch
-end

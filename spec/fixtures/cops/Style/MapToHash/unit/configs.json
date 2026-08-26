@@ -1,0 +1,6 @@
+{
+  "0140b215f08708fe": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/MapToHash:\n  Description: Prefer `to_h` with a block over `map.to_h`.\n  Enabled: true\n  VersionAdded: '1.24'\n  Safe: false\n  AutoCorrect: always\n",
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
+  "7f91c31d5304a0dd": "---\nAllCops:\n  TargetRubyVersion: 3.4\nStyle/MapToHash:\n  Description: Prefer `to_h` with a block over `map.to_h`.\n  Enabled: true\n  VersionAdded: '1.24'\n  Safe: false\n  AutoCorrect: always\n",
+  "89ea1b0a472e874c": "---\nAllCops:\n  TargetRubyVersion: 2.6\nStyle/MapToHash:\n  Description: Prefer `to_h` with a block over `map.to_h`.\n  Enabled: true\n  VersionAdded: '1.24'\n  Safe: false\n  AutoCorrect: always\n"
+}

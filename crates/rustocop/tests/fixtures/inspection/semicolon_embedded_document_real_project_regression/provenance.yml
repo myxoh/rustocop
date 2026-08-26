@@ -1,4 +1,0 @@
-repository: discourse/discourse
-revision: cec79c60b354e37e9a119544860123b122a995e0
-path: script/import_scripts/nabble.rb
-source_lines: 7-36

@@ -1,0 +1,4 @@
+{
+  "1feac3368a0c19d1": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/DotPosition:\n  Description: Checks the position of the dot in multi-line method calls.\n  StyleGuide: \"#consistent-multi-line-chains\"\n  Enabled: true\n  VersionAdded: '0.49'\n  EnforcedStyle: trailing\n  SupportedStyles:\n  - leading\n  - trailing\n  AutoCorrect: always\n",
+  "ad8f3340c9e6135a": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/DotPosition:\n  Description: Checks the position of the dot in multi-line method calls.\n  StyleGuide: \"#consistent-multi-line-chains\"\n  Enabled: true\n  VersionAdded: '0.49'\n  EnforcedStyle: leading\n  SupportedStyles:\n  - leading\n  - trailing\n  AutoCorrect: always\n"
+}

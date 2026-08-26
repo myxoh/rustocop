@@ -1,0 +1,4 @@
+{
+  "065a12b5031200c1": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\n",
+  "4564107f8a914c94": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/FloatComparison:\n  Description: Checks for the presence of precise comparison of floating point numbers.\n  StyleGuide: \"#float-comparison\"\n  Enabled: true\n  VersionAdded: '0.89'\n  AutoCorrect: always\n"
+}

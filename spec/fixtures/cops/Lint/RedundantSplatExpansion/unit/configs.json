@@ -1,0 +1,5 @@
+{
+  "04e9e14086a3a82e": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/RedundantSplatExpansion:\n  Description: Checks for splat unnecessarily being called on literals.\n  Enabled: true\n  VersionAdded: '0.76'\n  VersionChanged: '1.7'\n  AllowPercentLiteralArrayArgument: false\n  AutoCorrect: always\n",
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
+  "80fe0d1b3b7b9b06": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/RedundantSplatExpansion:\n  Description: Checks for splat unnecessarily being called on literals.\n  Enabled: true\n  VersionAdded: '0.76'\n  VersionChanged: '1.7'\n  AllowPercentLiteralArrayArgument: true\n  AutoCorrect: always\n"
+}

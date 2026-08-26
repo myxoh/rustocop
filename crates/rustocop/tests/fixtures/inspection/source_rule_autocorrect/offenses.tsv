@@ -1,5 +1,0 @@
-cop	line	column	last_line	last_column	correctable	corrected	message
-Style/SymbolLiteral	1	10	1	17	true	true	Do not use strings for word-like symbol literals.
-Style/ArrayIntersectWithSingleElement	2	7	2	24	true	true	Use `include?(element)` instead of `intersect?([element])`.
-Style/EnvHome	3	1	3	11	true	true	Use `Dir.home` instead.
-Style/WhenThen	5	11	5	11	true	true	Do not use `when ready;`. Use `when ready then` instead.

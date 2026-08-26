@@ -40,6 +40,9 @@ pub(super) fn negated_unless(
 
 pub(super) fn negated_while(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
     if let Some(loop_node) = node.as_while_node() {
+        if loop_node.is_begin_modifier() {
+            return;
+        }
         check_negated_loop(
             loop_node.location(),
             loop_node.keyword_loc(),
@@ -49,6 +52,9 @@ pub(super) fn negated_while(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
             context,
         );
     } else if let Some(loop_node) = node.as_until_node() {
+        if loop_node.is_begin_modifier() {
+            return;
+        }
         check_negated_loop(
             loop_node.location(),
             loop_node.keyword_loc(),
@@ -68,11 +74,10 @@ fn check_negated_loop(
     message: &str,
     context: &mut CopContext<'_, '_>,
 ) {
-    let predicate_location = predicate.location();
-    let source = context.source_file().at(&predicate_location);
-    if source.starts_with("!!") || source.contains(" && ") || source.contains(" or ") {
+    let Some(predicate_location) = single_negative_location(&predicate) else {
         return;
-    }
+    };
+    let source = context.source_file().at(&predicate_location);
     let relative = if source.starts_with("not ") {
         Some((0, 4))
     } else if source.starts_with('!') {
@@ -103,6 +108,23 @@ fn check_negated_loop(
     );
 }
 
+fn single_negative_location<'pr>(
+    predicate: &Node<'pr>,
+) -> Option<ruby_prism::Location<'pr>> {
+    if let Some(parentheses) = predicate.as_parentheses_node() {
+        let statements = parentheses.body()?.as_statements_node()?;
+        let inner = statements.body().last()?;
+        return single_negative_location(&inner);
+    }
+    let call = predicate.as_call_node()?;
+    (call.name().as_slice() == b"!"
+        && call.receiver().is_some_and(|receiver| {
+            receiver
+                .as_call_node().is_none_or(|inner| inner.name().as_slice() != b"!")
+        }))
+    .then(|| predicate.location())
+}
+
 fn check_negated_conditional(
     location: &ruby_prism::Location<'_>,
     keyword: &ruby_prism::Location<'_>,
@@ -117,14 +139,10 @@ fn check_negated_conditional(
         "postfix" if !modifier => return,
         _ => {}
     }
-    let predicate_location = predicate.location();
-    let predicate_source = context.source_file().at(&predicate_location);
-    if predicate_source.starts_with("!!")
-        || predicate_source.contains(" && ")
-        || predicate_source.contains(" or ")
-    {
+    let Some(predicate_location) = single_negative_location(predicate) else {
         return;
-    }
+    };
+    let predicate_source = context.source_file().at(&predicate_location);
     let negation = if predicate_source.starts_with("not ") {
         predicate_location.start_offset()..predicate_location.start_offset() + 4
     } else if predicate_source.starts_with('!') {

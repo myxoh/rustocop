@@ -442,3 +442,4 @@ RSpec.describe RuboCop::Cop::Layout::MultilineAssignmentLayout, :config do
     end
   end
 end
+

@@ -1,0 +1,4 @@
+{
+  "bf33ed8e650fbcb9": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/RedundantMinMaxBy:\n  Description: Identifies places where `max_by`/`min_by` can be replaced by `max`/`min`.\n  Enabled: true\n  VersionAdded: '1.85'\n  AutoCorrect: always\n",
+  "e4c613e84d8e0992": "---\nAllCops:\n  TargetRubyVersion: 3.4\nStyle/RedundantMinMaxBy:\n  Description: Identifies places where `max_by`/`min_by` can be replaced by `max`/`min`.\n  Enabled: true\n  VersionAdded: '1.85'\n  AutoCorrect: always\n"
+}

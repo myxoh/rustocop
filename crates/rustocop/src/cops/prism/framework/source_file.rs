@@ -1,6 +1,6 @@
 use std::ops::Range;
 
-use ruby_prism::{Location, Node};
+use ruby_prism::{parse, Location, Node, Visit};
 
 /// A source-relative edit used while rendering a larger correction.
 ///
@@ -236,6 +236,191 @@ impl<'source> SourceFile<'source> {
             index += 1;
         }
         offsets
+    }
+
+    /// Source ranges occupied by literals whose punctuation must not be
+    /// mistaken for Ruby syntax by source-oriented layout cops.
+    pub(super) fn literal_ranges(self) -> Vec<Range<usize>> {
+        let parsed = parse(self.source.as_bytes());
+        Self::literal_ranges_from(&parsed)
+    }
+
+    pub(super) fn literal_ranges_from(parsed: &ruby_prism::ParseResult<'_>) -> Vec<Range<usize>> {
+        struct LiteralRanges(Vec<Range<usize>>);
+
+        impl LiteralRanges {
+            fn push(&mut self, location: Location<'_>) {
+                self.0.push(location.start_offset()..location.end_offset());
+            }
+
+            fn push_delimited(
+                &mut self,
+                location: Location<'_>,
+                opening: Option<Location<'_>>,
+                closing: Option<Location<'_>>,
+            ) {
+                let start = opening.map_or(location.start_offset(), |part| part.start_offset());
+                let end = closing.map_or(location.end_offset(), |part| part.end_offset());
+                self.0.push(start..end);
+            }
+        }
+
+        impl<'pr> Visit<'pr> for LiteralRanges {
+            fn visit_string_node(&mut self, node: &ruby_prism::StringNode<'pr>) {
+                self.push_delimited(node.location(), node.opening_loc(), node.closing_loc());
+            }
+
+            fn visit_interpolated_string_node(
+                &mut self,
+                node: &ruby_prism::InterpolatedStringNode<'pr>,
+            ) {
+                self.push_delimited(node.location(), node.opening_loc(), node.closing_loc());
+                ruby_prism::visit_interpolated_string_node(self, node);
+            }
+
+            fn visit_regular_expression_node(
+                &mut self,
+                node: &ruby_prism::RegularExpressionNode<'pr>,
+            ) {
+                self.push_delimited(
+                    node.location(),
+                    Some(node.opening_loc()),
+                    Some(node.closing_loc()),
+                );
+            }
+
+            fn visit_interpolated_regular_expression_node(
+                &mut self,
+                node: &ruby_prism::InterpolatedRegularExpressionNode<'pr>,
+            ) {
+                self.push_delimited(
+                    node.location(),
+                    Some(node.opening_loc()),
+                    Some(node.closing_loc()),
+                );
+                ruby_prism::visit_interpolated_regular_expression_node(self, node);
+            }
+
+            fn visit_x_string_node(&mut self, node: &ruby_prism::XStringNode<'pr>) {
+                self.push_delimited(
+                    node.location(),
+                    Some(node.opening_loc()),
+                    Some(node.closing_loc()),
+                );
+            }
+
+            fn visit_interpolated_x_string_node(
+                &mut self,
+                node: &ruby_prism::InterpolatedXStringNode<'pr>,
+            ) {
+                self.push_delimited(
+                    node.location(),
+                    Some(node.opening_loc()),
+                    Some(node.closing_loc()),
+                );
+                ruby_prism::visit_interpolated_x_string_node(self, node);
+            }
+
+            fn visit_symbol_node(&mut self, node: &ruby_prism::SymbolNode<'pr>) {
+                self.push(node.location());
+            }
+
+            fn visit_integer_node(&mut self, node: &ruby_prism::IntegerNode<'pr>) {
+                self.push(node.location());
+            }
+
+            fn visit_float_node(&mut self, node: &ruby_prism::FloatNode<'pr>) {
+                self.push(node.location());
+            }
+
+            fn visit_rational_node(&mut self, node: &ruby_prism::RationalNode<'pr>) {
+                self.push(node.location());
+            }
+
+            fn visit_imaginary_node(&mut self, node: &ruby_prism::ImaginaryNode<'pr>) {
+                self.push(node.location());
+            }
+
+            fn visit_interpolated_symbol_node(
+                &mut self,
+                node: &ruby_prism::InterpolatedSymbolNode<'pr>,
+            ) {
+                self.push(node.location());
+                ruby_prism::visit_interpolated_symbol_node(self, node);
+            }
+
+            fn visit_array_node(&mut self, node: &ruby_prism::ArrayNode<'pr>) {
+                if node
+                    .opening_loc()
+                    .is_some_and(|opening| opening.as_slice().starts_with(b"%"))
+                {
+                    self.push(node.location());
+                } else {
+                    ruby_prism::visit_array_node(self, node);
+                }
+            }
+        }
+
+        let mut ranges = LiteralRanges(Vec::new());
+        ranges.visit(&parsed.node());
+        ranges.0
+    }
+
+    pub(super) fn heredoc_ranges(self) -> Vec<Range<usize>> {
+        let parsed = parse(self.source.as_bytes());
+        Self::heredoc_ranges_from(&parsed)
+    }
+
+    pub(super) fn heredoc_ranges_from(parsed: &ruby_prism::ParseResult<'_>) -> Vec<Range<usize>> {
+        struct HeredocRanges(Vec<Range<usize>>);
+
+        impl HeredocRanges {
+            fn push(&mut self, opening: Option<Location<'_>>, closing: Option<Location<'_>>) {
+                let (Some(opening), Some(closing)) = (opening, closing) else {
+                    return;
+                };
+                if opening.as_slice().starts_with(b"<<") {
+                    self.0.push(opening.start_offset()..closing.end_offset());
+                }
+            }
+        }
+
+        impl<'pr> Visit<'pr> for HeredocRanges {
+            fn visit_string_node(&mut self, node: &ruby_prism::StringNode<'pr>) {
+                self.push(node.opening_loc(), node.closing_loc());
+            }
+
+            fn visit_interpolated_string_node(
+                &mut self,
+                node: &ruby_prism::InterpolatedStringNode<'pr>,
+            ) {
+                self.push(node.opening_loc(), node.closing_loc());
+            }
+        }
+
+        let mut ranges = HeredocRanges(Vec::new());
+        ranges.visit(&parsed.node());
+        ranges.0
+    }
+
+    pub(super) fn comment_ranges(self) -> Vec<Range<usize>> {
+        let parsed = parse(self.source.as_bytes());
+        Self::comment_ranges_from(&parsed)
+    }
+
+    pub(super) fn comment_ranges_from(parsed: &ruby_prism::ParseResult<'_>) -> Vec<Range<usize>> {
+        parsed
+            .comments()
+            .map(|comment| {
+                let location = comment.location();
+                location.start_offset()..location.end_offset()
+            })
+            .collect()
+    }
+
+    pub(super) fn data_section_start(self) -> Option<usize> {
+        self.lines()
+            .find_map(|(offset, line)| (line.trim() == "__END__").then_some(offset))
     }
 }
 

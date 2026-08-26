@@ -1,0 +1,3 @@
+{
+  "030c040f172cf848": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/MinMaxComparison:\n  Description: Enforces the use of `max` or `min` instead of comparison for greater\n    or less.\n  Enabled: true\n  Safe: false\n  VersionAdded: '1.42'\n  AutoCorrect: always\n"
+}

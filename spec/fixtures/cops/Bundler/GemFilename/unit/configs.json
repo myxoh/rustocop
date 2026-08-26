@@ -1,0 +1,4 @@
+{
+  "99e914c5b73752da": "---\nAllCops:\n  TargetRubyVersion: 2.7\nBundler/GemFilename:\n  Description: Enforces the filename for managing gems.\n  Enabled: true\n  VersionAdded: '1.20'\n  EnforcedStyle: gems.rb\n  SupportedStyles:\n  - Gemfile\n  - gems.rb\n  Include:\n  - \"**/Gemfile\"\n  - \"**/gems.rb\"\n  - \"**/Gemfile.lock\"\n  - \"**/gems.locked\"\n  AutoCorrect: always\n",
+  "f649b0482632f751": "---\nAllCops:\n  TargetRubyVersion: 2.7\nBundler/GemFilename:\n  Description: Enforces the filename for managing gems.\n  Enabled: true\n  VersionAdded: '1.20'\n  EnforcedStyle: Gemfile\n  SupportedStyles:\n  - Gemfile\n  - gems.rb\n  Include:\n  - \"**/Gemfile\"\n  - \"**/gems.rb\"\n  - \"**/Gemfile.lock\"\n  - \"**/gems.locked\"\n  AutoCorrect: always\n"
+}

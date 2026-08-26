@@ -1,7 +1,0 @@
-repository: gitlabhq/gitlabhq
-revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
-sources:
-  - path: spec/lib/web_ide/settings/main_spec.rb
-    source_lines: 60-111
-  - path: spec/lib/gitlab/database/load_balancing/load_balancer_spec.rb
-    source_lines: 561-563

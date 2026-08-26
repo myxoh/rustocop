@@ -1,0 +1,6 @@
+{
+  "065a12b5031200c1": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\n",
+  "08a65fea9cde436f": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/IfWithBooleanLiteralBranches:\n  Description: Checks for redundant `if` with boolean literal branches.\n  Enabled: true\n  VersionAdded: '1.9'\n  SafeAutoCorrect: false\n  AllowedMethods:\n  - nonzero?\n  AutoCorrect: always\n",
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
+  "9c1e9a5cbfe614a7": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/IfWithBooleanLiteralBranches:\n  Description: Checks for redundant `if` with boolean literal branches.\n  Enabled: true\n  VersionAdded: '1.9'\n  SafeAutoCorrect: false\n  AllowedMethods:\n  - infinite?\n  - nonzero?\n  AutoCorrect: always\n"
+}

@@ -1,0 +1,4 @@
+{
+  "0e5904da195165fa": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/UselessMethodDefinition:\n  Description: Checks for useless method definitions.\n  Enabled: true\n  AutoCorrect: always\n  VersionAdded: '0.90'\n  VersionChanged: '1.61'\n  Safe: false\n",
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n"
+}

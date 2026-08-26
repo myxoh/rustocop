@@ -145,14 +145,7 @@ fn collection_compact(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
         let Some(body) = block.body() else {
             return;
         };
-        let body = context.source_file().node(&body);
-        if !body.contains("nil?") {
-            false
-        } else if matches!(method, b"reject" | b"reject!") {
-            !body.contains('!')
-        } else {
-            body.contains('!')
-        }
+        collection_compact_block_matches(&block, &body, method, context.source_file())
     };
     if !matches {
         return;
@@ -163,6 +156,36 @@ fn collection_compact(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
         offense,
         preferred,
     );
+}
+
+fn collection_compact_block_matches(
+    block: &ruby_prism::BlockNode<'_>,
+    body: &Node<'_>,
+    method: &[u8],
+    file: SourceFile<'_>,
+) -> bool {
+    let body = file.node(body).chars().filter(|ch| !ch.is_whitespace()).collect::<String>();
+    let parameter = block
+        .parameters()
+        .and_then(|parameters| parameters.as_block_parameters_node())
+        .and_then(|parameters| parameters.parameters())
+        .and_then(|parameters| parameters.requireds().last())
+        .and_then(|parameter| parameter.as_required_parameter_node())
+        .map(|parameter| String::from_utf8_lossy(parameter.name().as_slice()).into_owned())
+        .unwrap_or_else(|| {
+            if body.contains("_1") {
+                "_1".to_string()
+            } else {
+                "it".to_string()
+            }
+        });
+    let nil = format!("{parameter}.nil?");
+    let safe_nil = format!("{parameter}&.nil?");
+    if matches!(method, b"reject" | b"reject!") {
+        body == nil || body == safe_nil
+    } else {
+        body == format!("!{nil}") || body == format!("{safe_nil}&.!")
+    }
 }
 
 fn receiver_uses_allowed_name(node: &Node<'_>, context: &CopContext<'_, '_>) -> bool {
@@ -177,7 +200,7 @@ fn receiver_uses_allowed_name(node: &Node<'_>, context: &CopContext<'_, '_>) -> 
 
 fn each_with_object(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     if !matches!(node.name().as_slice(), b"inject" | b"reduce")
-        || only_argument(node).is_none_or(|argument| argument.as_hash_node().is_none())
+        || only_argument(node).is_none_or(|argument| each_with_object_basic_literal(&argument))
     {
         return;
     }
@@ -204,9 +227,7 @@ fn each_with_object(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     let accumulator = explicit.map(|(first, _)| first).unwrap_or("_1");
     if (!numbered && explicit.is_none())
         || last_source != accumulator
-        || file
-            .node(&block.as_node())
-            .contains(&format!("{accumulator} +="))
+        || accumulator_assigned_in_block(file.node(&block.as_node()), accumulator)
     {
         return;
     }
@@ -266,11 +287,43 @@ fn each_with_object(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     );
 }
 
+fn each_with_object_basic_literal(node: &Node<'_>) -> bool {
+    node.as_string_node().is_some()
+        || node.as_symbol_node().is_some()
+        || node.as_integer_node().is_some()
+        || node.as_float_node().is_some()
+        || node.as_rational_node().is_some()
+        || node.as_imaginary_node().is_some()
+        || node.as_true_node().is_some()
+        || node.as_false_node().is_some()
+        || node.as_nil_node().is_some()
+}
+
 fn two_parameters(source: &str) -> Option<(&str, &str)> {
     let source = source.strip_prefix('|')?.strip_suffix('|')?;
-    let mut parameters = source.split(',').map(str::trim);
-    let first = parameters.next()?;
-    let second = parameters.next()?;
-    (parameters.next().is_none() && !first.is_empty() && !second.is_empty())
-        .then_some((first, second))
+    let mut depth = 0_usize;
+    let mut separator = None;
+    for (index, byte) in source.bytes().enumerate() {
+        match byte {
+            b'(' | b'[' | b'{' => depth += 1,
+            b')' | b']' | b'}' => depth = depth.saturating_sub(1),
+            b',' if depth == 0 => {
+                if separator.is_some() {
+                    return None;
+                }
+                separator = Some(index);
+            }
+            _ => {}
+        }
+    }
+    let separator = separator?;
+    let first = source[..separator].trim();
+    let second = source[separator + 1..].trim();
+    (!first.is_empty() && !second.is_empty()).then_some((first, second))
+}
+
+fn accumulator_assigned_in_block(source: &str, accumulator: &str) -> bool {
+    [" =", " +=", " -=", " *=", " /=", " ||=", " &&="]
+        .iter()
+        .any(|operator| source.contains(&format!("{accumulator}{operator}")))
 }

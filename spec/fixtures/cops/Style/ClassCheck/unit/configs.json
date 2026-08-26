@@ -1,0 +1,5 @@
+{
+  "5158f77191496646": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/ClassCheck:\n  Description: Enforces consistent use of `Object#is_a?` or `Object#kind_of?`.\n  StyleGuide: \"#is-a-vs-kind-of\"\n  Enabled: true\n  VersionAdded: '0.24'\n  EnforcedStyle: kind_of?\n  SupportedStyles:\n  - is_a?\n  - kind_of?\n  AutoCorrect: always\n",
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
+  "ce00a1d823f37a81": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/ClassCheck:\n  Description: Enforces consistent use of `Object#is_a?` or `Object#kind_of?`.\n  StyleGuide: \"#is-a-vs-kind-of\"\n  Enabled: true\n  VersionAdded: '0.24'\n  EnforcedStyle: is_a?\n  SupportedStyles:\n  - is_a?\n  - kind_of?\n  AutoCorrect: always\n"
+}

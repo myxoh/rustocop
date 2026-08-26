@@ -28,37 +28,45 @@ fn empty_node(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
     let parent_source = parent
         .map(|parent| context.source_file().at(&parent.location()))
         .unwrap_or_default();
-    let lambda_or_proc = parent_source.trim_start().starts_with("->")
-        || parent_source.trim_start().starts_with("lambda")
-        || parent_source.trim_start().starts_with("proc")
-        || parent_source.trim_start().starts_with("Proc.new")
-        || parent_source.trim_start().starts_with("::Proc.new");
+    let parent_source = parent_source.trim_start();
+    let named_proc = ["lambda", "proc", "Proc.new", "::Proc.new"]
+        .iter()
+        .any(|name| {
+            parent_source.strip_prefix(name).is_some_and(|rest| {
+                rest.starts_with(|character: char| {
+                    character.is_whitespace() || matches!(character, '(' | '{')
+                })
+            })
+        });
+    let lambda_or_proc = parent_source.starts_with("->") || named_proc;
     if lambda_or_proc && context.config_bool("AllowEmptyLambdas", true) {
         return;
     }
     let location = parent.map_or_else(|| node.location(), Node::location);
-    let line_start = context.source_file().line_start(location.start_offset());
+    let file = context.source_file();
+    let line_start = file.line_start(location.start_offset());
     let line_end = context.source()[line_start..]
         .find('\n')
         .map_or(context.source().len(), |at| line_start + at);
-    let line = &context.source()[line_start..line_end];
-    let block_source = context.source_file().at(&node.location());
-    let inline_comment = node.location().end_offset() <= line_end
-        && line[node.location().end_offset().saturating_sub(line_start)..].contains('#');
-    if context.config_bool("AllowComments", true) && (block_source.contains('#') || inline_comment)
-    {
-        return;
+    if context.config_bool("AllowComments", true) {
+        let block_location = node.location();
+        let comment = file.comment_ranges().into_iter().find(|comment| {
+            block_location.start_offset() <= comment.start
+                && comment.end <= block_location.end_offset()
+                || block_location.end_offset() <= comment.start && comment.start < line_end
+        });
+        if comment.is_some_and(|comment| {
+            let text = file.slice(comment).unwrap_or_default();
+            !text.contains("rubocop:disable Lint/EmptyBlock")
+                && !text.contains("rubocop:todo Lint/EmptyBlock")
+                && !text.contains("rubocop:disable all")
+                && !text.contains("rubocop:todo all")
+        }) {
+            return;
+        }
     }
     let start = location.start_offset();
-    let end = if lambda_or_proc && block_source.contains('\n')
-        || block_source.contains('#') && !context.config_bool("AllowComments", true)
-    {
-        location.end_offset()
-    } else if block_source.contains('\n') {
-        line_end
-    } else {
-        node.location().end_offset()
-    };
+    let end = location.end_offset();
     context.report("Empty block detected.", start..end);
 }
 
@@ -77,11 +85,7 @@ fn missing_super(node: &ruby_prism::DefNode<'_>, context: &mut CopContext<'_, '_
     if name != b"initialize" && !callback {
         return;
     }
-    let method_source = context.source_file().at(&node.location());
-    if method_source
-        .split(|character: char| !character.is_ascii_alphanumeric() && character != '_')
-        .any(|word| word == "super")
-    {
+    if contains_super(node) {
         return;
     }
     let allowed_parent = |parent: &str| {
@@ -96,26 +100,26 @@ fn missing_super(node: &ruby_prism::DefNode<'_>, context: &mut CopContext<'_, '_
         .iter()
         .rev()
         .find_map(Node::as_class_node);
-    let class_new = context.ancestors().iter().rev().find_map(|ancestor| {
-        let call = ancestor.as_call_node()?;
-        (call_name(&call) == b"new" && root_constant(call.receiver(), b"Class")).then_some(call)
-    });
     let applies = if callback {
-        in_class.is_some()
-    } else if let Some(call) = class_new {
-        first_argument(&call)
-            .is_some_and(|parent| !allowed_parent(node_source(context.source(), &parent)))
-    } else if let Some(class) = in_class {
-        let nested_block = context
-            .ancestors()
-            .iter()
-            .rev()
-            .take_while(|ancestor| ancestor.as_class_node().is_none())
-            .any(|ancestor| ancestor.as_block_node().is_some());
-        !nested_block
-            && class
-                .superclass()
+        context.ancestors().iter().rev().any(|ancestor| {
+            ancestor.as_class_node().is_some()
+                || ancestor.as_singleton_class_node().is_some()
+                || ancestor.as_module_node().is_some()
+        })
+    } else if let Some(block) = context
+        .ancestors()
+        .iter()
+        .rev()
+        .find_map(Node::as_block_node)
+    {
+        class_new_call_for_block(&block, context).is_some_and(|call| {
+            first_argument(&call)
                 .is_some_and(|parent| !allowed_parent(node_source(context.source(), &parent)))
+        })
+    } else if let Some(class) = in_class {
+        class
+            .superclass()
+            .is_some_and(|parent| !allowed_parent(node_source(context.source(), &parent)))
     } else {
         false
     };
@@ -128,4 +132,39 @@ fn missing_super(node: &ruby_prism::DefNode<'_>, context: &mut CopContext<'_, '_
         "Call `super` to invoke callback defined in the parent class."
     };
     context.report(message, node.location());
+}
+
+fn class_new_call_for_block<'pr>(
+    block: &ruby_prism::BlockNode<'pr>,
+    context: &CopContext<'_, 'pr>,
+) -> Option<ruby_prism::CallNode<'pr>> {
+    context.ancestors().iter().rev().find_map(|ancestor| {
+        let call = ancestor.as_call_node()?;
+        let call_block = call.block()?;
+        let same_block = call_block.location().start_offset() == block.location().start_offset()
+            && call_block.location().end_offset() == block.location().end_offset();
+        (same_block && call_name(&call) == b"new" && root_constant(call.receiver(), b"Class"))
+            .then_some(call)
+    })
+}
+
+fn contains_super(node: &ruby_prism::DefNode<'_>) -> bool {
+    struct SuperFinder(bool);
+
+    impl<'pr> Visit<'pr> for SuperFinder {
+        fn visit_super_node(&mut self, _node: &ruby_prism::SuperNode<'pr>) {
+            self.0 = true;
+        }
+
+        fn visit_forwarding_super_node(&mut self, _node: &ruby_prism::ForwardingSuperNode<'pr>) {
+            self.0 = true;
+        }
+    }
+
+    let Some(body) = node.body() else {
+        return false;
+    };
+    let mut finder = SuperFinder(false);
+    finder.visit(&body);
+    finder.0
 }

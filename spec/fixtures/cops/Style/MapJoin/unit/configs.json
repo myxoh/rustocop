@@ -1,0 +1,4 @@
+{
+  "09ac0ef19e2968c5": "---\nAllCops:\n  TargetRubyVersion: 3.4\nStyle/MapJoin:\n  Description: Checks for redundant `map(&:to_s)` before `join`.\n  Enabled: true\n  Safe: false\n  VersionAdded: '1.85'\n  AutoCorrect: always\n",
+  "bfff981e3b445f60": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/MapJoin:\n  Description: Checks for redundant `map(&:to_s)` before `join`.\n  Enabled: true\n  Safe: false\n  VersionAdded: '1.85'\n  AutoCorrect: always\n"
+}

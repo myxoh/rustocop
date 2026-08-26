@@ -7,68 +7,47 @@ use project_files::*;
 
 declare_source_cops! {
     AddRuntimeDependency => "Gemspec/AddRuntimeDependency" => add_runtime_dependency,
-    ArrayIntersect => "Style/ArrayIntersectWithSingleElement" => array_intersect,
     ClassAndModuleCamelCase => "Naming/ClassAndModuleCamelCase" => camel_case,
-    ArrayCoercion => "Style/ArrayCoercion" => array_coercion,
     ClassMethods => "Style/ClassMethods" => class_methods,
-    RedundantCapitalW => "Style/RedundantCapitalW" => redundant_capital_w,
     DuplicateElsifCondition => "Lint/DuplicateElsifCondition" => duplicate_elsif,
-    EnsureReturn => "Lint/EnsureReturn" => ensure_return,
-    ClassVars => "Style/ClassVars" => class_vars,
     DuplicatedGem => "Bundler/DuplicatedGem" => duplicated_gem,
 }
 
 fn add_runtime_dependency(source: &str, context: &mut Reporter<'_>) {
-    for dot in find_all(source, ".add_runtime_dependency") {
+    if !context.path().ends_with("(string)") && !context.path().ends_with(".gemspec") {
+        return;
+    }
+    const METHOD: &str = "add_runtime_dependency";
+    for (offset, line) in source_lines(source) {
+        let Some(dot) = line.find(&format!(".{METHOD}")) else {
+            continue;
+        };
         let start = dot + 1;
-        let end = start + "add_runtime_dependency".len();
-        if source.as_bytes().get(end) == Some(&b'(') {
+        let end = start + METHOD.len();
+        let after = line[end..].trim_start();
+        let has_argument = if let Some(arguments) = after.strip_prefix('(') {
+            arguments
+                .split_once(')')
+                .is_some_and(|(arguments, _)| !arguments.trim().is_empty())
+        } else {
+            !after.is_empty() && !after.starts_with('#')
+        };
+        if has_argument {
             context.replace(
                 "Use `add_dependency` instead of `add_runtime_dependency`.",
-                start..end,
-                start..end,
+                offset + start..offset + end,
+                offset + start..offset + end,
                 "add_dependency",
             );
         }
     }
 }
 
-fn array_intersect(source: &str, context: &mut Reporter<'_>) {
-    for start in find_all(source, ".intersect?(") {
-        if start > 0 && source.as_bytes()[start - 1] == b'&' {
-            continue;
-        }
-        let argument_start = start + ".intersect?(".len();
-        let Some(relative_end) = source[argument_start..].find(')') else {
-            continue;
-        };
-        let end = argument_start + relative_end + 1;
-        let argument = &source[argument_start..end - 1];
-        let element = if argument.starts_with('[')
-            && argument.ends_with(']')
-            && !argument[1..argument.len() - 1].contains(',')
-        {
-            Some(argument[1..argument.len() - 1].to_string())
-        } else if argument.starts_with("%i[")
-            && argument.ends_with(']')
-            && !argument[3..argument.len() - 1].contains(' ')
-        {
-            Some(format!(":{}", &argument[3..argument.len() - 1]))
-        } else {
-            None
-        };
-        if let Some(element) = element {
-            context.replace(
-                "Use `include?(element)` instead of `intersect?([element])`.",
-                start + 1..end,
-                start..end,
-                format!(".include?({element})"),
-            );
-        }
-    }
-}
-
 fn camel_case(source: &str, context: &mut Reporter<'_>) {
+    let file = SourceFile::new(source);
+    let class_offsets = file.code_offsets("class");
+    let module_offsets = file.code_offsets("module");
+    let heredocs = file.heredoc_ranges();
     for (offset, line) in source_lines(source) {
         let trimmed = line.trim_start();
         let keyword = if trimmed.starts_with("class ") {
@@ -79,6 +58,19 @@ fn camel_case(source: &str, context: &mut Reporter<'_>) {
             continue;
         };
         let leading = line.len() - trimmed.len();
+        let lexical = if keyword == "class " {
+            &class_offsets
+        } else {
+            &module_offsets
+        };
+        let keyword_offset = offset + leading;
+        if lexical.binary_search(&keyword_offset).is_err()
+            || heredocs
+                .iter()
+                .any(|heredoc| heredoc.start <= keyword_offset && keyword_offset < heredoc.end)
+        {
+            continue;
+        }
         let name_start = leading + keyword.len();
         let name = line[name_start..]
             .split_whitespace()
@@ -96,170 +88,112 @@ fn camel_case(source: &str, context: &mut Reporter<'_>) {
     }
 }
 
-fn array_coercion(source: &str, context: &mut Reporter<'_>) {
-    for start in find_all(source, "[*") {
-        let Some(end_rel) = source[start + 2..].find(']') else {
-            continue;
-        };
-        let end = start + 2 + end_rel + 1;
-        let value = &source[start + 2..end - 1];
-        if !value.contains(',') {
-            context.replace(
-                format!("Use `Array({value})` instead of `[*{value}]`."),
-                start..end,
-                start..end,
-                format!("Array({value})"),
-            );
-        }
-    }
-    for (offset, line) in source_lines(source) {
-        let Some((left, rest)) = line.split_once(" = [") else {
-            continue;
-        };
-        let value = left.trim();
-        let pattern = format!("] unless {value}.is_a?(Array)");
-        if rest == format!("{value}{pattern}") {
-            context.replace(
-                format!("Use `Array({value})` instead of explicit `Array` check."),
-                offset..offset + line.len(),
-                offset..offset + line.len(),
-                format!("{value} = Array({value})"),
-            );
-        }
-    }
-}
-
 fn class_methods(source: &str, context: &mut Reporter<'_>) {
-    let mut owner: Option<String> = None;
-    for (offset, line) in source_lines(source) {
-        let trimmed = line.trim();
-        if let Some(name) = trimmed
-            .strip_prefix("class ")
-            .or_else(|| trimmed.strip_prefix("module "))
-        {
-            owner = Some(
-                name.split_whitespace()
-                    .next()
-                    .unwrap_or_default()
-                    .to_string(),
-            );
-            continue;
-        }
-        let Some(owner_name) = owner.as_deref() else {
-            continue;
-        };
-        let needle = format!("def {owner_name}.");
-        if let Some(start) = line.find(&needle) {
-            let receiver = offset + start + 4..offset + start + 4 + owner_name.len();
-            let method = line[start + needle.len()..]
-                .split_whitespace()
-                .next()
-                .unwrap_or_default();
-            context.replace(
-                format!("Use `self.{method}` instead of `{owner_name}.{method}`."),
-                receiver.clone(),
-                receiver,
-                "self",
-            );
+    struct ClassMethodVisitor<'source> {
+        source: &'source str,
+        offenses: Vec<(std::ops::Range<usize>, String, String)>,
+    }
+
+    impl ClassMethodVisitor<'_> {
+        fn check_scope(&mut self, owner: &Node<'_>, body: Option<Node<'_>>) {
+            let Some(statements) = body.and_then(|body| body.as_statements_node()) else {
+                return;
+            };
+            let owner_source = source_at(self.source, &owner.location());
+            for statement in statements.body().iter() {
+                let Some(definition) = statement.as_def_node() else {
+                    continue;
+                };
+                let Some(receiver) = definition.receiver() else {
+                    continue;
+                };
+                if source_at(self.source, &receiver.location()) != owner_source {
+                    continue;
+                }
+                self.offenses.push((
+                    receiver.location().start_offset()..receiver.location().end_offset(),
+                    owner_source.to_string(),
+                    String::from_utf8_lossy(definition.name().as_slice()).into_owned(),
+                ));
+            }
         }
     }
-}
 
-fn redundant_capital_w(source: &str, context: &mut Reporter<'_>) {
-    for start in find_all(source, "%W") {
-        let Some(open) = source.as_bytes().get(start + 2).copied() else {
-            continue;
-        };
-        let close = match open {
-            b'(' => ')',
-            b'[' => ']',
-            b'{' => '}',
-            _ => continue,
-        };
-        let Some(relative_end) = source[start + 3..].find(close) else {
-            continue;
-        };
-        let end = start + 3 + relative_end + 1;
-        let body = &source[start + 3..end - 1];
-        if !body.contains("#{") && !body.contains('\\') {
-            context.replace(
-                "Do not use `%W` unless interpolation is needed. If not, use `%w`.",
-                start..end,
-                start + 1..start + 2,
-                "w",
-            );
+    impl<'pr> Visit<'pr> for ClassMethodVisitor<'_> {
+        fn visit_class_node(&mut self, node: &ruby_prism::ClassNode<'pr>) {
+            self.check_scope(&node.constant_path(), node.body());
+            ruby_prism::visit_class_node(self, node);
         }
+
+        fn visit_module_node(&mut self, node: &ruby_prism::ModuleNode<'pr>) {
+            self.check_scope(&node.constant_path(), node.body());
+            ruby_prism::visit_module_node(self, node);
+        }
+    }
+
+    let parsed = ruby_prism::parse(source.as_bytes());
+    let mut visitor = ClassMethodVisitor {
+        source,
+        offenses: Vec::new(),
+    };
+    visitor.visit(&parsed.node());
+    for (receiver, owner, method) in visitor.offenses {
+        context.replace(
+            format!("Use `self.{method}` instead of `{owner}.{method}`."),
+            receiver.clone(),
+            receiver,
+            "self",
+        );
     }
 }
 
 fn duplicate_elsif(source: &str, context: &mut Reporter<'_>) {
-    let mut seen = HashSet::new();
-    for (offset, line) in source_lines(source) {
-        let trimmed = line.trim_start();
-        if let Some(condition) = trimmed.strip_prefix("if ") {
-            seen.clear();
-            seen.insert(condition.to_string());
-        } else if let Some(condition) = trimmed.strip_prefix("elsif ") {
-            let start = offset + line.len() - trimmed.len() + 6;
-            if !seen.insert(condition.to_string()) {
-                context.report(
-                    "Duplicate `elsif` condition detected.",
-                    start..start + condition.len(),
-                );
+    struct DuplicateElsifVisitor<'source> {
+        source: &'source str,
+        offenses: Vec<std::ops::Range<usize>>,
+    }
+    impl<'pr> Visit<'pr> for DuplicateElsifVisitor<'_> {
+        fn visit_if_node(&mut self, node: &ruby_prism::IfNode<'pr>) {
+            if node
+                .if_keyword_loc()
+                .is_some_and(|keyword| keyword.as_slice() == b"if")
+            {
+                let predicate = node.predicate().location();
+                let mut seen = HashSet::from([self.source
+                    [predicate.start_offset()..predicate.end_offset()]
+                    .to_string()]);
+                let mut subsequent = node.subsequent();
+                while let Some(elsif) = subsequent.and_then(|branch| branch.as_if_node()) {
+                    if !elsif
+                        .if_keyword_loc()
+                        .is_some_and(|keyword| keyword.as_slice() == b"elsif")
+                    {
+                        break;
+                    }
+                    let predicate = elsif.predicate().location();
+                    let source = self.source[predicate.start_offset()..predicate.end_offset()]
+                        .to_string();
+                    if !seen.insert(source) {
+                        self.offenses
+                            .push(predicate.start_offset()..predicate.end_offset());
+                    }
+                    subsequent = elsif.subsequent();
+                }
             }
-        } else if trimmed == "end" {
-            seen.clear();
+            ruby_prism::visit_if_node(self, node);
         }
     }
-}
 
-fn ensure_return(source: &str, context: &mut Reporter<'_>) {
-    let mut in_ensure = false;
-    for (offset, line) in source_lines(source) {
-        let trimmed = line.trim();
-        if trimmed == "ensure" {
-            in_ensure = true;
-            continue;
-        }
-        if trimmed == "end" {
-            in_ensure = false;
-        }
-        if in_ensure && (trimmed == "return" || trimmed.starts_with("return ")) {
-            let start = offset + line.len() - line.trim_start().len();
-            context.report(
-                "Do not return from an `ensure` block.",
-                start..offset + line.len(),
-            );
-        }
+    let parsed = ruby_prism::parse(source.as_bytes());
+    let mut visitor = DuplicateElsifVisitor {
+        source,
+        offenses: Vec::new(),
+    };
+    visitor.visit(&parsed.node());
+    visitor.offenses.sort_by_key(|range| range.start);
+    for range in visitor.offenses {
+        context.report("Duplicate `elsif` condition detected.", range);
     }
-}
-
-fn class_vars(source: &str, context: &mut Reporter<'_>) {
-    for start in find_all(source, "@@") {
-        let end = start
-            + source[start..]
-                .bytes()
-                .take_while(|byte| byte.is_ascii_alphanumeric() || *byte == b'@' || *byte == b'_')
-                .count();
-        let prefix = &source[..start];
-        let assignment = source[end..].trim_start().starts_with('=');
-        let setter = prefix.ends_with(':') && prefix.rsplit_once("class_variable_set(").is_some();
-        if assignment || setter {
-            let offense_start = if setter { start - 1 } else { start };
-            let name = &source[offense_start..end];
-            context.report(
-                format!("Replace class var {name} with a class instance var."),
-                offense_start..end,
-            );
-        }
-    }
-}
-
-fn find_all(source: &str, needle: &str) -> Vec<usize> {
-    source
-        .match_indices(needle)
-        .map(|(offset, _)| offset)
-        .collect()
 }
 
 fn source_lines(source: &str) -> impl Iterator<Item = (usize, &str)> {

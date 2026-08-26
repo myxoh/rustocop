@@ -1,7 +1,7 @@
 use super::*;
 
 define_cops! {
-    ClosingHeredocIndentation => "Layout/ClosingHeredocIndentation" => source(closing_heredoc_indentation),
+    ClosingHeredocIndentation => "Layout/ClosingHeredocIndentation" => any_node(closing_heredoc_indentation),
     Encoding => "Style/Encoding" => source(encoding),
     DisableCopsWithinSourceCodeDirective => "Style/DisableCopsWithinSourceCodeDirective" => source(disable_cops_within_source_code_directive),
     RedundantHeredocDelimiterQuotes => "Style/RedundantHeredocDelimiterQuotes" => source(redundant_heredoc_delimiter_quotes),
@@ -9,9 +9,19 @@ define_cops! {
 
 fn redundant_heredoc_delimiter_quotes(context: &mut CopContext<'_, '_>) {
     let source = context.source();
+    let heredoc_starts = context
+        .source_file()
+        .literal_ranges()
+        .into_iter()
+        .filter_map(|range| source[range.clone()].starts_with("<<").then_some(range.start))
+        .collect::<std::collections::HashSet<_>>();
     let mut search_from = 0;
     while let Some(relative) = source[search_from..].find("<<") {
         let start = search_from + relative;
+        if !heredoc_starts.contains(&start) {
+            search_from = start + 2;
+            continue;
+        }
         let bytes = source.as_bytes();
         let mut quote_offset = start + 2;
         if matches!(bytes.get(quote_offset), Some(b'~' | b'-')) {
@@ -51,7 +61,7 @@ fn redundant_heredoc_delimiter_quotes(context: &mut CopContext<'_, '_>) {
         if body.contains("#{")
             || body.contains("#@")
             || body.contains("#$")
-            || body.lines().any(|line| line.ends_with('\\'))
+            || body.contains('\\')
         {
             search_from = close + 1;
             continue;
@@ -68,43 +78,87 @@ fn redundant_heredoc_delimiter_quotes(context: &mut CopContext<'_, '_>) {
     }
 }
 
-fn closing_heredoc_indentation(context: &mut CopContext<'_, '_>) {
-    let lines = context.source_file().lines().collect::<Vec<_>>();
-    for (index, (_, line)) in lines.iter().enumerate() {
-        let Some(marker) = line.find("<<-") else {
-            continue;
-        };
-        let identifier = line[marker + 3..]
-            .chars()
-            .take_while(|character| character.is_ascii_alphanumeric() || *character == '_')
-            .collect::<String>();
-        if identifier.is_empty() {
-            continue;
-        }
-        let opening_indent = line.len() - line.trim_start().len();
-        let expression_indent = if index > 0 && lines[index - 1].1.trim_end().ends_with(',') {
-            lines[index - 1].1.len() - lines[index - 1].1.trim_start().len()
-        } else {
-            opening_indent
-        };
-        let Some((closing_offset, closing_line)) = lines[index + 1..]
-            .iter()
-            .find(|(_, candidate)| candidate.trim() == identifier)
-        else {
-            continue;
-        };
-        let closing_indent = closing_line.len() - closing_line.trim_start().len();
-        if closing_indent == opening_indent || closing_indent == expression_indent {
-            continue;
-        }
-        let offense = *closing_offset..closing_offset + closing_indent + identifier.len();
-        context.replace(
-            format!("`{identifier}` is not aligned with `<<-{identifier}`."),
-            offense,
-            *closing_offset..closing_offset + closing_indent,
-            " ".repeat(opening_indent),
-        );
+fn closing_heredoc_indentation(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
+    let (opening, closing) = if let Some(string) = node.as_string_node() {
+        (string.opening_loc(), string.closing_loc())
+    } else if let Some(string) = node.as_interpolated_string_node() {
+        (string.opening_loc(), string.closing_loc())
+    } else {
+        return;
+    };
+    let (Some(opening), Some(closing)) = (opening, closing) else {
+        return;
+    };
+    if !matches!(opening.as_slice(), [b'<', b'<', b'-' | b'~', ..]) {
+        return;
     }
+
+    let file = context.source_file();
+    let opening_line = file.line(opening.start_offset());
+    let closing_line = file.line(closing.start_offset());
+    let opening_indent = opening_line.len() - opening_line.trim_start().len();
+    let closing_indent = closing_line.len() - closing_line.trim_start().len();
+    if opening_indent == closing_indent {
+        return;
+    }
+
+    let heredoc_start = opening.start_offset();
+    let mut argument = false;
+    let mut chained = false;
+    let mut outer_call = None;
+    let ancestors = context.ancestors();
+    let mut direct_call = None;
+    for (index, ancestor) in ancestors.iter().enumerate().rev() {
+        if ancestor.as_arguments_node().is_some() {
+            continue;
+        }
+        direct_call = ancestor.as_call_node().map(|call| (index, call));
+        break;
+    }
+    if let Some((call_index, call)) = direct_call {
+        let contains = |location: ruby_prism::Location<'_>| {
+            location.start_offset() <= heredoc_start && heredoc_start < location.end_offset()
+        };
+        argument = call
+            .arguments()
+            .is_some_and(|arguments| contains(arguments.location()));
+        chained = call
+            .receiver()
+            .is_some_and(|receiver| contains(receiver.location()));
+        if argument || chained {
+            outer_call = Some(call);
+            for ancestor in ancestors[..call_index].iter().rev() {
+                if ancestor.as_arguments_node().is_some() {
+                    continue;
+                }
+                let Some(parent_call) = ancestor.as_call_node() else {
+                    break;
+                };
+                outer_call = Some(parent_call);
+            }
+        }
+    }
+    if let Some(call) = outer_call {
+        let call_indent = file.indentation(call.location().start_offset()).len();
+        if (argument || chained) && closing_indent == call_indent {
+            return;
+        }
+    }
+
+    let identifier = closing_line.trim();
+    let opening_text = opening_line.trim();
+    let suffix = if argument {
+        " or beginning of method definition"
+    } else {
+        ""
+    };
+    let closing_start = file.line_start(closing.start_offset());
+    context.replace(
+        format!("`{identifier}` is not aligned with `{opening_text}`{suffix}."),
+        closing_start..closing_start + closing_indent + identifier.len(),
+        closing_start..closing_start + closing_indent,
+        " ".repeat(opening_indent),
+    );
 }
 
 fn encoding(context: &mut CopContext<'_, '_>) {
@@ -176,19 +230,42 @@ fn encoding_comment_without_encoding(text: &str, lower: &str) -> String {
 
 fn disable_cops_within_source_code_directive(context: &mut CopContext<'_, '_>) {
     let allowed = context.config_values("AllowedCops").to_vec();
-    for (offset, line) in context.source_file().lines() {
-        let Some(comment_start) = comment_start(line) else {
-            continue;
-        };
-        let comment = &line[comment_start..];
+    let source = context.source();
+    let mut all_disabled = false;
+    for range in context.source_file().comment_ranges() {
+        let comment = source.get(range.clone()).unwrap_or_default();
         let Some((command, list)) = directive(comment) else {
             continue;
         };
         let cops = list.split(',').map(str::trim).collect::<Vec<_>>();
+        let disables_this_cop = matches!(command, "disable" | "todo")
+            && cops.iter().any(|cop| {
+                cop.split_whitespace()
+                    .next()
+                    .map(|name| name.trim_matches(|character: char| {
+                        !character.is_alphanumeric() && !matches!(character, '_' | '/')
+                    }))
+                    == Some("Style/DisableCopsWithinSourceCodeDirective")
+            });
+        if disables_this_cop
+            && !context.related_config_explicit(
+                "Style/DisableCopsWithinSourceCodeDirective",
+                "Enabled",
+            )
+        {
+            continue;
+        }
+        if command == "enable" && cops.contains(&"all") && all_disabled {
+            all_disabled = false;
+            continue;
+        }
+        if command == "disable" && cops.contains(&"all") {
+            all_disabled = true;
+        }
         let disallowed = cops
             .iter()
             .copied()
-            .filter(|cop| !allowed.iter().any(|allowed| allowed == cop))
+            .filter(|cop| !cop.is_empty() && !allowed.iter().any(|allowed| allowed == cop))
             .collect::<Vec<_>>();
         if disallowed.is_empty() {
             continue;
@@ -211,32 +288,25 @@ fn disable_cops_within_source_code_directive(context: &mut CopContext<'_, '_>) {
         } else {
             format!("# rubocop:{command} {}", retained.join(", "))
         };
-        let range = offset + comment_start..offset + line.len();
         context.replace(message, range.clone(), range, replacement);
     }
 }
 
 fn directive(comment: &str) -> Option<(&str, &str)> {
-    let body = comment.strip_prefix("# rubocop:")?;
-    let (command, cops) = body.trim().split_once(' ')?;
-    matches!(command, "disable" | "enable").then_some((command, cops.trim()))
-}
-
-fn comment_start(line: &str) -> Option<usize> {
-    let mut quote = None;
-    let mut escaped = false;
-    for (index, byte) in line.bytes().enumerate() {
-        if escaped {
-            escaped = false;
-        } else if byte == b'\\' {
-            escaped = quote.is_some();
-        } else if Some(byte) == quote {
-            quote = None;
-        } else if quote.is_none() && matches!(byte, b'\'' | b'"') {
-            quote = Some(byte);
-        } else if quote.is_none() && byte == b'#' {
-            return Some(index);
-        }
+    let marker = comment.find("rubocop")?;
+    let before_marker = &comment[..marker];
+    let directive_hash = before_marker.trim_end().strip_suffix('#')?;
+    if directive_hash.starts_with('#')
+        && directive_hash[1..].chars().all(char::is_whitespace)
+    {
+        return None;
     }
-    None
+    let after_marker = comment[marker + "rubocop".len()..].trim_start();
+    let body = after_marker.strip_prefix(':')?;
+    let (command, cops) = body.trim().split_once(' ')?;
+    let cops = cops.split_once(" -- ").map_or(cops, |(cops, _)| cops).trim();
+    if cops.starts_with('.') {
+        return None;
+    }
+    matches!(command, "disable" | "enable" | "todo").then_some((command, cops))
 }

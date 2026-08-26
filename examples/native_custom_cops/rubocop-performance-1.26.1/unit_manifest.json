@@ -1,0 +1,38 @@
+{
+  "rubocop_version": "rubocop-performance 1.26.1 / rubocop 1.87.0",
+  "plugin": "rubocop-performance",
+  "plugin_version": "1.26.1",
+  "definition_sha256": "0010c2507ea7dcb17c8e258be7f8ac0986063560e8c004908a047579a7fd9d6e",
+  "cops": {
+    "Performance/RedundantSortBlock": {
+      "cases": "contracts/Performance/RedundantSortBlock/cases.jsonl",
+      "cases_sha256": "294560d0ebc6dabd292cdd1ecb86a647efc84b217c1273b56e11120f0c622f0f",
+      "configs": "contracts/Performance/RedundantSortBlock/configs.json",
+      "configs_sha256": "2346c30c94dcaea255d53b815dd24cdd37e67f32bb25c6d4d1981ae762656942"
+    },
+    "Performance/ReverseEach": {
+      "cases": "contracts/Performance/ReverseEach/cases.jsonl",
+      "cases_sha256": "2eec8e15957f7a7affc91050026634ff292f4a385c19c2091afe365f4c77cee4",
+      "configs": "contracts/Performance/ReverseEach/configs.json",
+      "configs_sha256": "e6db85fe2dfc85b3e2e8a7eacf0a8c8aaf8883268eaa3402117df629ab2fa7b7"
+    },
+    "Performance/ReverseFirst": {
+      "cases": "contracts/Performance/ReverseFirst/cases.jsonl",
+      "cases_sha256": "f36d2645fcd967f0fefea2ead48f314f172b946a07a4cd7d9e0551ef47b991fa",
+      "configs": "contracts/Performance/ReverseFirst/configs.json",
+      "configs_sha256": "76c8259a5d3c87d5a04823f81d30c69ef0fe88077df8804e970934c579a65acb"
+    },
+    "Performance/Size": {
+      "cases": "contracts/Performance/Size/cases.jsonl",
+      "cases_sha256": "0dc7760314c0cc5299dad930fe968013b25a22ddf36deeec27ff7240c4d2fe60",
+      "configs": "contracts/Performance/Size/configs.json",
+      "configs_sha256": "005662050f82f946ae87df972f48870ac30effd9779706ad19a3bfaa298d5a1e"
+    },
+    "Performance/StringBytesize": {
+      "cases": "contracts/Performance/StringBytesize/cases.jsonl",
+      "cases_sha256": "2dbfd100efda28e870ec06c2676be7b82cc9bc326636d5f712a38cb512ab98c8",
+      "configs": "contracts/Performance/StringBytesize/configs.json",
+      "configs_sha256": "8f38d36fa14a21a2ec3a164455ce712bc310397176d900fb756cbe4eeea69c24"
+    }
+  }
+}

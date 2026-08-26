@@ -55,9 +55,14 @@ fn unless_logical_operators(node: &ruby_prism::UnlessNode<'_>, context: &mut Cop
         .policy()
         .enforced_style("forbid_mixed_logical_operators")
         .to_string();
-    let message = if style == "forbid_logical_operators" && !operators.tokens.is_empty() {
+    let predicate = node.predicate();
+    let root_logical = predicate.as_and_node().is_some() || predicate.as_or_node().is_some();
+    let message = if style == "forbid_logical_operators" && root_logical {
         "Do not use any logical operator in an `unless`."
-    } else if style == "forbid_mixed_logical_operators" && operators.tokens.len() > 1 {
+    } else if style == "forbid_mixed_logical_operators"
+        && root_logical
+        && operators.tokens.len() > 1
+    {
         "Do not use mixed logical operators in an `unless`."
     } else {
         return;

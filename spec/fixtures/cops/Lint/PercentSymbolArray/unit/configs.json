@@ -1,0 +1,3 @@
+{
+  "818feef84ea66669": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/PercentSymbolArray:\n  Description: Checks for unwanted commas and colons in %i/%I literals.\n  Enabled: true\n  VersionAdded: '0.41'\n  AutoCorrect: always\n"
+}

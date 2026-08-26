@@ -1,0 +1,3 @@
+{
+  "bb136155ba316c3f": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/NumberedParameterAssignment:\n  Description: Checks for uses of numbered parameter assignment.\n  Enabled: true\n  VersionAdded: '1.9'\n  AutoCorrect: always\n"
+}

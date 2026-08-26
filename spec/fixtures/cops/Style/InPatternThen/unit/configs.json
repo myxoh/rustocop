@@ -1,0 +1,4 @@
+{
+  "0e24fa83937929ae": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/InPatternThen:\n  Description: Checks for `in;` uses in `case` expressions.\n  StyleGuide: \"#no-in-pattern-semicolons\"\n  Enabled: true\n  VersionAdded: '1.16'\n  AutoCorrect: always\n",
+  "937df91abd44face": "---\nAllCops:\n  DisabledByDefault: true\n  ParserEngine: parser_prism\n  TargetRubyVersion: 3.4\nStyle/InPatternThen:\n  Enabled: true\n"
+}

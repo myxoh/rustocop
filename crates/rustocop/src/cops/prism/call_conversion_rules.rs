@@ -67,7 +67,20 @@ fn lambda_call(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     } else {
         format!("{receiver_source}{operator}({arguments})")
     };
-    let current = context.source_file().node(&node.as_node());
+    let invocation = node.location().start_offset()
+        ..node
+            .closing_loc()
+            .map(|closing| closing.end_offset())
+            .or_else(|| {
+                node.arguments()
+                    .map(|arguments| arguments.location().end_offset())
+            })
+            .or_else(|| node.message_loc().map(|message| message.end_offset()))
+            .unwrap_or_else(|| node.location().end_offset());
+    let current = context
+        .source_file()
+        .slice(invocation.clone())
+        .unwrap_or_default();
     let message = format!("Prefer the use of `{preferred}` over `{current}`.");
     let nested_anonymous_receiver = context.ancestors().iter().rev().any(|ancestor| {
         ancestor.as_call_node().is_some_and(|call| {
@@ -81,10 +94,10 @@ fn lambda_call(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     });
     if nested_anonymous_receiver {
         if !context.autocorrect_enabled() {
-            context.report_call(node, message);
+            context.report(message, invocation);
         }
     } else {
-        context.replace_call(node, message, preferred);
+        context.replace(message, invocation.clone(), invocation, preferred);
     }
 }
 
@@ -97,7 +110,11 @@ fn case_equality(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     else {
         return;
     };
-    if receiver.as_regular_expression_node().is_some() {
+    if receiver.as_regular_expression_node().is_some()
+        || receiver.as_interpolated_regular_expression_node().is_some()
+        || receiver.as_match_last_line_node().is_some()
+        || receiver.as_interpolated_match_last_line_node().is_some()
+    {
         return;
     }
     let receiver_source = context.source_file().node(&receiver).to_string();
@@ -105,7 +122,8 @@ fn case_equality(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     let constant_path = constant_path(&receiver);
     let constant = constant_path.as_ref().is_some_and(|parts| {
         parts.last().is_some_and(|name| {
-            name.first().is_some_and(u8::is_ascii_uppercase) && !name.contains(&b'_')
+            name.first().is_some_and(u8::is_ascii_uppercase)
+                && name.iter().any(u8::is_ascii_lowercase)
         })
     });
     if constant_path.is_some() && !constant {
@@ -320,13 +338,22 @@ fn exact_regexp_match(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
 }
 
 fn ip_addresses(node: &ruby_prism::StringNode<'_>, context: &mut CopContext<'_, '_>) {
+    if node.opening_loc().is_none() {
+        return;
+    }
     let value = String::from_utf8_lossy(node.unescaped());
+    let default_unspecified = value == "::"
+        && !context.related_config_explicit("Style/IpAddresses", "AllowedAddresses");
+    let ipv4_shape = value.split('.').count() == 4;
+    let ipv6_shape = value.contains(':');
     if value.is_empty()
         || value.len() > 45
+        || default_unspecified
         || context
             .config_values("AllowedAddresses")
             .iter()
             .any(|allowed| allowed.eq_ignore_ascii_case(&value))
+        || !ipv4_shape && !ipv6_shape
         || value.parse::<std::net::IpAddr>().is_err()
     {
         return;

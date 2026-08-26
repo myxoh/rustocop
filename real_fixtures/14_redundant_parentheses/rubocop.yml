@@ -1,6 +1,0 @@
-AllCops:
-  DisabledByDefault: true
-  NewCops: disable
-  SuggestExtensions: false
-Style/RedundantParentheses:
-  Enabled: true

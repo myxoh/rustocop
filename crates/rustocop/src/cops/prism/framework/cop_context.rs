@@ -2,7 +2,7 @@ use ruby_prism::{CallNode, Node};
 
 use super::diagnostic::{ByteRange, Reporter};
 use super::{CopPolicy, CorrectionPlan, SourceFile};
-use crate::config::RubyVersion;
+use crate::config::{RubyVersion, SourceEncoding};
 
 /// The complete, read-only inspection view available to a cop callback, plus
 /// its cop-scoped diagnostic reporter.
@@ -36,6 +36,26 @@ impl<'context, 'pr> CopContext<'context, 'pr> {
         SourceFile::new(self.source)
     }
 
+    pub(super) fn line_index(&self, offset: usize) -> usize {
+        self.reporter.line_index(offset.min(self.source.len()))
+    }
+
+    pub(super) fn line_start_at(&self, index: usize) -> usize {
+        self.reporter.line_start_at(index)
+    }
+
+    pub(super) fn line_at(&self, index: usize) -> &'pr str {
+        let start = self.line_start_at(index);
+        let end = self
+            .source
+            .get(start..)
+            .and_then(|tail| tail.find('\n').map(|offset| start + offset))
+            .unwrap_or(self.source.len());
+        self.source[start..end]
+            .strip_suffix('\r')
+            .unwrap_or(&self.source[start..end])
+    }
+
     pub(super) fn path(&self) -> &str {
         self.reporter.path()
     }
@@ -63,6 +83,14 @@ impl<'context, 'pr> CopContext<'context, 'pr> {
         self.reporter.target_ruby_version()
     }
 
+    pub(super) fn source_encoding(&self) -> SourceEncoding {
+        self.reporter.source_encoding()
+    }
+
+    pub(super) fn cop_enabled(&self, cop_name: &str) -> bool {
+        self.reporter.cop_enabled(cop_name)
+    }
+
     pub(super) fn autocorrect_enabled(&self) -> bool {
         self.reporter.autocorrect_enabled()
     }
@@ -73,6 +101,18 @@ impl<'context, 'pr> CopContext<'context, 'pr> {
 
     pub(super) fn related_config_value(&self, cop_name: &str, key: &str) -> Option<&str> {
         self.reporter.related_config_value(cop_name, key)
+    }
+
+    pub(super) fn related_config_values(&self, cop_name: &str, key: &str) -> &[String] {
+        self.reporter.related_config_values(cop_name, key)
+    }
+
+    pub(super) fn related_config_explicit(&self, cop_name: &str, key: &str) -> bool {
+        self.reporter.related_config_explicit(cop_name, key)
+    }
+
+    pub(super) fn related_cop_normally_enabled(&self, cop_name: &str) -> bool {
+        self.reporter.related_cop_normally_enabled(cop_name)
     }
 
     pub(super) fn related_config_map(
@@ -97,6 +137,10 @@ impl<'context, 'pr> CopContext<'context, 'pr> {
 
     pub(super) fn config_contains(&self, key: &str) -> bool {
         self.reporter.config_contains(key)
+    }
+
+    pub(super) fn config_explicit(&self, key: &str) -> bool {
+        self.reporter.config_explicit(key)
     }
 
     pub(super) fn config_map(

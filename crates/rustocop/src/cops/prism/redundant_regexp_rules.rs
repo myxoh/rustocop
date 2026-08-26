@@ -56,16 +56,20 @@ impl RedundantRegexpEscapeRule<'_, '_, '_> {
         let Some(regexp) = RegexpView::new(node, self.source()) else {
             return;
         };
+        let mut class_depth = 0;
         for part in &regexp.parts {
             let Some(source) = self.source().get(part.clone()) else {
                 continue;
             };
-            for escape in redundant_escapes(
+            let (escapes, next_class_depth) = redundant_escapes(
                 source,
                 regexp.opening_delimiter,
                 regexp.closing_delimiter,
                 regexp.extended,
-            ) {
+                class_depth,
+            );
+            class_depth = next_class_depth;
+            for escape in escapes {
                 let location = part.start + escape..part.start + escape + 2;
                 add_offense!(self, location.clone(), message: ESCAPE_MSG, |corrector| {
                     corrector.remove(location.start..location.start + 1);
@@ -115,6 +119,7 @@ impl RedundantRegexpArgumentRule<'_, '_, '_> {
             return;
         };
         let source = self.source_file().node(&argument);
+        return_unless!(source.starts_with('/'));
         let content = self.source_file().at(&regexp.content_loc());
         let closing = self.source_file().at(&regexp.closing_loc());
         return_if!(closing.chars().skip(1).any(|character| character.is_ascii_alphabetic()) || content == " ");
@@ -133,15 +138,14 @@ impl RedundantRegexpArgumentRule<'_, '_, '_> {
         let mut replacement = regexp_to_string_content(content);
         let quote;
         if replacement.contains('"') {
-            replacement = escape_single_quotes(&replacement).replace("\\\"", "\"");
+            replacement = replacement.replace('\'', "\\'").replace("\\\"", "\"");
             quote = '\'';
         } else if replacement.contains("\\'") || replacement.contains('\'') {
             replacement = escape_single_quotes(&replacement);
             quote = '\'';
-        } else if replacement.contains('\\') {
-            quote = '"';
-        } else if self.related_config_value("Style/StringLiterals", "EnforcedStyle")
-            == Some("double_quotes")
+        } else if replacement.contains('\\')
+            || self.related_config_value("Style/StringLiterals", "EnforcedStyle")
+                == Some("double_quotes")
         {
             quote = '"';
         } else {
@@ -165,7 +169,7 @@ impl RegexpView {
             (
                 regexp.opening_loc(),
                 regexp.closing_loc(),
-                vec![content.start_offset()..content.end_offset()],
+                std::iter::once(content.start_offset()..content.end_offset()).collect(),
             )
         } else {
             let regexp = node.as_interpolated_regular_expression_node()?;
@@ -199,14 +203,15 @@ fn redundant_escapes(
     opening_delimiter: char,
     closing_delimiter: char,
     extended: bool,
-) -> Vec<usize> {
+    initial_class_depth: usize,
+) -> (Vec<usize>, usize) {
     let bytes = source.as_bytes();
     let mut offenses = Vec::new();
-    let mut class_depth = 0_usize;
-    let mut class_starts = Vec::new();
+    let mut class_depth = initial_class_depth;
+    let mut class_starts = vec![None; initial_class_depth];
     let mut index = 0;
     let mut comment = false;
-    while index + 1 < bytes.len() {
+    while index < bytes.len() {
         let character = bytes[index] as char;
         if comment {
             if character == '\n' {
@@ -222,7 +227,7 @@ fn redundant_escapes(
         }
         if character == '[' {
             class_depth += 1;
-            class_starts.push(index);
+            class_starts.push(Some(index));
             index += 1;
             continue;
         }
@@ -236,6 +241,9 @@ fn redundant_escapes(
             index += 1;
             continue;
         }
+        if index + 1 == bytes.len() {
+            break;
+        }
         let escaped = bytes[index + 1] as char;
         let previous = index.checked_sub(1).and_then(|at| bytes.get(at)).copied().map(char::from);
         let after = bytes.get(index + 2).copied().map(char::from);
@@ -246,7 +254,9 @@ fn redundant_escapes(
             || previous == Some('#') && matches!(escaped, '@' | '$')
             || if class_depth > 0 {
                 escaped == '-'
-                    && class_starts.last().is_some_and(|start| index != start + 1)
+                    && class_starts
+                        .last()
+                        .is_some_and(|start| start.is_none_or(|start| index != start + 1))
                     && after != Some(']')
             } else {
                 ".*+?{}()|$".contains(escaped)
@@ -256,7 +266,7 @@ fn redundant_escapes(
         }
         index += 2;
     }
-    offenses
+    (offenses, class_depth)
 }
 
 struct CharacterClass {
@@ -270,6 +280,10 @@ fn single_element_character_classes(source: &str, extended: bool) -> Vec<Charact
     let mut classes = Vec::new();
     let mut index = 0;
     while index < bytes.len() {
+        if bytes[index] == b'\\' {
+            index += escape_token_length(&source[index..]).max(2);
+            continue;
+        }
         if extended && bytes[index] == b'#' {
             index = source[index..]
                 .find('\n')
@@ -418,7 +432,7 @@ fn escape_single_quotes(source: &str) -> String {
             slash_run += 1;
             continue;
         }
-        if character == '\'' && slash_run % 2 == 0 {
+        if character == '\'' && slash_run.is_multiple_of(2) {
             output.push('\\');
         }
         output.push(character);

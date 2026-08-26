@@ -1,0 +1,5 @@
+{
+  "4e428ce05e68e91e": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/ArrayIntersectWithSingleElement:\n  Description: Use `include?(element)` instead of `intersect?([element])`.\n  Enabled: true\n  Safe: false\n  VersionAdded: '1.81'\n  AutoCorrect: always\n",
+  "77c39c64bd272713": "---\nAllCops:\n  TargetRubyVersion: '2.7'\n",
+  "8eefce22f4716004": "---\nAllCops:\n  DisabledByDefault: true\n  ParserEngine: parser_prism\n  TargetRubyVersion: 3.4\nStyle/ArrayIntersectWithSingleElement:\n  Enabled: true\n"
+}

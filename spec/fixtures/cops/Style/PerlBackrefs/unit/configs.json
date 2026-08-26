@@ -1,0 +1,4 @@
+{
+  "77c39c64bd272713": "---\nAllCops:\n  TargetRubyVersion: '2.7'\n",
+  "9b9e7879d1dcf743": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/PerlBackrefs:\n  Description: Avoid Perl-style regex back references.\n  StyleGuide: \"#no-perl-regexp-last-matchers\"\n  Enabled: true\n  VersionAdded: '0.13'\n  AutoCorrect: always\n"
+}

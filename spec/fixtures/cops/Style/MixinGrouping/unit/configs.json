@@ -1,0 +1,4 @@
+{
+  "91700385f3f753b7": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/MixinGrouping:\n  Description: Checks for grouping of mixins in `class` and `module` bodies.\n  StyleGuide: \"#mixin-grouping\"\n  Enabled: true\n  VersionAdded: '0.48'\n  VersionChanged: '0.49'\n  EnforcedStyle: separated\n  SupportedStyles:\n  - separated\n  - grouped\n  AutoCorrect: always\n",
+  "ec9fadb7d1f33458": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/MixinGrouping:\n  Description: Checks for grouping of mixins in `class` and `module` bodies.\n  StyleGuide: \"#mixin-grouping\"\n  Enabled: true\n  VersionAdded: '0.48'\n  VersionChanged: '0.49'\n  EnforcedStyle: grouped\n  SupportedStyles:\n  - separated\n  - grouped\n  AutoCorrect: always\n"
+}

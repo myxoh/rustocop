@@ -6,52 +6,67 @@ define_cops!(
     DepartmentName => "Migration/DepartmentName" => source(department_name),
     BarePercentLiterals => "Style/BarePercentLiterals" => any_node(bare_percent_literals),
     DocumentDynamicEvalDefinition => "Style/DocumentDynamicEvalDefinition" => call(document_dynamic_eval_definition),
-    ModuleFunction => "Style/ModuleFunction" => source(module_function),
+    ModuleFunction => "Style/ModuleFunction" => node(as_module_node, module_function),
     SingleLineBlockParams => "Style/SingleLineBlockParams" => node(as_block_node, single_line_block_params),
 );
 
 fn department_name(context: &mut CopContext<'_, '_>) {
-    const DEPARTMENTS: [(&str, &str); 3] = [
-        ("Alias", "Style/Alias"),
-        ("LineLength", "Layout/LineLength"),
-        (
-            "SingleSpaceBeforeFirstArg",
-            "Style/SingleSpaceBeforeFirstArg",
-        ),
-    ];
     let source = context.source();
-    for (line_start, line) in context.source_file().lines() {
-        let Some(marker) = line.find("rubocop") else {
+    let directive = regex::Regex::new(r"\A# *rubocop *: *((?:dis|en)able|todo) +(.*)")
+        .expect("static directive pattern");
+    let cop_names = crate::cops::cop_names();
+    let departments = cop_names
+        .iter()
+        .filter_map(|name| name.split_once('/').map(|(department, _)| department))
+        .collect::<std::collections::HashSet<_>>();
+
+    for comment_range in context.source_file().comment_ranges() {
+        let comment = &source[comment_range.clone()];
+        let Some(captures) = directive.captures(comment) else {
             continue;
         };
-        let directive = &line[marker + "rubocop".len()..];
-        if !directive.contains("disable")
-            && !directive.contains("enable")
-            && !directive.contains("todo")
-        {
-            continue;
-        }
-        for (short_name, full_name) in DEPARTMENTS {
-            let mut search = 0;
-            while let Some(relative) = directive[search..].find(short_name) {
-                let relative = search + relative;
-                let start = line_start + marker + "rubocop".len() + relative;
-                let end = start + short_name.len();
-                let before = source[..start].chars().next_back();
-                let after = source[end..].chars().next();
-                if !matches!(before, Some('/') | Some(':'))
-                    && !after
-                        .is_some_and(|character| character.is_alphanumeric() || character == '_')
-                {
+        let names = captures.get(2).expect("directive names");
+        let mut cursor = 0;
+        while cursor < names.as_str().len() {
+            let tail = &names.as_str()[cursor..];
+            let segment_len = tail.find(',').unwrap_or(tail.len());
+            let segment = &tail[..segment_len];
+            let leading = segment.len() - segment.trim_start().len();
+            let short_name = segment.trim();
+            let unexpected = segment
+                .chars()
+                .any(|character| !character.is_ascii_alphabetic() && !matches!(character, ' ' | ',' | '/'));
+            let plain_name = !short_name.is_empty()
+                && short_name.chars().all(|character| character.is_ascii_alphabetic());
+            if plain_name && short_name != "all" && !departments.contains(short_name) {
+                let matches = cop_names
+                    .iter()
+                    .copied()
+                    .filter(|name| name.rsplit_once('/').is_some_and(|(_, cop)| cop == short_name))
+                    .collect::<Vec<_>>();
+                let replacement = match matches.as_slice() {
+                    [qualified] => Some(*qualified),
+                    _ if short_name == "UselessComparison" => Some("Lint/UselessComparison"),
+                    _ if short_name == "SingleSpaceBeforeFirstArg" => {
+                        Some("Style/SingleSpaceBeforeFirstArg")
+                    }
+                    _ => None,
+                };
+                if let Some(replacement) = replacement {
+                    let start = comment_range.start + names.start() + cursor + leading;
+                    let end = start + short_name.len();
                     context.replace(
                         "Department name is missing.",
                         start..end,
                         start..end,
-                        full_name,
+                        replacement,
                     );
                 }
-                search = relative + short_name.len();
             }
+            if unexpected || segment_len == tail.len() {
+                break;
+            }
+            cursor += segment_len + 1;
         }
     }
 }
@@ -89,25 +104,69 @@ fn bare_percent_literals(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
 
 fn document_dynamic_eval_definition(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     let name = node.name().as_slice();
-    if !matches!(name, b"class_eval" | b"module_eval" | b"instance_eval") {
+    if !matches!(name, b"eval" | b"class_eval" | b"module_eval" | b"instance_eval") {
+        return;
+    }
+    let Some(argument) = first_argument(node) else {
+        return;
+    };
+    let Some(string) = argument.as_interpolated_string_node() else {
+        return;
+    };
+    let parts = string.parts().iter().collect::<Vec<_>>();
+    let interpolations = parts
+        .iter()
+        .filter(|part| part.as_embedded_statements_node().is_some())
+        .collect::<Vec<_>>();
+    if interpolations.is_empty() {
         return;
     }
     let source = context.source();
-    if !source.contains("def ") || !source.contains("#{") {
+    let file = context.source_file();
+    let opening = string.opening_loc();
+    let heredoc = opening
+        .as_ref()
+        .is_some_and(|location| file.at(location).starts_with("<<"));
+    let end = string
+        .closing_loc()
+        .map_or_else(|| argument.location().end_offset(), |location| location.end_offset());
+    let start = opening
+        .as_ref()
+        .map_or_else(|| argument.location().start_offset(), ruby_prism::Location::start_offset);
+    let inline_documented = interpolations.iter().all(|interpolation| {
+        let line_start = file.line_start(interpolation.location().start_offset());
+        let line_end = file.line_end(interpolation.location().end_offset());
+        comment_text(&source[line_start..line_end]).is_some()
+    });
+    if inline_documented {
         return;
     }
-    let comments = source.lines().filter_map(comment_text).collect::<Vec<_>>();
+    if !heredoc {
+        let literal = source.get(start..end).unwrap_or_default();
+        if comment_text(literal).is_some() {
+            return;
+        }
+        context.report_selector(node, "Add a comment block showing its appearance if interpolated.");
+        return;
+    }
+
+    let call_start = node.location().start_offset();
+    let call_end = node.location().end_offset().max(end);
+    let comments = source
+        .get(call_start..call_end)
+        .unwrap_or_default()
+        .lines()
+        .filter_map(comment_text)
+        .collect::<Vec<_>>()
+        .join("\n");
+    let normalized_comments = normalize_documentation(&comments).replace('\\', "");
     let documented = !comments.is_empty()
-        && (!source.contains("to_str.#{")
-            || comments.iter().any(|comment| comment.contains("to_str."))
-            || source
-                .lines()
-                .any(|line| line.contains("#{") && comment_text(line).is_some()));
+        && parts.iter().filter_map(Node::as_string_node).all(|part| {
+            let required = normalize_documentation(file.at(&part.content_loc())).replace('\\', "");
+            required.is_empty() || normalized_comments.contains(&required)
+        });
     if !documented {
-        context.report_selector(
-            node,
-            "Add a comment block showing its appearance if interpolated.",
-        );
+        context.report_selector(node, "Add a comment block showing its appearance if interpolated.");
     }
 }
 
@@ -121,39 +180,65 @@ fn comment_text(line: &str) -> Option<&str> {
     })
 }
 
-fn module_function(context: &mut CopContext<'_, '_>) {
-    let source = context.source();
-    if !source.trim_start().starts_with("module ") {
+fn normalize_documentation(source: &str) -> String {
+    source
+        .lines()
+        .map(|line| comment_text(line).map_or(line, |_| {
+            line.split_once(" #").map_or(line, |(code, _)| code)
+        }))
+        .flat_map(str::split_whitespace)
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+fn module_function(
+    node: &ruby_prism::ModuleNode<'_>,
+    context: &mut CopContext<'_, '_>,
+) {
+    let Some(statements) = node.body().and_then(|body| body.as_statements_node()) else {
+        return;
+    };
+    let children = statements.body().iter().collect::<Vec<_>>();
+    if children.len() < 2 {
         return;
     }
+    let calls = children
+        .iter()
+        .filter_map(Node::as_call_node)
+        .filter(|call| call.receiver().is_none())
+        .collect::<Vec<_>>();
     let style = context
         .policy()
         .enforced_style("module_function")
         .to_string();
-    let has_private = source.lines().any(|line| {
-        let line = line.trim();
-        line == "private" || line.starts_with("private ")
-    });
-    for (line_start, line) in context.source_file().lines() {
-        let indentation = line.len() - line.trim_start().len();
-        let token = line.trim();
-        let range = line_start + indentation..line_start + indentation + token.len();
-        match (style.as_str(), token) {
-            ("module_function", "extend self") if !has_private => context.replace(
+    if style == "module_function"
+        && calls.iter().any(|call| call_name(call) == b"private")
+    {
+        return;
+    }
+    for call in calls {
+        let extend_self = call_name(&call) == b"extend"
+            && first_argument(&call).is_some_and(|argument| argument.as_self_node().is_some());
+        let module_function = call_name(&call) == b"module_function"
+            && argument_count(&call) == 0;
+        let location = call.location();
+        match (style.as_str(), extend_self, module_function) {
+            ("module_function", true, _) => context.replace(
                 "Use `module_function` instead of `extend self`.",
-                range.clone(),
-                range,
+                &location,
+                &location,
                 "module_function",
             ),
-            ("extend_self", "module_function") => context.replace(
+            ("extend_self", _, true) => context.replace(
                 "Use `extend self` instead of `module_function`.",
-                range.clone(),
-                range,
+                &location,
+                &location,
                 "extend self",
             ),
-            ("forbidden", "extend self" | "module_function") => {
-                context.report("Do not use `module_function` or `extend self`.", range)
-            }
+            ("forbidden", true, _) | ("forbidden", _, true) => context.report(
+                "Do not use `module_function` or `extend self`.",
+                location,
+            ),
             _ => {}
         }
     }

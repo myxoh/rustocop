@@ -1,0 +1,10 @@
+{
+  "086ce9f997963e0f": "---\nAllCops:\n  StringLiteralsFrozenByDefault: false\nStyle/EmptyLiteral:\n  Enabled: true\n",
+  "51150209ec3c38ca": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/EmptyLiteral:\n  Description: Prefer literals to Array.new/Hash.new/String.new.\n  StyleGuide: \"#literal-array-hash\"\n  Enabled: true\n  VersionAdded: '0.9'\n  VersionChanged: '0.12'\n  AutoCorrect: always\nStyle/FrozenStringLiteralComment:\n  Enabled: false\nStyle/StringLiterals:\n  EnforcedStyle: double_quotes\n",
+  "57f5194555cd6ac3": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/EmptyLiteral:\n  Description: Prefer literals to Array.new/Hash.new/String.new.\n  StyleGuide: \"#literal-array-hash\"\n  Enabled: true\n  VersionAdded: '0.9'\n  VersionChanged: '0.12'\n  AutoCorrect: always\nStyle/FrozenStringLiteralComment:\n  Enabled: true\n",
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
+  "b2f6ff4267e77c65": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/EmptyLiteral:\n  Description: Prefer literals to Array.new/Hash.new/String.new.\n  StyleGuide: \"#literal-array-hash\"\n  Enabled: true\n  VersionAdded: '0.9'\n  VersionChanged: '0.12'\n  AutoCorrect: always\nStyle/FrozenStringLiteralComment:\n  Enabled: false\n",
+  "c4b8dcc10a2eb775": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/EmptyLiteral:\n  Description: Prefer literals to Array.new/Hash.new/String.new.\n  StyleGuide: \"#literal-array-hash\"\n  Enabled: true\n  VersionAdded: '0.9'\n  VersionChanged: '0.12'\n  AutoCorrect: always\n",
+  "c63aca0bff8feb68": "---\nAllCops:\n  StringLiteralsFrozenByDefault: true\nStyle/EmptyLiteral:\n  Enabled: true\n",
+  "cf74da2dabb1d653": "---\nAllCops:\n  TargetRubyVersion: 2.3\nStyle/EmptyLiteral:\n  Description: Prefer literals to Array.new/Hash.new/String.new.\n  StyleGuide: \"#literal-array-hash\"\n  Enabled: true\n  VersionAdded: '0.9'\n  VersionChanged: '0.12'\n  AutoCorrect: always\nStyle/FrozenStringLiteralComment:\n  Enabled: false\n"
+}

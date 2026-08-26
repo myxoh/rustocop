@@ -1,4 +1,0 @@
-repository: discourse/discourse
-revision: cec79c60b354e37e9a119544860123b122a995e0
-path: app/models/optimized_image.rb
-source_lines: 269-286

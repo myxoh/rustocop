@@ -8,47 +8,141 @@ const WHILE_UNTIL_MODIFIER_MSG: &str =
     "Favor modifier `{keyword}` usage when having a single-line body.";
 
 define_cops! {
-    FileRead => "Style/FileRead" => source(file_read),
+    FileRead => "Style/FileRead" => call(file_read),
     FileWrite => "Style/FileWrite" => rubocop_callbacks(FileWriteRule, [on_send restrict [b"open"]]),
     WhileUntilModifier => "Style/WhileUntilModifier" => node_rule_aliases(WhileUntilModifierRule, on_while => [as_while_node, as_until_node]),
 }
 
-fn file_read(context: &mut CopContext<'_, '_>) {
-    let source = context.source();
-    for (open_method, read_method, preferred) in [
-        ("File.open(", ").read", "File.read"),
-        ("File.open(", ").binread", "File.binread"),
-    ] {
-        let mut search = 0;
-        while let Some(relative) = source[search..].find(open_method) {
-            let start = search + relative;
-            let offense_start = if source.get(start.saturating_sub(2)..start) == Some("::") {
-                start - 2
-            } else {
-                start
-            };
-            let Some(close_relative) = source[start + open_method.len()..].find(read_method) else {
-                break;
-            };
-            let call_end = start + open_method.len() + close_relative + read_method.len();
-            let arguments =
-                &source[start + open_method.len()..start + open_method.len() + close_relative];
-            if arguments.contains(',') {
-                search = call_end;
-                continue;
-            }
-            context.replace(
-                format!("Use `{preferred}`."),
-                offense_start..call_end,
-                offense_start..call_end,
-                format!(
-                    "{}{preferred}({arguments})",
-                    if offense_start < start { "::" } else { "" }
-                ),
-            );
-            search = call_end;
-        }
+fn file_read(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
+    if call_name(node) != b"open" {
+        return;
     }
+    let Some(receiver) = node.receiver() else {
+        return;
+    };
+    if !matches!(context.source_file().node(&receiver), "File" | "::File") {
+        return;
+    }
+    let Some(arguments) = node.arguments() else {
+        return;
+    };
+    let arguments = arguments.arguments().iter().collect::<Vec<_>>();
+    let (filename, mode) = match arguments.as_slice() {
+        [filename] => (filename, "r"),
+        [filename, mode] => {
+            let Some(mode) = mode.as_string_node() else {
+                return;
+            };
+            let mode = String::from_utf8_lossy(mode.unescaped());
+            if !matches!(mode.as_ref(), "r" | "rt" | "rb" | "r+" | "r+t" | "r+b") {
+                return;
+            }
+            (filename, if mode.ends_with('b') { "rb" } else { "r" })
+        }
+        _ => return,
+    };
+    let read_method = if mode.ends_with('b') { "binread" } else { "read" };
+    let message = format!("Use `File.{read_method}`.");
+    let replacement = format!(
+        "{read_method}({})",
+        context.source_file().node(filename)
+    );
+    let Some(selector) = node.message_loc() else {
+        return;
+    };
+
+    if node.block().is_some_and(read_symbol_block_pass) {
+        let location = node.location();
+        context.replace(
+            message,
+            &location,
+            selector.start_offset()..location.end_offset(),
+            replacement,
+        );
+        return;
+    }
+
+    if let Some(block) = node.block().and_then(|block| block.as_block_node()) {
+        if !block_reads_parameter(&block) {
+            return;
+        }
+        let offense = node.location().start_offset()..block.closing_loc().end_offset();
+        context.replace(
+            message,
+            offense.clone(),
+            selector.start_offset()..offense.end,
+            replacement,
+        );
+        return;
+    }
+
+    let Some(read) = context.parent().and_then(Node::as_call_node) else {
+        return;
+    };
+    if call_name(&read) != b"read"
+        || argument_count(&read) != 0
+        || read.block().is_some()
+        || !read.receiver().is_some_and(|receiver| {
+            receiver.location().start_offset() == node.location().start_offset()
+                && receiver.location().end_offset() == node.location().end_offset()
+        })
+    {
+        return;
+    }
+    let location = read.location();
+    context.replace(
+        message,
+        &location,
+        selector.start_offset()..location.end_offset(),
+        replacement,
+    );
+}
+
+fn read_symbol_block_pass(node: Node<'_>) -> bool {
+    node.as_block_argument_node()
+        .and_then(|block| block.expression())
+        .and_then(|expression| expression.as_symbol_node())
+        .is_some_and(|symbol| symbol.unescaped() == b"read")
+}
+
+fn block_reads_parameter(block: &BlockNode<'_>) -> bool {
+    let Some(parameters) = block
+        .parameters()
+        .and_then(|parameters| parameters.as_block_parameters_node())
+        .and_then(|parameters| parameters.parameters())
+    else {
+        return false;
+    };
+    if parameters.requireds().len() != 1
+        || !parameters.optionals().is_empty()
+        || parameters.rest().is_some()
+        || !parameters.posts().is_empty()
+        || !parameters.keywords().is_empty()
+        || parameters.keyword_rest().is_some()
+        || parameters.block().is_some()
+    {
+        return false;
+    }
+    let Some(parameter) = parameters
+        .requireds()
+        .first()
+        .and_then(|parameter| parameter.as_required_parameter_node())
+    else {
+        return false;
+    };
+    block
+        .body()
+        .and_then(single_expression)
+        .and_then(|body| body.as_call_node())
+        .is_some_and(|read| {
+            call_name(&read) == b"read"
+                && argument_count(&read) == 0
+                && read.block().is_none()
+                && read
+                    .receiver()
+                    .and_then(|receiver| receiver.as_local_variable_read_node())
+                    .is_some_and(|receiver| receiver.name().as_slice() == parameter.name().as_slice())
+        })
 }
 
 impl FileWriteRule<'_, '_, '_> {

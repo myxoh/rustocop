@@ -1,7 +1,0 @@
-AllCops:
-  DisabledByDefault: true
-  NewCops: disable
-  SuggestExtensions: false
-Style/TrailingCommaInArrayLiteral:
-  Enabled: true
-  EnforcedStyleForMultiline: comma

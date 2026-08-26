@@ -1,0 +1,5 @@
+{
+  "25cef98fd8191350": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/FormatString:\n  Description: Enforce the use of Kernel#sprintf, Kernel#format or String#%.\n  StyleGuide: \"#sprintf\"\n  Enabled: true\n  VersionAdded: '0.19'\n  VersionChanged: '0.49'\n  EnforcedStyle: format\n  SupportedStyles:\n  - format\n  - sprintf\n  - percent\n  AutoCorrect: always\n",
+  "34d08ac317b066ba": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/FormatString:\n  Description: Enforce the use of Kernel#sprintf, Kernel#format or String#%.\n  StyleGuide: \"#sprintf\"\n  Enabled: true\n  VersionAdded: '0.19'\n  VersionChanged: '0.49'\n  EnforcedStyle: sprintf\n  SupportedStyles:\n  - format\n  - sprintf\n  - percent\n  AutoCorrect: always\n",
+  "d189709323b94995": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/FormatString:\n  Description: Enforce the use of Kernel#sprintf, Kernel#format or String#%.\n  StyleGuide: \"#sprintf\"\n  Enabled: true\n  VersionAdded: '0.19'\n  VersionChanged: '0.49'\n  EnforcedStyle: percent\n  SupportedStyles:\n  - format\n  - sprintf\n  - percent\n  AutoCorrect: always\n"
+}

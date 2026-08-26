@@ -22,6 +22,43 @@ impl Cop for ArrayFirstLast {
         _source: &str,
         context: &mut Context,
     ) {
+        macro_rules! check_index_write {
+            ($cast:ident) => {
+                if let Some(write) = node.$cast() {
+                    let Some(arguments) = write.arguments() else {
+                        return;
+                    };
+                    let arguments = arguments.arguments();
+                    if arguments.len() != 1 {
+                        return;
+                    }
+                    let argument = arguments.iter().next().expect("one index argument");
+                    let Some(value) = integer_value(&argument) else {
+                        return;
+                    };
+                    let preferred = match value {
+                        0 => "first",
+                        -1 => "last",
+                        _ => return,
+                    };
+                    let opening = write.opening_loc();
+                    let closing = write.closing_loc();
+                    let offense = opening.start_offset()..closing.end_offset();
+                    context.replace(
+                        self.name(),
+                        format!("Use `{preferred}`."),
+                        offense.clone(),
+                        offense,
+                        format!(".{preferred}"),
+                    );
+                    return;
+                }
+            };
+        }
+        check_index_write!(as_index_operator_write_node);
+        check_index_write!(as_index_or_write_node);
+        check_index_write!(as_index_and_write_node);
+
         let Some(call) = node.as_call_node() else {
             return;
         };
@@ -31,10 +68,7 @@ impl Cop for ArrayFirstLast {
         if call_name(&call) != b"[]" || chained_bracket_call(&call, ancestors) {
             return;
         }
-        let Some(value) = argument
-            .as_integer_node()
-            .and_then(|integer| TryInto::<i32>::try_into(integer.value()).ok())
-        else {
+        let Some(value) = integer_value(&argument) else {
             return;
         };
         let preferred = match value {
@@ -73,19 +107,27 @@ impl Cop for ArrayFirstLast {
     }
 }
 
+fn integer_value(node: &Node<'_>) -> Option<i32> {
+    node.as_integer_node()
+        .and_then(|integer| TryInto::<i32>::try_into(integer.value()).ok())
+}
+
 fn chained_bracket_call(call: &CallNode<'_>, ancestors: &[Node<'_>]) -> bool {
     if receiver_call(call).is_some_and(|receiver| call_name(&receiver) == b"[]") {
         return true;
     }
 
-    let call_node = call.as_node();
-    ancestors.iter().rev().any(|ancestor| {
-        ancestor.as_call_node().is_some_and(|parent| {
-            matches!(call_name(&parent), b"[]" | b"[]=")
-                && parent
-                    .receiver()
-                    .is_some_and(|receiver| same_location(&receiver, &call_node))
+    let parent = ancestors
+        .iter()
+        .rev()
+        .find(|ancestor| ancestor.as_arguments_node().is_none());
+    parent.is_some_and(|parent| {
+        parent.as_call_node().is_some_and(|parent| {
+            !parent.is_safe_navigation() && matches!(call_name(&parent), b"[]" | b"[]=")
         })
+            || parent.as_index_operator_write_node().is_some()
+            || parent.as_index_or_write_node().is_some()
+            || parent.as_index_and_write_node().is_some()
     })
 }
 
@@ -204,7 +246,9 @@ fn identity_block(block: &ruby_prism::BlockNode<'_>) -> Option<IdentityBlock> {
     let parameters = block_parameters.parameters()?;
     if parameters.requireds().len() != 1
         || !parameters.optionals().is_empty()
-        || parameters.rest().is_some()
+        || parameters
+            .rest()
+            .is_some_and(|rest| rest.as_implicit_rest_node().is_none())
         || !parameters.posts().is_empty()
         || !parameters.keywords().is_empty()
         || parameters.keyword_rest().is_some()

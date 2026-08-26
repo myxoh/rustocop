@@ -1,0 +1,3 @@
+{
+  "ded942d72545a8ed": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/InitialIndentation:\n  Description: Checks the indentation of the first non-blank non-comment line in a\n    file.\n  Enabled: true\n  VersionAdded: '0.49'\n  AutoCorrect: always\n"
+}

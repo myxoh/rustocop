@@ -1,0 +1,5 @@
+{
+  "2c2d085e821cca4c": "---\nAllCops:\n  TargetRubyVersion: 2.6\nStyle/TallyMethod:\n  Description: Prefer `Enumerable#tally` over manual counting patterns.\n  Enabled: true\n  Safe: false\n  VersionAdded: '1.85'\n  AutoCorrect: always\n",
+  "9f8b783a98b51275": "---\nAllCops:\n  TargetRubyVersion: 3.4\nStyle/TallyMethod:\n  Description: Prefer `Enumerable#tally` over manual counting patterns.\n  Enabled: true\n  Safe: false\n  VersionAdded: '1.85'\n  AutoCorrect: always\n",
+  "dc6101917be3a688": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/TallyMethod:\n  Description: Prefer `Enumerable#tally` over manual counting patterns.\n  Enabled: true\n  Safe: false\n  VersionAdded: '1.85'\n  AutoCorrect: always\n"
+}

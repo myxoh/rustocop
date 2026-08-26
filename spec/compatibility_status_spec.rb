@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "json"
 require_relative "../lib/rustocop/compatibility_status"
 
 RSpec.describe Rustocop::CompatibilityStatus do
@@ -46,5 +47,26 @@ RSpec.describe Rustocop::CompatibilityStatus do
 
     expect(hardened.validate_hardening!).to be(true)
     expect(hardened).to be_hardened("Style/Verified")
+  end
+
+  it "keeps intentionally-pending cops out of every active corpus" do
+    actual = described_class.load(root: ROOT)
+    pending = actual.intentionally_pending_cops
+    expect(pending.length).to eq(0)
+    expect(pending & actual.built_in_cops).to be_empty
+
+    rust_source = File.read(File.join(ROOT, "crates/rustocop/src/cops/mod.rs"))
+    rust_pending = rust_source
+      .match(/INTENTIONALLY_PENDING_COP_NAMES:.*?= &\[(.*?)\];/m)[1]
+      .scan(/"([A-Za-z]+\/[A-Za-z0-9]+)"/)
+      .flatten
+    expect(rust_pending).to eq(pending)
+
+    %w[fixtures projects].each do |name|
+      snapshot = JSON.parse(
+        File.read(File.join(ROOT, "spec/compatibility_evidence/#{name}.json"))
+      )
+      expect(snapshot.fetch("results").keys & pending).to be_empty
+    end
   end
 end

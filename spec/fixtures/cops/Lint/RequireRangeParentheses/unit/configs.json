@@ -1,0 +1,6 @@
+{
+  "2febd37b251b3ea7": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/RequireRangeParentheses:\n  Description: Checks that a range literal is enclosed in parentheses when the end\n    of the range is at a line break.\n  Enabled: true\n  VersionAdded: '1.32'\n  AutoCorrect: always\n",
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
+  "8c37163482cc6d84": "---\nAllCops:\n  DisabledByDefault: true\n  ParserEngine: parser_prism\n  TargetRubyVersion: 3.4\nLint/RequireRangeParentheses:\n  Enabled: true\n",
+  "ec4671d7c84f1956": "---\nAllCops:\n  TargetRubyVersion: 2.6\nLint/RequireRangeParentheses:\n  Description: Checks that a range literal is enclosed in parentheses when the end\n    of the range is at a line break.\n  Enabled: true\n  VersionAdded: '1.32'\n  AutoCorrect: always\n"
+}

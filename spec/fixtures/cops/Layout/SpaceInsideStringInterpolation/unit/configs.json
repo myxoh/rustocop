@@ -1,0 +1,5 @@
+{
+  "364dc22ce1796583": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/SpaceInsideStringInterpolation:\n  Description: Checks for padding/surrounding spaces inside string interpolation.\n  StyleGuide: \"#string-interpolation\"\n  Enabled: true\n  VersionAdded: '0.49'\n  EnforcedStyle: no_space\n  SupportedStyles:\n  - space\n  - no_space\n  AutoCorrect: always\n",
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
+  "7605ce3e59d66a81": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/SpaceInsideStringInterpolation:\n  Description: Checks for padding/surrounding spaces inside string interpolation.\n  StyleGuide: \"#string-interpolation\"\n  Enabled: true\n  VersionAdded: '0.49'\n  EnforcedStyle: space\n  SupportedStyles:\n  - space\n  - no_space\n  AutoCorrect: always\n"
+}

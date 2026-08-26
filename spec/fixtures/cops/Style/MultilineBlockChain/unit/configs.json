@@ -1,0 +1,6 @@
+{
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
+  "6537fe7360a0d69a": "---\nAllCops:\n  DisabledByDefault: true\n  ParserEngine: parser_prism\n  TargetRubyVersion: 3.4\nStyle/MultilineBlockChain:\n  Enabled: true\n",
+  "81f2f8791d8e3dc0": "---\nAllCops:\n  TargetRubyVersion: 3.4\nStyle/MultilineBlockChain:\n  Description: Avoid multi-line chains of blocks.\n  StyleGuide: \"#single-line-blocks\"\n  Enabled: true\n  VersionAdded: '0.13'\n  AutoCorrect: always\n",
+  "eee197569a8c2075": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/MultilineBlockChain:\n  Description: Avoid multi-line chains of blocks.\n  StyleGuide: \"#single-line-blocks\"\n  Enabled: true\n  VersionAdded: '0.13'\n  AutoCorrect: always\n"
+}

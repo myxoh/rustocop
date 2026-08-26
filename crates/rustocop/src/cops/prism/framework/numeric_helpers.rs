@@ -1,6 +1,6 @@
 use ruby_prism::Node;
 
-use super::{argument_count, call_name, first_argument};
+use super::{call_name, first_argument};
 
 pub(super) fn literal_zero(node: Option<&Node<'_>>) -> bool {
     let Some(node) = node else {
@@ -35,22 +35,43 @@ pub(super) fn float_expression(node: Option<&Node<'_>>) -> bool {
         return statements
             .body()
             .iter()
-            .any(|statement| float_expression(Some(&statement)));
+            .next()
+            .is_some_and(|statement| float_expression(Some(&statement)));
     }
     node.as_call_node().is_some_and(|call| {
-        matches!(call_name(&call), b"to_f" | b"fdiv" | b"Float")
-            || matches!(call_name(&call), b"+" | b"-" | b"*" | b"**" | b"/" | b"%")
-                && (float_expression(call.receiver().as_ref())
-                    || first_argument(&call)
-                        .as_ref()
-                        .is_some_and(|argument| float_expression(Some(argument))))
-            || call.receiver().as_ref().is_some_and(|receiver| {
-                float_expression(Some(receiver))
-                    && !(matches!(
-                        call_name(&call),
-                        b"ceil" | b"floor" | b"round" | b"truncate" | b"to_i"
-                    ) && argument_count(&call) == 0)
-            })
+        let name = call_name(&call);
+        if matches!(name, b"+" | b"-" | b"*" | b"**" | b"/" | b"%") {
+            return float_expression(call.receiver().as_ref())
+                || first_argument(&call)
+                    .as_ref()
+                    .is_some_and(|argument| float_expression(Some(argument)));
+        }
+        if matches!(name, b"to_f" | b"Float" | b"fdiv") {
+            return true;
+        }
+        call.receiver().as_ref().is_some_and(|receiver| {
+            receiver.as_float_node().is_some()
+                && (matches!(
+                    name,
+                    b"@-"
+                        | b"abs"
+                        | b"magnitude"
+                        | b"modulo"
+                        | b"next_float"
+                        | b"prev_float"
+                        | b"quo"
+                ) || matches!(name, b"ceil" | b"floor" | b"round" | b"truncate")
+                    && first_argument(&call).is_some_and(|argument| {
+                        argument.as_integer_node().is_some_and(|integer| {
+                            integer
+                                .value()
+                                .to_u32_digits()
+                                .1
+                                .iter()
+                                .any(|digit| *digit != 0)
+                        })
+                    }))
+        })
     })
 }
 

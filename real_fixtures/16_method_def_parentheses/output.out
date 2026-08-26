@@ -1,4 +1,0 @@
-== input.rb ==
-C:  1: 11: [Correctable] Style/MethodDefParentheses: Use def with parentheses when there are parameters.
-
-1 file inspected, 1 offense detected, 1 offense autocorrectable

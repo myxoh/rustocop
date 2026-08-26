@@ -25,33 +25,3 @@ pub(super) fn top_level_entries(source: &str) -> Vec<(usize, &str)> {
     entries.push((start, &source[start..]));
     entries
 }
-
-pub(super) fn matching_delimiter(source: &str, open: u8, close: u8) -> Option<usize> {
-    let mut depth = 0usize;
-    for (index, byte) in source.bytes().enumerate() {
-        if byte == open {
-            depth += 1;
-        } else if byte == close {
-            depth = depth.checked_sub(1)?;
-            if depth == 0 {
-                return Some(index + 1);
-            }
-        }
-    }
-    None
-}
-
-pub(super) fn returns_after_continuation(lines: &[(usize, &str)], indent: usize) -> bool {
-    for (_, line) in lines {
-        if line.trim().is_empty() {
-            continue;
-        }
-        if matches!(line.trim(), "end" | "rescue" | "ensure" | "else") {
-            return true;
-        }
-        if line.len() - line.trim_start().len() <= indent {
-            return false;
-        }
-    }
-    false
-}

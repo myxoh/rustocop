@@ -1,118 +1,112 @@
 use super::*;
 
-pub(super) fn shared_mutable_default(context: &mut CopContext<'_, '_>) {
+pub(super) fn shared_mutable_default(
+    node: &ruby_prism::CallNode<'_>,
+    context: &mut CopContext<'_, '_>,
+) {
     const MESSAGE: &str = "Do not create a Hash with a mutable default value as the default value can accidentally be changed.";
-    let source = context.source();
-    for call in call_ranges(source, "Hash.new(") {
-        let arguments = source[call.start + 9..call.end - 1].trim();
-        let default = arguments.split(',').next().unwrap_or_default().trim();
-        if matches!(default, "[]" | "{}" | "Array.new" | "Hash.new")
-            && !arguments.contains(".freeze")
-        {
-            context.report(MESSAGE, call);
-        }
+    return_unless!(node.name().as_slice() == b"new");
+    return_unless!(node
+        .receiver()
+        .is_some_and(|receiver| node_is_root_constant(&receiver, b"Hash")));
+    let arguments = node
+        .arguments()
+        .map(|arguments| arguments.arguments().iter().collect::<Vec<_>>())
+        .unwrap_or_default();
+    let Some(default) = arguments.first() else { return };
+
+    if arguments.len() == 1 && capacity_keyword_argument(default) {
+        return;
     }
-    for (start, line) in source_lines(source) {
-        let trimmed = line.trim();
-        if trimmed.starts_with("Hash.new Array.new") {
-            let leading = line.len() - line.trim_start().len();
-            context.report(MESSAGE, start + leading..start + line.len());
-        }
+    let mutable_literal = default.as_array_node().is_some()
+        || default.as_hash_node().is_some()
+        || default.as_keyword_hash_node().is_some();
+    let mutable_constructor = default.as_call_node().is_some_and(|call| {
+        call.name().as_slice() == b"new"
+            && argument_count(&call) == 0
+            && call.receiver().is_some_and(|receiver| {
+                node_is_root_constant(&receiver, b"Array")
+                    || node_is_root_constant(&receiver, b"Hash")
+            })
+    });
+    let mutable_with_capacity = arguments.len() > 1 && default.as_hash_node().is_some();
+    if mutable_with_capacity || arguments.len() == 1 && (mutable_literal || mutable_constructor) {
+        context.report(MESSAGE, node.location());
     }
 }
 
-pub(super) fn top_level_return_with_argument(context: &mut CopContext<'_, '_>) {
-    const MESSAGE: &str = "Top level return with argument detected.";
-    let source = context.source();
-    let mut method_depth = 0_usize;
-    for (line_start, line) in source_lines(source) {
-        let trimmed = line.trim_start();
-        if trimmed.starts_with("def ") {
-            method_depth += 1;
-            continue;
-        }
-        if method_depth > 0 {
-            if trimmed == "end" {
-                method_depth -= 1;
-            }
-            continue;
-        }
-        for (relative, _) in line.match_indices("return ") {
-            if relative > 0 && identifier_byte(line.as_bytes()[relative - 1]) {
-                continue;
-            }
-            if line[..relative].contains('{') && !line[..relative].contains('}') {
-                continue;
-            }
-            let tail = &line[relative + 7..];
-            if tail.starts_with("if ") || tail.starts_with("unless ") {
-                continue;
-            }
-            let argument_len = tail
-                .find(" if ")
-                .or_else(|| tail.find(" unless "))
-                .or_else(|| tail.find(';'))
-                .unwrap_or(tail.len());
-            if argument_len == 0 {
-                continue;
-            }
-            let offense = line_start + relative..line_start + relative + 7 + argument_len;
-            context.replace(MESSAGE, offense.clone(), offense, "return");
-        }
-    }
+fn capacity_keyword_argument(node: &ruby_prism::Node<'_>) -> bool {
+    let Some(hash) = node.as_keyword_hash_node() else {
+        return false;
+    };
+    let elements = hash.elements().iter().collect::<Vec<_>>();
+    let [element] = elements.as_slice() else {
+        return false;
+    };
+    element
+        .as_assoc_node()
+        .and_then(|association| association.key().as_symbol_node())
+        .is_some_and(|symbol| symbol.unescaped() == b"capacity")
 }
 
-pub(super) fn optional_arguments(context: &mut CopContext<'_, '_>) {
-    for definition in definitions(context.source()) {
-        let args = split_arguments(
-            context.source(),
-            definition.arguments.start,
-            definition.arguments.end,
+pub(super) fn optional_arguments(
+    node: &ruby_prism::DefNode<'_>,
+    context: &mut CopContext<'_, '_>,
+) {
+    // RuboCop implements only `on_def`; singleton definitions (`defs`) are
+    // intentionally outside this cop's callback surface.
+    if node.receiver().is_some() {
+        return;
+    }
+    let Some(parameters) = node.parameters() else {
+        return;
+    };
+    if parameters.posts().is_empty() {
+        return;
+    }
+    for optional in parameters.optionals().iter() {
+        context.report(
+            "Optional arguments should appear at the end of the argument list.",
+            optional.location(),
         );
-        let positional = args
-            .iter()
-            .take_while(|arg| !context.source()[(*arg).clone()].contains(':'))
-            .cloned()
-            .collect::<Vec<_>>();
-        let last_required = positional
-            .iter()
-            .rposition(|arg| !context.source()[arg.clone()].contains('='));
-        let Some(last_required) = last_required else {
+    }
+}
+
+pub(super) fn optional_boolean_parameter(
+    node: &ruby_prism::DefNode<'_>,
+    context: &mut CopContext<'_, '_>,
+) {
+    use crate::rubocop::cop::mixin::allowed_methods::AllowedMethods;
+
+    let method_name = String::from_utf8_lossy(node.name().as_slice());
+    let allowed_methods = AllowedMethods::new(
+        context.config_values("AllowedMethods").to_vec(),
+        Vec::new(),
+        Vec::new(),
+    );
+    if allowed_methods.allowed_method(&method_name) {
+        return;
+    }
+    let Some(parameters) = node.parameters() else {
+        return;
+    };
+    for optional in parameters.optionals().iter() {
+        let Some(optional) = optional.as_optional_parameter_node() else {
             continue;
         };
-        for argument in positional.iter().take(last_required) {
-            if context.source()[argument.clone()].contains('=') {
-                let range = trim_range(context.source(), argument.clone());
-                context.report(
-                    "Optional arguments should appear at the end of the argument list.",
-                    range,
-                );
-            }
-        }
-    }
-}
-
-pub(super) fn optional_boolean_parameter(context: &mut CopContext<'_, '_>) {
-    let source = context.source();
-    for definition in definitions(source) {
-        if context.policy().allows_method(definition.name.as_bytes()) {
+        let value = optional.value();
+        let value = if value.as_true_node().is_some() {
+            "true"
+        } else if value.as_false_node().is_some() {
+            "false"
+        } else {
             continue;
-        }
-        for argument in
-            split_arguments(source, definition.arguments.start, definition.arguments.end)
-        {
-            let range = trim_range(source, argument);
-            let text = &source[range.clone()];
-            let Some((name, value)) = text.split_once('=') else {
-                continue;
-            };
-            let value = value.trim();
-            if matches!(value, "true" | "false") {
-                context.report(
-                    format!("Prefer keyword arguments for arguments with a boolean default value; use `{}: {value}` instead of `{text}`.", name.trim()),
-                    range,
-                );
-            }
-        }
+        };
+        let text = context.source_file().at(&optional.location());
+        let name = String::from_utf8_lossy(optional.name().as_slice());
+        context.report(
+            format!("Prefer keyword arguments for arguments with a boolean default value; use `{name}: {value}` instead of `{text}`."),
+            optional.location(),
+        );
     }
 }

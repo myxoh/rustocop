@@ -1,0 +1,4 @@
+{
+  "2a8f67625428ffef": "---\nAllCops:\n  TargetRubyVersion: 3.0\nLint/RedundantDirGlobSort:\n  Description: Checks for redundant `sort` method to `Dir.glob` and `Dir[]`.\n  Enabled: true\n  VersionAdded: '1.8'\n  VersionChanged: '1.26'\n  SafeAutoCorrect: false\n  AutoCorrect: always\n",
+  "51933ce84eb19cd3": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/RedundantDirGlobSort:\n  Description: Checks for redundant `sort` method to `Dir.glob` and `Dir[]`.\n  Enabled: true\n  VersionAdded: '1.8'\n  VersionChanged: '1.26'\n  SafeAutoCorrect: false\n  AutoCorrect: always\n"
+}

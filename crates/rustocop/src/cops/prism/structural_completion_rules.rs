@@ -21,62 +21,115 @@ define_cops!(
 
 fn multiline_memoization(context: &mut CopContext<'_, '_>) {
     let source = context.source();
-    let Some(operator) = source.find("||=") else {
-        return;
+    let parsed = parse(source.as_bytes());
+    let mut collector = MultilineMemoizationCollector {
+        source,
+        candidates: Vec::new(),
     };
-    if !source[operator + 3..].contains('\n') {
-        return;
-    }
-    let style = context.policy().enforced_style("keyword");
-    if style == "keyword" {
-        let Some(open) = source[operator + 3..].find('(').map(|at| operator + 3 + at) else {
-            return;
-        };
-        let Some(close) = super::source_syntax::matching_delimiter(source, open, b'(', b')') else {
-            return;
-        };
-        let content = &source[open + 1..close];
-        if !content.contains('\n') {
-            return;
+    collector.visit(&parsed.node());
+    let style = context.policy().enforced_style("keyword").to_string();
+    for candidate in collector.candidates {
+        if style == "keyword" {
+            let MemoizationWrapper::Parentheses { open, close } = candidate.wrapper else {
+                continue;
+            };
+            let content = &source[open + 1..close];
+            let (opening, closing) = if content.starts_with('\n') {
+                ("begin".to_string(), "end".to_string())
+            } else {
+                let continuation = content
+                    .split_once('\n')
+                    .map_or(0, |(_, rest)| rest.len() - rest.trim_start().len());
+                (
+                    format!("begin\n{}", " ".repeat(continuation)),
+                    format!("\n{}end", " ".repeat(continuation.saturating_sub(2))),
+                )
+            };
+            context.replace_many(
+                "Wrap multiline memoization blocks in `begin` and `end`.",
+                candidate.location,
+                vec![(open..open + 1, opening), (close..close + 1, closing)],
+            );
+        } else if style == "braces" {
+            let MemoizationWrapper::Begin { begin, end } = candidate.wrapper else {
+                continue;
+            };
+            context.replace_many(
+                "Wrap multiline memoization blocks in `(` and `)`.",
+                candidate.location,
+                vec![
+                    (begin..begin + 5, "(".to_string()),
+                    (end..end + 3, ")".to_string()),
+                ],
+            );
         }
-        let (opening, closing) = if content.starts_with('\n') {
-            ("begin".to_string(), "end".to_string())
+    }
+}
+
+struct MultilineMemoizationCandidate {
+    location: std::ops::Range<usize>,
+    wrapper: MemoizationWrapper,
+}
+
+enum MemoizationWrapper {
+    Parentheses { open: usize, close: usize },
+    Begin { begin: usize, end: usize },
+}
+
+struct MultilineMemoizationCollector<'a> {
+    source: &'a str,
+    candidates: Vec<MultilineMemoizationCandidate>,
+}
+
+impl MultilineMemoizationCollector<'_> {
+    fn inspect(&mut self, assignment: ruby_prism::Location<'_>, value: Node<'_>) {
+        let wrapper = if let Some(parentheses) = value.as_parentheses_node() {
+            let open = parentheses.opening_loc().start_offset();
+            let close = parentheses.closing_loc().start_offset();
+            (self.source[open + 1..close].contains('\n'))
+                .then_some(MemoizationWrapper::Parentheses { open, close })
+        } else if let Some(begin_node) = value.as_begin_node() {
+            let (Some(begin), Some(end)) =
+                (begin_node.begin_keyword_loc(), begin_node.end_keyword_loc())
+            else {
+                return;
+            };
+            self.source[begin.start_offset()..end.start_offset()]
+                .contains('\n')
+                .then_some(MemoizationWrapper::Begin {
+                    begin: begin.start_offset(),
+                    end: end.start_offset(),
+                })
         } else {
-            let continuation = content
-                .split_once('\n')
-                .map_or(0, |(_, rest)| rest.len() - rest.trim_start().len());
-            (
-                format!("begin\n{}", " ".repeat(continuation)),
-                format!("\n{}end", " ".repeat(continuation.saturating_sub(2))),
-            )
+            None
         };
-        context.replace_many(
-            "Wrap multiline memoization blocks in `begin` and `end`.",
-            0..close + 1,
-            vec![(open..open + 1, opening), (close..close + 1, closing)],
-        );
-    } else if style == "braces" {
-        let Some(begin) = source[operator + 3..]
-            .find("begin")
-            .map(|at| operator + 3 + at)
-        else {
-            return;
-        };
-        let Some(end) = source.rfind("end") else {
-            return;
-        };
-        if end <= begin || !source[begin..end].contains('\n') {
-            return;
+        if let Some(wrapper) = wrapper {
+            self.candidates.push(MultilineMemoizationCandidate {
+                location: assignment.start_offset()..assignment.end_offset(),
+                wrapper,
+            });
         }
-        context.replace_many(
-            "Wrap multiline memoization blocks in `(` and `)`.",
-            0..end + 3,
-            vec![
-                (begin..begin + 5, "(".to_string()),
-                (end..end + 3, ")".to_string()),
-            ],
-        );
     }
+}
+
+macro_rules! inspect_or_write {
+    ($method:ident, $type:ty, $walk:path) => {
+        fn $method(&mut self, node: &$type) {
+            self.inspect(node.location(), node.value());
+            $walk(self, node);
+        }
+    };
+}
+
+impl<'pr> Visit<'pr> for MultilineMemoizationCollector<'_> {
+    inspect_or_write!(visit_local_variable_or_write_node, ruby_prism::LocalVariableOrWriteNode<'pr>, ruby_prism::visit_local_variable_or_write_node);
+    inspect_or_write!(visit_instance_variable_or_write_node, ruby_prism::InstanceVariableOrWriteNode<'pr>, ruby_prism::visit_instance_variable_or_write_node);
+    inspect_or_write!(visit_class_variable_or_write_node, ruby_prism::ClassVariableOrWriteNode<'pr>, ruby_prism::visit_class_variable_or_write_node);
+    inspect_or_write!(visit_global_variable_or_write_node, ruby_prism::GlobalVariableOrWriteNode<'pr>, ruby_prism::visit_global_variable_or_write_node);
+    inspect_or_write!(visit_constant_or_write_node, ruby_prism::ConstantOrWriteNode<'pr>, ruby_prism::visit_constant_or_write_node);
+    inspect_or_write!(visit_constant_path_or_write_node, ruby_prism::ConstantPathOrWriteNode<'pr>, ruby_prism::visit_constant_path_or_write_node);
+    inspect_or_write!(visit_index_or_write_node, ruby_prism::IndexOrWriteNode<'pr>, ruby_prism::visit_index_or_write_node);
+    inspect_or_write!(visit_call_or_write_node, ruby_prism::CallOrWriteNode<'pr>, ruby_prism::visit_call_or_write_node);
 }
 
 fn static_class(node: &ClassNode<'_>, context: &mut CopContext<'_, '_>) {

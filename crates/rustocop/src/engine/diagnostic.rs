@@ -19,13 +19,16 @@ pub(crate) fn sort_offenses(offenses: &mut [Offense]) {
         left.line
             .cmp(&right.line)
             .then(left.column.cmp(&right.column))
+            .then(left.last_line.cmp(&right.last_line))
+            .then(left.last_column.cmp(&right.last_column))
             .then(left.cop_name.cmp(&right.cop_name))
+            .then(left.message.cmp(&right.message))
     });
 }
 
 fn prism_offense(source: &str, index: &SourceIndex, finding: prism::Finding) -> Offense {
     let (line, column) = index.position(source, finding.start_offset);
-    let empty_location = finding.start_offset == 0 && finding.end_offset == 0;
+    let empty_location = finding.start_offset >= finding.end_offset;
     let ends_at_newline = finding.end_offset > finding.start_offset
         && source.as_bytes().get(finding.end_offset - 1) == Some(&b'\n');
     let reversed_empty = finding.end_offset < finding.start_offset;
@@ -40,17 +43,40 @@ fn prism_offense(source: &str, index: &SourceIndex, finding: prism::Finding) -> 
     while last_offset > finding.start_offset && !source.is_char_boundary(last_offset) {
         last_offset -= 1;
     }
-    let (last_line, last_column) = if empty_location {
-        (1, 0)
-    } else if ends_at_newline {
-        let (line, _) = index.position(source, finding.end_offset);
-        // RuboCop's JSON formatter reports the beginning of the following
-        // line as column one even though Parser's internal range column is
-        // zero for a range ending exactly at a newline.
-        (line, 1)
-    } else {
-        index.position(source, last_offset)
-    };
+    let (last_line, last_column) =
+        if reversed_empty && finding.start_offset == source.len() && source.ends_with('\n') {
+            (line, 0)
+        } else if reversed_empty {
+            index.position(source, finding.end_offset)
+        } else if empty_location {
+            // Parser represents an empty source range as ending immediately
+            // before its start. RuboCop's public JSON formatter renders that
+            // point at the start column, except for an insertion at the end
+            // of a non-newline-terminated source.
+            if finding.cop_name == "Lint/EmptyFile"
+                || finding.cop_name == "Layout/TrailingEmptyLines"
+                    && (source.is_empty() || source.ends_with('\n'))
+            {
+                (line, 0)
+            } else if (finding.start_offset == source.len()
+                && !source.is_empty()
+                && !source.ends_with('\n'))
+                || finding.cop_name == "Layout/IndentationWidth"
+                    && finding.message.ends_with(" spaces for indentation.")
+            {
+                (line, column.saturating_sub(1).max(1))
+            } else {
+                (line, column)
+            }
+        } else if ends_at_newline {
+            let (line, _) = index.position(source, finding.end_offset);
+            // RuboCop's JSON formatter reports the beginning of the following
+            // line as column one even though Parser's internal range column is
+            // zero for a range ending exactly at a newline.
+            (line, 1)
+        } else {
+            index.position(source, last_offset)
+        };
     Offense {
         cop_name: finding.cop_name.to_string(),
         message: finding.message,
@@ -60,10 +86,13 @@ fn prism_offense(source: &str, index: &SourceIndex, finding: prism::Finding) -> 
         column,
         last_line,
         last_column,
-        length: source
-            .get(finding.start_offset..finding.end_offset)
-            .map_or(0, |range| range.chars().count())
-            .max(1),
+        length: if empty_location && finding.cop_name != "Layout/EmptyLineAfterMagicComment" {
+            0
+        } else {
+            source
+                .get(finding.start_offset..finding.end_offset)
+                .map_or(1, |range| range.chars().count().max(1))
+        },
     }
 }
 
@@ -126,6 +155,62 @@ mod tests {
             },
         );
         assert_eq!((empty.last_line, empty.last_column), (1, 0));
+        assert_eq!(empty.length, 0);
+
+        let empty_at_nonterminated_eof = prism_offense(
+            "source",
+            &SourceIndex::new("source"),
+            prism::Finding {
+                cop_name: "Layout/TrailingEmptyLines",
+                message: "Final newline missing.".to_string(),
+                correctable: true,
+                corrected: false,
+                start_offset: 6,
+                end_offset: 6,
+            },
+        );
+        assert_eq!(
+            (
+                empty_at_nonterminated_eof.line,
+                empty_at_nonterminated_eof.column,
+                empty_at_nonterminated_eof.last_column
+            ),
+            (1, 7, 6)
+        );
+
+        let empty_at_start_of_nonempty_source = prism_offense(
+            "source\n",
+            &SourceIndex::new("source\n"),
+            prism::Finding {
+                cop_name: "Bundler/GemFilename",
+                message: "Wrong filename.".to_string(),
+                correctable: false,
+                corrected: false,
+                start_offset: 0,
+                end_offset: 0,
+            },
+        );
+        assert_eq!(
+            (
+                empty_at_start_of_nonempty_source.last_line,
+                empty_at_start_of_nonempty_source.last_column
+            ),
+            (1, 1)
+        );
+
+        let inserted_blank_line = prism_offense(
+            "# frozen_string_literal: true\nvalue\n",
+            &SourceIndex::new("# frozen_string_literal: true\nvalue\n"),
+            prism::Finding {
+                cop_name: "Layout/EmptyLineAfterMagicComment",
+                message: "Add an empty line after magic comments.".to_string(),
+                correctable: true,
+                corrected: false,
+                start_offset: 30,
+                end_offset: 30,
+            },
+        );
+        assert_eq!(inserted_blank_line.length, 1);
 
         let newline = prism_offense(
             "comment\n",
@@ -140,5 +225,29 @@ mod tests {
             },
         );
         assert_eq!((newline.last_line, newline.last_column), (2, 1));
+
+        let missing_trailing_blank = prism_offense(
+            "value\n",
+            &SourceIndex::new("value\n"),
+            prism::Finding {
+                cop_name: "Layout/TrailingEmptyLines",
+                message: "Trailing blank line missing.".to_string(),
+                correctable: true,
+                corrected: false,
+                start_offset: 6,
+                end_offset: 5,
+            },
+        );
+        assert_eq!(
+            (missing_trailing_blank.line, missing_trailing_blank.column),
+            (2, 1)
+        );
+        assert_eq!(
+            (
+                missing_trailing_blank.last_line,
+                missing_trailing_blank.last_column
+            ),
+            (2, 0)
+        );
     }
 }

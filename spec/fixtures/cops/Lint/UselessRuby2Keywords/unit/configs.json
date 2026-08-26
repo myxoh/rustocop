@@ -1,0 +1,4 @@
+{
+  "19f637e9a2e8371e": "---\nAllCops:\n  TargetRubyVersion: 3.4\nLint/UselessRuby2Keywords:\n  Description: Finds unnecessary uses of `ruby2_keywords`.\n  Enabled: true\n  VersionAdded: '1.23'\n  AutoCorrect: always\n",
+  "2f31b35aed4bae31": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/UselessRuby2Keywords:\n  Description: Finds unnecessary uses of `ruby2_keywords`.\n  Enabled: true\n  VersionAdded: '1.23'\n  AutoCorrect: always\n"
+}

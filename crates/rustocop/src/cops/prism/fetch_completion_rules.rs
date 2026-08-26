@@ -33,7 +33,7 @@ fn useless_default_value_argument(node: &CallNode<'_>, context: &mut CopContext<
     let (Some(first), Some(default)) = (arguments.first(), arguments.iter().nth(1)) else {
         return;
     };
-    if default.as_keyword_hash_node().is_some() || default.as_splat_node().is_some() {
+    if default.as_keyword_hash_node().is_some() {
         return;
     }
     context.remove_list_element(
@@ -54,8 +54,8 @@ fn redundant_fetch_block(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) 
     if block.parameters().is_some() {
         return;
     }
-    let fallback = match block.body() {
-        None => "nil".to_string(),
+    let (fallback, empty_block) = match block.body() {
+        None => ("nil".to_string(), true),
         Some(body) => {
             let Some(body) = single_expression(body) else {
                 return;
@@ -63,7 +63,7 @@ fn redundant_fetch_block(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) 
             if !safe_fallback(&body, context) {
                 return;
             }
-            context.source_file().node(&body).to_string()
+            (context.source_file().node(&body).to_string(), false)
         }
     };
     let Some(key) = only_argument(node) else {
@@ -74,10 +74,12 @@ fn redundant_fetch_block(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) 
     };
     let preferred = format!("fetch({}, {fallback})", context.source_file().node(&key));
     let offense = selector.start_offset()..block.location().end_offset();
-    let current = context
-        .source_file()
-        .slice(offense.clone())
-        .unwrap_or_default();
+    let block_display = if empty_block {
+        "{}".to_string()
+    } else {
+        format!("{{ {fallback} }}")
+    };
+    let current = format!("fetch({}) {block_display}", context.source_file().node(&key));
     context.replace(
         format!("Use `{preferred}` instead of `{current}`."),
         offense.clone(),
@@ -90,11 +92,14 @@ fn safe_fallback(node: &Node<'_>, context: &CopContext<'_, '_>) -> bool {
     if node.as_symbol_node().is_some()
         || node.as_integer_node().is_some()
         || node.as_float_node().is_some()
+        || node.as_true_node().is_some()
+        || node.as_false_node().is_some()
+        || node.as_nil_node().is_some()
     {
         return true;
     }
     if constant_path(node).is_some() {
-        return context.config_bool("SafeForConstants", true);
+        return context.config_bool("SafeForConstants", false);
     }
     if node.as_string_node().is_some() {
         return context.source().lines().take(2).any(|line| {

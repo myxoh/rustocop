@@ -1,0 +1,3 @@
+{
+  "e70daf64dd410eaf": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/MinMax:\n  Description: Use `Enumerable#minmax` instead of `Enumerable#min` and `Enumerable#max`\n    in conjunction.\n  Enabled: true\n  VersionAdded: '0.50'\n  AutoCorrect: always\n"
+}

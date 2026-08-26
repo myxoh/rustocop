@@ -1,0 +1,5 @@
+{
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
+  "8acb20c630e6121e": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/ConstantOverwrittenInRescue:\n  Description: Checks for overwriting an exception with an exception result by use\n    `rescue =>`.\n  Enabled: true\n  VersionAdded: '1.31'\n  AutoCorrect: always\n",
+  "e3d0042ac17c042c": "---\nAllCops:\n  DisabledByDefault: true\n  ParserEngine: parser_prism\n  TargetRubyVersion: 3.4\nLint/ConstantOverwrittenInRescue:\n  Enabled: true\n"
+}

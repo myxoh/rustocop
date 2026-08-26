@@ -1,0 +1,7 @@
+{
+  "43fe51825ceea5d0": "---\nAllCops:\n  DisabledByDefault: true\n  NewCops: disable\n  ParserEngine: parser_prism\n  TargetRubyVersion: 3.4\nStyle/InverseMethods:\n  InverseMethods:\n    :any?: :none?\n    :blank?: :present?\n    :==: :!=\n  InverseBlocks:\n    :select: :reject\nStyle/NegatedUnless:\n  EnforcedStyle: prefix\n",
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
+  "7e6fd1b0edf4e3ff": "---\nStyle/NegatedUnless:\n  SupportedStyles:\n  - both\n  - prefix\n  - postfix\n  EnforcedStyle: both\n  Enabled: true\n",
+  "b364f1b85b59f99e": "---\nStyle/NegatedUnless:\n  SupportedStyles:\n  - both\n  - prefix\n  - postfix\n  EnforcedStyle: postfix\n  Enabled: true\n",
+  "e0b410f8212e3e2a": "---\nStyle/NegatedUnless:\n  SupportedStyles:\n  - both\n  - prefix\n  - postfix\n  EnforcedStyle: prefix\n  Enabled: true\n"
+}

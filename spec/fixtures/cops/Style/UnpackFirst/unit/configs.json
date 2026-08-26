@@ -1,0 +1,3 @@
+{
+  "0779336320bfefe3": "---\nAllCops:\n  TargetRubyVersion: 2.4\nStyle/UnpackFirst:\n  Description: Checks for accessing the first element of `String#unpack` instead of\n    using `unpack1`.\n  Enabled: true\n  VersionAdded: '0.54'\n  AutoCorrect: always\n"
+}

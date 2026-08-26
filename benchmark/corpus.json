@@ -362,7 +362,7 @@
       ]
     },
     {
-      "cop": "Style/MethodCallWithoutArgsParentheses",
+      "cop": "Style/ParenthesesAroundCondition",
       "sources": [
         "action_1()\n",
         "action_2()\n",

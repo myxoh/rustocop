@@ -1,0 +1,4 @@
+{
+  "77c39c64bd272713": "---\nAllCops:\n  TargetRubyVersion: '2.7'\n",
+  "8b759a9d1eb877ba": "---\nLayout/IndentationWidth:\n  Width: 2\nStyle/TrailingBodyOnClass:\n  Enabled: true\n"
+}

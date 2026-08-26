@@ -1,0 +1,6 @@
+{
+  "0948ccb387cec661": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/NonNilCheck:\n  Description: Checks for redundant nil checks.\n  StyleGuide: \"#no-non-nil-checks\"\n  Enabled: true\n  VersionAdded: '0.20'\n  VersionChanged: '0.22'\n  IncludeSemanticChanges: false\n  AutoCorrect: always\nStyle/NilComparison:\n  EnforcedStyle: comparison\n",
+  "7df95f224879f7d6": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/NonNilCheck:\n  Description: Checks for redundant nil checks.\n  StyleGuide: \"#no-non-nil-checks\"\n  Enabled: true\n  VersionAdded: '0.20'\n  VersionChanged: '0.22'\n  IncludeSemanticChanges: false\n  AutoCorrect: always\n",
+  "874165970da346ad": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/NonNilCheck:\n  Description: Checks for redundant nil checks.\n  StyleGuide: \"#no-non-nil-checks\"\n  Enabled: true\n  VersionAdded: '0.20'\n  VersionChanged: '0.22'\n  IncludeSemanticChanges: true\n  AutoCorrect: always\nStyle/NilComparison:\n  EnforcedStyle: comparison\n",
+  "ab12221494b6b5fa": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/NonNilCheck:\n  Description: Checks for redundant nil checks.\n  StyleGuide: \"#no-non-nil-checks\"\n  Enabled: true\n  VersionAdded: '0.20'\n  VersionChanged: '0.22'\n  IncludeSemanticChanges: true\n  AutoCorrect: always\n"
+}

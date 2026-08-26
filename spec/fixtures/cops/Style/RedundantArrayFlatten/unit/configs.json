@@ -1,0 +1,4 @@
+{
+  "77c39c64bd272713": "---\nAllCops:\n  TargetRubyVersion: '2.7'\n",
+  "d84ebe773dea1efb": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/RedundantArrayFlatten:\n  Description: Checks for redundant calls of `Array#flatten`.\n  Enabled: true\n  Safe: false\n  VersionAdded: '1.76'\n  AutoCorrect: always\n"
+}

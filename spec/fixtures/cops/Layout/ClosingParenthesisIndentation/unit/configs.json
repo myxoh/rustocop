@@ -1,0 +1,4 @@
+{
+  "8783b31665a76da8": "---\nLayout/ClosingParenthesisIndentation:\n  IndentationWidth: 1\n  Enabled: true\nLayout/IndentationWidth:\n  Width: 2\n",
+  "bcb49c547fdd88e3": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/ClosingParenthesisIndentation:\n  Description: Checks the indentation of hanging closing parentheses.\n  Enabled: true\n  VersionAdded: '0.49'\n  VersionChanged: '1.86'\n  IndentationWidth:\n  AutoCorrect: always\n"
+}

@@ -1,40 +1,6 @@
 use std::ops::Range;
 
-use super::source_helpers::{all_offsets, source_lines};
-
-pub(super) struct Definition<'source> {
-    pub(super) name: &'source str,
-    pub(super) arguments: Range<usize>,
-}
-
-pub(super) fn definitions(source: &str) -> Vec<Definition<'_>> {
-    let mut definitions = Vec::new();
-    for (start, line) in source_lines(source) {
-        let trimmed = line.trim_start();
-        if !trimmed.starts_with("def ") {
-            continue;
-        }
-        let Some(open) = line.find('(') else {
-            continue;
-        };
-        let Some(close) = line.rfind(')') else {
-            continue;
-        };
-        let name_start = trimmed.find(' ').unwrap_or(0) + 1;
-        let name = trimmed[name_start..]
-            .split('(')
-            .next()
-            .unwrap_or_default()
-            .rsplit('.')
-            .next()
-            .unwrap_or_default();
-        definitions.push(Definition {
-            name,
-            arguments: start + open + 1..start + close,
-        });
-    }
-    definitions
-}
+use super::source_helpers::all_offsets;
 
 pub(super) fn call_ranges(source: &str, needle: &str) -> Vec<Range<usize>> {
     all_offsets(source, needle)
@@ -118,7 +84,7 @@ pub(super) fn top_level_elements(source: &str, start: usize, end: usize) -> Vec<
 pub(super) fn trim_range(source: &str, range: Range<usize>) -> Range<usize> {
     let value = &source[range.clone()];
     let leading = value.len() - value.trim_start().len();
-    let trailing = value.len() - value.trim_end().len();
+    let trailing = value[leading..].len() - value[leading..].trim_end().len();
     range.start + leading..range.end - trailing
 }
 
@@ -152,5 +118,11 @@ mod tests {
         let source = "before Hash.new(call(one, two)) after";
         let ranges = call_ranges(source, "Hash.new(");
         assert_eq!(&source[ranges[0].clone()], "Hash.new(call(one, two))");
+    }
+
+    #[test]
+    fn trims_an_all_whitespace_range_to_its_end() {
+        let source = "before   after";
+        assert_eq!(trim_range(source, 6..9), 9..9);
     }
 }

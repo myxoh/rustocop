@@ -1,0 +1,5 @@
+{
+  "01f1a789e5b330de": "--- {}\n",
+  "77c39c64bd272713": "---\nAllCops:\n  TargetRubyVersion: '2.7'\n",
+  "f11654d569a2a8bb": "---\nAllCops:\n  TargetRubyVersion: 2.7\nSecurity/JSONLoad:\n  Description: Prefer usage of `JSON.parse` over `JSON.load` due to potential security\n    issues. See reference for more information.\n  References:\n  - https://ruby-doc.org/stdlib-2.7.0/libdoc/json/rdoc/JSON.html#method-i-load\n  - https://bugs.ruby-lang.org/issues/19528\n  Enabled: true\n  VersionAdded: '0.43'\n  VersionChanged: '1.22'\n  SafeAutoCorrect: false\n  AutoCorrect: always\n"
+}

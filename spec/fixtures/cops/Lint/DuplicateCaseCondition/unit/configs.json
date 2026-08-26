@@ -1,0 +1,3 @@
+{
+  "0b55fdab620543d6": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/DuplicateCaseCondition:\n  Description: Do not repeat values in case conditionals.\n  Enabled: true\n  VersionAdded: '0.45'\n  AutoCorrect: always\n"
+}

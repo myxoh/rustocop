@@ -21,7 +21,7 @@ pub(super) fn exit_status(options: &RunOptions, results: &[InspectionResult]) ->
     let (count, uncorrected) = offenses.fold((0, 0), |(count, uncorrected), offense| {
         (count + 1, uncorrected + usize::from(!offense.corrected))
     });
-    if count == 0 || (options.inspection.autocorrect && uncorrected == 0) {
+    if count == 0 || (options.inspection.autocorrect_enabled() && uncorrected == 0) {
         0
     } else {
         1
@@ -63,7 +63,9 @@ fn json_file(result: &InspectionResult) -> String {
 }
 
 fn json_offense(offense: &Offense) -> String {
-    let severity = if warning_cop(&offense.cop_name) {
+    let severity = if offense.cop_name == "Lint/Syntax" {
+        "fatal"
+    } else if warning_cop(&offense.cop_name) {
         "warning"
     } else {
         "convention"
@@ -99,6 +101,7 @@ fn warning_cop(cop_name: &str) -> bool {
                 | "Gemspec/RequiredRubyVersion"
                 | "Layout/BeginEndAlignment"
                 | "Layout/DefEndAlignment"
+                | "Layout/EndAlignment"
         )
 }
 

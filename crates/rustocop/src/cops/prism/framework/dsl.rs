@@ -113,6 +113,33 @@ macro_rules! define_call_cop {
 /// Defines a cop callback for one Prism node type. The cast is the Prism
 /// `Node::as_*_node` method used to select that type.
 macro_rules! define_node_cop {
+    ($type:ident => $name:literal => recovered $cast:ident => $check:path) => {
+        struct $type;
+
+        impl Cop for $type {
+            fn name(&self) -> &'static str {
+                $name
+            }
+
+            fn visits_recovered_nodes(&self) -> bool {
+                true
+            }
+
+            fn on_node<'pr>(
+                &self,
+                node: &Node<'pr>,
+                ancestors: &[Node<'pr>],
+                source: &str,
+                context: &mut Context,
+            ) {
+                let Some(typed_node) = node.$cast() else {
+                    return;
+                };
+                let mut cop_context = context.cop_context(self.name(), source, ancestors);
+                $check(&typed_node, &mut cop_context);
+            }
+        }
+    };
     ($type:ident => $name:literal => $cast:ident => $check:path) => {
         struct $type;
 
@@ -185,24 +212,24 @@ macro_rules! define_source_context_cop {
     };
 }
 
-/// Defines a cop that consumes parse diagnostics produced by the engine's
-/// single Prism parse instead of parsing the source again.
-macro_rules! define_parse_error_cop {
-    ($type:ident => $name:literal => $check:path) => {
+macro_rules! define_parse_error_and_source_cop {
+    ($type:ident => $name:literal => $parse:path, $source_check:path) => {
         struct $type;
 
         impl Cop for $type {
             fn name(&self) -> &'static str {
                 $name
             }
-
             fn phase(&self) -> CopPhase {
-                CopPhase::ParseError
+                CopPhase::ParseErrorAndSource
             }
-
             fn on_parse_error(&self, error: &Diagnostic<'_>, source: &str, context: &mut Context) {
                 let mut cop_context = context.cop_context(self.name(), source, &[]);
-                $check(error, &mut cop_context);
+                $parse(error, &mut cop_context);
+            }
+            fn on_source(&self, source: &str, context: &mut Context) {
+                let mut cop_context = context.cop_context(self.name(), source, &[]);
+                $source_check(&mut cop_context);
             }
         }
     };
@@ -218,6 +245,9 @@ macro_rules! define_cops {
 }
 
 macro_rules! define_cop_entry {
+    ($type:ident => $name:literal => recovered_node($cast:ident, $check:path)) => {
+        define_node_cop!($type => $name => recovered $cast => $check);
+    };
     ($type:ident => $name:literal => call($check:path)) => {
         define_call_cop!($type => $name => $check);
     };
@@ -257,6 +287,10 @@ macro_rules! define_cop_entry {
         define_rule!($rule);
         define_rubocop_callback_rule_cop!($type => $name => $rule [$($callback),+]);
     };
+    ($type:ident => $name:literal => recovery_rubocop_callbacks($rule:ident, [$($callback:ident),+ $(,)?])) => {
+        define_rule!($rule);
+        define_recovery_rubocop_callback_rule_cop!($type => $name => $rule [$($callback),+]);
+    };
     ($type:ident => $name:literal => stateful_rubocop_callbacks($rule:ident, $state:ident, [$($callback:ident),+ $(,)?])) => {
         define_stateful_rule!($rule, $state);
         define_stateful_rubocop_callback_rule_cop!($type => $name => $rule<$state> [$($callback),+]);
@@ -267,15 +301,15 @@ macro_rules! define_cop_entry {
     ($type:ident => $name:literal => source($check:path)) => {
         define_source_context_cop!($type => $name => $check);
     };
-    ($type:ident => $name:literal => parse_error($check:path)) => {
-        define_parse_error_cop!($type => $name => $check);
+    ($type:ident => $name:literal => parse_error_and_source($parse:path, $source:path)) => {
+        define_parse_error_and_source_cop!($type => $name => $parse, $source);
     };
 }
 
 pub(super) use {
     add_offense, declare_cops, declare_source_cops, def_node_matcher, define_any_node_cop,
-    define_call_cop, define_cop_entry, define_cops, define_node_cop, define_parse_error_cop,
-    define_source_context_cop, return_if, return_unless,
+    define_call_cop, define_cop_entry, define_cops, define_node_cop,
+    define_parse_error_and_source_cop, define_source_context_cop, return_if, return_unless,
 };
 
 #[cfg(test)]

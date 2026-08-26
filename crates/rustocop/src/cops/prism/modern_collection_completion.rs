@@ -6,43 +6,100 @@ const ZERO_MSG: &str = "Use `empty?` instead of `{current}`.";
 const NONZERO_MSG: &str = "Use `!empty?` instead of `{current}`.";
 
 define_cops! {
-    ArrayIntersect => "Style/ArrayIntersect" => source(array_intersect),
+    ArrayIntersect => "Style/ArrayIntersect" => any_node(array_intersect),
     TallyMethod => "Style/TallyMethod" => call(tally_method),
     ZeroLengthPredicate => "Style/ZeroLengthPredicate" => call_rule(ZeroLengthPredicateRule, on_send, restrict [b"size", b"length"]),
 }
 
-fn array_intersect(context: &mut CopContext<'_, '_>) {
-    if !context.target_ruby_version().at_least(3, 1) {
+fn array_intersect(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
+    if !context.target_ruby_version().at_least(3, 1) { return; }
+    if let Some(block) = node.as_block_node() {
+        array_intersect_block(&block, context);
         return;
     }
-    for (offset, line) in context.source_file().lines() {
-        let code = line.trim();
-        let Some(prefix) = code
-            .strip_suffix(".any?")
-            .or_else(|| code.strip_suffix(".empty?"))
-            .or_else(|| code.strip_suffix(".none?"))
-        else {
-            continue;
-        };
-        let negated = code.ends_with(".empty?") || code.ends_with(".none?");
-        let inner = prefix.trim_matches(['(', ')']);
-        let Some((left, right)) = inner.split_once(" & ") else {
-            continue;
-        };
-        let replacement = format!(
-            "{}{}.intersect?({})",
-            if negated { "!" } else { "" },
-            left.trim(),
-            right.trim()
-        );
-        let start = offset + line.find(code).unwrap_or(0);
-        context.replace(
-            format!("Use `{replacement}` instead of `{code}`."),
-            start..start + code.len(),
-            start..start + code.len(),
-            replacement,
-        );
+    let Some(call) = node.as_call_node() else { return };
+    if call.block().is_some() { return; }
+    let active_support = context.related_config_value("AllCops", "ActiveSupportExtensionsEnabled") == Some("true");
+    let name = call_name(&call);
+    let direct = matches!(name, b"any?" | b"empty?" | b"none?")
+        || active_support && matches!(name, b"present?" | b"blank?");
+    let (left, right, dot, straight) = if direct {
+        let Some(receiver) = call.receiver() else { return };
+        let Some((left, right, dot)) = array_intersection_parts(&receiver, context.source_file()) else { return };
+        (left, right, dot, matches!(name, b"any?" | b"present?"))
+    } else if matches!(name, b">" | b"==" | b"!=") {
+        let Some(zero) = first_argument(&call).and_then(|argument| argument.as_integer_node()) else { return };
+        if context.source_file().at(&zero.location()) != "0" { return; }
+        let Some(size) = call.receiver().and_then(|receiver| receiver.as_call_node()) else { return };
+        if !matches!(call_name(&size), b"count" | b"length" | b"size") { return; }
+        let Some(intersection) = size.receiver() else { return };
+        let Some((left, right, dot)) = array_intersection_parts(&intersection, context.source_file()) else { return };
+        (left, right, dot, matches!(name, b">" | b"!="))
+    } else if matches!(name, b"zero?" | b"positive?") {
+        let Some(size) = call.receiver().and_then(|receiver| receiver.as_call_node()) else { return };
+        if !matches!(call_name(&size), b"count" | b"length" | b"size") { return; }
+        let Some(intersection) = size.receiver() else { return };
+        let Some((left, right, dot)) = array_intersection_parts(&intersection, context.source_file()) else { return };
+        (left, right, dot, name == b"positive?")
+    } else { return };
+    let replacement = format!("{}{left}{dot}intersect?({right})", if straight { "" } else { "!" });
+    let location = call.location();
+    let existing = context.source_file().at(&location);
+    context.replace(
+        format!("Use `{replacement}` instead of `{existing}`."),
+        location.start_offset()..location.end_offset(),
+        location.start_offset()..location.end_offset(),
+        replacement,
+    );
+}
+
+fn array_intersection_parts(node: &Node<'_>, file: SourceFile<'_>) -> Option<(String, String, String)> {
+    if let Some(parentheses) = node.as_parentheses_node() {
+        let inner = parentheses.body().and_then(single_expression)?;
+        return array_intersection_parts(&inner, file);
     }
+    let call = node.as_call_node()?;
+    if call_name(&call) == b"&" {
+        let left = call.receiver()?;
+        let right = first_argument(&call)?;
+        return Some((file.node(&left).to_string(), file.node(&right).to_string(), ".".to_string()));
+    }
+    if call_name(&call) != b"intersection" || argument_count(&call) != 1 { return None; }
+    let left = call.receiver()?;
+    let right = first_argument(&call)?;
+    let dot = call.call_operator_loc().map_or(".", |operator| file.at(&operator)).to_string();
+    Some((file.node(&left).to_string(), file.node(&right).to_string(), dot))
+}
+
+fn array_intersect_block(block: &ruby_prism::BlockNode<'_>, context: &mut CopContext<'_, '_>) {
+    let Some(call) = context.parent().and_then(Node::as_call_node) else { return };
+    if !matches!(call_name(&call), b"any?" | b"none?") { return; }
+    let Some(receiver) = call.receiver() else { return };
+    let Some(member) = block.body().and_then(|body| body.as_statements_node())
+        .and_then(|statements| statements.body().last())
+        .and_then(|body| body.as_call_node())
+    else { return };
+    if call_name(&member) != b"member?" || argument_count(&member) != 1 { return; }
+    let Some(argument) = first_argument(&member) else { return };
+    let local_name = argument.as_local_variable_read_node().map(|argument| argument.name().as_slice().to_vec());
+    let expected = block.parameters()
+        .and_then(|parameters| parameters.as_block_parameters_node())
+        .and_then(|parameters| parameters.parameters())
+        .and_then(|parameters| parameters.requireds().first())
+        .and_then(|parameter| parameter.as_required_parameter_node())
+        .map(|parameter| parameter.name().as_slice().to_vec())
+        .or_else(|| (local_name.as_deref() == Some(b"_1")).then(|| b"_1".to_vec()))
+        .or_else(|| (context.target_ruby_version().at_least(3, 4) && argument.as_it_local_variable_read_node().is_some()).then(|| b"it".to_vec()));
+    let actual = local_name.as_deref().or_else(|| argument.as_it_local_variable_read_node().map(|_| b"it".as_slice()));
+    if expected.as_deref() != actual { return; }
+    let Some(other) = member.receiver() else { return };
+    let dot = call.call_operator_loc().map_or(".", |operator| context.source_file().at(&operator));
+    let replacement = format!("{}{}{dot}intersect?({})",
+        if call_name(&call) == b"none?" { "!" } else { "" },
+        context.source_file().node(&receiver), context.source_file().node(&other));
+    let range = call.location().start_offset()..block.location().end_offset();
+    let existing = &context.source()[range.clone()];
+    context.replace(format!("Use `{replacement}` instead of `{existing}`."), range.clone(), range, replacement);
 }
 
 fn tally_method(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
@@ -101,10 +158,9 @@ fn each_with_object_tally(node: &CallNode<'_>, context: &CopContext<'_, '_>) -> 
         return false;
     };
     if write.binary_operator().as_slice() != b"+"
-        || !write
+        || write
             .value()
-            .as_integer_node()
-            .is_some_and(|integer| TryInto::<i32>::try_into(integer.value()).ok() == Some(1))
+            .as_integer_node().is_none_or(|integer| TryInto::<i32>::try_into(integer.value()).ok() != Some(1))
         || write
             .arguments()
             .is_none_or(|arguments| arguments.arguments().len() != 1)

@@ -1,0 +1,7 @@
+{
+  "234c2ae05f43c206": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/EmptyBlock:\n  Description: Checks for blocks without a body.\n  Enabled: true\n  VersionAdded: '1.1'\n  VersionChanged: '1.15'\n  AllowComments: true\n  AllowEmptyLambdas: true\n  AutoCorrect: always\n",
+  "2f7e9ef600e35612": "---\nAllCops:\n  DisabledByDefault: true\n  ParserEngine: parser_prism\n  TargetRubyVersion: 3.4\nLint/EmptyBlock:\n  Enabled: true\n",
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
+  "80d2c70fbbe95d0f": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/EmptyBlock:\n  Description: Checks for blocks without a body.\n  Enabled: true\n  VersionAdded: '1.1'\n  VersionChanged: '1.15'\n  AllowComments: true\n  AllowEmptyLambdas: false\n  AutoCorrect: always\n",
+  "91144d40202cdb87": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/EmptyBlock:\n  Description: Checks for blocks without a body.\n  Enabled: true\n  VersionAdded: '1.1'\n  VersionChanged: '1.15'\n  AllowComments: false\n  AllowEmptyLambdas: true\n  AutoCorrect: always\n"
+}

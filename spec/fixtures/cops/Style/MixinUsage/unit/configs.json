@@ -1,0 +1,4 @@
+{
+  "065a12b5031200c1": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\n",
+  "7285146bb38df879": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/MixinUsage:\n  Description: Checks that `include`, `extend` and `prepend` exists at the top level.\n  Enabled: true\n  VersionAdded: '0.51'\n  AutoCorrect: always\n"
+}

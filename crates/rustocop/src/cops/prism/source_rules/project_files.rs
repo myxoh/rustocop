@@ -29,6 +29,9 @@ pub(super) fn duplicated_gem(source: &str, context: &mut Reporter<'_>) {
     let mut next_conditional = 0;
     for (line_index, (offset, line)) in source_lines(source).enumerate() {
         let trimmed = line.trim_start();
+        if trimmed.starts_with('#') {
+            continue;
+        }
         if trimmed.trim() == "end" {
             frames.pop();
             continue;

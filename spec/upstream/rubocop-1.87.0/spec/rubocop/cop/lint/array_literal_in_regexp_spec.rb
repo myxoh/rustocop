@@ -89,3 +89,4 @@ RSpec.describe RuboCop::Cop::Lint::ArrayLiteralInRegexp, :config do
     RUBY
   end
 end
+

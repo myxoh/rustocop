@@ -1,0 +1,5 @@
+{
+  "542a630e9ccd0175": "---\nAllCops:\n  DisabledByDefault: true\n  ParserEngine: parser_prism\n  TargetRubyVersion: 3.4\nStyle/MultilineIfModifier:\n  Enabled: true\n",
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
+  "ae8f37e5067c131a": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/MultilineIfModifier:\n  Description: Only use if/unless modifiers on single line statements.\n  StyleGuide: \"#no-multiline-if-modifiers\"\n  Enabled: true\n  VersionAdded: '0.45'\n  AutoCorrect: always\n"
+}

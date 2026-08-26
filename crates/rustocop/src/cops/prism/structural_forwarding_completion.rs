@@ -1,333 +1,376 @@
 use super::*;
+use crate::rubocop::ast::node::core::NodeRef as RubocopNodeRef;
+use crate::rubocop::ast::prism::convert as convert_rubocop_ast;
 
 define_cops! {
-    MultipleComparison => "Style/MultipleComparison" => source(multiple_comparison),
+    ArrayCoercion => "Style/ArrayCoercion" => any_node(array_coercion),
+    MultipleComparison => "Style/MultipleComparison" => node(as_or_node, multiple_comparison),
     ExplicitBlockArgument => "Style/ExplicitBlockArgument" => source(explicit_block_argument),
 }
 
-fn multiple_comparison(context: &mut CopContext<'_, '_>) {
-    let threshold = context.config_usize("ComparisonsThreshold", 2);
-    for (offset, line) in context.source_file().lines() {
-        let code = line.split('#').next().unwrap_or(line);
-        for operator in [" || ", " or "] {
-            let comparisons = code.split(operator).collect::<Vec<_>>();
-            if comparisons.len() < threshold {
-                continue;
-            }
-            let mut pairs = Vec::new();
-            let mut first = None;
-            let mut last = None;
-            for comparison in &comparisons {
-                let trimmed = comparison.trim();
-                let Some((left, right)) = trimmed.split_once(" == ") else {
-                    pairs.clear();
-                    break;
-                };
-                let left = left.split_whitespace().next_back().unwrap_or(left);
-                pairs.push((left, right.trim().trim_end_matches([')', ';'])));
-                let at = line.find(trimmed).unwrap_or(0);
-                first.get_or_insert(at);
-                last = Some(at + trimmed.len());
-            }
-            if pairs.len() < threshold {
-                continue;
-            }
-            let identifier = |value: &str| {
-                value
-                    .bytes()
-                    .next()
-                    .is_some_and(|byte| byte.is_ascii_alphabetic() || byte == b'_')
-                    && value
-                        .bytes()
-                        .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
-            };
-            if pairs
-                .iter()
-                .all(|pair| identifier(pair.0) && identifier(pair.1))
-            {
-                continue;
-            }
-            let variable = [pairs[0].0, pairs[0].1].into_iter().find(|candidate| {
-                pairs
-                    .iter()
-                    .all(|pair| pair.0 == *candidate || pair.1 == *candidate)
-            });
-            let Some(variable) = variable else {
-                continue;
-            };
-            if variable.contains(['[', ']']) && !context.config_bool("AllowMethodComparison", true)
-            {
-                continue;
-            }
-            if variable.contains("&.") && !context.config_bool("AllowMethodComparison", true) {
-                continue;
-            }
-            if variable.starts_with(['\'', '"', ':'])
-                || variable
-                    .bytes()
-                    .next()
-                    .is_some_and(|byte| byte.is_ascii_digit())
-            {
-                continue;
-            }
-            let allow_methods = context.config_bool("AllowMethodComparison", true);
-            let literal = |value: &str| {
-                value.starts_with(['\'', '"', ':'])
-                    || value.as_bytes().first().is_some_and(u8::is_ascii_digit)
-            };
-            let effective_pairs = pairs
-                .iter()
-                .filter(|pair| {
-                    let other = if pair.0 == variable { pair.1 } else { pair.0 };
-                    !allow_methods || literal(other)
-                })
-                .collect::<Vec<_>>();
-            if effective_pairs.len() < threshold {
-                continue;
-            }
-            let values = effective_pairs
-                .iter()
-                .map(|pair| if pair.0 == variable { pair.1 } else { pair.0 })
-                .collect::<Vec<_>>();
-            if allow_methods
-                && values
-                    .iter()
-                    .any(|value| value.contains('.') || value.contains("&."))
-            {
-                continue;
-            }
-            let first_pair = effective_pairs[0];
-            let candidate = format!("{} == {}", first_pair.0, first_pair.1);
-            let first = line.find(&candidate).unwrap_or(first.unwrap_or(0));
-            let start = offset
-                + line[first..]
-                    .find(&candidate)
-                    .map_or(first, |at| first + at);
-            let end = offset + last.unwrap_or(0);
-            context.replace(
-                "Avoid comparing a variable with multiple items in a conditional, use `Array#include?` instead.",
-                start..end,
-                start..end,
-                format!("[{}].include?({variable})", values.join(", ")),
-            );
-            break;
+fn array_coercion(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
+    if let Some(array) = node.as_array_node() {
+        if array.opening_loc().is_none_or(|opening| opening.as_slice() != b"[")
+            || array.elements().len() != 1
+        {
+            return;
         }
+        let Some(argument) = array
+            .elements()
+            .iter()
+            .next()
+            .and_then(|element| element.as_splat_node())
+            .and_then(|splat| splat.expression())
+        else {
+            return;
+        };
+        let argument_source = context.source_file().node(&argument);
+        context.replace(
+            format!("Use `Array({argument_source})` instead of `[*{argument_source}]`."),
+            array.location(),
+            array.location(),
+            format!("Array({argument_source})"),
+        );
+        return;
+    }
+
+    let Some(unless_node) = node.as_unless_node() else { return };
+    return_if!(unless_node.end_keyword_loc().is_some() || unless_node.else_clause().is_some());
+    let Some(predicate) = unless_node.predicate().as_call_node() else { return };
+    return_unless!(predicate.name().as_slice() == b"is_a?");
+    let Some(checked) = predicate.receiver().and_then(|receiver| receiver.as_local_variable_read_node()) else { return };
+    let Some(arguments) = predicate.arguments() else { return };
+    let mut arguments = arguments.arguments().iter();
+    let Some(array_constant) = arguments.next() else { return };
+    return_unless!(arguments.next().is_none() && node_is_root_constant(&array_constant, b"Array"));
+    let Some(assignment) = unless_node
+        .statements()
+        .filter(|statements| statements.body().len() == 1)
+        .and_then(|statements| statements.body().first())
+        .and_then(|body| body.as_local_variable_write_node())
+    else { return };
+    let Some(wrapped) = assignment.value().as_array_node() else { return };
+    return_unless!(wrapped.opening_loc().is_some() && wrapped.elements().len() == 1);
+    let Some(wrapped_variable) = wrapped
+        .elements()
+        .iter()
+        .next()
+        .and_then(|element| element.as_local_variable_read_node())
+    else { return };
+    let name = checked.name().as_slice();
+    return_unless!(assignment.name().as_slice() == name && wrapped_variable.name().as_slice() == name);
+    let name = String::from_utf8_lossy(name);
+    context.replace(
+        format!("Use `Array({name})` instead of explicit `Array` check."),
+        unless_node.location(),
+        unless_node.location(),
+        format!("{name} = Array({name})"),
+    );
+}
+
+fn multiple_comparison(node: &ruby_prism::OrNode<'_>, context: &mut CopContext<'_, '_>) {
+    if context.parent().is_some_and(|parent| parent.as_or_node().is_some()) {
+        return;
+    }
+    let threshold = context.config_usize("ComparisonsThreshold", 2);
+    let allow_methods = context.config_bool("AllowMethodComparison", true);
+    let mut comparisons = Vec::new();
+    if !collect_comparisons(
+        &node.as_node(),
+        allow_methods,
+        context.source(),
+        &mut comparisons,
+    ) {
+        return;
+    }
+    let Some(variable) = comparisons.first().map(|comparison| comparison.0.clone()) else {
+        return;
+    };
+    let retained = comparisons
+        .iter()
+        .position(|(candidate, _, _, _)| candidate != &variable)
+        .unwrap_or(comparisons.len());
+    comparisons.truncate(retained);
+    if comparisons.len() < threshold {
+        return;
+    }
+    let start = comparisons[0].2;
+    let end = comparisons.last().unwrap().3;
+    let values = comparisons
+        .iter()
+        .map(|(_, value, _, _)| value.as_str())
+        .collect::<Vec<_>>()
+        .join(", ");
+    context.replace(
+        "Avoid comparing a variable with multiple items in a conditional, use `Array#include?` instead.",
+        start..end,
+        start..end,
+        format!("[{values}].include?({variable})"),
+    );
+}
+
+fn collect_comparisons(
+    node: &Node<'_>,
+    allow_methods: bool,
+    source: &str,
+    comparisons: &mut Vec<(String, String, usize, usize)>,
+) -> bool {
+    if let Some(or_node) = node.as_or_node() {
+        return collect_comparisons(&or_node.left(), allow_methods, source, comparisons)
+            && collect_comparisons(&or_node.right(), allow_methods, source, comparisons);
+    }
+    if !is_equality_comparison(node) {
+        return false;
+    }
+    if node.as_call_node().is_some_and(|call| {
+        call.receiver()
+            .is_some_and(|receiver| receiver.as_local_variable_read_node().is_some())
+            && only_argument(&call)
+                .is_some_and(|argument| argument.as_local_variable_read_node().is_some())
+    }) {
+        return true;
+    }
+    let Some((variable, value)) = comparison_parts(node, allow_methods) else {
+        let call = node.as_call_node().expect("equality comparison is a call");
+        let receiver = call.receiver().expect("equality comparison has a receiver");
+        let argument = only_argument(&call).expect("equality comparison has one argument");
+        return receiver.as_local_variable_read_node().is_some()
+            || receiver.as_call_node().is_some()
+            || argument.as_local_variable_read_node().is_some()
+            || argument.as_call_node().is_some();
+    };
+    let variable_location = variable.location();
+    let value_location = value.location();
+    comparisons.push((
+        source[variable_location.start_offset()..variable_location.end_offset()].to_string(),
+        source[value_location.start_offset()..value_location.end_offset()].to_string(),
+        node.location().start_offset(),
+        node.location().end_offset(),
+    ));
+    true
+}
+
+fn is_equality_comparison(node: &Node<'_>) -> bool {
+    node.as_call_node().is_some_and(|call| {
+        call.name().as_slice() == b"=="
+            && call.receiver().is_some()
+            && call
+                .arguments()
+                .is_some_and(|arguments| arguments.arguments().len() == 1)
+    })
+}
+
+fn comparison_parts<'pr>(
+    node: &Node<'pr>,
+    allow_methods: bool,
+) -> Option<(Node<'pr>, Node<'pr>)> {
+    let call = node.as_call_node()?;
+    let receiver = call.receiver()?;
+    let value = call.arguments()?.arguments().iter().next()?;
+    if receiver.as_local_variable_read_node().is_some()
+        && value.as_local_variable_read_node().is_some()
+    {
+        return None;
+    }
+    if comparison_variable(&receiver, allow_methods) {
+        if allow_methods && value.as_call_node().is_some() {
+            return None;
+        }
+        Some((receiver, value))
+    } else if comparison_variable(&value, allow_methods) {
+        if allow_methods && receiver.as_call_node().is_some() {
+            return None;
+        }
+        Some((value, receiver))
+    } else {
+        None
     }
 }
 
+fn comparison_variable(node: &Node<'_>, allow_methods: bool) -> bool {
+    node.as_local_variable_read_node().is_some()
+        || allow_methods && node.as_call_node().is_some()
+}
+
 fn explicit_block_argument(context: &mut CopContext<'_, '_>) {
-    let source = context.source();
-    for (def_offset, line) in context.source_file().lines() {
-        let trimmed = line.trim_start();
-        if !trimmed.starts_with("def ") {
-            continue;
-        }
-        let Some(relative_end) = source[def_offset..].find("\nend") else {
-            continue;
-        };
-        let method_end = def_offset + relative_end + 4;
-        let body = &source[def_offset..method_end];
-        if body
-            .lines()
-            .skip(1)
-            .any(|nested| nested.trim_start().starts_with("def "))
+    let source = context.source().to_owned();
+    let parsed = ruby_prism::parse(source.as_bytes());
+    let (ast, root) = convert_rubocop_ast(&source, &parsed.node());
+    let Some(root) = root.map(|root| ast.node(root)) else {
+        return;
+    };
+    let mut edited_definitions = std::collections::HashSet::new();
+    for block in root.each_node(&["block", "numblock", "itblock"]) {
+        let (send, arguments, yield_node, offense_range) =
+            if block.node_child(0).is_some_and(|node| node.kind() == "args") {
+                let Some(send) = block
+                    .parent()
+                    .filter(|node| matches!(node.kind(), "super" | "zsuper"))
+                else {
+                    continue;
+                };
+                let Some(arguments) = block.node_child(0) else {
+                    continue;
+                };
+                let Some(yield_node) = block.node_child(1).filter(|node| node.kind() == "yield") else {
+                    continue;
+                };
+                let (Some(send_range), Some(block_range)) = (send.source_range(), block.source_range()) else {
+                    continue;
+                };
+                (send, arguments, yield_node, send_range.start..block_range.end)
+            } else {
+                let Some(send) = block.node_child(0) else {
+                    continue;
+                };
+                let Some(arguments) = block.node_child(1).filter(|node| node.kind() == "args") else {
+                    continue;
+                };
+                let Some(yield_node) = block.node_child(2).filter(|node| node.kind() == "yield") else {
+                    continue;
+                };
+                let Some(range) = block.source_range() else {
+                    continue;
+                };
+                (send, arguments, yield_node, range)
+            };
+        let block_arguments = arguments.child_nodes();
+        let yield_arguments = yield_node.child_nodes();
+        if block_arguments.len() != yield_arguments.len()
+            || block_arguments
+                .iter()
+                .zip(&yield_arguments)
+                .any(|(block_argument, yield_argument)| {
+                    block_argument.symbol_child(0).is_none()
+                        || block_argument.symbol_child(0) != yield_argument.symbol_child(0)
+                })
         {
             continue;
         }
-        if explicit_inline_blocks(context, def_offset, line, method_end) {
+        let Some(definition) = block
+            .ancestors()
+            .into_iter()
+            .find(|node| matches!(node.kind(), "def" | "defs"))
+        else {
             continue;
-        }
-        if let Some(block_relative) = body.find(" { |") {
-            let block_start = def_offset + block_relative;
-            let Some(pipe_relative) = source[block_start + 4..].find('|') else {
-                continue;
-            };
-            let pipe = block_start + 4 + pipe_relative;
-            let args = source[block_start + 4..pipe].trim();
-            let Some(close_relative) = source[pipe + 1..method_end].find('}') else {
-                continue;
-            };
-            let close = pipe + 1 + close_relative;
-            if source[pipe + 1..close].trim() != format!("yield {args}") {
-                continue;
+        };
+        let definition_arguments = definition
+            .child_nodes()
+            .into_iter()
+            .find(|node| node.kind() == "args");
+        let existing_block_argument = definition_arguments
+            .into_iter()
+            .flat_map(RubocopNodeRef::child_nodes)
+            .find(|node| node.kind() == "blockarg");
+        let block_name = existing_block_argument
+            .and_then(|node| node.symbol_child(0))
+            .unwrap_or(if existing_block_argument.is_some() { "" } else { "block" });
+        let block_range = explicit_character_range_to_byte(&source, offense_range);
+        let Some(mut send_range) = send.source_range() else {
+            continue;
+        };
+        if matches!(send.kind(), "super" | "zsuper") {
+            if let Some((block_begin, _)) = block.loc("begin") {
+                send_range.end = block_begin.start;
             }
-            let call_start = source[..block_start]
-                .rfind('\n')
-                .map_or(def_offset, |at| at + 1);
-            let indent = &source[call_start
-                ..call_start + source[call_start..].len()
-                    - source[call_start..].trim_start().len()];
-            let call = source[call_start..block_start].trim();
-            let replacement_call = if let Some(call) = call.strip_suffix(')') {
-                format!("{}{call}, &block)", indent)
-            } else {
-                format!("{indent}{call}(&block)")
-            };
-            let signature_insert = if let Some(close) = line.rfind(')') {
-                def_offset + close
-            } else {
-                def_offset + line.len()
-            };
-            let signature_text = if line.contains('(') {
-                ", &block"
-            } else {
-                "(&block)"
-            };
-            context.replace_many(
-                "Consider using explicit block argument in the surrounding method's signature over `yield`.",
-                call_start + indent.len()..close + 1,
-                vec![
-                    (call_start..close + 1, replacement_call),
-                    (signature_insert..signature_insert, signature_text.to_string()),
-                ],
-            );
-            continue;
         }
-        let Some(block_start_relative) = body.find(" do |") else {
-            continue;
-        };
-        let block_start = def_offset + block_start_relative;
-        let Some(args_end_relative) = source[block_start + 5..].find('|') else {
-            continue;
-        };
-        let args_end = block_start + 5 + args_end_relative;
-        let args = source[block_start + 5..args_end].trim();
-        let Some(block_end_relative) = source[args_end + 1..method_end].find("\n  end") else {
-            continue;
-        };
-        let block_end = args_end + 1 + block_end_relative;
-        let block_body = source[args_end + 1..block_end].trim();
-        if block_body != format!("yield {args}") {
-            continue;
+        let send_range = explicit_character_range_to_byte(&source, send_range);
+        let call = source[send_range.clone()].trim_end();
+        let replacement = explicit_forwarding_call(call, send, definition, block_name);
+        let mut edits = vec![(block_range.clone(), replacement)];
+        if existing_block_argument.is_none() && edited_definitions.insert(definition.id()) {
+            if let Some(edit) = explicit_definition_block_edit(&source, definition, block_name) {
+                edits.push(edit);
+            }
         }
-        let call_start = source[..block_start]
-            .rfind('\n')
-            .map_or(def_offset, |at| at + 1);
-        let indent_len = source[call_start..].len() - source[call_start..].trim_start().len();
-        let indent = &source[call_start..call_start + indent_len];
-        let call = source[call_start..block_start].trim();
-        let replacement_call = format!("{indent}{call}(&block)");
-        let signature_insert = if let Some(close) = line.rfind(')') {
-            def_offset + close
-        } else {
-            def_offset + line.len()
-        };
-        let signature_text = if line.contains('(') {
-            ", &block"
-        } else {
-            "(&block)"
-        };
         context.replace_many(
             "Consider using explicit block argument in the surrounding method's signature over `yield`.",
-            call_start + indent_len..block_end + 6,
-            vec![
-                (call_start..block_end + 6, replacement_call),
-                (signature_insert..signature_insert, signature_text.to_string()),
-            ],
+            block_range,
+            edits,
         );
     }
 }
 
-fn explicit_inline_blocks(
-    context: &mut CopContext<'_, '_>,
-    def_offset: usize,
-    signature: &str,
-    method_end: usize,
-) -> bool {
-    let existing_block = signature
-        .split('&')
-        .nth(1)
-        .map(|tail| {
-            tail.bytes()
-                .take_while(|byte| byte.is_ascii_alphanumeric() || *byte == b'_')
-                .map(char::from)
-                .collect::<String>()
-        })
-        .filter(|name| !name.is_empty());
-    let block_name = existing_block.as_deref().unwrap_or("block");
-    let mut candidates = Vec::<(std::ops::Range<usize>, String)>::new();
-    for (line_offset, line) in context.source_file().lines() {
-        if line_offset <= def_offset || line_offset >= method_end {
-            continue;
-        }
-        let Some(open) = line.find(" {") else {
-            continue;
-        };
-        let Some(close) = line.rfind('}') else {
-            continue;
-        };
-        if close <= open + 2 {
-            continue;
-        }
-        let block = line[open + 2..close].trim();
-        let forwards = if let Some(parameters) = block.strip_prefix('|') {
-            let Some((parameters, body)) = parameters.split_once('|') else {
-                continue;
-            };
-            body.trim() == format!("yield {}", parameters.trim())
+fn explicit_forwarding_call(
+    call: &str,
+    send: RubocopNodeRef<'_>,
+    definition: RubocopNodeRef<'_>,
+    block_name: &str,
+) -> String {
+    if send.kind() == "zsuper" {
+        let arguments = definition
+            .child_nodes()
+            .into_iter()
+            .find(|node| node.kind() == "args")
+            .into_iter()
+            .flat_map(RubocopNodeRef::child_nodes)
+            .filter(|argument| argument.kind() != "blockarg")
+            .filter_map(|argument| {
+                if matches!(argument.kind(), "optarg" | "kwoptarg") {
+                    argument.symbol_child(0).map(str::to_owned)
+                } else {
+                    argument.source().map(str::to_owned)
+                }
+            })
+            .collect::<Vec<_>>();
+        let prefix = if arguments.is_empty() {
+            String::new()
         } else {
-            block == "yield"
+            format!("{}, ", arguments.join(", "))
         };
-        if !forwards {
-            continue;
-        }
-        let indent = line.len() - line.trim_start().len();
-        let call = line[indent..open].trim_end();
-        let replacement = if call == "super" && signature.contains('(') {
-            let parameters = signature
-                .split_once('(')
-                .and_then(|(_, rest)| rest.rsplit_once(')'))
-                .map(|(parameters, _)| {
-                    parameters
-                        .split(',')
-                        .map(str::trim)
-                        .filter(|parameter| !parameter.is_empty())
-                        .map(|parameter| {
-                            parameter
-                                .split_once('=')
-                                .map_or(parameter, |(name, _)| name.trim())
-                        })
-                        .collect::<Vec<_>>()
-                        .join(", ")
-                })
-                .unwrap_or_default();
-            let separator = if parameters.is_empty() { "" } else { ", " };
-            format!("super({parameters}{separator}&{block_name})")
-        } else if let Some(call) = call.strip_suffix(')') {
-            let inner = call.trim_end_matches(',');
-            let separator = if inner.ends_with('(') { "" } else { ", " };
-            format!("{inner}{separator}&{block_name})")
+        return format!("super({prefix}&{block_name})");
+    }
+    if let Some(close) = call.rfind(')').filter(|_| send.loc("end").is_some()) {
+        let trimmed = call[..close].trim_end();
+        let separator = if trimmed.ends_with('(') {
+            ""
+        } else if trimmed.ends_with(',') {
+            " "
         } else {
-            format!("{}(&{block_name})", call.trim_end_matches(','))
+            ", "
         };
-        candidates.push((line_offset + indent..line_offset + close + 1, replacement));
+        return format!(
+            "{}{separator}&{block_name}{}{}",
+            trimmed,
+            &call[trimmed.len()..close],
+            &call[close..]
+        );
     }
-    if candidates.is_empty() {
-        return false;
-    }
-    let signature_insert = if let Some(close) = signature.rfind(')') {
-        def_offset + close
+    let has_arguments = send
+        .loc("selector")
+        .zip(send.source_range())
+        .is_some_and(|((selector, _), range)| selector.end < range.end)
+        || matches!(send.kind(), "super") && call.trim() != "super";
+    if has_arguments {
+        format!("{call}, &{block_name}")
     } else {
-        def_offset + signature.len()
-    };
-    let signature_text = if signature.trim_end().ends_with("()") {
-        "&block"
-    } else if signature.contains('(') {
-        ", &block"
-    } else {
-        "(&block)"
-    };
-    let mut edits = vec![candidates[0].clone()];
-    if existing_block.is_none() {
-        edits.push((
-            signature_insert..signature_insert,
-            signature_text.to_string(),
-        ));
+        format!("{call}(&{block_name})")
     }
-    let message = "Consider using explicit block argument in the surrounding method's signature over `yield`.";
-    context.replace_many(message, candidates[0].0.clone(), edits);
-    for (range, replacement) in candidates.iter().skip(1) {
-        context.replace(message, range.clone(), range.clone(), replacement);
+}
+
+fn explicit_definition_block_edit(
+    source: &str,
+    definition: RubocopNodeRef<'_>,
+    block_name: &str,
+) -> Option<(std::ops::Range<usize>, String)> {
+    let arguments = definition
+        .child_nodes()
+        .into_iter()
+        .find(|node| node.kind() == "args")?;
+    if let Some((closing, _)) = arguments.loc("end") {
+        let at = explicit_character_to_byte(source, closing.start);
+        let empty = arguments.child_nodes().is_empty();
+        return Some((at..at, format!("{}&{block_name}", if empty { "" } else { ", " })));
     }
-    true
+    let (name, _) = definition.loc("name")?;
+    let at = explicit_character_to_byte(source, name.end);
+    Some((at..at, format!("(&{block_name})")))
+}
+
+fn explicit_character_range_to_byte(source: &str, range: std::ops::Range<usize>) -> std::ops::Range<usize> {
+    explicit_character_to_byte(source, range.start)..explicit_character_to_byte(source, range.end)
+}
+
+fn explicit_character_to_byte(source: &str, offset: usize) -> usize {
+    source.char_indices().nth(offset).map_or(source.len(), |(byte, _)| byte)
 }

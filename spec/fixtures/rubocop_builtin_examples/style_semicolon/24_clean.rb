@@ -1,2 +1,0 @@
-first_24
-second_24

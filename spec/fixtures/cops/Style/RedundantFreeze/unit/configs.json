@@ -1,0 +1,6 @@
+{
+  "81008c861bd84c80": "---\nAllCops:\n  StringLiteralsFrozenByDefault: true\nStyle/RedundantFreeze:\n  Enabled: true\n",
+  "8392b0804bc33c50": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/RedundantFreeze:\n  Description: Checks usages of Object#freeze on immutable objects.\n  Enabled: true\n  VersionAdded: '0.34'\n  VersionChanged: '0.66'\n  AutoCorrect: always\n",
+  "c218f3bee1637a40": "---\nAllCops:\n  StringLiteralsFrozenByDefault: false\nStyle/RedundantFreeze:\n  Enabled: true\n",
+  "f6c7d242f316283b": "---\nAllCops:\n  TargetRubyVersion: 3.0\nStyle/RedundantFreeze:\n  Description: Checks usages of Object#freeze on immutable objects.\n  Enabled: true\n  VersionAdded: '0.34'\n  VersionChanged: '0.66'\n  AutoCorrect: always\n"
+}

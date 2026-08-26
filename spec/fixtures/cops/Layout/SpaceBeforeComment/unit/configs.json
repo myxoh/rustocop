@@ -1,0 +1,3 @@
+{
+  "59c7b3c4b9084426": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/SpaceBeforeComment:\n  Description: Checks for missing space between code and a comment on the same line.\n  Enabled: true\n  VersionAdded: '0.49'\n  AutoCorrect: always\n"
+}

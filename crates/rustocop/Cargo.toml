@@ -9,6 +9,7 @@ regex = "1.13.1"
 ruby-prism = "1.9.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+unicode-width = "0.2"
 
 [lints.rust]
 unsafe_code = "forbid"
@@ -17,3 +18,10 @@ unsafe_code = "forbid"
 cognitive_complexity = "deny"
 too_many_arguments = "deny"
 too_many_lines = "deny"
+
+# Focused cop contracts favor incremental edit/build latency over runtime.
+# Full-corpus audits continue to use the optimized release profile.
+[profile.fixture]
+inherits = "dev"
+debug = 0
+incremental = true

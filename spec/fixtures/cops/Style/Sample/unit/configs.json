@@ -1,0 +1,4 @@
+{
+  "4dd9bf0f3c067701": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/Sample:\n  Description: Use `sample` instead of `shuffle.first`, `shuffle.last`, and `shuffle[Integer]`.\n  References:\n  - https://github.com/fastruby/fast-ruby#arrayshufflefirst-vs-arraysample-code\n  Enabled: true\n  VersionAdded: '0.30'\n  AutoCorrect: always\n",
+  "67d8adb156d2cc9d": "---\nAllCops:\n  TargetRubyVersion: 2.6\nStyle/Sample:\n  Description: Use `sample` instead of `shuffle.first`, `shuffle.last`, and `shuffle[Integer]`.\n  References:\n  - https://github.com/fastruby/fast-ruby#arrayshufflefirst-vs-arraysample-code\n  Enabled: true\n  VersionAdded: '0.30'\n  AutoCorrect: always\n"
+}

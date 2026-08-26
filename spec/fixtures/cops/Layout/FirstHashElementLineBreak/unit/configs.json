@@ -1,0 +1,5 @@
+{
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
+  "5fafa967dfb20f46": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/FirstHashElementLineBreak:\n  Description: Checks for a line break before the first element in a multi-line hash.\n  Enabled: true\n  VersionAdded: '0.49'\n  AllowMultilineFinalElement: false\n  AutoCorrect: always\n",
+  "9c804b59490eeb1f": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/FirstHashElementLineBreak:\n  Description: Checks for a line break before the first element in a multi-line hash.\n  Enabled: true\n  VersionAdded: '0.49'\n  AllowMultilineFinalElement: true\n  AutoCorrect: always\n"
+}

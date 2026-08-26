@@ -1,0 +1,6 @@
+{
+  "25760c68b914da43": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/UnusedBlockArgument:\n  Description: Checks for unused block arguments.\n  StyleGuide: \"#underscore-unused-vars\"\n  Enabled: true\n  AutoCorrect: always\n  VersionAdded: '0.21'\n  VersionChanged: '1.61'\n  IgnoreEmptyBlocks: true\n  AllowUnusedKeywordArguments: false\n",
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
+  "666997ebbbf036dc": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/UnusedBlockArgument:\n  Description: Checks for unused block arguments.\n  StyleGuide: \"#underscore-unused-vars\"\n  Enabled: true\n  AutoCorrect: always\n  VersionAdded: '0.21'\n  VersionChanged: '1.61'\n  IgnoreEmptyBlocks: false\n  AllowUnusedKeywordArguments: false\n",
+  "d5e15825eb49ab28": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/UnusedBlockArgument:\n  Description: Checks for unused block arguments.\n  StyleGuide: \"#underscore-unused-vars\"\n  Enabled: true\n  AutoCorrect: always\n  VersionAdded: '0.21'\n  VersionChanged: '1.61'\n  IgnoreEmptyBlocks: true\n  AllowUnusedKeywordArguments: true\n"
+}

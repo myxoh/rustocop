@@ -1,0 +1,5 @@
+{
+  "14e6cce852d28828": "---\nAllCops:\n  TargetRubyVersion: 3.4\nLayout/BlockEndNewline:\n  Description: Put end statement of multiline block on its own line.\n  Enabled: true\n  VersionAdded: '0.49'\n  AutoCorrect: always\n",
+  "76259bd38941c318": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLayout/BlockEndNewline:\n  Description: Put end statement of multiline block on its own line.\n  Enabled: true\n  VersionAdded: '0.49'\n  AutoCorrect: always\n",
+  "77c39c64bd272713": "---\nAllCops:\n  TargetRubyVersion: '2.7'\n"
+}

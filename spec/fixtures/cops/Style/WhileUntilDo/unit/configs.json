@@ -1,0 +1,3 @@
+{
+  "b2e3368d18c4ac27": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/WhileUntilDo:\n  Description: Checks for redundant do after while or until.\n  StyleGuide: \"#no-multiline-while-do\"\n  Enabled: true\n  VersionAdded: '0.9'\n  AutoCorrect: always\n"
+}

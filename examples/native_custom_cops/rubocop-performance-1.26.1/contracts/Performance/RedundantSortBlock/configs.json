@@ -1,0 +1,3 @@
+{
+  "8c3fb1e992bf8dcc": "---\nplugins:\n- rubocop-performance\nAllCops:\n  NewCops: enable\n  TargetRubyVersion: '3.4'\nPerformance/RedundantSortBlock:\n  Description: Use `sort` instead of `sort { |a, b| a <=> b }`.\n  Enabled: true\n  VersionAdded: '1.7'\n"
+}

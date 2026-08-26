@@ -1,0 +1,4 @@
+{
+  "7e08d5129a6b3f23": "---\nAllCops:\n  TargetRubyVersion: 3.4\nLint/RedundantWithIndex:\n  Description: Checks for redundant `with_index`.\n  Enabled: true\n  VersionAdded: '0.50'\n  AutoCorrect: always\n",
+  "cb955205331f7c97": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/RedundantWithIndex:\n  Description: Checks for redundant `with_index`.\n  Enabled: true\n  VersionAdded: '0.50'\n  AutoCorrect: always\n"
+}

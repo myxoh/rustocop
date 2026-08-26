@@ -1,0 +1,3 @@
+{
+  "aaf98e5d1a6ee12c": "---\nplugins:\n- rubocop-performance\nAllCops:\n  NewCops: enable\n  TargetRubyVersion: '3.4'\nPerformance/ReverseFirst:\n  Description: Use `last(n).reverse` instead of `reverse.first(n)`.\n  Enabled: true\n  VersionAdded: '1.7'\n"
+}

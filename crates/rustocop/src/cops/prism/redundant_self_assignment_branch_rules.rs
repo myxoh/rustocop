@@ -18,6 +18,8 @@ impl RedundantSelfAssignmentBranchRule<'_, '_, '_> {
         let Some((if_branch, else_branch)) = branches(&expression) else {
             return;
         };
+        return_if!(if_branch.as_ref().is_some_and(grouped_branch)
+            || else_branch.as_ref().is_some_and(grouped_branch));
         return_if!(expression
             .subsequent()
             .is_some_and(|branch| branch.as_if_node().is_some()));
@@ -71,6 +73,13 @@ impl RedundantSelfAssignmentBranchRule<'_, '_, '_> {
             .unwrap_or_default();
         tail.strip_suffix('\n').unwrap_or(tail)
     }
+}
+
+fn grouped_branch(node: &Node<'_>) -> bool {
+    node.as_parentheses_node()
+        .and_then(|parentheses| parentheses.body())
+        .and_then(|body| body.as_statements_node())
+        .is_some_and(|statements| !statements.body().is_empty())
 }
 
 fn branches<'pr>(node: &IfNode<'pr>) -> Option<(Option<Node<'pr>>, Option<Node<'pr>>)> {

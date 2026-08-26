@@ -1,5 +1,0 @@
-== input.rb ==
-W: 10: 13: [Correctable] Lint/AmbiguousRange: Wrap complex range boundaries with parentheses to avoid ambiguity.
-W: 11: 12: [Correctable] Lint/AmbiguousRange: Wrap complex range boundaries with parentheses to avoid ambiguity.
-
-1 file inspected, 2 offenses detected, 2 offenses autocorrectable

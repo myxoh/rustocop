@@ -5,7 +5,7 @@ define_cops! {
 }
 
 fn to_enum_arguments(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
-    if call_name(node) != b"to_enum"
+    if !matches!(call_name(node), b"to_enum" | b"enum_for")
         || node
             .receiver()
             .is_some_and(|receiver| receiver.as_self_node().is_none())
@@ -39,10 +39,19 @@ fn to_enum_arguments(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     let actual = ranges
         .iter()
         .skip(1)
-        .map(|range| normalize(&context.source()[range.clone()]))
+        .map(|range| normalize_forwarded_argument(&context.source()[range.clone()]))
         .collect::<Vec<_>>();
     if actual != expected {
-        context.report_call(node, "Ensure you correctly provided all the arguments.");
+        let end = node.block().map_or(node.location().end_offset(), |block| {
+            context
+                .source_file()
+                .whitespace_before(block.location().start_offset())
+                .start
+        });
+        context.report(
+            "Ensure you correctly provided all the arguments.",
+            node.location().start_offset()..end,
+        );
     }
 }
 
@@ -80,7 +89,7 @@ fn forwarded_parameter(parameter: &str) -> Option<String> {
     }
     if let Some((name, _value)) = parameter.split_once(':') {
         let name = name.trim();
-        return Some(format!("{name}:{name}"));
+        return Some(format!("{name}:"));
     }
     Some(normalize(parameter))
 }
@@ -89,6 +98,7 @@ fn static_symbol_name(source: &str) -> Option<&str> {
     source.strip_prefix(':').filter(|name| {
         !name.is_empty()
             && name
+                .trim_end_matches(['!', '?', '='])
                 .bytes()
                 .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
     })
@@ -99,4 +109,16 @@ fn normalize(source: &str) -> String {
         .chars()
         .filter(|character| !character.is_whitespace())
         .collect()
+}
+
+fn normalize_forwarded_argument(source: &str) -> String {
+    let normalized = normalize(source);
+    let Some((name, value)) = normalized.split_once(':') else {
+        return normalized;
+    };
+    if value.is_empty() || value == name {
+        format!("{name}:")
+    } else {
+        normalized
+    }
 }

@@ -1,0 +1,3 @@
+{
+  "045b82bf19b6d618": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/Attr:\n  Description: Checks for uses of Module#attr.\n  StyleGuide: \"#attr\"\n  Enabled: true\n  VersionAdded: '0.9'\n  VersionChanged: '0.12'\n  AutoCorrect: always\n"
+}

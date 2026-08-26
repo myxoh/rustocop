@@ -34,6 +34,12 @@ impl Cop for SafeNavigationWithEmpty {
         let Some(receiver) = call.receiver() else {
             return;
         };
+        let Some(receiver_call) = receiver.as_call_node() else {
+            return;
+        };
+        if receiver_call.is_safe_navigation() {
+            return;
+        };
         let receiver = source_at(source, &receiver.location());
         let location = call.location();
         context.replace(

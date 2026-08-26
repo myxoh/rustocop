@@ -1,0 +1,5 @@
+{
+  "037601475a6c5740": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/EmptyEnsure:\n  Description: Checks for empty ensure block.\n  Enabled: true\n  AutoCorrect: always\n  VersionAdded: '0.10'\n  VersionChanged: '1.61'\n",
+  "13cf69a7e4855652": "---\nAllCops:\n  DisabledByDefault: true\n  ParserEngine: parser_prism\n  TargetRubyVersion: 3.4\nLint/EmptyEnsure:\n  Enabled: true\n",
+  "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n"
+}

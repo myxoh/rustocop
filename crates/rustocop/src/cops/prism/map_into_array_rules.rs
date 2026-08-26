@@ -11,6 +11,9 @@ impl MapIntoArrayRule<'_, '_, '_> {
     fn on_block(&mut self, block: &BlockNode<'_>) {
         let Some(each) = self.parent().and_then(Node::as_call_node) else { return };
         return_unless!(each.name().as_slice() == b"each" && argument_count(&each) == 0);
+        return_if!(each
+            .call_operator_loc()
+            .is_some_and(|operator| operator.as_slice() == b"&."));
         return_if!(each.receiver().is_none_or(|receiver| receiver.as_self_node().is_some()));
         let Some(push) = block.body().and_then(single_expression).and_then(|body| body.as_call_node()) else { return };
         return_unless!(matches!(push.name().as_slice(), b"<<" | b"push" | b"append"));
@@ -33,16 +36,20 @@ impl MapIntoArrayRule<'_, '_, '_> {
             None
         };
         return_if!(assignment.is_none() && tap.is_none());
-        return_if!(self.ancestors().iter().any(|ancestor| {
-            ancestor.as_array_node().is_some()
-                || ancestor.as_if_node().is_some()
-                || ancestor.as_unless_node().is_some()
-                || ancestor.as_case_node().is_some()
-        }));
         if let Some(assignment) = assignment.as_ref() {
+            return_if!(self.source_file().indentation(assignment.range.start).len()
+                != self.source_file().indentation(each.location().start_offset()).len());
             let span = assignment.range.start..each.location().end_offset();
             return_unless!(word_count(self.source_file().slice(span).unwrap_or_default(), &destination) == 2);
-            return_if!(self.source()[assignment.range.end..each.location().start_offset()].lines().any(|line| line.trim() == "end"));
+            // RuboCop requires the assignment and block to have the same AST
+            // parent. A block embedded in another call's arguments therefore
+            // does not qualify, even when its destination is otherwise unused.
+            let line_start = self.source()[..each.location().start_offset()]
+                .rfind('\n')
+                .map_or(0, |newline| newline + 1);
+            let line_prefix = self.source()[line_start..each.location().start_offset()].trim();
+            return_if!(!line_prefix.is_empty()
+                && (!line_prefix.ends_with(';') || assignment.range.start < line_start));
         }
 
         let new_method = self.related_config_map("Style/CollectionMethods", "PreferredMethods")
@@ -58,7 +65,16 @@ impl MapIntoArrayRule<'_, '_, '_> {
             && !self.source_file().node(argument).trim_start().starts_with('{');
         let trailing_destination = trailing_destination(&each, &destination, self.source());
         let return_value_used = tap.is_none() && return_value_used(self.ancestors(), &each, self.source_file());
-        let assignment_removal = assignment.as_ref().map(|assignment| range_with_following_separator(assignment.range.clone(), self.source()));
+        let assignment_removal = assignment.as_ref().map(|assignment| {
+            if self
+                .source_file()
+                .same_line(assignment.range.start, each.location().start_offset())
+            {
+                assignment.range.clone()
+            } else {
+                range_with_following_separator(assignment.range.clone(), self.source())
+            }
+        });
         let tap_removals = tap.as_ref().map(|tap| (
             tap.location().start_offset()..each.location().start_offset(),
             each.location().end_offset()..tap.location().end_offset(),
@@ -87,9 +103,19 @@ impl MapIntoArrayRule<'_, '_, '_> {
 }
 
 fn word_count(source: &str, word: &str) -> usize {
+    let comments = SourceFile::new(source).comment_ranges();
     Regex::new(&format!(r"\b{}\b", regex::escape(word)))
         .expect("escaped local name")
         .find_iter(source)
+        .filter(|matched| {
+            !comments
+                .iter()
+                .any(|comment| comment.start <= matched.start() && matched.start() < comment.end)
+                && !matches!(
+                source.as_bytes().get(matched.start().saturating_sub(1)),
+                Some(b'@' | b'$' | b':' | b'.')
+            )
+        })
         .count()
 }
 
@@ -103,7 +129,17 @@ fn closest_empty_assignment(each: &CallNode<'_>, destination: &str, source: &str
         r"\b{}\s*=\s*(?:\[\]|Array\.new\(\[\]\)|Array\.new|Array\[\]|Array\(\[\]\))",
         regex::escape(destination)
     )).ok()?;
-    pattern.find_iter(&source[..each.location().start_offset()]).last().map(|matched| EmptyAssignment {
+    pattern
+        .find_iter(&source[..each.location().start_offset()])
+        .filter(|matched| {
+            source[matched.end()..each.location().start_offset()]
+                .trim_start()
+                .as_bytes()
+                .first()
+                != Some(&b',')
+        })
+        .last()
+        .map(|matched| EmptyAssignment {
         range: matched.start()..matched.end(),
     })
 }

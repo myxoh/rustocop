@@ -1,86 +1,207 @@
+use super::source_syntax::top_level_elements;
 use super::*;
 
 define_cops! {
-    AssignmentIndentation => "Layout/AssignmentIndentation" => source(assignment_indentation),
-    BeginEndAlignment => "Layout/BeginEndAlignment" => source(begin_end_alignment),
+    AssignmentIndentation => "Layout/AssignmentIndentation" => any_node(assignment_indentation),
+    BeginEndAlignment => "Layout/BeginEndAlignment" => node(as_begin_node, begin_end_alignment),
     EndOfLine => "Layout/EndOfLine" => source(end_of_line),
-    FirstParameterIndentation => "Layout/FirstParameterIndentation" => source(first_parameter_indentation),
-    SpaceBeforeBrackets => "Layout/SpaceBeforeBrackets" => source(space_before_brackets),
+    FirstParameterIndentation => "Layout/FirstParameterIndentation" => node(as_def_node, first_parameter_indentation),
+    SpaceBeforeBrackets => "Layout/SpaceBeforeBrackets" => call(space_before_brackets),
     SpaceBeforeFirstArg => "Layout/SpaceBeforeFirstArg" => call(space_before_first_arg),
-    SpaceInsideStringInterpolation => "Layout/SpaceInsideStringInterpolation" => source(space_inside_string_interpolation),
+    SpaceInsideStringInterpolation => "Layout/SpaceInsideStringInterpolation" => node(as_embedded_statements_node, space_inside_string_interpolation),
 }
 
-fn assignment_indentation(context: &mut CopContext<'_, '_>) {
-    let lines = context.source_file().lines().collect::<Vec<_>>();
+fn assignment_indentation(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
+    let Some(value) = assignment_value(node) else {
+        return;
+    };
+    let source = context.source();
+    let node_start = node.location().start_offset();
+    let value_start = value.location().start_offset();
+    let Some(operator) = source[node_start..value_start].rfind('=') else {
+        return;
+    };
+    let operator = node_start + operator;
+    let assignment_line_start = source[..operator].rfind('\n').map_or(0, |at| at + 1);
+    let value_line_start = source[..value_start].rfind('\n').map_or(0, |at| at + 1);
+    let assignment_line_end = source[assignment_line_start..]
+        .find('\n')
+        .map_or(source.len(), |at| assignment_line_start + at);
+    if assignment_line_start == value_line_start
+        || !source[assignment_line_start..assignment_line_end].is_ascii()
+    {
+        return;
+    }
     let width = context.config_usize("IndentationWidth", 2);
-    for pair in lines.windows(2) {
-        let (_, left) = pair[0];
-        let (right_start, right) = pair[1];
-        let left_trimmed = left.trim_end();
-        if !left_trimmed.ends_with('=') || left_trimmed.ends_with("==") || right.trim().is_empty() {
-            continue;
-        }
-        if !left.is_ascii() {
-            continue;
-        }
-        let current = right.len() - right.trim_start().len();
-        let expected = left.len() - left.trim_start().len() + width;
-        if current == expected {
-            continue;
-        }
-        let expression_start = right_start + current;
-        context.replace(
-            "Indent the first line of the right-hand-side of a multi-line assignment.",
-            expression_start..right_start + right.len(),
-            right_start..expression_start,
-            " ".repeat(expected),
-        );
+    let line_indentation = source[assignment_line_start..assignment_line_end].len()
+        - source[assignment_line_start..assignment_line_end]
+            .trim_start()
+            .len();
+    let prefix = &source[assignment_line_start..operator];
+    let chained = prefix.contains(" = ") || prefix.matches('=').count() > 0;
+    let node_line_start = source[..node_start].rfind('\n').map_or(0, |at| at + 1);
+    let multi_base = node
+        .as_multi_write_node()
+        .map(|_| node_start - node_line_start);
+    let current_start = if node_line_start == assignment_line_start {
+        node_start
+    } else {
+        assignment_line_start + line_indentation
+    };
+    let chain_start = context
+        .ancestors()
+        .iter()
+        .filter(|ancestor| assignment_value(ancestor).is_some())
+        .map(Node::location)
+        .map(|location| location.start_offset())
+        .filter(|start| {
+            source[..*start].rfind('\n').map_or(0, |at| at + 1) == assignment_line_start
+        })
+        .chain(std::iter::once(current_start))
+        .min()
+        .unwrap_or(current_start);
+    let base = if let Some(base) = multi_base {
+        base
+    } else if chained {
+        line_indentation
+    } else {
+        chain_start - assignment_line_start
+    };
+    let current = value_start - value_line_start;
+    let expected = base + width;
+    if current == expected {
+        return;
+    }
+    let location = value.location();
+    let delta = expected as isize - current as isize;
+    let edits = context
+        .source_file()
+        .lines()
+        .filter(|(offset, _)| {
+            value_line_start <= *offset && *offset < location.end_offset()
+        })
+        .filter_map(|(offset, line)| {
+            if line.trim().is_empty() {
+                return None;
+            }
+            let indentation = line.len() - line.trim_start().len();
+            let adjusted = (indentation as isize + delta).max(0) as usize;
+            Some((offset..offset + indentation, " ".repeat(adjusted)))
+        })
+        .collect::<Vec<_>>();
+    context.replace_many(
+        "Indent the first line of the right-hand-side of a multi-line assignment.",
+        &location,
+        edits,
+    );
+}
+
+fn assignment_value<'pr>(node: &Node<'pr>) -> Option<Node<'pr>> {
+    if let Some(write) = node.as_local_variable_write_node() {
+        Some(write.value())
+    } else if let Some(write) = node.as_instance_variable_write_node() {
+        Some(write.value())
+    } else if let Some(write) = node.as_class_variable_write_node() {
+        Some(write.value())
+    } else if let Some(write) = node.as_global_variable_write_node() {
+        Some(write.value())
+    } else if let Some(write) = node.as_constant_write_node() {
+        Some(write.value())
+    } else if let Some(write) = node.as_constant_path_write_node() {
+        Some(write.value())
+    } else if let Some(write) = node.as_local_variable_or_write_node() {
+        Some(write.value())
+    } else if let Some(write) = node.as_instance_variable_or_write_node() {
+        Some(write.value())
+    } else if let Some(write) = node.as_class_variable_or_write_node() {
+        Some(write.value())
+    } else if let Some(write) = node.as_global_variable_or_write_node() {
+        Some(write.value())
+    } else if let Some(write) = node.as_constant_or_write_node() {
+        Some(write.value())
+    } else if let Some(write) = node.as_constant_path_or_write_node() {
+        Some(write.value())
+    } else if let Some(write) = node.as_local_variable_and_write_node() {
+        Some(write.value())
+    } else if let Some(write) = node.as_instance_variable_and_write_node() {
+        Some(write.value())
+    } else if let Some(write) = node.as_class_variable_and_write_node() {
+        Some(write.value())
+    } else if let Some(write) = node.as_global_variable_and_write_node() {
+        Some(write.value())
+    } else if let Some(write) = node.as_constant_and_write_node() {
+        Some(write.value())
+    } else if let Some(write) = node.as_constant_path_and_write_node() {
+        Some(write.value())
+    } else if let Some(write) = node.as_multi_write_node() {
+        Some(write.value())
+    } else if let Some(write) = node.as_call_operator_write_node() {
+        Some(write.value())
+    } else if let Some(write) = node.as_index_operator_write_node() {
+        Some(write.value())
+    } else if let Some(call) = node.as_call_node().filter(|call| call.equal_loc().is_some()) {
+        call.arguments()?.arguments().iter().last()
+    } else {
+        None
     }
 }
 
-fn begin_end_alignment(context: &mut CopContext<'_, '_>) {
-    let lines = context.source_file().lines().collect::<Vec<_>>();
-    let mut stack = Vec::new();
-    for (line_number, (offset, line)) in lines.iter().enumerate() {
-        if let Some(begin_at) = line.find("begin") {
-            stack.push((line_number, *offset, begin_at, line.trim_end().to_string()));
-        }
-        if line.trim() != "end" {
-            continue;
-        }
-        let Some((begin_line, _, begin_column, begin_text)) = stack.pop() else {
-            continue;
-        };
-        let actual = line.len() - line.trim_start().len();
-        let style = context
-            .config_value("EnforcedStyleAlignWith")
-            .unwrap_or("begin");
-        let expected = if style == "start_of_line" {
-            0
-        } else {
-            begin_column
-        };
-        if actual == expected {
-            continue;
-        }
-        let start = offset + actual;
-        let reference = if style == "start_of_line" {
-            begin_text.trim().to_string()
-        } else {
-            "begin".to_string()
-        };
-        context.replace(
-            format!(
-                "`end` at {}, {} is not aligned with `{reference}` at {}, {expected}.",
-                line_number + 1,
-                actual,
-                begin_line + 1
-            ),
-            start..start + 3,
-            *offset..start,
-            " ".repeat(expected),
-        );
+fn begin_end_alignment(node: &ruby_prism::BeginNode<'_>, context: &mut CopContext<'_, '_>) {
+    let (Some(begin_keyword), Some(end_keyword)) =
+        (node.begin_keyword_loc(), node.end_keyword_loc())
+    else {
+        return;
+    };
+    let source = context.source();
+    let begin_line_start = source[..begin_keyword.start_offset()]
+        .rfind('\n')
+        .map_or(0, |offset| offset + 1);
+    let end_line_start = source[..end_keyword.start_offset()]
+        .rfind('\n')
+        .map_or(0, |offset| offset + 1);
+    if begin_line_start == end_line_start {
+        return;
     }
+    let begin_column = begin_keyword.start_offset() - begin_line_start;
+    let actual = end_keyword.start_offset() - end_line_start;
+    let style = context
+        .config_value("EnforcedStyleAlignWith")
+        .unwrap_or("begin");
+    let line = &source[begin_line_start
+        ..source[begin_line_start..]
+            .find('\n')
+            .map_or(source.len(), |offset| begin_line_start + offset)];
+    let expected = if style == "start_of_line" {
+        line.len() - line.trim_start().len()
+    } else {
+        begin_column
+    };
+    if actual == expected {
+        return;
+    }
+    let begin_line = source[..begin_keyword.start_offset()]
+        .bytes()
+        .filter(|byte| *byte == b'\n')
+        .count()
+        + 1;
+    let end_line = source[..end_keyword.start_offset()]
+        .bytes()
+        .filter(|byte| *byte == b'\n')
+        .count()
+        + 1;
+    let reference = if style == "start_of_line" {
+        line.trim().to_string()
+    } else {
+        "begin".to_string()
+    };
+    context.replace(
+        format!(
+            "`end` at {end_line}, {actual} is not aligned with `{reference}` at {begin_line}, {expected}."
+        ),
+        end_keyword.start_offset()..end_keyword.end_offset(),
+        end_line_start..end_keyword.start_offset(),
+        " ".repeat(expected),
+    );
 }
 
 fn end_of_line(context: &mut CopContext<'_, '_>) {
@@ -124,77 +245,76 @@ fn end_of_line(context: &mut CopContext<'_, '_>) {
     context.report(message, first.0..end);
 }
 
-fn first_parameter_indentation(context: &mut CopContext<'_, '_>) {
-    let lines = context.source_file().lines().collect::<Vec<_>>();
-    for pair in lines.windows(2) {
-        let (_, signature) = pair[0];
-        let (parameter_start, parameter) = pair[1];
-        let Some(opening) = signature.find('(') else {
-            continue;
-        };
-        if !signature.trim_start().starts_with("def ")
-            || !signature[opening + 1..].trim().is_empty()
-        {
-            continue;
-        }
-        let current = parameter.len() - parameter.trim_start().len();
-        let style = context.policy().enforced_style("consistent");
-        let width = context.config_usize("IndentationWidth", 2);
-        let base = signature.len() - signature.trim_start().len();
-        let expected = if style == "align_parentheses" {
-            opening + 2
-        } else {
-            base + width
-        };
-        if current == expected {
-            continue;
-        }
-        let start = parameter_start + current;
-        let message = if style == "align_parentheses" {
-            format!("Use {width} spaces for indentation in method args, relative to the position of the opening parenthesis.")
-        } else {
-            format!("Use {width} spaces for indentation in method args, relative to the start of the line where the left parenthesis is.")
-        };
-        let offense_end = parameter_start + parameter.trim_end_matches(',').trim_end().len();
-        context.replace(
-            message,
-            start..offense_end,
-            parameter_start..start,
-            " ".repeat(expected),
-        );
+fn first_parameter_indentation(
+    definition: &ruby_prism::DefNode<'_>,
+    context: &mut CopContext<'_, '_>,
+) {
+    let (Some(opening), Some(parameters)) = (definition.lparen_loc(), definition.parameters())
+    else {
+        return;
+    };
+    let parameter_location = parameters.location();
+    let Some(first_parameter) = top_level_elements(
+        context.source(),
+        parameter_location.start_offset(),
+        parameter_location.end_offset(),
+    )
+    .into_iter()
+    .next()
+    else {
+        return;
+    };
+    let file = context.source_file();
+    if file.same_line(opening.start_offset(), first_parameter.start) {
+        return;
     }
+
+    let parameter_line_start = file.line_start(first_parameter.start);
+    let current = first_parameter.start - parameter_line_start;
+    let style = context.policy().enforced_style("consistent");
+    let width = context.config_usize("IndentationWidth", 2);
+    let expected = if style == "align_parentheses" {
+        opening.start_offset() - file.line_start(opening.start_offset()) + width
+    } else {
+        file.indentation(definition.def_keyword_loc().start_offset()).len() + width
+    };
+    if current == expected {
+        return;
+    }
+    let message = if style == "align_parentheses" {
+        format!("Use {width} spaces for indentation in method args, relative to the position of the opening parenthesis.")
+    } else {
+        format!("Use {width} spaces for indentation in method args, relative to the start of the line where the left parenthesis is.")
+    };
+    context.replace(
+        message,
+        first_parameter.clone(),
+        parameter_line_start..first_parameter.start,
+        " ".repeat(expected),
+    );
 }
 
-fn space_before_brackets(context: &mut CopContext<'_, '_>) {
-    let source = context.source();
-    for (at, _) in source.match_indices(" [") {
-        let before = source[..at].bytes().next_back();
-        if before.is_none_or(|byte| {
-            !(byte.is_ascii_alphanumeric() || matches!(byte, b'_' | b')' | b']'))
-        }) {
-            continue;
-        }
-        let line_start = source[..at].rfind('\n').map_or(0, |offset| offset + 1);
-        let receiver = source[line_start..at]
-            .split(|character: char| {
-                !(character.is_alphanumeric() || matches!(character, '_' | '@' | '$'))
-            })
-            .next_back()
-            .unwrap_or_default();
-        let known_local = receiver.starts_with(['@', '$'])
-            || source[line_start..at].trim_end().ends_with(')')
-            || source[..line_start]
-                .lines()
-                .any(|line| line.trim_start().starts_with(&format!("{receiver} =")));
-        if !known_local {
-            continue;
-        }
-        context.remove(
-            "Remove the space before the opening brackets.",
-            at..at + 1,
-            at..at + 1,
-        );
+fn space_before_brackets(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
+    if !matches!(call_name(node), b"[]" | b"[]=") {
+        return;
     }
+    let (Some(receiver), Some(opening)) = (node.receiver(), node.opening_loc()) else {
+        return;
+    };
+    let start = receiver.location().end_offset();
+    let end = opening.start_offset();
+    if start >= end
+        || !context.source()[start..end]
+            .bytes()
+            .all(|byte| byte.is_ascii_whitespace())
+    {
+        return;
+    }
+    context.remove(
+        "Remove the space before the opening brackets.",
+        start..end,
+        start..end,
+    );
 }
 
 fn space_before_first_arg(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
@@ -233,7 +353,13 @@ fn space_before_first_arg(node: &CallNode<'_>, context: &mut CopContext<'_, '_>)
     }
     context.replace(
         "Put one space between the method name and the first argument.",
-        space.clone(),
+        if space.is_empty() {
+            // RuboCop's `range_between` preserves Parser's reversed empty
+            // range, whose JSON location ends immediately before it starts.
+            argument_start..argument_start.saturating_sub(1)
+        } else {
+            space.clone()
+        },
         space,
         " ",
     );
@@ -305,81 +431,75 @@ fn aligned_first_argument(context: &CopContext<'_, '_>, argument: &Node<'_>) -> 
             .is_some_and(aligns)
 }
 
-fn space_inside_string_interpolation(context: &mut CopContext<'_, '_>) {
+fn space_inside_string_interpolation(
+    node: &ruby_prism::EmbeddedStatementsNode<'_>,
+    context: &mut CopContext<'_, '_>,
+) {
     let source = context.source();
     let spaced = context.policy().enforced_style("no_space") == "space";
-    let mut search = 0;
-    while let Some(relative) = source[search..].find("#{") {
-        let opening = search + relative;
-        let Some(relative_close) = source[opening + 2..].find('}') else {
-            break;
-        };
-        let closing = opening + 2 + relative_close;
-        let inner = &source[opening + 2..closing];
-        if inner.is_empty() {
-            search = closing + 1;
-            continue;
-        }
-        if inner.contains('\n') {
-            search = closing + 1;
-            continue;
-        }
-        let leading = inner.len() - inner.trim_start_matches([' ', '\t']).len();
-        let trailing = inner.len() - inner.trim_end_matches([' ', '\t']).len();
-        if spaced {
-            if leading == 0 {
-                let mut edits = vec![(opening + 2..opening + 2, " ".to_string())];
-                if trailing == 0 {
-                    edits.push((closing..closing, " ".to_string()));
-                }
-                context.replace_many(
-                    "Use space inside string interpolation.",
-                    opening..opening + 2,
-                    edits,
-                );
-            }
+    let location = node.location();
+    let opening = location.start_offset();
+    let closing = location.end_offset().saturating_sub(1);
+    let Some(inner) = source.get(opening + 2..closing) else {
+        return;
+    };
+    if inner.trim().is_empty() || inner.contains('\n') {
+        return;
+    }
+    let leading = inner.len() - inner.trim_start_matches([' ', '\t']).len();
+    let trailing = inner.len() - inner.trim_end_matches([' ', '\t']).len();
+    if spaced {
+        if leading == 0 {
+            let mut edits = vec![(opening + 2..opening + 2, " ".to_string())];
             if trailing == 0 {
-                if leading == 0 {
-                    context.replace_indirectly(
-                        "Use space inside string interpolation.",
-                        closing..closing,
-                        closing..closing,
-                        "",
-                    );
-                } else {
-                    context.insert(
-                        "Use space inside string interpolation.",
-                        closing..closing,
-                        closing,
-                        " ",
-                    );
-                }
+                edits.push((closing..closing, " ".to_string()));
             }
-        } else if leading > 0 || trailing > 0 {
-            let message = "Do not use space inside string interpolation.";
-            if leading > 0 {
-                context.replace(
-                    message,
-                    opening + 2..opening + 2 + leading,
-                    opening + 2..closing,
-                    inner.trim(),
+            context.replace_many(
+                "Use space inside string interpolation.",
+                opening..opening + 2,
+                edits,
+            );
+        }
+        if trailing == 0 {
+            if leading == 0 {
+                context.replace_indirectly(
+                    "Use space inside string interpolation.",
+                    closing..(closing + 1).min(context.source().len()),
+                    closing..closing,
+                    "",
                 );
-                if trailing > 0 {
-                    context.replace_indirectly(
-                        message,
-                        closing - trailing..closing,
-                        closing - trailing..closing,
-                        "",
-                    );
-                }
             } else {
-                context.remove(
-                    message,
-                    closing - trailing..closing,
-                    closing - trailing..closing,
+                context.insert(
+                    "Use space inside string interpolation.",
+                    closing..(closing + 1).min(context.source().len()),
+                    closing,
+                    " ",
                 );
             }
         }
-        search = closing + 1;
+    } else if leading > 0 || trailing > 0 {
+        let message = "Do not use space inside string interpolation.";
+        if leading > 0 {
+            context.replace(
+                message,
+                opening + 2..opening + 2 + leading,
+                opening + 2..closing,
+                inner.trim(),
+            );
+            if trailing > 0 {
+                context.replace_indirectly(
+                    message,
+                    closing - trailing..closing,
+                    closing - trailing..closing,
+                    "",
+                );
+            }
+        } else {
+            context.remove(
+                message,
+                closing - trailing..closing,
+                closing - trailing..closing,
+            );
+        }
     }
 }

@@ -139,12 +139,14 @@ fn forwarded_arguments(
             if let Some(read) = argument.as_local_variable_read_node() {
                 result.push(Forwarded::Positional(name(read.name())));
             } else if let Some(splat) = argument.as_splat_node() {
-                let forwarded = splat.expression().map(|expression| {
-                    expression
-                        .as_local_variable_read_node()
-                        .map(|read| name(read.name()))
-                });
-                result.push(Forwarded::Rest(forwarded.flatten()));
+                let forwarded = match splat.expression() {
+                    None => None,
+                    Some(expression) => {
+                        let read = expression.as_local_variable_read_node()?;
+                        Some(name(read.name()))
+                    }
+                };
+                result.push(Forwarded::Rest(forwarded));
             } else if argument.as_forwarding_arguments_node().is_some() {
                 result.push(Forwarded::All);
             } else if let Some(hash) = argument.as_keyword_hash_node() {
@@ -166,12 +168,14 @@ fn forwarded_arguments(
                         }
                         result.push(Forwarded::Keyword(key));
                     } else if let Some(splat) = element.as_assoc_splat_node() {
-                        let value = splat.value().map(|value| {
-                            value
-                                .as_local_variable_read_node()
-                                .map(|read| name(read.name()))
-                        });
-                        result.push(Forwarded::KeywordRest(value.flatten()));
+                        let value = match splat.value() {
+                            None => None,
+                            Some(value) => {
+                                let read = value.as_local_variable_read_node()?;
+                                Some(name(read.name()))
+                            }
+                        };
+                        result.push(Forwarded::KeywordRest(value));
                     } else {
                         return None;
                     }
@@ -182,12 +186,14 @@ fn forwarded_arguments(
         }
     }
     if let Some(block) = node.block().and_then(|block| block.as_block_argument_node()) {
-        let value = block.expression().map(|value| {
-            value
-                .as_local_variable_read_node()
-                .map(|read| name(read.name()))
-        });
-        result.push(Forwarded::Block(value.flatten()));
+        let value = match block.expression() {
+            None => None,
+            Some(value) => {
+                let read = value.as_local_variable_read_node()?;
+                Some(name(read.name()))
+            }
+        };
+        result.push(Forwarded::Block(value));
     }
     Some(result)
 }

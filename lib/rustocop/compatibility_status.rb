@@ -1,35 +1,46 @@
 # frozen_string_literal: true
 
 require "yaml"
+require_relative "repository_layout"
 
 module Rustocop
   class CompatibilityStatus
     DEFAULT_VERSION = "1.87.0"
 
-    attr_reader :data, :hardening_data, :root, :version
+    attr_reader :data, :hardening_data, :pending_data, :root, :version
 
     def self.load(root:, version: DEFAULT_VERSION)
       new(
         root:,
         version:,
         data: YAML.safe_load_file(status_path(root, version)),
-        hardening_data: YAML.safe_load_file(hardening_path(root))
-      ).tap(&:validate_hardening!)
+        hardening_data: YAML.safe_load_file(hardening_path(root)),
+        pending_data: YAML.safe_load_file(pending_path(root, version))
+      ).tap(&:validate!)
     end
 
     def self.status_path(root, version)
-      File.join(root, "spec/upstream/rubocop-#{version}/status.yml")
+      RepositoryLayout.new(root).upstream(version, "status.yml")
     end
 
     def self.hardening_path(root)
-      File.join(root, "spec/hardening/status.yml")
+      RepositoryLayout.new(root).path("spec", "hardening", "status.yml")
     end
 
-    def initialize(root:, version:, data:, hardening_data: { "cops" => {} })
+    def self.pending_path(root, version)
+      RepositoryLayout.new(root).upstream(version, "intentionally_pending_cops.yml")
+    end
+
+    def initialize(root:, version:, data:, hardening_data: { "cops" => {} }, pending_data: nil)
       @root = root
       @version = version
       @data = data
       @hardening_data = hardening_data
+      @pending_data = pending_data || {
+        "version" => 1,
+        "rubocop_version" => version,
+        "cops" => []
+      }
     end
 
     def verified_cops
@@ -38,7 +49,7 @@ module Rustocop
 
     def heuristic_cops
       @heuristic_cops ||= begin
-        path = File.join(root, "spec/upstream/rubocop-#{version}/remaining_cops.yml")
+        path = RepositoryLayout.new(root).upstream(version, "remaining_cops.yml")
         YAML.safe_load_file(path).fetch("cops").filter_map do |entry|
           entry.fetch("cop") if entry.fetch("state") == "heuristic"
         end.freeze
@@ -51,6 +62,14 @@ module Rustocop
 
     def hardened_cops
       @hardened_cops ||= hardening_entries.keys.freeze
+    end
+
+    def intentionally_pending_cops
+      @intentionally_pending_cops ||= pending_data.fetch("cops").freeze
+    end
+
+    def intentionally_pending?(cop)
+      intentionally_pending_cops.include?(cop)
     end
 
     def built_in_cops
@@ -95,6 +114,31 @@ module Rustocop
         raise ArgumentError, "#{cop} has missing hardening evidence: #{absent.join(", ")}" unless absent.empty?
       end
       true
+    end
+
+    def validate_pending!
+      unless pending_data.fetch("version") == 1
+        raise ArgumentError, "unsupported intentionally-pending manifest version"
+      end
+      unless pending_data.fetch("rubocop_version").to_s == version
+        actual = pending_data.fetch("rubocop_version")
+        raise ArgumentError, "intentionally-pending manifest targets RuboCop #{actual}, expected #{version}"
+      end
+      unless intentionally_pending_cops == intentionally_pending_cops.sort.uniq
+        raise ArgumentError, "intentionally-pending cops must be sorted and unique"
+      end
+
+      active = verified_cops | heuristic_cops
+      overlap = intentionally_pending_cops & active
+      unless overlap.empty?
+        raise ArgumentError, "intentionally-pending cops remain active: #{overlap.join(', ')}"
+      end
+      true
+    end
+
+    def validate!
+      validate_hardening!
+      validate_pending!
     end
   end
 end

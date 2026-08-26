@@ -1,0 +1,5 @@
+{
+  "8a8903edca3a52c3": "---\nAllCops:\n  ActiveSupportExtensionsEnabled: false\nStyle/CollectionQuerying:\n  Enabled: true\n",
+  "9ba33e2c0899157a": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/CollectionQuerying:\n  Description: Prefer `Enumerable` predicate methods over expressions with `count`.\n  StyleGuide: \"#collection-querying\"\n  Enabled: true\n  VersionAdded: '1.77'\n  Safe: false\n  AutoCorrect: always\n",
+  "ee1a132066b46ee8": "---\nAllCops:\n  ActiveSupportExtensionsEnabled: true\nStyle/CollectionQuerying:\n  Enabled: true\n"
+}

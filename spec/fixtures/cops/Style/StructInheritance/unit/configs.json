@@ -1,0 +1,4 @@
+{
+  "403df3a693a50a70": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/StructInheritance:\n  Description: Checks for inheritance from Struct.new.\n  StyleGuide: \"#no-extend-struct-new\"\n  Enabled: true\n  SafeAutoCorrect: false\n  VersionAdded: '0.29'\n  VersionChanged: '1.20'\n  AutoCorrect: always\n",
+  "4bc219e4f57dee64": "---\nAllCops:\n  DisabledByDefault: true\n  NewCops: disable\n  ParserEngine: parser_prism\n  TargetRubyVersion: 3.4\n"
+}

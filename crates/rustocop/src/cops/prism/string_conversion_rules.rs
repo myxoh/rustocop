@@ -12,9 +12,26 @@ define_cops! {
 }
 
 fn string_hash_keys(node: &ruby_prism::AssocNode<'_>, context: &mut CopContext<'_, '_>) {
+    if node.key().as_source_file_node().is_some() {
+        let key = node.key();
+        context.replace(
+            "Prefer symbols instead of strings as hash keys.",
+            key.location(),
+            key.location(),
+            ruby_symbol_inspect(context.path()),
+        );
+        return;
+    }
     let Some(key) = node.key().as_string_node() else {
         return;
     };
+    if key
+        .opening_loc()
+        .is_some_and(|opening| opening.as_slice().starts_with(b"<<"))
+        || context.source_file().node(&key.as_node()).contains('\n')
+    {
+        return;
+    }
     if environment_or_replacement_hash(context) {
         return;
     }
@@ -40,6 +57,17 @@ fn environment_or_replacement_hash(context: &CopContext<'_, '_>) -> bool {
         if ancestor.as_array_node().is_some() {
             array_depth += 1;
             continue;
+        }
+        if ancestor.as_statements_node().is_some()
+            || ancestor.as_block_node().is_some()
+            || ancestor.as_def_node().is_some()
+            || ancestor.as_local_variable_write_node().is_some()
+            || ancestor.as_instance_variable_write_node().is_some()
+            || ancestor.as_class_variable_write_node().is_some()
+            || ancestor.as_global_variable_write_node().is_some()
+            || ancestor.as_constant_write_node().is_some()
+        {
+            return false;
         }
         let Some(call) = ancestor.as_call_node() else {
             continue;
@@ -319,11 +347,16 @@ fn string_literals_in_interpolation(
     node: &ruby_prism::StringNode<'_>,
     context: &mut CopContext<'_, '_>,
 ) {
-    if !context
+    let inside_interpolation = context
         .ancestors()
         .iter()
         .any(|ancestor| ancestor.as_embedded_statements_node().is_some())
-    {
+        && context.ancestors().iter().any(|ancestor| {
+            ancestor.as_interpolated_string_node().is_some()
+                || ancestor.as_interpolated_symbol_node().is_some()
+                || ancestor.as_interpolated_regular_expression_node().is_some()
+        });
+    if !inside_interpolation {
         return;
     }
     let (Some(opening), Some(closing)) = (node.opening_loc(), node.closing_loc()) else {
@@ -360,7 +393,7 @@ fn string_literals_in_interpolation(
     );
 }
 
-fn double_quotes_required(source: &str) -> bool {
+pub(super) fn double_quotes_required(source: &str) -> bool {
     if source.contains('\'') {
         return true;
     }
@@ -402,7 +435,7 @@ fn redundant_interpolation_unfreeze(node: &CallNode<'_>, context: &mut CopContex
         let Some(argument) = only_argument(node) else {
             return;
         };
-        if argument.as_interpolated_string_node().is_none() {
+        if !interpolated_string_has_interpolation(&argument) {
             return;
         }
         let Some(selector) = node.message_loc() else {
@@ -426,9 +459,7 @@ fn redundant_interpolation_unfreeze(node: &CallNode<'_>, context: &mut CopContex
     let Some(interpolated) = receiver.as_interpolated_string_node() else {
         return;
     };
-    if !interpolated.parts().iter().any(|part| {
-        part.as_embedded_variable_node().is_some() || part.as_embedded_statements_node().is_some()
-    }) {
+    if !interpolated_string_has_interpolation(&interpolated.as_node()) {
         return;
     }
     if interpolated.opening_loc().is_some_and(|opening| {
@@ -446,6 +477,18 @@ fn redundant_interpolation_unfreeze(node: &CallNode<'_>, context: &mut CopContex
         receiver.location().end_offset()..node.location().end_offset()
     };
     context.remove(MESSAGE, &selector, edit);
+}
+
+fn interpolated_string_has_interpolation(node: &Node<'_>) -> bool {
+    if node.as_embedded_variable_node().is_some() || node.as_embedded_statements_node().is_some() {
+        return true;
+    }
+    node.as_interpolated_string_node().is_some_and(|string| {
+        string
+            .parts()
+            .iter()
+            .any(|part| interpolated_string_has_interpolation(&part))
+    })
 }
 
 fn redundant_interpolation(node: &InterpolatedStringNode<'_>, context: &mut CopContext<'_, '_>) {

@@ -1,4 +1,0 @@
-== input.rb ==
-C:  1:  1: [Correctable] Style/NegatedIf: Favor unless over if for negative conditions.
-
-1 file inspected, 1 offense detected, 1 offense autocorrectable

@@ -197,6 +197,12 @@ fn block_method(block: &BlockNode<'_>) -> Option<String> {
 fn symbol_proc_method(parameters: Node<'_>, body: Node<'_>) -> Option<String> {
     let body = single_expression(body)?;
     let call = body.as_call_node()?;
+    if call
+        .call_operator_loc()
+        .is_some_and(|operator| operator.as_slice() == b"&.")
+    {
+        return None;
+    }
     if call.arguments().is_some_and(|arguments| !arguments.arguments().is_empty())
         || call.block().is_some()
     {

@@ -3,15 +3,78 @@ use super::*;
 #[test]
 fn expands_departments_without_enabling_default_disabled_cops() {
     let selection = CopSelection::only("Style");
-    assert!(selection.enabled("Style/KeywordParametersOrder"));
-    assert!(!selection.enabled("Style/Copyright"));
+    let config = CopConfig::default();
+    assert!(selection.enabled("Style/KeywordParametersOrder", &config));
+    assert!(!selection.enabled("Style/Copyright", &config));
 }
 
 #[test]
 fn explicitly_enables_default_disabled_cops() {
     let selection = CopSelection::only("Style/Copyright");
-    assert!(selection.enabled("Style/Copyright"));
-    assert!(!selection.enabled("Style/KeywordParametersOrder"));
+    let config = CopConfig::default();
+    assert!(selection.enabled("Style/Copyright", &config));
+    assert!(!selection.enabled("Style/KeywordParametersOrder", &config));
+}
+
+#[test]
+fn default_selection_honors_pinned_enabled_and_new_cop_settings() {
+    let selection = CopSelection::default_enabled();
+    let config = CopConfig::default();
+
+    assert!(selection.enabled("Style/KeywordParametersOrder", &config));
+    assert!(!selection.enabled("Lint/ConstantResolution", &config));
+    assert!(!selection.enabled("Lint/AmbiguousOperatorPrecedence", &config));
+}
+
+#[test]
+fn new_cops_setting_enables_pending_but_not_disabled_cops() {
+    let selection = CopSelection::default_enabled();
+    let config = CopConfig::from_source("AllCops:\n  NewCops: enable\n");
+
+    assert!(selection.enabled("Lint/AmbiguousOperatorPrecedence", &config));
+    assert!(!selection.enabled("Lint/ConstantResolution", &config));
+}
+
+#[test]
+fn enabling_a_department_does_not_override_disabled_cop_defaults() {
+    let selection = CopSelection::default_enabled();
+    let config = CopConfig::from_source("Lint:\n  Enabled: true\n");
+
+    assert!(selection.enabled("Lint/Debugger", &config));
+    assert!(!selection.enabled("Lint/ConstantResolution", &config));
+}
+
+#[test]
+fn explicit_cop_enabled_setting_overrides_pinned_defaults() {
+    let selection = CopSelection::default_enabled();
+    let config = CopConfig::from_source(
+        "Lint/ConstantResolution:\n  Enabled: true\nStyle/KeywordParametersOrder:\n  Enabled: false\n",
+    );
+
+    assert!(selection.enabled("Lint/ConstantResolution", &config));
+    assert!(!selection.enabled("Style/KeywordParametersOrder", &config));
+}
+
+#[test]
+fn disabled_by_default_enables_only_explicitly_configured_cops() {
+    let selection = CopSelection::default_enabled();
+    let config = CopConfig::from_source(
+        "AllCops:\n  DisabledByDefault: true\nStyle/FrozenStringLiteralComment:\n",
+    );
+
+    assert!(selection.enabled("Style/FrozenStringLiteralComment", &config));
+    assert!(!selection.enabled("Style/KeywordParametersOrder", &config));
+}
+
+#[test]
+fn enabled_by_default_still_respects_explicit_disabling() {
+    let selection = CopSelection::default_enabled();
+    let config = CopConfig::from_source(
+        "AllCops:\n  EnabledByDefault: true\nStyle/KeywordParametersOrder:\n  Enabled: false\n",
+    );
+
+    assert!(selection.enabled("Lint/ConstantResolution", &config));
+    assert!(!selection.enabled("Style/KeywordParametersOrder", &config));
 }
 
 #[test]
@@ -131,5 +194,17 @@ fn merges_user_configuration_over_pinned_rubocop_defaults() {
         .map("Style/PercentLiteralDelimiters", "PreferredDelimiters")
         .unwrap();
     assert_eq!(delimiters.get("default").map(String::as_str), Some("[]"));
-    assert_eq!(delimiters.get("%r").map(String::as_str), Some("{}"));
+    assert_eq!(delimiters.get("%r").map(String::as_str), None);
+}
+
+#[test]
+fn safe_autocorrection_honors_rubocop_safety_metadata() {
+    let config = CopConfig::from_source(
+        "Style/UnsafeExample:\n  SafeAutoCorrect: false\nStyle/DisabledExample:\n  AutoCorrect: false\n",
+    );
+
+    assert!(!AutocorrectMode::Safe.enabled_for(&config, "Style/UnsafeExample"));
+    assert!(AutocorrectMode::All.enabled_for(&config, "Style/UnsafeExample"));
+    assert!(!AutocorrectMode::Safe.enabled_for(&config, "Style/DisabledExample"));
+    assert!(!AutocorrectMode::All.enabled_for(&config, "Style/DisabledExample"));
 }
