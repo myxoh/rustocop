@@ -55,6 +55,27 @@ namespace :fixtures do
   end
 end
 
+namespace :extensions do
+  performance_pack = "examples/native_custom_cops/rubocop-performance-1.26.1"
+  performance_cops = %w[
+    Performance/RedundantSortBlock
+    Performance/ReverseEach
+    Performance/ReverseFirst
+    Performance/Size
+    Performance/StringBytesize
+  ].freeze
+
+  desc "Verify cached rubocop-performance example contracts"
+  task :verify do
+    sh RbConfig.ruby, "script/verify_extension_cops.rb", performance_pack, *performance_cops
+  end
+
+  desc "Refresh and verify rubocop-performance example contracts"
+  task :refresh do
+    sh RbConfig.ruby, "script/verify_extension_cops.rb", "--refresh", performance_pack, *performance_cops
+  end
+end
+
 namespace :build do
   desc "Build the Rust native binary into libexec/rustocop-native"
   task :native do

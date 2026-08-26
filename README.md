@@ -29,6 +29,12 @@ RuboCop-derived fixtures and complete project signatures; the old
 Verified/Heuristic qualification scoreboard is not used. The configured and
 audited real-project corpus contains 50 pinned repositories.
 
+The binary also advertises 21 extension cops outside that built-in evidence
+denominator. Five `rubocop-performance` cops form a rigorously cached native
+authoring example: all 39 controlled contracts pass and all five are exact on
+the 50-project corpus. See the measured
+[cop-authoring workflow](docs/cop-authoring-performance.md).
+
 The separate [RuboCop compatibility layer](docs/rubocop-compatibility-layer.md)
 tracks all 228 shared components from RuboCop 1.87.0 and rubocop-ast
 1.49.1. The strict generated ledger accounts for all of them: 191 translated,
@@ -115,8 +121,11 @@ reference, so routine compatibility refreshes run only Rustocop. The reference
 is regenerated explicitly when RuboCop, the audit configuration, selected cops,
 or pinned project revisions change. Evidence produced from a dirty worktree is
 bound to a deterministic SHA-256 of every native cop source file as well as the
-compiled binary, so unrelated edits do not invalidate it and cop changes cannot
-silently reuse stale results.
+compiled binary. This prevents cop changes from silently reusing stale results,
+but the current fingerprint is coarse: even an unrelated extension-cop edit
+invalidates all built-in rows. The
+[cop-authoring performance review](docs/cop-authoring-performance.md) records
+the required per-cop plus shared-runtime fingerprint follow-up.
 
 A steady warm complete audit measured on 2026-08-26 took 17.96 seconds
 wall-clock with 50/50 native cache hits and no mismatches. The same default
@@ -157,6 +166,11 @@ bundle exec ruby script/benchmark_rubocop_prism.rb
 ```
 
 ### Ruby custom cops
+
+Frequently used extension cops can instead be translated into native example
+packs. The pinned [`rubocop-performance` pack](examples/native_custom_cops/README.md)
+shows the controlled-oracle, cached-unit, and focused-project workflow without
+inflating built-in RuboCop compatibility claims.
 
 <!-- generated:mixed-custom:start -->
 Rustocop can keep recognized built-in cops native while delegating explicitly

@@ -1,0 +1,3 @@
+{
+  "fd3742bcfa148fd4": "---\nplugins:\n- rubocop-performance\nAllCops:\n  NewCops: enable\n  TargetRubyVersion: '3.4'\nPerformance/Size:\n  Description: Use `size` instead of `count` for counting the number of elements in\n    `Array` and `Hash`.\n  Reference: https://github.com/fastruby/fast-ruby#arraylength-vs-arraysize-vs-arraycount-code\n  Enabled: true\n  VersionAdded: '0.30'\n"
+}

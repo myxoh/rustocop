@@ -7,6 +7,10 @@ implementation history live in git. Optimizations must preserve normalized JSON
 and correction parity, one Prism parse per file, deterministic parallel output,
 architecture checks, and the complete project-parity contract.
 
+Cop implementation workflow timings, third-party oracle costs, and the
+per-project reference-cache design are tracked separately in
+[Cop authoring performance](cop-authoring-performance.md).
+
 ## Prism node dispatch
 
 Confidence: measured.

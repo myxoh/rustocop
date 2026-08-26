@@ -66,10 +66,10 @@ fn extension_cops_keep_their_inline_smoke_contracts() {
 #[ignore = "run explicitly as the strict cached RuboCop parity audit"]
 fn cached_unit_contracts_match() {
     let started = Instant::now();
-    let root = fixture_root();
+    let manifest_path = fixture_manifest();
+    let root = manifest_path.parent().unwrap().to_path_buf();
     let manifest: UnitManifest =
-        serde_json::from_str(&fs::read_to_string(root.join("unit_manifest.json")).unwrap())
-            .unwrap();
+        serde_json::from_str(&fs::read_to_string(manifest_path).unwrap()).unwrap();
     let selected = selected_cops(&manifest);
     let mut failures = Vec::new();
     let mut case_count = 0;
@@ -209,6 +209,9 @@ fn selected_cops(manifest: &UnitManifest) -> Vec<String> {
     cops
 }
 
-fn fixture_root() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("../../spec/fixtures")
+fn fixture_manifest() -> PathBuf {
+    std::env::var_os("RUSTOCOP_UNIT_MANIFEST").map_or_else(
+        || Path::new(env!("CARGO_MANIFEST_DIR")).join("../../spec/fixtures/unit_manifest.json"),
+        PathBuf::from,
+    )
 }

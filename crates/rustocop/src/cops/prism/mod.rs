@@ -1,7 +1,6 @@
 use ruby_prism::{parse, CallNode, Diagnostic, Node, Visit};
 use std::any::Any;
 use std::sync::Arc;
-
 #[path = "framework/catalog_cop.rs"]
 mod catalog_cop;
 #[path = "framework/context_node_facade.rs"]
@@ -194,6 +193,7 @@ cop_modules!(
     operator_method_call_rules,
     path_and_literal_rules,
     parameter_order_completion,
+    performance_extension_examples,
     percent_string_rules,
     predicate_conversion_rules,
     project_scope_completion,

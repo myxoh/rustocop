@@ -1,0 +1,100 @@
+---
+reference:
+  plugin: rubocop-performance
+  version: 1.26.1
+  rubocop_version: 1.87.0
+  target_ruby_version: 3.4
+cops:
+  Performance/ReverseFirst:
+    - id: no_argument
+      source: "items.reverse.first\n"
+    - id: integer_argument
+      source: "items.reverse.first(2)\n"
+    - id: safe_navigation
+      source: "items&.reverse&.first(2)\n"
+    - id: variable_argument_clean
+      source: "items.reverse.first(limit)\n"
+    - id: multiple_arguments_clean
+      source: "items.reverse.first(1, 2)\n"
+    - id: reverse_with_argument_clean
+      source: "items.reverse(true).first\n"
+  Performance/Size:
+    - id: array_literal
+      source: "[1, 2, 3].count\n"
+    - id: hash_literal
+      source: "{a: 1, b: 2}.count\n"
+    - id: to_a
+      source: "values.to_a.count\n"
+    - id: to_h
+      source: "pairs.to_h.count\n"
+    - id: array_constructor
+      source: "Array(1..3).count\n"
+    - id: hash_constructor
+      source: "Hash(key: :value).count\n"
+    - id: block_clean
+      source: "[1, 2, 3].count { |item| item.odd? }\n"
+    - id: enclosing_block_body_clean
+      source: "change { values.to_a.count }\n"
+      origin:
+        repository: gitlabhq/gitlabhq
+        revision: 67a526442c20d20b6e80ebf916bd766b54018c5e
+        path: spec/lib/gitlab/counters/buffered_counter_spec.rb
+        line: 456
+    - id: unknown_receiver_clean
+      source: "values.count\n"
+    - id: argument_clean
+      source: "[1, 2, 3].count(1)\n"
+  Performance/StringBytesize:
+    - id: size
+      source: "value.bytes.size\n"
+    - id: length
+      source: "value.bytes.length\n"
+    - id: count
+      source: "'hello'.bytes.count\n"
+    - id: safe_navigation
+      source: "value&.bytes&.size\n"
+    - id: integer_receiver_clean
+      source: "1.bytes.size\n"
+    - id: implicit_receiver_clean
+      source: "bytes.size\n"
+    - id: block_clean
+      source: "value.bytes.count { |byte| byte > 127 }\n"
+  Performance/ReverseEach:
+    - id: block
+      source: "items.reverse.each { |item| puts item }\n"
+    - id: bare_call
+      source: "items.reverse.each\n"
+    - id: safe_navigation
+      source: "items&.reverse&.each { |item| puts item }\n"
+    - id: assignment_clean
+      source: "result = items.reverse.each { |item| puts item }\n"
+    - id: argument_clean
+      source: "items.reverse.each(:extra)\n"
+    - id: reverse_argument_clean
+      source: "items.reverse(true).each { |item| puts item }\n"
+    - id: nested_call_clean
+      source: "consume(items.reverse.each { |item| puts item })\n"
+    - id: nested_enclosing_block
+      source: "topics.each do |topic|\n  topic.comments.reverse.each do |comment|\n    puts comment\n  end\nend\n"
+      origin:
+        repository: discourse/discourse
+        revision: cec79c60b354e37e9a119544860123b122a995e0
+        path: script/import_scripts/ning.rb
+        line: 249
+    - id: return_clean
+      source: "def ordered(items)\n  return items.reverse.each { |item| puts item }\nend\n"
+  Performance/RedundantSortBlock:
+    - id: named_parameters
+      source: "items.sort { |a, b| a <=> b }\n"
+    - id: do_end
+      source: "items.sort do |left, right|\n  left <=> right\nend\n"
+    - id: numbered_parameters
+      source: "items.sort { _1 <=> _2 }\n"
+    - id: reversed_clean
+      source: "items.sort { |a, b| b <=> a }\n"
+    - id: sort_by_clean
+      source: "items.sort_by { |item| item.name }\n"
+    - id: transformed_clean
+      source: "items.sort { |a, b| a.name <=> b.name }\n"
+    - id: multiple_expressions_clean
+      source: "items.sort { |a, b| puts(a); a <=> b }\n"

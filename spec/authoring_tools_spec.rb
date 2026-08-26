@@ -97,4 +97,19 @@ RSpec.describe "cop authoring tools" do
       "390\tStyle/FileOpen"
     ])
   end
+
+  it "resolves cops supplied by an explicit RuboCop extension" do
+    stdout, stderr, status = run_script(
+      "audit_project_parity.rb",
+      "--extension",
+      "rubocop-performance",
+      "--cops",
+      "Performance/Size",
+      "--dry-run"
+    )
+
+    expect(status).to be_success
+    expect(stderr).to eq("")
+    expect(stdout).to match(/\d+\tPerformance\/Size\n/)
+  end
 end

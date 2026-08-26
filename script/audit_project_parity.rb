@@ -50,12 +50,16 @@ options = {
   mismatch_inventory: nil,
   rubocop_reference: DEFAULT_RUBOCOP_REFERENCE,
   refresh_rubocop_reference: false,
-  dry_run: false
+  dry_run: false,
+  extensions: []
 }
 
 OptionParser.new do |parser|
   parser.banner = "Usage: ruby script/audit_project_parity.rb [options]"
   parser.on("--cops NAMES", "comma-separated cop names") { |value| options[:cops] = value.split(",").map(&:strip) }
+  parser.on("--extension GEM", "load a RuboCop extension before resolving cop names") do |value|
+    options[:extensions] << value
+  end
   parser.on("--active", "audit every cop in the active Rustocop corpus") { options[:active] = true }
   parser.on("--from-position POSITION", Integer, "one-based sorted matrix position") { |value| options[:from_position] = value }
   parser.on("--count COUNT", Integer, "reverse-order cop count (default: 30)") { |value| options[:count] = value }
@@ -85,6 +89,7 @@ OptionParser.new do |parser|
   parser.on("--dry-run", "print the selected cops without running either engine") { options[:dry_run] = true }
 end.parse!
 
+options[:extensions].each { |extension| require extension }
 matrix = RuboCop::Cop::Registry.global.map(&:cop_name).sort
 active_matrix = Rustocop::CompatibilityStatus.load(root: ROOT).built_in_cops.sort
 cops = if options[:active]
@@ -174,6 +179,16 @@ def accepted?(result)
   [0, 1].include?(result.fetch("exitstatus")) &&
     !result.fetch("stdout").empty? &&
     !result.fetch("stderr").include?("An error occurred while")
+end
+
+def validate_rubocop_coverage!(result, project)
+  report = JSON.parse(result.fetch("stdout"))
+  inspected = report.fetch("summary").fetch("inspected_file_count")
+  expected = project.fetch("files")
+  return report if inspected == expected
+
+  abort "RuboCop inspected #{inspected}/#{expected} files for #{project.fetch('name')}; " \
+        "ensure AllCops/Exclude is [] and the parity config includes external corpus paths"
 end
 
 def capture_native(native, jobs, common, corpus, cops, batch_size, cache:, cache_metadata:)
@@ -303,6 +318,35 @@ def validate_reference!(reference, path, rubocop_version:, config_sha256:, proje
         "rerun with --refresh-rubocop-reference"
 end
 
+def incremental_reference(path, rubocop_version:, config_sha256:, cops:)
+  return unless File.file?(path)
+
+  reference = Rustocop::ArtifactStore.read_gzip_json(path, label: "RuboCop reference")
+  return unless reference["version"] == RUBOCOP_REFERENCE_VERSION
+  return unless reference["kind"] == "rubocop_project_reference"
+  return unless reference["rubocop_version"] == rubocop_version
+  return unless reference["config_sha256"] == config_sha256
+  return unless reference["cops"] == cops
+
+  reference
+rescue Rustocop::ArtifactStore::Error
+  nil
+end
+
+def reusable_reference_project(reference, project)
+  return unless reference
+
+  revision = reference.fetch("project_revisions", []).find do |candidate|
+    candidate["name"] == project.fetch("name")
+  end
+  return unless revision == project.slice("name", "repository", "revision")
+
+  cached = reference.fetch("projects", {})[project.fetch("name")]
+  return unless cached && cached["files"] == project.fetch("files")
+
+  cached
+end
+
 def isolate_crash(cops, &fails)
   return cops if cops.one?
 
@@ -375,39 +419,50 @@ if native_cache
 end
 reference_source = options[:refresh_rubocop_reference] ? "refreshed" : "cached"
 if options[:refresh_rubocop_reference]
-  rubocop_survivors = cops.dup
-  rubocop_errors = []
-  probe_corpus = projects.fetch(0).fetch("corpus")
+  prior_reference = incremental_reference(
+    options[:rubocop_reference], rubocop_version:, config_sha256:, cops:
+  )
+  rubocop_errors = prior_reference&.fetch("rubocop_errors", [])&.dup || []
+  rubocop_survivors = cops - rubocop_errors.map { |error| error.fetch("cop") }
+  probe_project = projects.find { |project| !reusable_reference_project(prior_reference, project) }
   probe_rubocop_result = nil
-  loop do
-    warn "RuboCop engine gate: #{projects.fetch(0).fetch('name')} (#{rubocop_survivors.length} cops)"
-    result = capture_rubocop(rubocop, common, probe_corpus, rubocop_survivors)
-    if accepted?(result)
-      probe_rubocop_result = result
-      break
-    end
-    abort "RuboCop could not parse the #{projects.fetch(0).fetch('name')} corpus: #{result.fetch('stderr')}" unless
-      cop_inspection_error?(result)
+  if probe_project
+    probe_corpus = probe_project.fetch("corpus")
+    loop do
+      warn "RuboCop engine gate: #{probe_project.fetch('name')} (#{rubocop_survivors.length} cops)"
+      result = capture_rubocop(rubocop, common, probe_corpus, rubocop_survivors)
+      if accepted?(result)
+        probe_rubocop_result = result
+        break
+      end
+      abort "RuboCop could not parse the #{probe_project.fetch('name')} corpus: #{result.fetch('stderr')}" unless
+        cop_inspection_error?(result)
 
-    culprit = isolate_crash(rubocop_survivors) do |subset|
-      probe = capture_rubocop(rubocop, common, probe_corpus, subset)
-      !accepted?(probe)
-    end
-    abort "could not isolate interacting RuboCop error among: #{culprit.join(', ')}" unless culprit.one?
+      culprit = isolate_crash(rubocop_survivors) do |subset|
+        probe = capture_rubocop(rubocop, common, probe_corpus, subset)
+        !accepted?(probe)
+      end
+      abort "could not isolate interacting RuboCop error among: #{culprit.join(', ')}" unless culprit.one?
 
-    cop = culprit.fetch(0)
-    rubocop_errors << {
-      "cop" => cop,
-      "project" => projects.fetch(0).fetch("name"),
-      "stderr" => result.fetch("stderr").lines.first(12).join
-    }
-    rubocop_survivors.delete(cop)
-    abort "every selected cop failed an engine gate" if rubocop_survivors.empty?
+      cop = culprit.fetch(0)
+      rubocop_errors << {
+        "cop" => cop,
+        "project" => probe_project.fetch("name"),
+        "stderr" => result.fetch("stderr").lines.first(12).join
+      }
+      rubocop_survivors.delete(cop)
+      abort "every selected cop failed an engine gate" if rubocop_survivors.empty?
+    end
   end
 
   reference_projects = projects.to_h do |project|
+    if (cached = reusable_reference_project(prior_reference, project))
+      warn "RuboCop reference cache: #{project.fetch('name')} (#{rubocop_survivors.length} cops)"
+      next [project.fetch("name"), cached]
+    end
+
     warn "RuboCop reference: #{project.fetch('name')} (#{rubocop_survivors.length} cops)"
-    result = if project == projects.fetch(0)
+    result = if project == probe_project
                probe_rubocop_result
              else
                capture_rubocop(rubocop, common, project.fetch("corpus"), rubocop_survivors)
@@ -435,8 +490,9 @@ if options[:refresh_rubocop_reference]
       result = capture_rubocop(rubocop, common, project.fetch("corpus"), rubocop_survivors)
     end
 
+    report = validate_rubocop_coverage!(result, project)
     offenses = Rustocop::DiagnosticSignatures.hashes_from_report(
-      JSON.parse(result.fetch("stdout")), corpus: project.fetch("corpus"), root: ROOT
+      report, corpus: project.fetch("corpus"), root: ROOT
     )
     [project.fetch("name"), {
       "files" => Dir.glob(File.join(project.fetch("corpus"), "**/*.rb")).length,
