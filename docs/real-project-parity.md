@@ -126,11 +126,15 @@ PROJECT_BENCHMARK_PREPARE_ONLY=1 \
 The audit builds the release binary, records either the clean-tree Git commit or
 a deterministic native-cop source SHA-256 together with the binary SHA-256,
 runs Rust crash gates, and then compares complete diagnostic signatures against
-the checked-in compressed RuboCop reference. Alongside the concise JSON report,
+the checked-in compressed RuboCop reference. Rustocop runs are split into
+bounded cop batches and cached under `tmp/project-parity/native-cache/` using
+the native binary, configuration, pinned project revision, corpus file count,
+and exact cop selection as the cache key. Alongside the concise JSON report,
 it writes a `.mismatches.json.gz` sidecar containing every distinct unmatched
 signature, its multiplicity, project revision, and source-file digest. The
 normal command reuses the complete cached 50-project reference and runs only
-Rustocop:
+Rustocop. An unchanged exhaustive rerun normally reads the native cache as well;
+any changed native binary or comparison input produces a safe cache miss:
 
 ```sh
 bundle exec ruby script/audit_project_parity.rb \
@@ -138,6 +142,11 @@ bundle exec ruby script/audit_project_parity.rb \
   --report tmp/project-parity/all-cops-current.json \
   --markdown tmp/project-parity/all-cops-current.md
 ```
+
+Use `--no-native-cache` when measuring cold native execution. Use
+`--native-cache-root PATH` to isolate a benchmark cache. Reports record the
+worker count, cop batch size, and per-project cache hits and misses so cached
+and cold timings cannot be confused.
 
 Turn newly observed signature differences into minimized, provenance-backed
 cop-owned unit contracts before changing implementations. The isolator consumes

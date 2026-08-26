@@ -33,11 +33,9 @@ fn multiline_block_chain(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) 
     {
         return;
     }
-    let current_end = call_send_end(node, context.source());
-    let offense_end = current_end;
     context.report(
         "Avoid multi-line chains of blocks.",
-        closing.start_offset()..offense_end,
+        closing.start_offset()..call_send_end(node, context.source()),
     );
 }
 

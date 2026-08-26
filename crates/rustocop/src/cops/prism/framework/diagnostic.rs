@@ -62,6 +62,7 @@ pub(crate) struct Context {
     target_ruby_version: RubyVersion,
     source_encoding: SourceEncoding,
     cop_config: Arc<CopConfig>,
+    line_starts: Vec<usize>,
     findings: Vec<Finding>,
     corrections: Vec<Correction>,
 }
@@ -82,6 +83,7 @@ impl Context {
             target_ruby_version,
             source_encoding,
             cop_config,
+            line_starts: Vec::new(),
             findings: Vec::new(),
             corrections: Vec::new(),
         }
@@ -112,6 +114,15 @@ impl Context {
         source: &'pr str,
         ancestors: &'pr [Node<'pr>],
     ) -> CopContext<'context, 'pr> {
+        if self.line_starts.is_empty() {
+            self.line_starts.push(0);
+            self.line_starts.extend(
+                source
+                    .match_indices('\n')
+                    .map(|(offset, _)| offset + 1)
+                    .filter(|offset| *offset < source.len()),
+            );
+        }
         CopContext::new(
             Reporter {
                 cop_name,
@@ -120,6 +131,16 @@ impl Context {
             source,
             ancestors,
         )
+    }
+
+    fn line_index(&self, offset: usize) -> usize {
+        self.line_starts
+            .partition_point(|start| *start <= offset)
+            .saturating_sub(1)
+    }
+
+    fn line_start_at(&self, index: usize) -> usize {
+        self.line_starts.get(index).copied().unwrap_or(0)
     }
 
     pub(super) fn report(

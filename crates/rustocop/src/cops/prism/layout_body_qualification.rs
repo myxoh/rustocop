@@ -6,7 +6,7 @@ define_cops! {
     EmptyLinesAroundAttributeAccessor => "Layout/EmptyLinesAroundAttributeAccessor" => call(empty_around_accessor),
     EmptyLinesAroundBlockBody => "Layout/EmptyLinesAroundBlockBody" => node(as_block_node, empty_block_body),
     EmptyLinesAroundArguments => "Layout/EmptyLinesAroundArguments" => call(empty_around_arguments),
-    EmptyLinesAroundExceptionHandlingKeywords => "Layout/EmptyLinesAroundExceptionHandlingKeywords" => source(empty_exception_keywords),
+    EmptyLinesAroundExceptionHandlingKeywords => "Layout/EmptyLinesAroundExceptionHandlingKeywords" => node(as_begin_node, empty_exception_keywords),
     EmptyLinesAroundClassBody => "Layout/EmptyLinesAroundClassBody" => any_node(empty_class_body),
     EmptyLinesAroundModuleBody => "Layout/EmptyLinesAroundModuleBody" => node(as_module_node, empty_module_body),
 }
@@ -56,7 +56,10 @@ fn empty_method_body(node: &ruby_prism::DefNode<'_>, context: &mut CopContext<'_
 }
 
 fn empty_block_body(node: &ruby_prism::BlockNode<'_>, context: &mut CopContext<'_, '_>) {
-    let style = context.policy().enforced_style("no_empty_lines").to_string();
+    let style = context
+        .policy()
+        .enforced_style("no_empty_lines")
+        .to_string();
     if node.body().is_none() && style == "empty_lines" {
         return;
     }
@@ -79,12 +82,12 @@ fn empty_around_arguments(node: &CallNode<'_>, context: &mut CopContext<'_, '_>)
     }
     let source = context.source();
     let location = node.location();
-    if line_index(source, location.start_offset()) == line_index(source, location.end_offset()) {
+    if context.line_index(location.start_offset()) == context.line_index(location.end_offset()) {
         return;
     }
     if let (Some(receiver), Some(selector)) = (node.receiver(), node.message_loc()) {
-        if line_index(source, receiver.location().end_offset())
-            != line_index(source, selector.start_offset())
+        if context.line_index(receiver.location().end_offset())
+            != context.line_index(selector.start_offset())
         {
             return;
         }
@@ -98,20 +101,15 @@ fn empty_around_arguments(node: &CallNode<'_>, context: &mut CopContext<'_, '_>)
         starts.push(closing.start_offset());
     }
     for start in starts {
-        let whitespace_start = source[..start]
-            .trim_end_matches(char::is_whitespace)
-            .len();
+        let whitespace_start = source[..start].trim_end_matches(char::is_whitespace).len();
         if source[whitespace_start..start]
             .bytes()
             .filter(|byte| *byte == b'\n')
             .count()
             > 1
         {
-            remove_blank_line(
-                context,
-                line_index(source, start) - 1,
-                "Empty line detected around arguments.",
-            );
+            let blank_line = context.line_index(start) - 1;
+            remove_blank_line(context, blank_line, "Empty line detected around arguments.");
         }
     }
 }
@@ -215,48 +213,46 @@ fn is_enable_directive(source: &str) -> bool {
     source.starts_with("# rubocop:enable") || source.starts_with("# rubocop:todo")
 }
 
-fn empty_exception_keywords(context: &mut CopContext<'_, '_>) {
-    let lines = context.source_file().lines().collect::<Vec<_>>();
-    for (index, (_, line)) in lines.iter().enumerate() {
-        let trimmed = line.trim_start();
-        let keyword = ["rescue", "ensure", "else"].into_iter().find(|keyword| {
-            trimmed == *keyword
-                || trimmed
-                    .strip_prefix(keyword)
-                    .is_some_and(|rest| rest.starts_with(char::is_whitespace))
-        });
-        let Some(keyword) = keyword else { continue };
-        if keyword == "else" {
-            let indentation = line.len() - line.trim_start().len();
-            let mut rescue_in_same_body = false;
-            for (_, previous) in lines[..index].iter().rev() {
-                let trimmed = previous.trim_start();
-                let previous_indentation = previous.len() - trimmed.len();
-                if previous_indentation == indentation && trimmed == "end" {
-                    break;
-                }
-                if previous_indentation == indentation
-                    && (trimmed == "rescue" || trimmed.starts_with("rescue "))
-                {
-                    rescue_in_same_body = true;
-                    break;
-                }
-            }
-            if !rescue_in_same_body {
-                continue;
-            }
+fn empty_exception_keywords(node: &ruby_prism::BeginNode<'_>, context: &mut CopContext<'_, '_>) {
+    let mut keywords = Vec::new();
+    let mut rescue = node.rescue_clause();
+    while let Some(clause) = rescue {
+        keywords.push((clause.keyword_loc(), "rescue"));
+        rescue = clause.subsequent();
+    }
+    if node.rescue_clause().is_some() {
+        if let Some(clause) = node.else_clause() {
+            keywords.push((clause.else_keyword_loc(), "else"));
         }
-        if index > 0 && lines[index - 1].1.is_empty() {
+    }
+    if let Some(clause) = node.ensure_clause() {
+        keywords.push((clause.ensure_keyword_loc(), "ensure"));
+    }
+
+    let source = context.source();
+    if let Some((location, _)) = keywords.last() {
+        let last_line = line(source, line_index(source, location.start_offset()));
+        if last_line
+            .split(|character: char| !character.is_ascii_alphabetic())
+            .any(|token| token == "end")
+        {
+            return;
+        }
+    }
+    let opening_line = line_index(source, node.location().start_offset());
+    for (location, keyword) in keywords {
+        let index = line_index(source, location.start_offset());
+        if index == opening_line {
+            continue;
+        }
+        if index > 0 && line(source, index - 1).trim().is_empty() {
             remove_blank_line(
                 context,
                 index - 1,
                 format!("Extra empty line detected before the `{keyword}`."),
             );
         }
-        if !line.contains("; end")
-            && index + 1 < lines.len()
-            && lines[index + 1].1.is_empty()
-        {
+        if line(source, index + 1).trim().is_empty() {
             remove_blank_line(
                 context,
                 index + 1,
@@ -282,10 +278,7 @@ fn empty_class_body(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
     } else if let Some(class) = node.as_singleton_class_node() {
         check_container_body(
             context,
-            line_index(
-                context.source(),
-                class.class_keyword_loc().start_offset(),
-            ),
+            line_index(context.source(), class.class_keyword_loc().start_offset()),
             line_index(context.source(), class.end_keyword_loc().start_offset()),
             "class",
             class.body(),
@@ -310,7 +303,10 @@ fn check_container_body(
     kind: &str,
     body: Option<Node<'_>>,
 ) {
-    let style = context.policy().enforced_style("no_empty_lines").to_string();
+    let style = context
+        .policy()
+        .enforced_style("no_empty_lines")
+        .to_string();
     if body.is_none() && style != "no_empty_lines" {
         return;
     }
@@ -329,15 +325,13 @@ fn check_container_body(
                 "empty_lines"
             },
         ),
-        "empty_lines_special" if namespace => check_body_edges(
-            context,
-            opening_line,
-            closing_line,
-            kind,
-            "no_empty_lines",
-        ),
+        "empty_lines_special" if namespace => {
+            check_body_edges(context, opening_line, closing_line, kind, "no_empty_lines")
+        }
         "empty_lines_special" => {
-            let Some(first) = children.first() else { return };
+            let Some(first) = children.first() else {
+                return;
+            };
             if requires_special_empty_line(first) {
                 check_beginning(context, opening_line, kind, true);
             } else {
@@ -388,7 +382,11 @@ fn check_deferred_empty_line(context: &mut CopContext<'_, '_>, node: &Node<'_>) 
         return;
     }
     let mut previous = node_line - 1;
-    while line(context.source(), previous).trim_start().starts_with('#') && previous > 0 {
+    while line(context.source(), previous)
+        .trim_start()
+        .starts_with('#')
+        && previous > 0
+    {
         previous -= 1;
     }
     if line(context.source(), previous).is_empty() {
@@ -506,7 +504,12 @@ fn insert_blank_line(
     message: impl Into<String>,
 ) {
     let start = line_start(context.source(), line_number);
-    context.insert(message, start..(start + 1).min(context.source().len()), start, "\n");
+    context.insert(
+        message,
+        start..(start + 1).min(context.source().len()),
+        start,
+        "\n",
+    );
 }
 
 fn line_index(source: &str, offset: usize) -> usize {

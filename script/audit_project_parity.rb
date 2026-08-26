@@ -3,12 +3,15 @@
 require "json"
 require "fileutils"
 require "digest"
+require "etc"
 require "optparse"
 require "pathname"
 require "rbconfig"
 require "time"
 require_relative "../lib/rustocop/artifact_store"
+require_relative "../lib/rustocop/batched_native_reports"
 require_relative "../lib/rustocop/diagnostic_signatures"
+require_relative "../lib/rustocop/native_result_cache"
 require_relative "../lib/rustocop/process_runner"
 require_relative "../lib/rustocop/project_mismatch_inventory"
 require_relative "../lib/rustocop/repository_layout"
@@ -34,7 +37,10 @@ options = {
   count: 30,
   config: DEFAULT_CONFIG,
   native: DEFAULT_NATIVE,
-  jobs: 4,
+  jobs: [Etc.nprocessors, 8].min,
+  native_batch_size: 25,
+  native_cache: true,
+  native_cache_root: File.join(ROOT, "tmp", "project-parity", "native-cache"),
   build: true,
   report: nil,
   markdown: nil,
@@ -53,6 +59,14 @@ OptionParser.new do |parser|
   parser.on("--config PATH") { |value| options[:config] = File.expand_path(value) }
   parser.on("--native PATH") { |value| options[:native] = File.expand_path(value) }
   parser.on("--jobs COUNT", Integer) { |value| options[:jobs] = value }
+  parser.on("--native-batch-size COUNT", Integer,
+            "maximum cops per Rustocop process (default: 25)") do |value|
+    options[:native_batch_size] = value
+  end
+  parser.on("--[no-]native-cache", "reuse content-addressed Rustocop batch results (default: true)") do |value|
+    options[:native_cache] = value
+  end
+  parser.on("--native-cache-root PATH") { |value| options[:native_cache_root] = File.expand_path(value) }
   parser.on("--[no-]build", "build the release binary before auditing (default: true)") { |value| options[:build] = value }
   parser.on("--report PATH") { |value| options[:report] = File.expand_path(value) }
   parser.on("--markdown PATH") { |value| options[:markdown] = File.expand_path(value) }
@@ -85,6 +99,7 @@ end
 unknown = cops - matrix
 abort "unknown cops: #{unknown.join(', ')}" unless unknown.empty?
 abort "no cops selected" if cops.empty?
+abort "--native-batch-size must be positive" unless options[:native_batch_size].positive?
 if options[:refresh_rubocop_reference] && options[:rubocop_reference] == DEFAULT_RUBOCOP_REFERENCE && cops.sort != active_matrix
   abort "refusing to replace the default RuboCop reference with a partial active-cop selection; " \
         "pass --active or use --rubocop-reference PATH"
@@ -133,7 +148,10 @@ projects = Rustocop::ProjectCorpus::PROJECTS.map do |project|
     abort "project corpus not found: #{corpus}; " \
       "run PROJECT_BENCHMARK_PREPARE_ONLY=1 bundle exec ruby script/benchmark_projects.rb"
   end
-  project.merge("corpus" => corpus)
+  project.merge(
+    "corpus" => corpus,
+    "files" => Dir.glob(File.join(corpus, "**/*.rb")).length
+  )
 end
 
 rubocop_version = RuboCop::Version::STRING
@@ -153,6 +171,19 @@ def accepted?(result)
   [0, 1].include?(result.fetch("exitstatus")) &&
     !result.fetch("stdout").empty? &&
     !result.fetch("stderr").include?("An error occurred while")
+end
+
+def capture_native(native, jobs, common, corpus, cops, batch_size, cache:, cache_metadata:)
+  Rustocop::BatchedNativeReports.capture(cops:, batch_size:, run: lambda do |batch|
+    metadata = cache_metadata.merge("cops" => batch)
+    cached = cache&.fetch(metadata)
+    next cached if cached
+
+    result = capture(native_command(native, jobs, common, corpus, batch))
+    next result unless cache && accepted?(result)
+
+    cache.store(metadata, result)
+  end)
 end
 
 def cop_inspection_error?(result)
@@ -292,6 +323,10 @@ def decode_offenses(project, cops)
 end
 
 config_sha256 = Digest::SHA256.file(options[:config]).hexdigest
+native_sha256 = Digest::SHA256.file(options[:native]).hexdigest
+native_cache = if options[:native_cache]
+                 Rustocop::NativeResultCache.new(root: options[:native_cache_root])
+               end
 reference_source = options[:refresh_rubocop_reference] ? "refreshed" : "cached"
 if options[:refresh_rubocop_reference]
   rubocop_survivors = cops.dup
@@ -398,7 +433,16 @@ loop do
   failure = nil
   projects.each do |project|
     warn "Rust crash gate: #{project.fetch('name')} (#{rust_survivors.length} cops)"
-    result = capture(native_command(options[:native], options[:jobs], common, project.fetch("corpus"), rust_survivors))
+    cache_metadata = {
+      "native_sha256" => native_sha256,
+      "config_sha256" => config_sha256,
+      "project" => project.slice("name", "repository", "revision"),
+      "files" => project.fetch("files")
+    }
+    result = capture_native(
+      options[:native], options[:jobs], common, project.fetch("corpus"), rust_survivors,
+      options[:native_batch_size], cache: native_cache, cache_metadata:
+    )
     unless accepted?(result)
       failure = [project, result]
       break
@@ -411,8 +455,18 @@ loop do
   end
 
   project, result = failure
-  culprit = isolate_crash(rust_survivors) do |subset|
-    probe = capture(native_command(options[:native], options[:jobs], common, project.fetch("corpus"), subset))
+  cache_metadata = {
+    "native_sha256" => native_sha256,
+    "config_sha256" => config_sha256,
+    "project" => project.slice("name", "repository", "revision"),
+    "files" => project.fetch("files")
+  }
+  crash_candidates = result.fetch("failed_cops", rust_survivors)
+  culprit = isolate_crash(crash_candidates) do |subset|
+    probe = capture_native(
+      options[:native], options[:jobs], common, project.fetch("corpus"), subset,
+      options[:native_batch_size], cache: native_cache, cache_metadata:
+    )
     !accepted?(probe)
   end
   abort "could not isolate interacting crash among: #{culprit.join(', ')}" unless culprit.one?
@@ -437,7 +491,7 @@ project_results = projects.to_h do |project|
   ruby_result = rubocop_reference.fetch("projects").fetch(project.fetch("name"))
 
   rust_offenses = Rustocop::DiagnosticSignatures.hashes_from_report(
-    JSON.parse(rust_result.fetch("stdout")), corpus:, root: ROOT
+    rust_result.fetch("report"), corpus:, root: ROOT
   )
   ruby_offenses = decode_offenses(ruby_result, rubocop_reference.fetch("cops")).select do |offense|
     survivor_lookup.key?(offense.fetch("cop"))
@@ -461,7 +515,7 @@ project_results = projects.to_h do |project|
   [project.fetch("name"), {
     "repository" => project.fetch("repository"),
     "revision" => project.fetch("revision"),
-    "files" => Dir.glob(File.join(corpus, "**/*.rb")).length,
+    "files" => project.fetch("files"),
     "timing_seconds" => {
       "rustocop" => rust_result.fetch("seconds"),
       "rubocop" => ruby_result.fetch("seconds")
@@ -469,6 +523,10 @@ project_results = projects.to_h do |project|
     "warning_counts" => {
       "rustocop" => rust_result.fetch("stderr").lines.count { |line| !line.strip.empty? },
       "rubocop" => ruby_result.fetch("warning_count")
+    },
+    "native_cache" => {
+      "hits" => rust_result.fetch("cache_hits"),
+      "misses" => rust_result.fetch("cache_misses")
     },
     "by_cop" => comparison.by_cop
   }]
@@ -537,7 +595,12 @@ report = {
   "generated_at" => generated_at,
   "rust_commit" => rust_commit,
   "cop_source_sha256" => Rustocop::SourceFingerprint.cops(root: ROOT),
-  "native_sha256" => Digest::SHA256.file(options[:native]).hexdigest,
+  "native_sha256" => native_sha256,
+  "rustocop_execution" => {
+    "jobs" => options[:jobs],
+    "cop_batch_size" => options[:native_batch_size],
+    "native_cache" => options[:native_cache]
+  },
   "rubocop_version" => rubocop_version,
   "rubocop_reference" => {
     "path" => Pathname(options[:rubocop_reference]).relative_path_from(Pathname(ROOT)).to_s,

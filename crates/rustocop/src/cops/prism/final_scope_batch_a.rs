@@ -151,6 +151,16 @@ fn exception_shadows(ancestor: &str, descendant: &str) -> bool {
     if ancestor == descendant && ancestor != "*" {
         return true;
     }
+    let mut current = descendant;
+    while let Some(parent) = exception_parent(current) {
+        if parent == ancestor {
+            return true;
+        }
+        if parent == current {
+            break;
+        }
+        current = parent;
+    }
     let descendant_base = descendant.rsplit("::").next().unwrap_or(descendant);
     match ancestor {
         "Exception" => true,
@@ -201,6 +211,27 @@ fn exception_shadows(ancestor: &str, descendant: &str) -> bool {
         "OpenSSL::PKey::PKeyError" => descendant == "OpenSSL::PKey::RSAError",
         "Psych::Exception" => descendant == "Psych::SyntaxError",
         _ => false,
+    }
+}
+
+fn exception_parent(exception: &str) -> Option<&'static str> {
+    if exception.starts_with("Errno::") {
+        return Some("SystemCallError");
+    }
+    match exception {
+        "SystemCallError" | "IOError" | "SocketError" | "ArgumentError" | "RuntimeError" => {
+            Some("StandardError")
+        }
+        "EOFError" => Some("IOError"),
+        "Date::Error" | "IPAddr::InvalidAddressError" => Some("ArgumentError"),
+        "Timeout::Error" | "Psych::Exception" => Some("RuntimeError"),
+        "Net::OpenTimeout" | "Net::ReadTimeout" => Some("Timeout::Error"),
+        "Psych::BadAlias" | "Psych::DisallowedClass" | "Psych::SyntaxError" => {
+            Some("Psych::Exception")
+        }
+        "Psych::AliasesNotEnabled" => Some("Psych::BadAlias"),
+        "StandardError" => Some("Exception"),
+        _ => None,
     }
 }
 
@@ -967,31 +998,12 @@ fn rescued_exception_name(node: &ruby_prism::RescueNode<'_>, context: &mut CopCo
     let expected = if actual.starts_with('_') && !preferred.starts_with('_') {
         format!("_{preferred}")
     } else {
-        preferred
+        preferred.clone()
     };
-    let rescue_start = node.keyword_loc().start_offset();
-    let assignment_scope_end = context
-        .ancestors()
-        .iter()
-        .rev()
-        .find_map(Node::as_begin_node)
-        .and_then(|begin| begin.begin_keyword_loc())
-        .map(|keyword| keyword.start_offset())
-        .or_else(|| {
-            context
-                .ancestors()
-                .iter()
-                .filter_map(Node::as_rescue_node)
-                .map(|rescue| rescue.keyword_loc().start_offset())
-                .min()
-        })
-        .unwrap_or(rescue_start);
-    if identifier_assigned(&context.source()[..assignment_scope_end], &expected) {
-        return;
-    }
-    if node.statements().is_some_and(|statements| {
-        identifier_assigned(context.source_file().node(&statements.as_node()), &expected)
-    }) {
+    if node
+        .statements()
+        .is_some_and(|statements| contains_preferred_local_read(&statements.as_node(), &preferred))
+    {
         return;
     }
     if actual != expected {
@@ -1070,6 +1082,34 @@ fn rescued_exception_name(node: &ruby_prism::RescueNode<'_>, context: &mut CopCo
     }
 }
 
+fn contains_preferred_local_read(node: &Node<'_>, preferred: &str) -> bool {
+    struct LocalReads<'a> {
+        preferred: &'a [u8],
+        underscored: Vec<u8>,
+        found: bool,
+    }
+
+    impl<'pr> ruby_prism::Visit<'pr> for LocalReads<'_> {
+        fn visit_local_variable_read_node(
+            &mut self,
+            node: &ruby_prism::LocalVariableReadNode<'pr>,
+        ) {
+            let name = node.name().as_slice();
+            if name == self.preferred || name == self.underscored {
+                self.found = true;
+            }
+        }
+    }
+
+    let mut visitor = LocalReads {
+        preferred: preferred.as_bytes(),
+        underscored: format!("_{preferred}").into_bytes(),
+        found: false,
+    };
+    visitor.visit(node);
+    visitor.found
+}
+
 fn first_identifier_assignment(
     source: &str,
     name: &str,
@@ -1094,17 +1134,6 @@ fn first_identifier_assignment(
                 .filter(|equal| at < *equal)
                 .map(|_| at)
         })
-}
-
-fn identifier_assigned(source: &str, name: &str) -> bool {
-    source.match_indices(name).any(|(start, _)| {
-        let before = source[..start].bytes().next_back();
-        let after = source[start + name.len()..].trim_start();
-        !before.is_some_and(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
-            && after.starts_with('=')
-            && !after.starts_with("==")
-            && !after.starts_with("=>")
-    })
 }
 
 fn block_forwarding(definition: &ruby_prism::DefNode<'_>, context: &mut CopContext<'_, '_>) {

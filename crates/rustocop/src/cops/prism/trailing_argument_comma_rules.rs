@@ -15,7 +15,9 @@ fn trailing_comma_in_arguments(node: &CallNode<'_>, context: &mut CopContext<'_,
         return;
     };
     let raw_items = arguments.arguments().iter().collect::<Vec<_>>();
-    let block_argument = node.block().filter(|block| block.as_block_argument_node().is_some());
+    let block_argument = node
+        .block()
+        .filter(|block| block.as_block_argument_node().is_some());
     let last_item = block_argument.as_ref().or_else(|| raw_items.last());
     let Some(last_item) = last_item else {
         return;
@@ -46,7 +48,7 @@ fn trailing_comma_in_arguments(node: &CallNode<'_>, context: &mut CopContext<'_,
         &elements,
         &closing,
         last_item.as_hash_node().is_some(),
-        context.source(),
+        context,
     );
 
     if let Some(comma) = comma.filter(|_| !required) {
@@ -85,37 +87,35 @@ fn compatibility_requires_trailing_comma(
     elements: &[(usize, usize)],
     closing: &ruby_prism::Location<'_>,
     last_item_is_hash: bool,
-    source: &str,
+    context: &CopContext<'_, '_>,
 ) -> bool {
     use crate::rubocop::cop::mixin::trailing_comma::{
         Item, Location, TrailingComma, TrailingCommaStyle,
     };
 
-    fn line_number(source: &str, offset: usize) -> usize {
-        source.as_bytes()[..offset.min(source.len())]
-            .iter()
-            .filter(|byte| **byte == b'\n')
-            .count()
-            + 1
+    fn line_number(context: &CopContext<'_, '_>, offset: usize) -> usize {
+        context.line_index(offset) + 1
     }
 
-    fn item_location(source: &str, range: std::ops::Range<usize>) -> Location {
+    fn item_location(context: &CopContext<'_, '_>, range: std::ops::Range<usize>) -> Location {
+        let source = context.source();
         Location {
-            line: line_number(source, range.start),
-            last_line: line_number(source, range.end.saturating_sub(1)),
+            line: line_number(context, range.start),
+            last_line: line_number(context, range.end.saturating_sub(1)),
             source: source.get(range.clone()).unwrap_or_default().to_string(),
-            begins_its_line: source[source[..range.start].rfind('\n').map_or(0, |at| at + 1)
-                ..range.start]
+            begins_its_line: source
+                [source[..range.start].rfind('\n').map_or(0, |at| at + 1)..range.start]
                 .trim()
                 .is_empty(),
             bytes: range,
         }
     }
 
-    fn item(source: &str, start: usize, end: usize, braces: bool) -> Item {
+    fn item(context: &CopContext<'_, '_>, start: usize, end: usize, braces: bool) -> Item {
+        let source = context.source();
         Item {
             kind: if braces { "hash" } else { "argument" }.to_string(),
-            source_range: item_location(source, start..end),
+            source_range: item_location(context, start..end),
             children: Vec::new(),
             arguments: Vec::new(),
             call_type: false,
@@ -128,12 +128,14 @@ fn compatibility_requires_trailing_comma(
         }
     }
 
+    let source = context.source();
+
     let mut arguments = elements
         .iter()
         .enumerate()
         .map(|(index, &(start, end))| {
             item(
-                source,
+                context,
                 start,
                 end,
                 last_item_is_hash && index + 1 == elements.len(),
@@ -142,16 +144,13 @@ fn compatibility_requires_trailing_comma(
         .collect::<Vec<_>>();
     let children = arguments.clone();
     let location = node.location();
-    let end_location = item_location(
-        source,
-        closing.start_offset()..closing.end_offset(),
-    );
+    let end_location = item_location(context, closing.start_offset()..closing.end_offset());
     let selector_line = node
         .message_loc()
-        .map(|selector| line_number(source, selector.start_offset()));
+        .map(|selector| line_number(context, selector.start_offset()));
     let node = Item {
         kind: "send".to_string(),
-        source_range: item_location(source, location.start_offset()..location.end_offset()),
+        source_range: item_location(context, location.start_offset()..location.end_offset()),
         children,
         arguments: std::mem::take(&mut arguments),
         call_type: true,

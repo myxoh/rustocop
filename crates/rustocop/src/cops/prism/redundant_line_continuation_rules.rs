@@ -18,12 +18,14 @@ impl RedundantLineContinuationRule<'_, '_, '_> {
         let ruby_end = source.find("\n__END__\n").map_or(source.len(), |at| at + 1);
         let ruby_source = &source[..ruby_end];
         let logical_end = ruby_source.trim_end_matches(['\n', '\r']).len();
+        let literal_ranges = self.source_file().literal_ranges();
+        let comment_ranges = self.source_file().comment_ranges();
         for (slash, _) in ruby_source.match_indices("\\\n") {
             if slash + 2 >= logical_end {
                 continue;
             }
             let range = slash..slash + 2;
-            if self.require_line_continuation(&source, slash)
+            if self.require_line_continuation(&source, slash, &literal_ranges, &comment_ranges)
                 || !self.redundant_line_continuation(&source, slash)
             {
                 continue;
@@ -35,7 +37,13 @@ impl RedundantLineContinuationRule<'_, '_, '_> {
         self.inspect_end_of_ruby_code_line_continuation(ruby_source);
     }
 
-    fn require_line_continuation(&self, source: &str, slash: usize) -> bool {
+    fn require_line_continuation(
+        &self,
+        source: &str,
+        slash: usize,
+        literal_ranges: &[std::ops::Range<usize>],
+        comment_ranges: &[std::ops::Range<usize>],
+    ) -> bool {
         let line_start = source[..slash].rfind('\n').map_or(0, |at| at + 1);
         let line = &source[line_start..slash];
         let next_start = slash + 2;
@@ -44,17 +52,12 @@ impl RedundantLineContinuationRule<'_, '_, '_> {
             .map_or(source.len(), |at| next_start + at);
         let next = &source[next_start..next_end];
         let before = line.trim_end();
-        let inside_literal = self
-            .source_file()
-            .literal_ranges()
+        let inside_literal = literal_ranges
             .iter()
             .any(|literal| literal.start <= slash && slash < literal.end);
-        let interpolation_boundary = inside_literal
-            && interpolation_begins_next_line(source, slash)
-            && line.contains('(');
-        let has_comment = self
-            .source_file()
-            .comment_ranges()
+        let interpolation_boundary =
+            inside_literal && interpolation_begins_next_line(source, slash) && line.contains('(');
+        let has_comment = comment_ranges
             .iter()
             .any(|comment| line_start <= comment.start && comment.start < slash);
         if has_comment
@@ -70,10 +73,7 @@ impl RedundantLineContinuationRule<'_, '_, '_> {
         {
             return false;
         }
-        if before.ends_with('=')
-            && next.contains('{')
-            && next.trim_end().ends_with(['+', '-'])
-        {
+        if before.ends_with('=') && next.contains('{') && next.trim_end().ends_with(['+', '-']) {
             return true;
         }
         starts_with_arithmetic_operator(next)
@@ -140,14 +140,19 @@ fn string_concatenation(line: &str) -> bool {
 }
 
 fn starts_with_arithmetic_operator(line: &str) -> bool {
-    matches!(line.trim_start().chars().next(), Some('+' | '-' | '*' | '/' | '%'))
+    matches!(
+        line.trim_start().chars().next(),
+        Some('+' | '-' | '*' | '/' | '%')
+    )
 }
 
 fn starts_with_required_operator(line: &str) -> bool {
     let line = line.trim_start();
-    ["&&", "||", "==", "===", "!=", ">=", "<=", "<=>", "=~", "!~", "&", "|", "^"]
-        .iter()
-        .any(|operator| line.starts_with(operator))
+    [
+        "&&", "||", "==", "===", "!=", ">=", "<=", "<=>", "=~", "!~", "&", "|", "^",
+    ]
+    .iter()
+    .any(|operator| line.starts_with(operator))
 }
 
 fn method_with_argument(line: &str, next: &str) -> bool {
@@ -160,9 +165,11 @@ fn method_with_argument(line: &str, next: &str) -> bool {
     {
         return false;
     }
-    if ["class ", "module ", "def ", "if ", "unless ", "while ", "until "]
-        .iter()
-        .any(|keyword| previous.starts_with(keyword))
+    if [
+        "class ", "module ", "def ", "if ", "unless ", "while ", "until ",
+    ]
+    .iter()
+    .any(|keyword| previous.starts_with(keyword))
         || previous.ends_with(" do")
         || ["&& ", "|| "]
             .iter()
@@ -171,14 +178,20 @@ fn method_with_argument(line: &str, next: &str) -> bool {
         return false;
     }
     let last = previous
-        .split(|character: char| character.is_whitespace() || "()[]{}.,;".contains(character)).rfind(|part| !part.is_empty())
+        .split(|character: char| character.is_whitespace() || "()[]{}.,;".contains(character))
+        .rfind(|part| !part.is_empty())
         .unwrap_or_default();
-    let flow = matches!(last, "break" | "next" | "return" | "super" | "yield" | "defined?");
+    let flow = matches!(
+        last,
+        "break" | "next" | "return" | "super" | "yield" | "defined?"
+    );
     let identifier = last
         .chars()
         .next()
         .is_some_and(|character| character.is_ascii_alphabetic() || character == '_')
-        && last.chars().all(|character| character.is_ascii_alphanumeric() || "_?!".contains(character));
+        && last
+            .chars()
+            .all(|character| character.is_ascii_alphanumeric() || "_?!".contains(character));
     (flow || identifier)
         && !previous.ends_with(['.', ',', '(', '[', '{', ':'])
         && !previous.ends_with("&&")

@@ -27,6 +27,14 @@ impl Reporter<'_> {
         self.context.source_encoding()
     }
 
+    pub(in super::super) fn line_index(&self, offset: usize) -> usize {
+        self.context.line_index(offset)
+    }
+
+    pub(in super::super) fn line_start_at(&self, index: usize) -> usize {
+        self.context.line_start_at(index)
+    }
+
     pub(in super::super) fn config_value(&self, key: &str) -> Option<&str> {
         self.context.config_value(self.cop_name, key)
     }

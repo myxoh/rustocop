@@ -14,11 +14,25 @@ define_cops! {
 
 fn case_like_if(context: &mut CopContext<'_, '_>) {
     let lines = context.source_file().lines().collect::<Vec<_>>();
-    let minimum = context.config_usize("MinBranchesCount", 2);
+    let minimum = context
+        .config_value("MinBranchesCount")
+        .and_then(|value| value.parse::<usize>().ok())
+        .unwrap_or(3);
+    let mut literal_ranges = context.source_file().literal_ranges();
+    literal_ranges.extend(context.source_file().heredoc_ranges());
+    let mut reported = Vec::new();
     let mut index = 0usize;
     while index < lines.len() {
         let (start_offset, first_line) = lines[index];
         let first = first_line.trim_start();
+        let first_content = start_offset + first_line.len() - first.len();
+        if literal_ranges
+            .iter()
+            .any(|range| range.start <= first_content && first_content < range.end)
+        {
+            index += 1;
+            continue;
+        }
         let Some(condition) = first.strip_prefix("if ") else {
             index += 1;
             continue;
@@ -66,7 +80,9 @@ fn case_like_if(context: &mut CopContext<'_, '_>) {
                 has_conditional_else = lines
                     .get(cursor + 1)
                     .map(|(_, body)| body.trim())
-                    .is_some_and(|body| body.contains(" ? ") && body.contains(" : "));
+                    .is_some_and(|body| {
+                        body.contains(" ? ") && body.contains(" : ") && !body.contains(" = ")
+                    });
             } else if line == "end" || line.starts_with("end ") {
                 end_index = Some(cursor);
                 break;
@@ -93,12 +109,135 @@ fn case_like_if(context: &mut CopContext<'_, '_>) {
         }
         let end_line = lines[end_index].1;
         let end = lines[end_index].0 + end_line.len() - end_line.trim_start().len() + 3;
+        let offense = start_offset + indent.len()..end;
+        reported.push(offense.clone());
         context.replace_many(
             "Convert `if-elsif` to `case-when`.",
-            start_offset + indent.len()..end,
+            offense,
             edits,
         );
         index += 1;
+    }
+    ast_case_like_if(context, minimum, &reported);
+}
+
+fn ast_case_like_if(
+    context: &mut CopContext<'_, '_>,
+    minimum: usize,
+    reported: &[std::ops::Range<usize>],
+) {
+    struct Candidate {
+        offense: std::ops::Range<usize>,
+        edits: Vec<(std::ops::Range<usize>, String)>,
+    }
+
+    struct Finder<'source> {
+        file: SourceFile<'source>,
+        minimum: usize,
+        reported: &'source [std::ops::Range<usize>],
+        candidates: Vec<Candidate>,
+    }
+
+    impl<'pr> ruby_prism::Visit<'pr> for Finder<'_> {
+        fn visit_if_node(&mut self, node: &ruby_prism::IfNode<'pr>) {
+            let Some(keyword) = node.if_keyword_loc() else {
+                ruby_prism::visit_if_node(self, node);
+                return;
+            };
+            if keyword.as_slice() != b"if" || node.end_keyword_loc().is_none() {
+                ruby_prism::visit_if_node(self, node);
+                return;
+            }
+
+            let offense = node.location().start_offset()..node.location().end_offset();
+            if self.reported.contains(&offense) {
+                ruby_prism::visit_if_node(self, node);
+                return;
+            }
+            let mut branches = Vec::new();
+            let first_condition = self.file.node(&node.predicate());
+            if !case_condition_supported(first_condition) {
+                ruby_prism::visit_if_node(self, node);
+                return;
+            }
+            let Some((target, value)) = case_comparison(first_condition) else {
+                ruby_prism::visit_if_node(self, node);
+                return;
+            };
+            let keyword_start = keyword.start_offset();
+            branches.push((keyword, node.predicate().location(), value));
+            let mut subsequent = node.subsequent();
+            let mut has_conditional_else = false;
+            while let Some(branch) = subsequent {
+                let Some(elsif) = branch.as_if_node() else {
+                    if let Some(else_node) = branch.as_else_node() {
+                        has_conditional_else = else_node
+                            .statements()
+                            .is_some_and(|statements| {
+                                let body = self.file.node(&statements.as_node());
+                                body.contains(" ? ")
+                                    && body.contains(" : ")
+                                    && !body.contains(" = ")
+                            });
+                    }
+                    break;
+                };
+                let Some(elsif_keyword) = elsif.if_keyword_loc() else { break };
+                let Some((candidate, value)) = case_comparison(self.file.node(&elsif.predicate()))
+                else {
+                    branches.clear();
+                    break;
+                };
+                if candidate != target {
+                    branches.clear();
+                    break;
+                }
+                branches.push((elsif_keyword, elsif.predicate().location(), value));
+                subsequent = elsif.subsequent();
+            }
+            if branches.len() + usize::from(has_conditional_else) >= self.minimum {
+                let indent = " ".repeat(keyword_start - self.file.line_start(keyword_start));
+                let mut edits = Vec::new();
+                for (index, (branch_keyword, predicate, value)) in branches.into_iter().enumerate() {
+                    let replacement = if index == 0 {
+                        format!("case {target}\n{indent}when {value}")
+                    } else {
+                        format!("when {value}")
+                    };
+                    edits.push((branch_keyword.start_offset()..predicate.end_offset(), replacement));
+                }
+                candidates_push(
+                    &mut self.candidates,
+                    offense,
+                    edits,
+                );
+            }
+            ruby_prism::visit_if_node(self, node);
+        }
+    }
+
+    fn candidates_push(
+        candidates: &mut Vec<Candidate>,
+        offense: std::ops::Range<usize>,
+        edits: Vec<(std::ops::Range<usize>, String)>,
+    ) {
+        candidates.push(Candidate { offense, edits });
+    }
+
+    let parsed = ruby_prism::parse(context.source().as_bytes());
+    let mut finder = Finder {
+        file: context.source_file(),
+        minimum,
+        reported,
+        candidates: Vec::new(),
+    };
+    finder.visit(&parsed.node());
+    for candidate in finder.candidates {
+        context.replace_many(
+            "Convert `if-elsif` to `case-when`.",
+            candidate.offense,
+            candidate.edits,
+        );
     }
 }
 
@@ -106,9 +245,30 @@ fn source_regexp(source: &str) -> bool {
     source.starts_with('/') || source.starts_with("%r")
 }
 
+fn case_condition_supported(condition: &str) -> bool {
+    if let Some((left, right)) = condition.split_once(" =~ ") {
+        return source_regexp(left.trim())
+            || source_regexp(right.trim())
+            || (!left.contains('(') && !right.contains('('));
+    }
+    if let Some((receiver, argument)) = condition.split_once(".match?(") {
+        let argument = argument.trim_end_matches(')').trim();
+        return source_regexp(receiver.trim())
+            || source_regexp(argument)
+            || (!receiver.contains('(') && !argument.contains('('));
+    }
+    true
+}
+
 fn case_comparison(condition: &str) -> Option<(String, String)> {
+    let trailing_comment = condition
+        .find('#')
+        .map(|start| condition[start..].trim().to_string());
     let condition = condition.split('#').next().unwrap_or(condition).trim();
-    if condition.contains(" && ") {
+    if condition.contains(" && ")
+        || condition.contains(" and ")
+        || condition.contains(" or ")
+    {
         return None;
     }
     let condition = if condition.contains(" == ") {
@@ -140,15 +300,27 @@ fn case_comparison(condition: &str) -> Option<(String, String)> {
     if let Some((subject, value)) = condition.split_once(" == ") {
         let subject = subject.trim();
         let value = value.trim();
-        if value.as_bytes().first().is_some_and(u8::is_ascii_uppercase)
-            && (value.len() == 1 || value.bytes().any(|byte| byte.is_ascii_lowercase()))
+        let terminal_constant = value.rsplit("::").next().unwrap_or(value);
+        let constant_like = terminal_constant
+            .as_bytes()
+            .first()
+            .is_some_and(u8::is_ascii_uppercase);
+        if constant_like
+            && (terminal_constant.len() == 1
+                || (!case_literal(value)
+                    && terminal_constant.bytes().any(|byte| byte.is_ascii_lowercase())))
         {
             return None;
         }
         if case_literal(subject) && !case_literal(value) {
             return Some((value.to_string(), subject.to_string()));
         }
-        return Some((subject.to_string(), value.to_string()));
+        if !case_literal(value) {
+            return None;
+        }
+        let value = trailing_comment
+            .map_or_else(|| value.to_string(), |comment| format!("{value} {comment}"));
+        return Some((subject.to_string(), value));
     }
     if let Some((subject, class)) = condition.split_once(".is_a?(") {
         return Some((
@@ -156,12 +328,20 @@ fn case_comparison(condition: &str) -> Option<(String, String)> {
             class.trim_end_matches(')').trim().to_string(),
         ));
     }
+    if let Some((subject, class)) = condition.split_once(".is_a? ") {
+        return Some((subject.trim().to_string(), class.trim().to_string()));
+    }
     if let Some((receiver, argument)) = condition.split_once(".match?(") {
         let receiver = receiver.trim();
         let argument = argument.trim_end_matches(')').trim();
         return if receiver.starts_with('/') {
             Some((argument.to_string(), receiver.to_string()))
         } else if argument.starts_with('/') {
+            Some((receiver.to_string(), argument.to_string()))
+        } else if argument
+            .bytes()
+            .all(|byte| byte.is_ascii_uppercase() || byte.is_ascii_digit() || byte == b'_')
+        {
             Some((receiver.to_string(), argument.to_string()))
         } else {
             Some((argument.to_string(), receiver.to_string()))
@@ -191,9 +371,18 @@ fn case_comparison(condition: &str) -> Option<(String, String)> {
 }
 
 fn case_literal(value: &str) -> bool {
+    let terminal_constant = value.rsplit("::").next().unwrap_or(value);
     value.starts_with(['\'', '"', ':', '/', '[', '{'])
-        || value.as_bytes().first().is_some_and(u8::is_ascii_digit)
+        || value
+            .trim_start_matches('-')
+            .as_bytes()
+            .first()
+            .is_some_and(u8::is_ascii_digit)
         || matches!(value, "nil" | "true" | "false")
+        || value.contains("::")
+            && terminal_constant
+                .bytes()
+                .all(|byte| byte.is_ascii_uppercase() || byte.is_ascii_digit() || byte == b'_')
         || value
             .bytes()
             .all(|byte| byte.is_ascii_uppercase() || byte.is_ascii_digit() || byte == b'_')

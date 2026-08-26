@@ -609,43 +609,71 @@ fn configured_indentation_width(context: &CopContext<'_, '_>) -> usize {
 }
 
 fn indentation_style(context: &mut CopContext<'_, '_>) {
-    if context.source().contains("<<") {
-        return;
-    }
     let spaces_style = context.policy().enforced_style("spaces") == "spaces";
     let width = context.config_usize("IndentationWidth", 2);
+    let heredocs = context.source_file().heredoc_ranges();
+    let mut string_ranges = context
+        .source_file()
+        .literal_ranges()
+        .into_iter()
+        .filter(|literal| {
+            !heredocs
+                .iter()
+                .any(|heredoc| literal.start <= heredoc.start && heredoc.end <= literal.end)
+        })
+        .collect::<Vec<_>>();
+    string_ranges.extend(heredocs.iter().filter_map(|heredoc| {
+        let body_start = context.source()[heredoc.start..heredoc.end]
+            .find('\n')?
+            + heredoc.start
+            + 1;
+        let closing_start = context
+            .source_file()
+            .line_start(heredoc.end.saturating_sub(1));
+        (body_start <= closing_start).then_some(body_start..closing_start)
+    }));
     for (offset, line) in context.source_file().lines() {
         if line.trim() == "__END__" {
             break;
         }
         let indentation = line.len() - line.trim_start_matches([' ', '\t']).len();
-        let trimmed = &line[indentation..];
-        if indentation == 0
-            || trimmed.is_empty()
-            || !context
-                .source_file()
-                .code_offsets(trimmed)
-                .contains(&(offset + indentation))
-        {
+        if indentation == 0 {
             continue;
         }
         let leading = &line[..indentation];
         if spaces_style && leading.contains('\t') {
             let offense_end = leading.rfind('\t').map_or(indentation, |tab| tab + 1);
+            let offense = offset..offset + offense_end;
+            if string_ranges
+                .iter()
+                .any(|range| range.start <= offense.start && offense.end <= range.end)
+            {
+                continue;
+            }
             context.replace(
                 "Tab detected in indentation.",
-                offset..offset + offense_end,
-                offset..offset + indentation,
-                leading.replace('\t', &" ".repeat(width)),
+                offense.clone(),
+                offense.clone(),
+                context.source_file().slice(offense).unwrap_or_default().replace(
+                    '\t',
+                    &" ".repeat(width),
+                ),
             );
         } else if !spaces_style && leading.contains(' ') {
             let spaces = leading.bytes().take_while(|byte| *byte == b' ').count();
             let offense_end = if spaces > 0 { spaces } else { indentation };
+            let offense = offset..offset + offense_end;
+            if string_ranges
+                .iter()
+                .any(|range| range.start <= offense.start && offense.end <= range.end)
+            {
+                continue;
+            }
             context.replace(
                 "Space detected in indentation.",
-                offset..offset + offense_end,
-                offset..offset + indentation,
-                "\t".repeat(indentation / width),
+                offense.clone(),
+                offense,
+                "\t".repeat(offense_end / width),
             );
         }
     }

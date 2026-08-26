@@ -344,6 +344,12 @@ bundle exec ruby script/audit_project_parity.rb \
   --markdown tmp/project-parity/current-head.md
 ```
 
+The project runner reuses both the pinned RuboCop reference and
+content-addressed Rustocop batch results. The native cache is invalidated by a
+changed binary, comparison configuration, project revision, corpus file count,
+or cop selection, so a newly compiled cop is always re-exercised. Pass
+`--no-native-cache` only for cold performance measurements.
+
 Project parity compares complete diagnostic signatures and writes an exhaustive
 compressed mismatch inventory next to the report. The report retains three
 examples per direction for readability; isolation reads the complete inventory,

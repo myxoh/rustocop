@@ -17,9 +17,10 @@ impl MissingElseRule<'_, '_, '_> {
             let finish = node
                 .statements()
                 .and_then(|statements| statements.body().last())
-                .map_or(start + keyword.as_slice().len(), |statement| {
-                    parser_compatible_expression_end(&statement, self.source_file())
-                });
+                .map_or_else(
+                    || node.predicate().location().end_offset(),
+                    |statement| statement.location().end_offset(),
+                );
             start..finish
         } else {
             node.location().start_offset()..node.location().end_offset()
@@ -59,29 +60,4 @@ impl MissingElseRule<'_, '_, '_> {
             self.report(message, offense);
         }
     }
-}
-
-fn parser_compatible_expression_end(node: &ruby_prism::Node<'_>, file: SourceFile<'_>) -> usize {
-    let location = node.location();
-    for (line_start, line) in file.lines() {
-        if line_start < location.start_offset() || line_start >= location.end_offset() {
-            continue;
-        }
-        if contains_heredoc_opener(line) {
-            return line_start + line.trim_end().len();
-        }
-    }
-    location.end_offset()
-}
-
-fn contains_heredoc_opener(line: &str) -> bool {
-    line.match_indices("<<").any(|(offset, _)| {
-        let after = &line[offset + 2..];
-        let candidate = after.strip_prefix(['-', '~']).unwrap_or(after);
-        candidate.starts_with(['\'', '"'])
-            || candidate
-                .as_bytes()
-                .first()
-                .is_some_and(u8::is_ascii_uppercase)
-    })
 }

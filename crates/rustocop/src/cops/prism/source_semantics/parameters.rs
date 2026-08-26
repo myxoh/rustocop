@@ -1,24 +1,52 @@
 use super::*;
 
-pub(super) fn shared_mutable_default(context: &mut CopContext<'_, '_>) {
+pub(super) fn shared_mutable_default(
+    node: &ruby_prism::CallNode<'_>,
+    context: &mut CopContext<'_, '_>,
+) {
     const MESSAGE: &str = "Do not create a Hash with a mutable default value as the default value can accidentally be changed.";
-    let source = context.source();
-    for call in call_ranges(source, "Hash.new(") {
-        let arguments = source[call.start + 9..call.end - 1].trim();
-        let default = arguments.split(',').next().unwrap_or_default().trim();
-        if matches!(default, "[]" | "{}" | "Array.new" | "Hash.new")
-            && !arguments.contains(".freeze")
-        {
-            context.report(MESSAGE, call);
-        }
+    return_unless!(node.name().as_slice() == b"new");
+    return_unless!(node
+        .receiver()
+        .is_some_and(|receiver| node_is_root_constant(&receiver, b"Hash")));
+    let arguments = node
+        .arguments()
+        .map(|arguments| arguments.arguments().iter().collect::<Vec<_>>())
+        .unwrap_or_default();
+    let Some(default) = arguments.first() else { return };
+
+    if arguments.len() == 1 && capacity_keyword_argument(default) {
+        return;
     }
-    for (start, line) in source_lines(source) {
-        let trimmed = line.trim();
-        if trimmed.starts_with("Hash.new Array.new") {
-            let leading = line.len() - line.trim_start().len();
-            context.report(MESSAGE, start + leading..start + line.len());
-        }
+    let mutable_literal = default.as_array_node().is_some()
+        || default.as_hash_node().is_some()
+        || default.as_keyword_hash_node().is_some();
+    let mutable_constructor = default.as_call_node().is_some_and(|call| {
+        call.name().as_slice() == b"new"
+            && argument_count(&call) == 0
+            && call.receiver().is_some_and(|receiver| {
+                node_is_root_constant(&receiver, b"Array")
+                    || node_is_root_constant(&receiver, b"Hash")
+            })
+    });
+    let mutable_with_capacity = arguments.len() > 1 && default.as_hash_node().is_some();
+    if mutable_with_capacity || arguments.len() == 1 && (mutable_literal || mutable_constructor) {
+        context.report(MESSAGE, node.location());
     }
+}
+
+fn capacity_keyword_argument(node: &ruby_prism::Node<'_>) -> bool {
+    let Some(hash) = node.as_keyword_hash_node() else {
+        return false;
+    };
+    let elements = hash.elements().iter().collect::<Vec<_>>();
+    let [element] = elements.as_slice() else {
+        return false;
+    };
+    element
+        .as_assoc_node()
+        .and_then(|association| association.key().as_symbol_node())
+        .is_some_and(|symbol| symbol.unescaped() == b"capacity")
 }
 
 pub(super) fn optional_arguments(

@@ -35,9 +35,9 @@ module Rustocop
       trailing_newline ? "#{content}\n" : content
     end
 
-    def write_gzip_json(path, value)
+    def write_gzip_json(path, value, compression: Zlib::DEFAULT_COMPRESSION)
       atomic_replace(path) do |temporary|
-        Zlib::GzipWriter.open(temporary) do |gzip|
+        Zlib::GzipWriter.open(temporary, compression) do |gzip|
           gzip.mtime = 0
           gzip.write(JSON.generate(value))
         end

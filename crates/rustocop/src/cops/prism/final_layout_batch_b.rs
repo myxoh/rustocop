@@ -186,7 +186,11 @@ fn report_parameter_boundary(
     if actual == wanted {
         return;
     }
-    let side = if opening { "before first" } else { "after last" };
+    let side = if opening {
+        "before first"
+    } else {
+        "after last"
+    };
     if actual < wanted {
         context.insert(
             format!("Space {side} block parameter missing."),
@@ -200,11 +204,7 @@ fn report_parameter_boundary(
         } else {
             start + wanted..start + actual
         };
-        let adjective = if wanted == 0 {
-            "Space"
-        } else {
-            "Extra space"
-        };
+        let adjective = if wanted == 0 { "Space" } else { "Extra space" };
         context.remove(
             format!("{adjective} {side} block parameter detected."),
             remove.clone(),
@@ -215,17 +215,58 @@ fn report_parameter_boundary(
 
 struct RedundantLineBreakCop;
 
+#[derive(Default)]
+struct RedundantLineBreakState {
+    comment_ranges: Option<Vec<std::ops::Range<usize>>>,
+    heredoc_ranges: Option<Vec<std::ops::Range<usize>>>,
+}
+
 impl Cop for RedundantLineBreakCop {
     fn name(&self) -> &'static str {
         "Layout/RedundantLineBreak"
     }
 
-    fn on_node<'pr>(
+    fn investigation_state(&self) -> Box<dyn Any> {
+        Box::new(RedundantLineBreakState::default())
+    }
+
+    fn on_node_with_state<'pr>(
         &self,
         node: &Node<'pr>,
         ancestors: &[Node<'pr>],
         source: &str,
         context: &mut Context,
+        state: &mut dyn Any,
+    ) {
+        let state = state
+            .downcast_mut::<RedundantLineBreakState>()
+            .expect("redundant line break investigation state");
+        let comment_ranges = state
+            .comment_ranges
+            .get_or_insert_with(|| SourceFile::new(source).comment_ranges());
+        let heredoc_ranges = state
+            .heredoc_ranges
+            .get_or_insert_with(|| SourceFile::new(source).heredoc_ranges());
+        self.inspect_node(
+            node,
+            ancestors,
+            source,
+            context,
+            comment_ranges,
+            heredoc_ranges,
+        );
+    }
+}
+
+impl RedundantLineBreakCop {
+    fn inspect_node<'pr>(
+        &self,
+        node: &Node<'pr>,
+        ancestors: &[Node<'pr>],
+        source: &str,
+        context: &mut Context,
+        comment_ranges: &[std::ops::Range<usize>],
+        heredoc_ranges: &[std::ops::Range<usize>],
     ) {
         if redundant_assignment_wrapper(node) {
             if node.as_local_variable_write_node().is_some() && source.ends_with("%\n\n") {
@@ -234,7 +275,13 @@ impl Cop for RedundantLineBreakCop {
             let location = node.location();
             let range = location.start_offset()..location.end_offset();
             let mut reporter = context.cop_context(self.name(), source, ancestors);
-            report_redundant_line_break(&mut reporter, range);
+            report_redundant_line_break(
+                &mut reporter,
+                node,
+                range,
+                comment_ranges,
+                heredoc_ranges,
+            );
             return;
         }
         let Some(call) = node.as_call_node() else {
@@ -242,9 +289,7 @@ impl Cop for RedundantLineBreakCop {
         };
         let boundary = ancestors
             .iter()
-            .rposition(|ancestor| {
-                ancestor.as_block_node().is_some()
-            })
+            .rposition(|ancestor| ancestor.as_block_node().is_some())
             .map_or(0, |index| index + 1);
         let scoped = &ancestors[boundary..];
         if scoped
@@ -277,18 +322,31 @@ impl Cop for RedundantLineBreakCop {
         let expanded = scoped
             .iter()
             .find(|ancestor| redundant_binary_wrapper(ancestor))
-            .map(|ancestor| ancestor.location().start_offset()..ancestor.location().end_offset());
+            .map(|ancestor| {
+                (
+                    ancestor,
+                    ancestor.location().start_offset()..ancestor.location().end_offset(),
+                )
+            });
         if let Some(assignment) = scoped
             .iter()
             .find(|ancestor| redundant_assignment_wrapper(ancestor))
         {
             let location = assignment.location();
             let range = location.start_offset()..location.end_offset();
-            if redundant_replacement(&reporter, &range).is_some() {
+            if redundant_replacement(
+                &reporter,
+                assignment,
+                &range,
+                comment_ranges,
+                heredoc_ranges,
+            )
+            .is_some()
+            {
                 return;
             }
         }
-        if let Some(range) = expanded {
+        if let Some((expanded_node, range)) = expanded {
             let binary = scoped.iter().any(|ancestor| {
                 ancestor.as_and_node().is_some() || ancestor.as_or_node().is_some()
             });
@@ -299,14 +357,26 @@ impl Cop for RedundantLineBreakCop {
                 return;
             }
             if range.start <= call_range.start && call_range.end <= range.end {
-                let reported = report_redundant_line_break(&mut reporter, range);
+                let reported = report_redundant_line_break(
+                    &mut reporter,
+                    expanded_node,
+                    range,
+                    comment_ranges,
+                    heredoc_ranges,
+                );
                 if binary || reported {
                     return;
                 }
             }
         }
         if source[call_range.clone()].contains('\n') {
-            report_redundant_line_break(&mut reporter, call_range);
+            report_redundant_line_break(
+                &mut reporter,
+                node,
+                call_range,
+                comment_ranges,
+                heredoc_ranges,
+            );
         }
     }
 }
@@ -360,9 +430,14 @@ fn binary_operator_precedes_backslash(source: &str, range: &std::ops::Range<usiz
 
 fn report_redundant_line_break(
     context: &mut CopContext<'_, '_>,
+    node: &Node<'_>,
     range: std::ops::Range<usize>,
+    comment_ranges: &[std::ops::Range<usize>],
+    heredoc_ranges: &[std::ops::Range<usize>],
 ) -> bool {
-    let Some(replacement) = redundant_replacement(context, &range) else {
+    let Some(replacement) =
+        redundant_replacement(context, node, &range, comment_ranges, heredoc_ranges)
+    else {
         return false;
     };
     context.replace(
@@ -376,7 +451,10 @@ fn report_redundant_line_break(
 
 fn redundant_replacement(
     context: &CopContext<'_, '_>,
+    node: &Node<'_>,
     range: &std::ops::Range<usize>,
+    comment_ranges: &[std::ops::Range<usize>],
+    heredoc_ranges: &[std::ops::Range<usize>],
 ) -> Option<String> {
     let source = context.source();
     let candidate = &source[range.clone()];
@@ -388,15 +466,15 @@ fn redundant_replacement(
                 .any(|word| matches!(word, "if" | "unless" | "case" | "begin" | "def"))
         })
         || multiline_quoted_literal(candidate)
-        || contains_multiline_unsafe_syntax(candidate)
+        || contains_multiline_unsafe_syntax(node, range, heredoc_ranges)
         || index_access_chained_across_line(candidate)
-        || comment_within(source, range)
+        || comment_within(context.source_file(), range, comment_ranges)
         || operator_after_line_break(candidate)
     {
         return None;
     }
     let inspect_blocks = context.config_bool("InspectBlocks", false);
-    let multiline_block = contains_multiline_block(candidate);
+    let multiline_block = contains_multiline_block(node, range);
     if multiline_block && !inspect_blocks {
         return None;
     }
@@ -407,9 +485,8 @@ fn redundant_replacement(
         return None;
     }
     let replacement = redundant_single_line(candidate)?;
-    let line_length_enabled = context
-        .related_config_value("Layout/LineLength", "Enabled")
-        != Some("false");
+    let line_length_enabled =
+        context.related_config_value("Layout/LineLength", "Enabled") != Some("false");
     let max = context
         .related_config_value("Layout/LineLength", "Max")
         .and_then(|value| value.parse::<usize>().ok())
@@ -420,102 +497,161 @@ fn redundant_replacement(
         .chars()
         .take_while(|character| character.is_whitespace() && *character != '\n')
         .count();
-    let physical_single_line = redundant_single_line(physical_source)
-        .unwrap_or_default();
+    let physical_single_line = redundant_single_line(physical_source).unwrap_or_default();
     if line_length_enabled && leading + physical_single_line.chars().count() > max {
         return None;
     }
     Some(replacement)
 }
 
-fn contains_multiline_block(source: &str) -> bool {
-    #[derive(Default)]
-    struct MultilineBlock(bool);
+fn contains_multiline_block(node: &Node<'_>, candidate: &std::ops::Range<usize>) -> bool {
+    struct MultilineBlock<'a> {
+        candidate: &'a std::ops::Range<usize>,
+        found: bool,
+    }
 
-    impl<'pr> Visit<'pr> for MultilineBlock {
+    impl<'pr> Visit<'pr> for MultilineBlock<'_> {
         fn visit_block_node(&mut self, node: &ruby_prism::BlockNode<'pr>) {
+            let location = node.location();
+            if location.start_offset() < self.candidate.start
+                || location.end_offset() > self.candidate.end
+            {
+                ruby_prism::visit_block_node(self, node);
+                return;
+            }
             let opening = node.opening_loc();
             let closing = node.closing_loc();
             let range = opening.start_offset()..closing.end_offset();
-            if node.location().as_slice()[range.start - node.location().start_offset()
-                ..range.end - node.location().start_offset()]
+            if location.as_slice()
+                [range.start - location.start_offset()..range.end - location.start_offset()]
                 .contains(&b'\n')
             {
-                self.0 = true;
+                self.found = true;
                 return;
             }
             ruby_prism::visit_block_node(self, node);
         }
 
         fn visit_lambda_node(&mut self, node: &ruby_prism::LambdaNode<'pr>) {
+            let location = node.location();
+            if location.start_offset() < self.candidate.start
+                || location.end_offset() > self.candidate.end
+            {
+                ruby_prism::visit_lambda_node(self, node);
+                return;
+            }
             let opening = node.opening_loc();
             let closing = node.closing_loc();
             let range = opening.start_offset()..closing.end_offset();
-            if node.location().as_slice()[range.start - node.location().start_offset()
-                ..range.end - node.location().start_offset()]
+            if location.as_slice()
+                [range.start - location.start_offset()..range.end - location.start_offset()]
                 .contains(&b'\n')
             {
-                self.0 = true;
+                self.found = true;
                 return;
             }
             ruby_prism::visit_lambda_node(self, node);
         }
     }
 
-    let mut block = MultilineBlock::default();
-    block.visit(&parse(source.as_bytes()).node());
-    block.0
+    let mut block = MultilineBlock {
+        candidate,
+        found: false,
+    };
+    block.visit(node);
+    block.found
 }
 
-fn contains_multiline_unsafe_syntax(source: &str) -> bool {
-    #[derive(Default)]
-    struct UnsafeSyntax(bool);
+fn contains_multiline_unsafe_syntax(
+    node: &Node<'_>,
+    candidate: &std::ops::Range<usize>,
+    heredoc_ranges: &[std::ops::Range<usize>],
+) -> bool {
+    // Prism does not expose a heredoc string as a descendant of every call
+    // whose source range contains its opener. Cache the file's heredoc ranges
+    // and recover the sliced-parser behavior by matching the opener offset.
+    if heredoc_ranges
+        .iter()
+        .any(|heredoc| candidate.start <= heredoc.start && heredoc.start < candidate.end)
+    {
+        return true;
+    }
 
-    impl<'pr> Visit<'pr> for UnsafeSyntax {
-        fn visit_if_node(&mut self, _node: &ruby_prism::IfNode<'pr>) {
-            self.0 = true;
+    struct UnsafeSyntax<'a> {
+        candidate: &'a std::ops::Range<usize>,
+        found: bool,
+    }
+
+    impl UnsafeSyntax<'_> {
+        fn contains(&self, location: ruby_prism::Location<'_>) -> bool {
+            self.candidate.start <= location.start_offset()
+                && location.end_offset() <= self.candidate.end
+        }
+    }
+
+    impl<'pr> Visit<'pr> for UnsafeSyntax<'_> {
+        fn visit_if_node(&mut self, node: &ruby_prism::IfNode<'pr>) {
+            if self.contains(node.location()) {
+                self.found = true;
+            } else {
+                ruby_prism::visit_if_node(self, node);
+            }
         }
 
-        fn visit_unless_node(&mut self, _node: &ruby_prism::UnlessNode<'pr>) {
-            self.0 = true;
+        fn visit_unless_node(&mut self, node: &ruby_prism::UnlessNode<'pr>) {
+            if self.contains(node.location()) {
+                self.found = true;
+            } else {
+                ruby_prism::visit_unless_node(self, node);
+            }
         }
 
-        fn visit_case_node(&mut self, _node: &ruby_prism::CaseNode<'pr>) {
-            self.0 = true;
+        fn visit_case_node(&mut self, node: &ruby_prism::CaseNode<'pr>) {
+            if self.contains(node.location()) {
+                self.found = true;
+            } else {
+                ruby_prism::visit_case_node(self, node);
+            }
         }
 
-        fn visit_case_match_node(&mut self, _node: &ruby_prism::CaseMatchNode<'pr>) {
-            self.0 = true;
+        fn visit_case_match_node(&mut self, node: &ruby_prism::CaseMatchNode<'pr>) {
+            if self.contains(node.location()) {
+                self.found = true;
+            } else {
+                ruby_prism::visit_case_match_node(self, node);
+            }
         }
 
         fn visit_parentheses_node(&mut self, node: &ruby_prism::ParenthesesNode<'pr>) {
-            if node.location().as_slice().contains(&b'\n') {
-                self.0 = true;
+            if self.contains(node.location()) && node.location().as_slice().contains(&b'\n') {
+                self.found = true;
                 return;
             }
             ruby_prism::visit_parentheses_node(self, node);
         }
 
         fn visit_string_node(&mut self, node: &ruby_prism::StringNode<'pr>) {
-            if node.unescaped().contains(&b'\n') || node.opening_loc().is_some_and(|loc| loc.as_slice().starts_with(b"<<")) {
-                self.0 = true;
+            if self.contains(node.location())
+                && (node.unescaped().contains(&b'\n')
+                    || node
+                        .opening_loc()
+                        .is_some_and(|loc| loc.as_slice().starts_with(b"<<")))
+            {
+                self.found = true;
             }
             ruby_prism::visit_string_node(self, node);
         }
 
         fn visit_symbol_node(&mut self, node: &ruby_prism::SymbolNode<'pr>) {
-            if node.location().as_slice().contains(&b'\n') {
-                self.0 = true;
+            if self.contains(node.location()) && node.location().as_slice().contains(&b'\n') {
+                self.found = true;
             }
             ruby_prism::visit_symbol_node(self, node);
         }
 
-        fn visit_regular_expression_node(
-            &mut self,
-            node: &ruby_prism::RegularExpressionNode<'pr>,
-        ) {
-            if node.location().as_slice().contains(&b'\n') {
-                self.0 = true;
+        fn visit_regular_expression_node(&mut self, node: &ruby_prism::RegularExpressionNode<'pr>) {
+            if self.contains(node.location()) && node.location().as_slice().contains(&b'\n') {
+                self.found = true;
             }
             ruby_prism::visit_regular_expression_node(self, node);
         }
@@ -524,16 +660,19 @@ fn contains_multiline_unsafe_syntax(source: &str) -> bool {
             &mut self,
             node: &ruby_prism::InterpolatedRegularExpressionNode<'pr>,
         ) {
-            if node.location().as_slice().contains(&b'\n') {
-                self.0 = true;
+            if self.contains(node.location()) && node.location().as_slice().contains(&b'\n') {
+                self.found = true;
             }
             ruby_prism::visit_interpolated_regular_expression_node(self, node);
         }
     }
 
-    let mut unsafe_syntax = UnsafeSyntax::default();
-    unsafe_syntax.visit(&parse(source.as_bytes()).node());
-    unsafe_syntax.0
+    let mut unsafe_syntax = UnsafeSyntax {
+        candidate,
+        found: false,
+    };
+    unsafe_syntax.visit(node);
+    unsafe_syntax.found
 }
 
 fn multiline_quoted_literal(source: &str) -> bool {
@@ -563,19 +702,20 @@ fn multiline_quoted_literal(source: &str) -> bool {
 
 fn index_access_chained_across_line(source: &str) -> bool {
     source.lines().collect::<Vec<_>>().windows(2).any(|lines| {
-        lines[0]
-            .trim_end_matches([' ', '\t', '\\'])
-            .ends_with(']')
+        lines[0].trim_end_matches([' ', '\t', '\\']).ends_with(']')
             && lines[1].trim_start().starts_with('[')
     })
 }
 
-fn comment_within(source: &str, range: &std::ops::Range<usize>) -> bool {
-    let lines = SourceFile::new(source).full_line_range(range.clone());
-    parse(source.as_bytes()).comments().any(|comment| {
-        let offset = comment.location().start_offset();
-        lines.start <= offset && offset < lines.end
-    })
+fn comment_within(
+    file: SourceFile<'_>,
+    range: &std::ops::Range<usize>,
+    comment_ranges: &[std::ops::Range<usize>],
+) -> bool {
+    let lines = file.full_line_range(range.clone());
+    comment_ranges
+        .iter()
+        .any(|comment| lines.start <= comment.start && comment.start < lines.end)
 }
 
 fn block_has_multiple_body_lines(source: &str) -> bool {
@@ -589,23 +729,25 @@ fn block_has_multiple_body_lines(source: &str) -> bool {
 }
 
 fn operator_after_line_break(source: &str) -> bool {
-    source
-        .lines()
-        .skip(1)
-        .any(|line| matches!(line.trim_start().as_bytes(), [b'&', b'&', ..] | [b'|', b'|', ..]))
+    source.lines().skip(1).any(|line| {
+        matches!(
+            line.trim_start().as_bytes(),
+            [b'&', b'&', ..] | [b'|', b'|', ..]
+        )
+    })
 }
 
-fn single_line_block_chain_takes_precedence(
-    source: &str,
-    context: &CopContext<'_, '_>,
-) -> bool {
+fn single_line_block_chain_takes_precedence(source: &str, context: &CopContext<'_, '_>) -> bool {
     if context.related_config_value("Layout/SingleLineBlockChain", "Enabled") == Some("false") {
         return false;
     }
     source.lines().collect::<Vec<_>>().windows(2).any(|lines| {
         lines[0].contains('{')
             && lines[0].trim_end().ends_with('}')
-            && matches!(lines[1].trim_start().as_bytes(), [b'.', ..] | [b'&', b'.', ..])
+            && matches!(
+                lines[1].trim_start().as_bytes(),
+                [b'.', ..] | [b'&', b'.', ..]
+            )
     })
 }
 
@@ -786,9 +928,7 @@ fn enforce_bracket_spacing(
 
     let comment_after_opening = source[left_ws_end..].starts_with('#');
     let mut left_reported = false;
-    if (!left_newline
-        || compact_left
-        || !require_left_space && left_horizontal_end > opening + 1)
+    if (!left_newline || compact_left || !require_left_space && left_horizontal_end > opening + 1)
         && !(style == "no_space" && comment_after_opening)
     {
         if require_left_space && left_ws_end == opening + 1 {
@@ -867,8 +1007,9 @@ fn end_alignment(context: &mut CopContext<'_, '_>) {
         .into_iter()
         .chain(comment_ranges.iter().cloned())
         .collect::<Vec<_>>();
+    let lines = context.source_file().lines().collect::<Vec<_>>();
     let mut stack: Vec<Opening> = Vec::new();
-    for (line_index, (offset, line)) in context.source_file().lines().enumerate() {
+    for (line_index, &(offset, line)) in lines.iter().enumerate() {
         let trimmed = line.trim_start();
         let indentation = line.len() - trimmed.len();
         if trimmed == "end"
@@ -896,7 +1037,7 @@ fn end_alignment(context: &mut CopContext<'_, '_>) {
                     && !excluded
                         .iter()
                         .any(|range| range.start <= absolute && absolute < range.end))
-                    .then_some(relative)
+                .then_some(relative)
             });
             let Some(relative) = relative else {
                 continue;
@@ -904,17 +1045,12 @@ fn end_alignment(context: &mut CopContext<'_, '_>) {
             let before = &line[..relative];
             let Some(opening) = stack.iter().rev().find(|opening| {
                 opening.relevant
-                    && !context.source_file().lines().any(|(candidate_offset, candidate)| {
-                        let candidate_line = context.source()[..candidate_offset]
-                            .bytes()
-                            .filter(|byte| *byte == b'\n')
-                            .count()
-                            + 1;
-                        opening.line < candidate_line
-                            && candidate_line < line_index + 1
-                            && candidate.trim() == "end"
-                            && candidate.len() - candidate.trim_start().len() == opening.column
-                    })
+                    && !lines[opening.line..line_index]
+                        .iter()
+                        .any(|(_, candidate)| {
+                            candidate.trim() == "end"
+                                && candidate.len() - candidate.trim_start().len() == opening.column
+                        })
             }) else {
                 continue;
             };
@@ -979,8 +1115,7 @@ fn end_alignment(context: &mut CopContext<'_, '_>) {
                 .find(['<', ';'])
                 .map_or(code.len(), |at| indentation + at);
             Some((indentation, code[indentation..end].trim_end().to_string()))
-        } else if code.ends_with(" do") || code.contains(" do |")
-        {
+        } else if code.ends_with(" do") || code.contains(" do |") {
             if let Some(assignment) = rescue_assignment_lhs(&code[indentation..]) {
                 Some((indentation, assignment))
             } else {
@@ -993,20 +1128,10 @@ fn end_alignment(context: &mut CopContext<'_, '_>) {
         if let Some((column, source)) = relevant {
             let chained_call = (code.ends_with(" do") || code.contains(" do |"))
                 && (trimmed.starts_with('.')
-                    || line_index > 0
-                        && context
-                            .source_file()
-                            .lines()
-                            .nth(line_index - 1)
-                            .is_some_and(|(_, previous)| previous.trim_end().ends_with('.')));
+                    || line_index > 0 && lines[line_index - 1].1.trim_end().ends_with('.'));
             let correction_column = if chained_call && line_index > 0 {
-                context
-                    .source_file()
-                    .lines()
-                    .nth(line_index - 1)
-                    .map_or(column, |(_, previous)| {
-                        previous.len() - previous.trim_start().len()
-                    })
+                let previous = lines[line_index - 1].1;
+                previous.len() - previous.trim_start().len()
             } else {
                 column
             };
@@ -1092,13 +1217,16 @@ impl Cop for MultilineMethodCallIndentationCop {
             return;
         }
         let call_location = call.location();
-        let hash_pair = ancestors.iter().any(|ancestor| ancestor.as_assoc_node().is_some());
-        if !hash_pair && ancestors.iter().any(|ancestor| {
-            ancestor.as_parentheses_node().is_some_and(|group| {
-                let group = group.location();
-                group.start_offset() < call_location.start_offset()
-                    && call_location.end_offset() < group.end_offset()
-            }) || ancestor.as_call_node().is_some_and(|parent| {
+        let hash_pair = ancestors
+            .iter()
+            .any(|ancestor| ancestor.as_assoc_node().is_some());
+        if !hash_pair
+            && ancestors.iter().any(|ancestor| {
+                ancestor.as_parentheses_node().is_some_and(|group| {
+                    let group = group.location();
+                    group.start_offset() < call_location.start_offset()
+                        && call_location.end_offset() < group.end_offset()
+                }) || ancestor.as_call_node().is_some_and(|parent| {
                     parent.arguments().is_some_and(|arguments| {
                         let arguments = arguments.location();
                         (arguments.start_offset() < call_location.start_offset()
@@ -1108,8 +1236,9 @@ impl Cop for MultilineMethodCallIndentationCop {
                                 && arguments.start_offset() <= call_location.start_offset()
                                 && call_location.end_offset() <= arguments.end_offset())
                     })
+                })
             })
-        }) {
+        {
             return;
         }
         let mut reporter = context.cop_context(self.name(), source, ancestors);
@@ -1174,14 +1303,12 @@ fn check_multiline_method_call(
     let width = context.config_usize("IndentationWidth", 2);
     let actual = file.column(rhs.start);
     let receiver_range = receiver.location().start_offset()..receiver.location().end_offset();
-    let receiver_has_block = receiver
-        .as_call_node()
-        .is_some_and(|receiver_call| {
-            receiver_call
-                .block()
-                .and_then(|block| block.as_block_node())
-                .is_some()
-        });
+    let receiver_has_block = receiver.as_call_node().is_some_and(|receiver_call| {
+        receiver_call
+            .block()
+            .and_then(|block| block.as_block_node())
+            .is_some()
+    });
     let call_has_literal_block = call
         .block()
         .and_then(|block| block.as_block_node())
@@ -1189,9 +1316,8 @@ fn check_multiline_method_call(
     let multiline_block_dot = multiline_block_chain_dot_column(&receiver, file);
     let expression_indent = continuation_expression_indent(receiver_range.start, file);
     let base_receiver = base_call_receiver(receiver);
-    let multiline_block_dot = multiline_block_dot.or_else(|| {
-        prior_block_end_chain_dot_column(0, rhs.start, file)
-    });
+    let multiline_block_dot =
+        multiline_block_dot.or_else(|| prior_block_end_chain_dot_column(0, rhs.start, file));
     let pair_key = multiline_method_pair_key(context, file);
     let pair_key_column = pair_key.map(|(column, _)| column);
     let base_prefix = &context.source()[file.line_start(base_receiver.location().start_offset())
@@ -1556,7 +1682,10 @@ fn multiline_block_chain_dot_column(node: &Node<'_>, file: SourceFile<'_>) -> Op
     let mut current = node.as_call_node();
     while let Some(call) = current {
         if let Some(block) = call.block().filter(|block| {
-            !file.same_line(block.location().start_offset(), block.location().end_offset())
+            !file.same_line(
+                block.location().start_offset(),
+                block.location().end_offset(),
+            )
         }) {
             let end = block.location().end_offset();
             let line_end = file.line_end(end.saturating_sub(1));
@@ -2635,7 +2764,8 @@ fn operator_spacing(context: &mut CopContext<'_, '_>) {
         .config_value("EnforcedStyleForRationalLiterals")
         .is_some_and(|style| style == "space");
     let allow_alignment = context
-        .config_value("AllowForAlignment").is_none_or(|value| value != "false");
+        .config_value("AllowForAlignment")
+        .is_none_or(|value| value != "false");
     let force_equal_alignment = context
         .related_config_value("Layout/ExtraSpacing", "ForceEqualSignAlignment")
         .is_some_and(|value| value == "true");
@@ -2646,10 +2776,25 @@ fn operator_spacing(context: &mut CopContext<'_, '_>) {
             .related_config_values("Layout/HashAlignment", "EnforcedHashRocketStyle")
             .iter()
             .any(|style| style == "table");
-    let literal_ranges = context.source_file().literal_ranges();
-    let comment_ranges = context.source_file().comment_ranges();
+    // Literal ranges can overlap (notably heredocs followed by calls containing
+    // regexp arguments). RuboCop's previous scanner selected the narrowest
+    // containing range. Keep that exact choice with a sweep-line heap instead of
+    // testing every source byte against every literal.
+    let mut literal_events = context
+        .source_file()
+        .literal_ranges()
+        .into_iter()
+        .enumerate()
+        .map(|(order, range)| (range.start, order, range.end))
+        .collect::<Vec<_>>();
+    literal_events.sort_by_key(|&(start, order, _)| (start, order));
+    let mut active_literals = std::collections::BinaryHeap::new();
+    let mut comment_ranges = context.source_file().comment_ranges();
+    comment_ranges.sort_by_key(|range| range.start);
     let unary_operator_offsets = unary_operator_offsets(&source);
     let hash_pair_starts = hash_pair_starts(&source);
+    let mut literal_index = 0;
+    let mut comment_index = 0;
 
     for (line_offset, line) in context.source_file().lines().collect::<Vec<_>>() {
         if line.trim() == "__END__" {
@@ -2668,18 +2813,36 @@ fn operator_spacing(context: &mut CopContext<'_, '_>) {
         let mut ternary_depth = 0usize;
         while index < code.len() {
             let absolute = line_offset + index;
+            while comment_ranges
+                .get(comment_index)
+                .is_some_and(|range| range.end <= absolute)
+            {
+                comment_index += 1;
+            }
             if let Some(range) = comment_ranges
-                .iter()
-                .find(|range| range.start <= absolute && absolute < range.end)
+                .get(comment_index)
+                .filter(|range| range.start <= absolute && absolute < range.end)
             {
                 index = range.end.saturating_sub(line_offset).min(code.len());
                 continue;
             }
-            if let Some(range) = literal_ranges
-                .iter()
-                .filter(|range| range.start <= absolute && absolute < range.end)
-                .min_by_key(|range| range.end - range.start)
+            while literal_events
+                .get(literal_index)
+                .is_some_and(|&(start, _, _)| start <= absolute)
             {
+                let (start, order, end) = literal_events[literal_index];
+                active_literals.push(std::cmp::Reverse((end - start, order, start, end)));
+                literal_index += 1;
+            }
+            while active_literals
+                .peek()
+                .is_some_and(|entry| entry.0.3 <= absolute)
+            {
+                active_literals.pop();
+            }
+            if let Some(entry) = active_literals.peek() {
+                let (_, _, start, end) = entry.0;
+                let range = start..end;
                 let literal = &source[range.clone()];
                 let heredoc_tail = literal.starts_with("<<")
                     && line_offset <= range.start
@@ -2707,18 +2870,12 @@ fn operator_spacing(context: &mut CopContext<'_, '_>) {
                 continue;
             }
             let byte = code.as_bytes()[index];
-            let character_width = code[index..]
-                .chars()
-                .next()
-                .map_or(1, char::len_utf8);
+            let character_width = code[index..].chars().next().map_or(1, char::len_utf8);
             if let Some(delimiter) = quote {
                 if byte == b'\\' {
                     index += 1;
                     if index < code.len() {
-                        index += code[index..]
-                            .chars()
-                            .next()
-                            .map_or(1, char::len_utf8);
+                        index += code[index..].chars().next().map_or(1, char::len_utf8);
                     }
                     continue;
                 }
@@ -2770,10 +2927,7 @@ fn operator_spacing(context: &mut CopContext<'_, '_>) {
             let left_start = code[..index]
                 .rfind(|character: char| !character.is_ascii_whitespace())
                 .map_or(index, |at| {
-                    at + code[at..]
-                        .chars()
-                        .next()
-                        .map_or(1, char::len_utf8)
+                    at + code[at..].chars().next().map_or(1, char::len_utf8)
                 });
             let right_end = end
                 + code[end..]
@@ -3071,10 +3225,9 @@ fn operator_is_non_binary(source: &str, start: usize, end: usize, operator: &str
         return true;
     }
     if operator == "<<"
-        && source[end..]
-            .chars()
-            .next()
-            .is_some_and(|character| character.is_ascii_uppercase() || matches!(character, '\'' | '"' | '`'))
+        && source[end..].chars().next().is_some_and(|character| {
+            character.is_ascii_uppercase() || matches!(character, '\'' | '"' | '`')
+        })
     {
         return true;
     }
@@ -3129,9 +3282,7 @@ fn operator_is_non_binary(source: &str, start: usize, end: usize, operator: &str
             || before
                 .split_whitespace()
                 .last()
-                .is_some_and(|word| {
-                    matches!(word, "return" | "yield" | "when" | "in" | "rescue")
-                }))
+                .is_some_and(|word| matches!(word, "return" | "yield" | "when" | "in" | "rescue")))
     {
         return true;
     }
@@ -3249,22 +3400,16 @@ fn operator_alignment_is_allowed(
         .filter(|absolute| {
             (line_offset..=line_offset + current_line_source.len()).contains(absolute)
         })
-        .map_or(
-        (rhs_start_column, rhs_start),
-        |absolute| {
+        .map_or((rhs_start_column, rhs_start), |absolute| {
             (
-                current_line_source[..absolute - line_offset].chars().count(),
+                current_line_source[..absolute - line_offset]
+                    .chars()
+                    .count(),
                 absolute - line_offset,
             )
-        },
-    );
+        });
     let trailing_aligned = !trailing_excess
-        || generic_rhs_alignment_is_allowed(
-            source,
-            line_offset,
-            alignment_column,
-            alignment_start,
-        );
+        || generic_rhs_alignment_is_allowed(source, line_offset, alignment_column, alignment_start);
 
     leading_aligned && trailing_aligned
 }
@@ -3275,7 +3420,10 @@ fn alignment_search(
     mut predicate: impl FnMut(&str) -> bool,
 ) -> bool {
     let lines = source.lines().collect::<Vec<_>>();
-    let current = source[..line_offset].bytes().filter(|byte| *byte == b'\n').count();
+    let current = source[..line_offset]
+        .bytes()
+        .filter(|byte| *byte == b'\n')
+        .count();
     let current_indent = lines[current].len() - lines[current].trim_start().len();
     let eligible = |line: &&str| !line.trim().is_empty() && !line.trim_start().starts_with('#');
 
@@ -3287,9 +3435,8 @@ fn alignment_search(
         return true;
     }
 
-    let same_indent = |line: &&str| {
-        eligible(line) && line.len() - line.trim_start().len() == current_indent
-    };
+    let same_indent =
+        |line: &&str| eligible(line) && line.len() - line.trim_start().len() == current_indent;
     lines[..current]
         .iter()
         .rev()
@@ -3375,7 +3522,10 @@ fn assignment_leading_alignment_is_allowed(
     operator_end_column: usize,
 ) -> bool {
     let lines = source.lines().collect::<Vec<_>>();
-    let current_line = source[..line_offset].bytes().filter(|byte| *byte == b'\n').count();
+    let current_line = source[..line_offset]
+        .bytes()
+        .filter(|byte| *byte == b'\n')
+        .count();
     let current_indent = lines[current_line].len() - lines[current_line].trim_start().len();
     let relevant = |direction: isize| {
         let mut matches = Vec::new();
@@ -3422,18 +3572,12 @@ fn operator_layouts(line: &str) -> Vec<(usize, usize, usize, usize)> {
             continue;
         }
         let byte = code.as_bytes()[index];
-        let character_width = code[index..]
-            .chars()
-            .next()
-            .map_or(1, char::len_utf8);
+        let character_width = code[index..].chars().next().map_or(1, char::len_utf8);
         if let Some(delimiter) = quote {
             if byte == b'\\' {
                 index += 1;
                 if index < code.len() {
-                    index += code[index..]
-                        .chars()
-                        .next()
-                        .map_or(1, char::len_utf8);
+                    index += code[index..].chars().next().map_or(1, char::len_utf8);
                 }
                 continue;
             }
@@ -3466,10 +3610,7 @@ fn operator_layouts(line: &str) -> Vec<(usize, usize, usize, usize)> {
             let whitespace_start = code[..index]
                 .rfind(|character: char| !character.is_ascii_whitespace())
                 .map_or(index, |at| {
-                    at + code[at..]
-                        .chars()
-                        .next()
-                        .map_or(1, char::len_utf8)
+                    at + code[at..].chars().next().map_or(1, char::len_utf8)
                 });
             let rhs_start = end
                 + code[end..]
@@ -3612,9 +3753,7 @@ fn heredoc_openers(line: &str) -> Vec<(usize, &'static str, &str)> {
         if prefix.starts_with('#') && !prefix.starts_with("#{") {
             break;
         }
-        if inside_quoted_literal(&line[..marker_at])
-            && !inside_interpolation(&line[..marker_at])
-        {
+        if inside_quoted_literal(&line[..marker_at]) && !inside_interpolation(&line[..marker_at]) {
             continue;
         }
         if line[..marker_at].trim_end().ends_with('/') {

@@ -162,7 +162,9 @@ fn empty_lines_after_module_inclusion(node: &CallNode<'_>, context: &mut CopCont
             && (0..current_line)
                 .rev()
                 .map(|line_number| line(source, line_number))
-                .find(|candidate| !candidate.trim().is_empty() && !candidate.trim_start().starts_with('#'))
+                .find(|candidate| {
+                    !candidate.trim().is_empty() && !candidate.trim_start().starts_with('#')
+                })
                 .is_some_and(|previous| {
                     previous.len() - previous.trim_start().len()
                         == line(source, current_line).len()
@@ -201,13 +203,18 @@ fn empty_lines_around_access_modifier(node: &CallNode<'_>, context: &mut CopCont
     {
         return;
     }
-    if context.ancestors().iter().rev().find(|ancestor| {
-        ancestor.as_def_node().is_some()
-            || ancestor.as_class_node().is_some()
-            || ancestor.as_module_node().is_some()
-            || ancestor.as_singleton_class_node().is_some()
-            || ancestor.as_block_node().is_some()
-    }).is_some_and(|ancestor| ancestor.as_def_node().is_some())
+    if context
+        .ancestors()
+        .iter()
+        .rev()
+        .find(|ancestor| {
+            ancestor.as_def_node().is_some()
+                || ancestor.as_class_node().is_some()
+                || ancestor.as_module_node().is_some()
+                || ancestor.as_singleton_class_node().is_some()
+                || ancestor.as_block_node().is_some()
+        })
+        .is_some_and(|ancestor| ancestor.as_def_node().is_some())
     {
         return;
     }
@@ -241,7 +248,10 @@ fn empty_lines_around_access_modifier(node: &CallNode<'_>, context: &mut CopCont
                     && call.name().as_slice() == b"new"
                     && call.receiver().is_some_and(|receiver| {
                         matches!(
-                            context.source_file().node(&receiver).trim_start_matches("::"),
+                            context
+                                .source_file()
+                                .node(&receiver)
+                                .trim_start_matches("::"),
                             "Class" | "Module" | "Struct"
                         )
                     })
@@ -279,15 +289,11 @@ fn empty_lines_around_access_modifier(node: &CallNode<'_>, context: &mut CopCont
     let source = context.source();
     let location = node.location();
     let current_line = line_index(source, location.start_offset());
-    if previous_non_comment_line(source, current_line)
-        .is_some_and(|previous| {
-            line(source, previous).trim_end().ends_with(',')
-                || line(source, previous).len()
-                    - line(source, previous).trim_start().len()
-                    > line(source, current_line).len()
-                        - line(source, current_line).trim_start().len()
-        })
-    {
+    if previous_non_comment_line(source, current_line).is_some_and(|previous| {
+        line(source, previous).trim_end().ends_with(',')
+            || line(source, previous).len() - line(source, previous).trim_start().len()
+                > line(source, current_line).len() - line(source, current_line).trim_start().len()
+    }) {
         return;
     }
     if !source[location.end_offset()..line_end(source, current_line)]
@@ -407,9 +413,9 @@ fn lambda_alignment(node: &ruby_prism::LambdaNode<'_>, context: &mut CopContext<
     };
     let start_column = file.column(start_offset);
 
-    let body_start = node
-        .body()
-        .map_or(closing.start_offset(), |body| body.location().start_offset());
+    let body_start = node.body().map_or(closing.start_offset(), |body| {
+        body.location().start_offset()
+    });
     let brace = source[lambda_start..body_start]
         .rfind('{')
         .map_or(lambda_start, |relative| lambda_start + relative);
@@ -440,14 +446,17 @@ fn lambda_alignment(node: &ruby_prism::LambdaNode<'_>, context: &mut CopContext<
         brace_column,
         brace_line_start + brace_column,
     );
-    let preferred = if style == "start_of_block" { &block } else { &start };
-    let alternate = if style == "either"
-        && (lambda_line != brace_line || start_column != brace_column)
-    {
-        format!(" or {block}")
+    let preferred = if style == "start_of_block" {
+        &block
     } else {
-        String::new()
+        &start
     };
+    let alternate =
+        if style == "either" && (lambda_line != brace_line || start_column != brace_column) {
+            format!(" or {block}")
+        } else {
+            String::new()
+        };
     let parenthesized_argument = before_lambda.trim_end().ends_with('(');
     if !assigned && !parenthesized_argument {
         context.report(
@@ -459,8 +468,7 @@ fn lambda_alignment(node: &ruby_prism::LambdaNode<'_>, context: &mut CopContext<
     let target = if style == "start_of_block" {
         brace_column
     } else if parenthesized_argument {
-        source[line_begin..lambda_start].len()
-            - source[line_begin..lambda_start].trim_start().len()
+        source[line_begin..lambda_start].len() - source[line_begin..lambda_start].trim_start().len()
     } else {
         start_column
     };
@@ -474,12 +482,12 @@ fn lambda_alignment(node: &ruby_prism::LambdaNode<'_>, context: &mut CopContext<
 
 fn block_alignment(node: &ruby_prism::BlockNode<'_>, context: &mut CopContext<'_, '_>) {
     let opening = node.opening_loc();
-    let opening_line = line_index(context.source(), opening.start_offset());
+    let opening_line = context.line_index(opening.start_offset());
     let block_column = context
         .source_file()
         .indentation(opening.start_offset())
         .len();
-    let block_start = line_start(context.source(), opening_line) + block_column;
+    let block_start = context.line_start_at(opening_line) + block_column;
     block_alignment_locations(
         node.closing_loc(),
         opening,
@@ -499,8 +507,8 @@ fn block_alignment_locations(
     context: &mut CopContext<'_, '_>,
 ) {
     let file = context.source_file();
-    let closing_line = line_index(context.source(), closing.start_offset());
-    let closing_start = line_start(context.source(), closing_line);
+    let closing_line = context.line_index(closing.start_offset());
+    let closing_start = context.line_start_at(closing_line);
     if !context.source()[closing_start..closing.start_offset()]
         .chars()
         .all(char::is_whitespace)
@@ -523,8 +531,8 @@ fn block_alignment_locations(
         if parent.as_statements_node().is_some() || parent.as_arguments_node().is_some() {
             continue;
         }
-        let parent_line = line_index(context.source(), parent.location().start_offset());
-        let target_line = line_index(context.source(), target.start_offset());
+        let parent_line = context.line_index(parent.location().start_offset());
+        let target_line = context.line_index(target.start_offset());
         let mass_assignment = parent.as_multi_write_node().is_some();
         if parent_line != target_line && !mass_assignment {
             break;
@@ -553,10 +561,10 @@ fn block_alignment_locations(
             break;
         }
     }
-    let start_line = line_index(context.source(), target.start_offset());
+    let start_line = context.line_index(target.start_offset());
     let start_offset = target.start_offset();
     let start_column = file.column(start_offset);
-    let opening_line = line_index(context.source(), opening.start_offset());
+    let opening_line = context.line_index(opening.start_offset());
     let current_column = file.column(closing.start_offset());
     let style = context
         .config_value("EnforcedStyleAlignWith")
@@ -585,27 +593,22 @@ fn block_alignment_locations(
     .unwrap_or_else(|| {
         source_line_column(context.source(), start_line, start_column, start_offset)
     });
-    let block = source_line_column(
-        context.source(),
-        opening_line,
-        block_column,
-        block_start,
-    );
+    let block = source_line_column(context.source(), opening_line, block_column, block_start);
     let preferred = if style == "start_of_block" || style == "either" && prefer_block {
         &block
     } else {
         &start
     };
-    let alternate = if style == "either" && (start_line != opening_line || start_column != block_column)
-    {
-        if prefer_block {
-            format!(" or {start}")
+    let alternate =
+        if style == "either" && (start_line != opening_line || start_column != block_column) {
+            if prefer_block {
+                format!(" or {start}")
+            } else {
+                format!(" or {block}")
+            }
         } else {
-            format!(" or {block}")
-        }
-    } else {
-        String::new()
-    };
+            String::new()
+        };
     let target = if style == "start_of_block" {
         block_column
     } else {
@@ -845,11 +848,11 @@ fn first_argument_indentation(node: &Node<'_>, context: &mut CopContext<'_, '_>)
 
     let source = context.source();
     let argument_start = first.location().start_offset();
-    if line_index(source, call_start) == line_index(source, argument_start) {
+    if context.line_index(call_start) == context.line_index(argument_start) {
         return;
     }
-    let argument_line = line_index(source, argument_start);
-    if !source[line_start(source, argument_line)..argument_start]
+    let argument_line = context.line_index(argument_start);
+    if !source[context.line_start_at(argument_line)..argument_start]
         .chars()
         .all(char::is_whitespace)
     {
@@ -901,7 +904,7 @@ fn first_argument_indentation(node: &Node<'_>, context: &mut CopContext<'_, '_>)
                 .and_then(|value| value.parse().ok())
         })
         .unwrap_or(2);
-    let previous_line = previous_code_line(source, argument_line);
+    let previous_line = previous_code_line_in(context, argument_line);
     let base_start = semantic_parent
         .filter(|parent| parent.as_splat_node().is_some() || parent.as_assoc_splat_node().is_some())
         .map_or(call_start, |parent| parent.location().start_offset());
@@ -911,19 +914,23 @@ fn first_argument_indentation(node: &Node<'_>, context: &mut CopContext<'_, '_>)
             .as_ref()
             .and_then(|call| call.message_loc())
             .map_or(call_start, |selector| selector.start_offset());
-        let selector_line = line_index(source, selector_start);
-        line(source, selector_line).len() - line(source, selector_line).trim_start().len()
+        let selector_line = context.line_index(selector_start);
+        context.line_at(selector_line).len() - context.line_at(selector_line).trim_start().len()
     } else if special_indentation {
         if base_source.contains('\n') {
             previous_line
-                .map(|number| line(source, number).len() - line(source, number).trim_start().len())
+                .map(|number| {
+                    context.line_at(number).len() - context.line_at(number).trim_start().len()
+                })
                 .unwrap_or(0)
         } else {
-            display_column(source, base_start)
+            display_column_at(context, base_start)
         }
     } else {
         previous_line
-            .map(|number| line(source, number).len() - line(source, number).trim_start().len())
+            .map(|number| {
+                context.line_at(number).len() - context.line_at(number).trim_start().len()
+            })
             .unwrap_or(0)
     };
     let expected = base + width;
@@ -951,9 +958,9 @@ fn first_argument_indentation(node: &Node<'_>, context: &mut CopContext<'_, '_>)
             if !contains {
                 return false;
             }
-            let outer_line = line_index(source, outer_location.start_offset());
-            if line_index(source, parent.location().start_offset()) == outer_line
-                || !source[line_start(source, outer_line)..outer_location.start_offset()]
+            let outer_line = context.line_index(outer_location.start_offset());
+            if context.line_index(parent.location().start_offset()) == outer_line
+                || !source[context.line_start_at(outer_line)..outer_location.start_offset()]
                     .chars()
                     .all(char::is_whitespace)
             {
@@ -964,9 +971,9 @@ fn first_argument_indentation(node: &Node<'_>, context: &mut CopContext<'_, '_>)
                     .source_file()
                     .column(parent.location().start_offset())
             } else {
-                previous_code_line(source, outer_line)
+                previous_code_line_in(context, outer_line)
                     .map(|number| {
-                        line(source, number).len() - line(source, number).trim_start().len()
+                        context.line_at(number).len() - context.line_at(number).trim_start().len()
                     })
                     .unwrap_or(0)
             };
@@ -993,7 +1000,7 @@ fn first_argument_indentation(node: &Node<'_>, context: &mut CopContext<'_, '_>)
     let message = format!("Indent the first argument one step more than {base_description}.");
     let delta = expected as isize - actual as isize;
     let first_location = first.location();
-    let first_line = line_index(source, first_location.start_offset());
+    let first_line = context.line_index(first_location.start_offset());
     let mut correction_end = first_location.end_offset();
     let inside_parenthesized_argument = call_node.as_ref().is_some_and(|call| {
         context
@@ -1020,12 +1027,12 @@ fn first_argument_indentation(node: &Node<'_>, context: &mut CopContext<'_, '_>)
             }
         }
     }
-    let last_line = line_index(source, correction_end);
+    let last_line = context.line_index(correction_end);
     let mut previous = None::<(usize, bool)>;
     let edits = (first_line..=last_line)
         .filter_map(|number| {
-            let start = line_start(source, number);
-            let content = line(source, number);
+            let start = context.line_start_at(number);
+            let content = context.line_at(number);
             if content.trim().is_empty() {
                 return None;
             }
@@ -1053,8 +1060,8 @@ fn first_argument_indentation(node: &Node<'_>, context: &mut CopContext<'_, '_>)
     context.replace_many(message, &first_location, edits);
 }
 
-fn display_column(source: &str, offset: usize) -> usize {
-    source[line_start(source, line_index(source, offset))..offset]
+fn display_column_at(context: &CopContext<'_, '_>, offset: usize) -> usize {
+    context.source()[context.line_start_at(context.line_index(offset))..offset]
         .chars()
         .map(|character| character.width().unwrap_or(0))
         .sum()
@@ -1126,9 +1133,9 @@ fn previous_non_comment_line(source: &str, line_number: usize) -> Option<usize> 
         .find(|number| !line(source, *number).trim_start().starts_with('#'))
 }
 
-fn previous_code_line(source: &str, line_number: usize) -> Option<usize> {
+fn previous_code_line_in(context: &CopContext<'_, '_>, line_number: usize) -> Option<usize> {
     (0..line_number).rev().find(|number| {
-        let candidate = line(source, *number).trim();
+        let candidate = context.line_at(*number).trim();
         !candidate.is_empty() && !candidate.starts_with('#')
     })
 }

@@ -36,6 +36,26 @@ impl<'context, 'pr> CopContext<'context, 'pr> {
         SourceFile::new(self.source)
     }
 
+    pub(super) fn line_index(&self, offset: usize) -> usize {
+        self.reporter.line_index(offset.min(self.source.len()))
+    }
+
+    pub(super) fn line_start_at(&self, index: usize) -> usize {
+        self.reporter.line_start_at(index)
+    }
+
+    pub(super) fn line_at(&self, index: usize) -> &'pr str {
+        let start = self.line_start_at(index);
+        let end = self
+            .source
+            .get(start..)
+            .and_then(|tail| tail.find('\n').map(|offset| start + offset))
+            .unwrap_or(self.source.len());
+        self.source[start..end]
+            .strip_suffix('\r')
+            .unwrap_or(&self.source[start..end])
+    }
+
     pub(super) fn path(&self) -> &str {
         self.reporter.path()
     }

@@ -14,7 +14,7 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
         Box::new(RedundantTypeConversion),
         Box::new(ConditionalAssignment),
         Box::new(Debugger),
-        custom("Lint/UselessAccessModifier", useless_access_modifier),
+        Box::new(UselessAccessModifier),
         custom("Lint/DuplicateRequire", duplicate_require),
         Box::new(ArgumentsForwarding),
         Box::new(Void),
@@ -2135,9 +2135,53 @@ fn range_hash_receiver(node: &Node<'_>) -> bool {
     })
 }
 
-fn useless_access_modifier(context: &mut CopContext<'_, '_>) {
-    let parsed = parse(context.source().as_bytes());
-    let (ast, root) = convert_rubocop_ast(context.source(), &parsed.node());
+struct UselessAccessModifier;
+
+impl Cop for UselessAccessModifier {
+    fn name(&self) -> &'static str {
+        "Lint/UselessAccessModifier"
+    }
+
+    fn on_node<'pr>(
+        &self,
+        node: &Node<'pr>,
+        ancestors: &[Node<'pr>],
+        source: &str,
+        context: &mut Context,
+    ) {
+        if node.as_program_node().is_none() || !prism_access_modifier_candidate(node) {
+            return;
+        }
+        let mut context = context.cop_context(self.name(), source, ancestors);
+        useless_access_modifier(node, &mut context);
+    }
+}
+
+fn prism_access_modifier_candidate(node: &Node<'_>) -> bool {
+    struct Candidate(bool);
+
+    impl<'pr> Visit<'pr> for Candidate {
+        fn visit_call_node(&mut self, node: &ruby_prism::CallNode<'pr>) {
+            if node.receiver().is_none()
+                && matches!(
+                    node.name().as_slice(),
+                    b"private" | b"protected" | b"public" | b"private_class_method"
+                )
+            {
+                self.0 = true;
+                return;
+            }
+            ruby_prism::visit_call_node(self, node);
+        }
+    }
+
+    let mut candidate = Candidate(false);
+    candidate.visit(node);
+    candidate.0
+}
+
+fn useless_access_modifier(root_node: &Node<'_>, context: &mut CopContext<'_, '_>) {
+    let (ast, root) = convert_rubocop_ast(context.source(), root_node);
     let Some(root) = root.map(|root| ast.node(root)) else {
         return;
     };

@@ -1,12 +1,12 @@
 {
   "version": 1,
   "rubocop_version": "1.87.0",
-  "updated_at": "2026-08-25T22:43:15-04:00",
+  "updated_at": "2026-08-25T23:12:34-04:00",
   "raw_capture_sha256": "aec260b35238542dafa044aad90dfe5c873b6c91019d3708f870fdc8b2453666",
   "raw_cases": 28606,
   "lsp_exclusions": 5,
-  "controlled_cases": 29416,
-  "imported_cases": 1367,
+  "controlled_cases": 29458,
+  "imported_cases": 1409,
   "exact_duplicates_removed": 552,
   "distribution": {
     "minimum": 1,
@@ -339,9 +339,9 @@
     "Layout/EmptyLinesAroundExceptionHandlingKeywords": {
       "cases": "cops/Layout/EmptyLinesAroundExceptionHandlingKeywords/unit/cases.jsonl",
       "configs": "cops/Layout/EmptyLinesAroundExceptionHandlingKeywords/unit/configs.json",
-      "count": 25,
-      "sha256": "1b54fc21f129bf1155ffcfb135050a8c123ebf3cca29358403253362acdf75ef",
-      "configs_sha256": "c813b09b757dce6f368c368a6225fd5c89e6e287c1bb172e57dd4b5878bcbbef"
+      "count": 27,
+      "sha256": "999b057a104430628f365ae6ef63646420a08d47252273507efb5baa50787c5f",
+      "configs_sha256": "e08543d8ea07f51a9e09d46e7e655fdb249693926d231a048ea287b93088603b"
     },
     "Layout/EmptyLinesAroundMethodBody": {
       "cases": "cops/Layout/EmptyLinesAroundMethodBody/unit/cases.jsonl",
@@ -465,9 +465,9 @@
     "Layout/IndentationStyle": {
       "cases": "cops/Layout/IndentationStyle/unit/cases.jsonl",
       "configs": "cops/Layout/IndentationStyle/unit/configs.json",
-      "count": 26,
-      "sha256": "e76ff5766478e3fdd2fea6276cdc0e1dc2369b97c0efca4e1495e05c30b5d859",
-      "configs_sha256": "d94e8c3c2a77958cb378ae4747b735a5af1a26969464cb35b51867b42c240529"
+      "count": 30,
+      "sha256": "0bebf6f65205b297aad1909dffdd66017e464f2aa3c055d1a8826cb0dc21b51d",
+      "configs_sha256": "3a39f7a9381a4cc693d2bac55a77668ee5d5f64e27cbe84d9a4bed4766aab3c5"
     },
     "Layout/IndentationWidth": {
       "cases": "cops/Layout/IndentationWidth/unit/cases.jsonl",
@@ -1361,9 +1361,9 @@
     "Lint/NonAtomicFileOperation": {
       "cases": "cops/Lint/NonAtomicFileOperation/unit/cases.jsonl",
       "configs": "cops/Lint/NonAtomicFileOperation/unit/configs.json",
-      "count": 45,
-      "sha256": "1a095626b0cb4f06bba3db12a6ae97aedc14020d2a71e415352aba55962408ad",
-      "configs_sha256": "0f8f96a428ce4c36d66e3f4d0e964f939b40a60cd0817d475e2ed1023e7790d9"
+      "count": 51,
+      "sha256": "7042cef97bb6fc2d49c61367a442cc28b29f12edfb45c537e784180b12e2c0cf",
+      "configs_sha256": "f5d296b66873738de2b6df1bddba4f7f12056b17afc8cf497a11249089713eca"
     },
     "Lint/NonDeterministicRequireOrder": {
       "cases": "cops/Lint/NonDeterministicRequireOrder/unit/cases.jsonl",
@@ -1641,9 +1641,9 @@
     "Lint/ShadowedException": {
       "cases": "cops/Lint/ShadowedException/unit/cases.jsonl",
       "configs": "cops/Lint/ShadowedException/unit/configs.json",
-      "count": 41,
-      "sha256": "a4409b9c292e45c802603bc98ef36dc4c862b4eca3913be92ecd71d911728d0e",
-      "configs_sha256": "0890254c31d880b4de5aa38317a7453c40aad57266ebd3862f7206ba6a6950db"
+      "count": 46,
+      "sha256": "531e43003d092c2638da9e612afbaa274d0c02cb4898137ce8c472323a3c3af9",
+      "configs_sha256": "96ab165ff59755fdb0ed790939a63a170b69e4b1b9485bc992fdd3aae80670b3"
     },
     "Lint/ShadowingOuterLocalVariable": {
       "cases": "cops/Lint/ShadowingOuterLocalVariable/unit/cases.jsonl",
@@ -1655,9 +1655,9 @@
     "Lint/SharedMutableDefault": {
       "cases": "cops/Lint/SharedMutableDefault/unit/cases.jsonl",
       "configs": "cops/Lint/SharedMutableDefault/unit/configs.json",
-      "count": 6,
-      "sha256": "2606688eeb0610457ab84c76fbddcdf597197b922a917f05cd11cc51aea7741e",
-      "configs_sha256": "3c2af9f48d53a27abbdd35dfcdcdc212d212ab34bde515344f2591d7c92e903c"
+      "count": 9,
+      "sha256": "b37ad72eeb3270eaea07d05eaf10cc876c02017c37c9b805e1ce36cd8fdb2e57",
+      "configs_sha256": "8213859fec9f7ba90cd1858d91a57bb8415cddb42c844c5facf55cc0dd34f8d4"
     },
     "Lint/StructNewOverride": {
       "cases": "cops/Lint/StructNewOverride/unit/cases.jsonl",
@@ -1984,9 +1984,9 @@
     "Migration/DepartmentName": {
       "cases": "cops/Migration/DepartmentName/unit/cases.jsonl",
       "configs": "cops/Migration/DepartmentName/unit/configs.json",
-      "count": 8,
-      "sha256": "6bf6a9403f6731998f9e0415d31662a062deec2796f3b969e2a4907c23ede8bc",
-      "configs_sha256": "cc6897a9a8317c73d2ee9e6f8895972806110473b23e6e728f3deb174e059d07"
+      "count": 11,
+      "sha256": "5d003db9d26ba11bd926b8c704d1fb28e8dc3da49f02a343e90c9605d3625e3e",
+      "configs_sha256": "7e9385626722d3484069ea5eccddf5308fa247964134b9ef29b1ffb6ca591daf"
     },
     "Naming/AccessorMethodName": {
       "cases": "cops/Naming/AccessorMethodName/unit/cases.jsonl",
@@ -2103,9 +2103,9 @@
     "Naming/RescuedExceptionsVariableName": {
       "cases": "cops/Naming/RescuedExceptionsVariableName/unit/cases.jsonl",
       "configs": "cops/Naming/RescuedExceptionsVariableName/unit/configs.json",
-      "count": 37,
-      "sha256": "519e07c90a7010378b94a29049084464adef3cece4f5480b11574a8ef7b45f34",
-      "configs_sha256": "b19ce3f2ea3f65a1991a0f9e0768428038a649006ba400bfc34d23efbc5f3bcb"
+      "count": 39,
+      "sha256": "f3789eea0a61bfd8c36d0643319642101fa4a28e1873cf2d280cadfb4a2e7d17",
+      "configs_sha256": "89ed54d16ba4c27864cdf7de324b0a1ce0d73da49fd978d4729fed4dbe12e63c"
     },
     "Naming/VariableName": {
       "cases": "cops/Naming/VariableName/unit/cases.jsonl",
@@ -2320,9 +2320,9 @@
     "Style/CaseLikeIf": {
       "cases": "cops/Style/CaseLikeIf/unit/cases.jsonl",
       "configs": "cops/Style/CaseLikeIf/unit/configs.json",
-      "count": 40,
-      "sha256": "76f089025cebad549e8dec98d4dc3074f701bcc6e6a702c07f4ff9b2b2fca36a",
-      "configs_sha256": "5396afd3c77840ab18cc8b67353f23195ec064edc92bf3a0715aa4ad5b82219f"
+      "count": 53,
+      "sha256": "3089e86da799e399214586664382bf743b8596327735cd2aa448ee70785e14fa",
+      "configs_sha256": "dc3d8b17c0335a03c1dafb28b9eb7b6ad6ee7fbf9c7ebe7181fc4f559a14e97d"
     },
     "Style/CharacterLiteral": {
       "cases": "cops/Style/CharacterLiteral/unit/cases.jsonl",
@@ -3125,9 +3125,9 @@
     "Style/MissingElse": {
       "cases": "cops/Style/MissingElse/unit/cases.jsonl",
       "configs": "cops/Style/MissingElse/unit/configs.json",
-      "count": 91,
-      "sha256": "6ec06433f4db4a99fd68c11c0f4314f2442d0278271b34a2ba8a95b8f7845c11",
-      "configs_sha256": "ec779d33bf1a5d9415314f40c12a558df55ea7ddb6b6e68dcca18352dc9c8480"
+      "count": 93,
+      "sha256": "315d97ae76618ca8423ce2e9da59d5657f09f56d31d23a3703048ca08ba34298",
+      "configs_sha256": "c71039aa699f9dd098cac94e67decc46822c5e72bdae6fa11f363b164c1932d3"
     },
     "Style/MissingRespondToMissing": {
       "cases": "cops/Style/MissingRespondToMissing/unit/cases.jsonl",
@@ -3167,9 +3167,9 @@
     "Style/MultilineBlockChain": {
       "cases": "cops/Style/MultilineBlockChain/unit/cases.jsonl",
       "configs": "cops/Style/MultilineBlockChain/unit/configs.json",
-      "count": 13,
-      "sha256": "6bc1d4ae2af2d5d6ca298797a1f6d31695fb0b4818008724de455361793bb774",
-      "configs_sha256": "df114b82ec1ab151f60d2d200f1144e8947d98cca8e918efb065faf273911ac1"
+      "count": 14,
+      "sha256": "2c0efe86946c601f159f67908be8da2c1a742d12731faf64c0979d7582dd54f3",
+      "configs_sha256": "4178f9d24e54d161e027bda30ada3aebfa940a22e885de67bb5f789878eddcd0"
     },
     "Style/MultilineIfModifier": {
       "cases": "cops/Style/MultilineIfModifier/unit/cases.jsonl",
@@ -3958,9 +3958,9 @@
     "Style/SpecialGlobalVars": {
       "cases": "cops/Style/SpecialGlobalVars/unit/cases.jsonl",
       "configs": "cops/Style/SpecialGlobalVars/unit/configs.json",
-      "count": 31,
-      "sha256": "89e818db602ccc837563c60fdff4e620a03f59cf92d5891593d372948188bcbc",
-      "configs_sha256": "20508f3f19020310fb5d508253bbb48bbd7b784f66f0582534db382d0eec99a0"
+      "count": 32,
+      "sha256": "c4deba5c186f91b26517f67b5f2f8800033d3d792ebadc2706b5abb7f3421427",
+      "configs_sha256": "a343431827e7ff5ac9aefe7edb727ff6dd79cdb61e32c1cc4acbefe39463a5dc"
     },
     "Style/StabbyLambdaParentheses": {
       "cases": "cops/Style/StabbyLambdaParentheses/unit/cases.jsonl",

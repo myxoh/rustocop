@@ -1,17 +1,17 @@
 # RuboCop compatibility evidence
 
-Generated at `2026-08-25T22:40:32-04:00` for RuboCop 1.87.0.
+Generated at `2026-08-26T01:03:49-04:00` for RuboCop 1.87.0.
 Compatibility is binary at the cop level: every exercised fixture must match,
 and project output must have no false positives, false negatives, or signature
 differences. Partial overlap is not classified as compatible.
 
 This table covers 606 active built-in cops. The [`intentionally_pending_cops.yml`](../spec/upstream/rubocop-1.87.0/intentionally_pending_cops.yml) manifest is empty.
 
-Fixture evidence was updated at `2026-08-25T22:40:32-04:00`. Project
-evidence was updated at `2026-08-25T22:40:03-04:00` from
+Fixture evidence was updated at `2026-08-26T01:03:49-04:00`. Project
+evidence was updated at `2026-08-26T01:01:10-04:00` from
 50 projects and 85471 Ruby files.
-Fixture source: `cop source 5bb6d38ac57f, native 6248d97c06da`. Project source:
-`cop source 5bb6d38ac57f, native 6248d97c06da`.
+Fixture source: `cop source 2d402c0b6b59, native 4db840d691bf`. Project source:
+`cop source 2d402c0b6b59, native 4db840d691bf`.
 
 This evidence covers the complete configured 50-project corpus.
 
@@ -21,12 +21,12 @@ This evidence covers the complete configured 50-project corpus.
 | --- | ---: | ---: |
 | Cops with fixture coverage | 606/606 | 100.0% |
 | Cops with current fixture evidence | 606/606 | 100.0% |
-| Fixture cases matching | 29333/29333 | 100.0% |
+| Fixture cases matching | 29458/29458 | 100.0% |
 | Cops matching every fixture | 606/606 | 100.0% |
-| Cops exercised on projects | 537/606 | 88.6% |
+| Cops exercised on projects | 531/606 | 87.6% |
 | Cops with current project evidence | 606/606 | 100.0% |
-| Project-exact cops among exercised cops | 438/537 | 81.6% |
-| Cops compatible in both evidence sets | 438/606 | 72.3% |
+| Project-exact cops among exercised cops | 467/531 | 87.9% |
+| Cops compatible in both evidence sets | 467/606 | 77.1% |
 
 “Project hits” is the number of RuboCop reference diagnostics. Project matching
 is exact shared signatures divided by the union of Rustocop and RuboCop
@@ -58,7 +58,7 @@ compatible in the overall totals.
 
 ## Per-cop evidence
 
-| Cop | Implementation file | Implementation updated | Fixture tests<br>(as of 2026-08-25T22:40:32-04:00) | Fixture matching<br>(as of 2026-08-25T22:40:32-04:00) | Project hits<br>(as of 2026-08-25T22:40:03-04:00) | Project matching<br>(as of 2026-08-25T22:40:03-04:00) |
+| Cop | Implementation file | Implementation updated | Fixture tests<br>(as of 2026-08-26T01:03:49-04:00) | Fixture matching<br>(as of 2026-08-26T01:03:49-04:00) | Project hits<br>(as of 2026-08-26T01:01:10-04:00) | Project matching<br>(as of 2026-08-26T01:01:10-04:00) |
 | --- | --- | --- | ---: | ---: | ---: | ---: |
 | `Bundler/DuplicatedGem` | [`crates/rustocop/src/cops/prism/source_rules.rs`](../crates/rustocop/src/cops/prism/source_rules.rs) | 2026-08-25 | 10 | 10/10 (100.0%) | 0 | — (unexercised) |
 | `Bundler/DuplicatedGroup` | [`crates/rustocop/src/cops/prism/project_scope_completion.rs`](../crates/rustocop/src/cops/prism/project_scope_completion.rs) | 2026-08-24 | 21 | 21/21 (100.0%) | 0 | — (unexercised) |
@@ -68,8 +68,8 @@ compatible in the overall totals.
 | `Bundler/InsecureProtocolSource` | [`crates/rustocop/src/cops/prism/additional_rules.rs`](../crates/rustocop/src/cops/prism/additional_rules.rs) | 2026-08-25 | 7 | 7/7 (100.0%) | 0 | — (unexercised) |
 | `Bundler/OrderedGems` | [`crates/rustocop/src/cops/prism/bundler_completion.rs`](../crates/rustocop/src/cops/prism/bundler_completion.rs) | 2026-08-24 | 19 | 19/19 (100.0%) | 0 | — (unexercised) |
 | `Gemspec/AddRuntimeDependency` | [`crates/rustocop/src/cops/prism/source_rules.rs`](../crates/rustocop/src/cops/prism/source_rules.rs) | 2026-08-25 | 7 | 7/7 (100.0%) | 0 | — (unexercised) |
-| `Gemspec/AttributeAssignment` | [`crates/rustocop/src/cops/prism/additional_rules.rs`](../crates/rustocop/src/cops/prism/additional_rules.rs) | 2026-08-25 | 7 | 7/7 (100.0%) | 0 | 0/37 (0.0%) |
-| `Gemspec/DependencyVersion` | [`crates/rustocop/src/cops/prism/final_project_context_batch.rs`](../crates/rustocop/src/cops/prism/final_project_context_batch.rs) | 2026-08-24 | 77 | 77/77 (100.0%) | 0 | 0/45 (0.0%) |
+| `Gemspec/AttributeAssignment` | [`crates/rustocop/src/cops/prism/additional_rules.rs`](../crates/rustocop/src/cops/prism/additional_rules.rs) | 2026-08-25 | 7 | 7/7 (100.0%) | 0 | — (unexercised) |
+| `Gemspec/DependencyVersion` | [`crates/rustocop/src/cops/prism/final_project_context_batch.rs`](../crates/rustocop/src/cops/prism/final_project_context_batch.rs) | 2026-08-24 | 77 | 77/77 (100.0%) | 0 | — (unexercised) |
 | `Gemspec/DeprecatedAttributeAssignment` | [`crates/rustocop/src/cops/prism/project_scope_completion.rs`](../crates/rustocop/src/cops/prism/project_scope_completion.rs) | 2026-08-24 | 19 | 19/19 (100.0%) | 0 | — (unexercised) |
 | `Gemspec/DevelopmentDependencies` | [`crates/rustocop/src/cops/prism/project_scope_completion.rs`](../crates/rustocop/src/cops/prism/project_scope_completion.rs) | 2026-08-24 | 13 | 13/13 (100.0%) | 0 | — (unexercised) |
 | `Gemspec/DuplicatedAssignment` | [`crates/rustocop/src/cops/prism/gemspec_completion.rs`](../crates/rustocop/src/cops/prism/gemspec_completion.rs) | 2026-08-22 | 18 | 18/18 (100.0%) | 0 | — (unexercised) |
@@ -78,11 +78,11 @@ compatible in the overall totals.
 | `Gemspec/RequiredRubyVersion` | [`crates/rustocop/src/cops/prism/project_structural_completion_batch.rs`](../crates/rustocop/src/cops/prism/project_structural_completion_batch.rs) | 2026-08-25 | 22 | 22/22 (100.0%) | 0 | — (unexercised) |
 | `Gemspec/RubyVersionGlobalsUsage` | [`crates/rustocop/src/cops/prism/additional_rules.rs`](../crates/rustocop/src/cops/prism/additional_rules.rs) | 2026-08-25 | 6 | 6/6 (100.0%) | 0 | — (unexercised) |
 | `Layout/AccessModifierIndentation` | [`crates/rustocop/src/cops/prism/final_layout_batch_a.rs`](../crates/rustocop/src/cops/prism/final_layout_batch_a.rs) | 2026-08-25 | 44 | 44/44 (100.0%) | 173 | 173/173 (100.0%) |
-| `Layout/ArgumentAlignment` | [`crates/rustocop/src/cops/prism/restored_layout_indentation/core.rs`](../crates/rustocop/src/cops/prism/restored_layout_indentation/core.rs) | 2026-08-24 | 55 | 55/55 (100.0%) | 20632 | 20632/20632 (100.0%) |
+| `Layout/ArgumentAlignment` | [`crates/rustocop/src/cops/prism/restored_layout_indentation/core.rs`](../crates/rustocop/src/cops/prism/restored_layout_indentation/core.rs) | 2026-08-25 | 55 | 55/55 (100.0%) | 20632 | 20632/20632 (100.0%) |
 | `Layout/ArrayAlignment` | [`crates/rustocop/src/cops/prism/layout_qualification.rs`](../crates/rustocop/src/cops/prism/layout_qualification.rs) | 2026-08-24 | 27 | 27/27 (100.0%) | 2299 | 2299/2299 (100.0%) |
 | `Layout/AssignmentIndentation` | [`crates/rustocop/src/cops/prism/layout_spacing_completion.rs`](../crates/rustocop/src/cops/prism/layout_spacing_completion.rs) | 2026-08-25 | 16 | 16/16 (100.0%) | 22 | 22/22 (100.0%) |
 | `Layout/BeginEndAlignment` | [`crates/rustocop/src/cops/prism/layout_spacing_completion.rs`](../crates/rustocop/src/cops/prism/layout_spacing_completion.rs) | 2026-08-25 | 9 | 9/9 (100.0%) | 39 | 39/39 (100.0%) |
-| `Layout/BlockAlignment` | [`crates/rustocop/src/cops/prism/layout_core_qualification.rs`](../crates/rustocop/src/cops/prism/layout_core_qualification.rs) | 2026-08-25 | 79 | 79/79 (100.0%) | 215 | 213/220 (96.8%) |
+| `Layout/BlockAlignment` | [`crates/rustocop/src/cops/prism/layout_core_qualification.rs`](../crates/rustocop/src/cops/prism/layout_core_qualification.rs) | 2026-08-25 | 84 | 84/84 (100.0%) | 215 | 215/215 (100.0%) |
 | `Layout/BlockEndNewline` | [`crates/rustocop/src/cops/prism/layout_geometry_completion.rs`](../crates/rustocop/src/cops/prism/layout_geometry_completion.rs) | 2026-08-24 | 19 | 19/19 (100.0%) | 124 | 124/124 (100.0%) |
 | `Layout/CaseIndentation` | [`crates/rustocop/src/cops/prism/final_layout_batch_a.rs`](../crates/rustocop/src/cops/prism/final_layout_batch_a.rs) | 2026-08-25 | 49 | 49/49 (100.0%) | 466 | 466/466 (100.0%) |
 | `Layout/ClassStructure` | [`crates/rustocop/src/cops/prism/project_structural_completion_batch.rs`](../crates/rustocop/src/cops/prism/project_structural_completion_batch.rs) | 2026-08-25 | 24 | 24/24 (100.0%) | 2878 | 2878/2878 (100.0%) |
@@ -94,7 +94,7 @@ compatible in the overall totals.
 | `Layout/DotPosition` | [`crates/rustocop/src/cops/prism/layout_core_qualification.rs`](../crates/rustocop/src/cops/prism/layout_core_qualification.rs) | 2026-08-25 | 40 | 40/40 (100.0%) | 1949 | 1949/1949 (100.0%) |
 | `Layout/ElseAlignment` | [`crates/rustocop/src/cops/prism/final_layout_batch_a.rs`](../crates/rustocop/src/cops/prism/final_layout_batch_a.rs) | 2026-08-25 | 53 | 53/53 (100.0%) | 1043 | 1043/1043 (100.0%) |
 | `Layout/EmptyComment` | [`crates/rustocop/src/cops/prism/layout_finalization_completion.rs`](../crates/rustocop/src/cops/prism/layout_finalization_completion.rs) | 2026-08-25 | 19 | 19/19 (100.0%) | 99 | 99/99 (100.0%) |
-| `Layout/EmptyLineAfterGuardClause` | [`crates/rustocop/src/cops/prism/final_layout_batch_a.rs`](../crates/rustocop/src/cops/prism/final_layout_batch_a.rs) | 2026-08-25 | 70 | 70/70 (100.0%) | 4964 | 4957/4966 (99.8%) |
+| `Layout/EmptyLineAfterGuardClause` | [`crates/rustocop/src/cops/prism/final_layout_batch_a.rs`](../crates/rustocop/src/cops/prism/final_layout_batch_a.rs) | 2026-08-25 | 75 | 75/75 (100.0%) | 4964 | 4964/4964 (100.0%) |
 | `Layout/EmptyLineAfterMagicComment` | [`crates/rustocop/src/cops/prism/layout_finalization_completion.rs`](../crates/rustocop/src/cops/prism/layout_finalization_completion.rs) | 2026-08-25 | 24 | 24/24 (100.0%) | 1194 | 1194/1194 (100.0%) |
 | `Layout/EmptyLineAfterMultilineCondition` | [`crates/rustocop/src/cops/prism/project_structural_completion_batch.rs`](../crates/rustocop/src/cops/prism/project_structural_completion_batch.rs) | 2026-08-25 | 23 | 23/23 (100.0%) | 1618 | 1618/1618 (100.0%) |
 | `Layout/EmptyLineBetweenDefs` | [`crates/rustocop/src/cops/prism/layout_core_qualification.rs`](../crates/rustocop/src/cops/prism/layout_core_qualification.rs) | 2026-08-25 | 45 | 45/45 (100.0%) | 729 | 729/729 (100.0%) |
@@ -106,14 +106,14 @@ compatible in the overall totals.
 | `Layout/EmptyLinesAroundBeginBody` | [`crates/rustocop/src/cops/prism/layout_body_completion.rs`](../crates/rustocop/src/cops/prism/layout_body_completion.rs)<br>[`crates/rustocop/src/cops/prism/layout_body_qualification.rs`](../crates/rustocop/src/cops/prism/layout_body_qualification.rs) | 2026-08-25 | 11 | 11/11 (100.0%) | 5 | 5/5 (100.0%) |
 | `Layout/EmptyLinesAroundBlockBody` | [`crates/rustocop/src/cops/prism/layout_body_completion.rs`](../crates/rustocop/src/cops/prism/layout_body_completion.rs)<br>[`crates/rustocop/src/cops/prism/layout_body_qualification.rs`](../crates/rustocop/src/cops/prism/layout_body_qualification.rs) | 2026-08-25 | 20 | 20/20 (100.0%) | 742 | 742/742 (100.0%) |
 | `Layout/EmptyLinesAroundClassBody` | [`crates/rustocop/src/cops/prism/layout_body_qualification.rs`](../crates/rustocop/src/cops/prism/layout_body_qualification.rs) | 2026-08-25 | 46 | 46/46 (100.0%) | 971 | 971/971 (100.0%) |
-| `Layout/EmptyLinesAroundExceptionHandlingKeywords` | [`crates/rustocop/src/cops/prism/layout_body_completion.rs`](../crates/rustocop/src/cops/prism/layout_body_completion.rs)<br>[`crates/rustocop/src/cops/prism/layout_body_qualification.rs`](../crates/rustocop/src/cops/prism/layout_body_qualification.rs) | 2026-08-25 | 25 | 25/25 (100.0%) | 188 | 188/207 (90.8%) |
+| `Layout/EmptyLinesAroundExceptionHandlingKeywords` | [`crates/rustocop/src/cops/prism/layout_body_completion.rs`](../crates/rustocop/src/cops/prism/layout_body_completion.rs)<br>[`crates/rustocop/src/cops/prism/layout_body_qualification.rs`](../crates/rustocop/src/cops/prism/layout_body_qualification.rs) | 2026-08-25 | 27 | 27/27 (100.0%) | 188 | 188/188 (100.0%) |
 | `Layout/EmptyLinesAroundMethodBody` | [`crates/rustocop/src/cops/prism/layout_body_completion.rs`](../crates/rustocop/src/cops/prism/layout_body_completion.rs)<br>[`crates/rustocop/src/cops/prism/layout_body_qualification.rs`](../crates/rustocop/src/cops/prism/layout_body_qualification.rs) | 2026-08-25 | 14 | 14/14 (100.0%) | 320 | 320/320 (100.0%) |
 | `Layout/EmptyLinesAroundModuleBody` | [`crates/rustocop/src/cops/prism/layout_body_qualification.rs`](../crates/rustocop/src/cops/prism/layout_body_qualification.rs) | 2026-08-25 | 37 | 37/37 (100.0%) | 347 | 347/347 (100.0%) |
 | `Layout/EndAlignment` | [`crates/rustocop/src/cops/prism/layout_qualification.rs`](../crates/rustocop/src/cops/prism/layout_qualification.rs) | 2026-08-24 | 217 | 217/217 (100.0%) | 1119 | 1119/1119 (100.0%) |
 | `Layout/EndOfLine` | [`crates/rustocop/src/cops/prism/layout_spacing_completion.rs`](../crates/rustocop/src/cops/prism/layout_spacing_completion.rs) | 2026-08-25 | 13 | 13/13 (100.0%) | 0 | — (unexercised) |
 | `Layout/ExtraSpacing` | [`crates/rustocop/src/cops/prism/layout_qualification.rs`](../crates/rustocop/src/cops/prism/layout_qualification.rs) | 2026-08-24 | 90 | 90/90 (100.0%) | 1905 | 471/2763 (17.0%) |
 | `Layout/FirstArgumentIndentation` | [`crates/rustocop/src/cops/prism/layout_core_qualification.rs`](../crates/rustocop/src/cops/prism/layout_core_qualification.rs) | 2026-08-25 | 143 | 143/143 (100.0%) | 883 | 883/883 (100.0%) |
-| `Layout/FirstArrayElementIndentation` | [`crates/rustocop/src/cops/prism/restored_layout_indentation/core.rs`](../crates/rustocop/src/cops/prism/restored_layout_indentation/core.rs) | 2026-08-24 | 60 | 60/60 (100.0%) | 3431 | 3431/3443 (99.7%) |
+| `Layout/FirstArrayElementIndentation` | [`crates/rustocop/src/cops/prism/restored_layout_indentation/core.rs`](../crates/rustocop/src/cops/prism/restored_layout_indentation/core.rs) | 2026-08-25 | 64 | 64/64 (100.0%) | 3431 | 3431/3431 (100.0%) |
 | `Layout/FirstArrayElementLineBreak` | [`crates/rustocop/src/cops/prism/restored_layout_line_breaks.rs`](../crates/rustocop/src/cops/prism/restored_layout_line_breaks.rs) | 2026-08-23 | 17 | 17/17 (100.0%) | 3665 | 3665/3665 (100.0%) |
 | `Layout/FirstHashElementIndentation` | [`crates/rustocop/src/cops/prism/layout_qualification.rs`](../crates/rustocop/src/cops/prism/layout_qualification.rs) | 2026-08-24 | 61 | 61/61 (100.0%) | 7366 | 7366/7366 (100.0%) |
 | `Layout/FirstHashElementLineBreak` | [`crates/rustocop/src/cops/prism/restored_layout_line_breaks.rs`](../crates/rustocop/src/cops/prism/restored_layout_line_breaks.rs) | 2026-08-23 | 14 | 14/14 (100.0%) | 3723 | 3723/3723 (100.0%) |
@@ -122,10 +122,10 @@ compatible in the overall totals.
 | `Layout/FirstParameterIndentation` | [`crates/rustocop/src/cops/prism/layout_spacing_completion.rs`](../crates/rustocop/src/cops/prism/layout_spacing_completion.rs) | 2026-08-25 | 20 | 20/20 (100.0%) | 5 | 1/28 (3.6%) |
 | `Layout/HashAlignment` | [`crates/rustocop/src/cops/prism/final_layout_batch_b.rs`](../crates/rustocop/src/cops/prism/final_layout_batch_b.rs) | 2026-08-25 | 132 | 132/132 (100.0%) | 23714 | 23714/23714 (100.0%) |
 | `Layout/HeredocArgumentClosingParenthesis` | [`crates/rustocop/src/cops/prism/heredoc_argument_closing_parenthesis_rules.rs`](../crates/rustocop/src/cops/prism/heredoc_argument_closing_parenthesis_rules.rs) | 2026-08-24 | 81 | 81/81 (100.0%) | 34 | 34/58 (58.6%) |
-| `Layout/HeredocIndentation` | [`crates/rustocop/src/cops/prism/final_layout_batch_b/registry.rs`](../crates/rustocop/src/cops/prism/final_layout_batch_b/registry.rs) | 2026-08-23 | 111 | 111/111 (100.0%) | 3447 | 3447/3447 (100.0%) |
-| `Layout/IndentationConsistency` | [`crates/rustocop/src/cops/prism/restored_layout_indentation/core.rs`](../crates/rustocop/src/cops/prism/restored_layout_indentation/core.rs) | 2026-08-24 | 60 | 60/60 (100.0%) | 7197 | 7197/7197 (100.0%) |
-| `Layout/IndentationStyle` | [`crates/rustocop/src/cops/prism/final_layout_batch_a.rs`](../crates/rustocop/src/cops/prism/final_layout_batch_a.rs) | 2026-08-25 | 26 | 26/26 (100.0%) | 22 | 7/22 (31.8%) |
-| `Layout/IndentationWidth` | [`crates/rustocop/src/cops/prism/restored_layout_indentation/core.rs`](../crates/rustocop/src/cops/prism/restored_layout_indentation/core.rs) | 2026-08-24 | 198 | 198/198 (100.0%) | 8652 | 7902/9402 (84.0%) |
+| `Layout/HeredocIndentation` | [`crates/rustocop/src/cops/prism/final_layout_batch_b/registry.rs`](../crates/rustocop/src/cops/prism/final_layout_batch_b/registry.rs) | 2026-08-25 | 111 | 111/111 (100.0%) | 3447 | 3447/3447 (100.0%) |
+| `Layout/IndentationConsistency` | [`crates/rustocop/src/cops/prism/restored_layout_indentation/core.rs`](../crates/rustocop/src/cops/prism/restored_layout_indentation/core.rs) | 2026-08-25 | 60 | 60/60 (100.0%) | 7197 | 7197/7197 (100.0%) |
+| `Layout/IndentationStyle` | [`crates/rustocop/src/cops/prism/final_layout_batch_a.rs`](../crates/rustocop/src/cops/prism/final_layout_batch_a.rs) | 2026-08-25 | 30 | 30/30 (100.0%) | 22 | 22/22 (100.0%) |
+| `Layout/IndentationWidth` | [`crates/rustocop/src/cops/prism/restored_layout_indentation/core.rs`](../crates/rustocop/src/cops/prism/restored_layout_indentation/core.rs) | 2026-08-25 | 198 | 198/198 (100.0%) | 8652 | 7902/9402 (84.0%) |
 | `Layout/InitialIndentation` | [`crates/rustocop/src/cops/prism/lexical_rules.rs`](../crates/rustocop/src/cops/prism/lexical_rules.rs) | 2026-08-25 | 8 | 8/8 (100.0%) | 2 | 2/2 (100.0%) |
 | `Layout/LeadingCommentSpace` | [`crates/rustocop/src/cops/prism/final_layout_batch_a.rs`](../crates/rustocop/src/cops/prism/final_layout_batch_a.rs) | 2026-08-25 | 29 | 29/29 (100.0%) | 538 | 538/538 (100.0%) |
 | `Layout/LeadingEmptyLines` | [`crates/rustocop/src/cops/prism/additional_rules_more.rs`](../crates/rustocop/src/cops/prism/additional_rules_more.rs) | 2026-08-25 | 9 | 9/9 (100.0%) | 14 | 14/14 (100.0%) |
@@ -147,18 +147,18 @@ compatible in the overall totals.
 | `Layout/MultilineOperationIndentation` | [`crates/rustocop/src/cops/prism/final_layout_batch_b.rs`](../crates/rustocop/src/cops/prism/final_layout_batch_b.rs) | 2026-08-25 | 103 | 103/103 (100.0%) | 2263 | 1629/4996 (32.6%) |
 | `Layout/ParameterAlignment` | [`crates/rustocop/src/cops/prism/layout_geometry_completion.rs`](../crates/rustocop/src/cops/prism/layout_geometry_completion.rs) | 2026-08-24 | 20 | 20/20 (100.0%) | 20 | 20/20 (100.0%) |
 | `Layout/RedundantLineBreak` | [`crates/rustocop/src/cops/prism/final_layout_batch_b.rs`](../crates/rustocop/src/cops/prism/final_layout_batch_b.rs) | 2026-08-25 | 118 | 118/118 (100.0%) | 31577 | 31471/31821 (98.9%) |
-| `Layout/RescueEnsureAlignment` | [`crates/rustocop/src/cops/prism/final_layout_batch_b/registry.rs`](../crates/rustocop/src/cops/prism/final_layout_batch_b/registry.rs) | 2026-08-23 | 105 | 105/105 (100.0%) | 372 | 372/455 (81.8%) |
+| `Layout/RescueEnsureAlignment` | [`crates/rustocop/src/cops/prism/final_layout_batch_b/registry.rs`](../crates/rustocop/src/cops/prism/final_layout_batch_b/registry.rs) | 2026-08-25 | 105 | 105/105 (100.0%) | 372 | 372/455 (81.8%) |
 | `Layout/SingleLineBlockChain` | [`crates/rustocop/src/cops/prism/layout_line_break_completion.rs`](../crates/rustocop/src/cops/prism/layout_line_break_completion.rs) | 2026-08-24 | 9 | 9/9 (100.0%) | 34783 | 34783/34783 (100.0%) |
 | `Layout/SpaceAfterColon` | [`crates/rustocop/src/cops/prism/layout.rs`](../crates/rustocop/src/cops/prism/layout.rs) | 2026-08-18 | 12 | 12/12 (100.0%) | 39 | 39/39 (100.0%) |
 | `Layout/SpaceAfterComma` | [`crates/rustocop/src/cops/prism/source_rules_layout.rs`](../crates/rustocop/src/cops/prism/source_rules_layout.rs) | 2026-08-25 | 21 | 21/21 (100.0%) | 3203 | 3203/3203 (100.0%) |
-| `Layout/SpaceAfterMethodName` | [`crates/rustocop/src/cops/prism/additional_rules.rs`](../crates/rustocop/src/cops/prism/additional_rules.rs) | 2026-08-25 | 10 | 10/10 (100.0%) | 1 | 1/15 (6.7%) |
+| `Layout/SpaceAfterMethodName` | [`crates/rustocop/src/cops/prism/additional_rules.rs`](../crates/rustocop/src/cops/prism/additional_rules.rs) | 2026-08-25 | 12 | 12/12 (100.0%) | 1 | 1/1 (100.0%) |
 | `Layout/SpaceAfterNot` | [`crates/rustocop/src/cops/prism/layout_finalization_completion.rs`](../crates/rustocop/src/cops/prism/layout_finalization_completion.rs) | 2026-08-25 | 8 | 8/8 (100.0%) | 89 | 89/89 (100.0%) |
 | `Layout/SpaceAfterSemicolon` | [`crates/rustocop/src/cops/prism/source_rules_layout.rs`](../crates/rustocop/src/cops/prism/source_rules_layout.rs) | 2026-08-25 | 15 | 15/15 (100.0%) | 13 | 13/13 (100.0%) |
 | `Layout/SpaceAroundBlockParameters` | [`crates/rustocop/src/cops/prism/final_layout_batch_b.rs`](../crates/rustocop/src/cops/prism/final_layout_batch_b.rs) | 2026-08-25 | 45 | 45/45 (100.0%) | 98 | 98/98 (100.0%) |
 | `Layout/SpaceAroundEqualsInParameterDefault` | [`crates/rustocop/src/cops/prism/layout_finalization_completion.rs`](../crates/rustocop/src/cops/prism/layout_finalization_completion.rs) | 2026-08-25 | 12 | 12/12 (100.0%) | 789 | 789/789 (100.0%) |
-| `Layout/SpaceAroundKeyword` | [`crates/rustocop/src/cops/prism/final_layout_batch_b/registry.rs`](../crates/rustocop/src/cops/prism/final_layout_batch_b/registry.rs) | 2026-08-23 | 122 | 122/122 (100.0%) | 232 | 230/239 (96.2%) |
+| `Layout/SpaceAroundKeyword` | [`crates/rustocop/src/cops/prism/final_layout_batch_b/registry.rs`](../crates/rustocop/src/cops/prism/final_layout_batch_b/registry.rs) | 2026-08-25 | 127 | 127/127 (100.0%) | 232 | 232/232 (100.0%) |
 | `Layout/SpaceAroundMethodCallOperator` | [`crates/rustocop/src/cops/prism/operator_method_call_rules.rs`](../crates/rustocop/src/cops/prism/operator_method_call_rules.rs) | 2026-08-25 | 56 | 56/56 (100.0%) | 33 | 33/33 (100.0%) |
-| `Layout/SpaceAroundOperators` | [`crates/rustocop/src/cops/prism/final_layout_batch_b/registry.rs`](../crates/rustocop/src/cops/prism/final_layout_batch_b/registry.rs) | 2026-08-23 | 102 | 102/102 (100.0%) | 7084 | 6988/7116 (98.2%) |
+| `Layout/SpaceAroundOperators` | [`crates/rustocop/src/cops/prism/final_layout_batch_b/registry.rs`](../crates/rustocop/src/cops/prism/final_layout_batch_b/registry.rs) | 2026-08-25 | 102 | 102/102 (100.0%) | 7084 | 6988/7116 (98.2%) |
 | `Layout/SpaceBeforeBlockBraces` | [`crates/rustocop/src/cops/prism/layout_geometry_completion.rs`](../crates/rustocop/src/cops/prism/layout_geometry_completion.rs) | 2026-08-24 | 19 | 19/19 (100.0%) | 2527 | 2527/2527 (100.0%) |
 | `Layout/SpaceBeforeBrackets` | [`crates/rustocop/src/cops/prism/layout_spacing_completion.rs`](../crates/rustocop/src/cops/prism/layout_spacing_completion.rs) | 2026-08-25 | 29 | 29/29 (100.0%) | 1 | 1/1 (100.0%) |
 | `Layout/SpaceBeforeComma` | [`crates/rustocop/src/cops/prism/source_rules_layout.rs`](../crates/rustocop/src/cops/prism/source_rules_layout.rs) | 2026-08-25 | 9 | 9/9 (100.0%) | 92 | 92/92 (100.0%) |
@@ -167,11 +167,11 @@ compatible in the overall totals.
 | `Layout/SpaceBeforeSemicolon` | [`crates/rustocop/src/cops/prism/source_rules_layout.rs`](../crates/rustocop/src/cops/prism/source_rules_layout.rs) | 2026-08-25 | 12 | 12/12 (100.0%) | 337 | 337/337 (100.0%) |
 | `Layout/SpaceInLambdaLiteral` | [`crates/rustocop/src/cops/prism/layout_finalization_completion.rs`](../crates/rustocop/src/cops/prism/layout_finalization_completion.rs) | 2026-08-25 | 17 | 17/17 (100.0%) | 283 | 283/283 (100.0%) |
 | `Layout/SpaceInsideArrayLiteralBrackets` | [`crates/rustocop/src/cops/prism/final_layout_batch_b.rs`](../crates/rustocop/src/cops/prism/final_layout_batch_b.rs) | 2026-08-25 | 102 | 102/102 (100.0%) | 3118 | 3118/3118 (100.0%) |
-| `Layout/SpaceInsideArrayPercentLiteral` | [`crates/rustocop/src/cops/prism/final_layout_batch_b/registry.rs`](../crates/rustocop/src/cops/prism/final_layout_batch_b/registry.rs) | 2026-08-23 | 94 | 94/94 (100.0%) | 112 | 110/123 (89.4%) |
+| `Layout/SpaceInsideArrayPercentLiteral` | [`crates/rustocop/src/cops/prism/final_layout_batch_b/registry.rs`](../crates/rustocop/src/cops/prism/final_layout_batch_b/registry.rs) | 2026-08-25 | 97 | 97/97 (100.0%) | 112 | 112/112 (100.0%) |
 | `Layout/SpaceInsideBlockBraces` | [`crates/rustocop/src/cops/prism/final_layout_batch_a.rs`](../crates/rustocop/src/cops/prism/final_layout_batch_a.rs) | 2026-08-25 | 44 | 44/44 (100.0%) | 4193 | 4193/4193 (100.0%) |
 | `Layout/SpaceInsideHashLiteralBraces` | [`crates/rustocop/src/cops/prism/final_layout_batch_a/registry.rs`](../crates/rustocop/src/cops/prism/final_layout_batch_a/registry.rs) | 2026-08-25 | 40 | 40/40 (100.0%) | 23154 | 23154/23154 (100.0%) |
 | `Layout/SpaceInsideParens` | [`crates/rustocop/src/cops/prism/final_layout_batch_a.rs`](../crates/rustocop/src/cops/prism/final_layout_batch_a.rs) | 2026-08-25 | 31 | 31/31 (100.0%) | 1012 | 958/1013 (94.6%) |
-| `Layout/SpaceInsidePercentLiteralDelimiters` | [`crates/rustocop/src/cops/prism/final_layout_batch_b/registry.rs`](../crates/rustocop/src/cops/prism/final_layout_batch_b/registry.rs) | 2026-08-23 | 218 | 218/218 (100.0%) | 995 | 995/995 (100.0%) |
+| `Layout/SpaceInsidePercentLiteralDelimiters` | [`crates/rustocop/src/cops/prism/final_layout_batch_b/registry.rs`](../crates/rustocop/src/cops/prism/final_layout_batch_b/registry.rs) | 2026-08-25 | 218 | 218/218 (100.0%) | 995 | 995/995 (100.0%) |
 | `Layout/SpaceInsideRangeLiteral` | [`crates/rustocop/src/cops/prism/layout_finalization_completion.rs`](../crates/rustocop/src/cops/prism/layout_finalization_completion.rs) | 2026-08-25 | 9 | 9/9 (100.0%) | 18 | 18/18 (100.0%) |
 | `Layout/SpaceInsideReferenceBrackets` | [`crates/rustocop/src/cops/prism/final_layout_batch_b.rs`](../crates/rustocop/src/cops/prism/final_layout_batch_b.rs) | 2026-08-25 | 49 | 49/49 (100.0%) | 18 | 18/18 (100.0%) |
 | `Layout/SpaceInsideStringInterpolation` | [`crates/rustocop/src/cops/prism/layout_spacing_completion.rs`](../crates/rustocop/src/cops/prism/layout_spacing_completion.rs) | 2026-08-25 | 14 | 14/14 (100.0%) | 117 | 117/117 (100.0%) |
@@ -197,12 +197,12 @@ compatible in the overall totals.
 | `Lint/DataDefineOverride` | [`crates/rustocop/src/cops/prism/lint_builtin_overrides.rs`](../crates/rustocop/src/cops/prism/lint_builtin_overrides.rs) | 2026-08-20 | 8 | 8/8 (100.0%) | 2 | 2/2 (100.0%) |
 | `Lint/Debugger` | [`crates/rustocop/src/cops/prism/final_ast_structural_batch.rs`](../crates/rustocop/src/cops/prism/final_ast_structural_batch.rs) | 2026-08-25 | 98 | 98/98 (100.0%) | 8 | 8/8 (100.0%) |
 | `Lint/DeprecatedClassMethods` | [`crates/rustocop/src/cops/prism/deprecated_api_rules.rs`](../crates/rustocop/src/cops/prism/deprecated_api_rules.rs) | 2026-08-18 | 29 | 29/29 (100.0%) | 12 | 12/12 (100.0%) |
-| `Lint/DeprecatedConstants` | [`crates/rustocop/src/cops/prism/lint_naming_completion_batch.rs`](../crates/rustocop/src/cops/prism/lint_naming_completion_batch.rs) | 2026-08-24 | 21 | 21/21 (100.0%) | 12 | 12/12 (100.0%) |
+| `Lint/DeprecatedConstants` | [`crates/rustocop/src/cops/prism/lint_naming_completion_batch.rs`](../crates/rustocop/src/cops/prism/lint_naming_completion_batch.rs) | 2026-08-25 | 21 | 21/21 (100.0%) | 12 | 12/12 (100.0%) |
 | `Lint/DeprecatedOpenSSLConstant` | [`crates/rustocop/src/cops/prism/project_structural_completion_batch.rs`](../crates/rustocop/src/cops/prism/project_structural_completion_batch.rs) | 2026-08-25 | 25 | 25/25 (100.0%) | 26 | 26/26 (100.0%) |
 | `Lint/DisjunctiveAssignmentInConstructor` | [`crates/rustocop/src/cops/prism/additional_rules.rs`](../crates/rustocop/src/cops/prism/additional_rules.rs) | 2026-08-25 | 9 | 9/9 (100.0%) | 5 | 5/5 (100.0%) |
 | `Lint/DuplicateBranch` | [`crates/rustocop/src/cops/prism/final_control_flow_batch.rs`](../crates/rustocop/src/cops/prism/final_control_flow_batch.rs) | 2026-08-25 | 133 | 133/133 (100.0%) | 397 | 397/397 (100.0%) |
 | `Lint/DuplicateCaseCondition` | [`crates/rustocop/src/cops/prism/literal_and_pattern_rules.rs`](../crates/rustocop/src/cops/prism/literal_and_pattern_rules.rs) | 2026-08-25 | 9 | 9/9 (100.0%) | 1 | 1/1 (100.0%) |
-| `Lint/DuplicateElsifCondition` | [`crates/rustocop/src/cops/prism/source_rules.rs`](../crates/rustocop/src/cops/prism/source_rules.rs) | 2026-08-25 | 7 | 7/7 (100.0%) | 0 | 0/13 (0.0%) |
+| `Lint/DuplicateElsifCondition` | [`crates/rustocop/src/cops/prism/source_rules.rs`](../crates/rustocop/src/cops/prism/source_rules.rs) | 2026-08-25 | 10 | 10/10 (100.0%) | 0 | — (unexercised) |
 | `Lint/DuplicateHashKey` | [`crates/rustocop/src/cops/prism/restored_structural_cops.rs`](../crates/rustocop/src/cops/prism/restored_structural_cops.rs) | 2026-08-25 | 37 | 37/37 (100.0%) | 2 | 2/2 (100.0%) |
 | `Lint/DuplicateMagicComment` | [`crates/rustocop/src/cops/prism/lexical_rules.rs`](../crates/rustocop/src/cops/prism/lexical_rules.rs) | 2026-08-25 | 11 | 11/11 (100.0%) | 0 | — (unexercised) |
 | `Lint/DuplicateMatchPattern` | [`crates/rustocop/src/cops/prism/project_scope_completion.rs`](../crates/rustocop/src/cops/prism/project_scope_completion.rs) | 2026-08-24 | 20 | 20/20 (100.0%) | 0 | — (unexercised) |
@@ -210,10 +210,10 @@ compatible in the overall totals.
 | `Lint/DuplicateRegexpCharacterClassElement` | [`crates/rustocop/src/cops/prism/final_regexp_batch.rs`](../crates/rustocop/src/cops/prism/final_regexp_batch.rs) | 2026-08-25 | 16 | 16/16 (100.0%) | 103 | 99/3774 (2.6%) |
 | `Lint/DuplicateRequire` | [`crates/rustocop/src/cops/prism/final_ast_structural_batch.rs`](../crates/rustocop/src/cops/prism/final_ast_structural_batch.rs) | 2026-08-25 | 11 | 11/11 (100.0%) | 5 | 5/5 (100.0%) |
 | `Lint/DuplicateRescueException` | [`crates/rustocop/src/cops/prism/restored_structural_cops.rs`](../crates/rustocop/src/cops/prism/restored_structural_cops.rs) | 2026-08-25 | 7 | 7/7 (100.0%) | 0 | — (unexercised) |
-| `Lint/DuplicateSetElement` | [`crates/rustocop/src/cops/prism/literal_integrity_completion.rs`](../crates/rustocop/src/cops/prism/literal_integrity_completion.rs) | 2026-08-24 | 38 | 38/38 (100.0%) | 2 | 2/9 (22.2%) |
+| `Lint/DuplicateSetElement` | [`crates/rustocop/src/cops/prism/literal_integrity_completion.rs`](../crates/rustocop/src/cops/prism/literal_integrity_completion.rs) | 2026-08-25 | 42 | 42/42 (100.0%) | 2 | 2/2 (100.0%) |
 | `Lint/EachWithObjectArgument` | [`crates/rustocop/src/cops/prism/additional_rules.rs`](../crates/rustocop/src/cops/prism/additional_rules.rs) | 2026-08-25 | 10 | 10/10 (100.0%) | 0 | — (unexercised) |
 | `Lint/ElseLayout` | [`crates/rustocop/src/cops/prism/branch_layout_rules.rs`](../crates/rustocop/src/cops/prism/branch_layout_rules.rs) | 2026-08-25 | 13 | 13/13 (100.0%) | 3 | 3/3 (100.0%) |
-| `Lint/EmptyBlock` | [`crates/rustocop/src/cops/prism/lint_scope_completion.rs`](../crates/rustocop/src/cops/prism/lint_scope_completion.rs) | 2026-08-23 | 18 | 18/18 (100.0%) | 1639 | 1632/1640 (99.5%) |
+| `Lint/EmptyBlock` | [`crates/rustocop/src/cops/prism/lint_scope_completion.rs`](../crates/rustocop/src/cops/prism/lint_scope_completion.rs) | 2026-08-25 | 23 | 23/23 (100.0%) | 1639 | 1639/1639 (100.0%) |
 | `Lint/EmptyClass` | [`crates/rustocop/src/cops/prism/empty_class_rules.rs`](../crates/rustocop/src/cops/prism/empty_class_rules.rs) | 2026-08-23 | 11 | 11/11 (100.0%) | 77 | 77/77 (100.0%) |
 | `Lint/EmptyConditionalBody` | [`crates/rustocop/src/cops/prism/final_control_flow_batch.rs`](../crates/rustocop/src/cops/prism/final_control_flow_batch.rs) | 2026-08-25 | 40 | 40/40 (100.0%) | 9 | 9/9 (100.0%) |
 | `Lint/EmptyEnsure` | [`crates/rustocop/src/cops/prism/lexical_rules.rs`](../crates/rustocop/src/cops/prism/lexical_rules.rs) | 2026-08-25 | 6 | 6/6 (100.0%) | 0 | — (unexercised) |
@@ -244,7 +244,7 @@ compatible in the overall totals.
 | `Lint/LiteralInInterpolation` | [`crates/rustocop/src/cops/prism/final_ast_structural_batch.rs`](../crates/rustocop/src/cops/prism/final_ast_structural_batch.rs) | 2026-08-25 | 386 | 386/386 (100.0%) | 45 | 45/45 (100.0%) |
 | `Lint/Loop` | [`crates/rustocop/src/cops/prism/lint_control_flow.rs`](../crates/rustocop/src/cops/prism/lint_control_flow.rs) | 2026-08-20 | 4 | 4/4 (100.0%) | 27 | 27/27 (100.0%) |
 | `Lint/MissingCopEnableDirective` | [`crates/rustocop/src/cops/prism/directive_completion.rs`](../crates/rustocop/src/cops/prism/directive_completion.rs) | 2026-08-25 | 19 | 19/19 (100.0%) | 98 | 75/2047 (3.7%) |
-| `Lint/MissingSuper` | [`crates/rustocop/src/cops/prism/lint_scope_completion.rs`](../crates/rustocop/src/cops/prism/lint_scope_completion.rs) | 2026-08-23 | 23 | 23/23 (100.0%) | 839 | 839/839 (100.0%) |
+| `Lint/MissingSuper` | [`crates/rustocop/src/cops/prism/lint_scope_completion.rs`](../crates/rustocop/src/cops/prism/lint_scope_completion.rs) | 2026-08-25 | 23 | 23/23 (100.0%) | 839 | 839/839 (100.0%) |
 | `Lint/MixedCaseRange` | [`crates/rustocop/src/cops/prism/literal_and_pattern_rules.rs`](../crates/rustocop/src/cops/prism/literal_and_pattern_rules.rs) | 2026-08-25 | 31 | 31/31 (100.0%) | 15 | 15/15 (100.0%) |
 | `Lint/MixedRegexpCaptureTypes` | [`crates/rustocop/src/cops/prism/lint_builtin_overrides.rs`](../crates/rustocop/src/cops/prism/lint_builtin_overrides.rs) | 2026-08-20 | 13 | 13/13 (100.0%) | 32 | 32/32 (100.0%) |
 | `Lint/MultipleComparison` | [`crates/rustocop/src/cops/prism/logical_condition_rules.rs`](../crates/rustocop/src/cops/prism/logical_condition_rules.rs) | 2026-08-25 | 20 | 20/20 (100.0%) | 0 | — (unexercised) |
@@ -252,12 +252,12 @@ compatible in the overall totals.
 | `Lint/NestedPercentLiteral` | [`crates/rustocop/src/cops/prism/additional_rules_literals.rs`](../crates/rustocop/src/cops/prism/additional_rules_literals.rs) | 2026-08-23 | 12 | 12/12 (100.0%) | 6 | 6/6 (100.0%) |
 | `Lint/NextWithoutAccumulator` | [`crates/rustocop/src/cops/prism/block_arity_rules.rs`](../crates/rustocop/src/cops/prism/block_arity_rules.rs) | 2026-08-18 | 18 | 18/18 (100.0%) | 0 | — (unexercised) |
 | `Lint/NoReturnInBeginEndBlocks` | [`crates/rustocop/src/cops/prism/restored_structural_cops.rs`](../crates/rustocop/src/cops/prism/restored_structural_cops.rs) | 2026-08-25 | 70 | 70/70 (100.0%) | 49 | 49/49 (100.0%) |
-| `Lint/NonAtomicFileOperation` | [`crates/rustocop/src/cops/prism/lint_signature_completion_batch.rs`](../crates/rustocop/src/cops/prism/lint_signature_completion_batch.rs) | 2026-08-25 | 45 | 45/45 (100.0%) | 259 | 249/268 (92.9%) |
+| `Lint/NonAtomicFileOperation` | [`crates/rustocop/src/cops/prism/lint_signature_completion_batch.rs`](../crates/rustocop/src/cops/prism/lint_signature_completion_batch.rs) | 2026-08-25 | 51 | 51/51 (100.0%) | 259 | 259/259 (100.0%) |
 | `Lint/NonDeterministicRequireOrder` | [`crates/rustocop/src/cops/prism/non_deterministic_require_rules.rs`](../crates/rustocop/src/cops/prism/non_deterministic_require_rules.rs) | 2026-08-18 | 28 | 28/28 (100.0%) | 0 | — (unexercised) |
 | `Lint/NonLocalExitFromIterator` | [`crates/rustocop/src/cops/prism/conditional_semantics_rules.rs`](../crates/rustocop/src/cops/prism/conditional_semantics_rules.rs) | 2026-08-19 | 14 | 14/14 (100.0%) | 30 | 30/30 (100.0%) |
 | `Lint/NumberConversion` | [`crates/rustocop/src/cops/prism/number_conversion_rules.rs`](../crates/rustocop/src/cops/prism/number_conversion_rules.rs) | 2026-08-25 | 39 | 39/39 (100.0%) | 10808 | 10808/10808 (100.0%) |
 | `Lint/NumberedParameterAssignment` | [`crates/rustocop/src/cops/prism/argument_and_inheritance_rules.rs`](../crates/rustocop/src/cops/prism/argument_and_inheritance_rules.rs) | 2026-08-25 | 13 | 13/13 (100.0%) | 0 | — (unexercised) |
-| `Lint/NumericOperationWithConstantResult` | [`crates/rustocop/src/cops/prism/literal_integrity_completion.rs`](../crates/rustocop/src/cops/prism/literal_integrity_completion.rs) | 2026-08-24 | 16 | 16/16 (100.0%) | 0 | 0/12 (0.0%) |
+| `Lint/NumericOperationWithConstantResult` | [`crates/rustocop/src/cops/prism/literal_integrity_completion.rs`](../crates/rustocop/src/cops/prism/literal_integrity_completion.rs) | 2026-08-25 | 18 | 18/18 (100.0%) | 0 | — (unexercised) |
 | `Lint/OrAssignmentToConstant` | [`crates/rustocop/src/cops/prism/additional_rules_more.rs`](../crates/rustocop/src/cops/prism/additional_rules_more.rs) | 2026-08-25 | 10 | 10/10 (100.0%) | 172 | 136/195 (69.7%) |
 | `Lint/OrderedMagicComments` | [`crates/rustocop/src/cops/prism/additional_rules_more.rs`](../crates/rustocop/src/cops/prism/additional_rules_more.rs) | 2026-08-25 | 11 | 11/11 (100.0%) | 23 | 23/23 (100.0%) |
 | `Lint/OutOfRangeRegexpRef` | [`crates/rustocop/src/cops/prism/final_regexp_batch.rs`](../crates/rustocop/src/cops/prism/final_regexp_batch.rs) | 2026-08-25 | 124 | 124/124 (100.0%) | 1 | 1/1 (100.0%) |
@@ -266,8 +266,8 @@ compatible in the overall totals.
 | `Lint/PercentSymbolArray` | [`crates/rustocop/src/cops/prism/percent_string_rules.rs`](../crates/rustocop/src/cops/prism/percent_string_rules.rs) | 2026-08-23 | 12 | 12/12 (100.0%) | 0 | — (unexercised) |
 | `Lint/RaiseException` | [`crates/rustocop/src/cops/prism/argument_and_inheritance_rules.rs`](../crates/rustocop/src/cops/prism/argument_and_inheritance_rules.rs) | 2026-08-25 | 15 | 15/15 (100.0%) | 23 | 23/23 (100.0%) |
 | `Lint/RandOne` | [`crates/rustocop/src/cops/prism/lint_suspicious_calls.rs`](../crates/rustocop/src/cops/prism/lint_suspicious_calls.rs) | 2026-08-21 | 16 | 16/16 (100.0%) | 0 | — (unexercised) |
-| `Lint/RedundantCopDisableDirective` | [`crates/rustocop/src/cops/prism/final_file_metadata_batch.rs`](../crates/rustocop/src/cops/prism/final_file_metadata_batch.rs) | 2026-08-24 | 26 | 26/26 (100.0%) | 0 | — (unexercised) |
-| `Lint/RedundantCopEnableDirective` | [`crates/rustocop/src/cops/prism/lint_naming_completion_batch.rs`](../crates/rustocop/src/cops/prism/lint_naming_completion_batch.rs) | 2026-08-24 | 28 | 28/28 (100.0%) | 20 | 20/176 (11.4%) |
+| `Lint/RedundantCopDisableDirective` | [`crates/rustocop/src/cops/prism/final_file_metadata_batch.rs`](../crates/rustocop/src/cops/prism/final_file_metadata_batch.rs) | 2026-08-25 | 26 | 26/26 (100.0%) | 0 | — (unexercised) |
+| `Lint/RedundantCopEnableDirective` | [`crates/rustocop/src/cops/prism/lint_naming_completion_batch.rs`](../crates/rustocop/src/cops/prism/lint_naming_completion_batch.rs) | 2026-08-25 | 28 | 28/28 (100.0%) | 20 | 20/176 (11.4%) |
 | `Lint/RedundantDirGlobSort` | [`crates/rustocop/src/cops/prism/path_and_literal_rules.rs`](../crates/rustocop/src/cops/prism/path_and_literal_rules.rs) | 2026-08-25 | 16 | 16/16 (100.0%) | 48 | 48/48 (100.0%) |
 | `Lint/RedundantRegexpQuantifiers` | [`crates/rustocop/src/cops/prism/final_regexp_batch.rs`](../crates/rustocop/src/cops/prism/final_regexp_batch.rs) | 2026-08-25 | 28 | 28/28 (100.0%) | 0 | — (unexercised) |
 | `Lint/RedundantRequireStatement` | [`crates/rustocop/src/cops/prism/require_rules.rs`](../crates/rustocop/src/cops/prism/require_rules.rs) | 2026-08-18 | 15 | 15/15 (100.0%) | 40 | 40/40 (100.0%) |
@@ -288,31 +288,31 @@ compatible in the overall totals.
 | `Lint/SafeNavigationChain` | [`crates/rustocop/src/cops/prism/control_semantics_completion_batch.rs`](../crates/rustocop/src/cops/prism/control_semantics_completion_batch.rs) | 2026-08-25 | 67 | 67/67 (100.0%) | 3 | 3/3 (100.0%) |
 | `Lint/SafeNavigationConsistency` | [`crates/rustocop/src/cops/prism/control_semantics_completion_batch.rs`](../crates/rustocop/src/cops/prism/control_semantics_completion_batch.rs) | 2026-08-25 | 45 | 45/45 (100.0%) | 2 | 2/2 (100.0%) |
 | `Lint/SafeNavigationWithEmpty` | [`crates/rustocop/src/cops/prism/lint_control_flow.rs`](../crates/rustocop/src/cops/prism/lint_control_flow.rs) | 2026-08-20 | 4 | 4/4 (100.0%) | 3 | 3/3 (100.0%) |
-| `Lint/ScriptPermission` | [`crates/rustocop/src/cops/prism/final_file_metadata_batch.rs`](../crates/rustocop/src/cops/prism/final_file_metadata_batch.rs) | 2026-08-24 | 7 | 7/7 (100.0%) | 10 | 10/10 (100.0%) |
+| `Lint/ScriptPermission` | [`crates/rustocop/src/cops/prism/final_file_metadata_batch.rs`](../crates/rustocop/src/cops/prism/final_file_metadata_batch.rs) | 2026-08-25 | 7 | 7/7 (100.0%) | 10 | 10/10 (100.0%) |
 | `Lint/SelfAssignment` | [`crates/rustocop/src/cops/prism/lint.rs`](../crates/rustocop/src/cops/prism/lint.rs) | 2026-08-25 | 60 | 60/60 (100.0%) | 18 | 18/48 (37.5%) |
 | `Lint/SendWithMixinArgument` | [`crates/rustocop/src/cops/prism/call_conversion_rules.rs`](../crates/rustocop/src/cops/prism/call_conversion_rules.rs) | 2026-08-25 | 14 | 14/14 (100.0%) | 11 | 11/11 (100.0%) |
-| `Lint/ShadowedArgument` | [`crates/rustocop/src/cops/prism/final_scope_batch_a/naming.rs`](../crates/rustocop/src/cops/prism/final_scope_batch_a/naming.rs) | 2026-08-24 | 56 | 56/56 (100.0%) | 101 | 101/101 (100.0%) |
-| `Lint/ShadowedException` | [`crates/rustocop/src/cops/prism/final_scope_batch_a.rs`](../crates/rustocop/src/cops/prism/final_scope_batch_a.rs) | 2026-08-25 | 41 | 41/41 (100.0%) | 39 | 22/39 (56.4%) |
-| `Lint/ShadowingOuterLocalVariable` | [`crates/rustocop/src/cops/prism/final_scope_batch_a.rs`](../crates/rustocop/src/cops/prism/final_scope_batch_a.rs) | 2026-08-25 | 46 | 46/46 (100.0%) | 386 | 386/386 (100.0%) |
-| `Lint/SharedMutableDefault` | [`crates/rustocop/src/cops/prism/source_semantics.rs`](../crates/rustocop/src/cops/prism/source_semantics.rs) | 2026-08-25 | 6 | 6/6 (100.0%) | 11 | 8/26 (30.8%) |
+| `Lint/ShadowedArgument` | [`crates/rustocop/src/cops/prism/final_scope_batch_a/naming.rs`](../crates/rustocop/src/cops/prism/final_scope_batch_a/naming.rs) | 2026-08-25 | 56 | 56/56 (100.0%) | 101 | 101/101 (100.0%) |
+| `Lint/ShadowedException` | [`crates/rustocop/src/cops/prism/final_scope_batch_a.rs`](../crates/rustocop/src/cops/prism/final_scope_batch_a.rs) | 2026-08-25 | 46 | 46/46 (100.0%) | 39 | 39/39 (100.0%) |
+| `Lint/ShadowingOuterLocalVariable` | [`crates/rustocop/src/cops/prism/final_scope_batch_a.rs`](../crates/rustocop/src/cops/prism/final_scope_batch_a.rs) | 2026-08-25 | 38 | 38/38 (100.0%) | 386 | 386/386 (100.0%) |
+| `Lint/SharedMutableDefault` | [`crates/rustocop/src/cops/prism/source_semantics.rs`](../crates/rustocop/src/cops/prism/source_semantics.rs) | 2026-08-25 | 9 | 9/9 (100.0%) | 11 | 11/11 (100.0%) |
 | `Lint/StructNewOverride` | [`crates/rustocop/src/cops/prism/lint_builtin_overrides.rs`](../crates/rustocop/src/cops/prism/lint_builtin_overrides.rs) | 2026-08-20 | 10 | 10/10 (100.0%) | 23 | 23/23 (100.0%) |
 | `Lint/SuppressedException` | [`crates/rustocop/src/cops/prism/rescue_rules.rs`](../crates/rustocop/src/cops/prism/rescue_rules.rs) | 2026-08-25 | 25 | 25/25 (100.0%) | 459 | 459/459 (100.0%) |
 | `Lint/SuppressedExceptionInNumberConversion` | [`crates/rustocop/src/cops/prism/exception_location_completion.rs`](../crates/rustocop/src/cops/prism/exception_location_completion.rs) | 2026-08-24 | 27 | 27/27 (100.0%) | 4 | 4/34 (11.8%) |
-| `Lint/SymbolConversion` | [`crates/rustocop/src/cops/prism/literal_integrity_completion.rs`](../crates/rustocop/src/cops/prism/literal_integrity_completion.rs) | 2026-08-24 | 46 | 46/46 (100.0%) | 1888 | 1888/1888 (100.0%) |
+| `Lint/SymbolConversion` | [`crates/rustocop/src/cops/prism/literal_integrity_completion.rs`](../crates/rustocop/src/cops/prism/literal_integrity_completion.rs) | 2026-08-25 | 46 | 46/46 (100.0%) | 1888 | 1888/1888 (100.0%) |
 | `Lint/Syntax` | [`crates/rustocop/src/cops/prism/lint_signature_completion_batch.rs`](../crates/rustocop/src/cops/prism/lint_signature_completion_batch.rs) | 2026-08-25 | 6 | 6/6 (100.0%) | 60 | 60/60 (100.0%) |
 | `Lint/ToEnumArguments` | [`crates/rustocop/src/cops/prism/enum_argument_rules.rs`](../crates/rustocop/src/cops/prism/enum_argument_rules.rs) | 2026-08-25 | 31 | 31/31 (100.0%) | 10 | 10/10 (100.0%) |
 | `Lint/ToJSON` | [`crates/rustocop/src/cops/prism/lint.rs`](../crates/rustocop/src/cops/prism/lint.rs) | 2026-08-25 | 2 | 2/2 (100.0%) | 14 | 14/14 (100.0%) |
 | `Lint/TopLevelReturnWithArgument` | [`crates/rustocop/src/cops/prism/restored_structural_cops.rs`](../crates/rustocop/src/cops/prism/restored_structural_cops.rs) | 2026-08-25 | 12 | 12/12 (100.0%) | 0 | — (unexercised) |
 | `Lint/TrailingCommaInAttributeDeclaration` | [`crates/rustocop/src/cops/text/lint.rs`](../crates/rustocop/src/cops/text/lint.rs) | 2026-08-25 | 3 | 3/3 (100.0%) | 0 | — (unexercised) |
 | `Lint/TripleQuotes` | [`crates/rustocop/src/cops/prism/additional_rules_more.rs`](../crates/rustocop/src/cops/prism/additional_rules_more.rs) | 2026-08-25 | 10 | 10/10 (100.0%) | 0 | — (unexercised) |
-| `Lint/UnderscorePrefixedVariableName` | [`crates/rustocop/src/cops/prism/lint_naming_completion_batch.rs`](../crates/rustocop/src/cops/prism/lint_naming_completion_batch.rs) | 2026-08-24 | 19 | 19/19 (100.0%) | 2109 | 897/2248 (39.9%) |
+| `Lint/UnderscorePrefixedVariableName` | [`crates/rustocop/src/cops/prism/lint_naming_completion_batch.rs`](../crates/rustocop/src/cops/prism/lint_naming_completion_batch.rs) | 2026-08-25 | 19 | 19/19 (100.0%) | 2109 | 897/2248 (39.9%) |
 | `Lint/UnescapedBracketInRegexp` | [`crates/rustocop/src/cops/prism/final_regexp_batch.rs`](../crates/rustocop/src/cops/prism/final_regexp_batch.rs) | 2026-08-25 | 46 | 46/46 (100.0%) | 0 | — (unexercised) |
 | `Lint/UnexpectedBlockArity` | [`crates/rustocop/src/cops/prism/block_arity_rules.rs`](../crates/rustocop/src/cops/prism/block_arity_rules.rs) | 2026-08-18 | 21 | 21/21 (100.0%) | 11 | 11/11 (100.0%) |
 | `Lint/UnifiedInteger` | [`crates/rustocop/src/cops/prism/literal_and_pattern_rules.rs`](../crates/rustocop/src/cops/prism/literal_and_pattern_rules.rs) | 2026-08-25 | 15 | 15/15 (100.0%) | 7 | 7/7 (100.0%) |
 | `Lint/UnmodifiedReduceAccumulator` | [`crates/rustocop/src/cops/prism/lint_signature_completion_batch.rs`](../crates/rustocop/src/cops/prism/lint_signature_completion_batch.rs) | 2026-08-25 | 166 | 166/166 (100.0%) | 1 | 1/1 (100.0%) |
 | `Lint/UnreachableCode` | [`crates/rustocop/src/cops/prism/final_control_flow_batch.rs`](../crates/rustocop/src/cops/prism/final_control_flow_batch.rs) | 2026-08-25 | 267 | 267/267 (100.0%) | 9 | 9/9 (100.0%) |
-| `Lint/UnreachableLoop` | [`crates/rustocop/src/cops/prism/final_control_flow_batch.rs`](../crates/rustocop/src/cops/prism/final_control_flow_batch.rs) | 2026-08-25 | 29 | 29/29 (100.0%) | 629 | 618/630 (98.1%) |
-| `Lint/UnreachablePatternBranch` | [`crates/rustocop/src/cops/prism/lint_naming_completion_batch.rs`](../crates/rustocop/src/cops/prism/lint_naming_completion_batch.rs) | 2026-08-24 | 24 | 24/24 (100.0%) | 0 | 0/13 (0.0%) |
+| `Lint/UnreachableLoop` | [`crates/rustocop/src/cops/prism/final_control_flow_batch.rs`](../crates/rustocop/src/cops/prism/final_control_flow_batch.rs) | 2026-08-25 | 33 | 33/33 (100.0%) | 629 | 629/629 (100.0%) |
+| `Lint/UnreachablePatternBranch` | [`crates/rustocop/src/cops/prism/lint_naming_completion_batch.rs`](../crates/rustocop/src/cops/prism/lint_naming_completion_batch.rs) | 2026-08-25 | 27 | 27/27 (100.0%) | 0 | — (unexercised) |
 | `Lint/UnusedBlockArgument` | [`crates/rustocop/src/cops/prism/lint_signature_completion_batch.rs`](../crates/rustocop/src/cops/prism/lint_signature_completion_batch.rs) | 2026-08-25 | 31 | 31/31 (100.0%) | 3150 | 3150/3150 (100.0%) |
 | `Lint/UnusedMethodArgument` | [`crates/rustocop/src/cops/prism/semantic_gap_completion.rs`](../crates/rustocop/src/cops/prism/semantic_gap_completion.rs)<br>[`crates/rustocop/src/cops/text/lint_semantic.rs`](../crates/rustocop/src/cops/text/lint_semantic.rs) | 2026-08-25 | 44 | 44/44 (100.0%) | 3598 | 3284/11466 (28.6%) |
 | `Lint/UriEscapeUnescape` | [`crates/rustocop/src/cops/prism/uri_escape_unescape_rules.rs`](../crates/rustocop/src/cops/prism/uri_escape_unescape_rules.rs) | 2026-08-25 | 14 | 14/14 (100.0%) | 3 | 3/3 (100.0%) |
@@ -341,8 +341,8 @@ compatible in the overall totals.
 | `Metrics/ModuleLength` | [`crates/rustocop/src/cops/prism/project_structural_completion_batch.rs`](../crates/rustocop/src/cops/prism/project_structural_completion_batch.rs) | 2026-08-25 | 21 | 21/21 (100.0%) | 1201 | 1201/1201 (100.0%) |
 | `Metrics/ParameterLists` | [`crates/rustocop/src/cops/prism/metrics_naming_completion.rs`](../crates/rustocop/src/cops/prism/metrics_naming_completion.rs) | 2026-08-25 | 20 | 20/20 (100.0%) | 1558 | 1558/1558 (100.0%) |
 | `Metrics/PerceivedComplexity` | [`crates/rustocop/src/cops/prism/final_metrics_batch.rs`](../crates/rustocop/src/cops/prism/final_metrics_batch.rs) | 2026-08-24 | 31 | 31/31 (100.0%) | 6450 | 3399/9092 (37.4%) |
-| `Migration/DepartmentName` | [`crates/rustocop/src/cops/prism/compatibility_lexical_rules.rs`](../crates/rustocop/src/cops/prism/compatibility_lexical_rules.rs) | 2026-08-23 | 8 | 8/8 (100.0%) | 1 | 0/19 (0.0%) |
-| `Naming/AccessorMethodName` | [`crates/rustocop/src/cops/prism/lint_naming_completion_batch.rs`](../crates/rustocop/src/cops/prism/lint_naming_completion_batch.rs) | 2026-08-24 | 24 | 24/24 (100.0%) | 996 | 996/996 (100.0%) |
+| `Migration/DepartmentName` | [`crates/rustocop/src/cops/prism/compatibility_lexical_rules.rs`](../crates/rustocop/src/cops/prism/compatibility_lexical_rules.rs) | 2026-08-23 | 11 | 11/11 (100.0%) | 1 | 1/1 (100.0%) |
+| `Naming/AccessorMethodName` | [`crates/rustocop/src/cops/prism/lint_naming_completion_batch.rs`](../crates/rustocop/src/cops/prism/lint_naming_completion_batch.rs) | 2026-08-25 | 24 | 24/24 (100.0%) | 996 | 996/996 (100.0%) |
 | `Naming/AsciiIdentifiers` | [`crates/rustocop/src/cops/prism/lexical_rules.rs`](../crates/rustocop/src/cops/prism/lexical_rules.rs) | 2026-08-25 | 13 | 13/13 (100.0%) | 10 | 10/10 (100.0%) |
 | `Naming/BinaryOperatorParameterName` | [`crates/rustocop/src/cops/prism/metrics_naming_completion.rs`](../crates/rustocop/src/cops/prism/metrics_naming_completion.rs) | 2026-08-25 | 19 | 19/19 (100.0%) | 186 | 186/186 (100.0%) |
 | `Naming/BlockForwarding` | [`crates/rustocop/src/cops/prism/final_scope_batch_a.rs`](../crates/rustocop/src/cops/prism/final_scope_batch_a.rs) | 2026-08-25 | 39 | 39/39 (100.0%) | 4852 | 4852/4852 (100.0%) |
@@ -351,14 +351,14 @@ compatible in the overall totals.
 | `Naming/ConstantName` | [`crates/rustocop/src/cops/prism/project_scope_completion.rs`](../crates/rustocop/src/cops/prism/project_scope_completion.rs) | 2026-08-24 | 27 | 27/27 (100.0%) | 353 | 353/353 (100.0%) |
 | `Naming/FileName` | [`crates/rustocop/src/cops/prism/final_scope_batch_b.rs`](../crates/rustocop/src/cops/prism/final_scope_batch_b.rs) | 2026-08-25 | 122 | 122/122 (100.0%) | 469 | 469/469 (100.0%) |
 | `Naming/HeredocDelimiterCase` | [`crates/rustocop/src/cops/prism/final_scope_batch_a.rs`](../crates/rustocop/src/cops/prism/final_scope_batch_a.rs) | 2026-08-25 | 27 | 27/27 (100.0%) | 154 | 154/154 (100.0%) |
-| `Naming/HeredocDelimiterNaming` | [`crates/rustocop/src/cops/prism/lint_naming_completion_batch.rs`](../crates/rustocop/src/cops/prism/lint_naming_completion_batch.rs) | 2026-08-24 | 22 | 22/22 (100.0%) | 2184 | 2184/2356 (92.7%) |
-| `Naming/InclusiveLanguage` | [`crates/rustocop/src/cops/prism/final_scope_batch_a/naming.rs`](../crates/rustocop/src/cops/prism/final_scope_batch_a/naming.rs) | 2026-08-24 | 36 | 36/36 (100.0%) | 480 | 474/482 (98.3%) |
+| `Naming/HeredocDelimiterNaming` | [`crates/rustocop/src/cops/prism/lint_naming_completion_batch.rs`](../crates/rustocop/src/cops/prism/lint_naming_completion_batch.rs) | 2026-08-25 | 22 | 22/22 (100.0%) | 2184 | 2184/2356 (92.7%) |
+| `Naming/InclusiveLanguage` | [`crates/rustocop/src/cops/prism/final_scope_batch_a/naming.rs`](../crates/rustocop/src/cops/prism/final_scope_batch_a/naming.rs) | 2026-08-25 | 40 | 40/40 (100.0%) | 480 | 480/480 (100.0%) |
 | `Naming/MemoizedInstanceVariableName` | [`crates/rustocop/src/cops/prism/final_scope_batch_b.rs`](../crates/rustocop/src/cops/prism/final_scope_batch_b.rs) | 2026-08-25 | 76 | 76/76 (100.0%) | 554 | 554/554 (100.0%) |
 | `Naming/MethodName` | [`crates/rustocop/src/cops/prism/final_scope_batch_b.rs`](../crates/rustocop/src/cops/prism/final_scope_batch_b.rs) | 2026-08-25 | 203 | 203/203 (100.0%) | 1903 | 1903/1903 (100.0%) |
-| `Naming/MethodParameterName` | [`crates/rustocop/src/cops/prism/lint_naming_completion_batch.rs`](../crates/rustocop/src/cops/prism/lint_naming_completion_batch.rs) | 2026-08-24 | 24 | 24/24 (100.0%) | 3353 | 3353/3353 (100.0%) |
+| `Naming/MethodParameterName` | [`crates/rustocop/src/cops/prism/lint_naming_completion_batch.rs`](../crates/rustocop/src/cops/prism/lint_naming_completion_batch.rs) | 2026-08-25 | 24 | 24/24 (100.0%) | 3353 | 3353/3353 (100.0%) |
 | `Naming/PredicateMethod` | [`crates/rustocop/src/cops/prism/final_scope_batch_b.rs`](../crates/rustocop/src/cops/prism/final_scope_batch_b.rs) | 2026-08-25 | 1264 | 1264/1264 (100.0%) | 2217 | 2217/2217 (100.0%) |
 | `Naming/PredicatePrefix` | [`crates/rustocop/src/cops/prism/metrics_naming_completion.rs`](../crates/rustocop/src/cops/prism/metrics_naming_completion.rs) | 2026-08-25 | 25 | 25/25 (100.0%) | 3560 | 3560/3560 (100.0%) |
-| `Naming/RescuedExceptionsVariableName` | [`crates/rustocop/src/cops/prism/final_scope_batch_a.rs`](../crates/rustocop/src/cops/prism/final_scope_batch_a.rs) | 2026-08-25 | 37 | 37/37 (100.0%) | 1195 | 1177/1196 (98.4%) |
+| `Naming/RescuedExceptionsVariableName` | [`crates/rustocop/src/cops/prism/final_scope_batch_a.rs`](../crates/rustocop/src/cops/prism/final_scope_batch_a.rs) | 2026-08-25 | 39 | 39/39 (100.0%) | 1195 | 1195/1195 (100.0%) |
 | `Naming/VariableName` | [`crates/rustocop/src/cops/prism/final_scope_batch_b.rs`](../crates/rustocop/src/cops/prism/final_scope_batch_b.rs) | 2026-08-25 | 118 | 118/118 (100.0%) | 530 | 530/1513 (35.0%) |
 | `Naming/VariableNumber` | [`crates/rustocop/src/cops/prism/final_scope_batch_b.rs`](../crates/rustocop/src/cops/prism/final_scope_batch_b.rs) | 2026-08-25 | 115 | 115/115 (100.0%) | 9963 | 9545/13500 (70.7%) |
 | `Security/CompoundHash` | [`crates/rustocop/src/cops/prism/security.rs`](../crates/rustocop/src/cops/prism/security.rs) | 2026-08-25 | 24 | 24/24 (100.0%) | 26 | 26/26 (100.0%) |
@@ -373,7 +373,7 @@ compatible in the overall totals.
 | `Style/Alias` | [`crates/rustocop/src/cops/prism/alias_rules.rs`](../crates/rustocop/src/cops/prism/alias_rules.rs) | 2026-08-25 | 35 | 35/35 (100.0%) | 1719 | 1719/1719 (100.0%) |
 | `Style/AmbiguousEndlessMethodDefinition` | [`crates/rustocop/src/cops/prism/semantic_gap_completion.rs`](../crates/rustocop/src/cops/prism/semantic_gap_completion.rs) | 2026-08-25 | 32 | 32/32 (100.0%) | 0 | — (unexercised) |
 | `Style/AndOr` | [`crates/rustocop/src/cops/prism/control_semantics_completion_batch.rs`](../crates/rustocop/src/cops/prism/control_semantics_completion_batch.rs) | 2026-08-25 | 79 | 79/79 (100.0%) | 638 | 638/638 (100.0%) |
-| `Style/ArgumentsForwarding` | [`crates/rustocop/src/cops/prism/final_ast_structural_batch.rs`](../crates/rustocop/src/cops/prism/final_ast_structural_batch.rs) | 2026-08-25 | 186 | 186/186 (100.0%) | 7614 | 7602/7614 (99.8%) |
+| `Style/ArgumentsForwarding` | [`crates/rustocop/src/cops/prism/final_ast_structural_batch.rs`](../crates/rustocop/src/cops/prism/final_ast_structural_batch.rs) | 2026-08-25 | 191 | 191/191 (100.0%) | 7614 | 7614/7614 (100.0%) |
 | `Style/ArrayCoercion` | [`crates/rustocop/src/cops/prism/structural_forwarding_completion.rs`](../crates/rustocop/src/cops/prism/structural_forwarding_completion.rs) | 2026-08-25 | 7 | 7/7 (100.0%) | 130 | 130/130 (100.0%) |
 | `Style/ArrayFirstLast` | [`crates/rustocop/src/cops/prism/style_collections.rs`](../crates/rustocop/src/cops/prism/style_collections.rs) | 2026-08-25 | 20 | 20/20 (100.0%) | 7093 | 7093/7093 (100.0%) |
 | `Style/ArrayIntersect` | [`crates/rustocop/src/cops/prism/modern_collection_completion.rs`](../crates/rustocop/src/cops/prism/modern_collection_completion.rs) | 2026-08-24 | 83 | 83/83 (100.0%) | 119 | 119/119 (100.0%) |
@@ -387,9 +387,9 @@ compatible in the overall totals.
 | `Style/BisectedAttrAccessor` | [`crates/rustocop/src/cops/prism/accessor_rules.rs`](../crates/rustocop/src/cops/prism/accessor_rules.rs) | 2026-08-18 | 14 | 14/14 (100.0%) | 22 | 22/22 (100.0%) |
 | `Style/BitwisePredicate` | [`crates/rustocop/src/cops/prism/predicate_conversion_rules.rs`](../crates/rustocop/src/cops/prism/predicate_conversion_rules.rs) | 2026-08-25 | 19 | 19/19 (100.0%) | 54 | 54/54 (100.0%) |
 | `Style/BlockComments` | [`crates/rustocop/src/cops/prism/block_comments_rules.rs`](../crates/rustocop/src/cops/prism/block_comments_rules.rs) | 2026-08-25 | 8 | 8/8 (100.0%) | 41 | 41/41 (100.0%) |
-| `Style/BlockDelimiters` | [`crates/rustocop/src/cops/prism/control_semantics_completion_batch.rs`](../crates/rustocop/src/cops/prism/control_semantics_completion_batch.rs) | 2026-08-25 | 174 | 174/174 (100.0%) | 7814 | 7804/7816 (99.8%) |
+| `Style/BlockDelimiters` | [`crates/rustocop/src/cops/prism/control_semantics_completion_batch.rs`](../crates/rustocop/src/cops/prism/control_semantics_completion_batch.rs) | 2026-08-25 | 183 | 183/183 (100.0%) | 7814 | 7814/7814 (100.0%) |
 | `Style/CaseEquality` | [`crates/rustocop/src/cops/prism/call_conversion_rules.rs`](../crates/rustocop/src/cops/prism/call_conversion_rules.rs) | 2026-08-25 | 22 | 22/22 (100.0%) | 869 | 869/869 (100.0%) |
-| `Style/CaseLikeIf` | [`crates/rustocop/src/cops/prism/structural_next_completion.rs`](../crates/rustocop/src/cops/prism/structural_next_completion.rs) | 2026-08-24 | 40 | 40/40 (100.0%) | 52 | 46/66 (69.7%) |
+| `Style/CaseLikeIf` | [`crates/rustocop/src/cops/prism/structural_next_completion.rs`](../crates/rustocop/src/cops/prism/structural_next_completion.rs) | 2026-08-24 | 53 | 53/53 (100.0%) | 52 | 52/52 (100.0%) |
 | `Style/CharacterLiteral` | [`crates/rustocop/src/cops/prism/style.rs`](../crates/rustocop/src/cops/prism/style.rs) | 2026-08-24 | 6 | 6/6 (100.0%) | 186 | 186/186 (100.0%) |
 | `Style/ClassAndModuleChildren` | [`crates/rustocop/src/cops/prism/control_semantics_completion_batch.rs`](../crates/rustocop/src/cops/prism/control_semantics_completion_batch.rs) | 2026-08-25 | 50 | 50/50 (100.0%) | 7031 | 7031/7031 (100.0%) |
 | `Style/ClassCheck` | [`crates/rustocop/src/cops/prism/class_check_rules.rs`](../crates/rustocop/src/cops/prism/class_check_rules.rs) | 2026-08-21 | 5 | 5/5 (100.0%) | 382 | 382/382 (100.0%) |
@@ -403,7 +403,7 @@ compatible in the overall totals.
 | `Style/ColonMethodCall` | [`crates/rustocop/src/cops/prism/style_calls.rs`](../crates/rustocop/src/cops/prism/style_calls.rs) | 2026-08-18 | 10 | 10/10 (100.0%) | 140 | 140/140 (100.0%) |
 | `Style/ColonMethodDefinition` | [`crates/rustocop/src/cops/prism/lexical_rules.rs`](../crates/rustocop/src/cops/prism/lexical_rules.rs) | 2026-08-25 | 8 | 8/8 (100.0%) | 1 | 1/1 (100.0%) |
 | `Style/CombinableDefined` | [`crates/rustocop/src/cops/prism/control_semantics_completion_batch.rs`](../crates/rustocop/src/cops/prism/control_semantics_completion_batch.rs) | 2026-08-25 | 45 | 45/45 (100.0%) | 3 | 3/3 (100.0%) |
-| `Style/CombinableLoops` | [`crates/rustocop/src/cops/prism/control_flow_completion_batch.rs`](../crates/rustocop/src/cops/prism/control_flow_completion_batch.rs) | 2026-08-24 | 24 | 24/24 (100.0%) | 94 | 91/114 (79.8%) |
+| `Style/CombinableLoops` | [`crates/rustocop/src/cops/prism/control_flow_completion_batch.rs`](../crates/rustocop/src/cops/prism/control_flow_completion_batch.rs) | 2026-08-25 | 24 | 24/24 (100.0%) | 94 | 91/114 (79.8%) |
 | `Style/CommandLiteral` | [`crates/rustocop/src/cops/prism/style_metadata_completion.rs`](../crates/rustocop/src/cops/prism/style_metadata_completion.rs) | 2026-08-24 | 35 | 35/35 (100.0%) | 22 | 22/22 (100.0%) |
 | `Style/CommentAnnotation` | [`crates/rustocop/src/cops/prism/style_metadata_completion.rs`](../crates/rustocop/src/cops/prism/style_metadata_completion.rs) | 2026-08-24 | 32 | 32/32 (100.0%) | 544 | 543/565 (96.1%) |
 | `Style/CommentedKeyword` | [`crates/rustocop/src/cops/prism/style_metadata_completion.rs`](../crates/rustocop/src/cops/prism/style_metadata_completion.rs) | 2026-08-24 | 49 | 49/49 (100.0%) | 1044 | 1044/1044 (100.0%) |
@@ -424,16 +424,16 @@ compatible in the overall totals.
 | `Style/Documentation` | [`crates/rustocop/src/cops/text/style_declarations.rs`](../crates/rustocop/src/cops/text/style_declarations.rs) | 2026-08-24 | 55 | 55/55 (100.0%) | 49775 | 48846/55320 (88.3%) |
 | `Style/DocumentationMethod` | [`crates/rustocop/src/cops/prism/lint_signature_completion_batch.rs`](../crates/rustocop/src/cops/prism/lint_signature_completion_batch.rs) | 2026-08-25 | 86 | 86/86 (100.0%) | 186456 | 185717/186466 (99.6%) |
 | `Style/DoubleCopDisableDirective` | [`crates/rustocop/src/cops/prism/lexical_rules.rs`](../crates/rustocop/src/cops/prism/lexical_rules.rs) | 2026-08-25 | 5 | 5/5 (100.0%) | 0 | — (unexercised) |
-| `Style/DoubleNegation` | [`crates/rustocop/src/cops/prism/literal_integrity_completion.rs`](../crates/rustocop/src/cops/prism/literal_integrity_completion.rs) | 2026-08-24 | 49 | 49/49 (100.0%) | 273 | 273/273 (100.0%) |
-| `Style/EachForSimpleLoop` | [`crates/rustocop/src/cops/prism/control_flow_completion_batch.rs`](../crates/rustocop/src/cops/prism/control_flow_completion_batch.rs) | 2026-08-24 | 21 | 21/21 (100.0%) | 0 | 0/13 (0.0%) |
+| `Style/DoubleNegation` | [`crates/rustocop/src/cops/prism/literal_integrity_completion.rs`](../crates/rustocop/src/cops/prism/literal_integrity_completion.rs) | 2026-08-25 | 49 | 49/49 (100.0%) | 273 | 273/273 (100.0%) |
+| `Style/EachForSimpleLoop` | [`crates/rustocop/src/cops/prism/control_flow_completion_batch.rs`](../crates/rustocop/src/cops/prism/control_flow_completion_batch.rs) | 2026-08-25 | 23 | 23/23 (100.0%) | 0 | — (unexercised) |
 | `Style/EachWithObject` | [`crates/rustocop/src/cops/prism/collection_completion_rules.rs`](../crates/rustocop/src/cops/prism/collection_completion_rules.rs) | 2026-08-22 | 17 | 17/17 (100.0%) | 109 | 109/109 (100.0%) |
-| `Style/EmptyBlockParameter` | [`crates/rustocop/src/cops/prism/additional_rules_more.rs`](../crates/rustocop/src/cops/prism/additional_rules_more.rs) | 2026-08-25 | 11 | 11/11 (100.0%) | 4 | 3/16 (18.8%) |
+| `Style/EmptyBlockParameter` | [`crates/rustocop/src/cops/prism/additional_rules_more.rs`](../crates/rustocop/src/cops/prism/additional_rules_more.rs) | 2026-08-25 | 13 | 13/13 (100.0%) | 4 | 4/4 (100.0%) |
 | `Style/EmptyCaseCondition` | [`crates/rustocop/src/cops/prism/literal_and_pattern_rules.rs`](../crates/rustocop/src/cops/prism/literal_and_pattern_rules.rs) | 2026-08-25 | 30 | 30/30 (100.0%) | 63 | 63/63 (100.0%) |
 | `Style/EmptyClassDefinition` | [`crates/rustocop/src/cops/prism/class_definition_rules.rs`](../crates/rustocop/src/cops/prism/class_definition_rules.rs) | 2026-08-18 | 52 | 52/52 (100.0%) | 990 | 990/990 (100.0%) |
 | `Style/EmptyElse` | [`crates/rustocop/src/cops/prism/empty_else_rules.rs`](../crates/rustocop/src/cops/prism/empty_else_rules.rs) | 2026-08-23 | 126 | 126/126 (100.0%) | 244 | 244/244 (100.0%) |
 | `Style/EmptyHeredoc` | [`crates/rustocop/src/cops/prism/additional_rules.rs`](../crates/rustocop/src/cops/prism/additional_rules.rs) | 2026-08-25 | 8 | 8/8 (100.0%) | 18 | 6/33 (18.2%) |
 | `Style/EmptyLambdaParameter` | [`crates/rustocop/src/cops/prism/empty_lambda_parameter_rules.rs`](../crates/rustocop/src/cops/prism/empty_lambda_parameter_rules.rs) | 2026-08-21 | 4 | 4/4 (100.0%) | 49 | 49/49 (100.0%) |
-| `Style/EmptyLiteral` | [`crates/rustocop/src/cops/prism/literal_integrity_completion.rs`](../crates/rustocop/src/cops/prism/literal_integrity_completion.rs) | 2026-08-24 | 50 | 50/50 (100.0%) | 118 | 116/242 (47.9%) |
+| `Style/EmptyLiteral` | [`crates/rustocop/src/cops/prism/literal_integrity_completion.rs`](../crates/rustocop/src/cops/prism/literal_integrity_completion.rs) | 2026-08-25 | 50 | 50/50 (100.0%) | 118 | 116/242 (47.9%) |
 | `Style/EmptyMethod` | [`crates/rustocop/src/cops/prism/empty_method_rules.rs`](../crates/rustocop/src/cops/prism/empty_method_rules.rs) | 2026-08-22 | 34 | 34/34 (100.0%) | 777 | 777/777 (100.0%) |
 | `Style/EmptyStringInsideInterpolation` | [`crates/rustocop/src/cops/prism/interpolation_condition_rules.rs`](../crates/rustocop/src/cops/prism/interpolation_condition_rules.rs) | 2026-08-23 | 23 | 23/23 (100.0%) | 173 | 173/173 (100.0%) |
 | `Style/Encoding` | [`crates/rustocop/src/cops/prism/lexical_completion.rs`](../crates/rustocop/src/cops/prism/lexical_completion.rs) | 2026-08-25 | 13 | 13/13 (100.0%) | 128 | 128/128 (100.0%) |
@@ -446,13 +446,13 @@ compatible in the overall totals.
 | `Style/ExpandPathArguments` | [`crates/rustocop/src/cops/prism/path_and_literal_rules.rs`](../crates/rustocop/src/cops/prism/path_and_literal_rules.rs) | 2026-08-25 | 20 | 20/20 (100.0%) | 260 | 260/260 (100.0%) |
 | `Style/ExplicitBlockArgument` | [`crates/rustocop/src/cops/prism/structural_forwarding_completion.rs`](../crates/rustocop/src/cops/prism/structural_forwarding_completion.rs) | 2026-08-25 | 30 | 30/30 (100.0%) | 357 | 248/391 (63.4%) |
 | `Style/ExponentialNotation` | [`crates/rustocop/src/cops/prism/literal_and_pattern_rules.rs`](../crates/rustocop/src/cops/prism/literal_and_pattern_rules.rs) | 2026-08-25 | 27 | 27/27 (100.0%) | 12 | 12/12 (100.0%) |
-| `Style/FetchEnvVar` | [`crates/rustocop/src/cops/prism/literal_string_completion_batch.rs`](../crates/rustocop/src/cops/prism/literal_string_completion_batch.rs) | 2026-08-24 | 49 | 49/49 (100.0%) | 1386 | 1340/1543 (86.8%) |
+| `Style/FetchEnvVar` | [`crates/rustocop/src/cops/prism/literal_string_completion_batch.rs`](../crates/rustocop/src/cops/prism/literal_string_completion_batch.rs) | 2026-08-25 | 49 | 49/49 (100.0%) | 1386 | 1340/1543 (86.8%) |
 | `Style/FileEmpty` | [`crates/rustocop/src/cops/prism/file_predicate_rules.rs`](../crates/rustocop/src/cops/prism/file_predicate_rules.rs) | 2026-08-20 | 28 | 28/28 (100.0%) | 14 | 14/14 (100.0%) |
 | `Style/FileNull` | [`crates/rustocop/src/cops/prism/literal_and_pattern_rules.rs`](../crates/rustocop/src/cops/prism/literal_and_pattern_rules.rs) | 2026-08-25 | 13 | 13/13 (100.0%) | 71 | 71/71 (100.0%) |
 | `Style/FileOpen` | [`crates/rustocop/src/cops/prism/resource_and_precedence_rules.rs`](../crates/rustocop/src/cops/prism/resource_and_precedence_rules.rs) | 2026-08-23 | 22 | 22/22 (100.0%) | 118 | 118/118 (100.0%) |
-| `Style/FileRead` | [`crates/rustocop/src/cops/prism/compact_syntax_completion.rs`](../crates/rustocop/src/cops/prism/compact_syntax_completion.rs) | 2026-08-23 | 31 | 31/31 (100.0%) | 39 | 39/39 (100.0%) |
+| `Style/FileRead` | [`crates/rustocop/src/cops/prism/compact_syntax_completion.rs`](../crates/rustocop/src/cops/prism/compact_syntax_completion.rs) | 2026-08-25 | 31 | 31/31 (100.0%) | 39 | 39/39 (100.0%) |
 | `Style/FileTouch` | [`crates/rustocop/src/cops/prism/style_compat.rs`](../crates/rustocop/src/cops/prism/style_compat.rs) | 2026-08-20 | 4 | 4/4 (100.0%) | 0 | — (unexercised) |
-| `Style/FileWrite` | [`crates/rustocop/src/cops/prism/compact_syntax_completion.rs`](../crates/rustocop/src/cops/prism/compact_syntax_completion.rs) | 2026-08-23 | 199 | 199/199 (100.0%) | 202 | 202/202 (100.0%) |
+| `Style/FileWrite` | [`crates/rustocop/src/cops/prism/compact_syntax_completion.rs`](../crates/rustocop/src/cops/prism/compact_syntax_completion.rs) | 2026-08-25 | 199 | 199/199 (100.0%) | 202 | 202/202 (100.0%) |
 | `Style/FloatDivision` | [`crates/rustocop/src/cops/prism/numeric_operation_rules.rs`](../crates/rustocop/src/cops/prism/numeric_operation_rules.rs) | 2026-08-25 | 31 | 31/31 (100.0%) | 18 | 18/18 (100.0%) |
 | `Style/For` | [`crates/rustocop/src/cops/prism/control_semantics_completion_batch.rs`](../crates/rustocop/src/cops/prism/control_semantics_completion_batch.rs) | 2026-08-25 | 32 | 32/32 (100.0%) | 14 | 14/14 (100.0%) |
 | `Style/FormatString` | [`crates/rustocop/src/cops/prism/format_string_rules.rs`](../crates/rustocop/src/cops/prism/format_string_rules.rs) | 2026-08-20 | 46 | 46/46 (100.0%) | 2551 | 2551/2551 (100.0%) |
@@ -460,7 +460,7 @@ compatible in the overall totals.
 | `Style/FrozenStringLiteralComment` | [`crates/rustocop/src/cops/prism/frozen_string_literal_comment_rules.rs`](../crates/rustocop/src/cops/prism/frozen_string_literal_comment_rules.rs) | 2026-08-20 | 108 | 108/108 (100.0%) | 14117 | 14117/14117 (100.0%) |
 | `Style/GlobalStdStream` | [`crates/rustocop/src/cops/prism/style_compat.rs`](../crates/rustocop/src/cops/prism/style_compat.rs) | 2026-08-20 | 6 | 6/6 (100.0%) | 417 | 417/417 (100.0%) |
 | `Style/GlobalVars` | [`crates/rustocop/src/cops/prism/style_global_vars.rs`](../crates/rustocop/src/cops/prism/style_global_vars.rs) | 2026-08-21 | 74 | 74/74 (100.0%) | 1046 | 1046/1046 (100.0%) |
-| `Style/GuardClause` | [`crates/rustocop/src/cops/prism/guard_clause_rules.rs`](../crates/rustocop/src/cops/prism/guard_clause_rules.rs) | 2026-08-23 | 99 | 99/99 (100.0%) | 4327 | 4327/4327 (100.0%) |
+| `Style/GuardClause` | [`crates/rustocop/src/cops/prism/guard_clause_rules.rs`](../crates/rustocop/src/cops/prism/guard_clause_rules.rs) | 2026-08-25 | 99 | 99/99 (100.0%) | 4327 | 4327/4327 (100.0%) |
 | `Style/HashAsLastArrayItem` | [`crates/rustocop/src/cops/prism/hash_array_rules.rs`](../crates/rustocop/src/cops/prism/hash_array_rules.rs) | 2026-08-25 | 20 | 20/20 (100.0%) | 1629 | 1629/1629 (100.0%) |
 | `Style/HashConversion` | [`crates/rustocop/src/cops/prism/hash_conversion_rules.rs`](../crates/rustocop/src/cops/prism/hash_conversion_rules.rs) | 2026-08-25 | 26 | 26/26 (100.0%) | 156 | 156/156 (100.0%) |
 | `Style/HashEachMethods` | [`crates/rustocop/src/cops/prism/hash_each_methods_rules.rs`](../crates/rustocop/src/cops/prism/hash_each_methods_rules.rs) | 2026-08-22 | 64 | 64/64 (100.0%) | 497 | 497/497 (100.0%) |
@@ -472,7 +472,7 @@ compatible in the overall totals.
 | `Style/HashSyntax` | [`crates/rustocop/src/cops/prism/hash_syntax_rules.rs`](../crates/rustocop/src/cops/prism/hash_syntax_rules.rs) | 2026-08-25 | 192 | 192/192 (100.0%) | 19082 | 19082/19082 (100.0%) |
 | `Style/HashTransformKeys` | [`crates/rustocop/src/cops/prism/hash_transform_rules.rs`](../crates/rustocop/src/cops/prism/hash_transform_rules.rs) | 2026-08-20 | 40 | 40/40 (100.0%) | 0 | — (unexercised) |
 | `Style/HashTransformValues` | [`crates/rustocop/src/cops/prism/hash_transform_rules.rs`](../crates/rustocop/src/cops/prism/hash_transform_rules.rs) | 2026-08-20 | 40 | 40/40 (100.0%) | 4 | 4/4 (100.0%) |
-| `Style/IdenticalConditionalBranches` | [`crates/rustocop/src/cops/prism/identical_conditional_branches_rules.rs`](../crates/rustocop/src/cops/prism/identical_conditional_branches_rules.rs) | 2026-08-23 | 49 | 49/49 (100.0%) | 172 | 159/172 (92.4%) |
+| `Style/IdenticalConditionalBranches` | [`crates/rustocop/src/cops/prism/identical_conditional_branches_rules.rs`](../crates/rustocop/src/cops/prism/identical_conditional_branches_rules.rs) | 2026-08-25 | 57 | 57/57 (100.0%) | 172 | 172/172 (100.0%) |
 | `Style/IfInsideElse` | [`crates/rustocop/src/cops/prism/structural_next_completion.rs`](../crates/rustocop/src/cops/prism/structural_next_completion.rs) | 2026-08-24 | 24 | 24/24 (100.0%) | 191 | 191/191 (100.0%) |
 | `Style/IfUnlessModifier` | [`crates/rustocop/src/cops/prism/if_unless_modifier_rules.rs`](../crates/rustocop/src/cops/prism/if_unless_modifier_rules.rs) | 2026-08-23 | 148 | 148/148 (100.0%) | 11656 | 11179/11676 (95.7%) |
 | `Style/IfUnlessModifierOfIfUnless` | [`crates/rustocop/src/cops/prism/conditional_semantics_rules.rs`](../crates/rustocop/src/cops/prism/conditional_semantics_rules.rs) | 2026-08-19 | 6 | 6/6 (100.0%) | 14 | 14/14 (100.0%) |
@@ -480,8 +480,8 @@ compatible in the overall totals.
 | `Style/IfWithSemicolon` | [`crates/rustocop/src/cops/prism/if_with_semicolon_rules.rs`](../crates/rustocop/src/cops/prism/if_with_semicolon_rules.rs) | 2026-08-24 | 36 | 36/36 (100.0%) | 3 | 3/3 (100.0%) |
 | `Style/ImplicitRuntimeError` | [`crates/rustocop/src/cops/prism/restored_structural_cops.rs`](../crates/rustocop/src/cops/prism/restored_structural_cops.rs) | 2026-08-25 | 10 | 10/10 (100.0%) | 3265 | 3265/3265 (100.0%) |
 | `Style/InPatternThen` | [`crates/rustocop/src/cops/prism/lexical_rules.rs`](../crates/rustocop/src/cops/prism/lexical_rules.rs) | 2026-08-25 | 10 | 10/10 (100.0%) | 0 | — (unexercised) |
-| `Style/InfiniteLoop` | [`crates/rustocop/src/cops/prism/infinite_loop_rules.rs`](../crates/rustocop/src/cops/prism/infinite_loop_rules.rs) | 2026-08-20 | 34 | 34/34 (100.0%) | 546 | 546/546 (100.0%) |
-| `Style/InlineComment` | [`crates/rustocop/src/cops/prism/layout_finalization_completion.rs`](../crates/rustocop/src/cops/prism/layout_finalization_completion.rs) | 2026-08-25 | 14 | 14/14 (100.0%) | 18651 | 18651/229984 (8.1%) |
+| `Style/InfiniteLoop` | [`crates/rustocop/src/cops/prism/infinite_loop_rules.rs`](../crates/rustocop/src/cops/prism/infinite_loop_rules.rs) | 2026-08-25 | 33 | 33/33 (100.0%) | 546 | 546/546 (100.0%) |
+| `Style/InlineComment` | [`crates/rustocop/src/cops/prism/layout_finalization_completion.rs`](../crates/rustocop/src/cops/prism/layout_finalization_completion.rs) | 2026-08-25 | 14 | 14/14 (100.0%) | 18651 | 18651/18651 (100.0%) |
 | `Style/InverseMethods` | [`crates/rustocop/src/cops/prism/inverse_methods_rules.rs`](../crates/rustocop/src/cops/prism/inverse_methods_rules.rs) | 2026-08-20 | 111 | 111/111 (100.0%) | 153 | 153/153 (100.0%) |
 | `Style/InvertibleUnlessCondition` | [`crates/rustocop/src/cops/prism/invertible_unless_condition_rules.rs`](../crates/rustocop/src/cops/prism/invertible_unless_condition_rules.rs) | 2026-08-23 | 17 | 17/17 (100.0%) | 763 | 763/763 (100.0%) |
 | `Style/IpAddresses` | [`crates/rustocop/src/cops/prism/call_conversion_rules.rs`](../crates/rustocop/src/cops/prism/call_conversion_rules.rs) | 2026-08-25 | 15 | 15/15 (100.0%) | 2914 | 2914/2914 (100.0%) |
@@ -494,7 +494,7 @@ compatible in the overall totals.
 | `Style/LineEndConcatenation` | [`crates/rustocop/src/cops/prism/line_concatenation_rules.rs`](../crates/rustocop/src/cops/prism/line_concatenation_rules.rs) | 2026-08-25 | 23 | 23/23 (100.0%) | 658 | 658/658 (100.0%) |
 | `Style/MagicCommentFormat` | [`crates/rustocop/src/cops/prism/magic_comment_format_rules.rs`](../crates/rustocop/src/cops/prism/magic_comment_format_rules.rs) | 2026-08-25 | 27 | 27/27 (100.0%) | 6 | 6/6 (100.0%) |
 | `Style/MapCompactWithConditionalBlock` | [`crates/rustocop/src/cops/prism/map_compact_conditional_rules.rs`](../crates/rustocop/src/cops/prism/map_compact_conditional_rules.rs) | 2026-08-21 | 34 | 34/34 (100.0%) | 13 | 13/13 (100.0%) |
-| `Style/MapIntoArray` | [`crates/rustocop/src/cops/prism/map_into_array_rules.rs`](../crates/rustocop/src/cops/prism/map_into_array_rules.rs) | 2026-08-23 | 64 | 64/64 (100.0%) | 129 | 117/131 (89.3%) |
+| `Style/MapIntoArray` | [`crates/rustocop/src/cops/prism/map_into_array_rules.rs`](../crates/rustocop/src/cops/prism/map_into_array_rules.rs) | 2026-08-25 | 77 | 77/77 (100.0%) | 129 | 129/129 (100.0%) |
 | `Style/MapJoin` | [`crates/rustocop/src/cops/prism/map_join_rules.rs`](../crates/rustocop/src/cops/prism/map_join_rules.rs) | 2026-08-18 | 24 | 24/24 (100.0%) | 48 | 48/48 (100.0%) |
 | `Style/MapToHash` | [`crates/rustocop/src/cops/prism/map_conversion_rules.rs`](../crates/rustocop/src/cops/prism/map_conversion_rules.rs) | 2026-08-20 | 39 | 39/39 (100.0%) | 97 | 97/97 (100.0%) |
 | `Style/MapToSet` | [`crates/rustocop/src/cops/prism/map_conversion_rules.rs`](../crates/rustocop/src/cops/prism/map_conversion_rules.rs) | 2026-08-20 | 31 | 31/31 (100.0%) | 125 | 125/125 (100.0%) |
@@ -504,14 +504,14 @@ compatible in the overall totals.
 | `Style/MethodDefParentheses` | [`crates/rustocop/src/cops/prism/method_def_parentheses_rules.rs`](../crates/rustocop/src/cops/prism/method_def_parentheses_rules.rs) | 2026-08-20 | 50 | 50/50 (100.0%) | 926 | 926/926 (100.0%) |
 | `Style/MinMax` | [`crates/rustocop/src/cops/prism/style_compat.rs`](../crates/rustocop/src/cops/prism/style_compat.rs) | 2026-08-20 | 12 | 12/12 (100.0%) | 0 | — (unexercised) |
 | `Style/MinMaxComparison` | [`crates/rustocop/src/cops/prism/predicate_conversion_rules.rs`](../crates/rustocop/src/cops/prism/predicate_conversion_rules.rs) | 2026-08-25 | 17 | 17/17 (100.0%) | 66 | 66/66 (100.0%) |
-| `Style/MissingElse` | [`crates/rustocop/src/cops/prism/missing_else_rules.rs`](../crates/rustocop/src/cops/prism/missing_else_rules.rs) | 2026-08-24 | 91 | 91/91 (100.0%) | 40883 | 40876/40890 (100.0%) |
+| `Style/MissingElse` | [`crates/rustocop/src/cops/prism/missing_else_rules.rs`](../crates/rustocop/src/cops/prism/missing_else_rules.rs) | 2026-08-24 | 93 | 93/93 (100.0%) | 40883 | 40883/40883 (100.0%) |
 | `Style/MissingRespondToMissing` | [`crates/rustocop/src/cops/prism/declaration_semantics.rs`](../crates/rustocop/src/cops/prism/declaration_semantics.rs) | 2026-08-25 | 11 | 11/11 (100.0%) | 93 | 93/93 (100.0%) |
 | `Style/MixinGrouping` | [`crates/rustocop/src/cops/prism/mixin_grouping_rules.rs`](../crates/rustocop/src/cops/prism/mixin_grouping_rules.rs) | 2026-08-18 | 18 | 18/18 (100.0%) | 30 | 30/30 (100.0%) |
 | `Style/MixinUsage` | [`crates/rustocop/src/cops/prism/mixin_rules.rs`](../crates/rustocop/src/cops/prism/mixin_rules.rs) | 2026-08-25 | 20 | 20/20 (100.0%) | 47 | 47/47 (100.0%) |
 | `Style/ModuleFunction` | [`crates/rustocop/src/cops/prism/compatibility_lexical_rules.rs`](../crates/rustocop/src/cops/prism/compatibility_lexical_rules.rs) | 2026-08-23 | 12 | 12/12 (100.0%) | 134 | 134/134 (100.0%) |
 | `Style/ModuleMemberExistenceCheck` | [`crates/rustocop/src/cops/prism/module_member_existence_rules.rs`](../crates/rustocop/src/cops/prism/module_member_existence_rules.rs) | 2026-08-20 | 69 | 69/69 (100.0%) | 31 | 31/31 (100.0%) |
-| `Style/MultilineBlockChain` | [`crates/rustocop/src/cops/prism/block_chain_rules.rs`](../crates/rustocop/src/cops/prism/block_chain_rules.rs) | 2026-08-24 | 13 | 13/13 (100.0%) | 275 | 275/295 (93.2%) |
-| `Style/MultilineIfModifier` | [`crates/rustocop/src/cops/prism/branch_layout_rules.rs`](../crates/rustocop/src/cops/prism/branch_layout_rules.rs) | 2026-08-25 | 11 | 11/11 (100.0%) | 406 | 406/418 (97.1%) |
+| `Style/MultilineBlockChain` | [`crates/rustocop/src/cops/prism/block_chain_rules.rs`](../crates/rustocop/src/cops/prism/block_chain_rules.rs) | 2026-08-24 | 14 | 14/14 (100.0%) | 275 | 275/275 (100.0%) |
+| `Style/MultilineIfModifier` | [`crates/rustocop/src/cops/prism/branch_layout_rules.rs`](../crates/rustocop/src/cops/prism/branch_layout_rules.rs) | 2026-08-25 | 12 | 12/12 (100.0%) | 406 | 406/406 (100.0%) |
 | `Style/MultilineIfThen` | [`crates/rustocop/src/cops/prism/lexical_rules.rs`](../crates/rustocop/src/cops/prism/lexical_rules.rs) | 2026-08-25 | 13 | 13/13 (100.0%) | 404 | 404/404 (100.0%) |
 | `Style/MultilineInPatternThen` | [`crates/rustocop/src/cops/prism/branch_layout_rules.rs`](../crates/rustocop/src/cops/prism/branch_layout_rules.rs) | 2026-08-25 | 13 | 13/13 (100.0%) | 0 | — (unexercised) |
 | `Style/MultilineMemoization` | [`crates/rustocop/src/cops/prism/structural_completion_rules.rs`](../crates/rustocop/src/cops/prism/structural_completion_rules.rs) | 2026-08-23 | 19 | 19/19 (100.0%) | 9 | 9/9 (100.0%) |
@@ -583,7 +583,7 @@ compatible in the overall totals.
 | `Style/RedundantInitialize` | [`crates/rustocop/src/cops/prism/declaration_completion_rules.rs`](../crates/rustocop/src/cops/prism/declaration_completion_rules.rs) | 2026-08-25 | 35 | 35/35 (100.0%) | 17 | 17/17 (100.0%) |
 | `Style/RedundantInterpolation` | [`crates/rustocop/src/cops/prism/string_conversion_rules.rs`](../crates/rustocop/src/cops/prism/string_conversion_rules.rs) | 2026-08-24 | 30 | 30/30 (100.0%) | 704 | 704/704 (100.0%) |
 | `Style/RedundantInterpolationUnfreeze` | [`crates/rustocop/src/cops/prism/string_conversion_rules.rs`](../crates/rustocop/src/cops/prism/string_conversion_rules.rs) | 2026-08-24 | 18 | 18/18 (100.0%) | 166 | 166/166 (100.0%) |
-| `Style/RedundantLineContinuation` | [`crates/rustocop/src/cops/prism/redundant_line_continuation_rules.rs`](../crates/rustocop/src/cops/prism/redundant_line_continuation_rules.rs) | 2026-08-24 | 179 | 179/179 (100.0%) | 88 | 88/88 (100.0%) |
+| `Style/RedundantLineContinuation` | [`crates/rustocop/src/cops/prism/redundant_line_continuation_rules.rs`](../crates/rustocop/src/cops/prism/redundant_line_continuation_rules.rs) | 2026-08-25 | 178 | 178/178 (100.0%) | 88 | 88/88 (100.0%) |
 | `Style/RedundantMinMaxBy` | [`crates/rustocop/src/cops/prism/redundant_min_max_by_rules.rs`](../crates/rustocop/src/cops/prism/redundant_min_max_by_rules.rs) | 2026-08-19 | 33 | 33/33 (100.0%) | 0 | — (unexercised) |
 | `Style/RedundantParentheses` | [`crates/rustocop/src/cops/prism/redundant_parentheses_rules.rs`](../crates/rustocop/src/cops/prism/redundant_parentheses_rules.rs) | 2026-08-24 | 358 | 358/358 (100.0%) | 522 | 480/754 (63.7%) |
 | `Style/RedundantPercentQ` | [`crates/rustocop/src/cops/prism/percent_string_rules.rs`](../crates/rustocop/src/cops/prism/percent_string_rules.rs) | 2026-08-23 | 28 | 28/28 (100.0%) | 687 | 687/687 (100.0%) |
@@ -597,7 +597,7 @@ compatible in the overall totals.
 | `Style/RedundantSelfAssignmentBranch` | [`crates/rustocop/src/cops/prism/redundant_self_assignment_branch_rules.rs`](../crates/rustocop/src/cops/prism/redundant_self_assignment_branch_rules.rs) | 2026-08-20 | 23 | 23/23 (100.0%) | 84 | 84/84 (100.0%) |
 | `Style/RedundantSort` | [`crates/rustocop/src/cops/prism/redundant_sort_rules.rs`](../crates/rustocop/src/cops/prism/redundant_sort_rules.rs) | 2026-08-19 | 50 | 50/50 (100.0%) | 33 | 33/33 (100.0%) |
 | `Style/RedundantSortBy` | [`crates/rustocop/src/cops/prism/style_collections.rs`](../crates/rustocop/src/cops/prism/style_collections.rs) | 2026-08-25 | 9 | 9/9 (100.0%) | 2 | 2/2 (100.0%) |
-| `Style/RedundantStringEscape` | [`crates/rustocop/src/cops/prism/redundant_string_escape_rules.rs`](../crates/rustocop/src/cops/prism/redundant_string_escape_rules.rs) | 2026-08-19 | 324 | 324/324 (100.0%) | 1875 | 1864/1875 (99.4%) |
+| `Style/RedundantStringEscape` | [`crates/rustocop/src/cops/prism/redundant_string_escape_rules.rs`](../crates/rustocop/src/cops/prism/redundant_string_escape_rules.rs) | 2026-08-25 | 326 | 326/326 (100.0%) | 1875 | 1875/1875 (100.0%) |
 | `Style/RedundantStructKeywordInit` | [`crates/rustocop/src/cops/prism/declaration_completion_rules.rs`](../crates/rustocop/src/cops/prism/declaration_completion_rules.rs) | 2026-08-25 | 18 | 18/18 (100.0%) | 231 | 231/231 (100.0%) |
 | `Style/RegexpLiteral` | [`crates/rustocop/src/cops/prism/regexp_literal_rules.rs`](../crates/rustocop/src/cops/prism/regexp_literal_rules.rs) | 2026-08-24 | 66 | 66/66 (100.0%) | 2613 | 2613/2613 (100.0%) |
 | `Style/RequireOrder` | [`crates/rustocop/src/cops/prism/require_order_rules.rs`](../crates/rustocop/src/cops/prism/require_order_rules.rs) | 2026-08-22 | 25 | 25/25 (100.0%) | 8661 | 8661/8661 (100.0%) |
@@ -606,7 +606,7 @@ compatible in the overall totals.
 | `Style/ReturnNil` | [`crates/rustocop/src/cops/prism/lexical_rules.rs`](../crates/rustocop/src/cops/prism/lexical_rules.rs) | 2026-08-25 | 9 | 9/9 (100.0%) | 1971 | 1971/1971 (100.0%) |
 | `Style/ReturnNilInPredicateMethodDefinition` | [`crates/rustocop/src/cops/prism/return_nil_predicate_rules.rs`](../crates/rustocop/src/cops/prism/return_nil_predicate_rules.rs) | 2026-08-19 | 39 | 39/39 (100.0%) | 164 | 164/164 (100.0%) |
 | `Style/ReverseFind` | [`crates/rustocop/src/cops/prism/call_conversion_rules.rs`](../crates/rustocop/src/cops/prism/call_conversion_rules.rs) | 2026-08-25 | 14 | 14/14 (100.0%) | 0 | — (unexercised) |
-| `Style/SafeNavigation` | [`crates/rustocop/src/cops/prism/final_ast_structural_batch.rs`](../crates/rustocop/src/cops/prism/final_ast_structural_batch.rs) | 2026-08-25 | 785 | 785/785 (100.0%) | 1167 | 1167/1167 (100.0%) |
+| `Style/SafeNavigation` | [`crates/rustocop/src/cops/prism/final_ast_structural_batch.rs`](../crates/rustocop/src/cops/prism/final_ast_structural_batch.rs) | 2026-08-25 | 787 | 787/787 (100.0%) | 1167 | 1167/1167 (100.0%) |
 | `Style/SafeNavigationChainLength` | [`crates/rustocop/src/cops/prism/nested_call_rules.rs`](../crates/rustocop/src/cops/prism/nested_call_rules.rs) | 2026-08-25 | 9 | 9/9 (100.0%) | 140 | 140/140 (100.0%) |
 | `Style/Sample` | [`crates/rustocop/src/cops/prism/collection_transform_batch.rs`](../crates/rustocop/src/cops/prism/collection_transform_batch.rs) | 2026-08-21 | 82 | 82/82 (100.0%) | 1 | 1/1 (100.0%) |
 | `Style/SelectByKind` | [`crates/rustocop/src/cops/prism/final_ast_structural_batch.rs`](../crates/rustocop/src/cops/prism/final_ast_structural_batch.rs) | 2026-08-25 | 144 | 144/144 (100.0%) | 75 | 75/75 (100.0%) |
@@ -623,12 +623,12 @@ compatible in the overall totals.
 | `Style/SingleLineMethods` | [`crates/rustocop/src/cops/prism/method_layout_rules.rs`](../crates/rustocop/src/cops/prism/method_layout_rules.rs) | 2026-08-20 | 148 | 148/148 (100.0%) | 1278 | 1278/1278 (100.0%) |
 | `Style/SlicingWithRange` | [`crates/rustocop/src/cops/prism/path_and_literal_rules.rs`](../crates/rustocop/src/cops/prism/path_and_literal_rules.rs) | 2026-08-25 | 31 | 31/31 (100.0%) | 309 | 309/309 (100.0%) |
 | `Style/SoleNestedConditional` | [`crates/rustocop/src/cops/prism/sole_nested_conditional_rules.rs`](../crates/rustocop/src/cops/prism/sole_nested_conditional_rules.rs) | 2026-08-25 | 75 | 75/75 (100.0%) | 573 | 573/573 (100.0%) |
-| `Style/SpecialGlobalVars` | [`crates/rustocop/src/cops/prism/special_global_vars_rules.rs`](../crates/rustocop/src/cops/prism/special_global_vars_rules.rs) | 2026-08-22 | 31 | 31/31 (100.0%) | 519 | 519/539 (96.3%) |
+| `Style/SpecialGlobalVars` | [`crates/rustocop/src/cops/prism/special_global_vars_rules.rs`](../crates/rustocop/src/cops/prism/special_global_vars_rules.rs) | 2026-08-22 | 32 | 32/32 (100.0%) | 519 | 519/519 (100.0%) |
 | `Style/StabbyLambdaParentheses` | [`crates/rustocop/src/cops/prism/stabby_lambda_parentheses_rules.rs`](../crates/rustocop/src/cops/prism/stabby_lambda_parentheses_rules.rs) | 2026-08-19 | 9 | 9/9 (100.0%) | 90 | 90/90 (100.0%) |
 | `Style/StaticClass` | [`crates/rustocop/src/cops/prism/structural_completion_rules.rs`](../crates/rustocop/src/cops/prism/structural_completion_rules.rs) | 2026-08-23 | 11 | 11/11 (100.0%) | 777 | 777/777 (100.0%) |
 | `Style/StderrPuts` | [`crates/rustocop/src/cops/prism/style_rewrites.rs`](../crates/rustocop/src/cops/prism/style_rewrites.rs) | 2026-08-21 | 5 | 5/5 (100.0%) | 388 | 388/388 (100.0%) |
 | `Style/StringChars` | [`crates/rustocop/src/cops/prism/redundant_freeze_completion.rs`](../crates/rustocop/src/cops/prism/redundant_freeze_completion.rs) | 2026-08-19 | 8 | 8/8 (100.0%) | 32 | 32/32 (100.0%) |
-| `Style/StringConcatenation` | [`crates/rustocop/src/cops/prism/literal_string_completion_batch.rs`](../crates/rustocop/src/cops/prism/literal_string_completion_batch.rs) | 2026-08-24 | 32 | 32/32 (100.0%) | 3080 | 3080/3175 (97.0%) |
+| `Style/StringConcatenation` | [`crates/rustocop/src/cops/prism/literal_string_completion_batch.rs`](../crates/rustocop/src/cops/prism/literal_string_completion_batch.rs) | 2026-08-25 | 32 | 32/32 (100.0%) | 3080 | 3080/3175 (97.0%) |
 | `Style/StringHashKeys` | [`crates/rustocop/src/cops/prism/string_conversion_rules.rs`](../crates/rustocop/src/cops/prism/string_conversion_rules.rs) | 2026-08-24 | 11 | 11/11 (100.0%) | 131591 | 131587/131619 (100.0%) |
 | `Style/StringLiterals` | [`crates/rustocop/src/cops/prism/string_conversion_rules.rs`](../crates/rustocop/src/cops/prism/string_conversion_rules.rs) | 2026-08-24 | 59 | 59/59 (100.0%) | 928483 | 928483/928483 (100.0%) |
 | `Style/StringLiteralsInInterpolation` | [`crates/rustocop/src/cops/prism/string_conversion_rules.rs`](../crates/rustocop/src/cops/prism/string_conversion_rules.rs) | 2026-08-24 | 13 | 13/13 (100.0%) | 4012 | 4012/4012 (100.0%) |
@@ -638,7 +638,7 @@ compatible in the overall totals.
 | `Style/SuperArguments` | [`crates/rustocop/src/cops/prism/super_arguments_rules.rs`](../crates/rustocop/src/cops/prism/super_arguments_rules.rs) | 2026-08-25 | 95 | 95/95 (100.0%) | 443 | 443/443 (100.0%) |
 | `Style/SuperWithArgsParentheses` | [`crates/rustocop/src/cops/prism/style_compat.rs`](../crates/rustocop/src/cops/prism/style_compat.rs) | 2026-08-20 | 4 | 4/4 (100.0%) | 175 | 175/175 (100.0%) |
 | `Style/SwapValues` | [`crates/rustocop/src/cops/prism/assignment_completion_rules.rs`](../crates/rustocop/src/cops/prism/assignment_completion_rules.rs) | 2026-08-19 | 11 | 11/11 (100.0%) | 2 | 2/2 (100.0%) |
-| `Style/SymbolArray` | [`crates/rustocop/src/cops/prism/literal_string_completion_batch.rs`](../crates/rustocop/src/cops/prism/literal_string_completion_batch.rs) | 2026-08-24 | 34 | 34/34 (100.0%) | 7945 | 7945/7945 (100.0%) |
+| `Style/SymbolArray` | [`crates/rustocop/src/cops/prism/literal_string_completion_batch.rs`](../crates/rustocop/src/cops/prism/literal_string_completion_batch.rs) | 2026-08-25 | 34 | 34/34 (100.0%) | 7945 | 7945/7945 (100.0%) |
 | `Style/SymbolLiteral` | [`crates/rustocop/src/cops/prism/symbol_literal_rules.rs`](../crates/rustocop/src/cops/prism/symbol_literal_rules.rs) | 2026-08-19 | 5 | 5/5 (100.0%) | 588 | 588/588 (100.0%) |
 | `Style/SymbolProc` | [`crates/rustocop/src/cops/prism/symbol_proc_rules.rs`](../crates/rustocop/src/cops/prism/symbol_proc_rules.rs) | 2026-08-21 | 82 | 82/82 (100.0%) | 1413 | 1413/1413 (100.0%) |
 | `Style/TallyMethod` | [`crates/rustocop/src/cops/prism/modern_collection_completion.rs`](../crates/rustocop/src/cops/prism/modern_collection_completion.rs) | 2026-08-24 | 32 | 32/32 (100.0%) | 3 | 3/3 (100.0%) |
@@ -653,15 +653,15 @@ compatible in the overall totals.
 | `Style/TrailingCommaInHashLiteral` | [`crates/rustocop/src/cops/prism/trailing_comma_completion.rs`](../crates/rustocop/src/cops/prism/trailing_comma_completion.rs) | 2026-08-25 | 41 | 41/41 (100.0%) | 21428 | 21428/21428 (100.0%) |
 | `Style/TrailingMethodEndStatement` | [`crates/rustocop/src/cops/prism/method_layout_rules.rs`](../crates/rustocop/src/cops/prism/method_layout_rules.rs) | 2026-08-20 | 12 | 12/12 (100.0%) | 1 | 1/1 (100.0%) |
 | `Style/TrailingUnderscoreVariable` | [`crates/rustocop/src/cops/prism/trailing_underscore_rules.rs`](../crates/rustocop/src/cops/prism/trailing_underscore_rules.rs) | 2026-08-19 | 55 | 55/55 (100.0%) | 350 | 350/350 (100.0%) |
-| `Style/TrivialAccessors` | [`crates/rustocop/src/cops/prism/trivial_accessor_rules.rs`](../crates/rustocop/src/cops/prism/trivial_accessor_rules.rs) | 2026-08-19 | 43 | 43/43 (100.0%) | 152 | 152/152 (100.0%) |
+| `Style/TrivialAccessors` | [`crates/rustocop/src/cops/prism/trivial_accessor_rules.rs`](../crates/rustocop/src/cops/prism/trivial_accessor_rules.rs) | 2026-08-25 | 43 | 43/43 (100.0%) | 152 | 152/152 (100.0%) |
 | `Style/UnlessElse` | [`crates/rustocop/src/cops/prism/style_source.rs`](../crates/rustocop/src/cops/prism/style_source.rs) | 2026-08-24 | 5 | 5/5 (100.0%) | 22 | 22/22 (100.0%) |
 | `Style/UnlessLogicalOperators` | [`crates/rustocop/src/cops/prism/logical_condition_rules.rs`](../crates/rustocop/src/cops/prism/logical_condition_rules.rs) | 2026-08-25 | 31 | 31/31 (100.0%) | 94 | 94/94 (100.0%) |
 | `Style/UnpackFirst` | [`crates/rustocop/src/cops/prism/call_conversion_rules.rs`](../crates/rustocop/src/cops/prism/call_conversion_rules.rs) | 2026-08-25 | 11 | 11/11 (100.0%) | 17 | 17/17 (100.0%) |
 | `Style/VariableInterpolation` | [`crates/rustocop/src/cops/prism/lexical_rules.rs`](../crates/rustocop/src/cops/prism/lexical_rules.rs) | 2026-08-25 | 9 | 9/9 (100.0%) | 31 | 31/31 (100.0%) |
 | `Style/WhenThen` | [`crates/rustocop/src/cops/prism/branch_layout_rules.rs`](../crates/rustocop/src/cops/prism/branch_layout_rules.rs) | 2026-08-25 | 5 | 5/5 (100.0%) | 166 | 166/166 (100.0%) |
 | `Style/WhileUntilDo` | [`crates/rustocop/src/cops/prism/while_until_do_rules.rs`](../crates/rustocop/src/cops/prism/while_until_do_rules.rs) | 2026-08-19 | 6 | 6/6 (100.0%) | 29 | 29/29 (100.0%) |
-| `Style/WhileUntilModifier` | [`crates/rustocop/src/cops/prism/compact_syntax_completion.rs`](../crates/rustocop/src/cops/prism/compact_syntax_completion.rs) | 2026-08-23 | 48 | 48/48 (100.0%) | 64 | 64/64 (100.0%) |
-| `Style/WordArray` | [`crates/rustocop/src/cops/prism/literal_string_completion_batch.rs`](../crates/rustocop/src/cops/prism/literal_string_completion_batch.rs) | 2026-08-24 | 64 | 64/64 (100.0%) | 3513 | 3513/3513 (100.0%) |
+| `Style/WhileUntilModifier` | [`crates/rustocop/src/cops/prism/compact_syntax_completion.rs`](../crates/rustocop/src/cops/prism/compact_syntax_completion.rs) | 2026-08-25 | 48 | 48/48 (100.0%) | 64 | 64/64 (100.0%) |
+| `Style/WordArray` | [`crates/rustocop/src/cops/prism/literal_string_completion_batch.rs`](../crates/rustocop/src/cops/prism/literal_string_completion_batch.rs) | 2026-08-25 | 64 | 64/64 (100.0%) | 3513 | 3513/3513 (100.0%) |
 | `Style/YAMLFileRead` | [`crates/rustocop/src/cops/prism/argument_and_inheritance_rules.rs`](../crates/rustocop/src/cops/prism/argument_and_inheritance_rules.rs) | 2026-08-25 | 11 | 11/11 (100.0%) | 63 | 63/63 (100.0%) |
 | `Style/YodaCondition` | [`crates/rustocop/src/cops/prism/yoda_condition_rules.rs`](../crates/rustocop/src/cops/prism/yoda_condition_rules.rs) | 2026-08-19 | 76 | 76/76 (100.0%) | 171 | 171/171 (100.0%) |
 | `Style/YodaExpression` | [`crates/rustocop/src/cops/prism/structural_completion_rules.rs`](../crates/rustocop/src/cops/prism/structural_completion_rules.rs) | 2026-08-23 | 10 | 10/10 (100.0%) | 1978 | 1978/1978 (100.0%) |

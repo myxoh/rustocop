@@ -29,15 +29,19 @@ fn special_global_vars(
     node: &ruby_prism::GlobalVariableReadNode<'_>,
     context: &mut CopContext<'_, '_>,
 ) {
-    let current = String::from_utf8_lossy(node.name().as_slice());
+    // Prism canonicalizes English aliases in name(); RuboCop evaluates the
+    // spelling that the author actually used.
+    let current = context.source_file().at(&node.location());
     let style = context.policy().enforced_style("use_english_names");
-    let Some((perl, english)) = variable_entry(&current) else {
+    let Some((perl, english)) = variable_entry(current) else {
         return;
     };
     let preferred = match style {
-        "use_english_names" => english.first().copied(),
-        "use_perl_names" => (current.as_ref() != perl).then_some(perl),
-        "use_builtin_english_names" => builtin_preferred(&current, perl, english),
+        "use_english_names" => (!english.contains(&current))
+            .then(|| english.first().copied())
+            .flatten(),
+        "use_perl_names" => (current != perl).then_some(perl),
+        "use_builtin_english_names" => builtin_preferred(current, perl, english),
         _ => None,
     };
     let Some(preferred) = preferred else {

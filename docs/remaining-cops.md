@@ -1,7 +1,7 @@
 # Current project-parity gaps
 
 Generated from the same complete audit as [the evidence matrix](cop-support.md).
-Evidence updated at `2026-08-25T23:10:34-04:00`.
+Evidence updated at `2026-08-26T01:01:10-04:00`.
 This queue contains only failures from that 50-project audit; it does not use the old
 Verified/Heuristic qualification labels or captured-case pass counts.
 
@@ -9,12 +9,11 @@ The gap is unmatched complete diagnostic signatures, not the difference
 between aggregate offense counts. A cop can have equal counts and still have a
 nonzero gap because its message, severity, path, or source range differs.
 
-- Rust source: `cop source 031d11646fcf0c831d2aa2a54d409bb09e982b0598a446836a6736668d1ebbe2`
-- Unresolved cops: 77
+- Rust source: `cop source 2d402c0b6b599ec52de6db2fe51aa50717e74e87d68218cfee642ab10381de9d`
+- Unresolved cops: 64
 
 | Cop | Status | Rustocop | RuboCop | Exact | Signature gap | Project regression evidence |
 | --- | --- | ---: | ---: | ---: | ---: | --- |
-| `Style/InlineComment` | Mismatch | 229984 | 18651 | 18651 | 211333 | Project-derived |
 | `Metrics/AbcSize` | Mismatch | 55196 | 55118 | 41887 | 26540 | Pending unit |
 | `Lint/UnusedMethodArgument` | Mismatch | 11152 | 3598 | 3284 | 8182 | No |
 | `Style/Documentation` | Mismatch | 54391 | 49775 | 48846 | 6474 | No |
@@ -77,17 +76,5 @@ nonzero gap because its message, severity, path, or source range differs.
 | `Style/EnvHome` | Mismatch | 16 | 33 | 12 | 25 | Project-derived |
 | `Layout/HeredocArgumentClosingParenthesis` | Mismatch | 58 | 34 | 34 | 24 | Project-derived |
 | `Style/CombinableLoops` | Mismatch | 111 | 94 | 91 | 23 | Project-derived |
+| `Style/CommentAnnotation` | Mismatch | 564 | 544 | 543 | 22 | No |
 | `Style/RedundantCapitalW` | Mismatch | 55 | 35 | 34 | 22 | Project-derived |
-| `Style/CaseLikeIf` | Mismatch | 60 | 52 | 46 | 20 | Project-derived |
-| `Style/MultilineBlockChain` | Mismatch | 295 | 275 | 275 | 20 | Project-derived |
-| `Style/SpecialGlobalVars` | Mismatch | 539 | 519 | 519 | 20 | No |
-| `Layout/EmptyLinesAroundExceptionHandlingKeywords` | Mismatch | 207 | 188 | 188 | 19 | Project-derived |
-| `Lint/NonAtomicFileOperation` | Mismatch | 258 | 259 | 249 | 19 | Project-derived |
-| `Migration/DepartmentName` | Mismatch | 18 | 1 | 0 | 19 | No |
-| `Naming/RescuedExceptionsVariableName` | Mismatch | 1178 | 1195 | 1177 | 19 | Project-derived |
-| `Lint/SharedMutableDefault` | Mismatch | 23 | 11 | 8 | 18 | No |
-| `Lint/ShadowedException` | Mismatch | 22 | 39 | 22 | 17 | Project-derived |
-| `Layout/IndentationStyle` | Mismatch | 7 | 22 | 7 | 15 | Project-derived |
-| `Style/MissingElse` | Mismatch | 40883 | 40883 | 40876 | 14 | Pending unit |
-| `Style/MapIntoArray` | Mismatch | 127 | 129 | 127 | 2 | Project-derived |
-| `Style/CommentAnnotation` | Mismatch | 543 | 544 | 543 | 1 | No |

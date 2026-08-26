@@ -862,7 +862,16 @@ fn has_top_level_range_operator(source: &str) -> bool {
 
 fn non_atomic_file_operation(context: &mut CopContext<'_, '_>) {
     let lines = context.source_file().lines().collect::<Vec<_>>();
+    let mut literal_ranges = context.source_file().literal_ranges();
+    literal_ranges.extend(context.source_file().heredoc_ranges());
     for (index, (condition_offset, condition_line)) in lines.iter().copied().enumerate() {
+        let first_content = condition_offset + condition_line.len() - condition_line.trim_start().len();
+        if literal_ranges
+            .iter()
+            .any(|range| range.start <= first_content && first_content < range.end)
+        {
+            continue;
+        }
         let condition_trimmed = condition_line.trim();
         let prefix = ["unless ", "if ", "elsif "].iter().find_map(|prefix| {
             condition_trimmed
@@ -881,7 +890,7 @@ fn non_atomic_file_operation(context: &mut CopContext<'_, '_>) {
             let Some(operation) = non_atomic_operation(operation_line.trim()) else {
                 continue;
             };
-            if check.argument != operation.argument
+            if !same_non_atomic_argument(check.argument, operation.argument)
                 || lines
                     .get(index + 2)
                     .is_none_or(|(_, line)| line.trim() != "end")
@@ -935,18 +944,26 @@ fn non_atomic_file_operation(context: &mut CopContext<'_, '_>) {
         let Some(operation) = non_atomic_operation(operation_source) else {
             continue;
         };
+        let raw_condition_start = condition_offset + modifier_at + 1;
         let raw_condition = condition_line[modifier_at + 1..].trim_end();
         let raw_condition = raw_condition
             .strip_suffix('}')
             .map_or(raw_condition, str::trim_end);
         let mut condition_source = raw_condition.trim_start();
-        let mut condition_end = condition_offset + modifier_at + 1 + raw_condition.len();
+        let mut condition_end = raw_condition_start
+            + existence_call_end(raw_condition).unwrap_or(raw_condition.len());
         if condition_source == keyword || condition_source == format!("{keyword} (") {
             let Some((next_offset, next_line)) = lines.get(index + 1).copied() else {
                 continue;
             };
-            condition_source = next_line.trim().trim_end_matches(')');
-            condition_end = next_offset + next_line.trim_end().len();
+            let wrapped = condition_source.ends_with('(');
+            condition_source = next_line.trim();
+            if wrapped {
+                condition_source = condition_source.strip_suffix(')').unwrap_or(condition_source);
+            }
+            condition_end = next_offset
+                + existence_call_end(next_line).unwrap_or_else(|| next_line.trim_end().len())
+                + usize::from(wrapped);
         } else {
             condition_source = condition_source
                 .strip_prefix(keyword)
@@ -958,7 +975,9 @@ fn non_atomic_file_operation(context: &mut CopContext<'_, '_>) {
         let Some(check) = non_atomic_existence_check(condition_source) else {
             continue;
         };
-        if check.argument != operation.argument
+        if !same_non_atomic_argument(check.argument, operation.argument)
+            || condition_source.contains("&&")
+            || condition_source.contains("||")
             || operation.force_false
             || operation.kind == NonAtomicKind::Excluded
             || operation.kind.is_create() != (keyword == "unless" || negated)
@@ -1013,8 +1032,7 @@ fn non_atomic_existence_check(source: &str) -> Option<NonAtomicCheck<'_>> {
     let source = source.trim();
     let source = source
         .strip_suffix('}')
-        .map_or(source, str::trim_end)
-        .trim_end_matches(')');
+        .map_or(source, str::trim_end);
     for (receiver, method, label) in [
         ("FileTest", "exist?", "FileTest.exist?"),
         ("FileTest", "exists?", "FileTest.exists?"),
@@ -1033,10 +1051,11 @@ fn non_atomic_existence_check(source: &str) -> Option<NonAtomicCheck<'_>> {
             continue;
         };
         let argument = argument.trim_start();
-        let argument = if let Some(argument) = argument.strip_prefix('(') {
-            argument.trim_end_matches(')').trim()
+        let argument = if argument.starts_with('(') {
+            let closing = matching_parenthesis(argument, 0)?;
+            first_top_level_argument(&argument[1..closing])
         } else if !argument.is_empty() {
-            argument.trim()
+            first_top_level_argument(argument)
         } else {
             continue;
         };
@@ -1045,6 +1064,90 @@ fn non_atomic_existence_check(source: &str) -> Option<NonAtomicCheck<'_>> {
         }
     }
     None
+}
+
+fn matching_parenthesis(source: &str, opening: usize) -> Option<usize> {
+    let bytes = source.as_bytes();
+    if bytes.get(opening) != Some(&b'(') {
+        return None;
+    }
+    let mut depth = 0usize;
+    let mut quote = None;
+    let mut escaped = false;
+    for (index, byte) in bytes.iter().copied().enumerate().skip(opening) {
+        if escaped {
+            escaped = false;
+            continue;
+        }
+        if byte == b'\\' && quote.is_some() {
+            escaped = true;
+        } else if quote == Some(byte) {
+            quote = None;
+        } else if quote.is_none() && matches!(byte, b'\'' | b'"') {
+            quote = Some(byte);
+        } else if quote.is_none() && byte == b'(' {
+            depth += 1;
+        } else if quote.is_none() && byte == b')' {
+            depth = depth.saturating_sub(1);
+            if depth == 0 {
+                return Some(index);
+            }
+        }
+    }
+    None
+}
+
+fn existence_call_end(source: &str) -> Option<usize> {
+    let method = [".exist?", ".exists?"]
+        .iter()
+        .filter_map(|method| source.find(method).map(|offset| offset + method.len()))
+        .min()?;
+    let opening = method
+        + source[method..]
+            .find('(')?;
+    Some(matching_parenthesis(source, opening)? + 1)
+}
+
+fn first_top_level_argument(arguments: &str) -> &str {
+    let mut delimiters = Vec::new();
+    let mut quote = None;
+    let mut escaped = false;
+    for (index, byte) in arguments.bytes().enumerate() {
+        if escaped {
+            escaped = false;
+            continue;
+        }
+        if byte == b'\\' && quote.is_some() {
+            escaped = true;
+        } else if quote == Some(byte) {
+            quote = None;
+        } else if quote.is_none() && matches!(byte, b'\'' | b'"') {
+            quote = Some(byte);
+        } else if quote.is_none() && matches!(byte, b'(' | b'[' | b'{') {
+            delimiters.push(byte);
+        } else if quote.is_none() && matches!(byte, b')' | b']' | b'}') {
+            delimiters.pop();
+        } else if quote.is_none() && byte == b',' && delimiters.is_empty() {
+            return arguments[..index].trim();
+        }
+    }
+    arguments.trim()
+}
+
+fn same_non_atomic_argument(left: &str, right: &str) -> bool {
+    fn literal_value(source: &str) -> Option<&str> {
+        let source = source.trim();
+        let quote = source.as_bytes().first().copied()?;
+        if !matches!(quote, b'\'' | b'"') || source.as_bytes().last() != Some(&quote) {
+            return None;
+        }
+        Some(&source[1..source.len() - 1])
+    }
+
+    left.trim() == right.trim()
+        || literal_value(left)
+            .zip(literal_value(right))
+            .is_some_and(|(left, right)| left == right)
 }
 
 fn non_atomic_operation(source: &str) -> Option<NonAtomicOperation<'_>> {
@@ -1088,11 +1191,14 @@ fn non_atomic_operation(source: &str) -> Option<NonAtomicOperation<'_>> {
         operation_start -= 2;
     }
     let source = &source[operation_start..];
-    let (receiver_method, arguments) = if let Some(open) = source.find('(') {
-        (
-            &source[..open],
-            source[open + 1..].trim_end_matches(')').trim(),
-        )
+    let opening = source.find('(').filter(|opening| {
+        source
+            .find(char::is_whitespace)
+            .is_none_or(|whitespace| *opening < whitespace)
+    });
+    let (receiver_method, arguments) = if let Some(open) = opening {
+        let closing = matching_parenthesis(source, open)?;
+        (&source[..open], &source[open + 1..closing])
     } else {
         source.split_once(' ')?
     };
@@ -1101,7 +1207,7 @@ fn non_atomic_operation(source: &str) -> Option<NonAtomicOperation<'_>> {
     if !matches!(receiver, "FileUtils" | "File" | "Dir") {
         return None;
     }
-    let argument = arguments.split(',').next()?.trim();
+    let argument = first_top_level_argument(arguments);
     let force_false = arguments.contains("force: false");
     let (kind, replacement) = match (receiver, method) {
         ("FileUtils", "mkdir") | ("Dir", "mkdir") => (NonAtomicKind::Create, Some("mkdir_p")),

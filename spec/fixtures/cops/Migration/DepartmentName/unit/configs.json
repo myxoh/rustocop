@@ -1,3 +1,4 @@
 {
+  "94bcfe3f8c7cc988": "---\nAllCops:\n  DisabledByDefault: true\n  ParserEngine: parser_prism\n  TargetRubyVersion: 3.4\nMigration/DepartmentName:\n  Enabled: true\n",
   "b50bcb7a24697c61": "---\nAllCops:\n  TargetRubyVersion: 2.7\nMigration/DepartmentName:\n  Description: Check that cop names in rubocop:disable (etc) comments are given with\n    department name.\n  Enabled: true\n  VersionAdded: '0.75'\n  AutoCorrect: always\n"
 }

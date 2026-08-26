@@ -1,6 +1,7 @@
 {
   "0f81d45b5c5bf8d6": "---\nLayout/IndentationWidth:\n  Width: 2\nLayout/IndentationStyle:\n  IndentationWidth: 3\n  EnforcedStyle: tabs\n  SupportedStyles:\n  - spaces\n  - tabs\n  Enabled: true\n",
   "10e4104c3558f8a3": "---\nLayout/IndentationWidth:\n  Width: 2\nLayout/IndentationStyle:\n  IndentationWidth: 3\n  EnforcedStyle: spaces\n  SupportedStyles:\n  - spaces\n  - tabs\n  Enabled: true\n",
+  "375ab1eb1f87189e": "---\nAllCops:\n  DisabledByDefault: true\n  ParserEngine: parser_prism\n  TargetRubyVersion: 3.4\nLayout/IndentationStyle:\n  Enabled: true\n  EnforcedStyle: spaces\n  IndentationWidth: 2\n",
   "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
   "6a61e734fa836bfe": "---\nLayout/IndentationWidth:\n  Width: 2\nLayout/IndentationStyle:\n  EnforcedStyle: spaces\n  SupportedStyles:\n  - spaces\n  - tabs\n  Enabled: true\n",
   "aabeb733428122e0": "---\nLayout/IndentationWidth:\n  Width: 2\nLayout/IndentationStyle:\n  EnforcedStyle: tabs\n  SupportedStyles:\n  - spaces\n  - tabs\n  Enabled: true\n"

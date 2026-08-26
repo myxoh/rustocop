@@ -36,7 +36,9 @@ impl DelimiterKind {
 
     fn always_same_line_message(self) -> &'static str {
         match self {
-            Self::Array => "The closing array brace must be on the same line as the last array element.",
+            Self::Array => {
+                "The closing array brace must be on the same line as the last array element."
+            }
             Self::Hash => "Closing hash brace must be on the same line as the last hash element.",
             Self::MethodCall => {
                 "Closing method call brace must be on the same line as the last argument."
@@ -46,9 +48,13 @@ impl DelimiterKind {
 
     fn always_new_line_message(self) -> &'static str {
         match self {
-            Self::Array => "The closing array brace must be on the line after the last array element.",
+            Self::Array => {
+                "The closing array brace must be on the line after the last array element."
+            }
             Self::Hash => "Closing hash brace must be on the line after the last hash element.",
-            Self::MethodCall => "Closing method call brace must be on the line after the last argument.",
+            Self::MethodCall => {
+                "Closing method call brace must be on the line after the last argument."
+            }
         }
     }
 }
@@ -71,10 +77,7 @@ fn multiline_array_brace_layout(
     );
 }
 
-fn multiline_hash_brace_layout(
-    node: &ruby_prism::HashNode<'_>,
-    context: &mut CopContext<'_, '_>,
-) {
+fn multiline_hash_brace_layout(node: &ruby_prism::HashNode<'_>, context: &mut CopContext<'_, '_>) {
     let opening = node.opening_loc();
     let closing = node.closing_loc();
     let elements = node.elements().iter().collect::<Vec<_>>();
@@ -126,7 +129,9 @@ fn check_delimiter_layout(
     container: std::ops::Range<usize>,
     kind: DelimiterKind,
 ) {
-    let Some(first) = elements.first() else { return };
+    let Some(first) = elements.first() else {
+        return;
+    };
     let Some(last) = elements.last() else { return };
     let file = context.source_file();
     if file.same_line(container.start, container.end)
@@ -136,7 +141,8 @@ fn check_delimiter_layout(
         return;
     }
 
-    let opening_with_first = file.same_line(opening.start_offset(), first.location().start_offset());
+    let opening_with_first =
+        file.same_line(opening.start_offset(), first.location().start_offset());
     let closing_with_last = file.same_line(closing.start_offset(), last.location().end_offset());
     let style = context.policy().enforced_style("symmetrical");
     let wants_same_line = match style {
@@ -172,12 +178,50 @@ fn kind_is_single_line_call(
 
 fn unsafe_last_line_heredoc(file: SourceFile<'_>, last: &Node<'_>) -> bool {
     let location = last.location();
-    file.heredoc_ranges().iter().any(|range| {
+    node_heredoc_ranges(last).iter().any(|range| {
         location.start_offset() <= range.start
             && range.start < location.end_offset()
             && file.line_start(range.end.saturating_sub(1))
                 >= file.line_start(location.end_offset())
     })
+}
+
+fn node_heredoc_ranges(node: &Node<'_>) -> Vec<std::ops::Range<usize>> {
+    #[derive(Default)]
+    struct Heredocs(Vec<std::ops::Range<usize>>);
+
+    impl Heredocs {
+        fn push(
+            &mut self,
+            opening: Option<ruby_prism::Location<'_>>,
+            closing: Option<ruby_prism::Location<'_>>,
+        ) {
+            let (Some(opening), Some(closing)) = (opening, closing) else {
+                return;
+            };
+            if opening.as_slice().starts_with(b"<<") {
+                self.0.push(opening.start_offset()..closing.end_offset());
+            }
+        }
+    }
+
+    impl<'pr> ruby_prism::Visit<'pr> for Heredocs {
+        fn visit_string_node(&mut self, node: &ruby_prism::StringNode<'pr>) {
+            self.push(node.opening_loc(), node.closing_loc());
+        }
+
+        fn visit_interpolated_string_node(
+            &mut self,
+            node: &ruby_prism::InterpolatedStringNode<'pr>,
+        ) {
+            self.push(node.opening_loc(), node.closing_loc());
+            ruby_prism::visit_interpolated_string_node(self, node);
+        }
+    }
+
+    let mut heredocs = Heredocs::default();
+    heredocs.visit(node);
+    heredocs.0
 }
 
 fn correct_closing_to_same_line(
@@ -216,12 +260,9 @@ fn correct_closing_to_same_line(
         closing_text.push(',');
     }
     if matches!(kind, DelimiterKind::MethodCall)
-        && elements.iter().any(|element| {
-            let location = element.location();
-            file.heredoc_ranges().iter().any(|range| {
-                location.start_offset() <= range.start && range.start < location.end_offset()
-            })
-        })
+        && elements
+            .iter()
+            .any(|element| !node_heredoc_ranges(element).is_empty())
     {
         let suffix = file
             .slice(closing.end_offset()..file.line_end(closing.end_offset()))
@@ -238,7 +279,9 @@ fn correct_closing_to_same_line(
 }
 
 fn trailing_comma_end(file: SourceFile<'_>, start: usize, closing: usize) -> usize {
-    let Some(between) = file.slice(start..closing) else { return start };
+    let Some(between) = file.slice(start..closing) else {
+        return start;
+    };
     let whitespace = between.bytes().take_while(u8::is_ascii_whitespace).count();
     if between.as_bytes().get(whitespace) == Some(&b',') {
         start + whitespace + 1
@@ -259,5 +302,7 @@ fn delimiter_is_argument(context: &CopContext<'_, '_>, _elements: &[Node<'_>]) -
 }
 
 fn delimiter_is_chained(context: &CopContext<'_, '_>) -> bool {
-    context.parent().is_some_and(|parent| parent.as_call_node().is_some())
+    context
+        .parent()
+        .is_some_and(|parent| parent.as_call_node().is_some())
 }

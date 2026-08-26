@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::io::{self, Read};
 use std::path::Path;
@@ -47,6 +47,27 @@ fn inspect_stdin(
 }
 
 fn collapse_cli_duplicate_locations(result: &mut InspectionResult) {
+    let widest_block_chain = result
+        .offenses
+        .iter()
+        .filter(|offense| offense.cop_name == "Style/MultilineBlockChain")
+        .fold(HashMap::new(), |mut widest, offense| {
+            widest
+                .entry((offense.line, offense.column))
+                .and_modify(|end: &mut (usize, usize)| {
+                    *end = (*end).max((offense.last_line, offense.last_column));
+                })
+                .or_insert((offense.last_line, offense.last_column));
+            widest
+        });
+    let mut retained_block_chain = HashSet::new();
+    result.offenses.retain(|offense| {
+        offense.cop_name != "Style/MultilineBlockChain"
+            || (widest_block_chain.get(&(offense.line, offense.column))
+                == Some(&(offense.last_line, offense.last_column))
+                && retained_block_chain.insert((offense.line, offense.column)))
+    });
+
     let mut seen = HashSet::new();
     result.offenses.reverse();
     result.offenses.retain(|offense| {

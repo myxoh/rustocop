@@ -46,7 +46,10 @@ fn ensure_return(node: &ruby_prism::BeginNode<'_>, context: &mut CopContext<'_, 
 }
 
 fn colon_method_definition(node: &ruby_prism::DefNode<'_>, context: &mut CopContext<'_, '_>) {
-    let Some(operator) = node.operator_loc().filter(|operator| operator.as_slice() == b"::") else {
+    let Some(operator) = node
+        .operator_loc()
+        .filter(|operator| operator.as_slice() == b"::")
+    else {
         return;
     };
     let range = operator.start_offset()..operator.end_offset();
@@ -74,7 +77,10 @@ fn big_decimal_new(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     };
     let mut edits = vec![(dot.start_offset()..selector.end_offset(), String::new())];
     if receiver_source.starts_with("::") {
-        edits.push((receiver.location().start_offset()..receiver.location().start_offset() + 2, String::new()));
+        edits.push((
+            receiver.location().start_offset()..receiver.location().start_offset() + 2,
+            String::new(),
+        ));
     }
     context.replace_many(
         "`BigDecimal.new()` is deprecated. Use `BigDecimal()` instead.",
@@ -98,15 +104,18 @@ fn empty_ensure(node: &ruby_prism::BeginNode<'_>, context: &mut CopContext<'_, '
 }
 
 fn in_pattern_then(node: &ruby_prism::InNode<'_>, context: &mut CopContext<'_, '_>) {
-    let Some(body) = node.statements().and_then(|statements| statements.body().first()) else {
+    let Some(body) = node
+        .statements()
+        .and_then(|statements| statements.body().first())
+    else {
         return;
     };
     let pattern_node = node.pattern();
     let pattern_location = pattern_node.location();
-    if !context
-        .source_file()
-        .same_line(pattern_location.start_offset(), body.location().start_offset())
-    {
+    if !context.source_file().same_line(
+        pattern_location.start_offset(),
+        body.location().start_offset(),
+    ) {
         return;
     }
     let gap = pattern_location.end_offset()..body.location().start_offset();
@@ -229,10 +238,7 @@ fn inside_percent_word_array(context: &CopContext<'_, '_>) -> bool {
     })
 }
 
-fn require_range_parentheses(
-    node: &ruby_prism::RangeNode<'_>,
-    context: &mut CopContext<'_, '_>,
-) {
+fn require_range_parentheses(node: &ruby_prism::RangeNode<'_>, context: &mut CopContext<'_, '_>) {
     if context
         .ancestors()
         .iter()
@@ -265,20 +271,40 @@ fn require_range_parentheses(
 fn ascii_identifiers(context: &mut CopContext<'_, '_>) {
     let source = context.source();
     let ascii_constants = context.config_bool("AsciiConstants", true);
-    let literal_ranges = context.source_file().literal_ranges();
-    let comment_ranges = context.source_file().comment_ranges();
+    let mut excluded_ranges = context.source_file().literal_ranges();
+    excluded_ranges.extend(context.source_file().comment_ranges());
+    excluded_ranges.sort_by_key(|range| (range.start, range.end));
+    let excluded_ranges = excluded_ranges.into_iter().fold(
+        Vec::<std::ops::Range<usize>>::new(),
+        |mut merged, range| {
+            if let Some(previous) = merged.last_mut() {
+                if range.start < previous.end {
+                    previous.end = previous.end.max(range.end);
+                    return merged;
+                }
+            }
+            merged.push(range);
+            merged
+        },
+    );
     let data_section = source
         .find("\n__END__\n")
         .map_or(source.len(), |offset| offset + 1);
     let mut reported_through = 0;
+    let mut excluded_index = 0;
     for (offset, character) in source.char_indices() {
         if offset >= data_section {
             break;
         }
-        if literal_ranges
-            .iter()
-            .chain(comment_ranges.iter())
-            .any(|range| range.start <= offset && offset < range.end)
+        while excluded_ranges
+            .get(excluded_index)
+            .is_some_and(|range| range.end <= offset)
+        {
+            excluded_index += 1;
+        }
+        if excluded_ranges
+            .get(excluded_index)
+            .is_some_and(|range| range.start <= offset && offset < range.end)
         {
             continue;
         }
@@ -345,7 +371,9 @@ fn multiline_if_then(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
     } else {
         return;
     };
-    let Some(then_keyword) = then_keyword else { return };
+    let Some(then_keyword) = then_keyword else {
+        return;
+    };
     if then_keyword.as_slice() != b"then" {
         return;
     }

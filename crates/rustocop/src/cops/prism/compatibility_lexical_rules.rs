@@ -11,47 +11,62 @@ define_cops!(
 );
 
 fn department_name(context: &mut CopContext<'_, '_>) {
-    const DEPARTMENTS: [(&str, &str); 3] = [
-        ("Alias", "Style/Alias"),
-        ("LineLength", "Layout/LineLength"),
-        (
-            "SingleSpaceBeforeFirstArg",
-            "Style/SingleSpaceBeforeFirstArg",
-        ),
-    ];
     let source = context.source();
-    for (line_start, line) in context.source_file().lines() {
-        let Some(marker) = line.find("rubocop") else {
+    let directive = regex::Regex::new(r"\A# *rubocop *: *((?:dis|en)able|todo) +(.*)")
+        .expect("static directive pattern");
+    let cop_names = crate::cops::cop_names();
+    let departments = cop_names
+        .iter()
+        .filter_map(|name| name.split_once('/').map(|(department, _)| department))
+        .collect::<std::collections::HashSet<_>>();
+
+    for comment_range in context.source_file().comment_ranges() {
+        let comment = &source[comment_range.clone()];
+        let Some(captures) = directive.captures(comment) else {
             continue;
         };
-        let directive = &line[marker + "rubocop".len()..];
-        if !directive.contains("disable")
-            && !directive.contains("enable")
-            && !directive.contains("todo")
-        {
-            continue;
-        }
-        for (short_name, full_name) in DEPARTMENTS {
-            let mut search = 0;
-            while let Some(relative) = directive[search..].find(short_name) {
-                let relative = search + relative;
-                let start = line_start + marker + "rubocop".len() + relative;
-                let end = start + short_name.len();
-                let before = source[..start].chars().next_back();
-                let after = source[end..].chars().next();
-                if !matches!(before, Some('/') | Some(':'))
-                    && !after
-                        .is_some_and(|character| character.is_alphanumeric() || character == '_')
-                {
+        let names = captures.get(2).expect("directive names");
+        let mut cursor = 0;
+        while cursor < names.as_str().len() {
+            let tail = &names.as_str()[cursor..];
+            let segment_len = tail.find(',').unwrap_or(tail.len());
+            let segment = &tail[..segment_len];
+            let leading = segment.len() - segment.trim_start().len();
+            let short_name = segment.trim();
+            let unexpected = segment
+                .chars()
+                .any(|character| !character.is_ascii_alphabetic() && !matches!(character, ' ' | ',' | '/'));
+            let plain_name = !short_name.is_empty()
+                && short_name.chars().all(|character| character.is_ascii_alphabetic());
+            if plain_name && short_name != "all" && !departments.contains(short_name) {
+                let matches = cop_names
+                    .iter()
+                    .copied()
+                    .filter(|name| name.rsplit_once('/').is_some_and(|(_, cop)| cop == short_name))
+                    .collect::<Vec<_>>();
+                let replacement = match matches.as_slice() {
+                    [qualified] => Some(*qualified),
+                    _ if short_name == "UselessComparison" => Some("Lint/UselessComparison"),
+                    _ if short_name == "SingleSpaceBeforeFirstArg" => {
+                        Some("Style/SingleSpaceBeforeFirstArg")
+                    }
+                    _ => None,
+                };
+                if let Some(replacement) = replacement {
+                    let start = comment_range.start + names.start() + cursor + leading;
+                    let end = start + short_name.len();
                     context.replace(
                         "Department name is missing.",
                         start..end,
                         start..end,
-                        full_name,
+                        replacement,
                     );
                 }
-                search = relative + short_name.len();
             }
+            if unexpected || segment_len == tail.len() {
+                break;
+            }
+            cursor += segment_len + 1;
         }
     }
 }

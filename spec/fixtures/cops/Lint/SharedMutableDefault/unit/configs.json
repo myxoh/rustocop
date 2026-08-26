@@ -1,3 +1,4 @@
 {
+  "83680f8e989c2951": "---\nAllCops:\n  DisabledByDefault: true\n  ParserEngine: parser_prism\n  TargetRubyVersion: 3.4\nLint/SharedMutableDefault:\n  Enabled: true\n",
   "902a11c677bb39a7": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/SharedMutableDefault:\n  Description: Checks for mutable literals used as default arguments during Hash initialization.\n  StyleGuide: \"#no-mutable-defaults\"\n  Enabled: true\n  VersionAdded: '1.70'\n  AutoCorrect: always\n"
 }

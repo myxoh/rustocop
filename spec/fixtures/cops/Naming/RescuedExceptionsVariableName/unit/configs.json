@@ -1,4 +1,5 @@
 {
+  "1dc3a2530dfd9880": "---\nAllCops:\n  DisabledByDefault: true\n  ParserEngine: parser_prism\n  TargetRubyVersion: 3.4\nNaming/RescuedExceptionsVariableName:\n  Enabled: true\n  PreferredName: e\n",
   "2c393ea3bd73a38a": "---\nAllCops:\n  TargetRubyVersion: 2.7\nNaming/RescuedExceptionsVariableName:\n  Description: Use consistent rescued exceptions variables naming.\n  Enabled: true\n  VersionAdded: '0.67'\n  VersionChanged: '0.68'\n  PreferredName: e\n  AutoCorrect: always\n",
   "59dc048e49ce8f6f": "---\nAllCops:\n  DisabledByDefault: true\n  Exclude: []\n  NewCops: disable\n  ParserEngine: parser_prism\n  SuggestExtensions: false\n  TargetRubyVersion: 3.4\nMetrics/CollectionLiteralLength:\n  LengthThreshold: 3\n",
   "b776ee55f3602478": "---\nAllCops:\n  TargetRubyVersion: 2.7\nNaming/RescuedExceptionsVariableName:\n  Description: Use consistent rescued exceptions variables naming.\n  Enabled: true\n  VersionAdded: '0.67'\n  VersionChanged: '0.68'\n  PreferredName: exception\n  AutoCorrect: always\n",
