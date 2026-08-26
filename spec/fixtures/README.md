@@ -30,13 +30,13 @@ ruby script/verify_cop.rb Security/Eval
 
 Focused runs use Cargo's incremental `fixture` profile: it omits debug symbols
 to reduce relinking work while leaving the full corpus on the optimized release
-profile. On the audit machine on 2026-08-26, three warm runs of a representative
-32-case cop took 0.42-0.77 seconds inside the test process and 0.71-1.32 seconds
-wall-clock. Touching that cop's Rust source to simulate an implementation edit
-took 4.11 seconds to compile and 5.33 seconds end to end. The first focused run
-builds and caches this profile once. Compilation and linking of the single
-native crate remain the dominant edit-cycle cost; the previous 2.5-second
-one-file rebuild measurement no longer describes the current crate.
+profile. On the audit machine on 2026-08-26, two steady warm runs of the 32-case
+`Style/ExplicitBlockArgument` contract took 0.314-0.316 seconds inside the test
+process and 0.43-0.45 seconds wall-clock. Touching that cop's Rust source to
+simulate an implementation edit took 2.21 seconds to compile and 3.04 seconds
+end to end. A cold fixture-profile build took 7.69 seconds to compile and 8.61
+seconds end to end. Compilation and linking of the single native crate remain
+the dominant edit-cycle cost.
 
 Run the complete cached corpus:
 
@@ -44,12 +44,13 @@ Run the complete cached corpus:
 bundle exec rake fixtures:unit
 ```
 
-Three warm release runs checked all 29,616 cases in 2.75-2.87 seconds inside the
-test process and 2.96-3.20 seconds wall-clock. The intentionally sequential
-per-cop timing audit measured a 10.592 ms median, 46.641 ms p95, 113.803 ms p99,
-and 11.35 seconds for its complete run. Of 606 cops, 85 completed within 5 ms,
-270 within 10 ms, 525 within 25 ms, and 580 within 50 ms. A few size-sensitive
-contracts intentionally exercise source files as large as 100-400 KB. Cargo
+Three warm release runs checked all 29,616 cases in 2.68-2.84 seconds inside the
+test process and 2.90-3.05 seconds wall-clock. The intentionally sequential
+per-cop timing audit measured a 9.839 ms median, 43.362 ms p95, 94.815 ms p99,
+and 10.00 seconds for its complete in-process run. Of 606 cops, 91 completed
+within 5 ms, 315 within 10 ms, 539 within 25 ms, and 586 within 50 ms. A few
+size-sensitive contracts intentionally exercise source files as large as
+100-400 KB; `Layout/IndentationWidth` is the current 1.10-second outlier. Cargo
 process startup is separate from these in-run measurements.
 
 Reproduce the per-cop timing audit without cross-cop parallelism:

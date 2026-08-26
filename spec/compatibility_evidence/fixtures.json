@@ -1,8 +1,8 @@
 {
   "version": 1,
   "kind": "fixture_compatibility",
-  "updated_at": "2026-08-26T15:54:19-04:00",
-  "rust_commit": null,
+  "updated_at": "2026-08-26T16:18:45-04:00",
+  "rust_commit": "90f7b23ccfa3201072ef82a3f5868c1473f2e756",
   "cop_source_sha256": "14a8ee30eeecd1d5e952d85be1c0a513db3564a2a4b4205be3daa91069a52602",
   "native_sha256": "ec2932cc277261b97b2ec131accb416467b5b1d96b2f03ffbdf51b5c5c56a90e",
   "fixture_corpus_sha256": "554d728615a9cc3faca420dd5fd4b5a6e0418b6eadefa3ae8a07cfb334c3130f",

@@ -118,30 +118,31 @@ bound to a deterministic SHA-256 of every native cop source file as well as the
 compiled binary, so unrelated edits do not invalidate it and cop changes cannot
 silently reuse stale results.
 
-A warm complete audit measured on 2026-08-26 took 16.0 seconds wall-clock with
-50/50 native cache hits and no mismatches. The compact cache stores only the
-eight fields in a parity signature, with dictionaries for repeated paths, cops,
-and messages. Migrating the previous verbose cache and completing the same
-audit took 33.9 seconds. A changed native binary still causes a safe cold cache
-miss: the measured 606-cop, 85,471-file cold audit took 13 minutes 13 seconds.
-The runner now announces its warm/cold cache state before starting. Focused cop
-audits remain the development path after implementation changes; two historically
-expensive cops completed a cold exact audit across all 50 projects in 40 seconds.
-The complete cached audit is the final corpus gate.
+A steady warm complete audit measured on 2026-08-26 took 17.96 seconds
+wall-clock with 50/50 native cache hits and no mismatches. The same default
+command took 33.86 seconds after touching a cop source file and forcing a
+release rebuild. The compact cache stores only the eight fields in a parity
+signature, with dictionaries for repeated paths, cops, and messages. A changed
+native binary still causes a safe cold cache miss: the measured 606-cop,
+85,471-file cold audit took 13 minutes 13 seconds. The runner announces its
+warm/cold cache state before starting. Focused cop audits remain the development
+path after implementation changes; two historically expensive cops completed a
+cold exact audit across all 50 projects in 40 seconds. The complete cached audit
+is the final corpus gate.
 
 ## Performance
 
 <!-- generated:rubocop-prism:start -->
 On the pinned 500-file, 20-cop benchmark corpus, rustocop is currently
-about 36 times faster than RuboCop with Prism. Both tools produced identical
+about 26 times faster than RuboCop with Prism. Both tools produced identical
 normalized JSON before measurement.
 
 | Files | rustocop | RuboCop (Prism) | Speedup |
 | ---: | ---: | ---: | ---: |
-| 1 | 8.54 ms | 497.19 ms | 58.22× |
-| 25 | 9.24 ms | 566.01 ms | 61.28× |
-| 100 | 15.02 ms | 722.40 ms | 48.09× |
-| 500 | 18.00 ms | 646.75 ms | 35.92× |
+| 1 | 12.64 ms | 459.80 ms | 36.37× |
+| 25 | 13.46 ms | 472.63 ms | 35.12× |
+| 100 | 14.88 ms | 506.49 ms | 34.03× |
+| 500 | 20.73 ms | 539.93 ms | 26.04× |
 <!-- generated:rubocop-prism:end -->
 
 This uses RuboCop 1.87.0 with Prism, caching disabled, and server mode disabled.
@@ -160,14 +161,14 @@ bundle exec ruby script/benchmark_rubocop_prism.rb
 <!-- generated:mixed-custom:start -->
 Rustocop can keep recognized built-in cops native while delegating explicitly
 selected Ruby custom cops to RuboCop. On the same 500 files, 20 native cops plus
-one custom cop took 498.24 ms, versus 10.86 ms for pure native Rustocop and
-508.84 ms for pure RuboCop.
+one custom cop took 545.39 ms, versus 17.54 ms for pure native Rustocop and
+555.00 ms for pure RuboCop.
 
 | 500-file mode | Median |
 | --- | ---: |
-| Pure native, 20 built-in cops | **10.86 ms** |
-| Mixed, 20 native + 1 Ruby custom cop | **498.24 ms** |
-| Pure RuboCop, all 21 cops | **508.84 ms** |
+| Pure native, 20 built-in cops | **17.54 ms** |
+| Mixed, 20 native + 1 Ruby custom cop | **545.39 ms** |
+| Pure RuboCop, all 21 cops | **555.00 ms** |
 <!-- generated:mixed-custom:end -->
 
 The mixed report exactly matched RuboCop, but the Ruby custom cop still imposed

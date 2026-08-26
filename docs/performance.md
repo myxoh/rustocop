@@ -25,15 +25,15 @@ warmups followed by 7–30 measured runs depending on corpus size.
 
 | Files | Runs | Rustocop median / p95 | RuboCop Prism median / p95 | Speedup |
 | ---: | ---: | ---: | ---: | ---: |
-| 1 | 30 | 8.540 / 12.894 ms | 497.190 / 564.462 ms | 58.22× |
-| 25 | 20 | 9.236 / 10.385 ms | 566.014 / 636.020 ms | 61.28× |
-| 100 | 12 | 15.021 / 22.767 ms | 722.395 / 988.842 ms | 48.09× |
-| 500 | 7 | 18.004 / 19.445 ms | 646.752 / 780.971 ms | 35.92× |
+| 1 | 30 | 12.644 / 13.545 ms | 459.804 / 484.105 ms | 36.37× |
+| 25 | 20 | 13.457 / 15.181 ms | 472.633 / 477.622 ms | 35.12× |
+| 100 | 12 | 14.884 / 15.395 ms | 506.490 / 524.346 ms | 34.03× |
+| 500 | 7 | 20.731 / 22.822 ms | 539.932 / 542.214 ms | 26.04× |
 
 ## Interpretation
 
 The one-file result is dominated by process startup. At 500 files, rustocop is
-about 36 times faster than RuboCop. This tiny corpus measures the complete CLI,
+about 26 times faster than RuboCop. This tiny corpus measures the complete CLI,
 configuration, file, traversal, and formatting paths together—not parsing alone.
 <!-- generated:rubocop-prism-results:end -->
 
@@ -48,15 +48,15 @@ and RuboCop. Normalized JSON output was identical before measurement.
 <!-- generated:memory-results:start -->
 | Files | Rustocop sequential median / p95 | Rustocop parallel median / p95 | RuboCop + Prism median / p95 |
 | ---: | ---: | ---: | ---: |
-| 1 | 3.52 / 3.53 MiB | 3.53 / 3.53 MiB | 86.36 / 88.25 MiB |
-| 25 | 4.03 / 4.05 MiB | 4.20 / 4.27 MiB | 88.89 / 89.42 MiB |
-| 100 | 4.36 / 4.47 MiB | 4.52 / 4.53 MiB | 89.53 / 90.16 MiB |
-| 500 | 4.97 / 5.02 MiB | 5.45 / 5.48 MiB | 92.22 / 92.78 MiB |
+| 1 | 11.77 / 12.34 MiB | 11.78 / 12.75 MiB | 86.08 / 86.30 MiB |
+| 25 | 12.16 / 12.30 MiB | 12.58 / 12.69 MiB | 86.55 / 86.86 MiB |
+| 100 | 12.14 / 12.28 MiB | 12.75 / 12.81 MiB | 86.56 / 87.08 MiB |
+| 500 | 12.56 / 12.64 MiB | 13.53 / 13.75 MiB | 91.33 / 91.89 MiB |
 
 The nearly flat curves show that fixed runtime and startup cost dominate this
 corpus. At 500 files, automatic parallel execution added about
-0.48 MiB over sequential rustocop and RuboCop used
-16.9 times as much peak memory as parallel rustocop.
+0.97 MiB over sequential rustocop and RuboCop used
+6.7 times as much peak memory as parallel rustocop.
 This does not imply that arbitrary Ruby files cost only a few KiB each: the
 pinned corpus totals just 9,110 source bytes. Large files, large literals,
 and more complex syntax need a separate sustained-memory benchmark.
@@ -104,13 +104,13 @@ project methodology.
 xychart-beta
     title "End-to-end speedup over RuboCop + Prism"
     x-axis "Ruby files" [1, 25, 100, 500]
-    y-axis "Speedup (times)" 0 --> 70
-    bar [58.22, 61.28, 48.09, 35.92]
+    y-axis "Speedup (times)" 0 --> 40
+    bar [36.37, 35.12, 34.03, 26.04]
 ```
 
 At 500 files, median throughput was approximately
-27,772 files/second for Rustocop and
-773 for RuboCop with Prism.
+24,118 files/second for Rustocop and
+926 for RuboCop with Prism.
 <!-- generated:rubocop-prism-throughput:end -->
 The corpus is deliberately small—500 files totaling 9,110 bytes—so these figures primarily measure CLI startup,
 configuration, parsing, dispatch, and formatter overhead rather than sustained

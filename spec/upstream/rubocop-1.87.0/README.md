@@ -18,7 +18,7 @@ this directory so generated reports and local adaptations cannot be confused
 with upstream tests.
 
 The retained controlled contract was last verified at
-`2026-08-26T14:47:46-04:00`: all 29,616 cached checks and all 606 active cops
+`2026-08-26T16:18:45-04:00`: all 29,616 cached checks and all 606 active cops
 match RuboCop 1.87.0, including correction expectations. The upstream capture
 contributes 28,601 comparable executable inputs; the controlled corpus also
 contains adversarial and minimized cases derived from the 50-project audit.

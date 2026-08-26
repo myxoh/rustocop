@@ -7,6 +7,9 @@ is determined by the complete fixture and 50-project snapshots documented in
 the root README and `docs/compatibility.md`.
 
 Historical `verified` or `heuristic` labels do not grant compatibility credit.
+The current controlled fixture evidence was refreshed at
+`2026-08-26T16:18:45-04:00`; the exact 50-project evidence was refreshed at
+`2026-08-26T16:07:54-04:00`.
 
 The first qualification batch is the first 60 entries in the complete RuboCop
 1.87 built-in matrix. Work files use this schema:

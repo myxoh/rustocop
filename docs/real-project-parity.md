@@ -146,13 +146,14 @@ bundle exec ruby script/audit_project_parity.rb \
   --markdown tmp/project-parity/all-cops-current.md
 ```
 
-On the audit machine on 2026-08-26, the exact default command above took 16.0
-seconds with 50/50 compact-cache hits. Migrating the old verbose entries took
-33.9 seconds. A binary-changing cold run remains intentionally distinct: the
-measured 606-cop audit took 792.5 seconds because it executed every selected cop
-over all 85,471 files. The runner prints a cache preflight before project work,
-so this expensive state is visible immediately. A focused two-cop cold audit
-completed in 40 seconds and matched all 50 projects exactly.
+On the audit machine on 2026-08-26, the exact default command above took 17.96
+seconds with 50/50 compact-cache hits. After touching a cop source file, the
+same command took 33.86 seconds including the release rebuild. A binary-changing
+cold run remains intentionally distinct: the measured 606-cop audit took 792.5
+seconds because it executed every selected cop over all 85,471 files. The runner
+prints a cache preflight before project work, so this expensive state is visible
+immediately. A focused two-cop cold audit completed in 40 seconds and matched all
+50 projects exactly.
 
 Use `--no-native-cache` when measuring cold native execution. Use
 `--native-cache-root PATH` to isolate a benchmark cache. Reports record the
