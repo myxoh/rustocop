@@ -8,6 +8,7 @@ require "rbconfig"
 require "time"
 require_relative "../lib/rustocop/artifact_store"
 require_relative "../lib/rustocop/compatibility_status"
+require_relative "../lib/rustocop/cop_implementation_inventory"
 require_relative "../lib/rustocop/process_runner"
 require_relative "../lib/rustocop/project_corpus"
 require_relative "../lib/rustocop/repository_layout"
@@ -20,7 +21,6 @@ DEFAULT_PROJECT_SNAPSHOT = LAYOUT.compatibility_evidence("projects.json")
 DEFAULT_OUTPUT = LAYOUT.path("docs", "compatibility.md")
 DEFAULT_CONSUMER_MANIFEST = LAYOUT.path("crates", "rustocop", "rubocop-consumers.json")
 DEFAULT_ADOPTION_OUTPUT = LAYOUT.path("docs", "rubocop-compatibility-adoption.md")
-RUST_COP_ROOT = LAYOUT.path("crates", "rustocop", "src", "cops")
 ACTIVE_COPS = Rustocop::CompatibilityStatus.load(root: ROOT).built_in_cops.sort.freeze
 
 options = {
@@ -307,31 +307,10 @@ abort "compatibility evidence must cover the #{ACTIVE_COPS.length} active cops" 
 abort "fixture and project evidence use different RuboCop versions" unless
   fixtures.fetch("rubocop_version") == projects.fetch("rubocop_version")
 
-rust_files = Dir[File.join(RUST_COP_ROOT, "**", "*.rs")].reject do |path|
-  path.include?("/tests/") || path.include?("/framework/") || path.include?("/runtime/")
-end
-rust_sources = rust_files.to_h { |path| [path, File.read(path)] }
-
-def registration_paths(cop, sources)
-  quoted = Regexp.escape(cop)
-  patterns = [
-    /=>\s*"#{quoted}"\s*=>/m,
-    /(?:custom|report|replace)\(\s*"#{quoted}"/m,
-    /fn\s+name\s*\([^)]*\)[^{]*\{\s*"#{quoted}"\s*\}/m,
-    /let\s+cop\s*=\s*"#{quoted}"/m
-  ]
-  paths = sources.filter_map { |path, source| path if patterns.any? { |pattern| source.match?(pattern) } }
-  return paths.sort unless paths.empty?
-
-  literal = %Q{"#{cop}"}
-  paths = sources.filter_map { |path, source| path if source.include?(literal) }
-  paths.reject! { |path| path.end_with?("/text/mod.rs") }
-  text_paths = paths.select { |path| path.include?("/cops/text/") }
-  (text_paths.empty? ? paths : text_paths).sort
-end
+rust_sources = Rustocop::CopImplementationInventory.sources(root: ROOT)
 
 implementation_paths = cops.to_h do |cop|
-  paths = registration_paths(cop, rust_sources)
+  paths = Rustocop::CopImplementationInventory.registration_paths(cop, sources: rust_sources)
   abort "could not find implementation for #{cop}" if paths.empty?
   [cop, paths]
 end

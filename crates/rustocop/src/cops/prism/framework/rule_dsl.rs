@@ -286,6 +286,21 @@ macro_rules! dispatch_rubocop_callback {
             $rule.on_case_match(&typed_node);
         }
     };
+    ($rule:ident, $node:ident, on_resbody) => {
+        if let Some(typed_node) = $node.as_rescue_node() {
+            $rule.on_resbody(&typed_node);
+        }
+    };
+    ($rule:ident, $node:ident, on_irange) => {
+        if let Some(typed_node) = $node.as_range_node().filter(|range| !range.is_exclude_end()) {
+            $rule.on_irange(&typed_node);
+        }
+    };
+    ($rule:ident, $node:ident, on_erange) => {
+        if let Some(typed_node) = $node.as_range_node().filter(|range| range.is_exclude_end()) {
+            $rule.on_erange(&typed_node);
+        }
+    };
     ($rule:ident, $node:ident, on_yield) => {
         if let Some(typed_node) = $node.as_yield_node() {
             $rule.on_yield(&typed_node);
@@ -357,6 +372,15 @@ macro_rules! rubocop_callback_matches {
     };
     ($node:ident, on_case_match) => {
         $node.as_case_match_node().is_some()
+    };
+    ($node:ident, on_resbody) => {
+        $node.as_rescue_node().is_some()
+    };
+    ($node:ident, on_irange) => {
+        $node.as_range_node().is_some_and(|range| !range.is_exclude_end())
+    };
+    ($node:ident, on_erange) => {
+        $node.as_range_node().is_some_and(|range| range.is_exclude_end())
     };
     ($node:ident, on_yield) => {
         $node.as_yield_node().is_some()

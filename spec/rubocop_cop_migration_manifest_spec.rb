@@ -22,27 +22,39 @@ RSpec.describe "RuboCop cop source-shape migration manifest" do
     active = Rustocop::CompatibilityStatus.load(root: ROOT).built_in_cops
     rows = manifest.fetch("cops")
 
-    expect(manifest.fetch("format_version")).to eq(1)
+    expect(manifest.fetch("format_version")).to eq(2)
     expect(manifest.fetch("rubocop_version")).to eq(Rustocop::ProjectCorpus::RUBOCOP_VERSION)
     expect(manifest.fetch("rubocop_commit")).to eq(Rustocop::ProjectCorpus::RUBOCOP_COMMIT)
     expect(manifest.fetch("target_cops")).to eq(active.length)
-    expect(manifest.fetch("audited_cops")).to eq(rows.length)
+    expect(manifest.fetch("inventory_cops")).to eq(rows.length)
+    expect(rows.length).to eq(active.length)
+    expect(manifest.fetch("audited_cops")).to eq(
+      rows.count { |row| row.fetch("structural_status") != "unaudited" }
+    )
     expect(manifest.fetch("migrated_cops")).to eq(rows.count { |row| row.fetch("migration_status") == "migrated" })
     expect(rows.map { |row| row.fetch("cop") }).to contain_exactly(*rows.map { |row| row.fetch("cop") }.uniq)
     expect(rows.map { |row| row.fetch("cop") } - active).to be_empty
 
     rows.each do |row|
       upstream = File.join(upstream_root, row.fetch("upstream_source"))
-      implementation = File.join(crate_root, row.fetch("implementation"))
       expect(File).to exist(upstream), row.fetch("cop")
       expect(Digest::SHA256.file(upstream).hexdigest).to eq(row.fetch("upstream_sha256")), row.fetch("cop")
-      expect(File).to exist(implementation), row.fetch("cop")
-      expect(File.read(implementation)).to include(row.fetch("cop")), row.fetch("cop")
-      expect(row.fetch("upstream_callbacks")).not_to be_empty
-      expect(row.fetch("rust_callbacks")).not_to be_empty
-      expect(row.fetch("structural_gaps")).not_to be_empty
+      implementations = row.fetch("implementations").map { |path| File.join(crate_root, path) }
+      expect(implementations).not_to be_empty
+      expect(implementations).to all(satisfy { |path| File.file?(path) })
+      expect(implementations.any? { |path| File.read(path).include?(row.fetch("cop")) }).to be(true)
+      expect(row.fetch("structural_gaps")).not_to be_empty unless row.fetch("migration_status") == "migrated"
       expect(row.fetch("fixtures")).to eq(fixture_results.fetch(row.fetch("cop")))
       expect(row.fetch("projects")).to eq(project_results.fetch(row.fetch("cop")))
+
+      next if row.fetch("structural_status") == "unaudited"
+
+      expect(row.fetch("upstream_callbacks")).not_to be_empty
+      expect(row.fetch("rust_callbacks")).not_to be_empty
+      expect(row.fetch("similarity_score")).to be_between(1, 5)
+      if row.fetch("migration_status") == "migrated"
+        expect(row.fetch("documented_adaptations", [])).not_to be_empty
+      end
     end
   end
 
@@ -54,7 +66,7 @@ RSpec.describe "RuboCop cop source-shape migration manifest" do
       4 => "source_shaped_with_parser_adaptation",
       5 => "near_source_shaped"
     }
-    manifest.fetch("cops").each do |row|
+    manifest.fetch("cops").reject { |row| row.fetch("structural_status") == "unaudited" }.each do |row|
       expect(row.fetch("structural_status")).to eq(statuses.fetch(row.fetch("similarity_score")))
     end
 

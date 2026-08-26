@@ -18,7 +18,7 @@ define_cops! {
     DuplicateRescueException => "Lint/DuplicateRescueException" => node(as_rescue_node, duplicate_rescue_exception),
     LiteralAssignmentInCondition => "Lint/LiteralAssignmentInCondition" => any_node(literal_assignment_in_condition),
     NoReturnInBeginEndBlocks => "Lint/NoReturnInBeginEndBlocks" => node(as_return_node, no_return_in_begin_end_blocks),
-    RescueType => "Lint/RescueType" => node(as_rescue_node, rescue_type),
+    RescueType => "Lint/RescueType" => rubocop_callbacks(RescueTypeRule, [on_resbody]),
     FirstMethodParameterLineBreak => "Layout/FirstMethodParameterLineBreak" => node(as_def_node, first_method_parameter_line_break),
     EndBlock => "Style/EndBlock" => node(as_post_execution_node, end_block),
 }
@@ -291,42 +291,56 @@ fn assignment_context(node: &Node<'_>) -> bool {
     false
 }
 
-fn rescue_type(node: &RescueNode<'_>, context: &mut CopContext<'_, '_>) {
-    let exceptions = node.exceptions().iter().collect::<Vec<_>>();
-    let invalid = exceptions
-        .iter()
-        .filter(|exception| invalid_rescue_type(exception))
-        .collect::<Vec<_>>();
-    if invalid.is_empty() {
-        return;
+const RESCUE_TYPE_MSG: &str = "Rescuing from `{invalid_exceptions}` will raise a `TypeError` instead of catching the actual exception.";
+
+impl RescueTypeRule<'_, '_, '_> {
+    fn on_resbody(&mut self, node: &RescueNode<'_>) {
+        let exceptions = node.exceptions().iter().collect::<Vec<_>>();
+        let invalid_exceptions = self.invalid_exceptions(&exceptions);
+        return_if!(invalid_exceptions.is_empty());
+
+        let invalid_sources = invalid_exceptions
+            .iter()
+            .map(|exception| self.source_file().node(exception))
+            .collect::<Vec<_>>()
+            .join(", ");
+        let last = exceptions.last().expect("invalid rescue has an exception");
+        let offense = node.keyword_loc().start_offset()..last.location().end_offset();
+        let edit = node.keyword_loc().end_offset()..last.location().end_offset();
+        let replacement = self.correction(&exceptions);
+        let message = RESCUE_TYPE_MSG.replace("{invalid_exceptions}", &invalid_sources);
+        add_offense!(self, offense, message: message, |corrector| {
+            corrector.replace(edit, replacement);
+        });
     }
-    let invalid_sources = invalid
-        .iter()
-        .map(|exception| context.source_file().node(exception))
-        .collect::<Vec<_>>()
-        .join(", ");
-    let valid_sources = exceptions
-        .iter()
-        .filter(|exception| !invalid_rescue_type(exception))
-        .map(|exception| context.source_file().node(exception))
-        .collect::<Vec<_>>()
-        .join(", ");
-    let last = exceptions.last().expect("invalid rescue has an exception");
-    let offense = node.keyword_loc().start_offset()..last.location().end_offset();
-    let edit = node.keyword_loc().end_offset()..last.location().end_offset();
-    let replacement = if valid_sources.is_empty() {
-        String::new()
-    } else {
-        format!(" {valid_sources}")
-    };
-    context.replace(
-        format!(
-            "Rescuing from `{invalid_sources}` will raise a `TypeError` instead of catching the actual exception."
-        ),
-        offense,
-        edit,
-        replacement,
-    );
+
+    fn correction(&self, exceptions: &[Node<'_>]) -> String {
+        let correction = self
+            .valid_exceptions(exceptions)
+            .iter()
+            .map(|exception| self.source_file().node(exception))
+            .collect::<Vec<_>>()
+            .join(", ");
+        if correction.is_empty() {
+            correction
+        } else {
+            format!(" {correction}")
+        }
+    }
+
+    fn valid_exceptions<'node>(&self, exceptions: &'node [Node<'_>]) -> Vec<&'node Node<'node>> {
+        exceptions
+            .iter()
+            .filter(|exception| !invalid_rescue_type(exception))
+            .collect()
+    }
+
+    fn invalid_exceptions<'node>(&self, exceptions: &'node [Node<'_>]) -> Vec<&'node Node<'node>> {
+        exceptions
+            .iter()
+            .filter(|exception| invalid_rescue_type(exception))
+            .collect()
+    }
 }
 
 fn invalid_rescue_type(node: &Node<'_>) -> bool {

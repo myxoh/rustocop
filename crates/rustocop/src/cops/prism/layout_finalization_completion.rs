@@ -4,7 +4,7 @@ define_cops! {
     EmptyComment => "Layout/EmptyComment" => source(empty_comment),
     EmptyLineAfterMagicComment => "Layout/EmptyLineAfterMagicComment" => source(empty_line_after_magic_comment),
     SpaceAfterNot => "Layout/SpaceAfterNot" => call(space_after_not),
-    SpaceInsideRangeLiteral => "Layout/SpaceInsideRangeLiteral" => node(as_range_node, space_inside_range_literal),
+    SpaceInsideRangeLiteral => "Layout/SpaceInsideRangeLiteral" => rubocop_callbacks(SpaceInsideRangeLiteralRule, [on_irange, on_erange]),
     SpaceAroundEqualsInParameterDefault => "Layout/SpaceAroundEqualsInParameterDefault" => node(as_optional_parameter_node, space_around_parameter_equals),
     SpaceInLambdaLiteral => "Layout/SpaceInLambdaLiteral" => node(as_lambda_node, space_in_lambda_literal),
     TrailingEmptyLines => "Layout/TrailingEmptyLines" => source(trailing_empty_lines),
@@ -34,33 +34,38 @@ fn space_after_not(node: &ruby_prism::CallNode<'_>, context: &mut CopContext<'_,
     );
 }
 
-fn space_inside_range_literal(
-    node: &ruby_prism::RangeNode<'_>,
-    context: &mut CopContext<'_, '_>,
-) {
-    let (Some(left), Some(right)) = (node.left(), node.right()) else {
-        return;
-    };
-    let operator = node.operator_loc();
-    let whitespace_after = &context.source()[operator.end_offset()..right.location().start_offset()];
-    if left.location().end_offset() == operator.start_offset()
-        && (operator.end_offset() == right.location().start_offset()
-            || whitespace_after.starts_with('\n')) {
-        return;
+impl SpaceInsideRangeLiteralRule<'_, '_, '_> {
+    fn on_irange(&mut self, node: &ruby_prism::RangeNode<'_>) {
+        self.check(node);
     }
-    let source = context.source_file();
-    let replacement = format!(
-        "{}{}{}",
-        source.at(&left.location()),
-        source.at(&operator),
-        source.at(&right.location())
-    );
-    context.replace(
-        "Space inside range literal.",
-        node.location(),
-        node.location(),
-        replacement,
-    );
+
+    fn on_erange(&mut self, node: &ruby_prism::RangeNode<'_>) {
+        self.check(node);
+    }
+
+    fn check(&mut self, node: &ruby_prism::RangeNode<'_>) {
+        let (Some(left), Some(right)) = (node.left(), node.right()) else {
+            return;
+        };
+        let operator = node.operator_loc();
+        let whitespace_after = &self.source()[operator.end_offset()..right.location().start_offset()];
+        return_if!(
+            left.location().end_offset() == operator.start_offset()
+                && (operator.end_offset() == right.location().start_offset()
+                    || whitespace_after.starts_with('\n'))
+        );
+
+        let source = self.source_file();
+        let replacement = format!(
+            "{}{}{}",
+            source.at(&left.location()),
+            source.at(&operator),
+            source.at(&right.location())
+        );
+        add_offense!(self, node.location(), message: "Space inside range literal.", |corrector| {
+            corrector.replace(node.location(), replacement);
+        });
+    }
 }
 
 fn inline_comment(context: &mut CopContext<'_, '_>) {
