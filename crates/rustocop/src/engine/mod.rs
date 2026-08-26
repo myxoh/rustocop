@@ -42,7 +42,7 @@ pub(crate) struct InspectionPlan {
 
 impl InspectionPlan {
     pub(crate) fn new(options: &InspectionConfig) -> Self {
-        let prism = prism::Engine::new(&|cop| options.cop_enabled(cop));
+        let prism = prism::Engine::new(&|cop| options.cop_enabled(cop), text::LEGACY_COP_NAMES);
         let text_cops_enabled = text::LEGACY_COP_NAMES
             .iter()
             .any(|cop| options.cop_enabled(cop) && !prism.implements(cop));

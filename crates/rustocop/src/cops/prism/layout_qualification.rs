@@ -23,8 +23,8 @@ fn multiline_assignment_layout(context: &mut CopContext<'_, '_>) {
     let mut corrections = Vec::new();
 
     for assignment in root.each_node(&[
-        "lvasgn", "ivasgn", "cvasgn", "gvasgn", "casgn", "masgn", "op_asgn", "or_asgn",
-        "and_asgn", "send",
+        "lvasgn", "ivasgn", "cvasgn", "gvasgn", "casgn", "masgn", "op_asgn", "or_asgn", "and_asgn",
+        "send",
     ]) {
         let Some(rhs) = extract_rhs(assignment) else {
             continue;
@@ -237,40 +237,43 @@ fn align_array_elements(
         .iter()
         .rev()
         .find_map(Node::as_array_node);
-    let nested_correction_conflict = array.is_some() && ancestor_array.is_some_and(|ancestor| {
-        let Some(position) = ancestor.elements().iter().position(|element| {
-            element.location().start_offset() == container_offset
-        }) else {
-            return false;
-        };
-        if position == 0 {
-            return false;
-        }
-        let ancestor_elements = ancestor.elements().iter().collect::<Vec<_>>();
-        let ancestor_first = &ancestor_elements[0];
-        let expected = if style == "with_fixed_indentation" {
-            let start = ancestor.opening_loc().map_or_else(
-                || ancestor.location().start_offset(),
-                |opening| opening.start_offset(),
-            );
+    let nested_correction_conflict = array.is_some()
+        && ancestor_array.is_some_and(|ancestor| {
+            let Some(position) = ancestor
+                .elements()
+                .iter()
+                .position(|element| element.location().start_offset() == container_offset)
+            else {
+                return false;
+            };
+            if position == 0 {
+                return false;
+            }
+            let ancestor_elements = ancestor.elements().iter().collect::<Vec<_>>();
+            let ancestor_first = &ancestor_elements[0];
+            let expected = if style == "with_fixed_indentation" {
+                let start = ancestor.opening_loc().map_or_else(
+                    || ancestor.location().start_offset(),
+                    |opening| opening.start_offset(),
+                );
+                let line_start = file.line_range(start).start;
+                context.source()[line_start..start]
+                    .chars()
+                    .take_while(|character| character.is_whitespace())
+                    .count()
+                    + 2
+            } else {
+                let line_start = file
+                    .line_range(ancestor_first.location().start_offset())
+                    .start;
+                unicode_width::UnicodeWidthStr::width(
+                    &context.source()[line_start..ancestor_first.location().start_offset()],
+                )
+            };
+            let start = container_offset;
             let line_start = file.line_range(start).start;
-            context.source()[line_start..start]
-                .chars()
-                .take_while(|character| character.is_whitespace())
-                .count()
-                + 2
-        } else {
-            let line_start = file
-                .line_range(ancestor_first.location().start_offset())
-                .start;
-            unicode_width::UnicodeWidthStr::width(
-                &context.source()[line_start..ancestor_first.location().start_offset()],
-            )
-        };
-        let start = container_offset;
-        let line_start = file.line_range(start).start;
-        context.source()[line_start..start].chars().count() != expected
-    });
+            context.source()[line_start..start].chars().count() != expected
+        });
 
     let bracketed = opening.is_some();
     let mut previous_line = if bracketed {
@@ -367,7 +370,10 @@ fn end_alignment(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
         Some((value.keyword_loc(), closing, true))
     } else if let Some(value) = node.as_case_node() {
         Some((value.case_keyword_loc(), value.end_keyword_loc(), true))
-    } else { node.as_case_match_node().map(|value| (value.case_keyword_loc(), value.end_keyword_loc(), true)) };
+    } else {
+        node.as_case_match_node()
+            .map(|value| (value.case_keyword_loc(), value.end_keyword_loc(), true))
+    };
     let Some((keyword, closing, variable_may_use_outer_expression)) = candidate else {
         return;
     };
@@ -484,21 +490,27 @@ fn extra_spacing(_context: &mut CopContext<'_, '_>) {
         .match_indices("__END__")
         .find(|(offset, _)| {
             (*offset == 0 || source.as_bytes().get(offset - 1) == Some(&b'\n'))
-                && source.as_bytes().get(offset + 7).is_none_or(|byte| *byte == b'\n')
+                && source
+                    .as_bytes()
+                    .get(offset + 7)
+                    .is_none_or(|byte| *byte == b'\n')
         })
         .map_or(source.len(), |(offset, _)| offset);
-    let tokens = spacing_tokens(&source[..syntax_end]);
+    let mut literal_ranges = context
+        .source_file()
+        .literal_ranges()
+        .into_iter()
+        .collect::<Vec<_>>();
+    literal_ranges.sort_by_key(|range| (range.start, std::cmp::Reverse(range.end)));
+    let mut comment_ranges = context.source_file().comment_ranges();
+    comment_ranges.sort_by_key(|range| (range.start, std::cmp::Reverse(range.end)));
+    let tokens = spacing_tokens(&source[..syntax_end], &literal_ranges, &comment_ranges);
     let lines = context
         .source_file()
         .lines()
         .map(|(_, line)| line)
         .collect::<Vec<_>>();
     let ignored_hash_ranges = multiline_hash_pair_ranges(source);
-    let literal_ranges = context
-        .source_file()
-        .literal_ranges()
-        .into_iter()
-        .collect::<Vec<_>>();
     let allow_alignment = context.config_bool("AllowForAlignment", true);
     let allow_trailing_comments = context.config_bool("AllowBeforeTrailingComments", false);
     let force_equals = context.config_explicit("ForceEqualSignAlignment")
@@ -508,17 +520,43 @@ fn extra_spacing(_context: &mut CopContext<'_, '_>) {
         .iter()
         .map(|index| tokens[*index].start)
         .collect::<std::collections::HashSet<_>>();
+    let alignment_tokens = tokens
+        .iter()
+        .map(|token| {
+            let line_start = source[..token.start].rfind('\n').map_or(0, |at| at + 1);
+            crate::rubocop::cop::mixin::preceding_following_alignment::AlignmentToken {
+                kind: match token.text.as_str() {
+                    "=" => "tEQL",
+                    "==" => "tEQ",
+                    "===" => "tEQQ",
+                    "!=" => "tNEQ",
+                    "<=" => "tLEQ",
+                    ">=" => "tGEQ",
+                    "<<" => "tLSHFT",
+                    value if assignment_operator(value) => "tOP_ASGN",
+                    _ => "tTOKEN",
+                }
+                .to_string(),
+                line: token.line + 1,
+                column: source[line_start..token.start].chars().count(),
+                source: token.text.clone(),
+                begin_pos: token.start,
+            }
+        })
+        .collect::<Vec<_>>();
 
     let mut aligned_comment_lines = std::collections::HashSet::new();
     let mut full_line_comment_lines = std::collections::HashSet::new();
-    let comments = context
-        .source_file()
-        .comment_ranges()
-        .into_iter()
+    let comments = comment_ranges
+        .iter()
+        .cloned()
         .map(|range| {
-            let line = source[..range.start].bytes().filter(|byte| *byte == b'\n').count();
+            let line = source[..range.start]
+                .bytes()
+                .filter(|byte| *byte == b'\n')
+                .count();
             let line_start = source[..range.start].rfind('\n').map_or(0, |at| at + 1);
-            (line, range.start - line_start)
+            (line, source[line_start..range.start].chars().count())
         })
         .collect::<Vec<_>>();
     for pair in comments.windows(2) {
@@ -527,13 +565,27 @@ fn extra_spacing(_context: &mut CopContext<'_, '_>) {
             aligned_comment_lines.insert(pair[1].0);
         }
     }
-    for range in context.source_file().comment_ranges() {
-        let line = source[..range.start].bytes().filter(|byte| *byte == b'\n').count();
+    for range in &comment_ranges {
+        let line = source[..range.start]
+            .bytes()
+            .filter(|byte| *byte == b'\n')
+            .count();
         let line_start = source[..range.start].rfind('\n').map_or(0, |at| at + 1);
         if source[line_start..range.start].trim().is_empty() {
             full_line_comment_lines.insert(line);
         }
     }
+    let alignment_comment_lines = full_line_comment_lines
+        .iter()
+        .map(|line| line + 1)
+        .collect::<Vec<_>>();
+    let alignment =
+        crate::rubocop::cop::mixin::preceding_following_alignment::PrecedingFollowingAlignment::new(
+            &lines,
+            &alignment_tokens,
+            &alignment_comment_lines,
+            allow_alignment,
+        );
 
     let mut ordinary_offenses = Vec::new();
     for pair in tokens.windows(2) {
@@ -562,16 +614,105 @@ fn extra_spacing(_context: &mut CopContext<'_, '_>) {
         {
             continue;
         }
-        if allow_alignment
-            && aligned_spacing_token(&lines, &tokens, right, &full_line_comment_lines)
-        {
-            continue;
+        if allow_alignment {
+            let line_start = source[..right.start].rfind('\n').map_or(0, |at| at + 1);
+            let range = crate::rubocop::cop::mixin::preceding_following_alignment::AlignmentRange {
+                line: right.line + 1,
+                column: source[line_start..right.start].chars().count(),
+                source: right.text.clone(),
+            };
+            if alignment.aligned_with_something(&range) {
+                continue;
+            }
         }
 
         ordinary_offenses.push(left.end..right.start - 1);
     }
+    for inner in interpolation_inner_ranges(source, 0) {
+        if comment_ranges.iter().any(|comment| {
+            comment.start <= inner.start.saturating_sub(2) && inner.end <= comment.end
+        }) {
+            continue;
+        }
+        let mut inner_tokens = spacing_tokens_for_fragment(&source[inner.clone()]);
+        for token in &mut inner_tokens {
+            token.start += inner.start;
+            token.end += inner.start;
+            token.line = source[..token.start]
+                .bytes()
+                .filter(|byte| *byte == b'\n')
+                .count();
+            let inner_line_start = source[..token.start].rfind('\n').map_or(0, |at| at + 1);
+            token.column = source[inner_line_start..token.start].chars().count();
+        }
+        for pair in inner_tokens.windows(2) {
+            let (left, right) = (&pair[0], &pair[1]);
+            if left.line != right.line
+                || right.start.saturating_sub(left.end) <= 1
+                || right.kind == SpacingTokenKind::Comment
+                || ignored_hash_ranges
+                    .iter()
+                    .any(|range| range.start <= left.end && left.end < range.end)
+            {
+                continue;
+            }
+            if allow_alignment {
+                let range =
+                    crate::rubocop::cop::mixin::preceding_following_alignment::AlignmentRange {
+                        line: right.line + 1,
+                        column: right.column,
+                        source: right.text.clone(),
+                    };
+                if alignment.aligned_with_something(&range) {
+                    continue;
+                }
+            }
+            ordinary_offenses.push(left.end..right.start - 1);
+        }
+    }
+    for literal in &literal_ranges {
+        let Some(value) = source.get(literal.clone()) else {
+            continue;
+        };
+        if !(value.starts_with("%w") || value.starts_with("%W")) || value.len() < 4 {
+            continue;
+        }
+        let whitespace_start = literal.start + 3;
+        let mut token_start = whitespace_start;
+        while token_start < literal.end
+            && source.as_bytes()[token_start].is_ascii_whitespace()
+            && source.as_bytes()[token_start] != b'\n'
+        {
+            token_start += 1;
+        }
+        if token_start.saturating_sub(whitespace_start) <= 1 {
+            continue;
+        }
+        let token_end = source[token_start..literal.end]
+            .find(char::is_whitespace)
+            .map_or(literal.end, |relative| token_start + relative);
+        if allow_alignment {
+            let line = source[..token_start]
+                .bytes()
+                .filter(|byte| *byte == b'\n')
+                .count();
+            let line_start = source[..token_start].rfind('\n').map_or(0, |at| at + 1);
+            let range = crate::rubocop::cop::mixin::preceding_following_alignment::AlignmentRange {
+                line: line + 1,
+                column: source[line_start..token_start].chars().count(),
+                source: source[token_start..token_end].to_string(),
+            };
+            if alignment.aligned_with_something(&range) {
+                continue;
+            }
+        }
+        let offense = whitespace_start..token_start - 1;
+        if !ordinary_offenses.contains(&offense) {
+            ordinary_offenses.push(offense);
+        }
+    }
     if !allow_trailing_comments {
-        for range in context.source_file().comment_ranges() {
+        for range in &comment_ranges {
             let line_number = source[..range.start]
                 .bytes()
                 .filter(|byte| *byte == b'\n')
@@ -612,7 +753,11 @@ fn extra_spacing(_context: &mut CopContext<'_, '_>) {
     }
 }
 
-fn spacing_tokens(source: &str) -> Vec<SpacingToken> {
+fn spacing_tokens(
+    source: &str,
+    literal_ranges: &[std::ops::Range<usize>],
+    comment_ranges: &[std::ops::Range<usize>],
+) -> Vec<SpacingToken> {
     const OPERATORS: &[&str] = &[
         "&&=", "||=", "<<=", ">>=", "**=", "===", "<=>", "==", "!=", "<=", ">=", "+=", "-=", "*=",
         "/=", "%=", "&=", "|=", "^=", "=>", "=~", "!~", "<<", ">>", "&&", "||", "&.", "::", "**",
@@ -638,13 +783,211 @@ fn spacing_tokens(source: &str) -> Vec<SpacingToken> {
             _ => {}
         }
         let start = offset;
+        let token_line = line;
+        let token_column = start.saturating_sub(line_start);
+        let mut emitted_start = start;
+        let mut emitted_end = None;
+        let mut emitted_line = token_line;
+        let mut emitted_column = token_column;
         let kind;
-        if bytes[offset] == b'#' {
+        if let Some(comment) = comment_ranges
+            .iter()
+            .take_while(|range| range.start <= offset)
+            .find(|range| range.start == offset && offset < range.end && range.end <= source.len())
+        {
+            offset = comment.end;
+            let value = &source[start..offset];
+            let newlines = value.bytes().filter(|byte| *byte == b'\n').count();
+            if newlines > 0 {
+                line += newlines;
+                line_start = start + value.rfind('\n').unwrap_or(0) + 1;
+            }
+            kind = SpacingTokenKind::Comment;
+        } else if let Some(literal) = literal_ranges
+            .iter()
+            .take_while(|range| range.start <= offset)
+            .find(|range| range.start == offset && offset < range.end && range.end <= source.len())
+        {
+            offset = literal.end;
+            let value = &source[start..offset];
+            if value.starts_with("%w") || value.starts_with("%W") {
+                let delimiter_at = 2;
+                let body_start = start + delimiter_at + 1;
+                let body_end = offset.saturating_sub(1);
+                tokens.push(SpacingToken {
+                    start,
+                    end: body_start,
+                    line: token_line,
+                    column: token_column,
+                    text: source[start..body_start].to_string(),
+                    kind: SpacingTokenKind::String,
+                });
+                let mut body_offset = body_start;
+                while body_offset < body_end {
+                    while body_offset < body_end
+                        && source.as_bytes()[body_offset].is_ascii_whitespace()
+                    {
+                        body_offset += 1;
+                    }
+                    if body_offset >= body_end {
+                        break;
+                    }
+                    let word_start = body_offset;
+                    while body_offset < body_end
+                        && !source.as_bytes()[body_offset].is_ascii_whitespace()
+                    {
+                        body_offset += source[body_offset..]
+                            .chars()
+                            .next()
+                            .map_or(1, char::len_utf8);
+                    }
+                    let word_line_start = source[..word_start].rfind('\n').map_or(0, |at| at + 1);
+                    tokens.push(SpacingToken {
+                        start: word_start,
+                        end: body_offset,
+                        line: source[..word_start]
+                            .bytes()
+                            .filter(|byte| *byte == b'\n')
+                            .count(),
+                        column: source[word_line_start..word_start].chars().count(),
+                        text: source[word_start..body_offset].to_string(),
+                        kind: SpacingTokenKind::String,
+                    });
+                }
+                if let Some(last) = tokens.last_mut() {
+                    last.end = offset;
+                    last.text = source[last.start..offset].to_string();
+                }
+                let newlines = value.bytes().filter(|byte| *byte == b'\n').count();
+                if newlines > 0 {
+                    line += newlines;
+                    line_start = start + value.rfind('\n').unwrap_or(0) + 1;
+                }
+                continue;
+            }
+            let newlines = value.bytes().filter(|byte| *byte == b'\n').count();
+            let interpolations = interpolation_inner_ranges(value, start);
+            if newlines == 0 && !interpolations.is_empty() {
+                let mut segment_start = start;
+                for inner in interpolations {
+                    if segment_start < inner.start {
+                        let segment_line_start =
+                            source[..segment_start].rfind('\n').map_or(0, |at| at + 1);
+                        tokens.push(SpacingToken {
+                            start: segment_start,
+                            end: inner.start,
+                            line: source[..segment_start]
+                                .bytes()
+                                .filter(|byte| *byte == b'\n')
+                                .count(),
+                            column: source[segment_line_start..segment_start].chars().count(),
+                            text: source[segment_start..inner.start].to_string(),
+                            kind: SpacingTokenKind::String,
+                        });
+                    }
+                    let mut inner_tokens = spacing_tokens_for_fragment(&source[inner.clone()]);
+                    for token in &mut inner_tokens {
+                        token.start += inner.start;
+                        token.end += inner.start;
+                        token.line = source[..token.start]
+                            .bytes()
+                            .filter(|byte| *byte == b'\n')
+                            .count();
+                        let inner_line_start =
+                            source[..token.start].rfind('\n').map_or(0, |at| at + 1);
+                        token.column = source[inner_line_start..token.start].chars().count();
+                    }
+                    tokens.extend(inner_tokens);
+                    segment_start = inner.end;
+                }
+                if segment_start < offset {
+                    let segment_line_start =
+                        source[..segment_start].rfind('\n').map_or(0, |at| at + 1);
+                    tokens.push(SpacingToken {
+                        start: segment_start,
+                        end: offset,
+                        line: source[..segment_start]
+                            .bytes()
+                            .filter(|byte| *byte == b'\n')
+                            .count(),
+                        column: source[segment_line_start..segment_start].chars().count(),
+                        text: source[segment_start..offset].to_string(),
+                        kind: SpacingTokenKind::String,
+                    });
+                }
+                continue;
+            }
+            if newlines > 0 {
+                let trimmed_len = value.trim_end_matches(['\r', '\n']).len();
+                if let Some(last_newline) = value[..trimmed_len].rfind('\n') {
+                    let opening_end = start + value.find('\n').unwrap_or(value.len());
+                    if start < opening_end {
+                        tokens.push(SpacingToken {
+                            start,
+                            end: opening_end,
+                            line: token_line,
+                            column: token_column,
+                            text: source[start..opening_end].to_string(),
+                            kind: SpacingTokenKind::String,
+                        });
+                    }
+                    let mut interpolation_segment_start = opening_end;
+                    for inner in interpolation_inner_ranges(value, start) {
+                        if interpolation_segment_start < inner.start {
+                            let segment_line_start = source[..interpolation_segment_start]
+                                .rfind('\n')
+                                .map_or(0, |at| at + 1);
+                            tokens.push(SpacingToken {
+                                start: interpolation_segment_start,
+                                end: inner.start,
+                                line: source[..interpolation_segment_start]
+                                    .bytes()
+                                    .filter(|byte| *byte == b'\n')
+                                    .count(),
+                                column: source[segment_line_start..interpolation_segment_start]
+                                    .chars()
+                                    .count(),
+                                text: source[interpolation_segment_start..inner.start].to_string(),
+                                kind: SpacingTokenKind::String,
+                            });
+                        }
+                        let mut inner_tokens = spacing_tokens_for_fragment(&source[inner.clone()]);
+                        for token in &mut inner_tokens {
+                            token.start += inner.start;
+                            token.end += inner.start;
+                            token.line = source[..token.start]
+                                .bytes()
+                                .filter(|byte| *byte == b'\n')
+                                .count();
+                            let inner_line_start =
+                                source[..token.start].rfind('\n').map_or(0, |at| at + 1);
+                            token.column = source[inner_line_start..token.start].chars().count();
+                        }
+                        tokens.extend(inner_tokens);
+                        interpolation_segment_start = inner.end;
+                    }
+                    emitted_start = start + last_newline + 1;
+                    emitted_end = Some(start + trimmed_len);
+                    emitted_line = source[..emitted_start]
+                        .bytes()
+                        .filter(|byte| *byte == b'\n')
+                        .count();
+                    let closing_line_start =
+                        source[..emitted_start].rfind('\n').map_or(0, |at| at + 1);
+                    emitted_column = source[closing_line_start..emitted_start].chars().count();
+                }
+                line += newlines;
+                line_start = start + value.rfind('\n').unwrap_or(0) + 1;
+            }
+            kind = SpacingTokenKind::String;
+        } else if bytes[offset] == b'#' {
             offset = source[offset..]
                 .find('\n')
                 .map_or(source.len(), |relative| offset + relative);
             kind = SpacingTokenKind::Comment;
-        } else if matches!(bytes[offset], b'\'' | b'"' | b'`') {
+        } else if matches!(bytes[offset], b'\'' | b'"' | b'`')
+            && (offset == 0 || bytes[offset - 1] != b'$')
+        {
             let quote = bytes[offset];
             offset += 1;
             let mut escaped = false;
@@ -701,16 +1044,73 @@ fn spacing_tokens(source: &str) -> Vec<SpacingToken> {
             offset += source[offset..].chars().next().map_or(1, char::len_utf8);
             kind = SpacingTokenKind::Punctuation;
         }
-        tokens.push(SpacingToken {
-            start,
-            end: offset,
-            line,
-            column: start.saturating_sub(line_start),
-            text: source[start..offset].to_string(),
-            kind,
-        });
+        let token_end = emitted_end.unwrap_or(offset);
+        if emitted_start < token_end {
+            tokens.push(SpacingToken {
+                start: emitted_start,
+                end: token_end,
+                line: emitted_line,
+                column: emitted_column,
+                text: source[emitted_start..token_end].to_string(),
+                kind,
+            });
+        }
     }
     tokens
+}
+
+fn spacing_tokens_for_fragment(source: &str) -> Vec<SpacingToken> {
+    let file = SourceFile::new(source);
+    let mut literals = file.literal_ranges();
+    literals.sort_by_key(|range| (range.start, std::cmp::Reverse(range.end)));
+    let mut comments = file.comment_ranges();
+    comments.sort_by_key(|range| (range.start, std::cmp::Reverse(range.end)));
+    spacing_tokens(source, &literals, &comments)
+}
+
+fn interpolation_inner_ranges(value: &str, base: usize) -> Vec<std::ops::Range<usize>> {
+    let bytes = value.as_bytes();
+    let mut ranges = Vec::new();
+    let mut offset = 0;
+    while offset + 1 < bytes.len() {
+        if bytes[offset] != b'#' || bytes[offset + 1] != b'{' {
+            offset += 1;
+            continue;
+        }
+        let inner_start = offset + 2;
+        let mut cursor = inner_start;
+        let mut depth = 1_usize;
+        let mut quote = None;
+        let mut escaped = false;
+        while cursor < bytes.len() {
+            let byte = bytes[cursor];
+            if let Some(delimiter) = quote {
+                if escaped {
+                    escaped = false;
+                } else if byte == b'\\' {
+                    escaped = true;
+                } else if byte == delimiter {
+                    quote = None;
+                }
+            } else if matches!(byte, b'\'' | b'"' | b'`') {
+                quote = Some(byte);
+            } else if byte == b'{' {
+                depth += 1;
+            } else if byte == b'}' {
+                depth -= 1;
+                if depth == 0 {
+                    ranges.push(base + inner_start..base + cursor);
+                    offset = cursor + 1;
+                    break;
+                }
+            }
+            cursor += 1;
+        }
+        if depth != 0 {
+            break;
+        }
+    }
+    ranges
 }
 
 fn percent_literal_end(source: &str, start: usize) -> Option<usize> {
@@ -770,7 +1170,9 @@ fn multiline_hash_pair_ranges(source: &str) -> Vec<std::ops::Range<usize>> {
                 return;
             }
             for element in elements.iter() {
-                let Some(pair) = element.as_assoc_node() else { continue };
+                let Some(pair) = element.as_assoc_node() else {
+                    continue;
+                };
                 let key_end = pair.key().location().end_offset();
                 let value_start = pair.value().location().start_offset();
                 if key_end <= value_start {
@@ -804,82 +1206,6 @@ fn multiline_hash_pair_ranges(source: &str) -> Vec<std::ops::Range<usize>> {
     };
     ranges.visit(&parsed.node());
     ranges.ranges
-}
-
-fn aligned_spacing_token(
-    lines: &[&str],
-    tokens: &[SpacingToken],
-    token: &SpacingToken,
-    full_line_comment_lines: &std::collections::HashSet<usize>,
-) -> bool {
-    if token.kind == SpacingTokenKind::Comment {
-        return false;
-    }
-    let indentation = lines
-        .get(token.line)
-        .map_or(0, |line| line.len() - line.trim_start().len());
-    let preceding = (0..token.line).rev().collect::<Vec<_>>();
-    let following = (token.line + 1..lines.len()).collect::<Vec<_>>();
-    [None, Some(indentation)].into_iter().any(|required_indent| {
-        [&preceding, &following].into_iter().any(|line_numbers| {
-            aligned_spacing_in_lines(
-                lines,
-                tokens,
-                token,
-                line_numbers,
-                required_indent,
-                full_line_comment_lines,
-            )
-        })
-    })
-}
-
-fn aligned_spacing_in_lines(
-    lines: &[&str],
-    tokens: &[SpacingToken],
-    token: &SpacingToken,
-    line_numbers: &[usize],
-    required_indent: Option<usize>,
-    full_line_comment_lines: &std::collections::HashSet<usize>,
-) -> bool {
-    for line_number in line_numbers {
-        if full_line_comment_lines.contains(line_number) {
-            continue;
-        }
-        let Some(line) = lines.get(*line_number) else { continue };
-        let Some(indentation) = line.find(|character: char| !character.is_whitespace()) else {
-            continue;
-        };
-        if required_indent.is_some_and(|required| required != indentation) {
-            continue;
-        }
-        let word_aligned = token.column > 0
-            && line
-                .get(token.column - 1..token.column + 1)
-                .is_some_and(|pair| {
-                    pair.as_bytes()[0].is_ascii_whitespace()
-                        && !pair.as_bytes()[1].is_ascii_whitespace()
-                })
-            || line
-                .get(token.column..token.column + token.text.len())
-                .is_some_and(|value| value == token.text);
-        let operator_aligned = equality_or_comparison(&token.text)
-            && tokens
-                .iter()
-                .find(|candidate| {
-                    candidate.line == *line_number && equality_or_comparison(&candidate.text)
-                })
-                .is_some_and(|candidate| aligned_operators(token, candidate));
-        // RuboCop intentionally decides on the nearest eligible line. It does
-        // not keep searching farther through the file after a non-match.
-        return word_aligned || operator_aligned;
-    }
-    false
-}
-
-fn equality_or_comparison(value: &str) -> bool {
-    matches!(value, "=" | "==" | "===" | "!=" | "<=" | ">=" | "<<")
-        || (value.ends_with('=') && !matches!(value, "=>" | "=~" | "!~"))
 }
 
 fn aligned_operators(left: &SpacingToken, right: &SpacingToken) -> bool {

@@ -1,5 +1,3 @@
-use crate::model::SourceLine;
-
 pub(super) fn trailing_whitespace_len(value: &str) -> usize {
     value
         .chars()
@@ -22,70 +20,6 @@ pub(super) fn leading_spaces(line: &str) -> usize {
     line.chars()
         .take_while(|character| *character == ' ')
         .count()
-}
-
-pub(super) fn starts_block(trimmed: &str) -> bool {
-    trimmed.starts_with("def ")
-        || trimmed.starts_with("class ")
-        || trimmed.starts_with("module ")
-        || trimmed.starts_with("if ")
-        || trimmed.starts_with("unless ")
-        || trimmed.starts_with("case")
-        || trimmed.starts_with("begin")
-        || trimmed.ends_with(" do")
-        || trimmed.contains(" do |")
-}
-
-pub(super) fn method_arguments(signature: &str) -> Vec<String> {
-    let Some(start) = signature.find('(') else {
-        return Vec::new();
-    };
-    let Some(end) = signature.rfind(')') else {
-        return Vec::new();
-    };
-
-    signature[start + 1..end]
-        .split(',')
-        .filter_map(|arg| {
-            let arg = arg
-                .trim()
-                .trim_start_matches('*')
-                .trim_start_matches('&')
-                .split(':')
-                .next()
-                .unwrap_or_default()
-                .split('=')
-                .next()
-                .unwrap_or_default()
-                .trim();
-
-            if arg.is_empty() {
-                None
-            } else {
-                Some(arg.to_string())
-            }
-        })
-        .collect()
-}
-
-pub(super) fn find_matching_end(lines: &[SourceLine], start: usize) -> Option<usize> {
-    let mut depth = 0usize;
-
-    for (index, line) in lines.iter().enumerate().skip(start) {
-        let trimmed = line.body.trim();
-        if starts_block(trimmed) {
-            depth += 1;
-        }
-
-        if trimmed == "end" {
-            depth = depth.saturating_sub(1);
-            if depth == 0 {
-                return Some(index);
-            }
-        }
-    }
-
-    None
 }
 
 pub(super) fn is_rspec_group_start(trimmed: &str) -> bool {

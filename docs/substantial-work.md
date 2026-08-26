@@ -11,9 +11,9 @@ regression layer, not the prioritization scoreboard.
   native built-in corpus. The intentionally-pending dataset is empty.
 - The executable trust standard is differential: minimized fixtures plus
   complete diagnostic signatures across 50 pinned projects.
-- The complete 50-project audit currently classifies 429 cops as project-exact,
-  68 as dormant, 106 as mismatching, none as crashing, and three as blocked by
-  RuboCop reference errors.
+- The complete 50-project audit currently classifies all 531 exercised cops as
+  project-exact and 75 as dormant, with no mismatches, crashes, or RuboCop
+  reference errors.
 - Atomic multi-edit correction transactions and deterministic file-level
   parallelism are implemented.
 - A cop being registered, passing captured upstream examples, or producing a
@@ -26,7 +26,8 @@ Current matrix counts and the tested Rust/binary hashes live in
 
 | Priority | Workstream | Outcome |
 | --- | --- | --- |
-| P0 | Eliminate current project-parity gaps | Make the pinned real-project outputs identical cop by cop. |
+| P0 | Preserve project parity | Keep the pinned real-project outputs identical cop by cop as implementations evolve. |
+| P0 | Exercise dormant cops | Add controlled differential coverage for behavior absent from the pinned projects. |
 | P0 | Configuration parity | Ensure cop selection and every consumed setting match RuboCop. |
 | P0 | Input failure semantics | Make syntax, encoding, and unreadable-file behavior explicit and differential. |
 | P1 | Autocorrection convergence | Match multi-pass RuboCop corrections without loops or conflicting edits. |

@@ -1,14 +1,24 @@
 use super::*;
 use crate::config::AutocorrectMode;
+use std::collections::HashSet;
 
 pub struct Engine {
     registry: Registry,
+    enabled_cops: HashSet<&'static str>,
 }
 
 impl Engine {
-    pub fn new(enabled: &dyn Fn(&str) -> bool) -> Self {
+    pub fn new(enabled: &dyn Fn(&str) -> bool, legacy_cops: &[&'static str]) -> Self {
+        let registry = Registry::enabled(enabled);
+        let enabled_cops = registry
+            .cops
+            .iter()
+            .map(|cop| cop.name())
+            .chain(legacy_cops.iter().copied().filter(|cop| enabled(cop)))
+            .collect();
         Self {
-            registry: Registry::enabled(enabled),
+            registry,
+            enabled_cops,
         }
     }
 
@@ -35,7 +45,7 @@ impl Engine {
             source_encoding,
             cop_config,
         );
-        context.set_enabled_cops(self.registry.cops.iter().map(|cop| cop.as_ref()));
+        context.set_enabled_cops(self.enabled_cops.iter().copied());
         context.set_parser_warnings(parsed.warnings());
         let has_unrecoverable_parse_errors = parsed
             .errors()

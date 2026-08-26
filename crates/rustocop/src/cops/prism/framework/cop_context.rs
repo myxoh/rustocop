@@ -111,6 +111,10 @@ impl<'context, 'pr> CopContext<'context, 'pr> {
         self.reporter.related_config_explicit(cop_name, key)
     }
 
+    pub(super) fn related_cop_normally_enabled(&self, cop_name: &str) -> bool {
+        self.reporter.related_cop_normally_enabled(cop_name)
+    }
+
     pub(super) fn related_config_map(
         &self,
         cop_name: &str,

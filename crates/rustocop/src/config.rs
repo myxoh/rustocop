@@ -446,6 +446,13 @@ impl CopConfig {
         self.explicit_sections.contains(cop)
     }
 
+    /// Whether RuboCop would enable this cop without an explicit `--only`
+    /// selection. Directive-aware cops need both this and the command-line
+    /// selection state to reproduce Registry#enabled?.
+    pub(crate) fn normally_enables(&self, cop: &str) -> bool {
+        selection::normally_enabled(cop, self)
+    }
+
     #[allow(dead_code)]
     pub(crate) fn patterns(&self, cop: &str, key: &str) -> &[Regex] {
         self.patterns

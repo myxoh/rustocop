@@ -49,9 +49,9 @@ end
 fixture_evidence = lambda do |cop|
   passing = passing_fixture_cops[cop]
   pending = pending_fixture_cops.key?(cop)
-  next "Project-derived + pending" if passing && pending
+  next "Project-derived + isolated" if passing && pending
   next "Project-derived" if passing
-  next "Pending unit" if pending
+  next "Project-isolated" if pending
 
   "No"
 end
@@ -103,8 +103,8 @@ support = <<~MARKDOWN
   - Intentionally pending cops: #{Rustocop::CompatibilityStatus.load(root: ROOT).intentionally_pending_cops.length}
   - Pinned projects: #{report.fetch("projects").length}
   - Cops with project-derived unit contracts: #{passing_fixture_cops.length}
-  - Pending isolated mismatch directions: #{pending_rows.length}
-  - Cops with pending isolated mismatches: #{pending_fixture_cops.length}
+  - Isolated project-regression directions: #{pending_rows.length}
+  - Cops with project-isolation fixtures: #{pending_fixture_cops.length}
 
   | Classification | Cops |
   | --- | ---: |

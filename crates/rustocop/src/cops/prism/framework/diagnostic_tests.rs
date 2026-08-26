@@ -275,6 +275,28 @@ fn ignored_disable_comments_expose_raw_investigation_offenses() {
 }
 
 #[test]
+fn inline_disable_accepts_a_colon_before_the_reason_separator() {
+    let source = "value # rubocop:disable Style/Example: -- generated code\n";
+    let mut context = context(false);
+    context.report("Style/Example", "Hidden.", 0..5);
+
+    let inspection = context.finish(source);
+
+    assert!(inspection.findings.is_empty());
+}
+
+#[test]
+fn inline_disable_accepts_a_parenthesized_reason() {
+    let source = "value # rubocop:disable Style/Example(RuboCop)\n";
+    let mut context = context(false);
+    context.report("Style/Example", "Hidden.", 0..5);
+
+    let inspection = context.finish(source);
+
+    assert!(inspection.findings.is_empty());
+}
+
+#[test]
 fn department_directives_suppress_member_cops() {
     let source = "value # rubocop:disable Style\n";
     let mut context = context(false);

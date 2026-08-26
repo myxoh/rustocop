@@ -1,6 +1,7 @@
 use super::helpers::*;
 use super::{push_offense, CorrectionStatus, Offense, SourceLine};
 use crate::config::InspectionConfig;
+use ruby_prism::Visit;
 
 const TRAILING_WHITESPACE_COP: &str = "Layout/TrailingWhitespace";
 
@@ -173,6 +174,20 @@ fn check_line_length(
     if !options.cop_enabled(cop) {
         return;
     }
+    // RuboCop does not invoke this AST cop when the configured parser cannot
+    // build a valid syntax tree. This matters for generator templates that
+    // intentionally contain ERB/placeholders but still have a `.rb` suffix.
+    let parsed_source = lines
+        .iter()
+        .map(|line| format!("{}{}", line.body, line.ending))
+        .collect::<String>();
+    if ruby_prism::parse(parsed_source.as_bytes())
+        .errors()
+        .next()
+        .is_some()
+    {
+        return;
+    }
     let autocorrect = options.autocorrect_for(cop);
 
     let max = options
@@ -224,6 +239,10 @@ fn check_line_length(
         .cop_config
         .bool(cop, "SplitStrings")
         .unwrap_or(false);
+    let allow_all_heredocs = allow_heredoc == Some("true");
+    let allowed_heredoc_lines =
+        allowed_line_length_heredoc_lines(lines, allow_all_heredocs, allowed_heredocs);
+    let comment_columns = prism_comment_columns(lines);
     let mut heredoc_queue = std::collections::VecDeque::<(String, bool)>::new();
     let mut heredoc_stack = Vec::<(String, bool)>::new();
     let mut heredoc: Option<(String, bool)> = None;
@@ -237,18 +256,30 @@ fn check_line_length(
         let closes_heredoc = heredoc
             .as_ref()
             .is_some_and(|(delimiter, _)| line.body.trim() == delimiter);
-        let in_allowed_heredoc = heredoc.as_ref().is_some_and(|(_, allowed)| *allowed);
-        let line_disabled = update_line_length_directive(&line.body, &mut directive_disabled);
+        let in_allowed_heredoc = if allow_all_heredocs {
+            allowed_heredoc_lines.contains(&index)
+        } else {
+            heredoc.as_ref().is_some_and(|(_, allowed)| *allowed)
+        };
+        let comment_column = comment_columns.get(index).copied().flatten();
+        let directive_marker =
+            comment_column.and_then(|comment| line_length_directive_marker(&line.body, comment));
+        let line_disabled = update_line_length_directive(
+            &line.body,
+            comment_column,
+            directive_marker,
+            &mut directive_disabled,
+        );
         let length = visual_length(&line.body, tab_width);
-        let directive_at = line.body.find("rubocop:");
-        let length_without_directive = directive_at
-            .and_then(|at| line.body[..at].rfind('#'))
-            .map_or(length, |at| line.body[..at].trim_end().chars().count());
+        let directive_at = directive_marker.map(|(marker, _)| marker);
+        let length_without_directive =
+            directive_at.map_or(length, |at| line.body[..at].trim_end().chars().count());
         let effective_length = if allow_directives && directive_at.is_some() {
             length_without_directive
         } else {
             length
         };
+        let directive_length_only = allow_directives && directive_at.is_some();
         let indentation_difference = line
             .body
             .chars()
@@ -262,11 +293,11 @@ fn check_line_length(
             );
             (!(adjusted.0 < max && adjusted.1 < max)).then_some(adjusted)
         };
-        let uri_range = allow_uri
+        let uri_range = (!directive_length_only && allow_uri)
             .then(|| last_excess_token_range(&line.body, ExcessToken::Uri, uri_schemes))
             .flatten()
             .and_then(applicable_token_range);
-        let qualified_range = allow_qualified
+        let qualified_range = (!directive_length_only && allow_qualified)
             .then(|| last_excess_token_range(&line.body, ExcessToken::QualifiedName, &[]))
             .flatten()
             .and_then(applicable_token_range);
@@ -331,7 +362,7 @@ fn check_line_length(
             continue;
         }
         let parent_allowed = heredoc.as_ref().is_some_and(|(_, allowed)| *allowed);
-        let openings = heredoc_delimiters(&line.body)
+        let openings = heredoc_delimiters(&line.body, heredoc.is_some())
             .into_iter()
             .map(|delimiter| {
                 let allowed = parent_allowed
@@ -357,11 +388,51 @@ fn check_line_length(
     }
 }
 
-fn update_line_length_directive(line: &str, disabled: &mut bool) -> bool {
-    let Some(comment) = line.find("# rubocop:") else {
+fn line_length_directive_marker(line: &str, comment: usize) -> Option<(usize, usize)> {
+    for (relative, _) in line[comment..].match_indices('#') {
+        let marker = comment + relative;
+        let mut cursor = marker + 1;
+        while line
+            .as_bytes()
+            .get(cursor)
+            .is_some_and(u8::is_ascii_whitespace)
+        {
+            cursor += 1;
+        }
+        if !line[cursor..].starts_with("rubocop") {
+            continue;
+        }
+        cursor += "rubocop".len();
+        while line
+            .as_bytes()
+            .get(cursor)
+            .is_some_and(u8::is_ascii_whitespace)
+        {
+            cursor += 1;
+        }
+        if line.as_bytes().get(cursor) != Some(&b':') {
+            continue;
+        }
+        // DirectiveComment deliberately rejects `# # rubocop:...`, while
+        // accepting a directive later in a substantive comment.
+        if marker > comment && line[comment + 1..marker].trim().is_empty() {
+            return None;
+        }
+        return Some((marker, cursor + 1));
+    }
+    None
+}
+
+fn update_line_length_directive(
+    line: &str,
+    comment: Option<usize>,
+    marker: Option<(usize, usize)>,
+    disabled: &mut bool,
+) -> bool {
+    let (Some(comment), Some((_marker, directive_start))) = (comment, marker) else {
         return *disabled;
     };
-    let directive = line[comment + "# rubocop:".len()..].trim_start();
+    let directive = line[directive_start..].trim_start();
     let (turn_off, rest) = if let Some(rest) = directive.strip_prefix("disable") {
         (true, rest)
     } else if let Some(rest) = directive.strip_prefix("todo") {
@@ -386,6 +457,27 @@ fn update_line_length_directive(line: &str, disabled: &mut bool) -> bool {
     } else {
         turn_off || *disabled
     }
+}
+
+fn prism_comment_columns(lines: &[SourceLine]) -> Vec<Option<usize>> {
+    let source = lines
+        .iter()
+        .map(|line| format!("{}{}", line.body, line.ending))
+        .collect::<String>();
+    let parsed = ruby_prism::parse(source.as_bytes());
+    let mut columns = vec![None; lines.len()];
+    for comment in parsed.comments() {
+        let start = comment.location().start_offset();
+        let line_start = source[..start].rfind('\n').map_or(0, |newline| newline + 1);
+        let line = source[..line_start]
+            .bytes()
+            .filter(|byte| *byte == b'\n')
+            .count();
+        if let Some(column) = columns.get_mut(line) {
+            *column = Some(start - line_start);
+        }
+    }
+    columns
 }
 
 fn correct_line_length(line: &str, max: usize, split_strings: bool) -> String {
@@ -686,78 +778,123 @@ fn last_excess_token_range(
 ) -> Option<(usize, usize)> {
     match kind {
         ExcessToken::Uri => {
-            let mut result = None;
+            let mut candidates = Vec::new();
             for scheme in uri_schemes {
-                let needle = format!("{scheme}://");
-                for (start, _) in line.match_indices(&needle) {
-                    let uri_end = line[start..]
-                        .find(|character: char| {
-                            character.is_ascii_whitespace()
-                                || matches!(character, '\'' | '"' | ')' | ']' | '}')
-                        })
-                        .map_or(line.len(), |at| start + at);
-                    let extended_end =
-                        if line[..start].rfind('{').is_some() && line.trim_end().ends_with('}') {
-                            line.trim_end().len()
-                        } else {
-                            extend_non_whitespace(line, uri_end)
-                        };
-                    let range = (start, extended_end);
-                    if result.is_none_or(|(previous, _)| start > previous) {
-                        result = Some(range);
-                    }
+                let scheme_prefix = format!("{scheme}:");
+                for (start, _) in line.match_indices(&scheme_prefix) {
+                    let after_scheme = start + scheme_prefix.len();
+                    let uri_end = if line[after_scheme..].starts_with('\\') {
+                        // URI's regexp still recognizes `http:` in a regexp
+                        // literal such as `/http:\/\/example/`.
+                        after_scheme
+                    } else {
+                        rfc2396_uri_end(line, start)
+                    };
+                    // URI's regexp consumes a closing bracket in YARD-style
+                    // `[https://...]` links; URI.parse then rejects the match.
+                    let candidate = &line[start..uri_end];
+                    // URI.parse rejects an unmatched closing bracket in a
+                    // fragment. This is what keeps Markdown links whose first
+                    // URL has a fragment from being treated as one giant URI.
+                    let valid = !line[after_scheme..uri_end].starts_with(':')
+                        && !candidate.split_once('#').is_some_and(|(_, fragment)| {
+                            fragment.matches(']').count() > fragment.matches('[').count()
+                        });
+                    candidates.push((start, uri_end, valid));
                 }
             }
-            result
-        }
-        ExcessToken::QualifiedName => {
-            let mut result = None;
-            let mut start = None;
-            for (offset, character) in line
-                .char_indices()
-                .chain(std::iter::once((line.len(), ' ')))
-            {
-                if character.is_ascii_alphanumeric() || matches!(character, '_' | ':') {
-                    start.get_or_insert(offset);
+            candidates.sort_unstable();
+            // URI.make_regexp consumes nested `http://` text as part of the
+            // surrounding URI. Scheme-by-scheme scanning must therefore not
+            // promote a nested URL (commonly a query parameter value) to a
+            // separate, later match.
+            let mut matches = Vec::new();
+            let mut covered_until = 0;
+            for (start, end, valid) in candidates {
+                if start < covered_until {
                     continue;
                 }
-                if let Some(token_start) = start.take() {
-                    let token = &line[token_start..offset];
-                    if strict_qualified_name(token) {
-                        result = Some((token_start, extend_non_whitespace(line, offset)));
-                    }
+                covered_until = end;
+                if valid {
+                    matches.push((start, end));
                 }
             }
-            result
+            let (start, uri_end) = matches.last().copied()?;
+            let extended_end = extend_non_whitespace(line, uri_end);
+            Some((
+                line[..start].chars().count(),
+                line[..extended_end].chars().count(),
+            ))
+        }
+        ExcessToken::QualifiedName => {
+            static QUALIFIED_NAME: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
+            let pattern = QUALIFIED_NAME.get_or_init(|| {
+                regex::Regex::new(r"\b(?:[A-Z][A-Za-z0-9_]*::)+[A-Za-z_][A-Za-z0-9_]*\b").unwrap()
+            });
+            let found = pattern.find_iter(line).last()?;
+            let end = extend_non_whitespace(line, found.end());
+            Some((
+                line[..found.start()].chars().count(),
+                line[..end].chars().count(),
+            ))
         }
     }
 }
 
+fn rfc2396_uri_end(line: &str, start: usize) -> usize {
+    let mut end = start;
+    let mut query_or_fragment = false;
+    while end < line.len() {
+        let byte = line.as_bytes()[end];
+        if matches!(byte, b'?' | b'#') {
+            query_or_fragment = true;
+        }
+        let allowed = byte.is_ascii_alphanumeric()
+            || matches!(
+                byte,
+                b'-' | b'_'
+                    | b'.'
+                    | b'!'
+                    | b'~'
+                    | b'*'
+                    | b'\''
+                    | b'('
+                    | b')'
+                    | b';'
+                    | b'/'
+                    | b'?'
+                    | b':'
+                    | b'@'
+                    | b'&'
+                    | b'='
+                    | b'+'
+                    | b'$'
+                    | b','
+                    | b'#'
+                    | b'%'
+            )
+            || query_or_fragment && matches!(byte, b'[' | b']');
+        if !allowed {
+            break;
+        }
+        end += 1;
+    }
+    end
+}
+
 fn extend_non_whitespace(line: &str, start: usize) -> usize {
+    // LineLengthHelp extends a URI/qualified-name match through a trailing
+    // brace expression (originally intended for YARD links). RuboCop applies
+    // that rule to ordinary Ruby blocks too.
+    if line.contains('{') && line.trim_end().ends_with('}') && line[start..].contains('}') {
+        return line.trim_end().len();
+    }
     start
         + line[start..]
             .chars()
             .take_while(|character| !character.is_whitespace())
             .map(char::len_utf8)
             .sum::<usize>()
-}
-
-fn strict_qualified_name(token: &str) -> bool {
-    let parts = token.split("::").collect::<Vec<_>>();
-    if parts.len() < 2 || parts.iter().any(|part| part.is_empty()) {
-        return false;
-    }
-    parts[..parts.len() - 1].iter().all(|part| {
-        part.starts_with(|character: char| character.is_ascii_uppercase())
-            && part
-                .chars()
-                .all(|character| character.is_ascii_alphanumeric() || character == '_')
-    }) && parts.last().is_some_and(|part| {
-        part.starts_with(|character: char| character.is_ascii_alphabetic() || character == '_')
-            && part
-                .chars()
-                .all(|character| character.is_ascii_alphanumeric() || character == '_')
-    })
 }
 
 #[derive(Clone, Copy)]
@@ -875,28 +1012,152 @@ fn delimiter_delta(line: &str) -> isize {
     delta
 }
 
-fn heredoc_delimiters(line: &str) -> Vec<String> {
+fn heredoc_delimiters(line: &str, in_heredoc: bool) -> Vec<String> {
+    // A heredoc body can only introduce a nested heredoc from interpolated
+    // Ruby. Its other text is not tokenized as Ruby source.
+    let mut cursor = if in_heredoc {
+        let Some(interpolation) = line.find("#{") else {
+            return Vec::new();
+        };
+        interpolation + 2
+    } else {
+        0
+    };
     let mut delimiters = Vec::new();
-    let mut rest = line;
-    while let Some(marker) = rest.find("<<") {
-        rest = &rest[marker + 2..];
-        rest = rest.strip_prefix(['-', '~']).unwrap_or(rest);
-        let quote = rest
-            .chars()
-            .next()
-            .filter(|character| matches!(character, '\'' | '"' | '`'));
-        if quote.is_some() {
-            rest = &rest[1..];
-        }
-        let delimiter = rest
-            .chars()
-            .take_while(|character| character.is_ascii_alphanumeric() || *character == '_')
-            .collect::<String>();
-        if delimiter.is_empty() {
+    let bytes = line.as_bytes();
+    let mut quote = None;
+    let mut escaped = false;
+    while cursor < bytes.len() {
+        let byte = bytes[cursor];
+        if let Some(delimiter) = quote {
+            if escaped {
+                escaped = false;
+            } else if byte == b'\\' {
+                escaped = true;
+            } else if byte == delimiter {
+                quote = None;
+            }
+            cursor += 1;
             continue;
         }
-        rest = &rest[delimiter.len()..];
-        delimiters.push(delimiter);
+        if byte == b'#' {
+            // `#{` is Ruby only while scanning an interpolated heredoc body;
+            // elsewhere a hash begins a comment.
+            if in_heredoc && bytes.get(cursor + 1) == Some(&b'{') {
+                cursor += 2;
+                continue;
+            }
+            break;
+        }
+        if matches!(byte, b'\'' | b'"' | b'`') {
+            quote = Some(byte);
+            cursor += 1;
+            continue;
+        }
+        if bytes.get(cursor..cursor + 2) != Some(b"<<") {
+            cursor += 1;
+            continue;
+        }
+        let mut end = cursor + 2;
+        if matches!(bytes.get(end), Some(b'-' | b'~')) {
+            end += 1;
+        }
+        let delimiter_quote = bytes
+            .get(end)
+            .copied()
+            .filter(|byte| matches!(byte, b'\'' | b'"' | b'`'));
+        if delimiter_quote.is_some() {
+            end += 1;
+        }
+        let name_start = end;
+        while bytes
+            .get(end)
+            .is_some_and(|byte| byte.is_ascii_alphanumeric() || *byte == b'_')
+        {
+            end += 1;
+        }
+        if end > name_start {
+            delimiters.push(line[name_start..end].to_string());
+        }
+        if delimiter_quote.is_some() && bytes.get(end) == delimiter_quote.as_ref() {
+            end += 1;
+        }
+        cursor = end.max(cursor + 2);
     }
     delimiters
+}
+
+fn allowed_line_length_heredoc_lines(
+    lines: &[SourceLine],
+    allow_all: bool,
+    allowed_delimiters: &[String],
+) -> std::collections::HashSet<usize> {
+    if !allow_all {
+        return std::collections::HashSet::new();
+    }
+    let source = lines
+        .iter()
+        .map(|line| format!("{}{}", line.body, line.ending))
+        .collect::<String>();
+    let parsed = ruby_prism::parse(source.as_bytes());
+    let mut collector = LineLengthHeredocCollector {
+        source: &source,
+        allow_all,
+        allowed_delimiters,
+        lines: std::collections::HashSet::new(),
+    };
+    collector.visit(&parsed.node());
+    collector.lines
+}
+
+struct LineLengthHeredocCollector<'source, 'config> {
+    source: &'source str,
+    allow_all: bool,
+    allowed_delimiters: &'config [String],
+    lines: std::collections::HashSet<usize>,
+}
+
+impl LineLengthHeredocCollector<'_, '_> {
+    fn record(
+        &mut self,
+        opening: Option<ruby_prism::Location<'_>>,
+        closing: Option<ruby_prism::Location<'_>>,
+    ) {
+        let (Some(opening), Some(closing)) = (opening, closing) else {
+            return;
+        };
+        let opening_source = &self.source[opening.start_offset()..opening.end_offset()];
+        if !opening_source.starts_with("<<") {
+            return;
+        }
+        let delimiter = self.source[closing.start_offset()..closing.end_offset()].trim();
+        if !self.allow_all
+            && !self
+                .allowed_delimiters
+                .iter()
+                .any(|allowed| allowed == delimiter)
+        {
+            return;
+        }
+        let opening_line = self.source[..opening.start_offset()]
+            .bytes()
+            .filter(|byte| *byte == b'\n')
+            .count();
+        let closing_line = self.source[..closing.start_offset()]
+            .bytes()
+            .filter(|byte| *byte == b'\n')
+            .count();
+        self.lines.extend(opening_line + 1..closing_line);
+    }
+}
+
+impl<'pr> Visit<'pr> for LineLengthHeredocCollector<'_, '_> {
+    fn visit_string_node(&mut self, node: &ruby_prism::StringNode<'pr>) {
+        self.record(node.opening_loc(), node.closing_loc());
+    }
+
+    fn visit_interpolated_string_node(&mut self, node: &ruby_prism::InterpolatedStringNode<'pr>) {
+        self.record(node.opening_loc(), node.closing_loc());
+        ruby_prism::visit_interpolated_string_node(self, node);
+    }
 }

@@ -270,8 +270,8 @@ fn explicit_block_argument(context: &mut CopContext<'_, '_>) {
             continue;
         };
         if matches!(send.kind(), "super" | "zsuper") {
-            if let Some(block_source) = block.source_range() {
-                send_range.end = block_source.start;
+            if let Some((block_begin, _)) = block.loc("begin") {
+                send_range.end = block_begin.start;
             }
         }
         let send_range = explicit_character_range_to_byte(&source, send_range);

@@ -11,11 +11,10 @@ pub(super) fn before_prism(
 }
 
 pub(super) fn after_prism(
-    lines: &[SourceLine],
-    options: &InspectionConfig,
-    offenses: &mut Vec<Offense>,
+    _lines: &[SourceLine],
+    _options: &InspectionConfig,
+    _offenses: &mut Vec<Offense>,
 ) {
-    super::lint_semantic::check(lines, options, offenses);
 }
 
 #[allow(clippy::too_many_lines)]
@@ -56,25 +55,6 @@ fn check_small_line_cops(
             options,
             offenses,
         );
-
-        if options.cop_enabled("Style/InlineComment")
-            && !crate::cops::intentionally_pending("Style/InlineComment")
-        {
-            if let Some(comment) = original.find('#') {
-                let text = &original[comment..];
-                if !original[..comment].trim().is_empty() && !text.starts_with("# rubocop:") {
-                    push_offense(
-                        offenses,
-                        "Style/InlineComment",
-                        "Avoid trailing inline comments.",
-                        index + 1,
-                        comment + 1,
-                        text.chars().count(),
-                        CorrectionStatus::Unavailable,
-                    );
-                }
-            }
-        }
     }
 }
 

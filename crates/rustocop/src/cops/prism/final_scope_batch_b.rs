@@ -1444,9 +1444,13 @@ impl Cop for UselessAssignment {
             branches: Vec::new(),
             next_branch: 0,
             modifier_branches: std::collections::HashSet::new(),
+            incomplete_branches: std::collections::HashSet::new(),
             loops: Vec::new(),
             next_loop: 0,
+            loop_conditions: Vec::new(),
             retry_loops: std::collections::HashSet::new(),
+            retry_region_stack: Vec::new(),
+            retry_regions: Vec::new(),
             interrupts: Vec::new(),
             next_interrupt: 0,
             block_depth: 0,
@@ -1454,8 +1458,63 @@ impl Cop for UselessAssignment {
             ignore_targets: 0,
             block_scopes: Vec::new(),
             parameter_stack: Vec::new(),
+            captures: std::collections::HashMap::new(),
+            scope_returns: std::collections::HashMap::new(),
         };
-        collector.visit(&parsed.node());
+        let root = parsed.node();
+        collector
+            .scope_returns
+            .insert(0, final_assignment_expression_range(&root));
+        collector.visit(&root);
+        let mut rubocop_referenced_assignments = std::collections::HashSet::new();
+        for (read_index, read) in collector.events.iter().enumerate() {
+            let compound_reference = matches!(
+                read.kind,
+                AssignmentEventKind::Write {
+                    consumes_previous: true,
+                    ..
+                }
+            );
+            if !matches!(read.kind, AssignmentEventKind::Read) && !compound_reference {
+                continue;
+            }
+            let mut consumed_branches = std::collections::HashSet::new();
+            for write_index in (0..read_index).rev() {
+                let write = &collector.events[write_index];
+                if write.scope != read.scope
+                    || write.name != read.name
+                    || !matches!(write.kind, AssignmentEventKind::Write { .. })
+                    || branch_conflict(write, read)
+                    || compound_reference && write.offense.start > read.offense.start
+                    || write
+                        .branches
+                        .last()
+                        .is_some_and(|branch| consumed_branches.contains(branch))
+                {
+                    continue;
+                }
+                rubocop_referenced_assignments.insert(write_index);
+                let modifier_assignment = write
+                    .branches
+                    .last()
+                    .is_some_and(|branch| collector.modifier_branches.contains(&branch.0));
+                if modifier_assignment {
+                    continue;
+                }
+                if write.branches.last().is_none()
+                    || write.branches.last() == read.branches.last()
+                {
+                    break;
+                }
+                if let Some(branch) = write
+                    .branches
+                    .last()
+                    .filter(|branch| !collector.incomplete_branches.contains(branch))
+                {
+                    consumed_branches.insert(*branch);
+                }
+            }
+        }
         collector.candidates.extend(
             collector
                 .events
@@ -1474,28 +1533,73 @@ impl Cop for UselessAssignment {
             if event.name.starts_with('_') {
                 continue;
             }
+            if collector.events[index + 1..]
+                .iter()
+                .enumerate()
+                .any(|(offset, outer)| {
+                    let AssignmentEventKind::Write {
+                        correction: Some(edit),
+                        consumes_previous: false,
+                        ..
+                    } = &outer.kind
+                    else {
+                        return false;
+                    };
+                    let outer_index = index + 1 + offset;
+                    !rubocop_referenced_assignments.contains(&outer_index)
+                        && outer.scope == event.scope
+                        && outer.offense.start < event.offense.start
+                        && edit.range.end <= event.offense.start
+                        && source[edit.range.end..event.offense.start]
+                            .bytes()
+                            .all(|byte| matches!(byte, b' ' | b'\t' | b'-' | b'+' | b'!' | b'~'))
+                })
+            {
+                continue;
+            }
             if *consumes_previous && !event.loops.is_empty() && !event.branches.is_empty() {
                 continue;
             }
-            if collector.events[index + 1..].iter().any(|outer| {
-                let AssignmentEventKind::Write {
-                    correction: Some(edit),
-                    consumes_previous: false,
-                    ..
-                } = &outer.kind
-                else {
-                    return false;
-                };
-                outer.scope == event.scope
-                    && outer.offense.start < event.offense.start
-                    && edit.range.end <= event.offense.start
-                    && source[edit.range.end..event.offense.start]
-                        .bytes()
-                        .all(|byte| matches!(byte, b' ' | b'\t' | b'-' | b'+' | b'!' | b'~'))
-            }) {
-                continue;
+            let mut used = rubocop_referenced_assignments.contains(&index);
+            used |= collector.retry_regions.iter().any(|(scope, range)| {
+                *scope == event.scope
+                    && range.start <= event.offense.start
+                    && event.offense.end <= range.end
+                    && collector.events.iter().any(|other| {
+                        other.scope == event.scope
+                            && other.name == event.name
+                            && range.start <= other.offense.start
+                            && other.offense.end <= range.end
+                            && (matches!(other.kind, AssignmentEventKind::Read)
+                                || matches!(
+                                    other.kind,
+                                    AssignmentEventKind::Write {
+                                        consumes_previous: true,
+                                        ..
+                                    }
+                                ))
+                    })
+            });
+            if let Some(capture_start) = collector
+                .captures
+                .get(&(event.scope, event.name.clone()))
+                .copied()
+            {
+                let reassigned_before_capture = event.offense.start < capture_start
+                    && collector.events[index + 1..].iter().any(|later| {
+                        later.scope == event.scope
+                            && later.name == event.name
+                            && later.offense.start < capture_start
+                            && later.branches == event.branches
+                            && matches!(later.kind, AssignmentEventKind::Write { .. })
+                    });
+                if event.offense.start >= capture_start || !reassigned_before_capture {
+                    // VariableForce stops proving reassignments once a local
+                    // is captured by a block, because the block's invocation
+                    // time and frequency are unknowable.
+                    used = true;
+                }
             }
-            let mut used = false;
             if event.block_depth > 0 {
                 used |= collector.events[..index].iter().any(|other| {
                     other.scope == event.scope
@@ -1541,10 +1645,51 @@ impl Cop for UselessAssignment {
             {
                 used = true;
             }
+            used |= event.loops.iter().any(|loop_id| {
+                collector.loop_conditions.iter().any(|(id, range)| {
+                    id == loop_id
+                        && collector.events.iter().any(|other| {
+                            other.scope == event.scope
+                                && other.name == event.name
+                                && range.start <= other.offense.start
+                                && other.offense.end <= range.end
+                                && matches!(other.kind, AssignmentEventKind::Read)
+                        })
+                        && !collector.events.iter().any(|other| {
+                            range.start <= other.offense.start
+                                && other.offense.end <= range.end
+                                && matches!(other.kind, AssignmentEventKind::Write { .. })
+                        })
+                })
+            });
+            if event.loops.iter().rev().any(|loop_id| {
+                let referenced_in_loop = collector.events.iter().any(|other| {
+                    other.scope == event.scope
+                        && other.name == event.name
+                        && other.loops.contains(loop_id)
+                        && (matches!(other.kind, AssignmentEventKind::Read)
+                            || matches!(
+                                other.kind,
+                                AssignmentEventKind::Write {
+                                    consumes_previous: true,
+                                    ..
+                                }
+                            ))
+                });
+                let last_assignment_in_loop = !collector.events[index + 1..].iter().any(|later| {
+                    later.scope == event.scope
+                        && later.name == event.name
+                        && later.loops.contains(loop_id)
+                        && matches!(later.kind, AssignmentEventKind::Write { .. })
+                });
+                referenced_in_loop && (!event.branches.is_empty() || last_assignment_in_loop)
+            }) {
+                used = true;
+            }
             if used {
                 continue;
             }
-            let mut shadowed_branches = Vec::<(usize, usize)>::new();
+            let mut shadowed_branches = Vec::<Vec<(usize, usize)>>::new();
             for later in &collector.events[index + 1..] {
                 if later.scope != event.scope {
                     continue;
@@ -1554,7 +1699,7 @@ impl Cop for UselessAssignment {
                 }
                 if shadowed_branches
                     .iter()
-                    .any(|branch| later.branches.contains(branch))
+                    .any(|shadow| shadow.iter().all(|branch| later.branches.contains(branch)))
                 {
                     continue;
                 }
@@ -1578,44 +1723,32 @@ impl Cop for UselessAssignment {
                                     .loops
                                     .iter()
                                     .any(|loop_id| !event.loops.contains(loop_id))
+                                && !collector.loop_conditions.iter().any(|(_, range)| {
+                                    range.start <= later.offense.start
+                                        && later.offense.end <= range.end
+                                })
                             || later.block_depth > event.block_depth;
                         if later.block_depth > event.block_depth {
                             used = true;
                         }
                         if conditional_write {
-                            shadowed_branches.extend(
-                                later
-                                    .branches
-                                    .iter()
-                                    .filter(|branch| {
-                                        !collector.modifier_branches.contains(&branch.0)
-                                            && !event.branches.iter().any(|own| own.0 == branch.0)
-                                    })
-                                    .copied(),
-                            );
+                            let shadow = later
+                                .branches
+                                .iter()
+                                .filter(|branch| {
+                                    !collector.modifier_branches.contains(&branch.0)
+                                        && !event.branches.iter().any(|own| own.0 == branch.0)
+                                })
+                                .copied()
+                                .collect::<Vec<_>>();
+                            if !shadow.is_empty() {
+                                shadowed_branches.push(shadow);
+                            }
                             continue;
                         }
                     }
                 }
                 break;
-            }
-            if !used {
-                if let Some(loop_id) = event.loops.last() {
-                    for earlier in collector.events[..index].iter().filter(|other| {
-                        other.scope == event.scope
-                            && other.loops.contains(loop_id)
-                            && !branch_conflict(event, other)
-                    }) {
-                        if earlier.name != event.name {
-                            continue;
-                        }
-                        match earlier.kind {
-                            AssignmentEventKind::Read => used = true,
-                            AssignmentEventKind::Write { .. } => {}
-                        }
-                        break;
-                    }
-                }
             }
             if used {
                 continue;
@@ -1634,6 +1767,13 @@ impl Cop for UselessAssignment {
                 None
             };
             let mut effective_suffix = suggestion.as_deref().unwrap_or(suffix);
+            if suffix.contains(" instead of `")
+                && collector.scope_returns.get(&event.scope).is_some_and(|range| {
+                    range.end != event.end || range.start > event.offense.start
+                })
+            {
+                effective_suffix = "";
+            }
             if suffix.starts_with(" Use `||`") {
                 let tail = &source[event.end..];
                 if tail
@@ -1734,9 +1874,13 @@ struct AssignmentEventCollector<'s> {
     branches: Vec<(usize, usize)>,
     next_branch: usize,
     modifier_branches: std::collections::HashSet<usize>,
+    incomplete_branches: std::collections::HashSet<(usize, usize)>,
     loops: Vec<usize>,
     next_loop: usize,
+    loop_conditions: Vec<(usize, std::ops::Range<usize>)>,
     retry_loops: std::collections::HashSet<usize>,
+    retry_region_stack: Vec<std::ops::Range<usize>>,
+    retry_regions: Vec<(usize, std::ops::Range<usize>)>,
     interrupts: Vec<usize>,
     next_interrupt: usize,
     block_depth: usize,
@@ -1744,6 +1888,29 @@ struct AssignmentEventCollector<'s> {
     ignore_targets: usize,
     block_scopes: Vec<usize>,
     parameter_stack: Vec<Vec<String>>,
+    captures: std::collections::HashMap<(usize, String), usize>,
+    scope_returns: std::collections::HashMap<usize, std::ops::Range<usize>>,
+}
+
+fn final_assignment_expression_range(node: &Node<'_>) -> std::ops::Range<usize> {
+    if let Some(program) = node.as_program_node() {
+        return final_assignment_expression_range(&program.statements().as_node());
+    }
+    if let Some(statements) = node.as_statements_node() {
+        if let Some(last) = statements.body().iter().last() {
+            return final_assignment_expression_range(&last);
+        }
+    }
+    if let Some(begin) = node.as_begin_node().filter(|begin| {
+        begin.begin_keyword_loc().is_none()
+            && begin.rescue_clause().is_none()
+            && begin.ensure_clause().is_none()
+    }) {
+        if let Some(statements) = begin.statements() {
+            return final_assignment_expression_range(&statements.as_node());
+        }
+    }
+    node.location().start_offset()..node.location().end_offset()
 }
 
 fn edit_distance(left: &str, right: &str) -> usize {
@@ -1786,8 +1953,8 @@ fn did_you_mean_name<'a>(target: &str, names: impl Iterator<Item = &'a str>) -> 
         })
         .collect::<Vec<_>>();
     words.sort_by(|left, right| {
-        left.2
-            .partial_cmp(&right.2)
+        jaro_winkler_distance(&left.0, &normalized_target)
+            .partial_cmp(&jaro_winkler_distance(&right.0, &normalized_target))
             .unwrap_or(std::cmp::Ordering::Equal)
     });
     words.reverse();
@@ -1808,61 +1975,65 @@ fn did_you_mean_name<'a>(target: &str, names: impl Iterator<Item = &'a str>) -> 
 }
 
 fn jaro_winkler_distance(left: &str, right: &str) -> f64 {
-    let left = left.as_bytes();
-    let right = right.as_bytes();
-    if left == right {
-        return 1.0;
+    let mut left = left.chars().collect::<Vec<_>>();
+    let mut right = right.chars().collect::<Vec<_>>();
+    if left.len() > right.len() {
+        std::mem::swap(&mut left, &mut right);
     }
-    if left.is_empty() || right.is_empty() {
-        return 0.0;
-    }
-    let radius = left
-        .len()
-        .max(right.len())
-        .saturating_div(2)
-        .saturating_sub(1);
+    let range = if right.len() > 3 {
+        right.len() / 2 - 1
+    } else {
+        0
+    };
     let mut left_match = vec![false; left.len()];
     let mut right_match = vec![false; right.len()];
-    let mut matches = 0usize;
-    for (index, byte) in left.iter().enumerate() {
-        let start = index.saturating_sub(radius);
-        let end = (index + radius + 1).min(right.len());
-        if let Some(other) =
-            (start..end).find(|&other| !right_match[other] && right[other] == *byte)
-        {
-            left_match[index] = true;
-            right_match[other] = true;
-            matches += 1;
+    let mut matches = 0.0;
+    for (index, character) in left.iter().enumerate() {
+        let start = index.saturating_sub(range);
+        let end = (index + range).min(right.len().saturating_sub(1));
+        if start <= end {
+            if let Some(other) =
+                (start..=end).find(|&other| !right_match[other] && right[other] == *character)
+            {
+                left_match[index] = true;
+                right_match[other] = true;
+                matches += 1.0;
+            }
         }
     }
-    if matches == 0 {
+    if matches == 0.0 {
         return 0.0;
     }
-    let left_sequence = left
-        .iter()
-        .zip(&left_match)
-        .filter_map(|(byte, matched)| matched.then_some(*byte));
-    let right_sequence = right
-        .iter()
-        .zip(&right_match)
-        .filter_map(|(byte, matched)| matched.then_some(*byte));
-    let transpositions = left_sequence
-        .zip(right_sequence)
-        .filter(|(a, b)| a != b)
-        .count() as f64
-        / 2.0;
-    let matches = matches as f64;
+    let mut right_index = 0;
+    let mut transpositions = 0.0;
+    for (index, character) in left.iter().enumerate() {
+        if !left_match[index] {
+            continue;
+        }
+        while !right_match[right_index] {
+            right_index += 1;
+        }
+        if *character != right[right_index] {
+            transpositions += 1.0;
+        }
+        right_index += 1;
+    }
+    let transpositions = (transpositions / 2.0_f64).floor();
     let jaro = (matches / left.len() as f64
         + matches / right.len() as f64
         + (matches - transpositions) / matches)
         / 3.0;
-    let prefix = left
-        .iter()
-        .zip(right)
-        .take(4)
-        .take_while(|(a, b)| a == b)
-        .count() as f64;
-    jaro + prefix * 0.1 * (1.0 - jaro)
+    if jaro > 0.7 {
+        let prefix = left
+            .iter()
+            .zip(&right)
+            .take(4)
+            .take_while(|(a, b)| a == b)
+            .count() as f64;
+        jaro + prefix * 0.1 * (1.0 - jaro)
+    } else {
+        jaro
+    }
 }
 
 fn branch_conflict(left: &AssignmentEvent, right: &AssignmentEvent) -> bool {
@@ -1870,7 +2041,12 @@ fn branch_conflict(left: &AssignmentEvent, right: &AssignmentEvent) -> bool {
         right
             .branches
             .iter()
-            .any(|other| branch.0 == other.0 && branch.1 != other.1)
+            .any(|other| {
+                branch.0 == other.0
+                    && branch.1 != other.1
+                    && left.interrupts.is_empty()
+                    && right.interrupts.is_empty()
+            })
     })
 }
 
@@ -1904,7 +2080,11 @@ impl AssignmentEventCollector<'_> {
     fn read(&mut self, name: &[u8], location: ruby_prism::Location<'_>, depth: u32) {
         let name = String::from_utf8_lossy(name).into_owned();
         let scope = self.scope_for_depth(depth);
-        self.candidates.push((scope, name.clone()));
+        if depth > 0 {
+            self.captures
+                .entry((scope, name.clone()))
+                .or_insert(location.start_offset());
+        }
         self.events.push(AssignmentEvent {
             scope,
             name,
@@ -1939,6 +2119,11 @@ impl AssignmentEventCollector<'_> {
         };
         let name = String::from_utf8_lossy(name).into_owned();
         let scope = self.scope_for_depth(depth);
+        if depth > 0 {
+            self.captures
+                .entry((scope, name.clone()))
+                .or_insert(location.start_offset());
+        }
         self.events.push(AssignmentEvent {
             scope,
             name,
@@ -1973,6 +2158,38 @@ impl AssignmentEventCollector<'_> {
 
 impl<'s, 'pr> Visit<'pr> for AssignmentEventCollector<'s> {
     fn visit_call_node(&mut self, node: &ruby_prism::CallNode<'pr>) {
+        if node.receiver().is_none()
+            && node.arguments().is_none()
+            && node.name().as_slice() == b"binding"
+        {
+            let accessible_scopes = std::iter::once(self.scope)
+                .chain(self.block_scopes.iter().copied())
+                .collect::<std::collections::HashSet<_>>();
+            let variables = self
+                .events
+                .iter()
+                .filter(|event| accessible_scopes.contains(&event.scope))
+                .map(|event| (event.scope, event.name.clone()))
+                .collect::<std::collections::HashSet<_>>();
+            for (scope, name) in variables {
+                self.events.push(AssignmentEvent {
+                    scope,
+                    name,
+                    offense: node.location().start_offset()..node.location().end_offset(),
+                    end: node.location().end_offset(),
+                    target: AssignmentTarget::Normal,
+                    // VariableForce resolves an implicit `binding` reference
+                    // from the referenced variable's scope. A binding inside
+                    // a nested block therefore has no branch identity in the
+                    // outer scope, even when that block sits in a rescue body.
+                    branches: Vec::new(),
+                    loops: self.loops.clone(),
+                    interrupts: self.interrupts.clone(),
+                    block_depth: self.block_depth,
+                    kind: AssignmentEventKind::Read,
+                });
+            }
+        }
         if node.receiver().is_none() && node.arguments().is_none() {
             self.candidates.push((
                 self.scope_for_depth(0),
@@ -1997,7 +2214,13 @@ impl<'s, 'pr> Visit<'pr> for AssignmentEventCollector<'s> {
                     .collect()
             })
             .unwrap_or_default();
+        let return_range = node
+            .body()
+            .map(|body| final_assignment_expression_range(&body));
         self.nested_scope(|this| {
+            if let Some(range) = return_range {
+                this.scope_returns.insert(this.scope, range);
+            }
             this.parameter_stack.push(names);
             if let Some(parameters) = node.parameters() {
                 this.visit(&parameters.as_node());
@@ -2012,7 +2235,13 @@ impl<'s, 'pr> Visit<'pr> for AssignmentEventCollector<'s> {
         if let Some(superclass) = node.superclass() {
             self.visit(&superclass);
         }
+        let return_range = node
+            .body()
+            .map(|body| final_assignment_expression_range(&body));
         self.nested_scope(|this| {
+            if let Some(range) = return_range {
+                this.scope_returns.insert(this.scope, range);
+            }
             if let Some(body) = node.body() {
                 this.visit(&body);
             }
@@ -2020,7 +2249,13 @@ impl<'s, 'pr> Visit<'pr> for AssignmentEventCollector<'s> {
     }
     fn visit_module_node(&mut self, node: &ruby_prism::ModuleNode<'pr>) {
         self.visit(&node.constant_path());
+        let return_range = node
+            .body()
+            .map(|body| final_assignment_expression_range(&body));
         self.nested_scope(|this| {
+            if let Some(range) = return_range {
+                this.scope_returns.insert(this.scope, range);
+            }
             if let Some(body) = node.body() {
                 this.visit(&body);
             }
@@ -2028,7 +2263,13 @@ impl<'s, 'pr> Visit<'pr> for AssignmentEventCollector<'s> {
     }
     fn visit_singleton_class_node(&mut self, node: &ruby_prism::SingletonClassNode<'pr>) {
         self.visit(&node.expression());
+        let return_range = node
+            .body()
+            .map(|body| final_assignment_expression_range(&body));
         self.nested_scope(|this| {
+            if let Some(range) = return_range {
+                this.scope_returns.insert(this.scope, range);
+            }
             if let Some(body) = node.body() {
                 this.visit(&body);
             }
@@ -2087,6 +2328,10 @@ impl<'s, 'pr> Visit<'pr> for AssignmentEventCollector<'s> {
         }
     }
     fn visit_while_node(&mut self, node: &ruby_prism::WhileNode<'pr>) {
+        self.loop_conditions.push((
+            self.next_loop,
+            node.predicate().location().start_offset()..node.predicate().location().end_offset(),
+        ));
         let modifier = node.keyword_loc().start_offset() != node.location().start_offset();
         if modifier {
             let group = self.next_branch;
@@ -2100,6 +2345,10 @@ impl<'s, 'pr> Visit<'pr> for AssignmentEventCollector<'s> {
         }
     }
     fn visit_until_node(&mut self, node: &ruby_prism::UntilNode<'pr>) {
+        self.loop_conditions.push((
+            self.next_loop,
+            node.predicate().location().start_offset()..node.predicate().location().end_offset(),
+        ));
         let modifier = node.keyword_loc().start_offset() != node.location().start_offset();
         if modifier {
             let group = self.next_branch;
@@ -2171,8 +2420,11 @@ impl<'s, 'pr> Visit<'pr> for AssignmentEventCollector<'s> {
             ruby_prism::visit_begin_node(self, node);
             return;
         }
+        self.retry_region_stack
+            .push(node.location().start_offset()..node.location().end_offset());
         let group = self.next_branch;
         self.next_branch += 1;
+        self.incomplete_branches.insert((group, 0));
         let interrupt = self.next_interrupt;
         self.next_interrupt += 1;
         if let Some(statements) = node.statements() {
@@ -2186,48 +2438,47 @@ impl<'s, 'pr> Visit<'pr> for AssignmentEventCollector<'s> {
         let mut arm = 1;
         while let Some(clause) = rescue {
             self.with_branch(group, arm, |this| {
-                this.with_loop(|this| {
-                    for exception in clause.exceptions().iter() {
-                        this.visit(&exception);
+                for exception in clause.exceptions().iter() {
+                    this.visit(&exception);
+                }
+                if let Some(reference) = clause.reference() {
+                    if let Some(target) = reference.as_local_variable_target_node() {
+                        let old = this.target;
+                        this.target = AssignmentTarget::Rescue;
+                        let start = clause
+                            .operator_loc()
+                            .map_or(target.location().start_offset(), |operator| {
+                                operator.start_offset().saturating_sub(1)
+                            });
+                        this.write(
+                            target.name().as_slice(),
+                            target.location(),
+                            Some(AssignmentCorrection {
+                                range: start..target.location().end_offset(),
+                                replacement: "",
+                            }),
+                            false,
+                            target.depth(),
+                        );
+                        this.target = old;
+                    } else {
+                        this.visit(&reference);
                     }
-                    if let Some(reference) = clause.reference() {
-                        if let Some(target) = reference.as_local_variable_target_node() {
-                            let old = this.target;
-                            this.target = AssignmentTarget::Rescue;
-                            let start = clause
-                                .operator_loc()
-                                .map_or(target.location().start_offset(), |operator| {
-                                    operator.start_offset().saturating_sub(1)
-                                });
-                            this.write(
-                                target.name().as_slice(),
-                                target.location(),
-                                Some(AssignmentCorrection {
-                                    range: start..target.location().end_offset(),
-                                    replacement: "",
-                                }),
-                                false,
-                                target.depth(),
-                            );
-                            this.target = old;
-                        } else {
-                            this.visit(&reference);
-                        }
-                    }
-                    if let Some(statements) = clause.statements() {
-                        this.visit(&statements.as_node());
-                    }
-                })
+                }
+                if let Some(statements) = clause.statements() {
+                    this.visit(&statements.as_node());
+                }
             });
             rescue = clause.subsequent();
             arm += 1;
         }
         if let Some(otherwise) = node.else_clause() {
-            self.with_branch(group, 0, |this| this.visit(&otherwise.as_node()));
+            self.with_branch(group, arm, |this| this.visit(&otherwise.as_node()));
         }
         if let Some(ensure) = node.ensure_clause() {
             self.visit(&ensure.as_node());
         }
+        self.retry_region_stack.pop();
     }
     fn visit_in_node(&mut self, node: &ruby_prism::InNode<'pr>) {
         self.ignore_targets += 1;
@@ -2267,6 +2518,12 @@ impl<'s, 'pr> Visit<'pr> for AssignmentEventCollector<'s> {
     fn visit_block_node(&mut self, node: &ruby_prism::BlockNode<'pr>) {
         let scope = self.next_scope;
         self.next_scope += 1;
+        if let Some(range) = node
+            .body()
+            .map(|body| final_assignment_expression_range(&body))
+        {
+            self.scope_returns.insert(scope, range);
+        }
         self.block_scopes.push(scope);
         if let Some(parameters) = node.parameters() {
             self.visit(&parameters);
@@ -2282,6 +2539,12 @@ impl<'s, 'pr> Visit<'pr> for AssignmentEventCollector<'s> {
     fn visit_lambda_node(&mut self, node: &ruby_prism::LambdaNode<'pr>) {
         let scope = self.next_scope;
         self.next_scope += 1;
+        if let Some(range) = node
+            .body()
+            .map(|body| final_assignment_expression_range(&body))
+        {
+            self.scope_returns.insert(scope, range);
+        }
         self.block_scopes.push(scope);
         self.block_depth += 1;
         ruby_prism::visit_lambda_node(self, node);
@@ -2316,9 +2579,16 @@ impl<'s, 'pr> Visit<'pr> for AssignmentEventCollector<'s> {
             .trim_end_matches('=')
             .to_string();
         let suffix = format!(" Use `{operator}` instead of `{operator}=`.");
+        let scope = self.scope_for_depth(node.depth());
+        let name = String::from_utf8_lossy(node.name().as_slice()).into_owned();
+        if node.depth() > 0 {
+            self.captures
+                .entry((scope, name.clone()))
+                .or_insert(node.name_loc().start_offset());
+        }
         self.events.push(AssignmentEvent {
-            scope: self.scope_for_depth(node.depth()),
-            name: String::from_utf8_lossy(node.name().as_slice()).into_owned(),
+            scope,
+            name,
             offense: node.name_loc().start_offset()..node.name_loc().end_offset(),
             end: node.location().end_offset(),
             target: AssignmentTarget::Normal,
@@ -2357,9 +2627,16 @@ impl<'s, 'pr> Visit<'pr> for AssignmentEventCollector<'s> {
         let group = self.next_branch;
         self.next_branch += 1;
         self.with_branch(group, 0, |this| this.visit(&node.value()));
+        let scope = self.scope_for_depth(node.depth());
+        let name = String::from_utf8_lossy(node.name().as_slice()).into_owned();
+        if node.depth() > 0 {
+            self.captures
+                .entry((scope, name.clone()))
+                .or_insert(node.name_loc().start_offset());
+        }
         self.events.push(AssignmentEvent {
-            scope: self.scope_for_depth(node.depth()),
-            name: String::from_utf8_lossy(node.name().as_slice()).into_owned(),
+            scope,
+            name,
             offense: node.name_loc().start_offset()..node.name_loc().end_offset(),
             end: node.location().end_offset(),
             target: AssignmentTarget::Normal,
@@ -2381,9 +2658,16 @@ impl<'s, 'pr> Visit<'pr> for AssignmentEventCollector<'s> {
         let group = self.next_branch;
         self.next_branch += 1;
         self.with_branch(group, 0, |this| this.visit(&node.value()));
+        let scope = self.scope_for_depth(node.depth());
+        let name = String::from_utf8_lossy(node.name().as_slice()).into_owned();
+        if node.depth() > 0 {
+            self.captures
+                .entry((scope, name.clone()))
+                .or_insert(node.name_loc().start_offset());
+        }
         self.events.push(AssignmentEvent {
-            scope: self.scope_for_depth(node.depth()),
-            name: String::from_utf8_lossy(node.name().as_slice()).into_owned(),
+            scope,
+            name,
             offense: node.name_loc().start_offset()..node.name_loc().end_offset(),
             end: node.location().end_offset(),
             target: AssignmentTarget::Normal,
@@ -2466,6 +2750,10 @@ impl<'s, 'pr> Visit<'pr> for AssignmentEventCollector<'s> {
     fn visit_retry_node(&mut self, _node: &ruby_prism::RetryNode<'pr>) {
         for id in &self.loops {
             self.retry_loops.insert(*id);
+        }
+        if let Some(range) = self.retry_region_stack.last().cloned() {
+            self.retry_regions
+                .push((self.scope_for_depth(0), range));
         }
     }
 }

@@ -23,6 +23,7 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
             multiline_operation_indentation,
         ),
         Box::new(HashAlignmentCop),
+        Box::new(MultilineMethodCallIndentationCompatCop),
         Box::new(MultilineMethodCallIndentationCop),
         Box::new(RedundantLineBreakCop),
         custom(
@@ -1452,6 +1453,31 @@ fn character_offset_to_byte(source: &str, offset: usize) -> usize {
         .map_or(source.len(), |(byte, _)| byte)
 }
 
+struct MultilineMethodCallIndentationCompatCop;
+
+impl Cop for MultilineMethodCallIndentationCompatCop {
+    fn name(&self) -> &'static str {
+        "Layout/MultilineMethodCallIndentation"
+    }
+
+    fn phase(&self) -> CopPhase {
+        CopPhase::Source
+    }
+
+    fn on_source(&self, source: &str, context: &mut Context) {
+        let parsed = ruby_prism::parse(source.as_bytes());
+        let (ast, root) = convert_rubocop_ast(source, &parsed.node());
+        let Some(root) = root.map(|root| ast.node(root)) else {
+            return;
+        };
+        let mut reporter = context.cop_context(self.name(), source, &[]);
+        if reporter.related_config_value("AllCops", "DisabledByDefault") != Some("true") {
+            return;
+        }
+        multiline_method_call_indentation_compat(root, source, &mut reporter);
+    }
+}
+
 struct MultilineMethodCallIndentationCop;
 
 impl Cop for MultilineMethodCallIndentationCop {
@@ -1486,6 +1512,10 @@ impl Cop for MultilineMethodCallIndentationCop {
         {
             return;
         }
+        let mut reporter = context.cop_context(self.name(), source, ancestors);
+        if reporter.related_config_value("AllCops", "DisabledByDefault") == Some("true") {
+            return;
+        }
         let call_location = call.location();
         let hash_pair = ancestors
             .iter()
@@ -1511,9 +1541,477 @@ impl Cop for MultilineMethodCallIndentationCop {
         {
             return;
         }
-        let mut reporter = context.cop_context(self.name(), source, ancestors);
         check_multiline_method_call(&call, receiver, rhs, &mut reporter);
     }
+}
+
+fn multiline_method_call_indentation_compat(
+    root: RubocopNodeRef<'_>,
+    source: &str,
+    context: &mut CopContext<'_, '_>,
+) {
+    let style = context.policy().enforced_style("aligned").to_string();
+    let width = context.config_usize("IndentationWidth", 2);
+    let normal_width = context
+        .related_config_value("Layout/IndentationWidth", "Width")
+        .and_then(|value| value.parse::<usize>().ok())
+        .unwrap_or(2);
+    for node in root.each_node(&["send", "csend"]) {
+        if node.method_name() == Some("[]") || node.loc("dot").is_none() {
+            continue;
+        }
+        let Some(receiver) = node.receiver() else {
+            continue;
+        };
+        let Some(rhs) = method_call_rhs(node, source) else {
+            continue;
+        };
+        if !method_range_begins_line(rhs.clone(), source) {
+            continue;
+        }
+        let pair = node.each_ancestor(&["pair"]).into_iter().next();
+        if pair
+            .is_some_and(|pair| method_inside_multiline_chain_arg(node, pair, source))
+            || pair.is_none() && method_not_for_this_cop(node, source)
+        {
+            continue;
+        }
+        let lhs = method_left_hand_side(receiver);
+        let base_receiver = method_base_receiver(node);
+        let actual = method_column(source, rhs.start);
+        let rhs_source = &source[character_offset_to_byte(source, rhs.start)
+            ..character_offset_to_byte(source, rhs.end)];
+        let mut base = None;
+        let mut hash_pair_base = None;
+        let desired = if let Some(pair) = pair {
+            if style == "aligned" {
+                base = method_hash_alignment_base(node, source)
+                    .or_else(|| method_pair_alignment_base(node, lhs, source))
+                    .or_else(|| lhs.source_range());
+                base.as_ref().map_or(actual, |base| method_column(source, base.start))
+            } else if style == "indented" && base_receiver.kind() == "hash" {
+                let key = pair.node_child(0).and_then(RubocopNodeRef::source_range);
+                hash_pair_base = key.as_ref().map(|key| method_column(source, key.start) + width);
+                key.map_or(actual, |key| method_column(source, key.start) + 2 * width)
+            } else {
+                method_line_indentation(lhs, source) + width
+            }
+        } else if style == "aligned" {
+            base = method_semantic_base(node, &rhs, source)
+                .or_else(|| method_syntactic_base(node));
+            base.as_ref().map_or_else(
+                || method_line_indentation(lhs, source)
+                    + method_correct_indentation(node, width, normal_width),
+                |base| method_column(source, base.start),
+            )
+        } else if style == "indented_relative_to_receiver" {
+            base = method_receiver_alignment_base(node);
+            base.as_ref().map_or_else(
+                || method_line_indentation(lhs, source) + width,
+                |base| method_column(source, base.start) + width,
+            )
+        } else {
+            method_line_indentation(lhs, source) + method_correct_indentation(node, width, normal_width)
+        };
+        if actual == desired {
+            continue;
+        }
+        let message = if let Some(base) = &base {
+            let base_source = source[character_offset_to_byte(source, base.start)
+                ..character_offset_to_byte(source, base.end)]
+                .lines()
+                .next()
+                .unwrap_or_default();
+            let base_line = source[..character_offset_to_byte(source, base.start)]
+                .bytes()
+                .filter(|byte| *byte == b'\n')
+                .count()
+                + 1;
+            if style == "indented_relative_to_receiver" {
+                format!("Indent `{rhs_source}` {width} spaces more than `{base_source}` on line {base_line}.")
+            } else {
+                format!("Align `{rhs_source}` with `{base_source}` on line {base_line}.")
+            }
+        } else {
+            let message_base = hash_pair_base.unwrap_or_else(|| method_line_indentation(lhs, source));
+            let expected = desired as isize - message_base as isize;
+            let used = actual as isize - message_base as isize;
+            let noun = if operation_keyword_ancestor(node).is_some() {
+                operation_description_compat(node, node, operation_keyword_ancestor(node), None)
+            } else if operation_assignment_ancestor(node, node).is_some() {
+                "an expression in an assignment".to_string()
+            } else {
+                "an expression".to_string()
+            };
+            format!("Use {expected} (not {used}) spaces for indenting {noun} spanning multiple lines.")
+        };
+        let offense_start = character_offset_to_byte(source, rhs.start);
+        let offense_end = character_offset_to_byte(source, rhs.end);
+        let line_start = source[..offense_start].rfind('\n').map_or(0, |newline| newline + 1);
+        let mut edits = vec![(line_start..offense_start, " ".repeat(desired))];
+        if let Some(block) = node.parent().filter(|parent| {
+            parent.type_is(&["any_block"])
+                && parent.send_node().is_some_and(|send| send.id() == node.id())
+        }) {
+            let delta = desired as isize - actual as isize;
+            if let Some(body) = block.body().and_then(RubocopNodeRef::source_range) {
+                let body_start = character_offset_to_byte(source, body.start);
+                let body_end = character_offset_to_byte(source, body.end);
+                for (offset, line) in SourceFile::new(source).lines() {
+                    if offset + line.len() <= body_start || offset >= body_end {
+                        continue;
+                    }
+                    let indentation = line.len() - line.trim_start().len();
+                    if indentation == line.trim_end_matches(['\r', '\n']).len() {
+                        continue;
+                    }
+                    let shifted = (indentation as isize + delta).max(0) as usize;
+                    edits.push((offset..offset + indentation, " ".repeat(shifted)));
+                }
+            }
+            if let Some((ending, _)) = block.loc("end") {
+                let end_byte = character_offset_to_byte(source, ending.start);
+                let end_line = source[..end_byte].rfind('\n').map_or(0, |newline| newline + 1);
+                let indentation = source[end_line..end_byte].chars().count();
+                let shifted = (indentation as isize + delta).max(0) as usize;
+                edits.push((end_line..end_byte, " ".repeat(shifted)));
+            }
+        }
+        context.replace_many(message, offense_start..offense_end, edits);
+    }
+}
+
+fn method_call_rhs(node: RubocopNodeRef<'_>, source: &str) -> Option<std::ops::Range<usize>> {
+    let (dot, dot_source) = node.loc("dot")?;
+    let selector = node.loc("selector");
+    if let Some((selector, _)) = selector {
+        if matches!(dot_source.as_str(), "." | "&.")
+            && method_same_line(source, dot.start, selector.start)
+        {
+            Some(dot.start..selector.end)
+        } else {
+            Some(selector.clone())
+        }
+    } else {
+        node.loc("begin").map(|(opening, _)| dot.start..opening.end)
+    }
+}
+
+fn method_same_line(source: &str, left: usize, right: usize) -> bool {
+    let left = character_offset_to_byte(source, left);
+    let right = character_offset_to_byte(source, right);
+    !source[left.min(right)..left.max(right)].contains('\n')
+}
+
+fn method_range_begins_line(range: std::ops::Range<usize>, source: &str) -> bool {
+    let start = character_offset_to_byte(source, range.start);
+    let line_start = source[..start].rfind('\n').map_or(0, |newline| newline + 1);
+    source[line_start..start].chars().all(char::is_whitespace)
+}
+
+fn method_column(source: &str, character: usize) -> usize {
+    let byte = character_offset_to_byte(source, character);
+    let line_start = source[..byte].rfind('\n').map_or(0, |newline| newline + 1);
+    source[line_start..byte].chars().count()
+}
+
+fn method_left_hand_side(mut lhs: RubocopNodeRef<'_>) -> RubocopNodeRef<'_> {
+    while let Some(parent) = lhs.parent() {
+        if !parent.call_type() || parent.loc("dot").is_none() || parent.assignment_method() {
+            break;
+        }
+        lhs = parent;
+    }
+    lhs
+}
+
+fn method_base_receiver(mut node: RubocopNodeRef<'_>) -> RubocopNodeRef<'_> {
+    while let Some(receiver) = node.receiver() {
+        node = receiver;
+    }
+    node
+}
+
+fn method_first_call_with_dot(mut node: RubocopNodeRef<'_>) -> Option<RubocopNodeRef<'_>> {
+    let base = method_base_receiver(node);
+    node = base.parent()?;
+    while node.loc("dot").is_none() {
+        node = node.parent()?;
+    }
+    Some(node)
+}
+
+fn method_not_for_this_cop(node: RubocopNodeRef<'_>, source: &str) -> bool {
+    let Some(node_range) = node.source_range() else {
+        return true;
+    };
+    method_lexically_return_grouped(node, source)
+        || node.ancestors().into_iter().any(|ancestor| {
+            ancestor.kind() == "dstr"
+                || ancestor.kind() == "begin" && ancestor.loc("begin").is_some()
+                || ancestor.call_type()
+                    && ancestor.parenthesized()
+                    && ancestor.loc("begin").zip(ancestor.loc("end")).is_some_and(
+                        |((opening, _), (closing, _))| {
+                            node_range.start > opening.start && node_range.end < closing.end
+                        },
+                    )
+        })
+}
+
+fn method_lexically_return_grouped(node: RubocopNodeRef<'_>, source: &str) -> bool {
+    let Some(range) = node.source_range() else {
+        return false;
+    };
+    let start = character_offset_to_byte(source, range.start);
+    let before = &source[..start];
+    before.rfind('(').is_some_and(|opening| {
+        before.rfind(')').is_none_or(|closing| opening > closing)
+            && before[..opening]
+                .trim_end()
+                .split(|character: char| !character.is_ascii_alphanumeric() && character != '_')
+                .next_back()
+                == Some("return")
+    })
+}
+
+fn method_inside_multiline_chain_arg(
+    node: RubocopNodeRef<'_>,
+    pair: RubocopNodeRef<'_>,
+    source: &str,
+) -> bool {
+    let Some(hash) = pair.parent() else {
+        return false;
+    };
+    let Some(call) = hash.parent().filter(|call| {
+        call.call_type()
+            && call.loc("dot").is_some()
+            && call.receiver().is_some_and(|receiver| receiver.id() != hash.id())
+    }) else {
+        return false;
+    };
+    call.loc("selector")
+        .zip(call.receiver().and_then(RubocopNodeRef::source_range))
+        .is_some_and(|((selector, _), receiver)| {
+            !method_same_line(source, selector.start, receiver.start)
+                && operation_contains(hash, node)
+        })
+}
+
+fn method_dot_selector_range(node: RubocopNodeRef<'_>) -> Option<std::ops::Range<usize>> {
+    let dot = node.loc("dot")?.0.clone();
+    let selector = node.loc("selector")?.0.clone();
+    Some(dot.start..selector.end)
+}
+
+fn method_semantic_base(
+    node: RubocopNodeRef<'_>,
+    rhs: &std::ops::Range<usize>,
+    source: &str,
+) -> Option<std::ops::Range<usize>> {
+    let rhs_source = &source[character_offset_to_byte(source, rhs.start)
+        ..character_offset_to_byte(source, rhs.end)];
+    if !rhs_source.starts_with('.') && !rhs_source.starts_with("&.") {
+        return None;
+    }
+    if operation_argument_call(node).is_some_and(RubocopNodeRef::parenthesized_call) {
+        return None;
+    }
+    let actual = method_column(source, rhs.start);
+    if let Some(above) = node.ancestors().into_iter().find(|ancestor| {
+        ancestor.loc("dot").is_some_and(|(dot, _)| {
+            method_column(source, dot.start) == actual
+                && source[..character_offset_to_byte(source, dot.start)]
+                    .bytes().filter(|byte| *byte == b'\n').count() + 2
+                    == source[..character_offset_to_byte(source, rhs.start)]
+                        .bytes().filter(|byte| *byte == b'\n').count() + 1
+        })
+    }) {
+        return method_dot_selector_range(above);
+    }
+    if let Some(base) = method_multiline_block_chain_base(node, source) {
+        return Some(base);
+    }
+    method_first_call_alignment_base(node, source)
+}
+
+fn method_syntactic_base(node: RubocopNodeRef<'_>) -> Option<std::ops::Range<usize>> {
+    if let Some(keyword) = operation_keyword_ancestor(node) {
+        let expression = match keyword.kind() {
+            "for" => keyword.collection(),
+            "if" | "while" | "until" => keyword.condition(),
+            "return" => keyword.first_argument(),
+            _ => None,
+        };
+        if let Some(range) = expression.and_then(RubocopNodeRef::source_range) {
+            return Some(range);
+        }
+    }
+    if let Some(assignment) = operation_assignment_ancestor(node, node) {
+        if let Some(range) = operation_assignment_rhs(assignment).and_then(RubocopNodeRef::source_range) {
+            return Some(range);
+        }
+    }
+    let receiver = node.receiver()?;
+    receiver.ancestors().into_iter().find_map(|ancestor| {
+        if !ancestor.call_type() || !ancestor.operator_method() {
+            return None;
+        }
+        let rhs = ancestor.first_argument()?;
+        operation_contains(rhs, receiver)
+            .then(|| rhs.source_range())
+            .flatten()
+    })
+}
+
+fn method_receiver_alignment_base(node: RubocopNodeRef<'_>) -> Option<std::ops::Range<usize>> {
+    method_first_call_with_dot(node)?.receiver()?.source_range()
+}
+
+fn method_hash_alignment_base(
+    node: RubocopNodeRef<'_>,
+    _source: &str,
+) -> Option<std::ops::Range<usize>> {
+    let base = method_base_receiver(node.receiver()?);
+    (base.kind() == "hash")
+        .then(|| method_first_call_with_dot(node).and_then(method_dot_selector_range))
+        .flatten()
+}
+
+fn method_pair_alignment_base(
+    node: RubocopNodeRef<'_>,
+    lhs: RubocopNodeRef<'_>,
+    source: &str,
+) -> Option<std::ops::Range<usize>> {
+    let first = method_first_call_with_dot(node)?;
+    if first.id() == node.id() {
+        return None;
+    }
+    if let Some(base) = method_after_multiline_block_base(first, node) {
+        return Some(base);
+    }
+    let dot = first.loc("dot")?.0.clone();
+    let receiver = first.receiver()?.source_range()?;
+    method_same_line(source, dot.start, receiver.start)
+        .then(|| method_dot_selector_range(first))
+        .flatten()
+        .or_else(|| lhs.source_range())
+}
+
+fn method_after_multiline_block_base(
+    first: RubocopNodeRef<'_>,
+    node: RubocopNodeRef<'_>,
+) -> Option<std::ops::Range<usize>> {
+    let block = first.block_node().filter(|block| block.multiline())?;
+    let after_block = block.parent()?;
+    (after_block.call_type()
+        && after_block.loc("dot").is_some()
+        && after_block.id() != node.id())
+    .then(|| method_dot_selector_range(after_block))
+    .flatten()
+}
+
+fn method_multiline_block_chain_base(
+    node: RubocopNodeRef<'_>,
+    source: &str,
+) -> Option<std::ops::Range<usize>> {
+    if node.block_node().is_some() {
+        let receiver = node.receiver()?;
+        if receiver.type_is(&["any_block"]) && receiver.single_line() {
+            return receiver.send_node().and_then(method_dot_selector_range);
+        }
+        if receiver.call_type() && receiver.loc("dot").is_some() {
+            let receiver_receiver = receiver.receiver()?;
+            if receiver_receiver.kind() == "begin"
+                && node.block_node().is_some_and(|block| block.single_line())
+            {
+                return method_dot_selector_range(receiver);
+            }
+            let dot = receiver.loc("dot")?.0.clone();
+            if method_range_line(source, dot.start) > receiver_receiver.last_line() {
+                return method_dot_selector_range(receiver);
+            }
+        }
+        return None;
+    }
+    let receiver = node.receiver()?;
+    if receiver.type_is(&["any_block"]) && receiver.single_line() {
+        return receiver.send_node().and_then(method_dot_selector_range);
+    }
+    let block = node
+        .each_descendant(&["any_block"])
+        .into_iter()
+        .min_by_key(|block| {
+            block
+                .source_range()
+                .map_or(usize::MAX, |range| range.start)
+        })?;
+    if !block.multiline() {
+        return None;
+    }
+    if receiver.call_type() {
+        method_dot_selector_range(receiver)
+    } else {
+        block.parent().and_then(method_dot_selector_range)
+    }
+}
+
+fn method_first_call_alignment_base(
+    node: RubocopNodeRef<'_>,
+    source: &str,
+) -> Option<std::ops::Range<usize>> {
+    let first = method_first_call_with_dot(node)?;
+    let base_receiver = method_base_receiver(first);
+    let dot = first.loc("dot")?.0.clone();
+    if base_receiver.kind() == "array"
+        && base_receiver.source_range().is_some_and(|range| {
+            method_same_line(source, dot.start, range.end.saturating_sub(1))
+        })
+    {
+        return method_dot_selector_range(first);
+    }
+    if method_range_line(source, dot.start) != first.first_line() {
+        return None;
+    }
+    if base_receiver.kind() == "begin"
+        && base_receiver.source_range().is_some_and(|range| {
+            method_same_line(source, dot.start, range.end.saturating_sub(1))
+        })
+    {
+        return None;
+    }
+    method_dot_selector_range(first)
+}
+
+fn method_range_line(source: &str, character: usize) -> usize {
+    source[..character_offset_to_byte(source, character)]
+        .bytes()
+        .filter(|byte| *byte == b'\n')
+        .count()
+        + 1
+}
+
+fn method_line_indentation(node: RubocopNodeRef<'_>, source: &str) -> usize {
+    let Some(range) = node.source_range() else {
+        return 0;
+    };
+    let byte = character_offset_to_byte(source, range.start);
+    let line_start = source[..byte].rfind('\n').map_or(0, |newline| newline + 1);
+    source[line_start..]
+        .chars()
+        .take_while(|character| character.is_whitespace() && *character != '\n')
+        .count()
+}
+
+fn method_correct_indentation(
+    node: RubocopNodeRef<'_>,
+    width: usize,
+    normal_width: usize,
+) -> usize {
+    width
+        + operation_keyword_ancestor(node)
+            .filter(|keyword| !keyword.modifier_form())
+            .map_or(0, |_| normal_width)
 }
 
 #[derive(Clone)]
@@ -2322,236 +2820,264 @@ fn inside_hash_argument_of_multiline_chain(
 }
 
 fn multiline_operation_indentation(context: &mut CopContext<'_, '_>) {
-    let lines = context.source_file().lines().collect::<Vec<_>>();
-    let mut operations = MultilineOperationRanges {
-        source: context.source().as_bytes(),
-        ranges: std::collections::HashMap::new(),
+    let source = context.source().to_string();
+    let parsed = ruby_prism::parse(source.as_bytes());
+    let (ast, root) = convert_rubocop_ast(&source, &parsed.node());
+    let Some(root) = root.map(|root| ast.node(root)) else {
+        return;
     };
-    operations.visit(&parse(context.source().as_bytes()).node());
     let style = context.policy().enforced_style("aligned").to_string();
     let width = context.config_usize("IndentationWidth", 2);
     let normal_width = context
         .related_config_value("Layout/IndentationWidth", "Width")
         .and_then(|value| value.parse::<usize>().ok())
         .unwrap_or(2);
-    for index in 1..lines.len() {
-        if !line_ends_with_binary_operator(lines[index - 1].1) {
-            continue;
-        }
-        let (_, current) = lines[index];
-        if current.trim().is_empty() || current.trim_start().starts_with('#') {
-            continue;
-        }
-
-        let mut first = index - 1;
-        while first > 0 && line_ends_with_binary_operator(lines[first - 1].1) {
-            first -= 1;
-        }
-        let first_line = lines[first].1;
-        let mut base = first_line.len() - first_line.trim_start().len();
-        let trimmed_first = first_line.trim_start();
-        if method_argument_operation(trimmed_first) {
-            continue;
-        }
-        let condition = ["if", "elsif", "unless", "while", "until"]
-            .into_iter()
-            .find(|keyword| trimmed_first.starts_with(&format!("{keyword} ")));
-        let modifier_condition = ["if", "unless", "while", "until"]
-            .into_iter()
-            .find(|keyword| trimmed_first.contains(&format!(" {keyword} ")));
-        let collection = trimmed_first.starts_with("for ").then_some("for");
-        let mut assignment = operation_assignment_rhs_column(first_line);
-        if first > 0 && lines[first - 1].1.trim_end().ends_with('=') {
-            base = lines[first - 1].1.len() - lines[first - 1].1.trim_start().len();
-            assignment = Some(base + width);
-        } else if first > 0 && lines[first - 1].1.trim_end().ends_with('\\') {
-            assignment = operation_assignment_rhs_column(lines[first - 1].1);
-            base = lines[first - 1].1.len() - lines[first - 1].1.trim_start().len();
-        }
-        let aligned_column = condition
-            .map(|keyword| base + keyword.len() + 1)
-            .or_else(|| collection.map(|_| first_line.find(" in ").map_or(base, |at| at + 4)))
-            .or(assignment)
-            .or_else(|| operation_argument_column(first_line));
-        let grouped_expression = trimmed_first.starts_with('(');
-        let nested_group_expression = first > 0
-            && lines[..first]
-                .iter()
-                .map(|(_, line)| line)
-                .fold(0isize, |depth, line| {
-                    depth + line.matches('(').count() as isize - line.matches(')').count() as isize
-                })
-                > 0;
-        let desired = if grouped_expression {
-            base + 1
-        } else if nested_group_expression && condition.is_none() && collection.is_none() {
-            base
-        } else if style == "indented" {
-            if condition.is_some() || collection.is_some() {
-                base + normal_width + width
-            } else {
-                base + width
-            }
+    for node in root.each_node(&["send", "csend", "and", "or"]) {
+        let operands = if node.operator_keyword() {
+            node.lhs().zip(node.rhs())
+        } else if node.operator_method()
+            && node.loc("dot").is_none()
+            && node.method_name() != Some("[]")
+            && !matches!(node.method_name(), Some("!" | "~" | "+@" | "-@"))
+        {
+            node.receiver().zip(node.first_argument())
         } else {
-            aligned_column
-                .filter(|column| *column >= base + width)
-                .unwrap_or(base + width)
+            None
         };
-        let actual = current.len() - current.trim_start().len();
-        let offense_start = lines[index].0 + actual;
-        let Some(offense_end) = operations.ranges.get(&offense_start).copied() else {
+        let Some((lhs, rhs)) = operands else {
             continue;
         };
+        let Some(rhs_range) = rhs.source_range() else {
+            continue;
+        };
+        if !operation_begins_line(rhs, &source)
+            || operation_not_for_this_cop(node, root, &source)
+        {
+            continue;
+        }
+        let assignment = operation_assignment_ancestor(node, rhs);
+        let keyword = operation_keyword_ancestor(node);
+        let should_align = assignment.is_some_and(|assignment| {
+            operation_assignment_rhs(assignment)
+                .is_some_and(|rhs| operation_begins_line(rhs, &source))
+        }) || style == "aligned"
+            && (keyword.is_some()
+                || assignment.is_some()
+                || operation_argument_call(node).is_some_and(|call| !operation_def_modifier(call)));
+        let lhs_indent = operation_line_indentation(lhs, &source);
+        let correct_indentation = width
+            + keyword
+                .filter(|keyword| !keyword.modifier_form())
+                .map_or(0, |_| normal_width);
+        let desired = if should_align {
+            node.column()
+        } else {
+            lhs_indent + correct_indentation
+        };
+        let actual = rhs.column();
         if actual == desired {
             continue;
         }
-
-        let noun = if let Some(keyword) = condition.or(modifier_condition) {
-            format!(
-                "a condition in {} `{keyword}` statement",
-                if matches!(keyword, "if" | "unless" | "until") {
-                    "an"
-                } else {
-                    "a"
-                }
-            )
-        } else if collection.is_some() {
-            "a collection in a `for` statement".to_string()
-        } else if assignment.is_some() {
-            "an expression in an assignment".to_string()
-        } else {
-            "an expression".to_string()
-        };
-        let aligned = style == "aligned"
-            && aligned_column.is_some_and(|column| column == desired && column != base + width);
-        let message = if aligned {
+        let noun = operation_description_compat(node, rhs, keyword, assignment);
+        let message = if should_align {
             format!("Align the operands of {noun} spanning multiple lines.")
         } else {
             format!(
-                "Use {} (not {}) spaces for indenting {noun} spanning multiple lines.",
-                desired.saturating_sub(base),
-                actual.saturating_sub(base)
+                "Use {correct_indentation} (not {}) spaces for indenting {noun} spanning multiple lines.",
+                actual as isize - lhs_indent as isize
             )
         };
+        let offense_start = character_offset_to_byte(&source, rhs_range.start);
+        let offense_end = character_offset_to_byte(&source, rhs_range.end);
+        let line_start = source[..offense_start]
+            .rfind('\n')
+            .map_or(0, |newline| newline + 1);
         context.replace(
             message,
             offense_start..offense_end,
-            lines[index].0..offense_start,
+            line_start..offense_start,
             " ".repeat(desired),
         );
     }
 }
 
-struct MultilineOperationRanges<'a> {
-    source: &'a [u8],
-    ranges: std::collections::HashMap<usize, usize>,
-}
-
-impl MultilineOperationRanges<'_> {
-    fn record(&mut self, left: Node<'_>, right: Node<'_>) {
-        let right_location = right.location();
-        let start = right_location.start_offset();
-        let line_start = self.source[..start]
-            .iter()
-            .rposition(|byte| *byte == b'\n')
-            .map_or(0, |newline| newline + 1);
-        if left.location().end_offset() <= line_start
-            && self.source[line_start..start]
-                .iter()
-                .all(|byte| byte.is_ascii_whitespace())
-        {
-            self.ranges.insert(start, right_location.end_offset());
-        }
-    }
-}
-
-impl<'pr> Visit<'pr> for MultilineOperationRanges<'_> {
-    fn visit_call_node(&mut self, node: &ruby_prism::CallNode<'pr>) {
-        if node.call_operator_loc().is_none()
-            && matches!(
-                node.name().as_slice(),
-                b"+" | b"-" | b"*" | b"/" | b"%" | b"<<" | b">>" | b"&" | b"|" | b"^"
-            )
-        {
-            if let (Some(left), Some(right)) = (node.receiver(), node.first_argument()) {
-                self.record(left, right);
-            }
-        }
-        ruby_prism::visit_call_node(self, node);
-    }
-
-    fn visit_and_node(&mut self, node: &ruby_prism::AndNode<'pr>) {
-        self.record(node.left(), node.right());
-        ruby_prism::visit_and_node(self, node);
-    }
-
-    fn visit_or_node(&mut self, node: &ruby_prism::OrNode<'pr>) {
-        self.record(node.left(), node.right());
-        ruby_prism::visit_or_node(self, node);
-    }
-}
-
-fn line_ends_with_binary_operator(line: &str) -> bool {
-    let code = line.split('#').next().unwrap_or(line).trim_end();
-    if code.ends_with('|') && (code.contains(" do |") || code.contains("{ |")) {
+fn operation_begins_line(node: RubocopNodeRef<'_>, source: &str) -> bool {
+    let Some(range) = node.source_range() else {
         return false;
-    }
-    [
-        "&&", "||", "and", "or", "+", "-", "*", "/", "%", "<<", ">>", "&", "|", "^",
-    ]
-    .iter()
-    .any(|operator| code.ends_with(operator))
+    };
+    let start = character_offset_to_byte(source, range.start);
+    let line_start = source[..start].rfind('\n').map_or(0, |newline| newline + 1);
+    source[line_start..start].chars().all(char::is_whitespace)
 }
 
-fn operation_assignment_rhs_column(line: &str) -> Option<usize> {
-    const OPERATORS: [&str; 11] = [
-        "||=", "&&=", "*=", "+=", "-=", "/=", "%=", "^=", "|=", "&=", " = ",
-    ];
-    OPERATORS.iter().find_map(|operator| {
-        line.find(operator).map(|at| {
-            let after = at + operator.len();
-            after
-                + line[after..]
-                    .bytes()
-                    .take_while(u8::is_ascii_whitespace)
-                    .count()
-        })
+fn operation_contains(outer: RubocopNodeRef<'_>, inner: RubocopNodeRef<'_>) -> bool {
+    outer.source_range().zip(inner.source_range()).is_some_and(|(outer, inner)| {
+        inner.start >= outer.start && inner.end <= outer.end
     })
 }
 
-fn operation_argument_column(line: &str) -> Option<usize> {
-    if let Some(comma) = line.rfind(',') {
-        let after = comma + 1;
-        return Some(
-            after
-                + line[after..]
-                    .bytes()
-                    .take_while(u8::is_ascii_whitespace)
-                    .count(),
-        );
-    }
-    let trimmed = line.trim_start();
-    if trimmed.starts_with('(') {
-        return Some(line.len() - trimmed.len() + 1);
-    }
-    trimmed
-        .find(['\'', '"'])
-        .filter(|at| *at > 0)
-        .map(|at| line.len() - trimmed.len() + at)
+fn operation_not_for_this_cop(
+    node: RubocopNodeRef<'_>,
+    root: RubocopNodeRef<'_>,
+    source: &str,
+) -> bool {
+    let Some(node_range) = node.source_range() else {
+        return true;
+    };
+    operation_lexically_grouped(node, source)
+        || root.each_node(&[]).into_iter().any(|ancestor| {
+        if ancestor.id() == node.id() || !operation_contains(ancestor, node) {
+            return false;
+        }
+        ancestor.kind() == "begin" && ancestor.loc("begin").is_some()
+            || ancestor.call_type()
+                && ancestor.parenthesized_call()
+                && ancestor.loc("begin").zip(ancestor.loc("end")).is_some_and(
+                    |((opening, _), (closing, _))| {
+                        node_range.start > opening.start && node_range.end < closing.end
+                    },
+                )
+        })
 }
 
-fn method_argument_operation(line: &str) -> bool {
-    let Some(opening) = line.find('(') else {
+fn operation_lexically_grouped(node: RubocopNodeRef<'_>, source: &str) -> bool {
+    let Some(range) = node.source_range() else {
         return false;
     };
-    opening > 0
-        && line[..opening]
-            .chars()
-            .next_back()
-            .is_some_and(|character| {
-                character.is_ascii_alphanumeric() || matches!(character, '_' | '!' | '?')
-            })
-        && !line[opening + 1..].contains(')')
+    let start = character_offset_to_byte(source, range.start);
+    let before = &source[..start];
+    let interpolation = before.rfind("#{").is_some_and(|opening| {
+        before.rfind('}').is_none_or(|closing| opening > closing)
+    });
+    let return_group = before.rfind('(').is_some_and(|opening| {
+        before.rfind(')').is_none_or(|closing| opening > closing)
+            && before[..opening]
+                .trim_end()
+                .split(|character: char| !character.is_ascii_alphanumeric() && character != '_')
+                .next_back()
+                == Some("return")
+    });
+    interpolation || return_group
+}
+
+fn operation_assignment_ancestor<'ast>(
+    node: RubocopNodeRef<'ast>,
+    candidate: RubocopNodeRef<'ast>,
+) -> Option<RubocopNodeRef<'ast>> {
+    for ancestor in node.ancestors() {
+        if matches!(ancestor.kind(), "if" | "while" | "until" | "for" | "return" | "array" | "kwbegin") {
+            break;
+        }
+        if ancestor.type_is(&["any_block"])
+            && ancestor.body().is_some_and(|body| operation_contains(body, candidate))
+        {
+            break;
+        }
+        if ancestor.assignment()
+            && operation_assignment_rhs(ancestor)
+                .is_some_and(|rhs| operation_contains(rhs, candidate))
+        {
+            return Some(ancestor);
+        }
+        if ancestor.call_type()
+            && ancestor.assignment_method()
+            && ancestor
+                .last_argument()
+                .is_some_and(|rhs| operation_contains(rhs, candidate))
+        {
+            return Some(ancestor);
+        }
+    }
+    None
+}
+
+fn operation_assignment_rhs(node: RubocopNodeRef<'_>) -> Option<RubocopNodeRef<'_>> {
+    if node.call_type() {
+        node.last_argument()
+    } else {
+        node.rhs().or_else(|| node.child_nodes().last().copied())
+    }
+}
+
+fn operation_keyword_ancestor(node: RubocopNodeRef<'_>) -> Option<RubocopNodeRef<'_>> {
+    node.ancestors().into_iter().find(|ancestor| {
+        let expression = match ancestor.kind() {
+            "for" => ancestor.collection(),
+            "if" if !ancestor.ternary() => ancestor.condition(),
+            "while" | "until" => ancestor.condition(),
+            "return" => ancestor.first_argument(),
+            _ => None,
+        };
+        expression.is_some_and(|expression| operation_contains(expression, node))
+    })
+}
+
+fn operation_argument_call(node: RubocopNodeRef<'_>) -> Option<RubocopNodeRef<'_>> {
+    for ancestor in node.ancestors() {
+        if ancestor.kind() == "block" {
+            return None;
+        }
+        if ancestor.call_type()
+            && !ancestor.assignment_method()
+            && ancestor
+                .arguments()
+                .into_iter()
+                .any(|argument| operation_contains(argument, node))
+        {
+            return Some(ancestor);
+        }
+    }
+    None
+}
+
+fn operation_def_modifier(mut node: RubocopNodeRef<'_>) -> bool {
+    loop {
+        if !node.call_type() || node.receiver().is_some() {
+            return false;
+        }
+        let Some(argument) = node.first_argument() else {
+            return false;
+        };
+        if argument.type_is(&["any_def"]) {
+            return true;
+        }
+        node = argument;
+    }
+}
+
+fn operation_line_indentation(node: RubocopNodeRef<'_>, source: &str) -> usize {
+    let Some(range) = node.source_range() else {
+        return 0;
+    };
+    let start = character_offset_to_byte(source, range.start);
+    let line_start = source[..start].rfind('\n').map_or(0, |newline| newline + 1);
+    source[line_start..]
+        .chars()
+        .take_while(|character| character.is_whitespace() && *character != '\n')
+        .count()
+}
+
+fn operation_description_compat(
+    _node: RubocopNodeRef<'_>,
+    _rhs: RubocopNodeRef<'_>,
+    keyword: Option<RubocopNodeRef<'_>>,
+    assignment: Option<RubocopNodeRef<'_>>,
+) -> String {
+    if let Some(keyword) = keyword {
+        let name = if keyword.kind() == "if" && keyword.loc_is("keyword", "unless") {
+            "unless"
+        } else {
+            keyword.loc("keyword").map_or(keyword.kind(), |(_, name)| name)
+        };
+        let kind = if name == "for" { "collection" } else { "condition" };
+        let article = if name.starts_with(['i', 'u']) { "an" } else { "a" };
+        return format!("a {kind} in {article} `{name}` statement");
+    }
+    if assignment.is_some() {
+        "an expression in an assignment".to_string()
+    } else {
+        "an expression".to_string()
+    }
 }
 
 struct HashAlignmentCop;

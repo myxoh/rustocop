@@ -3,6 +3,24 @@
 // Source SHA-256: ed9b43e4539ae5d9251f24620958994a5f4b9af6450bc72074fd94c780541d6c
 
 use std::collections::BTreeSet;
+
+fn char_at(source: &str, index: usize) -> Option<char> {
+    source.chars().nth(index)
+}
+
+fn char_slice(source: &str, start: usize, length: usize) -> Option<&str> {
+    let start_byte = source.char_indices().nth(start).map_or_else(
+        || (start == source.chars().count()).then_some(source.len()),
+        |(byte, _)| Some(byte),
+    )?;
+    let end_index = start.checked_add(length)?;
+    let end_byte = source.char_indices().nth(end_index).map_or_else(
+        || (end_index == source.chars().count()).then_some(source.len()),
+        |(byte, _)| Some(byte),
+    )?;
+    source.get(start_byte..end_byte)
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct AlignmentRange {
     pub(crate) line: usize,
@@ -12,7 +30,7 @@ pub(crate) struct AlignmentRange {
 
 impl AlignmentRange {
     fn last_column(&self) -> usize {
-        self.column + self.source.len()
+        self.column + self.source.chars().count()
     }
 }
 
@@ -33,7 +51,7 @@ impl AlignmentToken {
         )
     }
     fn last_column(&self) -> usize {
-        self.column + self.source.len()
+        self.column + self.source.chars().count()
     }
 }
 
@@ -63,7 +81,7 @@ impl<'a> PrecedingFollowingAlignment<'a> {
         self.allow_for_alignment
     }
 
-    fn aligned_with_something(&self, range: &AlignmentRange) -> bool {
+    pub(crate) fn aligned_with_something(&self, range: &AlignmentRange) -> bool {
         self.aligned_with_adjacent_line(range, false)
     }
 
@@ -124,7 +142,10 @@ impl<'a> PrecedingFollowingAlignment<'a> {
             let Some(line) = self.lines.get(line_number.saturating_sub(1)) else {
                 continue;
             };
-            let Some(index) = line.find(|character: char| !character.is_whitespace()) else {
+            let Some(index) = line
+                .chars()
+                .position(|character| !character.is_whitespace())
+            else {
                 continue;
             };
             if indentation.is_some_and(|expected| expected != index) {
@@ -135,9 +156,10 @@ impl<'a> PrecedingFollowingAlignment<'a> {
             } else {
                 self.aligned_token(range, line, line_number)
             };
-            if aligned {
-                return true;
-            }
+            // RuboCop decides on the nearest eligible code line. A failed
+            // predicate on that line is conclusive; it does not continue
+            // searching farther through the file.
+            return aligned;
         }
         false
     }
@@ -156,15 +178,12 @@ impl<'a> PrecedingFollowingAlignment<'a> {
 
     fn aligned_words(&self, range: &AlignmentRange, line: &str) -> bool {
         if range.column > 0
-            && line
-                .get(range.column - 1..=range.column)
-                .is_some_and(|pair| {
-                    pair.starts_with(char::is_whitespace) && !pair.ends_with(char::is_whitespace)
-                })
+            && char_at(line, range.column - 1).is_some_and(char::is_whitespace)
+            && char_at(line, range.column).is_some_and(|character| !character.is_whitespace())
         {
             return true;
         }
-        line.get(range.column..range.column + range.source.len()) == Some(range.source.as_str())
+        char_slice(line, range.column, range.source.chars().count()) == Some(range.source.as_str())
     }
 
     fn aligned_equals_operator(&self, range: &AlignmentRange, line_number: usize) -> bool {
@@ -196,7 +215,7 @@ impl<'a> PrecedingFollowingAlignment<'a> {
     }
 
     fn aligned_identical(&self, range: &AlignmentRange, line: &str) -> bool {
-        line.get(range.column..range.column + range.source.len()) == Some(range.source.as_str())
+        char_slice(line, range.column, range.source.chars().count()) == Some(range.source.as_str())
     }
 
     fn aligned_with_equals_sign(

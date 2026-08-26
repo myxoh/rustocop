@@ -12,7 +12,10 @@ fn cop_directive_syntax(context: &mut CopContext<'_, '_>) {
             continue;
         };
         let absolute_comment = offset + comment_start;
-        if !comment_ranges.iter().any(|range| range.start == absolute_comment) {
+        if !comment_ranges
+            .iter()
+            .any(|range| range.start == absolute_comment)
+        {
             continue;
         }
         let trimmed = &line[comment_start..];
@@ -35,9 +38,9 @@ fn cop_directive_syntax(context: &mut CopContext<'_, '_>) {
             || names.split(',').any(|name| name.trim().ends_with('/'))
             || names.ends_with(',')
             || names.split(',').any(|name| {
-                name.trim().bytes().any(|byte| {
-                    !(byte.is_ascii_alphanumeric() || matches!(byte, b'/' | b'_'))
-                })
+                name.trim()
+                    .bytes()
+                    .any(|byte| !(byte.is_ascii_alphanumeric() || matches!(byte, b'/' | b'_')))
             })
             || (!rest[mode.len()..].contains(',')
                 && rest[mode.len()..]
@@ -70,6 +73,14 @@ fn missing_cop_enable_directive(context: &mut CopContext<'_, '_>) {
             .or_else(|| {
                 line.find("# rubocop: disable ")
                     .map(|start| (start, "# rubocop: disable "))
+            })
+            .or_else(|| {
+                line.find("# rubocop:todo ")
+                    .map(|start| (start, "# rubocop:todo "))
+            })
+            .or_else(|| {
+                line.find("# rubocop: todo ")
+                    .map(|start| (start, "# rubocop: todo "))
             });
         let Some((comment_start, marker)) = directive else {
             continue;
@@ -89,70 +100,109 @@ fn missing_cop_enable_directive(context: &mut CopContext<'_, '_>) {
             .next()
             .unwrap_or_default()
             .trim();
-        let wrapped_by_push_pop = source
-            .lines()
-            .take(line_index)
-            .any(|line| line.trim() == "# rubocop:push")
-            && source
+        let push_depth =
+            source
                 .lines()
-                .skip(line_index + 1)
-                .any(|line| line.trim() == "# rubocop:pop");
+                .take(line_index)
+                .fold(0usize, |depth, line| match line.trim() {
+                    "# rubocop:push" | "# rubocop: push" => depth + 1,
+                    "# rubocop:pop" | "# rubocop: pop" => depth.saturating_sub(1),
+                    _ => depth,
+                });
+        let mut future_depth = push_depth;
+        let wrapped_by_push_pop = push_depth > 0
+            && source.lines().skip(line_index + 1).any(|line| {
+                match line.trim() {
+                    "# rubocop:push" | "# rubocop: push" => future_depth += 1,
+                    "# rubocop:pop" | "# rubocop: pop" => {
+                        future_depth = future_depth.saturating_sub(1)
+                    }
+                    _ => {}
+                }
+                future_depth < push_depth
+            });
         if wrapped_by_push_pop {
             continue;
         }
         let names = names.split(',').map(str::trim).collect::<Vec<_>>();
-        let prefer_explicit = names
-            .iter()
-            .any(|name| context.related_config_explicit(name, "Enabled"));
         for name in names {
             if name.is_empty()
-                || name.bytes().any(|byte| {
-                    !(byte.is_ascii_alphanumeric() || matches!(byte, b'/' | b'_'))
-                })
+                || name
+                    .bytes()
+                    .any(|byte| !(byte.is_ascii_alphanumeric() || matches!(byte, b'/' | b'_')))
             {
-                continue;
-            }
-            if prefer_explicit && !context.related_config_explicit(name, "Enabled") {
                 continue;
             }
             let built_in_department = name.split_once('/').is_some_and(|(department, _)| {
                 matches!(
                     department,
-                    "Bundler" | "Gemspec" | "Layout" | "Lint" | "Metrics" | "Migration"
-                        | "Naming" | "Security" | "Style"
+                    "Bundler"
+                        | "Gemspec"
+                        | "Layout"
+                        | "Lint"
+                        | "Metrics"
+                        | "Migration"
+                        | "Naming"
+                        | "Security"
+                        | "Style"
                 )
             });
-            if context.related_config_value("AllCops", "DisabledByDefault") == Some("true")
-                && built_in_department
+            let registered_built_in =
+                built_in_department && context.related_config_value(name, "Enabled").is_some();
+            if maximum == usize::MAX
+                && registered_built_in
                 && !context.cop_enabled(name)
+                && !context.related_cop_normally_enabled(name)
             {
                 continue;
             }
-            if context.related_config_value(name, "Enabled") == Some("false") {
+            let enable_line =
+                source
+                    .lines()
+                    .enumerate()
+                    .skip(line_index + 1)
+                    .find_map(|(index, line)| {
+                        let trimmed = line.trim();
+                        let list = trimmed
+                            .strip_prefix("# rubocop:enable ")
+                            .or_else(|| trimmed.strip_prefix("# rubocop: enable "))?;
+                        list.split("--")
+                            .next()
+                            .unwrap_or_default()
+                            .split(',')
+                            .map(str::trim)
+                            .any(|enabled| {
+                                enabled == name
+                                    || name
+                                        .split_once('/')
+                                        .is_some_and(|(department, _)| enabled == department)
+                            })
+                            .then_some(index)
+                    });
+            let repeated_disable_line =
+                source
+                    .lines()
+                    .enumerate()
+                    .skip(line_index + 1)
+                    .find_map(|(index, line)| {
+                        directive_names(
+                            line,
+                            &[
+                                "# rubocop:disable ",
+                                "# rubocop: disable ",
+                                "# rubocop:todo ",
+                                "# rubocop: todo ",
+                            ],
+                        )?
+                        .iter()
+                        .any(|disabled| *disabled == name)
+                        .then_some(index)
+                    });
+            if repeated_disable_line
+                .is_some_and(|repeat| enable_line.is_none_or(|enable| repeat < enable))
+            {
                 continue;
             }
-            let enable_line = source
-                .lines()
-                .enumerate()
-                .skip(line_index + 1)
-                .find_map(|(index, line)| {
-                    let trimmed = line.trim();
-                    let list = trimmed
-                        .strip_prefix("# rubocop:enable ")
-                        .or_else(|| trimmed.strip_prefix("# rubocop: enable "))?;
-                    list.split("--")
-                        .next()
-                        .unwrap_or_default()
-                        .split(',')
-                        .map(str::trim)
-                        .any(|enabled| {
-                            enabled == name
-                                || name
-                                    .split_once('/')
-                                    .is_some_and(|(department, _)| enabled == department)
-                        })
-                        .then_some(index)
-                });
             let missing = enable_line.is_none();
             let too_far =
                 enable_line.is_some_and(|index| index.saturating_sub(line_index + 1) > maximum);
@@ -188,4 +238,20 @@ fn missing_cop_enable_directive(context: &mut CopContext<'_, '_>) {
             break;
         }
     }
+}
+
+fn directive_names<'a>(line: &'a str, markers: &[&str]) -> Option<Vec<&'a str>> {
+    let trimmed = line.trim();
+    let list = markers
+        .iter()
+        .find_map(|marker| trimmed.strip_prefix(marker))?;
+    Some(
+        list.split("--")
+            .next()
+            .unwrap_or_default()
+            .split(',')
+            .map(str::trim)
+            .filter(|name| !name.is_empty())
+            .collect(),
+    )
 }

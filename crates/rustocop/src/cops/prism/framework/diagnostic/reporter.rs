@@ -103,6 +103,10 @@ impl Reporter<'_> {
         self.context.cop_config.explicitly_contains(cop_name, key)
     }
 
+    pub(in super::super) fn related_cop_normally_enabled(&self, cop_name: &str) -> bool {
+        self.context.cop_config.normally_enables(cop_name)
+    }
+
     pub(in super::super) fn related_config_map(
         &self,
         cop_name: &str,

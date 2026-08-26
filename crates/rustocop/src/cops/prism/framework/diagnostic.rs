@@ -97,8 +97,8 @@ impl Context {
         self.target_ruby_version
     }
 
-    pub(super) fn set_enabled_cops<'a>(&mut self, cops: impl Iterator<Item = &'a dyn super::Cop>) {
-        self.enabled_cops = cops.map(super::Cop::name).collect();
+    pub(super) fn set_enabled_cops(&mut self, cops: impl Iterator<Item = &'static str>) {
+        self.enabled_cops = cops.collect();
     }
 
     pub(super) fn set_parser_warnings<'pr>(
@@ -522,6 +522,8 @@ fn cop_directive(line: &str) -> Option<(usize, DirectiveAction, Vec<&str>)> {
         .map_or(names, |(names, _reason)| names)
         .split(',')
         .flat_map(str::split_whitespace)
+        .map(|name| name.split_once('(').map_or(name, |(cop, _reason)| cop))
+        .map(|name| name.trim_end_matches(':'))
         .filter(|name| !name.is_empty())
         .collect::<Vec<_>>();
     Some((comment_at, action, names))

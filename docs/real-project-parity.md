@@ -13,27 +13,27 @@ cases, and configuration branches that the projects do not exercise.
 ## Latest realistic status
 
 The latest complete checkpoint was generated at
-`2026-08-25T17:24:07-04:00` from commit
-`3360b7ab3bc13f1fdd138c47a275cd7190c989ea`
-and worktree native binary SHA-256
-`b0dac7c14b7e32302db4e3e71bdcda09a43f8bb06509ffdac0ad9a46ac644397`.
+`2026-08-26T14:47:18-04:00` from dirty-worktree cop-source SHA-256
+`3e72741c0ea482dfb92beb24594d784c1c1862ed67dbec53a5b93c3ec97352b1`
+and native binary SHA-256
+`d06f7ed679bd43ff8212ff12da956473ba552014ab416b4f9a993fdd64efa4d3`.
 The stored RuboCop reference has SHA-256
-`6fbcf83154ad05bab3c35cefef09b8d404a07037f47ef614c813649cb0cce7f8`.
+`d9f16acf805c8a76b324447497ec18c5acbd3e917b5dd24656c5eaf878a5620c`.
 The intentionally-pending dataset is empty, so the active-cop slice covers all
 606 built-in cops:
 
 | Classification | Complete checkpoint |
 | --- | ---: |
-| Project-exact | 429 |
-| Exact but dormant | 68 |
-| Mismatching | 106 |
+| Project-exact | 531 |
+| Exact but dormant | 75 |
+| Mismatching | 0 |
 | Rust crash | 0 |
-| RuboCop gate error | 3 |
+| RuboCop gate error | 0 |
 
-Among the 535 exercised cops, 429 are exact (80.2%), and the complete native
-project run has no crashes. `Lint/RedundantCopDisableDirective` cannot be selected with
-RuboCop's `--only`; `Style/FileWrite` triggers RuboCop 1.87 errors on GitLab;
-and `Style/ClassAndModuleChildren` triggers RuboCop 1.87 errors on Puppet.
+All 531 exercised cops are exact (100%), and the complete native project run
+has no crashes. The other 75 cops emitted no diagnostics in either engine for
+this pinned configuration and corpus, so the project audit classifies them as
+dormant rather than claiming unexercised project parity.
 
 The audited legacy project corpus retains 597 provenance entries. The current
 audit adds 20 pending mismatch directions across 19 minimized cases for 10
@@ -126,8 +126,9 @@ PROJECT_BENCHMARK_PREPARE_ONLY=1 \
 The audit builds the release binary, records either the clean-tree Git commit or
 a deterministic native-cop source SHA-256 together with the binary SHA-256,
 runs Rust crash gates, and then compares complete diagnostic signatures against
-the checked-in compressed RuboCop reference. Rustocop runs are split into
-bounded cop batches and cached under `tmp/project-parity/native-cache/` using
+the checked-in compressed RuboCop reference. Rustocop preserves the complete
+selected cop set in one process by default so selection-sensitive behavior
+matches the reference. Results are cached under `tmp/project-parity/native-cache/` using
 the native binary, configuration, pinned project revision, corpus file count,
 and exact cop selection as the cache key. Alongside the concise JSON report,
 it writes a `.mismatches.json.gz` sidecar containing every distinct unmatched

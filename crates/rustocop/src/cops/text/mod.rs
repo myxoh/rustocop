@@ -2,7 +2,6 @@ mod extensions;
 mod helpers;
 mod layout;
 mod lint;
-mod lint_semantic;
 mod style;
 
 use crate::config::InspectionConfig;

@@ -139,7 +139,7 @@ fn selection_matches(selection: &str, cop: &str) -> bool {
             .is_some_and(|suffix| suffix.starts_with('/'))
 }
 
-fn normally_enabled(cop: &str, config: &CopConfig) -> bool {
+pub(super) fn normally_enabled(cop: &str, config: &CopConfig) -> bool {
     if config.explicitly_contains(cop, "Enabled") {
         return config.bool(cop, "Enabled").unwrap_or(false);
     }

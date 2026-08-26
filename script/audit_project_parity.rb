@@ -38,7 +38,10 @@ options = {
   config: DEFAULT_CONFIG,
   native: DEFAULT_NATIVE,
   jobs: [Etc.nprocessors, 8].min,
-  native_batch_size: 25,
+  # Keep the full selected cop set visible to selection-sensitive cops. Splitting
+  # an audit into smaller invocations can change behavior such as directive
+  # handling because each invocation otherwise sees only its own batch.
+  native_batch_size: 1_000,
   native_cache: true,
   native_cache_root: File.join(ROOT, "tmp", "project-parity", "native-cache"),
   build: true,
@@ -60,7 +63,7 @@ OptionParser.new do |parser|
   parser.on("--native PATH") { |value| options[:native] = File.expand_path(value) }
   parser.on("--jobs COUNT", Integer) { |value| options[:jobs] = value }
   parser.on("--native-batch-size COUNT", Integer,
-            "maximum cops per Rustocop process (default: 25)") do |value|
+            "maximum cops per Rustocop process (default: 1000; preserves full-selection semantics)") do |value|
     options[:native_batch_size] = value
   end
   parser.on("--[no-]native-cache", "reuse content-addressed Rustocop batch results (default: true)") do |value|
