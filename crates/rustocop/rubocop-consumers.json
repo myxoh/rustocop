@@ -1,0 +1,60 @@
+{
+  "format_version": 1,
+  "updated_at": "2026-08-26T17:30:20-04:00",
+  "rubocop_version": "1.87.0",
+  "consumers": [
+    {
+      "cop": "Layout/SpaceAfterComma",
+      "adapter": "src/cops/prism/source_rules_layout.rs",
+      "components": ["lib/rubocop/cop/mixin/space_after_punctuation.rb"]
+    },
+    {
+      "cop": "Layout/SpaceAfterSemicolon",
+      "adapter": "src/cops/prism/source_rules_layout.rs",
+      "components": ["lib/rubocop/cop/mixin/space_after_punctuation.rb"]
+    },
+    {
+      "cop": "Style/TrailingCommaInArguments",
+      "adapter": "src/cops/prism/trailing_argument_comma_rules.rs",
+      "components": ["lib/rubocop/cop/mixin/trailing_comma.rb"]
+    },
+    {
+      "cop": "Style/TrailingCommaInArrayLiteral",
+      "adapter": "src/cops/prism/trailing_comma_completion.rs",
+      "components": ["lib/rubocop/cop/mixin/trailing_comma.rb"]
+    },
+    {
+      "cop": "Style/TrailingCommaInHashLiteral",
+      "adapter": "src/cops/prism/trailing_comma_completion.rs",
+      "components": ["lib/rubocop/cop/mixin/trailing_comma.rb"]
+    },
+    {
+      "cop": "Style/HashSlice",
+      "adapter": "src/cops/prism/hash_subset_rules.rs",
+      "components": ["lib/rubocop/cop/mixin/hash_subset.rb"]
+    },
+    {
+      "cop": "Style/HashExcept",
+      "adapter": "src/cops/prism/hash_subset_rules.rs",
+      "components": ["lib/rubocop/cop/mixin/hash_subset.rb"]
+    },
+    {
+      "cop": "Style/Next",
+      "adapter": "src/cops/prism/next_rules.rs",
+      "components": ["lib/rubocop/cop/mixin/min_body_length.rb"]
+    },
+    {
+      "cop": "Style/OptionalBooleanParameter",
+      "adapter": "src/cops/prism/source_semantics/parameters.rs",
+      "components": ["lib/rubocop/cop/mixin/allowed_methods.rb"]
+    },
+    {
+      "cop": "Style/NumericPredicate",
+      "adapter": "src/cops/prism/numeric_predicate_rules.rs",
+      "components": [
+        "lib/rubocop/cop/mixin/allowed_methods.rb",
+        "lib/rubocop/cop/mixin/allowed_pattern.rb"
+      ]
+    }
+  ]
+}

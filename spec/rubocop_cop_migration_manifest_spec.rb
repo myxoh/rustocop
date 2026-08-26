@@ -1,0 +1,65 @@
+# frozen_string_literal: true
+
+require "digest"
+require "json"
+require "time"
+require "rustocop/compatibility_status"
+require "rustocop/project_corpus"
+
+RSpec.describe "RuboCop cop source-shape migration manifest" do
+  manifest_path = File.join(ROOT, "crates", "rustocop", "rubocop-cop-migrations.json")
+  fixture_path = File.join(ROOT, "spec", "compatibility_evidence", "fixtures.json")
+  project_path = File.join(ROOT, "spec", "compatibility_evidence", "projects.json")
+  crate_root = File.join(ROOT, "crates", "rustocop")
+
+  let(:manifest) { JSON.parse(File.read(manifest_path)) }
+  let(:fixture_results) { JSON.parse(File.read(fixture_path)).fetch("results") }
+  let(:project_results) { JSON.parse(File.read(project_path)).fetch("results") }
+
+  it "pins every audited cop to its upstream source and current evidence" do
+    gem "rubocop", "=#{Rustocop::ProjectCorpus::RUBOCOP_VERSION}"
+    upstream_root = Gem::Specification.find_by_name("rubocop").full_gem_path
+    active = Rustocop::CompatibilityStatus.load(root: ROOT).built_in_cops
+    rows = manifest.fetch("cops")
+
+    expect(manifest.fetch("format_version")).to eq(1)
+    expect(manifest.fetch("rubocop_version")).to eq(Rustocop::ProjectCorpus::RUBOCOP_VERSION)
+    expect(manifest.fetch("rubocop_commit")).to eq(Rustocop::ProjectCorpus::RUBOCOP_COMMIT)
+    expect(manifest.fetch("target_cops")).to eq(active.length)
+    expect(manifest.fetch("audited_cops")).to eq(rows.length)
+    expect(manifest.fetch("migrated_cops")).to eq(rows.count { |row| row.fetch("migration_status") == "migrated" })
+    expect(rows.map { |row| row.fetch("cop") }).to contain_exactly(*rows.map { |row| row.fetch("cop") }.uniq)
+    expect(rows.map { |row| row.fetch("cop") } - active).to be_empty
+
+    rows.each do |row|
+      upstream = File.join(upstream_root, row.fetch("upstream_source"))
+      implementation = File.join(crate_root, row.fetch("implementation"))
+      expect(File).to exist(upstream), row.fetch("cop")
+      expect(Digest::SHA256.file(upstream).hexdigest).to eq(row.fetch("upstream_sha256")), row.fetch("cop")
+      expect(File).to exist(implementation), row.fetch("cop")
+      expect(File.read(implementation)).to include(row.fetch("cop")), row.fetch("cop")
+      expect(row.fetch("upstream_callbacks")).not_to be_empty
+      expect(row.fetch("rust_callbacks")).not_to be_empty
+      expect(row.fetch("structural_gaps")).not_to be_empty
+      expect(row.fetch("fixtures")).to eq(fixture_results.fetch(row.fetch("cop")))
+      expect(row.fetch("projects")).to eq(project_results.fetch(row.fetch("cop")))
+    end
+  end
+
+  it "uses a consistent score classification and ISO 8601 timestamp" do
+    statuses = {
+      1 => "divergent",
+      2 => "divergent",
+      3 => "conceptually_aligned",
+      4 => "source_shaped_with_parser_adaptation",
+      5 => "near_source_shaped"
+    }
+    manifest.fetch("cops").each do |row|
+      expect(row.fetch("structural_status")).to eq(statuses.fetch(row.fetch("similarity_score")))
+    end
+
+    updated_at = manifest.fetch("updated_at")
+    expect { Time.iso8601(updated_at) }.not_to raise_error
+    expect(updated_at).to match(/T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})\z/)
+  end
+end

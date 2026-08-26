@@ -54,8 +54,15 @@ explicit source rule; the complete binding is digest-checked. Its
 [generated progress ledger](docs/rubocop-compatibility-progress.md) tracks the
 source hashes and upstream spec ports. Ten cops now consume the layer through
 reviewed Prism adapters; all 649 of their cached unit contracts pass and all ten
-are exact on the 50-project corpus. Shared-layer completion and cop parity
-remain separate claims.
+are exact on the 50-project corpus. Their project-by-project diagnostic coverage
+is tracked in the generated
+[compatibility-layer adoption report](docs/rubocop-compatibility-adoption.md).
+Shared-layer completion and cop parity remain separate claims.
+The per-cop
+[source-shape migration ledger](crates/rustocop/rubocop-cop-migrations.json)
+also keeps structural review separate from behavioral parity by recording the
+pinned Ruby source, callbacks, mixins, implementation, evidence, and unresolved
+translation gaps for every audited cop.
 
 ## Validation standard
 

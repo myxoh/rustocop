@@ -63,10 +63,22 @@ As of `2026-08-25T07:41:06-04:00`, ten cops use translated shared behavior:
 Their 649 cached RuboCop unit contracts pass. A scoped comparison against all
 50 pinned projects classified all ten as `project_exact`, with 70,667 exact
 offense signatures, zero mismatch signatures, and zero unmatched offenses.
+Project-by-project diagnostic coverage is recorded in the generated
+[compatibility-layer adoption report](rubocop-compatibility-adoption.md). The
+consumer manifest distinguishes a cop merely being selected for a project from
+the project actually producing a reference diagnostic through that cop.
 
 The generated [progress report](rubocop-compatibility-progress.md) is the
 current component-level ledger. Its `updated_at` value is always an ISO 8601
 timestamp.
+
+Cop migration is tracked separately in the machine-readable
+[`rubocop-cop-migrations.json`](../crates/rustocop/rubocop-cop-migrations.json)
+ledger. It pins each audited cop to its RuboCop source hash, callbacks, mixins,
+native implementation, fixture/project evidence, structural similarity score,
+and explicit gaps. An audited cop is not counted as migrated until those gaps
+are resolved through the compatibility layer; behavioral parity alone does not
+close the source-shape gate.
 
 ## Translation rules
 

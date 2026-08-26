@@ -8,7 +8,7 @@ differences. Partial overlap is not classified as compatible.
 This table covers 606 active built-in cops. The [`intentionally_pending_cops.yml`](../spec/upstream/rubocop-1.87.0/intentionally_pending_cops.yml) manifest is empty.
 
 Fixture evidence was updated at `2026-08-26T16:18:45-04:00`. Project
-evidence was updated at `2026-08-26T16:07:54-04:00` from
+evidence was updated at `2026-08-26T16:08:29-04:00` from
 50 projects and 85471 Ruby files.
 Fixture source: `90f7b23ccfa3201072ef82a3f5868c1473f2e756`. Project source:
 `cop source 14a8ee30eeec, native ec2932cc2772`.
@@ -58,7 +58,7 @@ compatible in the overall totals.
 
 ## Per-cop evidence
 
-| Cop | Implementation file | Implementation updated | Fixture tests<br>(as of 2026-08-26T16:18:45-04:00) | Fixture matching<br>(as of 2026-08-26T16:18:45-04:00) | Project hits<br>(as of 2026-08-26T16:07:54-04:00) | Project matching<br>(as of 2026-08-26T16:07:54-04:00) |
+| Cop | Implementation file | Implementation updated | Fixture tests<br>(as of 2026-08-26T16:18:45-04:00) | Fixture matching<br>(as of 2026-08-26T16:18:45-04:00) | Project hits<br>(as of 2026-08-26T16:08:29-04:00) | Project matching<br>(as of 2026-08-26T16:08:29-04:00) |
 | --- | --- | --- | ---: | ---: | ---: | ---: |
 | `Bundler/DuplicatedGem` | [`crates/rustocop/src/cops/prism/source_rules.rs`](../crates/rustocop/src/cops/prism/source_rules.rs) | 2026-08-26 | 10 | 10/10 (100.0%) | 0 ⚠ | — (unexercised) ⚠ stale |
 | `Bundler/DuplicatedGroup` | [`crates/rustocop/src/cops/prism/project_scope_completion.rs`](../crates/rustocop/src/cops/prism/project_scope_completion.rs) | 2026-08-24 | 21 | 21/21 (100.0%) | 0 ⚠ | — (unexercised) ⚠ stale |

@@ -18,6 +18,8 @@ ROOT = LAYOUT.root
 DEFAULT_FIXTURE_SNAPSHOT = LAYOUT.compatibility_evidence("fixtures.json")
 DEFAULT_PROJECT_SNAPSHOT = LAYOUT.compatibility_evidence("projects.json")
 DEFAULT_OUTPUT = LAYOUT.path("docs", "compatibility.md")
+DEFAULT_CONSUMER_MANIFEST = LAYOUT.path("crates", "rustocop", "rubocop-consumers.json")
+DEFAULT_ADOPTION_OUTPUT = LAYOUT.path("docs", "rubocop-compatibility-adoption.md")
 RUST_COP_ROOT = LAYOUT.path("crates", "rustocop", "src", "cops")
 ACTIVE_COPS = Rustocop::CompatibilityStatus.load(root: ROOT).built_in_cops.sort.freeze
 
@@ -25,6 +27,8 @@ options = {
   fixture_snapshot: DEFAULT_FIXTURE_SNAPSHOT,
   project_snapshot: DEFAULT_PROJECT_SNAPSHOT,
   output: DEFAULT_OUTPUT,
+  consumer_manifest: DEFAULT_CONSUMER_MANIFEST,
+  adoption_output: DEFAULT_ADOPTION_OUTPUT,
   native: LAYOUT.native_binary,
   jobs: 8,
   check: false
@@ -52,6 +56,8 @@ OptionParser.new do |parser|
   parser.on("--fixture-snapshot PATH") { |path| options[:fixture_snapshot] = File.expand_path(path) }
   parser.on("--project-snapshot PATH") { |path| options[:project_snapshot] = File.expand_path(path) }
   parser.on("--output PATH") { |path| options[:output] = File.expand_path(path) }
+  parser.on("--consumer-manifest PATH") { |path| options[:consumer_manifest] = File.expand_path(path) }
+  parser.on("--adoption-output PATH") { |path| options[:adoption_output] = File.expand_path(path) }
   parser.on("--check", "fail instead of writing when snapshots or output are stale") do
     options[:check] = true
   end
@@ -165,12 +171,45 @@ def fixture_snapshot(report, path)
   }
 end
 
-def project_snapshot(report, path)
+def project_classification(row)
+  rustocop, rubocop, exact = row.values_at("rustocop", "rubocop", "exact")
+  return "unavailable" if [rustocop, rubocop, exact].any?(&:nil?)
+  return rubocop.zero? ? "dormant" : "project_exact" if rustocop == rubocop && exact == rubocop
+
+  "mismatch"
+end
+
+def compatibility_layer_evidence(report, consumers, manifest_sha256)
+  cops = consumers.map { |consumer| consumer.fetch("cop") }
+  project_rows = report.fetch("projects").sort.to_h do |name, project|
+    by_cop = cops.to_h do |cop|
+      row = project.fetch("by_cop").fetch(cop).slice("rustocop", "rubocop", "exact")
+      [cop, row.merge("classification" => project_classification(row))]
+    end
+    exercised = by_cop.filter_map { |cop, row| cop if row.fetch("rubocop").positive? }
+    [name, {
+      "repository" => project.fetch("repository"),
+      "revision" => project.fetch("revision"),
+      "exercised_cops" => exercised,
+      "by_cop" => by_cop
+    }]
+  end
+  {
+    "definition" => "A project diagnostically exercises a consumer when the pinned RuboCop reference emits at least one offense for that cop.",
+    "consumer_manifest_sha256" => manifest_sha256,
+    "consumer_cops" => cops,
+    "projects_exercising_any" => project_rows.count { |_name, row| !row.fetch("exercised_cops").empty? },
+    "projects_exercising_all" => project_rows.count { |_name, row| row.fetch("exercised_cops").length == cops.length },
+    "projects" => project_rows
+  }
+end
+
+def project_snapshot(report, path, consumers:, manifest_sha256:)
   results = report.fetch("combined_by_cop").transform_values do |row|
     row.slice("rustocop", "rubocop", "exact", "classification")
   end
   {
-    "version" => 1,
+    "version" => 2,
     "kind" => "project_compatibility",
     "updated_at" => evidence_time(report, path),
     "rust_commit" => report["rust_commit"],
@@ -180,7 +219,8 @@ def project_snapshot(report, path)
     "rubocop_reference" => report["rubocop_reference"],
     "project_count" => report.fetch("projects", {}).length,
     "ruby_files" => report.fetch("projects", {}).values.sum { |project| project.fetch("files", 0) },
-    "results" => results.sort.to_h
+    "results" => results.sort.to_h,
+    "compatibility_layer" => compatibility_layer_evidence(report, consumers, manifest_sha256)
   }
 end
 
@@ -192,6 +232,37 @@ def update_file(path, content, check:, label:)
 
   Rustocop::ArtifactStore.atomic_write(path, content)
 end
+
+consumer_manifest = read_json(options[:consumer_manifest], "compatibility-layer consumer manifest")
+consumer_timestamp = evidence_timestamp(consumer_manifest, "compatibility-layer consumer manifest")
+abort "unsupported compatibility-layer consumer manifest version" unless consumer_manifest.fetch("format_version") == 1
+abort "consumer manifest and active evidence use different RuboCop versions" unless
+  consumer_manifest.fetch("rubocop_version") == Rustocop::ProjectCorpus::RUBOCOP_VERSION
+consumers = consumer_manifest.fetch("consumers")
+consumer_cops = consumers.map { |consumer| consumer.fetch("cop") }
+abort "compatibility-layer consumer cops must be unique" unless consumer_cops.uniq.length == consumer_cops.length
+abort "compatibility-layer consumer manifest contains inactive cops" unless (consumer_cops - ACTIVE_COPS).empty?
+translation_manifest = read_json(
+  LAYOUT.path("crates", "rustocop", "rubocop-translation.json"), "RuboCop translation manifest"
+)
+translated_sources = translation_manifest.fetch("components").to_h do |component|
+  [component.fetch("source"), component]
+end
+consumers.each do |consumer|
+  adapter = LAYOUT.path("crates", "rustocop", consumer.fetch("adapter"))
+  abort "compatibility-layer adapter not found: #{adapter}" unless File.file?(adapter)
+  unknown_components = consumer.fetch("components") - translated_sources.keys
+  abort "unknown translated components for #{consumer.fetch('cop')}: #{unknown_components.join(', ')}" unless
+    unknown_components.empty?
+  adapter_source = File.read(adapter)
+  consumer.fetch("components").each do |source|
+    rust = translated_sources.fetch(source).fetch("rust")
+    module_path = "crate::#{rust.delete_suffix('.rs').delete_prefix('src/').gsub('/', '::')}"
+    abort "#{consumer.fetch('cop')} adapter does not reference #{module_path}" unless
+      adapter_source.include?(module_path)
+  end
+end
+consumer_manifest_sha256 = Digest::SHA256.file(options[:consumer_manifest]).hexdigest
 
 if options[:fixture_report]
   imported = fixture_snapshot(
@@ -208,7 +279,7 @@ end
 if options[:project_report]
   imported = project_snapshot(
     read_json(options[:project_report], "project report"),
-    options[:project_report]
+    options[:project_report], consumers:, manifest_sha256: consumer_manifest_sha256
   )
   abort "project report must cover all #{ACTIVE_COPS.length} active cops" unless
     imported.fetch("results").keys.sort == ACTIVE_COPS
@@ -225,6 +296,11 @@ fixture_timestamp = evidence_timestamp(fixtures, "fixture snapshot")
 project_timestamp = evidence_timestamp(projects, "project snapshot")
 fixture_results = fixtures.fetch("results")
 project_results = projects.fetch("results")
+adoption = projects.fetch("compatibility_layer")
+abort "project evidence uses a different compatibility-layer consumer manifest" unless
+  adoption.fetch("consumer_manifest_sha256") == consumer_manifest_sha256
+abort "project evidence has a different compatibility-layer consumer set" unless
+  adoption.fetch("consumer_cops") == consumer_cops
 cops = (fixture_results.keys | project_results.keys).sort
 abort "compatibility evidence must cover the same cops" unless fixture_results.keys.sort == project_results.keys.sort
 abort "compatibility evidence must cover the #{ACTIVE_COPS.length} active cops" unless cops == ACTIVE_COPS
@@ -482,7 +558,81 @@ report = <<~MARKDOWN
 MARKDOWN
 
 update_file(options[:output], report, check: options[:check], label: "compatibility report")
+
+adoption_projects = adoption.fetch("projects")
+consumer_rows = consumer_cops.map do |cop|
+  consumer = consumers.find { |candidate| candidate.fetch("cop") == cop }
+  rows = adoption_projects.values.map { |project| project.fetch("by_cop").fetch(cop) }
+  exercised = rows.count { |row| row.fetch("rubocop").positive? }
+  exact = rows.count do |row|
+    row.fetch("rubocop").positive? && row.fetch("classification") == "project_exact"
+  end
+  mismatches = rows.count { |row| row.fetch("classification") == "mismatch" }
+  diagnostics = rows.sum { |row| row.fetch("rubocop") }
+  components = consumer.fetch("components").map { |source| "`#{source}`" }.join("<br>")
+  "| `#{cop}` | #{components} | #{exercised}/#{adoption_projects.length} | #{diagnostics} | #{exact} | #{mismatches} |"
+end
+
+project_rows = adoption_projects.map do |name, project|
+  exercised = project.fetch("exercised_cops")
+  mismatches = project.fetch("by_cop").filter_map do |cop, row|
+    cop if row.fetch("classification") == "mismatch"
+  end
+  exercised_names = exercised.empty? ? "—" : exercised.map { |cop| "`#{cop}`" }.join("<br>")
+  mismatch_names = mismatches.empty? ? "—" : mismatches.map { |cop| "`#{cop}`" }.join("<br>")
+  "| `#{name}` | `#{project.fetch('repository')}` | #{exercised.length}/#{consumer_cops.length} | #{exercised_names} | #{mismatch_names} |"
+end
+
+consumer_list = consumers.map do |consumer|
+  components = consumer.fetch("components").map { |source| "`#{source}`" }.join(", ")
+  "- `#{consumer.fetch('cop')}` via #{components}"
+end
+adoption_report = <<~MARKDOWN
+  # Compatibility-layer project adoption
+
+  Generated from project evidence captured at `#{project_timestamp}`. The
+  compatibility-layer consumer manifest was updated at `#{consumer_timestamp}`.
+
+  All #{consumer_cops.length} registered consumer cops were selected against all
+  #{adoption_projects.length} pinned projects. Selection alone is not counted as
+  behavioral coverage. A project is recorded as **diagnostically exercising** a
+  consumer only when the pinned RuboCop reference emits at least one offense for
+  that cop. This does not claim that every branch in the shared component ran.
+
+  - Projects exercising at least one consumer: #{adoption.fetch('projects_exercising_any')}/#{adoption_projects.length}
+  - Projects exercising every consumer: #{adoption.fetch('projects_exercising_all')}/#{adoption_projects.length}
+  - Registered consumer cops: #{consumer_cops.length}
+
+  The machine-readable authority is the `compatibility_layer` section of
+  [`spec/compatibility_evidence/projects.json`](../spec/compatibility_evidence/projects.json).
+  Consumer ownership is declared in
+  [`crates/rustocop/rubocop-consumers.json`](../crates/rustocop/rubocop-consumers.json).
+  A full project evidence import refreshes both this report and the project-level
+  rows; `--check` rejects a changed consumer manifest without refreshed evidence.
+
+  ## Registered consumers
+
+  #{consumer_list.join("\n")}
+
+  ## Coverage by consumer
+
+  | Cop | Shared component | Projects exercised | RuboCop diagnostics | Exact exercised projects | Mismatching projects |
+  | --- | --- | ---: | ---: | ---: | ---: |
+  #{consumer_rows.join("\n")}
+
+  ## Coverage by project
+
+  | Project | Repository | Consumers exercised | Exercised cops | Mismatching exercised cops |
+  | --- | --- | ---: | --- | --- |
+  #{project_rows.join("\n")}
+MARKDOWN
+update_file(
+  options[:adoption_output], adoption_report,
+  check: options[:check], label: "compatibility-layer adoption report"
+)
+
 puts "Compatibility report: #{options[:output]}"
+puts "Compatibility-layer adoption: #{options[:adoption_output]}"
 puts "Fixture evidence: #{fixture_compatible}/#{fixture_cops_hit} cops match every fixture"
 puts "Project evidence: #{project_compatible}/#{project_cops_hit} exercised cops are project-exact"
 puts "Combined: #{fully_compatible}/#{cops.length} cops satisfy both gates"

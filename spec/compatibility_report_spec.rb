@@ -1,12 +1,16 @@
 # frozen_string_literal: true
 
 require "json"
+require "digest"
 require "time"
 require "tmpdir"
+require "rustocop/project_corpus"
 
 RSpec.describe "compatibility evidence report" do
   fixture_snapshot = File.join(ROOT, "spec", "compatibility_evidence", "fixtures.json")
   project_snapshot = File.join(ROOT, "spec", "compatibility_evidence", "projects.json")
+  consumer_manifest = File.join(ROOT, "crates", "rustocop", "rubocop-consumers.json")
+  adoption_report = File.join(ROOT, "docs", "rubocop-compatibility-adoption.md")
   report = File.join(ROOT, "docs", "compatibility.md")
 
   it "keeps complete compact evidence snapshots" do
@@ -27,6 +31,33 @@ RSpec.describe "compatibility evidence report" do
       source = snapshot["cop_source_sha256"]
       expect(commit&.match?(/\A[0-9a-f]{40}\z/) || source&.match?(/\A[0-9a-f]{64}\z/)).to be(true)
     end
+  end
+
+  it "tracks compatibility-layer consumers by project" do
+    projects = JSON.parse(File.read(project_snapshot))
+    manifest = JSON.parse(File.read(consumer_manifest))
+    adoption = projects.fetch("compatibility_layer")
+    consumer_cops = manifest.fetch("consumers").map { |consumer| consumer.fetch("cop") }
+
+    expect(projects.fetch("version")).to eq(2)
+    expect(adoption.fetch("consumer_manifest_sha256")).to eq(Digest::SHA256.file(consumer_manifest).hexdigest)
+    expect(adoption.fetch("consumer_cops")).to eq(consumer_cops)
+    expect(adoption.fetch("projects").keys).to match_array(
+      Rustocop::ProjectCorpus::PROJECTS.map { |project| project.fetch("name") }
+    )
+
+    adoption.fetch("projects").each_value do |project|
+      expect(project.fetch("by_cop").keys).to eq(consumer_cops)
+      expected_exercised = project.fetch("by_cop").filter_map do |cop, row|
+        cop if row.fetch("rubocop").positive?
+      end
+      expect(project.fetch("exercised_cops")).to eq(expected_exercised)
+    end
+
+    updated_at = manifest.fetch("updated_at")
+    expect { Time.iso8601(updated_at) }.not_to raise_error
+    expect(updated_at).to match(/T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})\z/)
+    expect(File.read(adoption_report)).to include("Projects exercising at least one consumer")
   end
 
   it "keeps the generated table current" do

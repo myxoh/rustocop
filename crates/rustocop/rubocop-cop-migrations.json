@@ -1,0 +1,225 @@
+{
+  "format_version": 1,
+  "updated_at": "2026-08-26T17:38:21-04:00",
+  "rubocop_version": "1.87.0",
+  "rubocop_commit": "e5b788dba181ad94de30cfbad661c5d6aa08a4e5",
+  "sampling": {
+    "method": "Random#sample over the sorted active built-in corpus",
+    "seed": 20260826
+  },
+  "rubric": {
+    "5": "Near one-to-one callback, helper, guard, offense, and correction structure.",
+    "4": "Source-shaped with visible parser or Rust ownership adaptations.",
+    "3": "The same concepts are present, but helpers or branch structure are consolidated or reordered.",
+    "2": "Behavior is recreated through a materially different algorithm.",
+    "1": "A heuristic or text implementation replaces an upstream AST implementation."
+  },
+  "target_cops": 606,
+  "audited_cops": 10,
+  "migrated_cops": 0,
+  "cops": [
+    {
+      "cop": "Style/RedundantRegexpCharacterClass",
+      "upstream_source": "lib/rubocop/cop/style/redundant_regexp_character_class.rb",
+      "upstream_sha256": "c05c4dc3833ddbb1c1422a3ef5e360c8799254aab83cc90aa256c816183bb0d4",
+      "implementation": "src/cops/prism/redundant_regexp_rules.rs",
+      "upstream_callbacks": ["on_regexp"],
+      "rust_callbacks": ["on_regexp"],
+      "upstream_mixins": ["AutoCorrector"],
+      "compatibility_components": [],
+      "dsl_features": ["define_cops", "define_rule", "node_rule_aliases", "add_offense"],
+      "similarity_score": 4,
+      "structural_status": "source_shaped_with_parser_adaptation",
+      "migration_status": "pending",
+      "structural_gaps": [
+        "Regexp expression traversal and redundancy predicates are consolidated behind Rust-specific helpers.",
+        "The cop is not registered as a compatibility-layer consumer."
+      ],
+      "fixtures": {"passed": 48, "total": 48, "status": "compatible"},
+      "projects": {"rustocop": 367, "rubocop": 367, "exact": 367, "classification": "project_exact"}
+    },
+    {
+      "cop": "Lint/EmptyWhen",
+      "upstream_source": "lib/rubocop/cop/lint/empty_when.rb",
+      "upstream_sha256": "8668ba9a338ff42c92ee33ffcbac801f12b1945c30f622b3073780bc7450c0cf",
+      "implementation": "src/cops/prism/branch_layout_rules.rs",
+      "upstream_callbacks": ["on_case"],
+      "rust_callbacks": ["on_when"],
+      "upstream_mixins": ["CommentsHelp"],
+      "compatibility_components": [],
+      "dsl_features": ["define_cops", "node"],
+      "similarity_score": 2,
+      "structural_status": "divergent",
+      "migration_status": "pending",
+      "structural_gaps": [
+        "Rust dispatches each when node instead of preserving on_case and when_branches traversal.",
+        "Comment and disable-directive semantics are recreated with source scanning instead of CommentsHelp."
+      ],
+      "fixtures": {"passed": 16, "total": 16, "status": "compatible"},
+      "projects": {"rustocop": 42, "rubocop": 42, "exact": 42, "classification": "project_exact"}
+    },
+    {
+      "cop": "Lint/TrailingCommaInAttributeDeclaration",
+      "upstream_source": "lib/rubocop/cop/lint/trailing_comma_in_attribute_declaration.rb",
+      "upstream_sha256": "e376fbe80cdebb3d0e3eb3dcb2f789068734c7e226b181ded5b300936a7223b3",
+      "implementation": "src/cops/text/lint.rs",
+      "upstream_callbacks": ["on_send"],
+      "rust_callbacks": ["line_scan"],
+      "upstream_mixins": ["AutoCorrector", "RangeHelp"],
+      "compatibility_components": [],
+      "dsl_features": [],
+      "similarity_score": 1,
+      "structural_status": "divergent",
+      "migration_status": "pending",
+      "structural_gaps": [
+        "A legacy starts_with/ends_with line heuristic replaces the on_send AST implementation.",
+        "attribute_accessor?, last_argument.def_type?, and range_with_surrounding_space are not represented."
+      ],
+      "fixtures": {"passed": 3, "total": 3, "status": "compatible"},
+      "projects": {"rustocop": 0, "rubocop": 0, "exact": 0, "classification": "dormant"}
+    },
+    {
+      "cop": "Layout/DotPosition",
+      "upstream_source": "lib/rubocop/cop/layout/dot_position.rb",
+      "upstream_sha256": "281f04e2fe8253398189687888de258d2a493ea84fa68452d62f48fa90617ae3",
+      "implementation": "src/cops/prism/layout_core_qualification.rs",
+      "upstream_callbacks": ["on_send", "on_csend"],
+      "rust_callbacks": ["on_call"],
+      "upstream_mixins": ["AutoCorrector", "ConfigurableEnforcedStyle", "RangeHelp"],
+      "compatibility_components": [],
+      "dsl_features": ["define_cops", "call"],
+      "similarity_score": 4,
+      "structural_status": "source_shaped_with_parser_adaptation",
+      "migration_status": "pending",
+      "structural_gaps": [
+        "RuboCop callback aliases and named range/heredoc helpers are flattened into one Prism callback.",
+        "Translated ConfigurableEnforcedStyle and RangeHelp are bypassed."
+      ],
+      "fixtures": {"passed": 40, "total": 40, "status": "compatible"},
+      "projects": {"rustocop": 1949, "rubocop": 1949, "exact": 1949, "classification": "project_exact"}
+    },
+    {
+      "cop": "Layout/LineContinuationSpacing",
+      "upstream_source": "lib/rubocop/cop/layout/line_continuation_spacing.rb",
+      "upstream_sha256": "7699e93d420b54b9baa4c4306258b4513d60174d6b19bed1d625b2e74132e459",
+      "implementation": "src/cops/prism/final_layout_batch_a.rs",
+      "upstream_callbacks": ["on_new_investigation"],
+      "rust_callbacks": ["on_source"],
+      "upstream_mixins": ["AutoCorrector", "RangeHelp"],
+      "compatibility_components": [],
+      "dsl_features": ["custom_source"],
+      "similarity_score": 3,
+      "structural_status": "conceptually_aligned",
+      "migration_status": "pending",
+      "structural_gaps": [
+        "RuboCop's investigate, find_offensive_spacing, ignored_ranges, and style predicates are collapsed into one loop.",
+        "Ignored literal and comment behavior uses native source helpers rather than the translated range API."
+      ],
+      "fixtures": {"passed": 33, "total": 33, "status": "compatible"},
+      "projects": {"rustocop": 349, "rubocop": 349, "exact": 349, "classification": "project_exact"}
+    },
+    {
+      "cop": "Layout/EmptyLinesAroundAttributeAccessor",
+      "upstream_source": "lib/rubocop/cop/layout/empty_lines_around_attribute_accessor.rb",
+      "upstream_sha256": "c572eb9a7e91dceb983a79953e079dd8672950c9daba69a47c32883782284b48",
+      "implementation": "src/cops/prism/layout_body_qualification.rs",
+      "related_inactive_implementations": ["src/cops/prism/layout_body_completion.rs"],
+      "upstream_callbacks": ["on_send"],
+      "rust_callbacks": ["on_call"],
+      "upstream_mixins": ["AllowedMethods", "AutoCorrector", "RangeHelp"],
+      "compatibility_components": [],
+      "dsl_features": ["define_cops", "call"],
+      "similarity_score": 2,
+      "structural_status": "divergent",
+      "migration_status": "pending",
+      "structural_gaps": [
+        "Sibling, alias, allowed-method, and directive-comment behavior is inferred from following-line text.",
+        "Translated AllowedMethods and RangeHelp are bypassed.",
+        "An older unregistered line-oriented implementation remains in the source tree."
+      ],
+      "fixtures": {"passed": 23, "total": 23, "status": "compatible"},
+      "projects": {"rustocop": 240, "rubocop": 240, "exact": 240, "classification": "project_exact"}
+    },
+    {
+      "cop": "Layout/SpaceInsideRangeLiteral",
+      "upstream_source": "lib/rubocop/cop/layout/space_inside_range_literal.rb",
+      "upstream_sha256": "9705a52f297dc8f8e4b6c71a4a89464a56ad33df472140d90efb01e16ce4b698",
+      "implementation": "src/cops/prism/layout_finalization_completion.rs",
+      "upstream_callbacks": ["on_irange", "on_erange"],
+      "rust_callbacks": ["on_range"],
+      "upstream_mixins": ["AutoCorrector"],
+      "compatibility_components": [],
+      "dsl_features": ["define_cops", "node"],
+      "similarity_score": 4,
+      "structural_status": "source_shaped_with_parser_adaptation",
+      "migration_status": "pending",
+      "structural_gaps": [
+        "The distinct RuboCop callback names and shared check helper are flattened into one Prism range callback.",
+        "The cop is not registered as a compatibility-layer consumer."
+      ],
+      "fixtures": {"passed": 9, "total": 9, "status": "compatible"},
+      "projects": {"rustocop": 18, "rubocop": 18, "exact": 18, "classification": "project_exact"}
+    },
+    {
+      "cop": "Lint/RescueType",
+      "upstream_source": "lib/rubocop/cop/lint/rescue_type.rb",
+      "upstream_sha256": "c6a932c5de56528a3c4447a3f97765b0f9394bd04562119b1beb1fe26995d8a8",
+      "implementation": "src/cops/prism/restored_structural_cops.rs",
+      "upstream_callbacks": ["on_resbody"],
+      "rust_callbacks": ["on_rescue"],
+      "upstream_mixins": ["AutoCorrector"],
+      "compatibility_components": [],
+      "dsl_features": ["define_cops", "node"],
+      "similarity_score": 5,
+      "structural_status": "near_source_shaped",
+      "migration_status": "pending",
+      "structural_gaps": [
+        "The RuboCop callback name and helper decomposition are not retained by the DSL.",
+        "The cop is not registered as a compatibility-layer consumer."
+      ],
+      "fixtures": {"passed": 52, "total": 52, "status": "compatible"},
+      "projects": {"rustocop": 0, "rubocop": 0, "exact": 0, "classification": "dormant"}
+    },
+    {
+      "cop": "Lint/LiteralInInterpolation",
+      "upstream_source": "lib/rubocop/cop/lint/literal_in_interpolation.rb",
+      "upstream_sha256": "f488de44b6c822fba9a6cf7f504303a94e43a0f94527bce07aede02989874404",
+      "implementation": "src/cops/prism/final_ast_structural_batch.rs",
+      "upstream_callbacks": ["on_interpolation"],
+      "rust_callbacks": ["on_source"],
+      "upstream_mixins": ["AutoCorrector", "Interpolation", "PercentLiteral", "RangeHelp"],
+      "compatibility_components": [],
+      "dsl_features": ["custom_source"],
+      "similarity_score": 2,
+      "structural_status": "divergent",
+      "migration_status": "pending",
+      "structural_gaps": [
+        "Rust scans interpolation ranges and reparses source fragments instead of receiving on_interpolation nodes.",
+        "Translated Interpolation, PercentLiteral, and RangeHelp behavior is recreated in cop-local helpers.",
+        "Private helper names and branch decomposition no longer align with the upstream source."
+      ],
+      "fixtures": {"passed": 386, "total": 386, "status": "compatible"},
+      "projects": {"rustocop": 45, "rubocop": 45, "exact": 45, "classification": "project_exact"}
+    },
+    {
+      "cop": "Layout/EmptyLineBetweenDefs",
+      "upstream_source": "lib/rubocop/cop/layout/empty_line_between_defs.rb",
+      "upstream_sha256": "761fe82c7d32b069b5e287fa2652b95573801a268ae29367c4080367aa029246",
+      "implementation": "src/cops/prism/layout_core_qualification.rs",
+      "upstream_callbacks": ["on_begin"],
+      "rust_callbacks": ["on_statements"],
+      "upstream_mixins": ["AutoCorrector", "RangeHelp"],
+      "compatibility_components": [],
+      "dsl_features": ["define_cops", "node"],
+      "similarity_score": 4,
+      "structural_status": "source_shaped_with_parser_adaptation",
+      "migration_status": "pending",
+      "structural_gaps": [
+        "The callback adapts Parser begin nodes to Prism statements nodes.",
+        "RangeHelp calls and several private helpers are inlined into byte/line arithmetic."
+      ],
+      "fixtures": {"passed": 45, "total": 45, "status": "compatible"},
+      "projects": {"rustocop": 729, "rubocop": 729, "exact": 729, "classification": "project_exact"}
+    }
+  ]
+}

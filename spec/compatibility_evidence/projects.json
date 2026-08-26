@@ -1,7 +1,7 @@
 {
-  "version": 1,
+  "version": 2,
   "kind": "project_compatibility",
-  "updated_at": "2026-08-26T16:07:54-04:00",
+  "updated_at": "2026-08-26T16:08:29-04:00",
   "rust_commit": null,
   "cop_source_sha256": "14a8ee30eeecd1d5e952d85be1c0a513db3564a2a4b4205be3daa91069a52602",
   "native_sha256": "ec2932cc277261b97b2ec131accb416467b5b1d96b2f03ffbdf51b5c5c56a90e",
@@ -3651,6 +3651,3641 @@
       "rubocop": 791,
       "exact": 791,
       "classification": "project_exact"
+    }
+  },
+  "compatibility_layer": {
+    "definition": "A project diagnostically exercises a consumer when the pinned RuboCop reference emits at least one offense for that cop.",
+    "consumer_manifest_sha256": "634c436bb6b04ce7ae0ad498c1a0d401e661b571af500aee711e9f1a095b571e",
+    "consumer_cops": [
+      "Layout/SpaceAfterComma",
+      "Layout/SpaceAfterSemicolon",
+      "Style/TrailingCommaInArguments",
+      "Style/TrailingCommaInArrayLiteral",
+      "Style/TrailingCommaInHashLiteral",
+      "Style/HashSlice",
+      "Style/HashExcept",
+      "Style/Next",
+      "Style/OptionalBooleanParameter",
+      "Style/NumericPredicate"
+    ],
+    "projects_exercising_any": 45,
+    "projects_exercising_all": 1,
+    "projects": {
+      "cancancan": {
+        "repository": "CanCanCommunity/cancancan",
+        "revision": "8c1bf153a3da7b2261d6fa4a5f84eb28e2feb828",
+        "exercised_cops": [],
+        "by_cop": {
+          "Layout/SpaceAfterComma": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Layout/SpaceAfterSemicolon": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArguments": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArrayLiteral": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInHashLiteral": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/HashSlice": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/HashExcept": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/Next": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/OptionalBooleanParameter": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/NumericPredicate": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          }
+        }
+      },
+      "capistrano": {
+        "repository": "capistrano/capistrano",
+        "revision": "b54b02fa0ecdf18fad97e7ccbacd4b8d4e342c83",
+        "exercised_cops": [],
+        "by_cop": {
+          "Layout/SpaceAfterComma": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Layout/SpaceAfterSemicolon": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArguments": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArrayLiteral": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInHashLiteral": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/HashSlice": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/HashExcept": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/Next": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/OptionalBooleanParameter": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/NumericPredicate": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          }
+        }
+      },
+      "carrierwave": {
+        "repository": "carrierwaveuploader/carrierwave",
+        "revision": "2072b120c8346cf0971f34dacc9e863c034cddfd",
+        "exercised_cops": [
+          "Style/TrailingCommaInHashLiteral",
+          "Style/HashSlice",
+          "Style/Next",
+          "Style/OptionalBooleanParameter"
+        ],
+        "by_cop": {
+          "Layout/SpaceAfterComma": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Layout/SpaceAfterSemicolon": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArguments": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArrayLiteral": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInHashLiteral": {
+            "rustocop": 2,
+            "rubocop": 2,
+            "exact": 2,
+            "classification": "project_exact"
+          },
+          "Style/HashSlice": {
+            "rustocop": 1,
+            "rubocop": 1,
+            "exact": 1,
+            "classification": "project_exact"
+          },
+          "Style/HashExcept": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/Next": {
+            "rustocop": 2,
+            "rubocop": 2,
+            "exact": 2,
+            "classification": "project_exact"
+          },
+          "Style/OptionalBooleanParameter": {
+            "rustocop": 2,
+            "rubocop": 2,
+            "exact": 2,
+            "classification": "project_exact"
+          },
+          "Style/NumericPredicate": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          }
+        }
+      },
+      "chatwoot": {
+        "repository": "chatwoot/chatwoot",
+        "revision": "8d93d69e8e356216e85c28de7c4240e66b8e83fa",
+        "exercised_cops": [
+          "Style/OptionalBooleanParameter",
+          "Style/NumericPredicate"
+        ],
+        "by_cop": {
+          "Layout/SpaceAfterComma": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Layout/SpaceAfterSemicolon": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArguments": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArrayLiteral": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInHashLiteral": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/HashSlice": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/HashExcept": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/Next": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/OptionalBooleanParameter": {
+            "rustocop": 3,
+            "rubocop": 3,
+            "exact": 3,
+            "classification": "project_exact"
+          },
+          "Style/NumericPredicate": {
+            "rustocop": 14,
+            "rubocop": 14,
+            "exact": 14,
+            "classification": "project_exact"
+          }
+        }
+      },
+      "debug": {
+        "repository": "ruby/debug",
+        "revision": "6510cfbc7496c55ebbefa437a25c17ca58f7c5eb",
+        "exercised_cops": [
+          "Layout/SpaceAfterComma",
+          "Style/TrailingCommaInArguments",
+          "Style/TrailingCommaInArrayLiteral",
+          "Style/TrailingCommaInHashLiteral",
+          "Style/Next",
+          "Style/OptionalBooleanParameter",
+          "Style/NumericPredicate"
+        ],
+        "by_cop": {
+          "Layout/SpaceAfterComma": {
+            "rustocop": 6,
+            "rubocop": 6,
+            "exact": 6,
+            "classification": "project_exact"
+          },
+          "Layout/SpaceAfterSemicolon": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArguments": {
+            "rustocop": 3,
+            "rubocop": 3,
+            "exact": 3,
+            "classification": "project_exact"
+          },
+          "Style/TrailingCommaInArrayLiteral": {
+            "rustocop": 36,
+            "rubocop": 36,
+            "exact": 36,
+            "classification": "project_exact"
+          },
+          "Style/TrailingCommaInHashLiteral": {
+            "rustocop": 33,
+            "rubocop": 33,
+            "exact": 33,
+            "classification": "project_exact"
+          },
+          "Style/HashSlice": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/HashExcept": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/Next": {
+            "rustocop": 7,
+            "rubocop": 7,
+            "exact": 7,
+            "classification": "project_exact"
+          },
+          "Style/OptionalBooleanParameter": {
+            "rustocop": 1,
+            "rubocop": 1,
+            "exact": 1,
+            "classification": "project_exact"
+          },
+          "Style/NumericPredicate": {
+            "rustocop": 21,
+            "rubocop": 21,
+            "exact": 21,
+            "classification": "project_exact"
+          }
+        }
+      },
+      "devise": {
+        "repository": "heartcombo/devise",
+        "revision": "372b295fe6f63b4af3269f5dcd51a18c0bc2016c",
+        "exercised_cops": [
+          "Layout/SpaceAfterComma",
+          "Style/TrailingCommaInArrayLiteral",
+          "Style/TrailingCommaInHashLiteral",
+          "Style/OptionalBooleanParameter"
+        ],
+        "by_cop": {
+          "Layout/SpaceAfterComma": {
+            "rustocop": 7,
+            "rubocop": 7,
+            "exact": 7,
+            "classification": "project_exact"
+          },
+          "Layout/SpaceAfterSemicolon": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArguments": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArrayLiteral": {
+            "rustocop": 1,
+            "rubocop": 1,
+            "exact": 1,
+            "classification": "project_exact"
+          },
+          "Style/TrailingCommaInHashLiteral": {
+            "rustocop": 1,
+            "rubocop": 1,
+            "exact": 1,
+            "classification": "project_exact"
+          },
+          "Style/HashSlice": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/HashExcept": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/Next": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/OptionalBooleanParameter": {
+            "rustocop": 3,
+            "rubocop": 3,
+            "exact": 3,
+            "classification": "project_exact"
+          },
+          "Style/NumericPredicate": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          }
+        }
+      },
+      "diaspora": {
+        "repository": "diaspora/diaspora",
+        "revision": "f96527862dc1ba2e5b95c4196efb0d1f0cc4b6e5",
+        "exercised_cops": [
+          "Layout/SpaceAfterComma",
+          "Style/TrailingCommaInHashLiteral",
+          "Style/HashExcept",
+          "Style/Next",
+          "Style/OptionalBooleanParameter",
+          "Style/NumericPredicate"
+        ],
+        "by_cop": {
+          "Layout/SpaceAfterComma": {
+            "rustocop": 145,
+            "rubocop": 145,
+            "exact": 145,
+            "classification": "project_exact"
+          },
+          "Layout/SpaceAfterSemicolon": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArguments": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArrayLiteral": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInHashLiteral": {
+            "rustocop": 26,
+            "rubocop": 26,
+            "exact": 26,
+            "classification": "project_exact"
+          },
+          "Style/HashSlice": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/HashExcept": {
+            "rustocop": 2,
+            "rubocop": 2,
+            "exact": 2,
+            "classification": "project_exact"
+          },
+          "Style/Next": {
+            "rustocop": 2,
+            "rubocop": 2,
+            "exact": 2,
+            "classification": "project_exact"
+          },
+          "Style/OptionalBooleanParameter": {
+            "rustocop": 21,
+            "rubocop": 21,
+            "exact": 21,
+            "classification": "project_exact"
+          },
+          "Style/NumericPredicate": {
+            "rustocop": 83,
+            "rubocop": 83,
+            "exact": 83,
+            "classification": "project_exact"
+          }
+        }
+      },
+      "discourse": {
+        "repository": "discourse/discourse",
+        "revision": "cec79c60b354e37e9a119544860123b122a995e0",
+        "exercised_cops": [
+          "Style/TrailingCommaInArguments",
+          "Style/TrailingCommaInArrayLiteral",
+          "Style/TrailingCommaInHashLiteral",
+          "Style/HashSlice",
+          "Style/HashExcept",
+          "Style/Next",
+          "Style/OptionalBooleanParameter",
+          "Style/NumericPredicate"
+        ],
+        "by_cop": {
+          "Layout/SpaceAfterComma": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Layout/SpaceAfterSemicolon": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArguments": {
+            "rustocop": 31672,
+            "rubocop": 31672,
+            "exact": 31672,
+            "classification": "project_exact"
+          },
+          "Style/TrailingCommaInArrayLiteral": {
+            "rustocop": 2555,
+            "rubocop": 2555,
+            "exact": 2555,
+            "classification": "project_exact"
+          },
+          "Style/TrailingCommaInHashLiteral": {
+            "rustocop": 16576,
+            "rubocop": 16576,
+            "exact": 16576,
+            "classification": "project_exact"
+          },
+          "Style/HashSlice": {
+            "rustocop": 11,
+            "rubocop": 11,
+            "exact": 11,
+            "classification": "project_exact"
+          },
+          "Style/HashExcept": {
+            "rustocop": 5,
+            "rubocop": 5,
+            "exact": 5,
+            "classification": "project_exact"
+          },
+          "Style/Next": {
+            "rustocop": 176,
+            "rubocop": 176,
+            "exact": 176,
+            "classification": "project_exact"
+          },
+          "Style/OptionalBooleanParameter": {
+            "rustocop": 65,
+            "rubocop": 65,
+            "exact": 65,
+            "classification": "project_exact"
+          },
+          "Style/NumericPredicate": {
+            "rustocop": 1150,
+            "rubocop": 1150,
+            "exact": 1150,
+            "classification": "project_exact"
+          }
+        }
+      },
+      "dry-validation": {
+        "repository": "dry-rb/dry-validation",
+        "revision": "e7dff1eddfa98a2bab3acd895535c29b1e0b294c",
+        "exercised_cops": [
+          "Style/NumericPredicate"
+        ],
+        "by_cop": {
+          "Layout/SpaceAfterComma": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Layout/SpaceAfterSemicolon": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArguments": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArrayLiteral": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInHashLiteral": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/HashSlice": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/HashExcept": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/Next": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/OptionalBooleanParameter": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/NumericPredicate": {
+            "rustocop": 1,
+            "rubocop": 1,
+            "exact": 1,
+            "classification": "project_exact"
+          }
+        }
+      },
+      "factory_bot": {
+        "repository": "thoughtbot/factory_bot",
+        "revision": "18ae8b581bf55de681c8adb5f74d32787fd2157f",
+        "exercised_cops": [
+          "Style/Next",
+          "Style/OptionalBooleanParameter",
+          "Style/NumericPredicate"
+        ],
+        "by_cop": {
+          "Layout/SpaceAfterComma": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Layout/SpaceAfterSemicolon": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArguments": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArrayLiteral": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInHashLiteral": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/HashSlice": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/HashExcept": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/Next": {
+            "rustocop": 2,
+            "rubocop": 2,
+            "exact": 2,
+            "classification": "project_exact"
+          },
+          "Style/OptionalBooleanParameter": {
+            "rustocop": 4,
+            "rubocop": 4,
+            "exact": 4,
+            "classification": "project_exact"
+          },
+          "Style/NumericPredicate": {
+            "rustocop": 2,
+            "rubocop": 2,
+            "exact": 2,
+            "classification": "project_exact"
+          }
+        }
+      },
+      "faker": {
+        "repository": "faker-ruby/faker",
+        "revision": "cca4184947e09fdd02afb8b89d25a9c8ebc7274e",
+        "exercised_cops": [],
+        "by_cop": {
+          "Layout/SpaceAfterComma": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Layout/SpaceAfterSemicolon": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArguments": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArrayLiteral": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInHashLiteral": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/HashSlice": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/HashExcept": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/Next": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/OptionalBooleanParameter": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/NumericPredicate": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          }
+        }
+      },
+      "fastlane": {
+        "repository": "fastlane/fastlane",
+        "revision": "a9a72554e1f4d6658842d4f3a7b0ca236b5c1589",
+        "exercised_cops": [
+          "Style/TrailingCommaInHashLiteral",
+          "Style/HashSlice",
+          "Style/OptionalBooleanParameter",
+          "Style/NumericPredicate"
+        ],
+        "by_cop": {
+          "Layout/SpaceAfterComma": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Layout/SpaceAfterSemicolon": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArguments": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArrayLiteral": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInHashLiteral": {
+            "rustocop": 23,
+            "rubocop": 23,
+            "exact": 23,
+            "classification": "project_exact"
+          },
+          "Style/HashSlice": {
+            "rustocop": 11,
+            "rubocop": 11,
+            "exact": 11,
+            "classification": "project_exact"
+          },
+          "Style/HashExcept": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/Next": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/OptionalBooleanParameter": {
+            "rustocop": 31,
+            "rubocop": 31,
+            "exact": 31,
+            "classification": "project_exact"
+          },
+          "Style/NumericPredicate": {
+            "rustocop": 353,
+            "rubocop": 353,
+            "exact": 353,
+            "classification": "project_exact"
+          }
+        }
+      },
+      "fluentd": {
+        "repository": "fluent/fluentd",
+        "revision": "dd45c6e18dc7be33b5e5a0f0767bf46307ff5626",
+        "exercised_cops": [
+          "Layout/SpaceAfterComma",
+          "Style/TrailingCommaInArguments",
+          "Style/TrailingCommaInArrayLiteral",
+          "Style/TrailingCommaInHashLiteral",
+          "Style/HashExcept",
+          "Style/Next",
+          "Style/OptionalBooleanParameter",
+          "Style/NumericPredicate"
+        ],
+        "by_cop": {
+          "Layout/SpaceAfterComma": {
+            "rustocop": 1093,
+            "rubocop": 1093,
+            "exact": 1093,
+            "classification": "project_exact"
+          },
+          "Layout/SpaceAfterSemicolon": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArguments": {
+            "rustocop": 234,
+            "rubocop": 234,
+            "exact": 234,
+            "classification": "project_exact"
+          },
+          "Style/TrailingCommaInArrayLiteral": {
+            "rustocop": 247,
+            "rubocop": 247,
+            "exact": 247,
+            "classification": "project_exact"
+          },
+          "Style/TrailingCommaInHashLiteral": {
+            "rustocop": 378,
+            "rubocop": 378,
+            "exact": 378,
+            "classification": "project_exact"
+          },
+          "Style/HashSlice": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/HashExcept": {
+            "rustocop": 1,
+            "rubocop": 1,
+            "exact": 1,
+            "classification": "project_exact"
+          },
+          "Style/Next": {
+            "rustocop": 17,
+            "rubocop": 17,
+            "exact": 17,
+            "classification": "project_exact"
+          },
+          "Style/OptionalBooleanParameter": {
+            "rustocop": 28,
+            "rubocop": 28,
+            "exact": 28,
+            "classification": "project_exact"
+          },
+          "Style/NumericPredicate": {
+            "rustocop": 308,
+            "rubocop": 308,
+            "exact": 308,
+            "classification": "project_exact"
+          }
+        }
+      },
+      "forem": {
+        "repository": "forem/forem",
+        "revision": "f354c376a7c5d1330dc40d66f150be8d1289020d",
+        "exercised_cops": [
+          "Layout/SpaceAfterComma",
+          "Style/TrailingCommaInArguments",
+          "Style/TrailingCommaInArrayLiteral",
+          "Style/TrailingCommaInHashLiteral",
+          "Style/Next",
+          "Style/OptionalBooleanParameter",
+          "Style/NumericPredicate"
+        ],
+        "by_cop": {
+          "Layout/SpaceAfterComma": {
+            "rustocop": 5,
+            "rubocop": 5,
+            "exact": 5,
+            "classification": "project_exact"
+          },
+          "Layout/SpaceAfterSemicolon": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArguments": {
+            "rustocop": 1351,
+            "rubocop": 1351,
+            "exact": 1351,
+            "classification": "project_exact"
+          },
+          "Style/TrailingCommaInArrayLiteral": {
+            "rustocop": 234,
+            "rubocop": 234,
+            "exact": 234,
+            "classification": "project_exact"
+          },
+          "Style/TrailingCommaInHashLiteral": {
+            "rustocop": 35,
+            "rubocop": 35,
+            "exact": 35,
+            "classification": "project_exact"
+          },
+          "Style/HashSlice": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/HashExcept": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/Next": {
+            "rustocop": 3,
+            "rubocop": 3,
+            "exact": 3,
+            "classification": "project_exact"
+          },
+          "Style/OptionalBooleanParameter": {
+            "rustocop": 1,
+            "rubocop": 1,
+            "exact": 1,
+            "classification": "project_exact"
+          },
+          "Style/NumericPredicate": {
+            "rustocop": 37,
+            "rubocop": 37,
+            "exact": 37,
+            "classification": "project_exact"
+          }
+        }
+      },
+      "github-markup": {
+        "repository": "github/markup",
+        "revision": "76e2682193828b98471b3a071edf4db0590ccacb",
+        "exercised_cops": [
+          "Layout/SpaceAfterComma",
+          "Style/TrailingCommaInArguments",
+          "Style/TrailingCommaInArrayLiteral",
+          "Style/TrailingCommaInHashLiteral"
+        ],
+        "by_cop": {
+          "Layout/SpaceAfterComma": {
+            "rustocop": 3,
+            "rubocop": 3,
+            "exact": 3,
+            "classification": "project_exact"
+          },
+          "Layout/SpaceAfterSemicolon": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArguments": {
+            "rustocop": 2,
+            "rubocop": 2,
+            "exact": 2,
+            "classification": "project_exact"
+          },
+          "Style/TrailingCommaInArrayLiteral": {
+            "rustocop": 1,
+            "rubocop": 1,
+            "exact": 1,
+            "classification": "project_exact"
+          },
+          "Style/TrailingCommaInHashLiteral": {
+            "rustocop": 3,
+            "rubocop": 3,
+            "exact": 3,
+            "classification": "project_exact"
+          },
+          "Style/HashSlice": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/HashExcept": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/Next": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/OptionalBooleanParameter": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/NumericPredicate": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          }
+        }
+      },
+      "gitlab-ce": {
+        "repository": "gitlabhq/gitlabhq",
+        "revision": "67a526442c20d20b6e80ebf916bd766b54018c5e",
+        "exercised_cops": [
+          "Layout/SpaceAfterComma",
+          "Style/TrailingCommaInArguments",
+          "Style/TrailingCommaInHashLiteral",
+          "Style/HashSlice",
+          "Style/HashExcept",
+          "Style/OptionalBooleanParameter",
+          "Style/NumericPredicate"
+        ],
+        "by_cop": {
+          "Layout/SpaceAfterComma": {
+            "rustocop": 1,
+            "rubocop": 1,
+            "exact": 1,
+            "classification": "project_exact"
+          },
+          "Layout/SpaceAfterSemicolon": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArguments": {
+            "rustocop": 2,
+            "rubocop": 2,
+            "exact": 2,
+            "classification": "project_exact"
+          },
+          "Style/TrailingCommaInArrayLiteral": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInHashLiteral": {
+            "rustocop": 8,
+            "rubocop": 8,
+            "exact": 8,
+            "classification": "project_exact"
+          },
+          "Style/HashSlice": {
+            "rustocop": 10,
+            "rubocop": 10,
+            "exact": 10,
+            "classification": "project_exact"
+          },
+          "Style/HashExcept": {
+            "rustocop": 6,
+            "rubocop": 6,
+            "exact": 6,
+            "classification": "project_exact"
+          },
+          "Style/Next": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/OptionalBooleanParameter": {
+            "rustocop": 108,
+            "rubocop": 108,
+            "exact": 108,
+            "classification": "project_exact"
+          },
+          "Style/NumericPredicate": {
+            "rustocop": 856,
+            "rubocop": 856,
+            "exact": 856,
+            "classification": "project_exact"
+          }
+        }
+      },
+      "grape": {
+        "repository": "ruby-grape/grape",
+        "revision": "60c1e842ceaae37adc3062600ad1579b6f8cb90e",
+        "exercised_cops": [
+          "Style/OptionalBooleanParameter",
+          "Style/NumericPredicate"
+        ],
+        "by_cop": {
+          "Layout/SpaceAfterComma": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Layout/SpaceAfterSemicolon": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArguments": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArrayLiteral": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInHashLiteral": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/HashSlice": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/HashExcept": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/Next": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/OptionalBooleanParameter": {
+            "rustocop": 1,
+            "rubocop": 1,
+            "exact": 1,
+            "classification": "project_exact"
+          },
+          "Style/NumericPredicate": {
+            "rustocop": 4,
+            "rubocop": 4,
+            "exact": 4,
+            "classification": "project_exact"
+          }
+        }
+      },
+      "hanami": {
+        "repository": "hanami/hanami",
+        "revision": "2c785981724efbf25f13acbc9d5db287011e949a",
+        "exercised_cops": [],
+        "by_cop": {
+          "Layout/SpaceAfterComma": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Layout/SpaceAfterSemicolon": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArguments": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArrayLiteral": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInHashLiteral": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/HashSlice": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/HashExcept": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/Next": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/OptionalBooleanParameter": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/NumericPredicate": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          }
+        }
+      },
+      "homebrew": {
+        "repository": "Homebrew/brew",
+        "revision": "44d5dd835c14c1beadd5b75c49835ae391cfd86b",
+        "exercised_cops": [
+          "Style/TrailingCommaInArguments",
+          "Style/TrailingCommaInArrayLiteral",
+          "Style/TrailingCommaInHashLiteral",
+          "Style/OptionalBooleanParameter"
+        ],
+        "by_cop": {
+          "Layout/SpaceAfterComma": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Layout/SpaceAfterSemicolon": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArguments": {
+            "rustocop": 2496,
+            "rubocop": 2496,
+            "exact": 2496,
+            "classification": "project_exact"
+          },
+          "Style/TrailingCommaInArrayLiteral": {
+            "rustocop": 649,
+            "rubocop": 649,
+            "exact": 649,
+            "classification": "project_exact"
+          },
+          "Style/TrailingCommaInHashLiteral": {
+            "rustocop": 1345,
+            "rubocop": 1345,
+            "exact": 1345,
+            "classification": "project_exact"
+          },
+          "Style/HashSlice": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/HashExcept": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/Next": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/OptionalBooleanParameter": {
+            "rustocop": 1,
+            "rubocop": 1,
+            "exact": 1,
+            "classification": "project_exact"
+          },
+          "Style/NumericPredicate": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          }
+        }
+      },
+      "huginn": {
+        "repository": "huginn/huginn",
+        "revision": "9faad4aeee0d97570693377e0a281567e775abb4",
+        "exercised_cops": [
+          "Layout/SpaceAfterComma",
+          "Style/TrailingCommaInArguments",
+          "Style/TrailingCommaInArrayLiteral",
+          "Style/TrailingCommaInHashLiteral",
+          "Style/HashSlice",
+          "Style/HashExcept",
+          "Style/Next",
+          "Style/OptionalBooleanParameter",
+          "Style/NumericPredicate"
+        ],
+        "by_cop": {
+          "Layout/SpaceAfterComma": {
+            "rustocop": 20,
+            "rubocop": 20,
+            "exact": 20,
+            "classification": "project_exact"
+          },
+          "Layout/SpaceAfterSemicolon": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArguments": {
+            "rustocop": 22,
+            "rubocop": 22,
+            "exact": 22,
+            "classification": "project_exact"
+          },
+          "Style/TrailingCommaInArrayLiteral": {
+            "rustocop": 30,
+            "rubocop": 30,
+            "exact": 30,
+            "classification": "project_exact"
+          },
+          "Style/TrailingCommaInHashLiteral": {
+            "rustocop": 240,
+            "rubocop": 240,
+            "exact": 240,
+            "classification": "project_exact"
+          },
+          "Style/HashSlice": {
+            "rustocop": 1,
+            "rubocop": 1,
+            "exact": 1,
+            "classification": "project_exact"
+          },
+          "Style/HashExcept": {
+            "rustocop": 2,
+            "rubocop": 2,
+            "exact": 2,
+            "classification": "project_exact"
+          },
+          "Style/Next": {
+            "rustocop": 4,
+            "rubocop": 4,
+            "exact": 4,
+            "classification": "project_exact"
+          },
+          "Style/OptionalBooleanParameter": {
+            "rustocop": 8,
+            "rubocop": 8,
+            "exact": 8,
+            "classification": "project_exact"
+          },
+          "Style/NumericPredicate": {
+            "rustocop": 62,
+            "rubocop": 62,
+            "exact": 62,
+            "classification": "project_exact"
+          }
+        }
+      },
+      "irb": {
+        "repository": "ruby/irb",
+        "revision": "3794e99709ae114f35c3f8f227748fca6e95df04",
+        "exercised_cops": [
+          "Layout/SpaceAfterSemicolon",
+          "Style/TrailingCommaInArguments",
+          "Style/TrailingCommaInArrayLiteral",
+          "Style/TrailingCommaInHashLiteral",
+          "Style/Next",
+          "Style/OptionalBooleanParameter",
+          "Style/NumericPredicate"
+        ],
+        "by_cop": {
+          "Layout/SpaceAfterComma": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Layout/SpaceAfterSemicolon": {
+            "rustocop": 10,
+            "rubocop": 10,
+            "exact": 10,
+            "classification": "project_exact"
+          },
+          "Style/TrailingCommaInArguments": {
+            "rustocop": 20,
+            "rubocop": 20,
+            "exact": 20,
+            "classification": "project_exact"
+          },
+          "Style/TrailingCommaInArrayLiteral": {
+            "rustocop": 60,
+            "rubocop": 60,
+            "exact": 60,
+            "classification": "project_exact"
+          },
+          "Style/TrailingCommaInHashLiteral": {
+            "rustocop": 11,
+            "rubocop": 11,
+            "exact": 11,
+            "classification": "project_exact"
+          },
+          "Style/HashSlice": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/HashExcept": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/Next": {
+            "rustocop": 4,
+            "rubocop": 4,
+            "exact": 4,
+            "classification": "project_exact"
+          },
+          "Style/OptionalBooleanParameter": {
+            "rustocop": 1,
+            "rubocop": 1,
+            "exact": 1,
+            "classification": "project_exact"
+          },
+          "Style/NumericPredicate": {
+            "rustocop": 11,
+            "rubocop": 11,
+            "exact": 11,
+            "classification": "project_exact"
+          }
+        }
+      },
+      "jekyll": {
+        "repository": "jekyll/jekyll",
+        "revision": "74d751339d3e534aa51d5d7b0640e9bd743509e4",
+        "exercised_cops": [
+          "Style/TrailingCommaInArrayLiteral",
+          "Style/TrailingCommaInHashLiteral",
+          "Style/HashExcept",
+          "Style/OptionalBooleanParameter"
+        ],
+        "by_cop": {
+          "Layout/SpaceAfterComma": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Layout/SpaceAfterSemicolon": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArguments": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArrayLiteral": {
+            "rustocop": 47,
+            "rubocop": 47,
+            "exact": 47,
+            "classification": "project_exact"
+          },
+          "Style/TrailingCommaInHashLiteral": {
+            "rustocop": 184,
+            "rubocop": 184,
+            "exact": 184,
+            "classification": "project_exact"
+          },
+          "Style/HashSlice": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/HashExcept": {
+            "rustocop": 1,
+            "rubocop": 1,
+            "exact": 1,
+            "classification": "project_exact"
+          },
+          "Style/Next": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/OptionalBooleanParameter": {
+            "rustocop": 1,
+            "rubocop": 1,
+            "exact": 1,
+            "classification": "project_exact"
+          },
+          "Style/NumericPredicate": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          }
+        }
+      },
+      "linguist": {
+        "repository": "github-linguist/linguist",
+        "revision": "b45dbe9b2825a43285bcd035861be91cc0a7299e",
+        "exercised_cops": [
+          "Layout/SpaceAfterComma",
+          "Style/TrailingCommaInArrayLiteral",
+          "Style/TrailingCommaInHashLiteral",
+          "Style/Next",
+          "Style/OptionalBooleanParameter",
+          "Style/NumericPredicate"
+        ],
+        "by_cop": {
+          "Layout/SpaceAfterComma": {
+            "rustocop": 26,
+            "rubocop": 26,
+            "exact": 26,
+            "classification": "project_exact"
+          },
+          "Layout/SpaceAfterSemicolon": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArguments": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArrayLiteral": {
+            "rustocop": 3,
+            "rubocop": 3,
+            "exact": 3,
+            "classification": "project_exact"
+          },
+          "Style/TrailingCommaInHashLiteral": {
+            "rustocop": 35,
+            "rubocop": 35,
+            "exact": 35,
+            "classification": "project_exact"
+          },
+          "Style/HashSlice": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/HashExcept": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/Next": {
+            "rustocop": 5,
+            "rubocop": 5,
+            "exact": 5,
+            "classification": "project_exact"
+          },
+          "Style/OptionalBooleanParameter": {
+            "rustocop": 14,
+            "rubocop": 14,
+            "exact": 14,
+            "classification": "project_exact"
+          },
+          "Style/NumericPredicate": {
+            "rustocop": 7,
+            "rubocop": 7,
+            "exact": 7,
+            "classification": "project_exact"
+          }
+        }
+      },
+      "logger": {
+        "repository": "ruby/logger",
+        "revision": "026eb9689c031cc7a720909f06d5b2927637fd3d",
+        "exercised_cops": [
+          "Style/TrailingCommaInHashLiteral",
+          "Style/NumericPredicate"
+        ],
+        "by_cop": {
+          "Layout/SpaceAfterComma": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Layout/SpaceAfterSemicolon": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArguments": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArrayLiteral": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInHashLiteral": {
+            "rustocop": 1,
+            "rubocop": 1,
+            "exact": 1,
+            "classification": "project_exact"
+          },
+          "Style/HashSlice": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/HashExcept": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/Next": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/OptionalBooleanParameter": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/NumericPredicate": {
+            "rustocop": 2,
+            "rubocop": 2,
+            "exact": 2,
+            "classification": "project_exact"
+          }
+        }
+      },
+      "mastodon": {
+        "repository": "mastodon/mastodon",
+        "revision": "60593f6a8de11effdcf0a0dcb40e22115ae9361a",
+        "exercised_cops": [
+          "Style/TrailingCommaInArrayLiteral",
+          "Style/TrailingCommaInHashLiteral",
+          "Style/NumericPredicate"
+        ],
+        "by_cop": {
+          "Layout/SpaceAfterComma": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Layout/SpaceAfterSemicolon": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArguments": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArrayLiteral": {
+            "rustocop": 270,
+            "rubocop": 270,
+            "exact": 270,
+            "classification": "project_exact"
+          },
+          "Style/TrailingCommaInHashLiteral": {
+            "rustocop": 1262,
+            "rubocop": 1262,
+            "exact": 1262,
+            "classification": "project_exact"
+          },
+          "Style/HashSlice": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/HashExcept": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/Next": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/OptionalBooleanParameter": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/NumericPredicate": {
+            "rustocop": 4,
+            "rubocop": 4,
+            "exact": 4,
+            "classification": "project_exact"
+          }
+        }
+      },
+      "net-http": {
+        "repository": "ruby/net-http",
+        "revision": "104338732a17f30e8c06a6504a848d911eba4d00",
+        "exercised_cops": [
+          "Layout/SpaceAfterComma",
+          "Style/TrailingCommaInArrayLiteral",
+          "Style/TrailingCommaInHashLiteral",
+          "Style/Next",
+          "Style/OptionalBooleanParameter",
+          "Style/NumericPredicate"
+        ],
+        "by_cop": {
+          "Layout/SpaceAfterComma": {
+            "rustocop": 22,
+            "rubocop": 22,
+            "exact": 22,
+            "classification": "project_exact"
+          },
+          "Layout/SpaceAfterSemicolon": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArguments": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArrayLiteral": {
+            "rustocop": 1,
+            "rubocop": 1,
+            "exact": 1,
+            "classification": "project_exact"
+          },
+          "Style/TrailingCommaInHashLiteral": {
+            "rustocop": 17,
+            "rubocop": 17,
+            "exact": 17,
+            "classification": "project_exact"
+          },
+          "Style/HashSlice": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/HashExcept": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/Next": {
+            "rustocop": 1,
+            "rubocop": 1,
+            "exact": 1,
+            "classification": "project_exact"
+          },
+          "Style/OptionalBooleanParameter": {
+            "rustocop": 1,
+            "rubocop": 1,
+            "exact": 1,
+            "classification": "project_exact"
+          },
+          "Style/NumericPredicate": {
+            "rustocop": 14,
+            "rubocop": 14,
+            "exact": 14,
+            "classification": "project_exact"
+          }
+        }
+      },
+      "openproject": {
+        "repository": "opf/openproject",
+        "revision": "9579995645b707626b8de36fbaf33dfda6c04b9e",
+        "exercised_cops": [
+          "Style/TrailingCommaInArrayLiteral",
+          "Style/TrailingCommaInHashLiteral",
+          "Style/HashSlice",
+          "Style/Next",
+          "Style/OptionalBooleanParameter",
+          "Style/NumericPredicate"
+        ],
+        "by_cop": {
+          "Layout/SpaceAfterComma": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Layout/SpaceAfterSemicolon": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArguments": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArrayLiteral": {
+            "rustocop": 2,
+            "rubocop": 2,
+            "exact": 2,
+            "classification": "project_exact"
+          },
+          "Style/TrailingCommaInHashLiteral": {
+            "rustocop": 7,
+            "rubocop": 7,
+            "exact": 7,
+            "classification": "project_exact"
+          },
+          "Style/HashSlice": {
+            "rustocop": 3,
+            "rubocop": 3,
+            "exact": 3,
+            "classification": "project_exact"
+          },
+          "Style/HashExcept": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/Next": {
+            "rustocop": 26,
+            "rubocop": 26,
+            "exact": 26,
+            "classification": "project_exact"
+          },
+          "Style/OptionalBooleanParameter": {
+            "rustocop": 40,
+            "rubocop": 40,
+            "exact": 40,
+            "classification": "project_exact"
+          },
+          "Style/NumericPredicate": {
+            "rustocop": 176,
+            "rubocop": 176,
+            "exact": 176,
+            "classification": "project_exact"
+          }
+        }
+      },
+      "paper_trail": {
+        "repository": "paper-trail-gem/paper_trail",
+        "revision": "098058ae472d13763fe66e6866a6a4dfc64a3eca",
+        "exercised_cops": [],
+        "by_cop": {
+          "Layout/SpaceAfterComma": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Layout/SpaceAfterSemicolon": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArguments": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArrayLiteral": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInHashLiteral": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/HashSlice": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/HashExcept": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/Next": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/OptionalBooleanParameter": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/NumericPredicate": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          }
+        }
+      },
+      "pghero": {
+        "repository": "ankane/pghero",
+        "revision": "7edb57986ffd36f9d64f0830c4ccc90a5eac46d6",
+        "exercised_cops": [
+          "Style/Next",
+          "Style/NumericPredicate"
+        ],
+        "by_cop": {
+          "Layout/SpaceAfterComma": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Layout/SpaceAfterSemicolon": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArguments": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArrayLiteral": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInHashLiteral": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/HashSlice": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/HashExcept": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/Next": {
+            "rustocop": 2,
+            "rubocop": 2,
+            "exact": 2,
+            "classification": "project_exact"
+          },
+          "Style/OptionalBooleanParameter": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/NumericPredicate": {
+            "rustocop": 8,
+            "rubocop": 8,
+            "exact": 8,
+            "classification": "project_exact"
+          }
+        }
+      },
+      "postal": {
+        "repository": "postalserver/postal",
+        "revision": "d038eaa8c763d3cafa797ccd6f773d53470bd336",
+        "exercised_cops": [
+          "Style/TrailingCommaInArrayLiteral",
+          "Style/NumericPredicate"
+        ],
+        "by_cop": {
+          "Layout/SpaceAfterComma": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Layout/SpaceAfterSemicolon": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArguments": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArrayLiteral": {
+            "rustocop": 32,
+            "rubocop": 32,
+            "exact": 32,
+            "classification": "project_exact"
+          },
+          "Style/TrailingCommaInHashLiteral": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/HashSlice": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/HashExcept": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/Next": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/OptionalBooleanParameter": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/NumericPredicate": {
+            "rustocop": 1,
+            "rubocop": 1,
+            "exact": 1,
+            "classification": "project_exact"
+          }
+        }
+      },
+      "psych": {
+        "repository": "ruby/psych",
+        "revision": "9b12bb3fb679c2bc2399ffec0bed15b58ce839e8",
+        "exercised_cops": [
+          "Layout/SpaceAfterComma",
+          "Style/TrailingCommaInArrayLiteral",
+          "Style/TrailingCommaInHashLiteral",
+          "Style/HashSlice",
+          "Style/HashExcept",
+          "Style/OptionalBooleanParameter",
+          "Style/NumericPredicate"
+        ],
+        "by_cop": {
+          "Layout/SpaceAfterComma": {
+            "rustocop": 99,
+            "rubocop": 99,
+            "exact": 99,
+            "classification": "project_exact"
+          },
+          "Layout/SpaceAfterSemicolon": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArguments": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArrayLiteral": {
+            "rustocop": 7,
+            "rubocop": 7,
+            "exact": 7,
+            "classification": "project_exact"
+          },
+          "Style/TrailingCommaInHashLiteral": {
+            "rustocop": 3,
+            "rubocop": 3,
+            "exact": 3,
+            "classification": "project_exact"
+          },
+          "Style/HashSlice": {
+            "rustocop": 2,
+            "rubocop": 2,
+            "exact": 2,
+            "classification": "project_exact"
+          },
+          "Style/HashExcept": {
+            "rustocop": 1,
+            "rubocop": 1,
+            "exact": 1,
+            "classification": "project_exact"
+          },
+          "Style/Next": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/OptionalBooleanParameter": {
+            "rustocop": 6,
+            "rubocop": 6,
+            "exact": 6,
+            "classification": "project_exact"
+          },
+          "Style/NumericPredicate": {
+            "rustocop": 4,
+            "rubocop": 4,
+            "exact": 4,
+            "classification": "project_exact"
+          }
+        }
+      },
+      "puma": {
+        "repository": "puma/puma",
+        "revision": "b8341dc946f0a2444e5ea6730d1967ca53c8d006",
+        "exercised_cops": [
+          "Layout/SpaceAfterComma",
+          "Style/TrailingCommaInArrayLiteral",
+          "Style/TrailingCommaInHashLiteral",
+          "Style/Next",
+          "Style/OptionalBooleanParameter",
+          "Style/NumericPredicate"
+        ],
+        "by_cop": {
+          "Layout/SpaceAfterComma": {
+            "rustocop": 66,
+            "rubocop": 66,
+            "exact": 66,
+            "classification": "project_exact"
+          },
+          "Layout/SpaceAfterSemicolon": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArguments": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArrayLiteral": {
+            "rustocop": 5,
+            "rubocop": 5,
+            "exact": 5,
+            "classification": "project_exact"
+          },
+          "Style/TrailingCommaInHashLiteral": {
+            "rustocop": 26,
+            "rubocop": 26,
+            "exact": 26,
+            "classification": "project_exact"
+          },
+          "Style/HashSlice": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/HashExcept": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/Next": {
+            "rustocop": 7,
+            "rubocop": 7,
+            "exact": 7,
+            "classification": "project_exact"
+          },
+          "Style/OptionalBooleanParameter": {
+            "rustocop": 42,
+            "rubocop": 42,
+            "exact": 42,
+            "classification": "project_exact"
+          },
+          "Style/NumericPredicate": {
+            "rustocop": 48,
+            "rubocop": 48,
+            "exact": 48,
+            "classification": "project_exact"
+          }
+        }
+      },
+      "puppet": {
+        "repository": "puppetlabs/puppet",
+        "revision": "e227c27540975c25aa22d533a52424a9d2fc886a",
+        "exercised_cops": [
+          "Layout/SpaceAfterComma",
+          "Layout/SpaceAfterSemicolon",
+          "Style/TrailingCommaInArguments",
+          "Style/TrailingCommaInArrayLiteral",
+          "Style/TrailingCommaInHashLiteral",
+          "Style/HashSlice",
+          "Style/HashExcept",
+          "Style/Next",
+          "Style/OptionalBooleanParameter",
+          "Style/NumericPredicate"
+        ],
+        "by_cop": {
+          "Layout/SpaceAfterComma": {
+            "rustocop": 1478,
+            "rubocop": 1478,
+            "exact": 1478,
+            "classification": "project_exact"
+          },
+          "Layout/SpaceAfterSemicolon": {
+            "rustocop": 1,
+            "rubocop": 1,
+            "exact": 1,
+            "classification": "project_exact"
+          },
+          "Style/TrailingCommaInArguments": {
+            "rustocop": 34,
+            "rubocop": 34,
+            "exact": 34,
+            "classification": "project_exact"
+          },
+          "Style/TrailingCommaInArrayLiteral": {
+            "rustocop": 157,
+            "rubocop": 157,
+            "exact": 157,
+            "classification": "project_exact"
+          },
+          "Style/TrailingCommaInHashLiteral": {
+            "rustocop": 821,
+            "rubocop": 821,
+            "exact": 821,
+            "classification": "project_exact"
+          },
+          "Style/HashSlice": {
+            "rustocop": 2,
+            "rubocop": 2,
+            "exact": 2,
+            "classification": "project_exact"
+          },
+          "Style/HashExcept": {
+            "rustocop": 4,
+            "rubocop": 4,
+            "exact": 4,
+            "classification": "project_exact"
+          },
+          "Style/Next": {
+            "rustocop": 12,
+            "rubocop": 12,
+            "exact": 12,
+            "classification": "project_exact"
+          },
+          "Style/OptionalBooleanParameter": {
+            "rustocop": 196,
+            "rubocop": 196,
+            "exact": 196,
+            "classification": "project_exact"
+          },
+          "Style/NumericPredicate": {
+            "rustocop": 336,
+            "rubocop": 336,
+            "exact": 336,
+            "classification": "project_exact"
+          }
+        }
+      },
+      "rack": {
+        "repository": "rack/rack",
+        "revision": "8bf4eb078498edc9105fb04add80d89c5340e60b",
+        "exercised_cops": [
+          "Layout/SpaceAfterComma",
+          "Style/TrailingCommaInArguments",
+          "Style/TrailingCommaInArrayLiteral",
+          "Style/TrailingCommaInHashLiteral",
+          "Style/Next",
+          "Style/OptionalBooleanParameter",
+          "Style/NumericPredicate"
+        ],
+        "by_cop": {
+          "Layout/SpaceAfterComma": {
+            "rustocop": 71,
+            "rubocop": 71,
+            "exact": 71,
+            "classification": "project_exact"
+          },
+          "Layout/SpaceAfterSemicolon": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArguments": {
+            "rustocop": 3,
+            "rubocop": 3,
+            "exact": 3,
+            "classification": "project_exact"
+          },
+          "Style/TrailingCommaInArrayLiteral": {
+            "rustocop": 13,
+            "rubocop": 13,
+            "exact": 13,
+            "classification": "project_exact"
+          },
+          "Style/TrailingCommaInHashLiteral": {
+            "rustocop": 27,
+            "rubocop": 27,
+            "exact": 27,
+            "classification": "project_exact"
+          },
+          "Style/HashSlice": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/HashExcept": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/Next": {
+            "rustocop": 2,
+            "rubocop": 2,
+            "exact": 2,
+            "classification": "project_exact"
+          },
+          "Style/OptionalBooleanParameter": {
+            "rustocop": 4,
+            "rubocop": 4,
+            "exact": 4,
+            "classification": "project_exact"
+          },
+          "Style/NumericPredicate": {
+            "rustocop": 19,
+            "rubocop": 19,
+            "exact": 19,
+            "classification": "project_exact"
+          }
+        }
+      },
+      "rails": {
+        "repository": "rails/rails",
+        "revision": "ba4f7369aee71f9f38d67bdbf0e8571fb372b535",
+        "exercised_cops": [
+          "Style/TrailingCommaInArguments",
+          "Style/TrailingCommaInArrayLiteral",
+          "Style/TrailingCommaInHashLiteral",
+          "Style/HashSlice",
+          "Style/HashExcept",
+          "Style/Next",
+          "Style/OptionalBooleanParameter",
+          "Style/NumericPredicate"
+        ],
+        "by_cop": {
+          "Layout/SpaceAfterComma": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Layout/SpaceAfterSemicolon": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArguments": {
+            "rustocop": 167,
+            "rubocop": 167,
+            "exact": 167,
+            "classification": "project_exact"
+          },
+          "Style/TrailingCommaInArrayLiteral": {
+            "rustocop": 219,
+            "rubocop": 219,
+            "exact": 219,
+            "classification": "project_exact"
+          },
+          "Style/TrailingCommaInHashLiteral": {
+            "rustocop": 250,
+            "rubocop": 250,
+            "exact": 250,
+            "classification": "project_exact"
+          },
+          "Style/HashSlice": {
+            "rustocop": 1,
+            "rubocop": 1,
+            "exact": 1,
+            "classification": "project_exact"
+          },
+          "Style/HashExcept": {
+            "rustocop": 2,
+            "rubocop": 2,
+            "exact": 2,
+            "classification": "project_exact"
+          },
+          "Style/Next": {
+            "rustocop": 29,
+            "rubocop": 29,
+            "exact": 29,
+            "classification": "project_exact"
+          },
+          "Style/OptionalBooleanParameter": {
+            "rustocop": 156,
+            "rubocop": 156,
+            "exact": 156,
+            "classification": "project_exact"
+          },
+          "Style/NumericPredicate": {
+            "rustocop": 251,
+            "rubocop": 251,
+            "exact": 251,
+            "classification": "project_exact"
+          }
+        }
+      },
+      "rake": {
+        "repository": "ruby/rake",
+        "revision": "ec87311d9339f6ed9ff7143fa8e449a97ba34f1b",
+        "exercised_cops": [
+          "Layout/SpaceAfterComma",
+          "Style/TrailingCommaInArrayLiteral",
+          "Style/TrailingCommaInHashLiteral",
+          "Style/Next",
+          "Style/NumericPredicate"
+        ],
+        "by_cop": {
+          "Layout/SpaceAfterComma": {
+            "rustocop": 2,
+            "rubocop": 2,
+            "exact": 2,
+            "classification": "project_exact"
+          },
+          "Layout/SpaceAfterSemicolon": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArguments": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArrayLiteral": {
+            "rustocop": 3,
+            "rubocop": 3,
+            "exact": 3,
+            "classification": "project_exact"
+          },
+          "Style/TrailingCommaInHashLiteral": {
+            "rustocop": 2,
+            "rubocop": 2,
+            "exact": 2,
+            "classification": "project_exact"
+          },
+          "Style/HashSlice": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/HashExcept": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/Next": {
+            "rustocop": 4,
+            "rubocop": 4,
+            "exact": 4,
+            "classification": "project_exact"
+          },
+          "Style/OptionalBooleanParameter": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/NumericPredicate": {
+            "rustocop": 4,
+            "rubocop": 4,
+            "exact": 4,
+            "classification": "project_exact"
+          }
+        }
+      },
+      "ransack": {
+        "repository": "activerecord-hackery/ransack",
+        "revision": "e82f6bab3956c5597e7debbefa218d9e94e58ceb",
+        "exercised_cops": [
+          "Style/TrailingCommaInArguments",
+          "Style/TrailingCommaInArrayLiteral",
+          "Style/TrailingCommaInHashLiteral",
+          "Style/Next",
+          "Style/NumericPredicate"
+        ],
+        "by_cop": {
+          "Layout/SpaceAfterComma": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Layout/SpaceAfterSemicolon": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArguments": {
+            "rustocop": 5,
+            "rubocop": 5,
+            "exact": 5,
+            "classification": "project_exact"
+          },
+          "Style/TrailingCommaInArrayLiteral": {
+            "rustocop": 2,
+            "rubocop": 2,
+            "exact": 2,
+            "classification": "project_exact"
+          },
+          "Style/TrailingCommaInHashLiteral": {
+            "rustocop": 2,
+            "rubocop": 2,
+            "exact": 2,
+            "classification": "project_exact"
+          },
+          "Style/HashSlice": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/HashExcept": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/Next": {
+            "rustocop": 2,
+            "rubocop": 2,
+            "exact": 2,
+            "classification": "project_exact"
+          },
+          "Style/OptionalBooleanParameter": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/NumericPredicate": {
+            "rustocop": 7,
+            "rubocop": 7,
+            "exact": 7,
+            "classification": "project_exact"
+          }
+        }
+      },
+      "rdoc": {
+        "repository": "ruby/rdoc",
+        "revision": "5bd8719f1a8ab12bd180b0b0632369f9bcafd547",
+        "exercised_cops": [
+          "Layout/SpaceAfterComma",
+          "Style/TrailingCommaInArguments",
+          "Style/TrailingCommaInArrayLiteral",
+          "Style/TrailingCommaInHashLiteral",
+          "Style/Next",
+          "Style/OptionalBooleanParameter",
+          "Style/NumericPredicate"
+        ],
+        "by_cop": {
+          "Layout/SpaceAfterComma": {
+            "rustocop": 14,
+            "rubocop": 14,
+            "exact": 14,
+            "classification": "project_exact"
+          },
+          "Layout/SpaceAfterSemicolon": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArguments": {
+            "rustocop": 6,
+            "rubocop": 6,
+            "exact": 6,
+            "classification": "project_exact"
+          },
+          "Style/TrailingCommaInArrayLiteral": {
+            "rustocop": 145,
+            "rubocop": 145,
+            "exact": 145,
+            "classification": "project_exact"
+          },
+          "Style/TrailingCommaInHashLiteral": {
+            "rustocop": 74,
+            "rubocop": 74,
+            "exact": 74,
+            "classification": "project_exact"
+          },
+          "Style/HashSlice": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/HashExcept": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/Next": {
+            "rustocop": 3,
+            "rubocop": 3,
+            "exact": 3,
+            "classification": "project_exact"
+          },
+          "Style/OptionalBooleanParameter": {
+            "rustocop": 27,
+            "rubocop": 27,
+            "exact": 27,
+            "classification": "project_exact"
+          },
+          "Style/NumericPredicate": {
+            "rustocop": 38,
+            "rubocop": 38,
+            "exact": 38,
+            "classification": "project_exact"
+          }
+        }
+      },
+      "react_on_rails": {
+        "repository": "shakacode/react_on_rails",
+        "revision": "e9dd9cdbf9fdcdcad028622637b9147bc95abd1c",
+        "exercised_cops": [
+          "Style/HashSlice"
+        ],
+        "by_cop": {
+          "Layout/SpaceAfterComma": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Layout/SpaceAfterSemicolon": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArguments": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArrayLiteral": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInHashLiteral": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/HashSlice": {
+            "rustocop": 1,
+            "rubocop": 1,
+            "exact": 1,
+            "classification": "project_exact"
+          },
+          "Style/HashExcept": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/Next": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/OptionalBooleanParameter": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/NumericPredicate": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          }
+        }
+      },
+      "redis-rb": {
+        "repository": "redis/redis-rb",
+        "revision": "2ba9010b91dab9e0fde1fbae3a9aae003f8bc307",
+        "exercised_cops": [
+          "Style/TrailingCommaInArguments",
+          "Style/TrailingCommaInArrayLiteral",
+          "Style/TrailingCommaInHashLiteral",
+          "Style/HashExcept",
+          "Style/NumericPredicate"
+        ],
+        "by_cop": {
+          "Layout/SpaceAfterComma": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Layout/SpaceAfterSemicolon": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArguments": {
+            "rustocop": 1,
+            "rubocop": 1,
+            "exact": 1,
+            "classification": "project_exact"
+          },
+          "Style/TrailingCommaInArrayLiteral": {
+            "rustocop": 9,
+            "rubocop": 9,
+            "exact": 9,
+            "classification": "project_exact"
+          },
+          "Style/TrailingCommaInHashLiteral": {
+            "rustocop": 14,
+            "rubocop": 14,
+            "exact": 14,
+            "classification": "project_exact"
+          },
+          "Style/HashSlice": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/HashExcept": {
+            "rustocop": 3,
+            "rubocop": 3,
+            "exact": 3,
+            "classification": "project_exact"
+          },
+          "Style/Next": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/OptionalBooleanParameter": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/NumericPredicate": {
+            "rustocop": 13,
+            "rubocop": 13,
+            "exact": 13,
+            "classification": "project_exact"
+          }
+        }
+      },
+      "resque": {
+        "repository": "resque/resque",
+        "revision": "bb0f097121f14ab1a77b06cbe8fc0606a8a2f2c7",
+        "exercised_cops": [
+          "Layout/SpaceAfterComma",
+          "Style/TrailingCommaInHashLiteral",
+          "Style/Next",
+          "Style/OptionalBooleanParameter",
+          "Style/NumericPredicate"
+        ],
+        "by_cop": {
+          "Layout/SpaceAfterComma": {
+            "rustocop": 42,
+            "rubocop": 42,
+            "exact": 42,
+            "classification": "project_exact"
+          },
+          "Layout/SpaceAfterSemicolon": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArguments": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArrayLiteral": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInHashLiteral": {
+            "rustocop": 1,
+            "rubocop": 1,
+            "exact": 1,
+            "classification": "project_exact"
+          },
+          "Style/HashSlice": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/HashExcept": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/Next": {
+            "rustocop": 1,
+            "rubocop": 1,
+            "exact": 1,
+            "classification": "project_exact"
+          },
+          "Style/OptionalBooleanParameter": {
+            "rustocop": 3,
+            "rubocop": 3,
+            "exact": 3,
+            "classification": "project_exact"
+          },
+          "Style/NumericPredicate": {
+            "rustocop": 2,
+            "rubocop": 2,
+            "exact": 2,
+            "classification": "project_exact"
+          }
+        }
+      },
+      "rspec-core": {
+        "repository": "rspec/rspec-core",
+        "revision": "aec5f49485d97908183dbe790a7fefb8baaa8091",
+        "exercised_cops": [
+          "Layout/SpaceAfterComma",
+          "Style/TrailingCommaInArrayLiteral",
+          "Style/TrailingCommaInHashLiteral",
+          "Style/HashExcept",
+          "Style/OptionalBooleanParameter",
+          "Style/NumericPredicate"
+        ],
+        "by_cop": {
+          "Layout/SpaceAfterComma": {
+            "rustocop": 50,
+            "rubocop": 50,
+            "exact": 50,
+            "classification": "project_exact"
+          },
+          "Layout/SpaceAfterSemicolon": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArguments": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArrayLiteral": {
+            "rustocop": 10,
+            "rubocop": 10,
+            "exact": 10,
+            "classification": "project_exact"
+          },
+          "Style/TrailingCommaInHashLiteral": {
+            "rustocop": 11,
+            "rubocop": 11,
+            "exact": 11,
+            "classification": "project_exact"
+          },
+          "Style/HashSlice": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/HashExcept": {
+            "rustocop": 1,
+            "rubocop": 1,
+            "exact": 1,
+            "classification": "project_exact"
+          },
+          "Style/Next": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/OptionalBooleanParameter": {
+            "rustocop": 7,
+            "rubocop": 7,
+            "exact": 7,
+            "classification": "project_exact"
+          },
+          "Style/NumericPredicate": {
+            "rustocop": 14,
+            "rubocop": 14,
+            "exact": 14,
+            "classification": "project_exact"
+          }
+        }
+      },
+      "rubocop": {
+        "repository": "rubocop/rubocop",
+        "revision": "3a42c622171794510e03999c8d55129b73c5dc8f",
+        "exercised_cops": [
+          "Style/HashExcept",
+          "Style/NumericPredicate"
+        ],
+        "by_cop": {
+          "Layout/SpaceAfterComma": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Layout/SpaceAfterSemicolon": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArguments": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArrayLiteral": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInHashLiteral": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/HashSlice": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/HashExcept": {
+            "rustocop": 2,
+            "rubocop": 2,
+            "exact": 2,
+            "classification": "project_exact"
+          },
+          "Style/Next": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/OptionalBooleanParameter": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/NumericPredicate": {
+            "rustocop": 1,
+            "rubocop": 1,
+            "exact": 1,
+            "classification": "project_exact"
+          }
+        }
+      },
+      "rubygems.org": {
+        "repository": "rubygems/rubygems.org",
+        "revision": "3201f8831866f82eb9acd7f66287a978d0e59079",
+        "exercised_cops": [
+          "Style/NumericPredicate"
+        ],
+        "by_cop": {
+          "Layout/SpaceAfterComma": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Layout/SpaceAfterSemicolon": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArguments": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArrayLiteral": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInHashLiteral": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/HashSlice": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/HashExcept": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/Next": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/OptionalBooleanParameter": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/NumericPredicate": {
+            "rustocop": 2,
+            "rubocop": 2,
+            "exact": 2,
+            "classification": "project_exact"
+          }
+        }
+      },
+      "searchkick": {
+        "repository": "ankane/searchkick",
+        "revision": "93e901a75b11a25101668a616e006b158251b16e",
+        "exercised_cops": [
+          "Style/Next",
+          "Style/OptionalBooleanParameter",
+          "Style/NumericPredicate"
+        ],
+        "by_cop": {
+          "Layout/SpaceAfterComma": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Layout/SpaceAfterSemicolon": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArguments": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArrayLiteral": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInHashLiteral": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/HashSlice": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/HashExcept": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/Next": {
+            "rustocop": 1,
+            "rubocop": 1,
+            "exact": 1,
+            "classification": "project_exact"
+          },
+          "Style/OptionalBooleanParameter": {
+            "rustocop": 16,
+            "rubocop": 16,
+            "exact": 16,
+            "classification": "project_exact"
+          },
+          "Style/NumericPredicate": {
+            "rustocop": 3,
+            "rubocop": 3,
+            "exact": 3,
+            "classification": "project_exact"
+          }
+        }
+      },
+      "sidekiq": {
+        "repository": "sidekiq/sidekiq",
+        "revision": "1bb4aa06e5aa178a114a5e855f9f3d5c24f6c61b",
+        "exercised_cops": [
+          "Style/Next",
+          "Style/OptionalBooleanParameter",
+          "Style/NumericPredicate"
+        ],
+        "by_cop": {
+          "Layout/SpaceAfterComma": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Layout/SpaceAfterSemicolon": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArguments": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArrayLiteral": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInHashLiteral": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/HashSlice": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/HashExcept": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/Next": {
+            "rustocop": 4,
+            "rubocop": 4,
+            "exact": 4,
+            "classification": "project_exact"
+          },
+          "Style/OptionalBooleanParameter": {
+            "rustocop": 13,
+            "rubocop": 13,
+            "exact": 13,
+            "classification": "project_exact"
+          },
+          "Style/NumericPredicate": {
+            "rustocop": 34,
+            "rubocop": 34,
+            "exact": 34,
+            "classification": "project_exact"
+          }
+        }
+      },
+      "simple_form": {
+        "repository": "heartcombo/simple_form",
+        "revision": "18f38aad0bdeca2ba1815043b94d96fdbbe6a325",
+        "exercised_cops": [
+          "Layout/SpaceAfterComma",
+          "Style/OptionalBooleanParameter",
+          "Style/NumericPredicate"
+        ],
+        "by_cop": {
+          "Layout/SpaceAfterComma": {
+            "rustocop": 4,
+            "rubocop": 4,
+            "exact": 4,
+            "classification": "project_exact"
+          },
+          "Layout/SpaceAfterSemicolon": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArguments": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArrayLiteral": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInHashLiteral": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/HashSlice": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/HashExcept": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/Next": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/OptionalBooleanParameter": {
+            "rustocop": 1,
+            "rubocop": 1,
+            "exact": 1,
+            "classification": "project_exact"
+          },
+          "Style/NumericPredicate": {
+            "rustocop": 1,
+            "rubocop": 1,
+            "exact": 1,
+            "classification": "project_exact"
+          }
+        }
+      },
+      "sinatra": {
+        "repository": "sinatra/sinatra",
+        "revision": "cb22afd7902b566b6eaba6c4ea89739494a65d12",
+        "exercised_cops": [
+          "Layout/SpaceAfterComma",
+          "Layout/SpaceAfterSemicolon",
+          "Style/TrailingCommaInArrayLiteral",
+          "Style/TrailingCommaInHashLiteral",
+          "Style/HashExcept",
+          "Style/OptionalBooleanParameter",
+          "Style/NumericPredicate"
+        ],
+        "by_cop": {
+          "Layout/SpaceAfterComma": {
+            "rustocop": 47,
+            "rubocop": 47,
+            "exact": 47,
+            "classification": "project_exact"
+          },
+          "Layout/SpaceAfterSemicolon": {
+            "rustocop": 2,
+            "rubocop": 2,
+            "exact": 2,
+            "classification": "project_exact"
+          },
+          "Style/TrailingCommaInArguments": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArrayLiteral": {
+            "rustocop": 3,
+            "rubocop": 3,
+            "exact": 3,
+            "classification": "project_exact"
+          },
+          "Style/TrailingCommaInHashLiteral": {
+            "rustocop": 1,
+            "rubocop": 1,
+            "exact": 1,
+            "classification": "project_exact"
+          },
+          "Style/HashSlice": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/HashExcept": {
+            "rustocop": 1,
+            "rubocop": 1,
+            "exact": 1,
+            "classification": "project_exact"
+          },
+          "Style/Next": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/OptionalBooleanParameter": {
+            "rustocop": 7,
+            "rubocop": 7,
+            "exact": 7,
+            "classification": "project_exact"
+          },
+          "Style/NumericPredicate": {
+            "rustocop": 7,
+            "rubocop": 7,
+            "exact": 7,
+            "classification": "project_exact"
+          }
+        }
+      },
+      "solidus": {
+        "repository": "solidusio/solidus",
+        "revision": "1f5bf5c638f5fe9fbda4d480bdb7ebcfa39a9a5e",
+        "exercised_cops": [
+          "Style/Next",
+          "Style/OptionalBooleanParameter",
+          "Style/NumericPredicate"
+        ],
+        "by_cop": {
+          "Layout/SpaceAfterComma": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Layout/SpaceAfterSemicolon": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArguments": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArrayLiteral": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInHashLiteral": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/HashSlice": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/HashExcept": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/Next": {
+            "rustocop": 2,
+            "rubocop": 2,
+            "exact": 2,
+            "classification": "project_exact"
+          },
+          "Style/OptionalBooleanParameter": {
+            "rustocop": 9,
+            "rubocop": 9,
+            "exact": 9,
+            "classification": "project_exact"
+          },
+          "Style/NumericPredicate": {
+            "rustocop": 68,
+            "rubocop": 68,
+            "exact": 68,
+            "classification": "project_exact"
+          }
+        }
+      },
+      "spree": {
+        "repository": "spree/spree",
+        "revision": "bf44766bd5c7b5f39f3e26a14ceaa9a864cb5a06",
+        "exercised_cops": [
+          "Layout/SpaceAfterComma",
+          "Style/TrailingCommaInArguments",
+          "Style/TrailingCommaInArrayLiteral",
+          "Style/TrailingCommaInHashLiteral",
+          "Style/HashExcept",
+          "Style/Next",
+          "Style/OptionalBooleanParameter",
+          "Style/NumericPredicate"
+        ],
+        "by_cop": {
+          "Layout/SpaceAfterComma": {
+            "rustocop": 2,
+            "rubocop": 2,
+            "exact": 2,
+            "classification": "project_exact"
+          },
+          "Layout/SpaceAfterSemicolon": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/TrailingCommaInArguments": {
+            "rustocop": 4,
+            "rubocop": 4,
+            "exact": 4,
+            "classification": "project_exact"
+          },
+          "Style/TrailingCommaInArrayLiteral": {
+            "rustocop": 11,
+            "rubocop": 11,
+            "exact": 11,
+            "classification": "project_exact"
+          },
+          "Style/TrailingCommaInHashLiteral": {
+            "rustocop": 9,
+            "rubocop": 9,
+            "exact": 9,
+            "classification": "project_exact"
+          },
+          "Style/HashSlice": {
+            "rustocop": 0,
+            "rubocop": 0,
+            "exact": 0,
+            "classification": "dormant"
+          },
+          "Style/HashExcept": {
+            "rustocop": 1,
+            "rubocop": 1,
+            "exact": 1,
+            "classification": "project_exact"
+          },
+          "Style/Next": {
+            "rustocop": 1,
+            "rubocop": 1,
+            "exact": 1,
+            "classification": "project_exact"
+          },
+          "Style/OptionalBooleanParameter": {
+            "rustocop": 16,
+            "rubocop": 16,
+            "exact": 16,
+            "classification": "project_exact"
+          },
+          "Style/NumericPredicate": {
+            "rustocop": 52,
+            "rubocop": 52,
+            "exact": 52,
+            "classification": "project_exact"
+          }
+        }
+      }
     }
   }
 }
