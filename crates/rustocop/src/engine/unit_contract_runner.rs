@@ -85,7 +85,9 @@ pub(super) fn check_cop(
         let selection = unit.selection.as_deref().unwrap_or(&unit.cop);
         let plan_key = (unit.config.clone(), selection.to_string());
         let (config, plan) = plans.entry(plan_key).or_insert_with(|| {
-            let config = Arc::new(CopConfig::from_source(configs.get(&unit.config).unwrap()));
+            let config = Arc::new(
+                CopConfig::from_source(configs.get(&unit.config).unwrap()).without_path_policy(),
+            );
             let options = inspection_options(
                 selection,
                 &unit.ruby_version,

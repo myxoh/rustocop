@@ -13,10 +13,10 @@ cases, and configuration branches that the projects do not exercise.
 ## Latest realistic status
 
 The latest complete checkpoint was generated at
-`2026-08-24T15:25:53-04:00` from commit
-`ddb32ffcc4aaa97d560add1482e3c33863409004`
+`2026-08-25T17:24:07-04:00` from commit
+`3360b7ab3bc13f1fdd138c47a275cd7190c989ea`
 and worktree native binary SHA-256
-`c06a23caf252ee2e7002dd30c13bff0f1b54dca89cba8b99b370d03083cdad76`.
+`b0dac7c14b7e32302db4e3e71bdcda09a43f8bb06509ffdac0ad9a46ac644397`.
 The stored RuboCop reference has SHA-256
 `6fbcf83154ad05bab3c35cefef09b8d404a07037f47ef614c813649cb0cce7f8`.
 The intentionally-pending dataset is empty, so the active-cop slice covers all
@@ -24,13 +24,13 @@ The intentionally-pending dataset is empty, so the active-cop slice covers all
 
 | Classification | Complete checkpoint |
 | --- | ---: |
-| Project-exact | 317 |
-| Exact but dormant | 53 |
-| Mismatching | 233 |
+| Project-exact | 429 |
+| Exact but dormant | 68 |
+| Mismatching | 106 |
 | Rust crash | 0 |
 | RuboCop gate error | 3 |
 
-Among the 550 exercised cops, 317 are exact (57.6%), and the complete native
+Among the 535 exercised cops, 429 are exact (80.2%), and the complete native
 project run has no crashes. `Lint/RedundantCopDisableDirective` cannot be selected with
 RuboCop's `--only`; `Style/FileWrite` triggers RuboCop 1.87 errors on GitLab;
 and `Style/ClassAndModuleChildren` triggers RuboCop 1.87 errors on Puppet.

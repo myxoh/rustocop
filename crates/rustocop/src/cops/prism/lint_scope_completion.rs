@@ -18,23 +18,6 @@ fn empty_node(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
     let Some(node) = node.as_block_node() else {
         return;
     };
-    let node_location = node.location();
-    if context.ancestors().iter().rev().any(|ancestor| {
-        ancestor.as_call_node().is_some_and(|call| {
-            let nested_receiver = call.receiver().is_some_and(|receiver| {
-                receiver.location().start_offset() <= node_location.start_offset()
-                    && node_location.end_offset() <= receiver.location().end_offset()
-            });
-            nested_receiver
-                && call.block().and_then(|block| block.as_block_node()).is_some_and(|outer| {
-                    outer.body().is_none()
-                        && (outer.location().start_offset() != node_location.start_offset()
-                            || outer.location().end_offset() != node_location.end_offset())
-                })
-        })
-    }) {
-        return;
-    }
     if node.body().is_some_and(|body| {
         body.as_statements_node()
             .is_none_or(|statements| !statements.body().is_empty())

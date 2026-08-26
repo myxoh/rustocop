@@ -172,6 +172,7 @@ end
 
 rubocop = [
   Gem.ruby,
+  "-r", File.join(LAYOUT.root, "lib/rustocop/rubocop_reference_compatibility.rb"),
   Gem.bin_path("rubocop", "rubocop", "=#{Rustocop::ProjectCorpus::RUBOCOP_VERSION}"),
   "--no-server", "--cache", "false"
 ].freeze

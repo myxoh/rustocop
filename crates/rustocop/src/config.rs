@@ -104,6 +104,29 @@ impl CopConfig {
         Self::from_sources([(source, HashSet::new())], None)
     }
 
+    #[cfg(test)]
+    pub(crate) fn without_path_policy(mut self) -> Self {
+        // RuboCop's cop unit specs investigate their supplied source directly,
+        // independent of the default Include/Exclude target discovery rules.
+        // The cached unit corpus models that callback contract; CLI and
+        // project inspections continue to enforce path policy.
+        for (section, entries) in &mut self.values {
+            // The upstream spec harness supplies a cop's complete resolved
+            // config, including its default Include glob, while investigating
+            // synthetic source under arbitrary paths. Explicit Exclude is
+            // itself behavior under test and must remain active.
+            entries.remove("Include");
+            if !self
+                .explicit_values
+                .contains(&(section.clone(), "Exclude".to_string()))
+            {
+                entries.remove("Exclude");
+            }
+        }
+        self.path_globs.clear();
+        self
+    }
+
     pub(crate) fn from_path(path: &str) -> Result<Self, String> {
         loader::load(path)
     }

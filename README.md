@@ -83,21 +83,21 @@ across those 10 cops.
 The real-project matrix asks whether each cop emits the same path, severity,
 message, and source range as RuboCop across 85,471 Ruby files in 50 projects.
 
-The complete audit updated at `2026-08-24T15:25:53-04:00` covers all 606 built-in
-cops. It leaves 317 project-exact cops, 53 dormant cops, 233 mismatches, no
+The complete audit updated at `2026-08-25T17:24:07-04:00` covers all 606 built-in
+cops. It leaves 429 project-exact cops, 68 dormant cops, 106 mismatches, no
 native crashes, and three RuboCop gate errors.
 
 | Real-project classification | Complete checkpoint |
 | --- | ---: |
-| Project-exact | 317 / 606 (57.6% of 550 exercised cops) |
-| Exact but dormant | 53 / 606 |
-| Mismatching | 233 / 606 |
+| Project-exact | 429 / 606 (80.2% of 535 exercised cops) |
+| Exact but dormant | 68 / 606 |
+| Mismatching | 106 / 606 |
 | Rust crashes | 0 / 606 |
 | RuboCop gate errors | 3 / 606 |
 
 The checkpoint is bound to worktree native binary SHA-256
-`c06a23caf252ee2e7002dd30c13bff0f1b54dca89cba8b99b370d03083cdad76` and
-commit `ddb32ffcc4aaa97d560add1482e3c33863409004`.
+`b0dac7c14b7e32302db4e3e71bdcda09a43f8bb06509ffdac0ad9a46ac644397` and
+commit `3360b7ab3bc13f1fdd138c47a275cd7190c989ea`.
 Its RuboCop reference SHA-256 is
 `6fbcf83154ad05bab3c35cefef09b8d404a07037f47ef614c813649cb0cce7f8`.
 Project-exact status is the strongest current diagnostic evidence. Unexercised

@@ -1,12 +1,12 @@
 {
   "version": 1,
   "rubocop_version": "1.87.0",
-  "updated_at": "2026-08-25T20:00:07-04:00",
+  "updated_at": "2026-08-25T22:43:15-04:00",
   "raw_capture_sha256": "aec260b35238542dafa044aad90dfe5c873b6c91019d3708f870fdc8b2453666",
   "raw_cases": 28606,
   "lsp_exclusions": 5,
-  "controlled_cases": 29248,
-  "imported_cases": 1199,
+  "controlled_cases": 29416,
+  "imported_cases": 1367,
   "exact_duplicates_removed": 552,
   "distribution": {
     "minimum": 1,
@@ -1089,7 +1089,7 @@
       "cases": "cops/Lint/EmptyBlock/unit/cases.jsonl",
       "configs": "cops/Lint/EmptyBlock/unit/configs.json",
       "count": 23,
-      "sha256": "dc11e4e95e89056248093716591cf840a8d639e593a2a46abe73b0f269855021",
+      "sha256": "57922dbfa48ae123fd85ab7eb202287ee9af6b35b665e8113772a95e4fd19564",
       "configs_sha256": "a0f25c29b752513e85d3642b16aaaba358f62012466b9165faf55b32f80756cc"
     },
     "Lint/EmptyClass": {
@@ -1459,9 +1459,9 @@
     "Lint/RedundantCopDisableDirective": {
       "cases": "cops/Lint/RedundantCopDisableDirective/unit/cases.jsonl",
       "configs": "cops/Lint/RedundantCopDisableDirective/unit/configs.json",
-      "count": 25,
-      "sha256": "8051786b6dbd1cc9c259903df91628fee9104222b2a967bc80bf595dcc397ff2",
-      "configs_sha256": "02ef70a5a8ce0ce78d940f9af0fb49d5e0584669bde476dfc73fded0ff546018"
+      "count": 26,
+      "sha256": "2d05512e3bc9d6620f58a903e0ef71916b87532f6b06db8c141edb83beb8aae1",
+      "configs_sha256": "08412ac0eaff232a546e3cf81971ede0fa3f8c321784dabc92ae47ed69fad01e"
     },
     "Lint/RedundantCopEnableDirective": {
       "cases": "cops/Lint/RedundantCopEnableDirective/unit/cases.jsonl",
@@ -2334,9 +2334,9 @@
     "Style/ClassAndModuleChildren": {
       "cases": "cops/Style/ClassAndModuleChildren/unit/cases.jsonl",
       "configs": "cops/Style/ClassAndModuleChildren/unit/configs.json",
-      "count": 44,
-      "sha256": "60a4e56bb6e0483c7f0f61e3c4035aa2e3b1baf11d453c378a44fc6a034dc1bb",
-      "configs_sha256": "c96c13faa915103a7dc2f0970042049db87ae722aaacfebfe456943a5ac0ac6b"
+      "count": 50,
+      "sha256": "9715fd5ea255db3270c194eab292ef9b5cd42f100efb6493991f7e07d9c8f5d5",
+      "configs_sha256": "31fd311d51a8e351f4f6bfc8f6a75265c81c6a293e4ad24387368579401d7105"
     },
     "Style/ClassCheck": {
       "cases": "cops/Style/ClassCheck/unit/cases.jsonl",
@@ -2761,9 +2761,9 @@
     "Style/FileWrite": {
       "cases": "cops/Style/FileWrite/unit/cases.jsonl",
       "configs": "cops/Style/FileWrite/unit/configs.json",
-      "count": 38,
-      "sha256": "f9459921e410edc0dd48eecbd23872ad2b57e4eb16f68f87ef7e86bc46f8d5f8",
-      "configs_sha256": "1336145c89b8b839cf4e31f765d7085f9a96832de202402d71ef49361fc5bcfe"
+      "count": 199,
+      "sha256": "a962f9a910116e784f182e4a5f45aeb89edf2ea36f51bc5e8144f61d2308037d",
+      "configs_sha256": "354d705b8456674b3996440fcdbd347734a079511dc3049802cda4b71252acd9"
     },
     "Style/FloatDivision": {
       "cases": "cops/Style/FloatDivision/unit/cases.jsonl",

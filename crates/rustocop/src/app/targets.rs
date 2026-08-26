@@ -50,8 +50,10 @@ fn collapse_cli_duplicate_locations(result: &mut InspectionResult) {
     let mut seen = HashSet::new();
     result.offenses.reverse();
     result.offenses.retain(|offense| {
-        offense.cop_name != "Lint/AmbiguousOperatorPrecedence"
-            || seen.insert((offense.cop_name.clone(), offense.line, offense.column))
+        !matches!(
+            offense.cop_name.as_str(),
+            "Lint/AmbiguousOperatorPrecedence" | "Lint/EmptyBlock"
+        ) || seen.insert((offense.cop_name.clone(), offense.line, offense.column))
     });
     result.offenses.reverse();
 }
