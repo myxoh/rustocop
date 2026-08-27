@@ -1,8 +1,8 @@
 use super::*;
 
 define_cops! {
-    IneffectiveAccessModifier => "Lint/IneffectiveAccessModifier" => node(as_def_node, ineffective_access_modifier),
-    MissingRespondToMissing => "Style/MissingRespondToMissing" => node(as_def_node, missing_respond_to_missing),
+    IneffectiveAccessModifier => "Lint/IneffectiveAccessModifier" => compatibility_prism_node(as_def_node, ineffective_access_modifier),
+    MissingRespondToMissing => "Style/MissingRespondToMissing" => compatibility_prism_node(as_def_node, missing_respond_to_missing),
 }
 
 fn ineffective_access_modifier(node: &ruby_prism::DefNode<'_>, context: &mut CopContext<'_, '_>) {

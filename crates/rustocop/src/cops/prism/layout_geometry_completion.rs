@@ -3,15 +3,15 @@ use super::*;
 define_rule!(BlockEndNewlineRule);
 
 define_cops! {
-    MultilineMethodParameterLineBreaks => "Layout/MultilineMethodParameterLineBreaks" => node(as_def_node, parameter_line_breaks),
-    SpaceBeforeBlockBraces => "Layout/SpaceBeforeBlockBraces" => any_node(space_before_block_braces),
-    BlockEndNewline => "Layout/BlockEndNewline" => node_rule_aliases(
+    MultilineMethodParameterLineBreaks => "Layout/MultilineMethodParameterLineBreaks" => compatibility_prism_node(as_def_node, parameter_line_breaks),
+    SpaceBeforeBlockBraces => "Layout/SpaceBeforeBlockBraces" => compatibility_prism_any_node(space_before_block_braces),
+    BlockEndNewline => "Layout/BlockEndNewline" => compatibility_prism_node_rule_aliases(
         BlockEndNewlineRule,
         on_block => [as_block_node, as_lambda_node]
     ),
-    DefEndAlignment => "Layout/DefEndAlignment" => node(as_def_node, def_end_alignment),
-    MultilineMethodArgumentLineBreaks => "Layout/MultilineMethodArgumentLineBreaks" => node(as_call_node, argument_line_breaks),
-    ParameterAlignment => "Layout/ParameterAlignment" => node(as_def_node, parameter_alignment),
+    DefEndAlignment => "Layout/DefEndAlignment" => compatibility_prism_node(as_def_node, def_end_alignment),
+    MultilineMethodArgumentLineBreaks => "Layout/MultilineMethodArgumentLineBreaks" => compatibility_prism_node(as_call_node, argument_line_breaks),
+    ParameterAlignment => "Layout/ParameterAlignment" => compatibility_prism_node(as_def_node, parameter_alignment),
 }
 
 fn parameter_line_breaks(node: &ruby_prism::DefNode<'_>, context: &mut CopContext<'_, '_>) {

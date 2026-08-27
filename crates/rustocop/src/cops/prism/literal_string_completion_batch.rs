@@ -12,10 +12,10 @@ define_stateful_rule!(WordArrayRule, WordArrayState);
 const PERCENT_MSG: &str = "Use `%w` or `%W` for an array of words.";
 
 define_cops! {
-    SymbolArray => "Style/SymbolArray" => node(as_array_node, symbol_array),
+    SymbolArray => "Style/SymbolArray" => compatibility_prism_node(as_array_node, symbol_array),
     FetchEnvVar => "Style/FetchEnvVar" => compatibility_source(fetch_env_var),
-    StringConcatenation => "Style/StringConcatenation" => call(string_concatenation),
-    WordArray => "Style/WordArray" => stateful_node_rule(as_array_node, WordArrayRule, WordArrayState, on_array),
+    StringConcatenation => "Style/StringConcatenation" => compatibility_prism_call(string_concatenation),
+    WordArray => "Style/WordArray" => compatibility_prism_stateful_node_rule(as_array_node, WordArrayRule, WordArrayState, on_array),
 }
 
 fn redundant_capital_w(node: &ruby_prism::ArrayNode<'_>, context: &mut CopContext<'_, '_>) {

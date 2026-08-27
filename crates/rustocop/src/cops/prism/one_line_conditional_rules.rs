@@ -5,7 +5,7 @@ use super::*;
 define_rule!(OneLineConditionalRule);
 
 define_cops! {
-    OneLineConditional => "Style/OneLineConditional" => node_rule_aliases(
+    OneLineConditional => "Style/OneLineConditional" => compatibility_prism_node_rule_aliases(
         OneLineConditionalRule,
         on_normal_if_unless => [as_if_node, as_unless_node]
     ),

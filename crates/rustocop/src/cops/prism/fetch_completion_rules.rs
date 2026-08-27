@@ -1,8 +1,8 @@
 use super::*;
 
 define_cops! {
-    UselessDefaultValueArgument => "Lint/UselessDefaultValueArgument" => call(useless_default_value_argument),
-    RedundantFetchBlock => "Style/RedundantFetchBlock" => call(redundant_fetch_block),
+    UselessDefaultValueArgument => "Lint/UselessDefaultValueArgument" => compatibility_prism_call(useless_default_value_argument),
+    RedundantFetchBlock => "Style/RedundantFetchBlock" => compatibility_prism_call(redundant_fetch_block),
 }
 
 fn useless_default_value_argument(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {

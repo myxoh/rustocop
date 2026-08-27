@@ -1,7 +1,7 @@
 use super::*;
 
 define_cops! {
-    UnexpectedBlockArity => "Lint/UnexpectedBlockArity" => call(unexpected_block_arity),
+    UnexpectedBlockArity => "Lint/UnexpectedBlockArity" => compatibility_prism_call(unexpected_block_arity),
 }
 
 fn next_without_accumulator(node: &ruby_prism::NextNode<'_>, context: &mut CopContext<'_, '_>) {

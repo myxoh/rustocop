@@ -3,8 +3,8 @@ use ruby_prism::CallNode;
 use super::*;
 
 define_cops! {
-    CollectionCompact => "Style/CollectionCompact" => call(collection_compact),
-    EachWithObject => "Style/EachWithObject" => call(each_with_object),
+    CollectionCompact => "Style/CollectionCompact" => compatibility_prism_call(collection_compact),
+    EachWithObject => "Style/EachWithObject" => compatibility_prism_call(each_with_object),
 }
 
 fn concat_array_literals(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {

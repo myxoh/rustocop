@@ -7,7 +7,7 @@ define_rule!(RedundantStringEscapeRule);
 const MSG: &str = "Redundant escape of {char} inside string literal.";
 
 define_cops! {
-    RedundantStringEscape => "Style/RedundantStringEscape" => node_rule(as_string_node, RedundantStringEscapeRule, on_str),
+    RedundantStringEscape => "Style/RedundantStringEscape" => compatibility_prism_node_rule(as_string_node, RedundantStringEscapeRule, on_str),
 }
 
 impl RedundantStringEscapeRule<'_, '_, '_> {

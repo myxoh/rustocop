@@ -292,6 +292,12 @@ pub(super) fn lexical_heredoc_body_ranges(source: &str) -> Vec<std::ops::Range<u
 }
 
 fn outside_line_quotes(line: &str, end: usize) -> bool {
+    let prefix = &line[..end];
+    if prefix.rfind("#{").is_some_and(|opening| {
+        prefix.rfind('}').is_none_or(|closing| opening > closing)
+    }) {
+        return true;
+    }
     let mut quote = None;
     let mut escaped = false;
     for byte in line.as_bytes()[..end].iter().copied() {

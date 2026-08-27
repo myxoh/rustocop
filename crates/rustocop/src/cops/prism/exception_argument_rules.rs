@@ -1,7 +1,7 @@
 use super::*;
 
 define_cops! {
-    RedundantException => "Style/RedundantException" => call(redundant_exception),
+    RedundantException => "Style/RedundantException" => compatibility_prism_call(redundant_exception),
 }
 
 fn redundant_exception(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {

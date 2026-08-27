@@ -1,11 +1,11 @@
 use super::*;
 
 define_cops! {
-    ArrayAlignment => "Layout/ArrayAlignment" => any_node(array_alignment),
+    ArrayAlignment => "Layout/ArrayAlignment" => compatibility_prism_any_node(array_alignment),
     MultilineAssignmentLayout => "Layout/MultilineAssignmentLayout" => compatibility_source(multiline_assignment_layout),
-    EndAlignment => "Layout/EndAlignment" => any_node(end_alignment),
+    EndAlignment => "Layout/EndAlignment" => compatibility_prism_any_node(end_alignment),
     ExtraSpacing => "Layout/ExtraSpacing" => compatibility_source(extra_spacing),
-    FirstHashElementIndentation => "Layout/FirstHashElementIndentation" => node(as_hash_node, first_hash_element_indentation),
+    FirstHashElementIndentation => "Layout/FirstHashElementIndentation" => compatibility_prism_node(as_hash_node, first_hash_element_indentation),
 }
 
 fn multiline_assignment_layout(context: &mut CompatibilityCopContext<'_, '_, '_>) {

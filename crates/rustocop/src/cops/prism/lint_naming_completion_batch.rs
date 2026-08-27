@@ -2,13 +2,13 @@ use super::*;
 use std::collections::{HashMap, HashSet};
 
 define_cops! {
-    UnderscorePrefixedVariableName => "Lint/UnderscorePrefixedVariableName" => any_node(underscore_variable),
+    UnderscorePrefixedVariableName => "Lint/UnderscorePrefixedVariableName" => compatibility_prism_any_node(underscore_variable),
     HeredocDelimiterNaming => "Naming/HeredocDelimiterNaming" => compatibility_source(heredoc_naming),
-    DeprecatedConstants => "Lint/DeprecatedConstants" => any_node(deprecated_constants),
+    DeprecatedConstants => "Lint/DeprecatedConstants" => compatibility_prism_any_node(deprecated_constants),
     RedundantCopEnableDirective => "Lint/RedundantCopEnableDirective" => compatibility_source(redundant_enable),
     UnreachablePatternBranch => "Lint/UnreachablePatternBranch" => compatibility_source(unreachable_pattern),
-    MethodParameterName => "Naming/MethodParameterName" => node(as_def_node, method_parameter_name),
-    AccessorMethodName => "Naming/AccessorMethodName" => node(as_def_node, accessor_method_name),
+    MethodParameterName => "Naming/MethodParameterName" => compatibility_prism_node(as_def_node, method_parameter_name),
+    AccessorMethodName => "Naming/AccessorMethodName" => compatibility_prism_node(as_def_node, accessor_method_name),
 }
 
 fn underscore_variable(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
@@ -183,15 +183,12 @@ fn heredoc_naming(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     use crate::rubocop::ast::prism::convert as convert_rubocop_ast;
 
     let source = context.source().to_string();
-    let blank_openings = blank_heredoc_opening_ranges(&source);
-    if !blank_openings.is_empty() {
-        for range in blank_openings {
-            context.report("Use meaningful heredoc delimiters.", range);
-        }
-        return;
-    }
     let parsed = ruby_prism::parse(source.as_bytes());
     if parsed.errors().next().is_some() {
+        // Parser can represent a blank quoted delimiter even though Prism
+        // rejects it. Only use the lexical fallback for invalid input: on a
+        // valid file, the same bytes may occur harmlessly in comments or in a
+        // heredoc body and must not be interpreted as Ruby syntax.
         for range in blank_heredoc_opening_ranges(&source) {
             context.report("Use meaningful heredoc delimiters.", range);
         }

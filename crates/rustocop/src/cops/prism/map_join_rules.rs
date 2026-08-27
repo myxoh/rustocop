@@ -1,7 +1,7 @@
 use super::*;
 
 define_cops! {
-    MapJoin => "Style/MapJoin" => call(map_join),
+    MapJoin => "Style/MapJoin" => compatibility_prism_call(map_join),
 }
 
 fn map_join(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {

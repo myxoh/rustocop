@@ -8,12 +8,12 @@ use super::source_syntax::top_level_elements;
 use super::*;
 
 define_cops! {
-    RedundantConstantBase => "Style/RedundantConstantBase" => any_node(redundant_constant_base),
-    ArrayLiteralInRegexp => "Lint/ArrayLiteralInRegexp" => node(as_interpolated_regular_expression_node, array_literal_in_regexp),
-    LiteralAssignmentInCondition => "Lint/LiteralAssignmentInCondition" => any_node(literal_assignment_in_condition),
-    NoReturnInBeginEndBlocks => "Lint/NoReturnInBeginEndBlocks" => node(as_return_node, no_return_in_begin_end_blocks),
+    RedundantConstantBase => "Style/RedundantConstantBase" => compatibility_prism_any_node(redundant_constant_base),
+    ArrayLiteralInRegexp => "Lint/ArrayLiteralInRegexp" => compatibility_prism_node(as_interpolated_regular_expression_node, array_literal_in_regexp),
+    LiteralAssignmentInCondition => "Lint/LiteralAssignmentInCondition" => compatibility_prism_any_node(literal_assignment_in_condition),
+    NoReturnInBeginEndBlocks => "Lint/NoReturnInBeginEndBlocks" => compatibility_prism_node(as_return_node, no_return_in_begin_end_blocks),
     RescueType => "Lint/RescueType" => compatibility_callbacks(RescueTypeRule, [on_resbody]),
-    FirstMethodParameterLineBreak => "Layout/FirstMethodParameterLineBreak" => node(as_def_node, first_method_parameter_line_break),
+    FirstMethodParameterLineBreak => "Layout/FirstMethodParameterLineBreak" => compatibility_prism_node(as_def_node, first_method_parameter_line_break),
 }
 
 define_compatibility_rule!(RescueTypeRule);

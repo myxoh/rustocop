@@ -1,7 +1,7 @@
 use super::*;
 
 define_cops! {
-    MultilineMethodSignature => "Style/MultilineMethodSignature" => node(as_def_node, multiline_method_signature),
+    MultilineMethodSignature => "Style/MultilineMethodSignature" => compatibility_prism_node(as_def_node, multiline_method_signature),
 }
 
 fn multiline_method_signature(node: &ruby_prism::DefNode<'_>, context: &mut CopContext<'_, '_>) {

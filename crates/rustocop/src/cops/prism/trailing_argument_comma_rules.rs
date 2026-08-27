@@ -1,7 +1,7 @@
 use super::*;
 
 define_cops! {
-    TrailingCommaInArguments => "Style/TrailingCommaInArguments" => node(as_call_node, trailing_comma_in_arguments),
+    TrailingCommaInArguments => "Style/TrailingCommaInArguments" => compatibility_prism_node(as_call_node, trailing_comma_in_arguments),
 }
 
 fn trailing_comma_in_arguments(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {

@@ -6,9 +6,9 @@ const ZERO_MSG: &str = "Use `empty?` instead of `{current}`.";
 const NONZERO_MSG: &str = "Use `!empty?` instead of `{current}`.";
 
 define_cops! {
-    ArrayIntersect => "Style/ArrayIntersect" => any_node(array_intersect),
-    TallyMethod => "Style/TallyMethod" => call(tally_method),
-    ZeroLengthPredicate => "Style/ZeroLengthPredicate" => call_rule(ZeroLengthPredicateRule, on_send, restrict [b"size", b"length"]),
+    ArrayIntersect => "Style/ArrayIntersect" => compatibility_prism_any_node(array_intersect),
+    TallyMethod => "Style/TallyMethod" => compatibility_prism_call(tally_method),
+    ZeroLengthPredicate => "Style/ZeroLengthPredicate" => compatibility_prism_call_rule(ZeroLengthPredicateRule, on_send, restrict [b"size", b"length"]),
 }
 
 fn array_intersect(node: &Node<'_>, context: &mut CopContext<'_, '_>) {

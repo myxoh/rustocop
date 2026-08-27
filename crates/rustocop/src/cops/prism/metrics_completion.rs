@@ -2,9 +2,9 @@ use super::*;
 use std::collections::HashSet;
 
 define_cops! {
-    MethodLength => "Metrics/MethodLength" => any_node(method_length),
-    BlockLength => "Metrics/BlockLength" => any_node(block_length),
-    AbcSize => "Metrics/AbcSize" => any_node(abc_size),
+    MethodLength => "Metrics/MethodLength" => compatibility_prism_any_node(method_length),
+    BlockLength => "Metrics/BlockLength" => compatibility_prism_any_node(block_length),
+    AbcSize => "Metrics/AbcSize" => compatibility_prism_any_node(abc_size),
 }
 
 fn method_length(node: &Node<'_>, context: &mut CopContext<'_, '_>) {

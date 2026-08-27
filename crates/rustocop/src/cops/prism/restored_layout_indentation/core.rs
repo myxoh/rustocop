@@ -1,10 +1,10 @@
 use super::*;
 
 define_cops! {
-    ArgumentAlignment => "Layout/ArgumentAlignment" => call(argument_alignment),
-    FirstArrayElementIndentation => "Layout/FirstArrayElementIndentation" => node(as_array_node, first_array_element_indentation),
-    IndentationConsistency => "Layout/IndentationConsistency" => node(as_statements_node, indentation_consistency),
-    IndentationWidth => "Layout/IndentationWidth" => node(as_statements_node, indentation_width),
+    ArgumentAlignment => "Layout/ArgumentAlignment" => compatibility_prism_call(argument_alignment),
+    FirstArrayElementIndentation => "Layout/FirstArrayElementIndentation" => compatibility_prism_node(as_array_node, first_array_element_indentation),
+    IndentationConsistency => "Layout/IndentationConsistency" => compatibility_prism_node(as_statements_node, indentation_consistency),
+    IndentationWidth => "Layout/IndentationWidth" => compatibility_prism_node(as_statements_node, indentation_width),
 }
 
 const ARGUMENT_ALIGNMENT_MESSAGE: &str =

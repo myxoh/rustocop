@@ -1,7 +1,7 @@
 use super::*;
 
 define_cops! {
-    Alias => "Style/Alias" => any_node(alias_style),
+    Alias => "Style/Alias" => compatibility_prism_any_node(alias_style),
 }
 
 fn alias_style(node: &Node<'_>, context: &mut CopContext<'_, '_>) {

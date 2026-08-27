@@ -1,7 +1,7 @@
 use super::*;
 
 define_cops! {
-    SpecialGlobalVars => "Style/SpecialGlobalVars" => node(as_global_variable_read_node, special_global_vars),
+    SpecialGlobalVars => "Style/SpecialGlobalVars" => compatibility_prism_node(as_global_variable_read_node, special_global_vars),
 }
 
 const VARIABLES: &[(&str, &[&str])] = &[

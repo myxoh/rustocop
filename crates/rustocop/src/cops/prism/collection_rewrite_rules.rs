@@ -18,7 +18,7 @@ define_cops! {
         on_send,
         restrict [b"each_with_object", b"inject", b"reduce"]
     ),
-    PartitionInsteadOfDoubleSelect => "Style/PartitionInsteadOfDoubleSelect" => stateful_call_rule(
+    PartitionInsteadOfDoubleSelect => "Style/PartitionInsteadOfDoubleSelect" => compatibility_prism_stateful_call_rule(
         PartitionRule,
         PartitionState,
         on_send,

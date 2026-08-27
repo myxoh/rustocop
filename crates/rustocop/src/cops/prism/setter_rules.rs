@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use super::*;
 
 define_cops! {
-    UselessSetterCall => "Lint/UselessSetterCall" => node(as_def_node, useless_setter_call),
+    UselessSetterCall => "Lint/UselessSetterCall" => compatibility_prism_node(as_def_node, useless_setter_call),
 }
 
 fn useless_setter_call(node: &ruby_prism::DefNode<'_>, context: &mut CopContext<'_, '_>) {

@@ -1,7 +1,7 @@
 use super::*;
 
 define_cops! {
-    RedundantSelf => "Style/RedundantSelf" => call(redundant_self),
+    RedundantSelf => "Style/RedundantSelf" => compatibility_prism_call(redundant_self),
 }
 
 fn redundant_self(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {

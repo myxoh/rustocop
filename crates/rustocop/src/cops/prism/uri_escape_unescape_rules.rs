@@ -1,7 +1,7 @@
 use super::*;
 
 define_cops! {
-    UriEscapeUnescape => "Lint/UriEscapeUnescape" => call(uri_escape_unescape),
+    UriEscapeUnescape => "Lint/UriEscapeUnescape" => compatibility_prism_call(uri_escape_unescape),
 }
 
 fn uri_escape_unescape(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {

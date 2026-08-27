@@ -1,7 +1,7 @@
 use super::*;
 
 define_cops! {
-    ClosingHeredocIndentation => "Layout/ClosingHeredocIndentation" => any_node(closing_heredoc_indentation),
+    ClosingHeredocIndentation => "Layout/ClosingHeredocIndentation" => compatibility_prism_any_node(closing_heredoc_indentation),
     DisableCopsWithinSourceCodeDirective => "Style/DisableCopsWithinSourceCodeDirective" => compatibility_source(disable_cops_within_source_code_directive),
 }
 

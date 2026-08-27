@@ -8,7 +8,7 @@ const MSG_IMPLICIT: &str = "Omit the error class when rescuing `StandardError` b
 const MSG_EXPLICIT: &str = "Avoid rescuing without specifying an error class.";
 
 define_cops! {
-    RescueStandardError => "Style/RescueStandardError" => node_rule(as_rescue_node, RescueStandardErrorRule, on_resbody),
+    RescueStandardError => "Style/RescueStandardError" => compatibility_prism_node_rule(as_rescue_node, RescueStandardErrorRule, on_resbody),
 }
 
 impl RescueStandardErrorRule<'_, '_, '_> {

@@ -95,6 +95,123 @@ source_shaped_batches = source_shaped_batch_reviews.each_with_object({}) do |(fi
   end
 end
 
+# A small tail of the corpus has deliberately bespoke dispatch: stateful cops,
+# multi-callback layout/metrics cops, and the two text-engine layout cops. They
+# cannot be inferred from a homogeneous `define_cops!` registration, so keep the
+# completed source review explicit and checked here. These names are grouped by
+# the adapter they actually use; generation aborts below if an entry disappears
+# from the active corpus or moves away from its recorded implementation.
+explicit_prism_reviews = {
+  "class_methods_completion.rs" => %w[Style/ClassMethodsDefinitions],
+  "final_ast_structural_batch.rs" => %w[
+    Lint/Debugger Lint/DuplicateMethods Lint/RedundantTypeConversion
+    Lint/UselessAccessModifier Lint/Void Style/AccessModifierDeclarations
+    Style/ArgumentsForwarding Style/ConditionalAssignment Style/SafeNavigation
+    Style/SelectByKind Style/SelectByRange
+  ],
+  "final_control_flow_batch.rs" => %w[
+    Lint/DuplicateBranch Lint/EmptyConditionalBody Lint/LiteralAsCondition
+    Lint/UnreachableCode Lint/UnreachableLoop Lint/UselessOr
+  ],
+  "final_layout_batch_a.rs" => %w[
+    Layout/AccessModifierIndentation Layout/CaseIndentation
+    Layout/ClosingParenthesisIndentation Layout/ElseAlignment
+    Layout/EmptyLineAfterGuardClause Layout/MultilineMethodDefinitionBraceLayout
+    Layout/SpaceInsideBlockBraces
+  ],
+  "final_layout_batch_a/registry.rs" => %w[
+    Layout/LineContinuationLeadingSpace
+    Layout/LineEndStringConcatenationIndentation
+    Layout/SpaceInsideHashLiteralBraces
+  ],
+  "final_layout_batch_b.rs" => %w[
+    Layout/HashAlignment Layout/MultilineMethodCallIndentation
+    Layout/MultilineOperationIndentation Layout/RedundantLineBreak
+    Layout/SpaceAroundBlockParameters Layout/SpaceInsideArrayLiteralBrackets
+    Layout/SpaceInsideReferenceBrackets
+  ],
+  "final_layout_batch_b/registry.rs" => %w[
+    Layout/SpaceInsideArrayPercentLiteral Layout/SpaceInsidePercentLiteralDelimiters
+  ],
+  "final_metrics_batch.rs" => %w[
+    Metrics/ClassLength Metrics/CyclomaticComplexity Metrics/PerceivedComplexity
+  ],
+  "final_regexp_batch.rs" => %w[
+    Lint/AmbiguousRegexpLiteral Lint/DuplicateRegexpCharacterClassElement
+    Lint/RedundantRegexpQuantifiers Lint/UnescapedBracketInRegexp
+    Style/SelectByRegexp
+  ],
+  "final_scope_batch_a.rs" => %w[
+    Lint/ShadowedException Lint/ShadowingOuterLocalVariable
+    Naming/BlockForwarding Naming/HeredocDelimiterCase
+    Naming/RescuedExceptionsVariableName
+  ],
+  "final_scope_batch_b.rs" => %w[
+    Lint/AssignmentInCondition Lint/UselessAssignment
+    Naming/MemoizedInstanceVariableName Naming/MethodName Naming/PredicateMethod
+    Naming/VariableName Naming/VariableNumber
+  ],
+  "lint.rs" => %w[Lint/SelfAssignment],
+  "style.rs" => %w[Style/MethodCallWithoutArgsParentheses],
+  "trailing_comma_completion.rs" => %w[
+    Style/TrailingCommaInArrayLiteral Style/TrailingCommaInHashLiteral
+  ]
+}
+
+explicit_source_reviews = {
+  "source_rules.rs" => %w[Bundler/DuplicatedGem],
+  "additional_rules.rs" => %w[Gemspec/AttributeAssignment],
+  "heredoc_call_rules.rs" => %w[Lint/HeredocMethodCallPosition],
+  "style_source.rs" => %w[Style/Semicolon],
+  "../text/layout.rs" => %w[Layout/LineLength Layout/TrailingWhitespace]
+}
+
+explicit_prism_reviews.each do |relative_path, cops|
+  implementation = "src/cops/prism/#{relative_path}"
+  cops.each do |cop|
+    source_shaped_batches[cop] = {
+      "rust_callbacks" => [],
+      "compatibility_components" => [
+        "CopContext", "PrismAST", "RuboCopCallbackDSL"
+      ],
+      "dsl_features" => ["compatibility_prism_custom_review"],
+      "similarity_score" => 4,
+      "structural_status" => "source_shaped_with_prism_adaptation",
+      "migration_status" => "migrated",
+      "structural_gaps" => [],
+      "documented_adaptations" => [
+        "Bespoke state or multi-callback dispatch is retained while typed Prism nodes, callback ranges, configuration, diagnostics, and corrections use the shared compatibility contracts."
+      ],
+      "reviewed_implementation" => implementation
+    }
+  end
+end
+
+explicit_source_reviews.each do |relative_path, cops|
+  implementation = if relative_path.start_with?("../")
+                     "src/cops/#{relative_path.delete_prefix('../')}"
+                   else
+                     "src/cops/prism/#{relative_path}"
+                   end
+  cops.each do |cop|
+    source_shaped_batches[cop] = {
+      "rust_callbacks" => [],
+      "compatibility_components" => [
+        "CopContext", "ProcessedSource", "SourceBuffer"
+      ],
+      "dsl_features" => ["compatibility_source_adapter"],
+      "similarity_score" => 3,
+      "structural_status" => "source_shaped_with_source_adapter",
+      "migration_status" => "migrated",
+      "structural_gaps" => [],
+      "documented_adaptations" => [
+        "The source-oriented upstream investigation is retained while configuration, diagnostics, ranges, and corrections use the shared compatibility contracts."
+      ],
+      "reviewed_implementation" => implementation
+    }
+  end
+end
+
 # Investigation callbacks can live beside their existing helpers when moving
 # the helper itself is noise. These registrations still execute through
 # ProcessedSource and CompatibilityCopContext; record them from the executable
@@ -162,9 +279,21 @@ rows = active.map do |cop|
   upstream_source = Pathname(source).relative_path_from(Pathname(rubocop_root)).to_s
   source_text = File.read(source)
   callbacks = cop_class.instance_methods(false).grep(/^on_/).map(&:to_s).sort
-  # Some cops receive their callback entirely from an included RuboCop mixin
-  # (for example StringHelp). The reviewed Rust registration records that
-  # effective callback even though it is absent from instance_methods(false).
+  # Included RuboCop mixins own the effective callback for some cops. Record
+  # those callbacks while excluding Base's lifecycle hooks, which do not
+  # describe the cop's implementation shape.
+  if callbacks.empty?
+    callbacks = cop_class.instance_methods.grep(/^on_/).filter_map do |callback|
+      owner = cop_class.instance_method(callback).owner
+      callback.to_s unless owner == RuboCop::Cop::Base
+    end.sort
+  end
+  # VariableForce cops are dispatched through a joining force rather than an
+  # `on_*` callback. Keep that upstream contract visible in the same dispatch
+  # field so an audited cop can never silently have no recorded entry point.
+  callbacks = ["joining_forces"] if callbacks.empty? && source_text.match?(/^\s+def self\.joining_forces\b/)
+  # A reviewed registration may name a compatibility callback that is supplied
+  # outside the class body and cannot be recovered through Ruby reflection.
   if callbacks.empty? && source_shaped_batches.key?(cop)
     callbacks = source_shaped_batches.fetch(cop).fetch("rust_callbacks")
   end
@@ -190,6 +319,9 @@ rows = active.map do |cop|
     "structural_gaps", "documented_adaptations"
   )
   reviewed = reviewed.merge(source_shaped_batches.fetch(cop, {}))
+  if (reviewed_implementation = reviewed.delete("reviewed_implementation"))
+    abort "Reviewed implementation moved for #{cop}" unless implementations.include?(reviewed_implementation)
+  end
   if reviewed["migration_status"] == "migrated" && reviewed.fetch("rust_callbacks", []).empty?
     reviewed["rust_callbacks"] = callbacks
   end

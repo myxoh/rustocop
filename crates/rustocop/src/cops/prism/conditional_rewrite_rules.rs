@@ -7,11 +7,11 @@ define_rule!(ParenthesesAroundConditionRule);
 define_rule!(RedundantConditionRule);
 
 define_cops! {
-    ParenthesesAroundCondition => "Style/ParenthesesAroundCondition" => node_rule_aliases(
+    ParenthesesAroundCondition => "Style/ParenthesesAroundCondition" => compatibility_prism_node_rule_aliases(
         ParenthesesAroundConditionRule,
         on_conditional => [as_if_node, as_unless_node, as_while_node, as_until_node]
     ),
-    RedundantCondition => "Style/RedundantCondition" => node_rule_aliases(
+    RedundantCondition => "Style/RedundantCondition" => compatibility_prism_node_rule_aliases(
         RedundantConditionRule,
         on_if => [as_if_node, as_unless_node]
     ),

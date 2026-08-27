@@ -9,7 +9,7 @@ define_rule!(RedundantFormatRule);
 const MSG: &str = "Use `{prefer}` directly instead of `{method_name}`.";
 
 define_cops! {
-    RedundantFormat => "Style/RedundantFormat" => call_rule(
+    RedundantFormat => "Style/RedundantFormat" => compatibility_prism_call_rule(
         RedundantFormatRule,
         on_send,
         restrict [b"format", b"sprintf"]

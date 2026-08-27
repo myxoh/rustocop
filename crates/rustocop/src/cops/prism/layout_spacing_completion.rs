@@ -2,11 +2,11 @@ use super::source_syntax::top_level_elements;
 use super::*;
 
 define_cops! {
-    AssignmentIndentation => "Layout/AssignmentIndentation" => any_node(assignment_indentation),
-    BeginEndAlignment => "Layout/BeginEndAlignment" => node(as_begin_node, begin_end_alignment),
-    FirstParameterIndentation => "Layout/FirstParameterIndentation" => node(as_def_node, first_parameter_indentation),
-    SpaceBeforeFirstArg => "Layout/SpaceBeforeFirstArg" => call(space_before_first_arg),
-    SpaceInsideStringInterpolation => "Layout/SpaceInsideStringInterpolation" => node(as_embedded_statements_node, space_inside_string_interpolation),
+    AssignmentIndentation => "Layout/AssignmentIndentation" => compatibility_prism_any_node(assignment_indentation),
+    BeginEndAlignment => "Layout/BeginEndAlignment" => compatibility_prism_node(as_begin_node, begin_end_alignment),
+    FirstParameterIndentation => "Layout/FirstParameterIndentation" => compatibility_prism_node(as_def_node, first_parameter_indentation),
+    SpaceBeforeFirstArg => "Layout/SpaceBeforeFirstArg" => compatibility_prism_call(space_before_first_arg),
+    SpaceInsideStringInterpolation => "Layout/SpaceInsideStringInterpolation" => compatibility_prism_node(as_embedded_statements_node, space_inside_string_interpolation),
 }
 
 fn assignment_indentation(node: &Node<'_>, context: &mut CopContext<'_, '_>) {

@@ -4,14 +4,14 @@ use std::collections::{HashMap, HashSet};
 use super::*;
 
 define_cops! {
-    SafeNavigationConsistency => "Lint/SafeNavigationConsistency" => any_node(safe_navigation_consistency),
+    SafeNavigationConsistency => "Lint/SafeNavigationConsistency" => compatibility_prism_any_node(safe_navigation_consistency),
     CombinableDefined => "Style/CombinableDefined" => compatibility_source(combinable_defined),
     For => "Style/For" => compatibility_prism_callbacks(ForRule, [on_for, on_block]),
     ClassAndModuleChildren => "Style/ClassAndModuleChildren" => compatibility_source(class_module_children),
-    SafeNavigationChain => "Lint/SafeNavigationChain" => call(safe_navigation_chain),
-    BlockDelimiters => "Style/BlockDelimiters" => node(as_block_node, block_delimiters),
-    RedundantSafeNavigation => "Lint/RedundantSafeNavigation" => call(redundant_safe_navigation),
-    AndOr => "Style/AndOr" => any_node(and_or),
+    SafeNavigationChain => "Lint/SafeNavigationChain" => compatibility_prism_call(safe_navigation_chain),
+    BlockDelimiters => "Style/BlockDelimiters" => compatibility_prism_node(as_block_node, block_delimiters),
+    RedundantSafeNavigation => "Lint/RedundantSafeNavigation" => compatibility_prism_call(redundant_safe_navigation),
+    AndOr => "Style/AndOr" => compatibility_prism_any_node(and_or),
 }
 
 fn safe_navigation_consistency(node: &Node<'_>, context: &mut CopContext<'_, '_>) {

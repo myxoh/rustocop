@@ -7,7 +7,7 @@ define_rule!(RescueModifierRule);
 const MSG: &str = "Avoid using `rescue` in its modifier form.";
 
 define_cops! {
-    RescueModifier => "Style/RescueModifier" => node_rule(as_rescue_modifier_node, RescueModifierRule, on_resbody),
+    RescueModifier => "Style/RescueModifier" => compatibility_prism_node_rule(as_rescue_modifier_node, RescueModifierRule, on_resbody),
 }
 
 impl RescueModifierRule<'_, '_, '_> {

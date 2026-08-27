@@ -1,7 +1,7 @@
 use super::*;
 
 define_cops! {
-    EmptyClassDefinition => "Style/EmptyClassDefinition" => any_node(empty_class_definition),
+    EmptyClassDefinition => "Style/EmptyClassDefinition" => compatibility_prism_any_node(empty_class_definition),
 }
 
 fn empty_class_definition(node: &Node<'_>, context: &mut CopContext<'_, '_>) {

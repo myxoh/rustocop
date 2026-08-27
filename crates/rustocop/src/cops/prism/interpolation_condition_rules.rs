@@ -1,7 +1,7 @@
 use super::*;
 
 define_cops! {
-    EmptyStringInsideInterpolation => "Style/EmptyStringInsideInterpolation" => any_node(empty_string_inside_interpolation),
+    EmptyStringInsideInterpolation => "Style/EmptyStringInsideInterpolation" => compatibility_prism_any_node(empty_string_inside_interpolation),
 }
 
 fn empty_string_inside_interpolation(node: &Node<'_>, context: &mut CopContext<'_, '_>) {

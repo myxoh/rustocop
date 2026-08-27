@@ -1,7 +1,7 @@
 use super::*;
 
 define_cops! {
-    IncompatibleIoSelectWithFiberScheduler => "Lint/IncompatibleIoSelectWithFiberScheduler" => call(incompatible_io_select),
+    IncompatibleIoSelectWithFiberScheduler => "Lint/IncompatibleIoSelectWithFiberScheduler" => compatibility_prism_call(incompatible_io_select),
 }
 
 fn incompatible_io_select(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {

@@ -1,8 +1,8 @@
 use super::*;
 
 define_cops! {
-    CollectionMethods => "Style/CollectionMethods" => call(collection_methods),
-    Sample => "Style/Sample" => call(sample),
+    CollectionMethods => "Style/CollectionMethods" => compatibility_prism_call(collection_methods),
+    Sample => "Style/Sample" => compatibility_prism_call(sample),
 }
 
 fn collection_methods(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {

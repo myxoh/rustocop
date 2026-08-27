@@ -6,12 +6,12 @@ define_compatibility_rule!(DotPositionRule);
 define_compatibility_rule!(EmptyLineBetweenDefsCompatibilityRule);
 
 define_cops! {
-    BlockAlignment => "Layout/BlockAlignment" => any_node(block_alignment_node),
+    BlockAlignment => "Layout/BlockAlignment" => compatibility_prism_any_node(block_alignment_node),
     DotPosition => "Layout/DotPosition" => compatibility_callbacks(DotPositionRule, [on_send]),
     EmptyLineBetweenDefs => "Layout/EmptyLineBetweenDefs" => compatibility_callbacks(EmptyLineBetweenDefsCompatibilityRule, [on_begin]),
-    EmptyLinesAfterModuleInclusion => "Layout/EmptyLinesAfterModuleInclusion" => call(empty_lines_after_module_inclusion),
-    EmptyLinesAroundAccessModifier => "Layout/EmptyLinesAroundAccessModifier" => call(empty_lines_around_access_modifier),
-    FirstArgumentIndentation => "Layout/FirstArgumentIndentation" => any_node(first_argument_indentation),
+    EmptyLinesAfterModuleInclusion => "Layout/EmptyLinesAfterModuleInclusion" => compatibility_prism_call(empty_lines_after_module_inclusion),
+    EmptyLinesAroundAccessModifier => "Layout/EmptyLinesAroundAccessModifier" => compatibility_prism_call(empty_lines_around_access_modifier),
+    FirstArgumentIndentation => "Layout/FirstArgumentIndentation" => compatibility_prism_any_node(first_argument_indentation),
 }
 
 impl EmptyLineBetweenDefsCompatibilityRule<'_, '_, '_, '_> {

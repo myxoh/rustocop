@@ -3,7 +3,7 @@ use ruby_prism::CallNode;
 use super::*;
 
 define_cops! {
-    HashLookupMethod => "Style/HashLookupMethod" => call(hash_lookup_method),
+    HashLookupMethod => "Style/HashLookupMethod" => compatibility_prism_call(hash_lookup_method),
 }
 
 fn hash_lookup_method(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {

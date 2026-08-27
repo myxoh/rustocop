@@ -1,7 +1,7 @@
 use super::*;
 
 define_cops! {
-    SignalException => "Style/SignalException" => call(signal_exception),
+    SignalException => "Style/SignalException" => compatibility_prism_call(signal_exception),
 }
 
 fn signal_exception(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {

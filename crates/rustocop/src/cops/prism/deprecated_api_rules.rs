@@ -1,7 +1,7 @@
 use super::*;
 
 define_cops! {
-    DeprecatedClassMethods => "Lint/DeprecatedClassMethods" => call(deprecated_class_methods),
+    DeprecatedClassMethods => "Lint/DeprecatedClassMethods" => compatibility_prism_call(deprecated_class_methods),
 }
 
 fn deprecated_class_methods(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {

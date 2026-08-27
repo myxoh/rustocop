@@ -1,7 +1,7 @@
 use super::*;
 
 define_cops! {
-    RandomWithOffset => "Style/RandomWithOffset" => call(random_with_offset),
+    RandomWithOffset => "Style/RandomWithOffset" => compatibility_prism_call(random_with_offset),
 }
 
 const MESSAGE: &str =

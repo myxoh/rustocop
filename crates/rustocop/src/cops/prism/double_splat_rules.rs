@@ -1,7 +1,7 @@
 use super::*;
 
 define_cops! {
-    RedundantDoubleSplatHashBraces => "Style/RedundantDoubleSplatHashBraces" => node(as_assoc_splat_node, redundant_double_splat_hash_braces),
+    RedundantDoubleSplatHashBraces => "Style/RedundantDoubleSplatHashBraces" => compatibility_prism_node(as_assoc_splat_node, redundant_double_splat_hash_braces),
 }
 
 const MESSAGE: &str =

@@ -8,7 +8,7 @@ const WHILE_UNTIL_MODIFIER_MSG: &str =
     "Favor modifier `{keyword}` usage when having a single-line body.";
 
 define_cops! {
-    FileRead => "Style/FileRead" => call(file_read),
+    FileRead => "Style/FileRead" => compatibility_prism_call(file_read),
     FileWrite => "Style/FileWrite" => compatibility_prism_callbacks(FileWriteRule, [on_send restrict [b"open"]]),
 }
 

@@ -8,7 +8,7 @@ const MSG_USE_SLASHES: &str = "Use `//` around regular expression.";
 const MSG_USE_PERCENT_R: &str = "Use `%r` around regular expression.";
 
 define_cops! {
-    RegexpLiteral => "Style/RegexpLiteral" => node_rule_aliases(RegexpLiteralRule, on_regexp => [as_regular_expression_node, as_interpolated_regular_expression_node]),
+    RegexpLiteral => "Style/RegexpLiteral" => compatibility_prism_node_rule_aliases(RegexpLiteralRule, on_regexp => [as_regular_expression_node, as_interpolated_regular_expression_node]),
 }
 
 impl RegexpLiteralRule<'_, '_, '_> {

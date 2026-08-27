@@ -4,13 +4,13 @@ use crate::rubocop::ast::node::core::NodeRef as RubocopNodeRef;
 define_compatibility_rule!(EmptyLinesAroundAttributeAccessorRule);
 
 define_cops! {
-    EmptyLinesAroundMethodBody => "Layout/EmptyLinesAroundMethodBody" => node(as_def_node, empty_method_body),
+    EmptyLinesAroundMethodBody => "Layout/EmptyLinesAroundMethodBody" => compatibility_prism_node(as_def_node, empty_method_body),
     EmptyLinesAroundAttributeAccessor => "Layout/EmptyLinesAroundAttributeAccessor" => compatibility_callbacks(EmptyLinesAroundAttributeAccessorRule, [on_send restrict ["attr_reader", "attr_writer", "attr_accessor", "attr"]]),
-    EmptyLinesAroundBlockBody => "Layout/EmptyLinesAroundBlockBody" => node(as_block_node, empty_block_body),
-    EmptyLinesAroundArguments => "Layout/EmptyLinesAroundArguments" => call(empty_around_arguments),
-    EmptyLinesAroundExceptionHandlingKeywords => "Layout/EmptyLinesAroundExceptionHandlingKeywords" => node(as_begin_node, empty_exception_keywords),
-    EmptyLinesAroundClassBody => "Layout/EmptyLinesAroundClassBody" => any_node(empty_class_body),
-    EmptyLinesAroundModuleBody => "Layout/EmptyLinesAroundModuleBody" => node(as_module_node, empty_module_body),
+    EmptyLinesAroundBlockBody => "Layout/EmptyLinesAroundBlockBody" => compatibility_prism_node(as_block_node, empty_block_body),
+    EmptyLinesAroundArguments => "Layout/EmptyLinesAroundArguments" => compatibility_prism_call(empty_around_arguments),
+    EmptyLinesAroundExceptionHandlingKeywords => "Layout/EmptyLinesAroundExceptionHandlingKeywords" => compatibility_prism_node(as_begin_node, empty_exception_keywords),
+    EmptyLinesAroundClassBody => "Layout/EmptyLinesAroundClassBody" => compatibility_prism_any_node(empty_class_body),
+    EmptyLinesAroundModuleBody => "Layout/EmptyLinesAroundModuleBody" => compatibility_prism_node(as_module_node, empty_module_body),
 }
 
 fn empty_begin_body(node: &ruby_prism::BeginNode<'_>, context: &mut CopContext<'_, '_>) {

@@ -7,7 +7,7 @@ define_rule!(RedundantSortRule);
 const MSG: &str = "Use `{suggestion}` instead of `{sorter}...{accessor}`.";
 
 define_cops! {
-    RedundantSort => "Style/RedundantSort" => call_rule(RedundantSortRule, on_send),
+    RedundantSort => "Style/RedundantSort" => compatibility_prism_call_rule(RedundantSortRule, on_send),
 }
 
 impl RedundantSortRule<'_, '_, '_> {

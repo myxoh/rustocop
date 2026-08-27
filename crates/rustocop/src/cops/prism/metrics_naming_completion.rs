@@ -2,10 +2,10 @@ use super::source_syntax::top_level_elements;
 use super::*;
 
 define_cops! {
-    ParameterLists => "Metrics/ParameterLists" => any_node(parameter_lists),
-    CollectionLiteralLength => "Metrics/CollectionLiteralLength" => any_node(collection_literal_length),
-    BlockParameterName => "Naming/BlockParameterName" => any_node(block_parameter_name),
-    PredicatePrefix => "Naming/PredicatePrefix" => any_node(predicate_prefix),
+    ParameterLists => "Metrics/ParameterLists" => compatibility_prism_any_node(parameter_lists),
+    CollectionLiteralLength => "Metrics/CollectionLiteralLength" => compatibility_prism_any_node(collection_literal_length),
+    BlockParameterName => "Naming/BlockParameterName" => compatibility_prism_any_node(block_parameter_name),
+    PredicatePrefix => "Naming/PredicatePrefix" => compatibility_prism_any_node(predicate_prefix),
 }
 
 fn predicate_prefix(node: &Node<'_>, context: &mut CopContext<'_, '_>) {

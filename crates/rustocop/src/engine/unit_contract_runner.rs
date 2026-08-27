@@ -363,6 +363,20 @@ pub(super) fn inspection_options(
 }
 
 fn expected_offense(offense: &Offense) -> ExpectedOffense {
+    // RuboCop's spec DSL exposes Parser's internal empty-range convention,
+    // where an insertion immediately before column one ends at column zero.
+    // Its public JSON formatter (and therefore project parity) renders the
+    // same point at column one. Preserve both contracts at their boundary.
+    let last_column = if offense.cop_name == "Layout/IndentationWidth"
+        && offense.length == 0
+        && offense.message.ends_with(" spaces for indentation.")
+        && offense.column == 1
+        && offense.last_column == 1
+    {
+        0
+    } else {
+        offense.last_column
+    };
     ExpectedOffense {
         message: offense.message.clone(),
         severity: offense_severity(&offense.cop_name).to_string(),
@@ -370,7 +384,7 @@ fn expected_offense(offense: &Offense) -> ExpectedOffense {
         line: offense.line,
         column: offense.column,
         last_line: offense.last_line,
-        last_column: offense.last_column,
+        last_column,
     }
 }
 

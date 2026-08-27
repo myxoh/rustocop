@@ -1,7 +1,7 @@
 use super::*;
 
 define_cops! {
-    FloatDivision => "Style/FloatDivision" => call(float_division),
+    FloatDivision => "Style/FloatDivision" => compatibility_prism_call(float_division),
 }
 
 const MESSAGE: &str = "Do not apply inconsequential numeric operations to variables.";

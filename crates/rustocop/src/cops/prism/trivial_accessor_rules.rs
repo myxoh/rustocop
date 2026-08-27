@@ -1,7 +1,7 @@
 use super::*;
 
 define_cops! {
-    TrivialAccessors => "Style/TrivialAccessors" => node(as_def_node, trivial_accessors),
+    TrivialAccessors => "Style/TrivialAccessors" => compatibility_prism_node(as_def_node, trivial_accessors),
 }
 
 fn trivial_accessors(node: &ruby_prism::DefNode<'_>, context: &mut CopContext<'_, '_>) {

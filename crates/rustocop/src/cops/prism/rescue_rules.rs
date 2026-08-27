@@ -1,8 +1,8 @@
 use super::*;
 
 define_cops! {
-    SuppressedException => "Lint/SuppressedException" => any_node(suppressed_exception),
-    UselessRescue => "Lint/UselessRescue" => node(as_rescue_node, useless_rescue),
+    SuppressedException => "Lint/SuppressedException" => compatibility_prism_any_node(suppressed_exception),
+    UselessRescue => "Lint/UselessRescue" => compatibility_prism_node(as_rescue_node, useless_rescue),
 }
 
 fn suppressed_exception(node: &Node<'_>, context: &mut CopContext<'_, '_>) {

@@ -2,7 +2,7 @@ use super::*;
 use std::ops::Range;
 
 define_cops! {
-    TrailingUnderscoreVariable => "Style/TrailingUnderscoreVariable" => node(as_multi_write_node, trailing_underscore_variable),
+    TrailingUnderscoreVariable => "Style/TrailingUnderscoreVariable" => compatibility_prism_node(as_multi_write_node, trailing_underscore_variable),
 }
 
 fn trailing_underscore_variable(

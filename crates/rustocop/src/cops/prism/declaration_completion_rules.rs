@@ -3,10 +3,10 @@ use ruby_prism::{CallNode, ClassNode, DefNode, Node, ParametersNode, StatementsN
 use super::*;
 
 define_cops! {
-    Attr => "Style/Attr" => call(attr),
-    DataInheritance => "Style/DataInheritance" => node(as_class_node, data_inheritance),
-    RedundantInitialize => "Style/RedundantInitialize" => node(as_def_node, redundant_initialize),
-    RedundantStructKeywordInit => "Style/RedundantStructKeywordInit" => call(redundant_struct_keyword_init),
+    Attr => "Style/Attr" => compatibility_prism_call(attr),
+    DataInheritance => "Style/DataInheritance" => compatibility_prism_node(as_class_node, data_inheritance),
+    RedundantInitialize => "Style/RedundantInitialize" => compatibility_prism_node(as_def_node, redundant_initialize),
+    RedundantStructKeywordInit => "Style/RedundantStructKeywordInit" => compatibility_prism_call(redundant_struct_keyword_init),
 }
 
 fn data_inheritance(node: &ClassNode<'_>, context: &mut CopContext<'_, '_>) {

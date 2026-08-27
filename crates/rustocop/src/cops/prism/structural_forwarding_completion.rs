@@ -3,8 +3,8 @@ use crate::rubocop::ast::node::core::NodeRef as RubocopNodeRef;
 use crate::rubocop::ast::prism::convert as convert_rubocop_ast;
 
 define_cops! {
-    ArrayCoercion => "Style/ArrayCoercion" => any_node(array_coercion),
-    MultipleComparison => "Style/MultipleComparison" => node(as_or_node, multiple_comparison),
+    ArrayCoercion => "Style/ArrayCoercion" => compatibility_prism_any_node(array_coercion),
+    MultipleComparison => "Style/MultipleComparison" => compatibility_prism_node(as_or_node, multiple_comparison),
     ExplicitBlockArgument => "Style/ExplicitBlockArgument" => compatibility_source(explicit_block_argument),
 }
 

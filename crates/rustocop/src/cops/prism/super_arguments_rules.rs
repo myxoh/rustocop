@@ -3,7 +3,7 @@ use ruby_prism::{DefNode, Node, ParametersNode};
 use super::*;
 
 define_cops! {
-    SuperArguments => "Style/SuperArguments" => node(as_super_node, super_arguments),
+    SuperArguments => "Style/SuperArguments" => compatibility_prism_node(as_super_node, super_arguments),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

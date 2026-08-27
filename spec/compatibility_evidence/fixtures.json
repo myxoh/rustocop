@@ -1,11 +1,11 @@
 {
   "version": 1,
   "kind": "fixture_compatibility",
-  "updated_at": "2026-08-26T16:18:45-04:00",
-  "rust_commit": "90f7b23ccfa3201072ef82a3f5868c1473f2e756",
-  "cop_source_sha256": "14a8ee30eeecd1d5e952d85be1c0a513db3564a2a4b4205be3daa91069a52602",
-  "native_sha256": "ec2932cc277261b97b2ec131accb416467b5b1d96b2f03ffbdf51b5c5c56a90e",
-  "fixture_corpus_sha256": "554d728615a9cc3faca420dd5fd4b5a6e0418b6eadefa3ae8a07cfb334c3130f",
+  "updated_at": "2026-08-27T07:05:20-04:00",
+  "rust_commit": null,
+  "cop_source_sha256": "88055a6564dbf70c48605b68d64609e06b4f79b9c6a3bdfc6dd6f072ad3a85bf",
+  "native_sha256": "0589ddb4e65837bb1eb7bc57f01b8465a4fd69fb2294ed35ce2464952e2e78b0",
+  "fixture_corpus_sha256": "4cca1a0c3e74623a23aee69580bb1cc4e5d5129c088e7691c11708f88cc39e7f",
   "rubocop_version": "1.87.0",
   "results": {
     "Bundler/DuplicatedGem": {
@@ -184,8 +184,8 @@
       "status": "compatible"
     },
     "Layout/EmptyLineAfterMagicComment": {
-      "passed": 24,
-      "total": 24,
+      "passed": 25,
+      "total": 25,
       "status": "compatible"
     },
     "Layout/EmptyLineAfterMultilineCondition": {
@@ -264,8 +264,8 @@
       "status": "compatible"
     },
     "Layout/ExtraSpacing": {
-      "passed": 92,
-      "total": 92,
+      "passed": 90,
+      "total": 90,
       "status": "compatible"
     },
     "Layout/FirstArgumentIndentation": {
@@ -384,8 +384,8 @@
       "status": "compatible"
     },
     "Layout/MultilineAssignmentLayout": {
-      "passed": 41,
-      "total": 41,
+      "passed": 42,
+      "total": 42,
       "status": "compatible"
     },
     "Layout/MultilineBlockLayout": {
@@ -744,8 +744,8 @@
       "status": "compatible"
     },
     "Lint/DuplicateRegexpCharacterClassElement": {
-      "passed": 20,
-      "total": 20,
+      "passed": 16,
+      "total": 16,
       "status": "compatible"
     },
     "Lint/DuplicateRequire": {
@@ -804,8 +804,8 @@
       "status": "compatible"
     },
     "Lint/EmptyInPattern": {
-      "passed": 13,
-      "total": 13,
+      "passed": 14,
+      "total": 14,
       "status": "compatible"
     },
     "Lint/EmptyInterpolation": {
@@ -924,8 +924,8 @@
       "status": "compatible"
     },
     "Lint/MissingCopEnableDirective": {
-      "passed": 21,
-      "total": 21,
+      "passed": 22,
+      "total": 22,
       "status": "compatible"
     },
     "Lint/MissingSuper": {
@@ -1044,8 +1044,8 @@
       "status": "compatible"
     },
     "Lint/RedundantCopEnableDirective": {
-      "passed": 33,
-      "total": 33,
+      "passed": 35,
+      "total": 35,
       "status": "compatible"
     },
     "Lint/RedundantDirGlobSort": {
@@ -1279,8 +1279,8 @@
       "status": "compatible"
     },
     "Lint/UnusedMethodArgument": {
-      "passed": 52,
-      "total": 52,
+      "passed": 44,
+      "total": 44,
       "status": "compatible"
     },
     "Lint/UriEscapeUnescape": {
@@ -1299,8 +1299,8 @@
       "status": "compatible"
     },
     "Lint/UselessAssignment": {
-      "passed": 151,
-      "total": 151,
+      "passed": 149,
+      "total": 149,
       "status": "compatible"
     },
     "Lint/UselessConstantScoping": {
@@ -1424,8 +1424,8 @@
       "status": "compatible"
     },
     "Naming/AsciiIdentifiers": {
-      "passed": 13,
-      "total": 13,
+      "passed": 15,
+      "total": 15,
       "status": "compatible"
     },
     "Naming/BinaryOperatorParameterName": {
@@ -1439,8 +1439,8 @@
       "status": "compatible"
     },
     "Naming/BlockParameterName": {
-      "passed": 16,
-      "total": 16,
+      "passed": 13,
+      "total": 13,
       "status": "compatible"
     },
     "Naming/ClassAndModuleCamelCase": {
@@ -1464,8 +1464,8 @@
       "status": "compatible"
     },
     "Naming/HeredocDelimiterNaming": {
-      "passed": 25,
-      "total": 25,
+      "passed": 26,
+      "total": 26,
       "status": "compatible"
     },
     "Naming/InclusiveLanguage": {
@@ -1509,8 +1509,8 @@
       "status": "compatible"
     },
     "Naming/VariableNumber": {
-      "passed": 117,
-      "total": 117,
+      "passed": 115,
+      "total": 115,
       "status": "compatible"
     },
     "Security/CompoundHash": {
@@ -1814,13 +1814,13 @@
       "status": "compatible"
     },
     "Style/Documentation": {
-      "passed": 65,
-      "total": 65,
+      "passed": 55,
+      "total": 55,
       "status": "compatible"
     },
     "Style/DocumentationMethod": {
-      "passed": 99,
-      "total": 99,
+      "passed": 100,
+      "total": 100,
       "status": "compatible"
     },
     "Style/DoubleCopDisableDirective": {
@@ -1989,8 +1989,8 @@
       "status": "compatible"
     },
     "Style/FormatStringToken": {
-      "passed": 269,
-      "total": 269,
+      "passed": 273,
+      "total": 273,
       "status": "compatible"
     },
     "Style/FrozenStringLiteralComment": {
@@ -2409,8 +2409,8 @@
       "status": "compatible"
     },
     "Style/OneClassPerFile": {
-      "passed": 22,
-      "total": 22,
+      "passed": 24,
+      "total": 24,
       "status": "compatible"
     },
     "Style/OneLineConditional": {
@@ -2604,8 +2604,8 @@
       "status": "compatible"
     },
     "Style/RedundantHeredocDelimiterQuotes": {
-      "passed": 18,
-      "total": 18,
+      "passed": 19,
+      "total": 19,
       "status": "compatible"
     },
     "Style/RedundantInitialize": {
@@ -2649,8 +2649,8 @@
       "status": "compatible"
     },
     "Style/RedundantRegexpCharacterClass": {
-      "passed": 48,
-      "total": 48,
+      "passed": 49,
+      "total": 49,
       "status": "compatible"
     },
     "Style/RedundantRegexpConstructor": {
@@ -2709,8 +2709,8 @@
       "status": "compatible"
     },
     "Style/RequireOrder": {
-      "passed": 25,
-      "total": 25,
+      "passed": 26,
+      "total": 26,
       "status": "compatible"
     },
     "Style/RescueModifier": {
@@ -2774,8 +2774,8 @@
       "status": "compatible"
     },
     "Style/Semicolon": {
-      "passed": 38,
-      "total": 38,
+      "passed": 39,
+      "total": 39,
       "status": "compatible"
     },
     "Style/Send": {
@@ -2854,8 +2854,8 @@
       "status": "compatible"
     },
     "Style/StringHashKeys": {
-      "passed": 13,
-      "total": 13,
+      "passed": 15,
+      "total": 15,
       "status": "compatible"
     },
     "Style/StringLiterals": {
@@ -2954,8 +2954,8 @@
       "status": "compatible"
     },
     "Style/TrailingCommaInBlockArgs": {
-      "passed": 21,
-      "total": 21,
+      "passed": 22,
+      "total": 22,
       "status": "compatible"
     },
     "Style/TrailingCommaInHashLiteral": {

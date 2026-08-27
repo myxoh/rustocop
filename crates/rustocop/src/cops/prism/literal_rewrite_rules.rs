@@ -6,12 +6,12 @@ define_rule!(QuotedSymbolsRule);
 define_rule!(PercentLiteralDelimitersRule);
 
 define_cops! {
-    QuotedSymbols => "Style/QuotedSymbols" => node_rule(
+    QuotedSymbols => "Style/QuotedSymbols" => compatibility_prism_node_rule(
         as_symbol_node,
         QuotedSymbolsRule,
         on_sym
     ),
-    PercentLiteralDelimiters => "Style/PercentLiteralDelimiters" => node_rule_aliases(
+    PercentLiteralDelimiters => "Style/PercentLiteralDelimiters" => compatibility_prism_node_rule_aliases(
         PercentLiteralDelimitersRule,
         on_percent_literal => [
             as_array_node,

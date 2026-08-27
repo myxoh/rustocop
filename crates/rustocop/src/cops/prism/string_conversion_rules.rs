@@ -3,10 +3,10 @@ use ruby_prism::InterpolatedStringNode;
 use super::*;
 
 define_cops! {
-    ImplicitStringConcatenation => "Lint/ImplicitStringConcatenation" => node(as_interpolated_string_node, implicit_string_concatenation),
-    RedundantInterpolation => "Style/RedundantInterpolation" => node(as_interpolated_string_node, redundant_interpolation),
-    StringLiterals => "Style/StringLiterals" => any_node(string_literals),
-    StringLiteralsInInterpolation => "Style/StringLiteralsInInterpolation" => node(as_string_node, string_literals_in_interpolation),
+    ImplicitStringConcatenation => "Lint/ImplicitStringConcatenation" => compatibility_prism_node(as_interpolated_string_node, implicit_string_concatenation),
+    RedundantInterpolation => "Style/RedundantInterpolation" => compatibility_prism_node(as_interpolated_string_node, redundant_interpolation),
+    StringLiterals => "Style/StringLiterals" => compatibility_prism_any_node(string_literals),
+    StringLiteralsInInterpolation => "Style/StringLiteralsInInterpolation" => compatibility_prism_node(as_string_node, string_literals_in_interpolation),
 }
 
 fn string_literals(node: &Node<'_>, context: &mut CopContext<'_, '_>) {

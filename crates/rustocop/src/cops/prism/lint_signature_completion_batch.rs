@@ -4,14 +4,14 @@ use crate::rubocop::ast::prism::convert as convert_rubocop_ast;
 use std::collections::HashMap;
 
 define_cops! {
-    Syntax => "Lint/Syntax" => parse_error_and_source(syntax, invalid_byte_syntax),
-    FormatParameterMismatch => "Lint/FormatParameterMismatch" => node(as_call_node, format_parameter_mismatch),
-    UnusedBlockArgument => "Lint/UnusedBlockArgument" => any_node(unused_block_argument),
+    Syntax => "Lint/Syntax" => compatibility_prism_parse_error_and_source(syntax, invalid_byte_syntax),
+    FormatParameterMismatch => "Lint/FormatParameterMismatch" => compatibility_prism_node(as_call_node, format_parameter_mismatch),
+    UnusedBlockArgument => "Lint/UnusedBlockArgument" => compatibility_prism_any_node(unused_block_argument),
     AmbiguousRange => "Lint/AmbiguousRange" => compatibility_source(ambiguous_range),
     NonAtomicFileOperation => "Lint/NonAtomicFileOperation" => compatibility_source(non_atomic_file_operation),
-    UnmodifiedReduceAccumulator => "Lint/UnmodifiedReduceAccumulator" => node(as_block_node, unmodified_reduce_accumulator),
+    UnmodifiedReduceAccumulator => "Lint/UnmodifiedReduceAccumulator" => compatibility_prism_node(as_block_node, unmodified_reduce_accumulator),
     DocumentationMethod => "Style/DocumentationMethod" => compatibility_source(documentation_method),
-    RedundantSplatExpansion => "Lint/RedundantSplatExpansion" => node(as_splat_node, redundant_splat_expansion),
+    RedundantSplatExpansion => "Lint/RedundantSplatExpansion" => compatibility_prism_node(as_splat_node, redundant_splat_expansion),
 }
 
 fn syntax(error: &Diagnostic<'_>, context: &mut CopContext<'_, '_>) {

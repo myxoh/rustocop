@@ -5,7 +5,7 @@ define_rule!(YodaConditionRule);
 const MSG: &str = "Reverse the order of the operands `{source}`.";
 
 define_cops! {
-    YodaCondition => "Style/YodaCondition" => call_rule(YodaConditionRule, on_send, restrict [b"==", b"!=", b"<", b"<=", b">", b">=", b"===", b"=~", b"!~"]),
+    YodaCondition => "Style/YodaCondition" => compatibility_prism_call_rule(YodaConditionRule, on_send, restrict [b"==", b"!=", b"<", b"<=", b">", b">=", b"===", b"=~", b"!~"]),
 }
 
 impl YodaConditionRule<'_, '_, '_> {

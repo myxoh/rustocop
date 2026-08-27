@@ -4,14 +4,14 @@ use crate::rubocop::ast::prism::convert as convert_rubocop_ast;
 use std::collections::HashSet;
 
 define_cops! {
-    UnusedMethodArgument => "Lint/UnusedMethodArgument" => node(as_def_node, unused_method_argument),
-    UselessMethodDefinition => "Lint/UselessMethodDefinition" => node(as_def_node, useless_method_definition),
+    UnusedMethodArgument => "Lint/UnusedMethodArgument" => compatibility_prism_node(as_def_node, unused_method_argument),
+    UselessMethodDefinition => "Lint/UselessMethodDefinition" => compatibility_prism_node(as_def_node, useless_method_definition),
     RedundantAssignment => "Style/RedundantAssignment" => compatibility_source(redundant_assignment),
-    ConstantResolution => "Lint/ConstantResolution" => any_node(constant_resolution),
-    AmbiguousEndlessMethodDefinition => "Style/AmbiguousEndlessMethodDefinition" => node(as_def_node, ambiguous_endless_method_definition),
-    NestedMethodDefinition => "Lint/NestedMethodDefinition" => node(as_def_node, nested_method_definition),
+    ConstantResolution => "Lint/ConstantResolution" => compatibility_prism_any_node(constant_resolution),
+    AmbiguousEndlessMethodDefinition => "Style/AmbiguousEndlessMethodDefinition" => compatibility_prism_node(as_def_node, ambiguous_endless_method_definition),
+    NestedMethodDefinition => "Lint/NestedMethodDefinition" => compatibility_prism_node(as_def_node, nested_method_definition),
     UselessConstantScoping => "Lint/UselessConstantScoping" => compatibility_source(useless_constant_scoping),
-    Documentation => "Style/Documentation" => any_node(style_documentation),
+    Documentation => "Style/Documentation" => compatibility_prism_any_node(style_documentation),
 }
 
 fn style_documentation(node: &Node<'_>, context: &mut CopContext<'_, '_>) {

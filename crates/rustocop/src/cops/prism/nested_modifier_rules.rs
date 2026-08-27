@@ -1,7 +1,7 @@
 use super::*;
 
 define_cops! {
-    NestedModifier => "Style/NestedModifier" => any_node(nested_modifier),
+    NestedModifier => "Style/NestedModifier" => compatibility_prism_any_node(nested_modifier),
 }
 
 const MESSAGE: &str = "Avoid using nested modifiers.";

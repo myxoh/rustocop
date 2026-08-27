@@ -5,7 +5,7 @@ use super::*;
 define_rule!(RedundantBeginRule);
 
 define_cops! {
-    RedundantBegin => "Style/RedundantBegin" => node_rule(
+    RedundantBegin => "Style/RedundantBegin" => compatibility_prism_node_rule(
         as_begin_node,
         RedundantBeginRule,
         on_kwbegin

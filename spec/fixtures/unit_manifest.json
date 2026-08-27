@@ -1,12 +1,12 @@
 {
   "version": 1,
   "rubocop_version": "1.87.0",
-  "updated_at": "2026-08-27T05:42:22-04:00",
+  "updated_at": "2026-08-27T07:05:00-04:00",
   "raw_capture_sha256": "0c8bedf20723f89ab5ed012066ae0427c17c3f91f790a0a5594fbb94d270717c",
   "raw_cases": 28606,
   "lsp_exclusions": 5,
-  "controlled_cases": 29605,
-  "imported_cases": 1556,
+  "controlled_cases": 29608,
+  "imported_cases": 1557,
   "exact_duplicates_removed": 552,
   "distribution": {
     "minimum": 1,
@@ -2054,8 +2054,8 @@
     "Naming/HeredocDelimiterNaming": {
       "cases": "cops/Naming/HeredocDelimiterNaming/unit/cases.jsonl",
       "configs": "cops/Naming/HeredocDelimiterNaming/unit/configs.json",
-      "count": 25,
-      "sha256": "e4c34cbee03e1d37fb8a927d021f541d8799f782b8cb087f2b153a232462163b",
+      "count": 26,
+      "sha256": "e3ebc960202d48d6159775ab2fd182054702856474340e51635aaece3e692d0d",
       "configs_sha256": "cf7e063edc6fe4d4dbb9bdf74dec932d5eeafc8232dc8229c35486abe9a565f7"
     },
     "Naming/InclusiveLanguage": {
@@ -3713,8 +3713,8 @@
     "Style/RedundantRegexpCharacterClass": {
       "cases": "cops/Style/RedundantRegexpCharacterClass/unit/cases.jsonl",
       "configs": "cops/Style/RedundantRegexpCharacterClass/unit/configs.json",
-      "count": 48,
-      "sha256": "694dcace391b174902fac1cffa3a86d14c7d89ca31e89d3e79dcde3504ec36b4",
+      "count": 49,
+      "sha256": "bb312e55e78b85be04dab0970abfa99b48eaac6eed38991d5115eaf867995636",
       "configs_sha256": "4b256b31911079f4c3e25491b0cab30fa548c23ce8c54662c03d5b711462de65"
     },
     "Style/RedundantRegexpConstructor": {
@@ -3888,8 +3888,8 @@
     "Style/Semicolon": {
       "cases": "cops/Style/Semicolon/unit/cases.jsonl",
       "configs": "cops/Style/Semicolon/unit/configs.json",
-      "count": 38,
-      "sha256": "ba3e17cde0b7bb23cd3a37dd84076ffe2210748aaa92fe0ca69a48cce0c7d1f6",
+      "count": 39,
+      "sha256": "af4a414786d11f55eb04858904e204fe24fbe68d2aa8125e7abfedeeca0bb008",
       "configs_sha256": "0fc46a78ae1b1ef8b2e11a83bc587bcc8a38a306d1c7f37ac31dd6bc3a9a8222"
     },
     "Style/Send": {

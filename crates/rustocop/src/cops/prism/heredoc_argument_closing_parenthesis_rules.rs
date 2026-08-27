@@ -1,7 +1,7 @@
 use super::*;
 
 define_cops! {
-    HeredocArgumentClosingParenthesis => "Layout/HeredocArgumentClosingParenthesis" => call(on_send),
+    HeredocArgumentClosingParenthesis => "Layout/HeredocArgumentClosingParenthesis" => compatibility_prism_call(on_send),
 }
 
 fn on_send(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {

@@ -1,6 +1,6 @@
 # Compatibility-layer project adoption
 
-Generated from project evidence captured at `2026-08-26T16:08:29-04:00`. The
+Generated from project evidence captured at `2026-08-27T07:03:56-04:00`. The
 compatibility-layer consumer manifest was updated at `2026-08-26T17:30:20-04:00`.
 
 All 10 registered consumer cops were selected against all

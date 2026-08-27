@@ -1,7 +1,7 @@
 use super::*;
 
 define_cops! {
-    NumberConversion => "Lint/NumberConversion" => call(number_conversion),
+    NumberConversion => "Lint/NumberConversion" => compatibility_prism_call(number_conversion),
 }
 
 fn number_conversion(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {

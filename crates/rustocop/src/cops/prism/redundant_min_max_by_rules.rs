@@ -9,7 +9,7 @@ const MSG_NUMBLOCK: &str = "Use `{replacement}` instead of `{original} { _1 }`."
 const MSG_ITBLOCK: &str = "Use `{replacement}` instead of `{original} { it }`.";
 
 define_cops! {
-    RedundantMinMaxBy => "Style/RedundantMinMaxBy" => call_rule(
+    RedundantMinMaxBy => "Style/RedundantMinMaxBy" => compatibility_prism_call_rule(
         RedundantMinMaxByRule,
         on_block,
         restrict [b"max_by", b"min_by", b"minmax_by"]

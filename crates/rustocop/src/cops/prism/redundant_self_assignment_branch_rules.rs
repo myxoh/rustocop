@@ -7,7 +7,7 @@ define_rule!(RedundantSelfAssignmentBranchRule);
 const MSG: &str = "Remove the self-assignment branch.";
 
 define_cops! {
-    RedundantSelfAssignmentBranch => "Style/RedundantSelfAssignmentBranch" => node_rule(as_local_variable_write_node, RedundantSelfAssignmentBranchRule, on_lvasgn),
+    RedundantSelfAssignmentBranch => "Style/RedundantSelfAssignmentBranch" => compatibility_prism_node_rule(as_local_variable_write_node, RedundantSelfAssignmentBranchRule, on_lvasgn),
 }
 
 impl RedundantSelfAssignmentBranchRule<'_, '_, '_> {

@@ -4,10 +4,10 @@ mod block_layout;
 use block_layout::multiline_block_layout;
 
 define_cops! {
-    MultilineArrayBraceLayout => "Layout/MultilineArrayBraceLayout" => node(as_array_node, multiline_array_brace_layout),
-    MultilineHashBraceLayout => "Layout/MultilineHashBraceLayout" => node(as_hash_node, multiline_hash_brace_layout),
-    MultilineMethodCallBraceLayout => "Layout/MultilineMethodCallBraceLayout" => node(as_call_node, multiline_method_call_brace_layout),
-    MultilineBlockLayout => "Layout/MultilineBlockLayout" => any_node(multiline_block_layout),
+    MultilineArrayBraceLayout => "Layout/MultilineArrayBraceLayout" => compatibility_prism_node(as_array_node, multiline_array_brace_layout),
+    MultilineHashBraceLayout => "Layout/MultilineHashBraceLayout" => compatibility_prism_node(as_hash_node, multiline_hash_brace_layout),
+    MultilineMethodCallBraceLayout => "Layout/MultilineMethodCallBraceLayout" => compatibility_prism_node(as_call_node, multiline_method_call_brace_layout),
+    MultilineBlockLayout => "Layout/MultilineBlockLayout" => compatibility_prism_any_node(multiline_block_layout),
 }
 
 #[derive(Clone, Copy)]

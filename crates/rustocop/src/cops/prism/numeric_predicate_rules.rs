@@ -1,7 +1,7 @@
 use super::*;
 
 define_cops! {
-    NumericPredicate => "Style/NumericPredicate" => call(numeric_predicate),
+    NumericPredicate => "Style/NumericPredicate" => compatibility_prism_call(numeric_predicate),
 }
 
 fn numeric_predicate(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {

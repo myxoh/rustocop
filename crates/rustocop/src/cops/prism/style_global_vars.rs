@@ -1,7 +1,7 @@
 use super::*;
 
 define_cops! {
-    GlobalVars => "Style/GlobalVars" => any_node(global_vars),
+    GlobalVars => "Style/GlobalVars" => compatibility_prism_any_node(global_vars),
 }
 
 const BUILT_INS: &[&[u8]] = &[

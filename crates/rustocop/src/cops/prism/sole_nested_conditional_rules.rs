@@ -1,7 +1,7 @@
 use super::*;
 
 define_cops! {
-    SoleNestedConditional => "Style/SoleNestedConditional" => any_node(sole_nested_conditional),
+    SoleNestedConditional => "Style/SoleNestedConditional" => compatibility_prism_any_node(sole_nested_conditional),
 }
 
 struct Conditional<'pr> {

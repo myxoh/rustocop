@@ -8,8 +8,8 @@ define_cops! {
     Copyright => "Style/Copyright" => compatibility_source(copyright),
     CommentedKeyword => "Style/CommentedKeyword" => compatibility_source(commented_keyword),
     CommentAnnotation => "Style/CommentAnnotation" => compatibility_source(comment_annotation),
-    NumericLiterals => "Style/NumericLiterals" => any_node(numeric_literals),
-    CommandLiteral => "Style/CommandLiteral" => any_node(command_literal),
+    NumericLiterals => "Style/NumericLiterals" => compatibility_prism_any_node(numeric_literals),
+    CommandLiteral => "Style/CommandLiteral" => compatibility_prism_any_node(command_literal),
 }
 
 fn copyright(context: &mut CompatibilityCopContext<'_, '_, '_>) {

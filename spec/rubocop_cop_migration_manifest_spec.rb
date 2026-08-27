@@ -60,14 +60,14 @@ RSpec.describe "RuboCop cop source-shape migration manifest" do
 
   it "uses a consistent score classification and ISO 8601 timestamp" do
     statuses = {
-      1 => "divergent",
-      2 => "divergent",
-      3 => "conceptually_aligned",
-      4 => "source_shaped_with_parser_adaptation",
-      5 => "near_source_shaped"
+      1 => %w[divergent],
+      2 => %w[divergent],
+      3 => %w[conceptually_aligned source_shaped_with_source_adapter],
+      4 => %w[source_shaped_with_parser_adaptation source_shaped_with_prism_adaptation],
+      5 => %w[near_source_shaped]
     }
     manifest.fetch("cops").reject { |row| row.fetch("structural_status") == "unaudited" }.each do |row|
-      expect(row.fetch("structural_status")).to eq(statuses.fetch(row.fetch("similarity_score")))
+      expect(statuses.fetch(row.fetch("similarity_score"))).to include(row.fetch("structural_status"))
     end
 
     updated_at = manifest.fetch("updated_at")

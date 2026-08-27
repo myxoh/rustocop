@@ -2,8 +2,8 @@ use super::source_syntax::{matching_delimiter, top_level_elements};
 use super::*;
 
 define_cops! {
-    MultilineHashKeyLineBreaks => "Layout/MultilineHashKeyLineBreaks" => any_node(multiline_hash_key_line_breaks),
-    SingleLineBlockChain => "Layout/SingleLineBlockChain" => any_node(single_line_block_chain),
+    MultilineHashKeyLineBreaks => "Layout/MultilineHashKeyLineBreaks" => compatibility_prism_any_node(multiline_hash_key_line_breaks),
+    SingleLineBlockChain => "Layout/SingleLineBlockChain" => compatibility_prism_any_node(single_line_block_chain),
 }
 
 #[allow(dead_code)]

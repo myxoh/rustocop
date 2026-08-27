@@ -11,7 +11,7 @@ define_cops! {
     DuplicateSetElement => "Lint/DuplicateSetElement" => compatibility_source(duplicate_set_element),
     NumericOperationWithConstantResult => "Lint/NumericOperationWithConstantResult" => compatibility_source(numeric_constant_result),
     SymbolConversion => "Lint/SymbolConversion" => compatibility_source(symbol_conversion),
-    DoubleNegation => "Style/DoubleNegation" => call(double_negation),
+    DoubleNegation => "Style/DoubleNegation" => compatibility_prism_call(double_negation),
     EmptyLiteral => "Style/EmptyLiteral" => compatibility_source(empty_literal),
 }
 

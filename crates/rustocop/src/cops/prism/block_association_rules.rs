@@ -1,7 +1,7 @@
 use super::*;
 
 define_cops! {
-    AmbiguousBlockAssociation => "Lint/AmbiguousBlockAssociation" => call(ambiguous_block_association),
+    AmbiguousBlockAssociation => "Lint/AmbiguousBlockAssociation" => compatibility_prism_call(ambiguous_block_association),
 }
 
 fn ambiguous_block_association(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {

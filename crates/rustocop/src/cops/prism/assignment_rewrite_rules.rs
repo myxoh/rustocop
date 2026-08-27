@@ -6,7 +6,7 @@ define_rule!(OrAssignmentRule);
 define_rule!(ParallelAssignmentRule);
 
 define_cops! {
-    OrAssignment => "Style/OrAssignment" => node_rule_aliases(
+    OrAssignment => "Style/OrAssignment" => compatibility_prism_node_rule_aliases(
         OrAssignmentRule,
         on_assignment_or_if => [
             as_local_variable_write_node,
@@ -17,7 +17,7 @@ define_cops! {
             as_unless_node
         ]
     ),
-    ParallelAssignment => "Style/ParallelAssignment" => node_rule(
+    ParallelAssignment => "Style/ParallelAssignment" => compatibility_prism_node_rule(
         as_multi_write_node,
         ParallelAssignmentRule,
         on_masgn

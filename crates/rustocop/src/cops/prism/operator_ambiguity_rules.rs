@@ -1,9 +1,9 @@
 use super::*;
 
 define_cops! {
-    AmbiguousOperator => "Lint/AmbiguousOperator" => any_node(ambiguous_operator),
-    AmbiguousOperatorPrecedence => "Lint/AmbiguousOperatorPrecedence" => any_node(ambiguous_operator_precedence),
-    ParenthesesAsGroupedExpression => "Lint/ParenthesesAsGroupedExpression" => call(parentheses_as_grouped_expression),
+    AmbiguousOperator => "Lint/AmbiguousOperator" => compatibility_prism_any_node(ambiguous_operator),
+    AmbiguousOperatorPrecedence => "Lint/AmbiguousOperatorPrecedence" => compatibility_prism_any_node(ambiguous_operator_precedence),
+    ParenthesesAsGroupedExpression => "Lint/ParenthesesAsGroupedExpression" => compatibility_prism_call(parentheses_as_grouped_expression),
 }
 
 fn parentheses_as_grouped_expression(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {

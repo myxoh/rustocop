@@ -13,7 +13,7 @@ const YODA_EXPRESSION_MSG: &str = "Non-literal operand (`{source}`) should be fi
 
 define_cops!(
     MultilineMemoization => "Style/MultilineMemoization" => compatibility_source(multiline_memoization),
-    StaticClass => "Style/StaticClass" => node(as_class_node, static_class),
+    StaticClass => "Style/StaticClass" => compatibility_prism_node(as_class_node, static_class),
 );
 
 fn multiline_memoization(context: &mut CompatibilityCopContext<'_, '_, '_>) {

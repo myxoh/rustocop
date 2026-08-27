@@ -5,7 +5,7 @@ define_rule!(YamlFileReadRule);
 const YAML_FILE_READ_MSG: &str = "Use `{prefer}` instead.";
 
 define_cops! {
-    CircularArgumentReference => "Lint/CircularArgumentReference" => any_node(circular_argument_reference),
+    CircularArgumentReference => "Lint/CircularArgumentReference" => compatibility_prism_any_node(circular_argument_reference),
     NumberedParameterAssignment => "Lint/NumberedParameterAssignment" => recovered_node(as_local_variable_write_node, numbered_parameter_assignment),
 }
 

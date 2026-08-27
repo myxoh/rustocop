@@ -1,7 +1,7 @@
 use super::*;
 
 define_cops! {
-    HashAsLastArrayItem => "Style/HashAsLastArrayItem" => node(as_array_node, hash_as_last_array_item),
+    HashAsLastArrayItem => "Style/HashAsLastArrayItem" => compatibility_prism_node(as_array_node, hash_as_last_array_item),
 }
 
 fn hash_as_last_array_item(node: &ruby_prism::ArrayNode<'_>, context: &mut CopContext<'_, '_>) {

@@ -1,8 +1,8 @@
 use super::*;
 
 define_cops! {
-    BitwisePredicate => "Style/BitwisePredicate" => call(bitwise_predicate),
-    ComparableBetween => "Style/ComparableBetween" => node(as_and_node, comparable_between),
+    BitwisePredicate => "Style/BitwisePredicate" => compatibility_prism_call(bitwise_predicate),
+    ComparableBetween => "Style/ComparableBetween" => compatibility_prism_node(as_and_node, comparable_between),
 }
 
 fn min_max_comparison(node: &ruby_prism::IfNode<'_>, context: &mut CopContext<'_, '_>) {

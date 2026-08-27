@@ -2,10 +2,10 @@ use super::*;
 
 define_cops! {
     RequiredRubyVersion => "Gemspec/RequiredRubyVersion" => compatibility_source(required_ruby_version),
-    ClassStructure => "Layout/ClassStructure" => any_node(class_structure),
-    ModuleLength => "Metrics/ModuleLength" => any_node(module_length),
-    EmptyLineAfterMultilineCondition => "Layout/EmptyLineAfterMultilineCondition" => any_node(empty_after_multiline_condition),
-    DeprecatedOpenSSLConstant => "Lint/DeprecatedOpenSSLConstant" => call(deprecated_openssl),
+    ClassStructure => "Layout/ClassStructure" => compatibility_prism_any_node(class_structure),
+    ModuleLength => "Metrics/ModuleLength" => compatibility_prism_any_node(module_length),
+    EmptyLineAfterMultilineCondition => "Layout/EmptyLineAfterMultilineCondition" => compatibility_prism_any_node(empty_after_multiline_condition),
+    DeprecatedOpenSSLConstant => "Lint/DeprecatedOpenSSLConstant" => compatibility_prism_call(deprecated_openssl),
 }
 
 fn required_ruby_version(context: &mut CompatibilityCopContext<'_, '_, '_>) {

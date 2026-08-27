@@ -1,7 +1,7 @@
 use super::*;
 
 define_cops! {
-    EmptyMethod => "Style/EmptyMethod" => node(as_def_node, empty_method),
+    EmptyMethod => "Style/EmptyMethod" => compatibility_prism_node(as_def_node, empty_method),
 }
 
 fn empty_method(node: &ruby_prism::DefNode<'_>, context: &mut CopContext<'_, '_>) {

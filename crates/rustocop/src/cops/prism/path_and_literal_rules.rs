@@ -1,8 +1,8 @@
 use super::*;
 
 define_cops! {
-    ExpandPathArguments => "Style/ExpandPathArguments" => call(expand_path_arguments),
-    SlicingWithRange => "Style/SlicingWithRange" => call(slicing_with_range),
+    ExpandPathArguments => "Style/ExpandPathArguments" => compatibility_prism_call(expand_path_arguments),
+    SlicingWithRange => "Style/SlicingWithRange" => compatibility_prism_call(slicing_with_range),
 }
 
 fn slicing_with_range(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {

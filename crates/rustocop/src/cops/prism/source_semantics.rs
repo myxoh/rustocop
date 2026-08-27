@@ -9,8 +9,8 @@ use parameters::*;
 
 define_cops! {
     GemVersion => "Bundler/GemVersion" => compatibility_source(gem_version),
-    MultilineArrayLineBreaks => "Layout/MultilineArrayLineBreaks" => any_node(multiline_array_line_breaks),
-    ErbNewArguments => "Lint/ErbNewArguments" => call(erb_new_arguments),
+    MultilineArrayLineBreaks => "Layout/MultilineArrayLineBreaks" => compatibility_prism_any_node(multiline_array_line_breaks),
+    ErbNewArguments => "Lint/ErbNewArguments" => compatibility_prism_call(erb_new_arguments),
 }
 
 fn gem_version(context: &mut CompatibilityCopContext<'_, '_, '_>) {

@@ -1,7 +1,7 @@
 use super::*;
 
 define_cops! {
-    ItBlockParameter => "Style/ItBlockParameter" => any_node(it_block_parameter),
+    ItBlockParameter => "Style/ItBlockParameter" => compatibility_prism_any_node(it_block_parameter),
 }
 
 fn it_block_parameter(node: &Node<'_>, context: &mut CopContext<'_, '_>) {

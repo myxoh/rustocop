@@ -1,7 +1,7 @@
 use super::*;
 
 define_cops! {
-    UselessRuby2Keywords => "Lint/UselessRuby2Keywords" => call(useless_ruby2_keywords),
+    UselessRuby2Keywords => "Lint/UselessRuby2Keywords" => compatibility_prism_call(useless_ruby2_keywords),
 }
 
 fn useless_ruby2_keywords(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {

@@ -1,7 +1,7 @@
 use super::*;
 
 define_cops! {
-    MixinGrouping => "Style/MixinGrouping" => any_node(mixin_grouping),
+    MixinGrouping => "Style/MixinGrouping" => compatibility_prism_any_node(mixin_grouping),
 }
 
 struct MixinCall<'pr> {

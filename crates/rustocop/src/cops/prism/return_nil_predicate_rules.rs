@@ -7,7 +7,7 @@ define_rule!(ReturnNilInPredicateMethodDefinitionRule);
 const MSG: &str = "Return `false` instead of `nil` in predicate methods.";
 
 define_cops! {
-    ReturnNilInPredicateMethodDefinition => "Style/ReturnNilInPredicateMethodDefinition" => node_rule(as_def_node, ReturnNilInPredicateMethodDefinitionRule, on_def),
+    ReturnNilInPredicateMethodDefinition => "Style/ReturnNilInPredicateMethodDefinition" => compatibility_prism_node_rule(as_def_node, ReturnNilInPredicateMethodDefinitionRule, on_def),
 }
 
 impl ReturnNilInPredicateMethodDefinitionRule<'_, '_, '_> {

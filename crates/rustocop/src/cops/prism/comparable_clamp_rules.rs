@@ -1,7 +1,7 @@
 use super::*;
 
 define_cops! {
-    ComparableClamp => "Style/ComparableClamp" => any_node(comparable_clamp),
+    ComparableClamp => "Style/ComparableClamp" => compatibility_prism_any_node(comparable_clamp),
 }
 
 fn comparable_clamp(node: &Node<'_>, context: &mut CopContext<'_, '_>) {

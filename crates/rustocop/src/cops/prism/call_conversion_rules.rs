@@ -1,8 +1,8 @@
 use super::*;
 
 define_cops! {
-    SendWithMixinArgument => "Lint/SendWithMixinArgument" => call(send_with_mixin_argument),
-    LambdaCall => "Style/LambdaCall" => call(lambda_call),
+    SendWithMixinArgument => "Lint/SendWithMixinArgument" => compatibility_prism_call(send_with_mixin_argument),
+    LambdaCall => "Style/LambdaCall" => compatibility_prism_call(lambda_call),
 }
 
 fn object_then(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {

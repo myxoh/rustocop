@@ -1,8 +1,8 @@
 use super::*;
 
 define_cops! {
-    SpaceAroundEqualsInParameterDefault => "Layout/SpaceAroundEqualsInParameterDefault" => node(as_optional_parameter_node, space_around_parameter_equals),
-    SpaceInLambdaLiteral => "Layout/SpaceInLambdaLiteral" => node(as_lambda_node, space_in_lambda_literal),
+    SpaceAroundEqualsInParameterDefault => "Layout/SpaceAroundEqualsInParameterDefault" => compatibility_prism_node(as_optional_parameter_node, space_around_parameter_equals),
+    SpaceInLambdaLiteral => "Layout/SpaceInLambdaLiteral" => compatibility_prism_node(as_lambda_node, space_in_lambda_literal),
     SpaceInsideRangeLiteralCompatibility => "Layout/SpaceInsideRangeLiteral" => compatibility_callbacks(SpaceInsideRangeLiteralCompatibilityRule, [on_irange, on_erange]),
 }
 

@@ -3,7 +3,7 @@ use ruby_prism::{BlockNode, CallNode, Node};
 use super::*;
 
 define_cops! {
-    SymbolProc => "Style/SymbolProc" => any_node(symbol_proc),
+    SymbolProc => "Style/SymbolProc" => compatibility_prism_any_node(symbol_proc),
 }
 
 fn symbol_proc(node: &Node<'_>, context: &mut CopContext<'_, '_>) {

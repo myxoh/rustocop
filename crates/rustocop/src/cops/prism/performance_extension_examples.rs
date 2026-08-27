@@ -1,11 +1,11 @@
 use super::*;
 
 define_cops! {
-    RedundantSortBlock => "Performance/RedundantSortBlock" => node(as_block_node, redundant_sort_block),
-    ReverseEach => "Performance/ReverseEach" => call(reverse_each),
-    ReverseFirst => "Performance/ReverseFirst" => call(reverse_first),
-    Size => "Performance/Size" => call(size),
-    StringBytesize => "Performance/StringBytesize" => call(string_bytesize),
+    RedundantSortBlock => "Performance/RedundantSortBlock" => compatibility_prism_node(as_block_node, redundant_sort_block),
+    ReverseEach => "Performance/ReverseEach" => compatibility_prism_call(reverse_each),
+    ReverseFirst => "Performance/ReverseFirst" => compatibility_prism_call(reverse_first),
+    Size => "Performance/Size" => compatibility_prism_call(size),
+    StringBytesize => "Performance/StringBytesize" => compatibility_prism_call(string_bytesize),
 }
 
 fn reverse_first(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {

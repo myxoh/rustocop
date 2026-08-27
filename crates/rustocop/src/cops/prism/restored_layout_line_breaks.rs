@@ -1,9 +1,9 @@
 use super::*;
 
 define_cops! {
-    FirstArrayElementLineBreak => "Layout/FirstArrayElementLineBreak" => node(as_array_node, first_array_element_line_break),
-    FirstHashElementLineBreak => "Layout/FirstHashElementLineBreak" => node(as_hash_node, first_hash_element_line_break),
-    FirstMethodArgumentLineBreak => "Layout/FirstMethodArgumentLineBreak" => any_node(first_method_argument_line_break),
+    FirstArrayElementLineBreak => "Layout/FirstArrayElementLineBreak" => compatibility_prism_node(as_array_node, first_array_element_line_break),
+    FirstHashElementLineBreak => "Layout/FirstHashElementLineBreak" => compatibility_prism_node(as_hash_node, first_hash_element_line_break),
+    FirstMethodArgumentLineBreak => "Layout/FirstMethodArgumentLineBreak" => compatibility_prism_any_node(first_method_argument_line_break),
 }
 
 fn first_array_element_line_break(

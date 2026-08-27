@@ -251,16 +251,22 @@ macro_rules! define_cop_entry {
     ($type:ident => $name:literal => recovered_node($cast:ident, $check:path)) => {
         define_node_cop!($type => $name => recovered $cast => $check);
     };
-    ($type:ident => $name:literal => call($check:path)) => {
+    ($type:ident => $name:literal => compatibility_prism_call($check:path)) => {
         define_call_cop!($type => $name => $check);
     };
-    ($type:ident => $name:literal => node($cast:ident, $check:path)) => {
+    ($type:ident => $name:literal => compatibility_prism_call($check:path)) => {
+        define_call_cop!($type => $name => $check);
+    };
+    ($type:ident => $name:literal => compatibility_prism_node($cast:ident, $check:path)) => {
         define_node_cop!($type => $name => $cast => $check);
     };
-    ($type:ident => $name:literal => call_rule($rule:ident, $callback:ident)) => {
+    ($type:ident => $name:literal => compatibility_prism_node($cast:ident, $check:path)) => {
+        define_node_cop!($type => $name => $cast => $check);
+    };
+    ($type:ident => $name:literal => compatibility_prism_call_rule($rule:ident, $callback:ident)) => {
         define_call_rule_cop!($type => $name => $rule::$callback);
     };
-    ($type:ident => $name:literal => call_rule($rule:ident, $callback:ident, restrict [$($method:literal),+ $(,)?])) => {
+    ($type:ident => $name:literal => compatibility_prism_call_rule($rule:ident, $callback:ident, restrict [$($method:literal),+ $(,)?])) => {
         define_call_rule_cop!($type => $name => $rule::$callback restrict [$($method),+]);
     };
     ($type:ident => $name:literal => compatibility_prism_call_rule($rule:ident, $callback:ident)) => {
@@ -269,19 +275,31 @@ macro_rules! define_cop_entry {
     ($type:ident => $name:literal => compatibility_prism_call_rule($rule:ident, $callback:ident, restrict [$($method:literal),+ $(,)?])) => {
         define_call_rule_cop!($type => $name => $rule::$callback restrict [$($method),+]);
     };
-    ($type:ident => $name:literal => stateful_call_rule($rule:ident, $state:ident, $callback:ident, restrict [$($method:literal),+ $(,)?])) => {
+    ($type:ident => $name:literal => compatibility_prism_stateful_call_rule($rule:ident, $state:ident, $callback:ident, restrict [$($method:literal),+ $(,)?])) => {
         define_stateful_call_rule_cop!($type => $name => $rule<$state>::$callback restrict [$($method),+]);
     };
-    ($type:ident => $name:literal => node_rule($cast:ident, $rule:ident, $callback:ident)) => {
+    ($type:ident => $name:literal => compatibility_prism_stateful_call_rule($rule:ident, $state:ident, $callback:ident, restrict [$($method:literal),+ $(,)?])) => {
+        define_stateful_call_rule_cop!($type => $name => $rule<$state>::$callback restrict [$($method),+]);
+    };
+    ($type:ident => $name:literal => compatibility_prism_node_rule($cast:ident, $rule:ident, $callback:ident)) => {
         define_node_rule_cop!($type => $name => $cast => $rule::$callback);
     };
-    ($type:ident => $name:literal => stateful_node_rule($cast:ident, $rule:ident, $state:ident, $callback:ident)) => {
+    ($type:ident => $name:literal => compatibility_prism_node_rule($cast:ident, $rule:ident, $callback:ident)) => {
+        define_node_rule_cop!($type => $name => $cast => $rule::$callback);
+    };
+    ($type:ident => $name:literal => compatibility_prism_stateful_node_rule($cast:ident, $rule:ident, $state:ident, $callback:ident)) => {
+        define_stateful_node_rule_cop!($type => $name => $cast => $rule<$state>::$callback);
+    };
+    ($type:ident => $name:literal => compatibility_prism_stateful_node_rule($cast:ident, $rule:ident, $state:ident, $callback:ident)) => {
         define_stateful_node_rule_cop!($type => $name => $cast => $rule<$state>::$callback);
     };
     ($type:ident => $name:literal => any_node_rule($rule:ident, $callback:ident)) => {
         define_any_node_rule_cop!($type => $name => $rule::$callback);
     };
-    ($type:ident => $name:literal => node_rule_aliases($rule:ident, $callback:ident => [$($cast:ident),+ $(,)?])) => {
+    ($type:ident => $name:literal => compatibility_prism_node_rule_aliases($rule:ident, $callback:ident => [$($cast:ident),+ $(,)?])) => {
+        define_any_node_rule_cop!($type => $name => $rule::$callback aliases [$($cast),+]);
+    };
+    ($type:ident => $name:literal => compatibility_prism_node_rule_aliases($rule:ident, $callback:ident => [$($cast:ident),+ $(,)?])) => {
         define_any_node_rule_cop!($type => $name => $rule::$callback aliases [$($cast),+]);
     };
     ($type:ident => $name:literal => rubocop_callbacks($rule:ident, [on_send restrict [$($method:literal),+ $(,)?]])) => {
@@ -324,10 +342,16 @@ macro_rules! define_cop_entry {
         define_stateful_rule!($rule, $state);
         define_stateful_rubocop_callback_rule_cop!($type => $name => $rule<$state> [$($callback),+]);
     };
-    ($type:ident => $name:literal => any_node($check:path)) => {
+    ($type:ident => $name:literal => compatibility_prism_any_node($check:path)) => {
         define_any_node_cop!($type => $name => $check);
     };
-    ($type:ident => $name:literal => parse_error_and_source($parse:path, $source:path)) => {
+    ($type:ident => $name:literal => compatibility_prism_any_node($check:path)) => {
+        define_any_node_cop!($type => $name => $check);
+    };
+    ($type:ident => $name:literal => compatibility_prism_parse_error_and_source($parse:path, $source:path)) => {
+        define_parse_error_and_source_cop!($type => $name => $parse, $source);
+    };
+    ($type:ident => $name:literal => compatibility_prism_parse_error_and_source($parse:path, $source:path)) => {
         define_parse_error_and_source_cop!($type => $name => $parse, $source);
     };
 }

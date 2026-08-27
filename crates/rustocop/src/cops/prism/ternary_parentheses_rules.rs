@@ -1,7 +1,7 @@
 use super::*;
 
 define_cops! {
-    TernaryParentheses => "Style/TernaryParentheses" => node(as_if_node, ternary_parentheses),
+    TernaryParentheses => "Style/TernaryParentheses" => compatibility_prism_node(as_if_node, ternary_parentheses),
 }
 
 fn ternary_parentheses(node: &ruby_prism::IfNode<'_>, context: &mut CopContext<'_, '_>) {

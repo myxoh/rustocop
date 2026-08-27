@@ -1,7 +1,7 @@
 use super::*;
 
 define_cops! {
-    ClassEqualityComparison => "Style/ClassEqualityComparison" => call(class_equality_comparison),
+    ClassEqualityComparison => "Style/ClassEqualityComparison" => compatibility_prism_call(class_equality_comparison),
 }
 
 fn class_equality_comparison(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {

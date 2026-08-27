@@ -1,7 +1,7 @@
 use super::*;
 
 define_cops! {
-    EmptyElse => "Style/EmptyElse" => any_node(empty_else),
+    EmptyElse => "Style/EmptyElse" => compatibility_prism_any_node(empty_else),
 }
 
 fn empty_else(node: &Node<'_>, context: &mut CopContext<'_, '_>) {

@@ -8,7 +8,7 @@ const MSG: &str = "Redundant `return` detected.";
 const MULTI_RETURN_MSG: &str = "To return multiple values, use an array.";
 
 define_cops! {
-    RedundantReturn => "Style/RedundantReturn" => node_rule_aliases(RedundantReturnRule, on_scope => [as_def_node, as_call_node, as_lambda_node]),
+    RedundantReturn => "Style/RedundantReturn" => compatibility_prism_node_rule_aliases(RedundantReturnRule, on_scope => [as_def_node, as_call_node, as_lambda_node]),
 }
 
 impl RedundantReturnRule<'_, '_, '_> {

@@ -1,7 +1,7 @@
 use super::*;
 
 define_cops! {
-    CollectionQuerying => "Style/CollectionQuerying" => call(collection_querying),
+    CollectionQuerying => "Style/CollectionQuerying" => compatibility_prism_call(collection_querying),
 }
 
 fn collection_querying(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {

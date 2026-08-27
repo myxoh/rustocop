@@ -1,7 +1,7 @@
 use super::*;
 
 define_cops! {
-    UnlessLogicalOperators => "Style/UnlessLogicalOperators" => node(as_unless_node, unless_logical_operators),
+    UnlessLogicalOperators => "Style/UnlessLogicalOperators" => compatibility_prism_node(as_unless_node, unless_logical_operators),
 }
 
 fn multiple_comparison(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {

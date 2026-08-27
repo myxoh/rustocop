@@ -45,9 +45,10 @@ The pinned source-shaped implementation audit is complete:
 - Every source and spec entry records its upstream SHA-256 in
   `crates/rustocop/rubocop-translation.json`.
 
-These figures describe the shared compatibility layer only. They do not claim
-that all 606 cop implementations consume the layer, or that those cops have
-full fixture or real-project parity. Cop migration is a separate phase.
+These figures describe the shared compatibility layer itself. The separate cop
+migration audit is now complete for all 606 built-in cops, as recorded below;
+that structural result does not turn a dormant project result into behavioral
+evidence, so fixture and project classifications remain independently visible.
 
 ## Production adoption
 
@@ -186,6 +187,31 @@ timestamp and now reports `148/606` audited and migrated cops. Each of these
 rows retains the pinned RuboCop source hash, effective callbacks, native source
 path, fixture/project evidence, structural classification, and documented
 parser adaptation.
+
+As of `2026-08-27T06:17:39-04:00`, the source-shaped migration audit is
+complete: the machine-readable ledger reports `606/606` built-in cops audited
+and migrated. The final 238-cop pass moved 171 homogeneous rule registrations
+onto explicit compatibility-Prism DSL forms and records the remaining 67
+stateful, multi-callback, source-wide, or text-engine adapters in a checked
+implementation map. The generator rejects an adapter whose registered source
+file moves, so bespoke dispatch cannot silently retain a stale audit claim.
+
+The final 238-cop migration pass was first checked against all 50 pinned
+projects in cohorts of at most 50: 228 cops were `project_exact`, 10 were
+dormant, and none mismatched. A subsequent canonical 606-cop audit found two
+previously hidden edge cases in the already-audited corpus. Both are now
+isolated in provenance-backed unit fixtures: `Naming/HeredocDelimiterNaming`
+ignores blank-heredoc-looking bytes inside comments and heredoc bodies, and
+`Style/RedundantRegexpCharacterClass` handles single escape classes inside
+multiline interpolated free-spacing regexps. The exhaustive focused rerun of
+those two cops is exact across all 50 projects.
+
+The refreshed canonical project evidence contains no mismatching built-in
+cops: all 531 cops exercised by RuboCop are `project_exact`, and the remaining
+75 are dormant on this fixed corpus. The completed tree passes all 29,608
+cached unit contracts in 2.880 seconds. The earlier migration gates also found
+and fixed contract boundaries in `Layout/IndentationWidth` and
+`Style/Semicolon`; their minimized regressions remain in the unit corpus.
 
 ## Translation rules
 

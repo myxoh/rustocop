@@ -1,8 +1,8 @@
 use super::*;
 
 define_cops! {
-    RedundantEach => "Style/RedundantEach" => call(redundant_each),
-    UselessTimes => "Lint/UselessTimes" => call(useless_times),
+    RedundantEach => "Style/RedundantEach" => compatibility_prism_call(redundant_each),
+    UselessTimes => "Lint/UselessTimes" => compatibility_prism_call(useless_times),
 }
 
 fn redundant_each(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {

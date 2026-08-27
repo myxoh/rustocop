@@ -1,7 +1,7 @@
 use super::*;
 
 define_cops! {
-    NestedPercentLiteral => "Lint/NestedPercentLiteral" => node(as_array_node, nested_percent_literal),
+    NestedPercentLiteral => "Lint/NestedPercentLiteral" => compatibility_prism_node(as_array_node, nested_percent_literal),
 }
 
 fn numeric_literal_prefix(node: &Node<'_>, context: &mut CopContext<'_, '_>) {

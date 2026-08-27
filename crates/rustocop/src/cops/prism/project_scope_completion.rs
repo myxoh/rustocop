@@ -11,10 +11,10 @@ define_cops! {
     DevelopmentDependencies => "Gemspec/DevelopmentDependencies" => compatibility_source(development_dependencies),
     DeprecatedAttributeAssignment => "Gemspec/DeprecatedAttributeAssignment" => compatibility_source(deprecated_gemspec_attribute),
     DuplicateMatchPattern => "Lint/DuplicateMatchPattern" => compatibility_prism_callbacks(DuplicateMatchPatternRule, [on_case_match]),
-    ConstantName => "Naming/ConstantName" => any_node(constant_name),
+    ConstantName => "Naming/ConstantName" => compatibility_prism_any_node(constant_name),
     ConstantVisibility => "Style/ConstantVisibility" => compatibility_source(constant_visibility),
-    RedundantSelfAssignment => "Style/RedundantSelfAssignment" => any_node(scope_rules::redundant_self_assignment),
-    TopLevelMethodDefinition => "Style/TopLevelMethodDefinition" => any_node(top_level_method_definition),
+    RedundantSelfAssignment => "Style/RedundantSelfAssignment" => compatibility_prism_any_node(scope_rules::redundant_self_assignment),
+    TopLevelMethodDefinition => "Style/TopLevelMethodDefinition" => compatibility_prism_any_node(top_level_method_definition),
 }
 
 fn top_level_method_definition(node: &Node<'_>, context: &mut CopContext<'_, '_>) {

@@ -1,7 +1,7 @@
 use super::*;
 
 define_cops! {
-    SendWithLiteralMethodName => "Style/SendWithLiteralMethodName" => call(send_with_literal_method_name),
+    SendWithLiteralMethodName => "Style/SendWithLiteralMethodName" => compatibility_prism_call(send_with_literal_method_name),
 }
 
 fn send_with_literal_method_name(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {

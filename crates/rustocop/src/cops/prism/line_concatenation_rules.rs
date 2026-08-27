@@ -1,7 +1,7 @@
 use super::*;
 
 define_cops! {
-    LineEndConcatenation => "Style/LineEndConcatenation" => call(line_end_concatenation),
+    LineEndConcatenation => "Style/LineEndConcatenation" => compatibility_prism_call(line_end_concatenation),
 }
 
 fn line_end_concatenation(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {

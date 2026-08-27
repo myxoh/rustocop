@@ -6,7 +6,7 @@ define_compatibility_rule!(EmptyWhenRule);
 
 define_cops!(
     EmptyWhen => "Lint/EmptyWhen" => compatibility_callbacks(EmptyWhenRule, [on_case]),
-    ElseLayout => "Lint/ElseLayout" => node(as_else_node, else_layout),
+    ElseLayout => "Lint/ElseLayout" => compatibility_prism_node(as_else_node, else_layout),
 );
 
 impl EmptyWhenRule<'_, '_, '_, '_> {

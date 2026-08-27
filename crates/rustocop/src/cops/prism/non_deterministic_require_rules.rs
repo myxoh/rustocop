@@ -1,7 +1,7 @@
 use super::*;
 
 define_cops! {
-    NonDeterministicRequireOrder => "Lint/NonDeterministicRequireOrder" => call(non_deterministic_require_order),
+    NonDeterministicRequireOrder => "Lint/NonDeterministicRequireOrder" => compatibility_prism_call(non_deterministic_require_order),
 }
 
 const MESSAGE: &str = "Sort files before requiring them.";

@@ -1,7 +1,7 @@
 use super::*;
 
 define_cops! {
-    SwapValues => "Style/SwapValues" => node(as_statements_node, swap_values),
+    SwapValues => "Style/SwapValues" => compatibility_prism_node(as_statements_node, swap_values),
 }
 
 struct SimpleAssignment<'pr> {

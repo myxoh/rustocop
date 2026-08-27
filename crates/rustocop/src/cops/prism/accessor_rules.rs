@@ -1,7 +1,7 @@
 use super::*;
 
 define_cops! {
-    BisectedAttrAccessor => "Style/BisectedAttrAccessor" => any_node(bisected_attr_accessor),
+    BisectedAttrAccessor => "Style/BisectedAttrAccessor" => compatibility_prism_any_node(bisected_attr_accessor),
 }
 
 struct Accessor<'pr> {

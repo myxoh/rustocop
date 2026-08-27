@@ -1,8 +1,8 @@
 use super::*;
 
 define_cops! {
-    PercentStringArray => "Lint/PercentStringArray" => node(as_array_node, percent_string_array),
-    RedundantPercentQ => "Style/RedundantPercentQ" => any_node(redundant_percent_q),
+    PercentStringArray => "Lint/PercentStringArray" => compatibility_prism_node(as_array_node, percent_string_array),
+    RedundantPercentQ => "Style/RedundantPercentQ" => compatibility_prism_any_node(redundant_percent_q),
 }
 
 fn percent_symbol_array(node: &ruby_prism::ArrayNode<'_>, context: &mut CopContext<'_, '_>) {

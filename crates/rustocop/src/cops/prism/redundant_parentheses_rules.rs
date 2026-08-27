@@ -5,7 +5,7 @@ use super::*;
 define_rule!(RedundantParenthesesRule);
 
 define_cops! {
-    RedundantParentheses => "Style/RedundantParentheses" => node_rule_aliases(
+    RedundantParentheses => "Style/RedundantParentheses" => compatibility_prism_node_rule_aliases(
         RedundantParenthesesRule,
         on_begin => [as_parentheses_node, as_pinned_expression_node]
     ),

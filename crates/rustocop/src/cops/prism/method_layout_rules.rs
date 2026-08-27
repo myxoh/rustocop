@@ -3,7 +3,7 @@ use ruby_prism::DefNode;
 use super::*;
 
 define_cops! {
-    SingleLineMethods => "Style/SingleLineMethods" => node(as_def_node, single_line_methods),
+    SingleLineMethods => "Style/SingleLineMethods" => compatibility_prism_node(as_def_node, single_line_methods),
 }
 
 fn trailing_method_end_statement(node: &DefNode<'_>, context: &mut CopContext<'_, '_>) {
