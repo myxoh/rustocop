@@ -83,19 +83,6 @@ fn nested_percent_literal(node: &ruby_prism::ArrayNode<'_>, context: &mut CopCon
     }
 }
 
-fn rescue_exception(node: &ruby_prism::RescueNode<'_>, context: &mut CopContext<'_, '_>) {
-    if node
-        .exceptions()
-        .iter()
-        .any(|exception| node_is_root_constant(&exception, b"Exception"))
-    {
-        context.report(
-            "Avoid rescuing the `Exception` class. Perhaps you meant to rescue `StandardError`?",
-            node.location(),
-        );
-    }
-}
-
 fn open_struct_use(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
     if !node_is_root_constant(node, b"OpenStruct") {
         return;

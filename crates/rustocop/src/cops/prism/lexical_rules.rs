@@ -43,22 +43,6 @@ fn ensure_return(node: &ruby_prism::BeginNode<'_>, context: &mut CopContext<'_, 
     }
 }
 
-fn colon_method_definition(node: &ruby_prism::DefNode<'_>, context: &mut CopContext<'_, '_>) {
-    let Some(operator) = node
-        .operator_loc()
-        .filter(|operator| operator.as_slice() == b"::")
-    else {
-        return;
-    };
-    let range = operator.start_offset()..operator.end_offset();
-    context.replace(
-        "Do not use `::` for defining class methods.",
-        range.clone(),
-        range,
-        ".",
-    );
-}
-
 fn big_decimal_new(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     if node.name().as_slice() != b"new" {
         return;
@@ -211,29 +195,6 @@ fn duplicate_magic_comment(context: &mut CopContext<'_, '_>) {
             start..edit_end,
         );
     }
-}
-
-fn empty_interpolation(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
-    let Some(interpolation) = node.as_embedded_statements_node() else {
-        return;
-    };
-    let source = context.source();
-    let range = interpolation.location().start_offset()..interpolation.location().end_offset();
-    let Some(inner) = source.get(range.start + 2..range.end.saturating_sub(1)) else {
-        return;
-    };
-    if matches!(inner.trim(), "" | "''" | "\"\"" | "nil") && !inside_percent_word_array(context) {
-        context.remove("Empty interpolation detected.", range.clone(), range);
-    }
-}
-
-fn inside_percent_word_array(context: &CopContext<'_, '_>) -> bool {
-    context.ancestors().iter().rev().any(|ancestor| {
-        ancestor
-            .as_array_node()
-            .and_then(|array| array.opening_loc())
-            .is_some_and(|opening| matches!(opening.as_slice(), b"%W[" | b"%I["))
-    })
 }
 
 fn require_range_parentheses(node: &ruby_prism::RangeNode<'_>, context: &mut CopContext<'_, '_>) {

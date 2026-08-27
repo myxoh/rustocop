@@ -46,6 +46,7 @@ impl<'call, 'pr> CallMatcher<'call, 'pr> {
         self
     }
 
+    #[allow(dead_code)] // Kept as part of the translated matcher contract and exercised in its unit tests.
     pub(super) fn without_receiver(mut self) -> Self {
         self.matches &= self.call.receiver().is_none();
         self
@@ -235,12 +236,6 @@ pub(super) fn constant_read(receiver: Option<Node<'_>>, expected: &[u8]) -> bool
     receiver
         .and_then(|node| node.as_constant_read_node())
         .is_some_and(|constant| constant.name().as_slice() == expected)
-}
-
-pub(super) fn marshal_dump(node: &Node<'_>) -> bool {
-    node.as_call_node().is_some_and(|call| {
-        call_name(&call) == b"dump" && root_constant(call.receiver(), b"Marshal")
-    })
 }
 
 pub(super) fn has_keyword(node: &CallNode<'_>, expected: &[u8]) -> bool {

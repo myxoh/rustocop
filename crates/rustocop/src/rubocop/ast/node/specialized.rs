@@ -269,6 +269,32 @@ impl<'ast> NodeRef<'ast> {
             _ => None,
         }
     }
+
+    /// Prism's constant-path `||=` node traverses through a call-shaped
+    /// target, while Parser exposes a `casgn` lhs. Preserve the Parser query
+    /// used by cops until the synthetic lhs can carry the complete namespace.
+    pub(crate) fn constant_assignment_lhs(self) -> bool {
+        if self.lhs().is_some_and(|lhs| lhs.kind() == "casgn") {
+            return true;
+        }
+        if !matches!(self.kind(), "or_asgn" | "and_asgn" | "op_asgn") {
+            return false;
+        }
+        let lhs = self
+            .source()
+            .and_then(|source| source.split_once('=').map(|(lhs, _)| lhs))
+            .unwrap_or_default()
+            .trim_end_matches(['|', '&', '+', '-', '*', '/', '%', '^'])
+            .trim();
+        !lhs.is_empty()
+            && lhs.split("::").filter(|part| !part.is_empty()).all(|part| {
+                part.chars().next().is_some_and(char::is_uppercase)
+                    && part
+                        .chars()
+                        .all(|character| character == '_' || character.is_ascii_alphanumeric())
+            })
+            && !lhs.contains(['[', ']', '.', '(', ')'])
+    }
     pub(crate) fn expression(self) -> Option<Self> {
         match self.kind() {
             "casgn" => self.node_child(2),

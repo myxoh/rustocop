@@ -53,15 +53,11 @@ fn literal_source(node: NodeRef<'_>) -> &str {
 define_compatibility_rule!(SpaceBeforeCommentRule);
 impl SpaceBeforeCommentRule<'_, '_, '_, '_> {
     fn on_new_investigation(&mut self) {
-        for pair in self.processed_source().sorted_tokens().windows(2) {
-            let (token1, token2) = (pair[0], pair[1]);
-            if !token2.comment()
-                || token1.line != token2.line
-                || token1.end_pos() != token2.begin_pos()
-            {
+        for comment in self.processed_source().comments() {
+            if !self.comment_immediately_follows_code(comment) {
                 continue;
             }
-            let offense = self.owned_character_range(token2.range.clone());
+            let offense = self.owned_character_range(comment.range.clone());
             add_offense!(self, offense.clone(), message: "Put a space before an end-of-line comment.", |corrector| {
                 corrector.insert_before(offense, " ");
             });
@@ -164,9 +160,13 @@ impl UnifiedIntegerRule<'_, '_, '_, '_> {
         let message = format!("Use `Integer` instead of `{klass}`.");
         if let Some(name) = self.location_range(node, "name") {
             let correct = self.target_ruby_version().at_least(2, 4);
-            add_offense!(self, node, message: message, |corrector| {
-                if correct { corrector.replace(name, "Integer"); }
-            });
+            if correct {
+                add_offense!(self, node, message: message, |corrector| {
+                    corrector.replace(name, "Integer");
+                });
+            } else {
+                self.report(message, node);
+            }
         }
     }
 }
@@ -174,12 +174,16 @@ impl UnifiedIntegerRule<'_, '_, '_, '_> {
 define_compatibility_rule!(OrAssignmentToConstantRule);
 impl OrAssignmentToConstantRule<'_, '_, '_, '_> {
     fn on_or_asgn(&mut self, node: NodeRef<'_>) {
-        if node.lhs().is_none_or(|lhs| lhs.kind() != "casgn") { return; }
+        if !node.constant_assignment_lhs() { return; }
         let Some(operator) = self.location_range(node, "operator") else { return; };
         let in_method = node.each_ancestor(&["def", "defs"]).into_iter().next().is_some();
-        add_offense!(self, operator, message: "Avoid using or-assignment with constants.", |corrector| {
-            if !in_method { corrector.replace(operator, "="); }
-        });
+        if in_method {
+            self.report("Avoid using or-assignment with constants.", operator);
+        } else {
+            add_offense!(self, operator, message: "Avoid using or-assignment with constants.", |corrector| {
+                corrector.replace(operator, "=");
+            });
+        }
     }
 }
 
@@ -396,6 +400,12 @@ define_compatibility_rule!(UnlessElseRule);
 impl UnlessElseRule<'_, '_, '_, '_> {
     fn on_if(&mut self, node: NodeRef<'_>) {
         if !node.unless_keyword() || !node.has_else() { return; }
+        let nested_in_ignored_node = node.each_ancestor(&["if"]).into_iter()
+            .any(|ancestor| ancestor.unless_keyword() && ancestor.has_else());
+        if nested_in_ignored_node {
+            self.report("Do not use `unless` with `else`. Rewrite these with the positive case first.", node);
+            return;
+        }
         let (Some(keyword), Some(else_keyword), Some(end_keyword), Some(condition)) = (
             self.location_range(node, "keyword"), self.location_range(node, "else"), self.location_range(node, "end"), node.condition()
         ) else { return; };

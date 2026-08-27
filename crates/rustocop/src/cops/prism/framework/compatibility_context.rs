@@ -102,23 +102,7 @@ impl CompatibilityCorrector<'_, '_> {
         }
     }
 
-    pub(super) fn wrap(
-        &mut self,
-        range: impl CompatibilityRange,
-        prefix: impl Into<String>,
-        suffix: impl Into<String>,
-    ) {
-        if let Some(range) = range.byte_range(self.buffer) {
-            self.plan.replace(range.start..range.start, prefix);
-            self.plan.replace(range.end..range.end, suffix);
-        }
-    }
-
-    pub(super) fn swap(
-        &mut self,
-        left: impl CompatibilityRange,
-        right: impl CompatibilityRange,
-    ) {
+    pub(super) fn swap(&mut self, left: impl CompatibilityRange, right: impl CompatibilityRange) {
         let Some(left) = left.byte_range(self.buffer) else {
             return;
         };
@@ -177,20 +161,33 @@ impl<'context, 'processed, 'source> CompatibilityCopContext<'context, 'processed
         })
     }
 
-    pub(super) fn location_source<'node>(
+    pub(super) fn range_between(
         &self,
-        node: NodeRef<'node>,
-        name: &str,
-    ) -> Option<&'node str> {
-        node.loc(name).map(|(_, source)| source.as_str())
-    }
-
-    pub(super) fn range_between(&self, begin_pos: usize, end_pos: usize) -> CompatibilitySourceRange {
+        begin_pos: usize,
+        end_pos: usize,
+    ) -> CompatibilitySourceRange {
         CompatibilitySourceRange { begin_pos, end_pos }
     }
 
     pub(super) fn range_source(&self, range: &CompatibilitySourceRange) -> &'source str {
         self.buffer.slice(range.character_range())
+    }
+
+    /// RuboCop asks whether the token immediately before a comment ends at
+    /// the comment's beginning. Prism gives us authoritative comment ranges,
+    /// but our intentionally small compatibility lexer can omit an earlier
+    /// token after syntax it does not model. At a comment boundary this is
+    /// equivalent to checking the preceding source character for whitespace.
+    pub(super) fn comment_immediately_follows_code(
+        &self,
+        comment: &crate::rubocop::ast::processed_source::SourceComment,
+    ) -> bool {
+        let begin = comment.range.start;
+        begin > 0
+            && !self
+                .range_source(&self.range_between(begin - 1, begin))
+                .chars()
+                .all(char::is_whitespace)
     }
 
     pub(super) fn owned_range(&self, range: SourceRange<'_, '_>) -> CompatibilitySourceRange {

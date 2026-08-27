@@ -306,7 +306,25 @@ impl<'source> ProcessedSource<'source> {
         let data_start = parsed.data_loc().map(|location| location.start_offset());
         let lines = source_lines(source, data_start);
         let tokens = if valid_syntax {
-            lex(source, data_start, &positions)
+            let mut tokens = lex(source, data_start, &positions);
+            // The lightweight lexer intentionally does not reproduce every
+            // regexp/interpolation state. Prism's comment list is
+            // authoritative: discard the lexer's guesses and add exactly the
+            // comments Prism found. This prevents both false comments inside
+            // literals and missed comments after the lightweight lexer has
+            // become desynchronized by syntax it does not model.
+            tokens.retain(|token| !token.comment());
+            tokens.extend(parsed.comments().map(|comment| {
+                let byte_range = comment.location().start_offset()..comment.location().end_offset();
+                SourceToken {
+                    kind: "tCOMMENT",
+                    text: String::from_utf8_lossy(comment.text()).into_owned(),
+                    range: positions.character_range(byte_range.clone()),
+                    line: positions.line_for_byte(byte_range.start),
+                    column: positions.column_for_byte(byte_range.start),
+                }
+            }));
+            tokens
         } else {
             Vec::new()
         };
@@ -978,4 +996,26 @@ pub(crate) fn sha1_hex(bytes: &[u8]) -> String {
         h[4] = h[4].wrapping_add(e);
     }
     h.iter().map(|word| format!("{word:08x}")).collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn sorted_tokens_use_prism_as_the_authority_for_comments() {
+        // The deliberately small lexer can mistake the apostrophe in this
+        // regexp for the start of a quoted string. A later real comment must
+        // still be present, while the `#` inside the regexp must not be.
+        let source = "/don't#comment/\ncall# real comment\n";
+        let processed = ProcessedSource::new(source, 3.3, None, ParserEngine::Prism).unwrap();
+        let comments: Vec<_> = processed
+            .sorted_tokens()
+            .into_iter()
+            .filter(|token| token.comment())
+            .map(|token| token.text.as_str())
+            .collect();
+
+        assert_eq!(comments, ["# real comment"]);
+    }
 }

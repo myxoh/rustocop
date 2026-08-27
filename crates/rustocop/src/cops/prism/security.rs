@@ -208,46 +208,6 @@ impl Cop for JsonLoad {
     }
 }
 
-struct MarshalLoad;
-
-impl Cop for MarshalLoad {
-    fn name(&self) -> &'static str {
-        "Security/MarshalLoad"
-    }
-
-    fn on_call(&self, node: &CallNode<'_>, context: &mut Context) {
-        let method = call_name(node);
-        if !match_call(node)
-            .named_any(&[b"load", b"restore"])
-            .on_root_constant(b"Marshal")
-            .matches()
-        {
-            return;
-        }
-
-        if node
-            .arguments()
-            .is_none_or(|arguments| arguments.arguments().len() != 1)
-        {
-            return;
-        }
-        let Some(argument) = first_argument(node) else {
-            return;
-        };
-        if marshal_dump(&argument) {
-            return;
-        }
-
-        if let Some(selector) = node.message_loc() {
-            context.report(
-                self.name(),
-                format!("Avoid using `Marshal.{}`.", String::from_utf8_lossy(method)),
-                selector,
-            );
-        }
-    }
-}
-
 struct Open;
 
 impl Cop for Open {

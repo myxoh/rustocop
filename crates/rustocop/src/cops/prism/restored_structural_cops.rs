@@ -1,8 +1,7 @@
 use std::collections::HashSet;
 
 use ruby_prism::{
-    CallNode, DefNode, HashNode, InterpolatedRegularExpressionNode, Node, RescueNode,
-    ReturnNode, StringNode,
+    DefNode, HashNode, InterpolatedRegularExpressionNode, Node, RescueNode, ReturnNode, StringNode,
 };
 
 use super::source_syntax::top_level_elements;
@@ -644,25 +643,6 @@ fn top_level_return_with_argument(node: &ReturnNode<'_>, context: &mut CopContex
         &location,
         &location,
         "return",
-    );
-}
-
-fn implicit_runtime_error(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
-    if node.receiver().is_some() || !matches!(node.name().as_slice(), b"raise" | b"fail") {
-        return;
-    }
-    let Some(argument) = node.arguments().and_then(|arguments| {
-        (arguments.arguments().len() == 1).then(|| arguments.arguments().first()).flatten()
-    }) else {
-        return;
-    };
-    if argument.as_string_node().is_none() && argument.as_interpolated_string_node().is_none() {
-        return;
-    }
-    let method = String::from_utf8_lossy(node.name().as_slice());
-    context.report_call(
-        node,
-        format!("Use `{method}` with an explicit exception class and message, rather than just a message."),
     );
 }
 

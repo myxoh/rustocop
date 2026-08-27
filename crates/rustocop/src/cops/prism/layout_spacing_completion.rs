@@ -293,29 +293,6 @@ fn first_parameter_indentation(
     );
 }
 
-fn space_before_brackets(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
-    if !matches!(call_name(node), b"[]" | b"[]=") {
-        return;
-    }
-    let (Some(receiver), Some(opening)) = (node.receiver(), node.opening_loc()) else {
-        return;
-    };
-    let start = receiver.location().end_offset();
-    let end = opening.start_offset();
-    if start >= end
-        || !context.source()[start..end]
-            .bytes()
-            .all(|byte| byte.is_ascii_whitespace())
-    {
-        return;
-    }
-    context.remove(
-        "Remove the space before the opening brackets.",
-        start..end,
-        start..end,
-    );
-}
-
 fn space_before_first_arg(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     let name = node.name().as_slice();
     if node.opening_loc().is_some() || space_before_operator_or_setter(name) {

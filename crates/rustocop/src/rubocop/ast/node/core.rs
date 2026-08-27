@@ -191,6 +191,14 @@ impl<'ast> NodeRef<'ast> {
         self.id
     }
     pub(crate) fn structurally_equal(self, other: Self) -> bool {
+        if matches!(self.kind(), "str" | "sym")
+            && self
+                .scalar_value_text()
+                .is_some_and(|value| value.contains('\u{fffd}'))
+            && self.source() != other.source()
+        {
+            return false;
+        }
         self.kind() == other.kind()
             && self.children().len() == other.children().len()
             && self

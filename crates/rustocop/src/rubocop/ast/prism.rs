@@ -166,7 +166,9 @@ impl Converter<'_> {
                 .next()
                 .unwrap_or(&source)
                 .to_owned();
-            let lhs_kind = if raw.starts_with("InstanceVariable") {
+            let lhs_kind = if raw.starts_with("Constant") {
+                "casgn"
+            } else if raw.starts_with("InstanceVariable") {
                 "ivasgn"
             } else if raw.starts_with("ClassVariable") {
                 "cvasgn"
@@ -175,12 +177,38 @@ impl Converter<'_> {
             } else {
                 "lvasgn"
             };
+            let lhs_start = self.location(&node).start;
+            let lhs_children = if lhs_kind == "casgn" {
+                vec![
+                    NodeValue::Nil,
+                    NodeValue::Symbol(name.rsplit("::").next().unwrap_or(&name).to_owned()),
+                ]
+            } else {
+                vec![NodeValue::Symbol(name.clone())]
+            };
             let lhs = self.ast.add_node(
                 lhs_kind,
-                vec![NodeValue::Symbol(name.clone())],
-                Some(self.location(&node).start..self.location(&node).start + name.chars().count()),
+                lhs_children,
+                Some(lhs_start..lhs_start + name.chars().count()),
             );
+            if lhs_kind == "casgn" {
+                let short_name = name.rsplit("::").next().unwrap_or(&name);
+                let name_start = lhs_start + name.chars().count() - short_name.chars().count();
+                self.ast.set_location(
+                    lhs,
+                    "name",
+                    name_start..name_start + short_name.chars().count(),
+                    short_name,
+                );
+            }
             self.ast.append_child(outer, NodeValue::Node(lhs));
+            if let Some(relative) = source.find(if kind == "and_asgn" { "&&=" } else { "||=" }) {
+                let byte_start = node.location().start_offset() + relative;
+                let byte_end = byte_start + 3;
+                let range = self.character_range(byte_start..byte_end);
+                self.ast
+                    .set_location(outer, "operator", range, &source[relative..relative + 3]);
+            }
             if kind == "op_asgn" {
                 let operator = source
                     .split_once('=')
@@ -289,6 +317,12 @@ impl Converter<'_> {
         self.attach(id);
         let node_source = self.source_for(&node).to_owned();
         self.set_delimiter_locations(id, &raw, &node_source);
+        if kind == "const" {
+            let range = self.location(&node);
+            let name = node_source.rsplit("::").next().unwrap_or(&node_source);
+            let start = range.end.saturating_sub(name.chars().count());
+            self.ast.set_location(id, "name", start..range.end, name);
+        }
         if raw == "UnlessNode" {
             self.set_keyword_location(id, "unless");
         }
@@ -805,6 +839,17 @@ impl<'pr> Visit<'pr> for Converter<'_> {
                 let operator_bytes = bytes.start + relative..bytes.start + relative + 1;
                 self.ast
                     .set_location(pair, "operator", self.character_range(operator_bytes), ":");
+            }
+        }
+        if self.ast.node(pair).loc_is("operator", ":") {
+            if let Some(key) = self.ast.node(pair).first_node() {
+                if key.kind() == "sym" {
+                    if let Some(range) = key.source_range().filter(|range| range.end > range.start)
+                    {
+                        self.ast
+                            .set_source_range(key.id(), Some(range.start..range.end - 1));
+                    }
+                }
             }
         }
     }
@@ -1425,6 +1470,37 @@ impl<'pr> Visit<'pr> for Converter<'_> {
         self.set_location(when_node, "keyword", node.keyword_loc());
         if let Some(location) = node.then_keyword_loc() {
             self.set_location(when_node, "begin", location);
+        } else if let Some(condition_end) = self
+            .ast
+            .node(when_node)
+            .conditions()
+            .last()
+            .and_then(|condition| condition.source_range())
+            .map(|range| range.end)
+        {
+            let source_end = self
+                .ast
+                .node(when_node)
+                .source_range()
+                .map_or(condition_end, |range| range.end);
+            let between = self.ast.node(when_node).source().unwrap_or_default();
+            let node_start = self
+                .ast
+                .node(when_node)
+                .source_range()
+                .map_or(0, |range| range.start);
+            let relative_start = condition_end.saturating_sub(node_start);
+            if let Some(relative) = between
+                .chars()
+                .skip(relative_start)
+                .position(|character| character == ';')
+            {
+                let start = condition_end + relative;
+                if start < source_end {
+                    self.ast
+                        .set_location(when_node, "begin", start..start + 1, ";");
+                }
+            }
         }
     }
 
@@ -1689,6 +1765,16 @@ impl<'pr> Visit<'pr> for Converter<'_> {
             if heredoc { None } else { node.closing_loc() },
         );
         if heredoc {
+            if self.ast.node(string).parent().is_some_and(|parent| {
+                parent.kind() == "begin"
+                    && parent
+                        .source()
+                        .is_some_and(|source| source.starts_with("#{"))
+            }) {
+                // Parser exposes heredocs embedded directly in interpolation
+                // as dynamic strings even when Prism emits a StringNode.
+                self.ast.replace_kind(string, "dstr");
+            }
             self.set_location(string, "heredoc_body", node.content_loc());
             if let Some(closing) = node.closing_loc() {
                 self.set_heredoc_end(string, closing);

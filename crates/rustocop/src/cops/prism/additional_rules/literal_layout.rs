@@ -33,33 +33,3 @@ pub(super) fn empty_heredoc(
         replacement,
     );
 }
-
-pub(super) fn space_after_method_name(source: &str, reporter: &mut Reporter<'_>) {
-    #[derive(Default)]
-    struct SpaceAfterMethodNameVisitor {
-        offenses: Vec<std::ops::Range<usize>>,
-    }
-    impl<'pr> Visit<'pr> for SpaceAfterMethodNameVisitor {
-        fn visit_def_node(&mut self, node: &ruby_prism::DefNode<'pr>) {
-            if let Some(opening) = node.lparen_loc() {
-                let name = node.name_loc();
-                if name.end_offset() < opening.start_offset() {
-                    self.offenses
-                        .push(name.end_offset()..opening.start_offset());
-                }
-            }
-            ruby_prism::visit_def_node(self, node);
-        }
-    }
-
-    let parsed = ruby_prism::parse(source.as_bytes());
-    let mut visitor = SpaceAfterMethodNameVisitor::default();
-    visitor.visit(&parsed.node());
-    for range in visitor.offenses {
-        reporter.remove(
-            "Do not put a space between a method name and the opening parenthesis.",
-            range.clone(),
-            range,
-        );
-    }
-}

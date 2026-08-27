@@ -111,6 +111,35 @@ offenses. The full generated compatibility table remains conservative: any
 changed shared implementation invalidates older global evidence until the next
 complete project refresh.
 
+As of `2026-08-27T03:31:11Z`, the migration ledger covers 40 of the 606 built-in
+cops. The latest source-shaped batch added 30 cops:
+
+- `Layout/SpaceBeforeComment`, `Layout/SpaceAfterMethodName`,
+  `Layout/SpaceAfterNot`, and `Layout/SpaceBeforeBrackets`;
+- `Lint/FlipFlop`, `Lint/RescueException`, `Lint/DuplicateCaseCondition`,
+  `Lint/EmptyExpression`, `Lint/UnifiedInteger`,
+  `Lint/OrAssignmentToConstant`, `Lint/EmptyInterpolation`,
+  `Lint/BooleanSymbol`, and `Lint/IdentityComparison`;
+- `Security/MarshalLoad`;
+- `Style/SymbolLiteral`, `Style/Send`, `Style/ImplicitRuntimeError`,
+  `Style/SuperWithArgsParentheses`, `Style/StringMethods`,
+  `Style/ColonMethodDefinition`, `Style/InlineComment`, `Style/WhenThen`,
+  `Style/Proc`, `Style/ArrayJoin`, `Style/StringChars`,
+  `Style/RedundantFileExtensionInRequire`, `Style/UnlessElse`,
+  `Style/StderrPuts`, `Style/EnvHome`, and `Style/WhileUntilDo`.
+
+The batch uses RuboCop-shaped callbacks and one shared investigation lifecycle;
+the superseded native implementations were removed. Project-derived failures
+strengthened shared boundaries for authoritative Prism comments, Parser-shaped
+constant assignment nodes, heredoc interpolation structure, semicolon
+locations, symbol-label ranges, and structural equality for invalid-byte
+literals. They did not introduce project-specific branches.
+
+All 282 cached unit cases and all 234 freshly captured upstream cases pass.
+The final scoped comparison classified all 30 cops as `project_exact` across
+the 50 pinned projects: 34,668 exact offense signatures, zero mismatch
+signatures, and zero unmatched offenses.
+
 ## Translation rules
 
 1. Mirror the RuboCop source path and module boundary where practical.

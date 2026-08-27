@@ -1,6 +1,6 @@
 {
   "format_version": 2,
-  "updated_at": "2026-08-27T00:07:24Z",
+  "updated_at": "2026-08-26T23:27:10-04:00",
   "rubocop_version": "1.87.0",
   "rubocop_commit": "e5b788dba181ad94de30cfbad661c5d6aa08a4e5",
   "sampling": {
@@ -16,8 +16,8 @@
   },
   "target_cops": 606,
   "inventory_cops": 606,
-  "audited_cops": 10,
-  "migrated_cops": 10,
+  "audited_cops": 40,
+  "migrated_cops": 40,
   "cops": [
     {
       "cop": "Bundler/DuplicatedGem",
@@ -3492,7 +3492,7 @@
       "upstream_source": "lib/rubocop/cop/layout/space_after_method_name.rb",
       "upstream_sha256": "76662533761ca7c094d2335c5066bf5238ceac3b208db78073db8e027f75d229",
       "implementations": [
-        "src/cops/prism/additional_rules.rs"
+        "src/cops/prism/compatibility_migration_batch_two.rs"
       ],
       "upstream_callbacks": [
         "on_def",
@@ -3513,23 +3513,37 @@
         "exact": 1,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_def",
+        "on_defs"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "RuboCopAST",
+        "SourceRange",
+        "Corrector",
+        "RangeHelp"
+      ],
+      "dsl_features": [
+        "define_cops",
+        "compatibility_callbacks",
+        "define_compatibility_rule"
+      ],
+      "similarity_score": 5,
+      "structural_status": "near_source_shaped",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "Shared callback dispatch, RuboCop-shaped AST nodes, source ranges, and corrector operations adapt Prism and Rust ownership without changing the upstream cop algorithm."
+      ]
     },
     {
       "cop": "Layout/SpaceAfterNot",
       "upstream_source": "lib/rubocop/cop/layout/space_after_not.rb",
       "upstream_sha256": "aae8fab9a1ed6b333f75f9cd87fda5c0b3ee65234e4c1e220866956842ee7f98",
       "implementations": [
-        "src/cops/prism/layout_finalization_completion.rs"
+        "src/cops/prism/compatibility_migration_batch_two.rs"
       ],
       "upstream_callbacks": [
         "on_send"
@@ -3549,16 +3563,29 @@
         "exact": 89,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_send"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "RuboCopAST",
+        "SourceRange",
+        "Corrector",
+        "RangeHelp"
+      ],
+      "dsl_features": [
+        "define_cops",
+        "compatibility_callbacks",
+        "define_compatibility_rule"
+      ],
+      "similarity_score": 5,
+      "structural_status": "near_source_shaped",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "Shared callback dispatch, RuboCop-shaped AST nodes, source ranges, and corrector operations adapt Prism and Rust ownership without changing the upstream cop algorithm."
+      ]
     },
     {
       "cop": "Layout/SpaceAfterSemicolon",
@@ -3876,7 +3903,7 @@
       "upstream_source": "lib/rubocop/cop/layout/space_before_brackets.rb",
       "upstream_sha256": "f3ae2497913fe073afc0091b4da537e882d5ba4368028404c910b6052d253ce6",
       "implementations": [
-        "src/cops/prism/layout_spacing_completion.rs"
+        "src/cops/prism/compatibility_migration_batch_two.rs"
       ],
       "upstream_callbacks": [
         "on_send"
@@ -3896,16 +3923,29 @@
         "exact": 1,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_send"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "RuboCopAST",
+        "SourceRange",
+        "Corrector",
+        "RangeHelp"
+      ],
+      "dsl_features": [
+        "define_cops",
+        "compatibility_callbacks",
+        "define_compatibility_rule"
+      ],
+      "similarity_score": 5,
+      "structural_status": "near_source_shaped",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "Shared callback dispatch, RuboCop-shaped AST nodes, source ranges, and corrector operations adapt Prism and Rust ownership without changing the upstream cop algorithm."
+      ]
     },
     {
       "cop": "Layout/SpaceBeforeComma",
@@ -3946,7 +3986,7 @@
       "upstream_source": "lib/rubocop/cop/layout/space_before_comment.rb",
       "upstream_sha256": "051c88fc9add371f0249da5dcd573f6ab65261d21a9bf2225f45c8eed47546c9",
       "implementations": [
-        "src/cops/prism/source_rules_layout.rs"
+        "src/cops/prism/compatibility_migration_batch_two.rs"
       ],
       "upstream_callbacks": [
         "on_new_investigation"
@@ -3965,16 +4005,28 @@
         "exact": 5,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_new_investigation"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "RuboCopAST",
+        "SourceRange",
+        "Corrector"
+      ],
+      "dsl_features": [
+        "define_cops",
+        "compatibility_investigation",
+        "define_compatibility_rule"
+      ],
+      "similarity_score": 5,
+      "structural_status": "near_source_shaped",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "Prism supplies authoritative comment locations; the shared context preserves RuboCop token-adjacency semantics when the lightweight lexer cannot model preceding syntax."
+      ]
     },
     {
       "cop": "Layout/SpaceBeforeFirstArg",
@@ -4887,7 +4939,7 @@
       "upstream_source": "lib/rubocop/cop/lint/boolean_symbol.rb",
       "upstream_sha256": "ba3bc3b202fd22ab0eacdc98c042ac2554c82394021ea647cf6c61a947f6e6dc",
       "implementations": [
-        "src/cops/prism/lint.rs"
+        "src/cops/prism/compatibility_migration_batch_two.rs"
       ],
       "upstream_callbacks": [
         "on_sym"
@@ -4906,16 +4958,28 @@
         "exact": 457,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_sym"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "RuboCopAST",
+        "SourceRange",
+        "Corrector"
+      ],
+      "dsl_features": [
+        "define_cops",
+        "compatibility_callbacks",
+        "define_compatibility_rule"
+      ],
+      "similarity_score": 5,
+      "structural_status": "near_source_shaped",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "Shared callback dispatch, RuboCop-shaped AST nodes, source ranges, and corrector operations adapt Prism and Rust ownership without changing the upstream cop algorithm."
+      ]
     },
     {
       "cop": "Lint/CircularArgumentReference",
@@ -5379,7 +5443,7 @@
       "upstream_source": "lib/rubocop/cop/lint/duplicate_case_condition.rb",
       "upstream_sha256": "84af19212f4d85fcd5e02bb9b75dee90f7ce3ca42d4073e71f2031c387adea45",
       "implementations": [
-        "src/cops/prism/literal_and_pattern_rules.rs"
+        "src/cops/prism/compatibility_migration_batch_two.rs"
       ],
       "upstream_callbacks": [
         "on_case"
@@ -5396,16 +5460,27 @@
         "exact": 1,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_case"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "RuboCopAST",
+        "SourceRange"
+      ],
+      "dsl_features": [
+        "define_cops",
+        "compatibility_callbacks",
+        "define_compatibility_rule"
+      ],
+      "similarity_score": 5,
+      "structural_status": "near_source_shaped",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The shared RuboCop AST equality adapter preserves distinct invalid-byte literal source that Prism exposes through lossy strings."
+      ]
     },
     {
       "cop": "Lint/DuplicateElsifCondition",
@@ -5941,7 +6016,7 @@
       "upstream_source": "lib/rubocop/cop/lint/empty_expression.rb",
       "upstream_sha256": "d997cbb0352aedd47794a2601dc8e1d763e9540c04255caf097c13b120f32bfb",
       "implementations": [
-        "src/cops/prism/lint.rs"
+        "src/cops/prism/compatibility_migration_batch_two.rs"
       ],
       "upstream_callbacks": [
         "on_begin"
@@ -5958,16 +6033,27 @@
         "exact": 1,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_begin"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "RuboCopAST",
+        "SourceRange"
+      ],
+      "dsl_features": [
+        "define_cops",
+        "compatibility_callbacks",
+        "define_compatibility_rule"
+      ],
+      "similarity_score": 5,
+      "structural_status": "near_source_shaped",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "Shared callback dispatch, RuboCop-shaped AST nodes, source ranges, and corrector operations adapt Prism and Rust ownership without changing the upstream cop algorithm."
+      ]
     },
     {
       "cop": "Lint/EmptyFile",
@@ -6043,7 +6129,7 @@
       "upstream_source": "lib/rubocop/cop/lint/empty_interpolation.rb",
       "upstream_sha256": "7faeeaee51a5f2e2cb9049e1f98b3c1d30eaf2c64abcdf60ecf9555e79589376",
       "implementations": [
-        "src/cops/prism/lexical_rules.rs"
+        "src/cops/prism/compatibility_migration_batch_two.rs"
       ],
       "upstream_callbacks": [
         "on_interpolation"
@@ -6063,16 +6149,28 @@
         "exact": 3,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_interpolation"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "RuboCopAST",
+        "SourceRange",
+        "Corrector"
+      ],
+      "dsl_features": [
+        "define_cops",
+        "compatibility_callbacks",
+        "define_compatibility_rule"
+      ],
+      "similarity_score": 5,
+      "structural_status": "near_source_shaped",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The shared Prism-to-RuboCop AST adapter normalizes heredoc interpolation nodes to Parser-compatible dynamic-string structure."
+      ]
     },
     {
       "cop": "Lint/EmptyWhen",
@@ -6195,7 +6293,7 @@
       "upstream_source": "lib/rubocop/cop/lint/flip_flop.rb",
       "upstream_sha256": "014a66f7899b136b29255461c836cce90aae168da45a70d8d498f78340bfc912",
       "implementations": [
-        "src/cops/prism/lint.rs"
+        "src/cops/prism/compatibility_migration_batch_two.rs"
       ],
       "upstream_callbacks": [
         "on_eflipflop",
@@ -6213,16 +6311,28 @@
         "exact": 1,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_eflipflop",
+        "on_iflipflop"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "RuboCopAST",
+        "SourceRange"
+      ],
+      "dsl_features": [
+        "define_cops",
+        "compatibility_callbacks",
+        "define_compatibility_rule"
+      ],
+      "similarity_score": 5,
+      "structural_status": "near_source_shaped",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "Shared callback dispatch, RuboCop-shaped AST nodes, source ranges, and corrector operations adapt Prism and Rust ownership without changing the upstream cop algorithm."
+      ]
     },
     {
       "cop": "Lint/FloatComparison",
@@ -6436,7 +6546,7 @@
       "upstream_source": "lib/rubocop/cop/lint/identity_comparison.rb",
       "upstream_sha256": "26b543c74c00c444bc995607d62eac5cc2b1b08d6dc2ed338e130ea444d1ff46",
       "implementations": [
-        "src/cops/prism/lint.rs"
+        "src/cops/prism/compatibility_migration_batch_two.rs"
       ],
       "upstream_callbacks": [
         "on_send"
@@ -6455,16 +6565,28 @@
         "exact": 8,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_send"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "RuboCopAST",
+        "SourceRange",
+        "Corrector"
+      ],
+      "dsl_features": [
+        "define_cops",
+        "compatibility_callbacks",
+        "define_compatibility_rule"
+      ],
+      "similarity_score": 5,
+      "structural_status": "near_source_shaped",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "Shared callback dispatch, RuboCop-shaped AST nodes, source ranges, and corrector operations adapt Prism and Rust ownership without changing the upstream cop algorithm."
+      ]
     },
     {
       "cop": "Lint/ImplicitStringConcatenation",
@@ -7419,7 +7541,7 @@
       "upstream_source": "lib/rubocop/cop/lint/or_assignment_to_constant.rb",
       "upstream_sha256": "889d900c8ad580a3bbd71f9f21d5f71f94257a1fd7484f219a072fab4d101cbe",
       "implementations": [
-        "src/cops/prism/additional_rules_more.rs"
+        "src/cops/prism/compatibility_migration_batch_two.rs"
       ],
       "upstream_callbacks": [
         "on_or_asgn"
@@ -7438,16 +7560,28 @@
         "exact": 172,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_or_asgn"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "RuboCopAST",
+        "SourceRange",
+        "Corrector"
+      ],
+      "dsl_features": [
+        "define_cops",
+        "compatibility_callbacks",
+        "define_compatibility_rule"
+      ],
+      "similarity_score": 5,
+      "structural_status": "near_source_shaped",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The shared RuboCop AST adapter exposes Parser-shaped constant assignment left-hand sides for Prism constant and constant-path writes."
+      ]
     },
     {
       "cop": "Lint/OrderedMagicComments",
@@ -8284,7 +8418,7 @@
       "upstream_source": "lib/rubocop/cop/lint/rescue_exception.rb",
       "upstream_sha256": "1cfc1dc0c68153ad27ede8311693c8fb9ed727578775927426c4f85c4a06b1f8",
       "implementations": [
-        "src/cops/prism/additional_rules_literals.rs"
+        "src/cops/prism/compatibility_migration_batch_two.rs"
       ],
       "upstream_callbacks": [
         "on_resbody"
@@ -8301,16 +8435,27 @@
         "exact": 191,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_resbody"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "RuboCopAST",
+        "SourceRange"
+      ],
+      "dsl_features": [
+        "define_cops",
+        "compatibility_callbacks",
+        "define_compatibility_rule"
+      ],
+      "similarity_score": 5,
+      "structural_status": "near_source_shaped",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "Shared callback dispatch, RuboCop-shaped AST nodes, source ranges, and corrector operations adapt Prism and Rust ownership without changing the upstream cop algorithm."
+      ]
     },
     {
       "cop": "Lint/RescueType",
@@ -9210,7 +9355,7 @@
       "upstream_source": "lib/rubocop/cop/lint/unified_integer.rb",
       "upstream_sha256": "1f1a3a6a8b82649b0c47c0b809f02534effa4f4adeefa928b6f090bbee857b4d",
       "implementations": [
-        "src/cops/prism/literal_and_pattern_rules.rs"
+        "src/cops/prism/compatibility_migration_batch_two.rs"
       ],
       "upstream_callbacks": [
         "on_const"
@@ -9229,16 +9374,28 @@
         "exact": 7,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_const"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "RuboCopAST",
+        "SourceRange",
+        "Corrector"
+      ],
+      "dsl_features": [
+        "define_cops",
+        "compatibility_callbacks",
+        "define_compatibility_rule"
+      ],
+      "similarity_score": 5,
+      "structural_status": "near_source_shaped",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "Shared callback dispatch, RuboCop-shaped AST nodes, source ranges, and corrector operations adapt Prism and Rust ownership without changing the upstream cop algorithm."
+      ]
     },
     {
       "cop": "Lint/UnmodifiedReduceAccumulator",
@@ -11263,7 +11420,7 @@
       "upstream_source": "lib/rubocop/cop/security/marshal_load.rb",
       "upstream_sha256": "c115f4aed76ca4a6bd37f5f3033f5c438532d2b878180ede30de0e4e06565496",
       "implementations": [
-        "src/cops/prism/security.rs"
+        "src/cops/prism/compatibility_migration_batch_two.rs"
       ],
       "upstream_callbacks": [
         "on_send"
@@ -11280,16 +11437,27 @@
         "exact": 55,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_send"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "RuboCopAST",
+        "SourceRange"
+      ],
+      "dsl_features": [
+        "define_cops",
+        "compatibility_callbacks",
+        "define_compatibility_rule"
+      ],
+      "similarity_score": 5,
+      "structural_status": "near_source_shaped",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "Shared callback dispatch, RuboCop-shaped AST nodes, source ranges, and corrector operations adapt Prism and Rust ownership without changing the upstream cop algorithm."
+      ]
     },
     {
       "cop": "Security/Open",
@@ -11747,7 +11915,7 @@
       "upstream_source": "lib/rubocop/cop/style/array_join.rb",
       "upstream_sha256": "7b9d10ec3cc8ee527967ee581cc306c12262c830efd9668e53084277db9c81f4",
       "implementations": [
-        "src/cops/prism/style_rewrites.rs"
+        "src/cops/prism/compatibility_migration_batch_two.rs"
       ],
       "upstream_callbacks": [
         "on_send"
@@ -11766,16 +11934,28 @@
         "exact": 15,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_send"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "RuboCopAST",
+        "SourceRange",
+        "Corrector"
+      ],
+      "dsl_features": [
+        "define_cops",
+        "compatibility_callbacks",
+        "define_compatibility_rule"
+      ],
+      "similarity_score": 5,
+      "structural_status": "near_source_shaped",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "Shared callback dispatch, RuboCop-shaped AST nodes, source ranges, and corrector operations adapt Prism and Rust ownership without changing the upstream cop algorithm."
+      ]
     },
     {
       "cop": "Style/AsciiComments",
@@ -12590,7 +12770,7 @@
       "upstream_source": "lib/rubocop/cop/style/colon_method_definition.rb",
       "upstream_sha256": "f5724b9c077c0f857bc6b231ad971b2449c57bded9b27e2674f835d56b05773b",
       "implementations": [
-        "src/cops/prism/lexical_rules.rs"
+        "src/cops/prism/compatibility_migration_batch_two.rs"
       ],
       "upstream_callbacks": [
         "on_defs"
@@ -12609,16 +12789,28 @@
         "exact": 1,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_defs"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "RuboCopAST",
+        "SourceRange",
+        "Corrector"
+      ],
+      "dsl_features": [
+        "define_cops",
+        "compatibility_callbacks",
+        "define_compatibility_rule"
+      ],
+      "similarity_score": 5,
+      "structural_status": "near_source_shaped",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "Shared callback dispatch, RuboCop-shaped AST nodes, source ranges, and corrector operations adapt Prism and Rust ownership without changing the upstream cop algorithm."
+      ]
     },
     {
       "cop": "Style/CombinableDefined",
@@ -13989,7 +14181,7 @@
       "upstream_source": "lib/rubocop/cop/style/env_home.rb",
       "upstream_sha256": "d8b45cee740ec4621d8504c1169fbf6750ebe87ce8f50f1d389e52a1da776c11",
       "implementations": [
-        "src/cops/prism/source_rules_misc.rs"
+        "src/cops/prism/compatibility_migration_batch_two.rs"
       ],
       "upstream_callbacks": [
         "on_send"
@@ -14008,16 +14200,28 @@
         "exact": 33,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_send"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "RuboCopAST",
+        "SourceRange",
+        "Corrector"
+      ],
+      "dsl_features": [
+        "define_cops",
+        "compatibility_callbacks",
+        "define_compatibility_rule"
+      ],
+      "similarity_score": 5,
+      "structural_status": "near_source_shaped",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "Shared callback dispatch, RuboCop-shaped AST nodes, source ranges, and corrector operations adapt Prism and Rust ownership without changing the upstream cop algorithm."
+      ]
     },
     {
       "cop": "Style/EvalWithLocation",
@@ -15417,7 +15621,7 @@
       "upstream_source": "lib/rubocop/cop/style/implicit_runtime_error.rb",
       "upstream_sha256": "824d051679d8a97fb157bd4bb73caf7ab4e3da8d4e6346c5226cdc23a68fa785",
       "implementations": [
-        "src/cops/prism/restored_structural_cops.rs"
+        "src/cops/prism/compatibility_migration_batch_two.rs"
       ],
       "upstream_callbacks": [
         "on_send"
@@ -15434,16 +15638,27 @@
         "exact": 3265,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_send"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "RuboCopAST",
+        "SourceRange"
+      ],
+      "dsl_features": [
+        "define_cops",
+        "compatibility_callbacks",
+        "define_compatibility_rule"
+      ],
+      "similarity_score": 5,
+      "structural_status": "near_source_shaped",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "Shared callback dispatch, RuboCop-shaped AST nodes, source ranges, and corrector operations adapt Prism and Rust ownership without changing the upstream cop algorithm."
+      ]
     },
     {
       "cop": "Style/InPatternThen",
@@ -15525,7 +15740,7 @@
       "upstream_source": "lib/rubocop/cop/style/inline_comment.rb",
       "upstream_sha256": "53e1583562f2114147ad87a30b0edaccc777cd847b6da44f99243e8a82f40c3a",
       "implementations": [
-        "src/cops/prism/layout_finalization_completion.rs"
+        "src/cops/prism/compatibility_migration_batch_two.rs"
       ],
       "upstream_callbacks": [
         "on_new_investigation"
@@ -15542,16 +15757,27 @@
         "exact": 18651,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_new_investigation"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "RuboCopAST",
+        "SourceRange"
+      ],
+      "dsl_features": [
+        "define_cops",
+        "compatibility_investigation",
+        "define_compatibility_rule"
+      ],
+      "similarity_score": 5,
+      "structural_status": "near_source_shaped",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "Shared callback dispatch, RuboCop-shaped AST nodes, source ranges, and corrector operations adapt Prism and Rust ownership without changing the upstream cop algorithm."
+      ]
     },
     {
       "cop": "Style/InverseMethods",
@@ -18300,7 +18526,7 @@
       "upstream_source": "lib/rubocop/cop/style/proc.rb",
       "upstream_sha256": "6e982cc77647e53732b2d13a74cb7fe586cf8c9e930070a6a9135301db347d86",
       "implementations": [
-        "src/cops/prism/style_rewrites.rs"
+        "src/cops/prism/compatibility_migration_batch_two.rs"
       ],
       "upstream_callbacks": [
         "on_block",
@@ -18321,16 +18547,30 @@
         "exact": 561,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_block",
+        "on_itblock",
+        "on_numblock"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "RuboCopAST",
+        "SourceRange",
+        "Corrector"
+      ],
+      "dsl_features": [
+        "define_cops",
+        "compatibility_callbacks",
+        "define_compatibility_rule"
+      ],
+      "similarity_score": 5,
+      "structural_status": "near_source_shaped",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "Shared callback dispatch, RuboCop-shaped AST nodes, source ranges, and corrector operations adapt Prism and Rust ownership without changing the upstream cop algorithm."
+      ]
     },
     {
       "cop": "Style/QuotedSymbols",
@@ -18998,7 +19238,7 @@
       "upstream_source": "lib/rubocop/cop/style/redundant_file_extension_in_require.rb",
       "upstream_sha256": "cd56f6e04c7d3276abc3ad56a59125ea105c0dba2058550764a1bbef0341be5e",
       "implementations": [
-        "src/cops/prism/style_compat.rs"
+        "src/cops/prism/compatibility_migration_batch_two.rs"
       ],
       "upstream_callbacks": [
         "on_send"
@@ -19018,16 +19258,29 @@
         "exact": 64,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_send"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "RuboCopAST",
+        "SourceRange",
+        "Corrector",
+        "RangeHelp"
+      ],
+      "dsl_features": [
+        "define_cops",
+        "compatibility_callbacks",
+        "define_compatibility_rule"
+      ],
+      "similarity_score": 5,
+      "structural_status": "near_source_shaped",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "Shared callback dispatch, RuboCop-shaped AST nodes, source ranges, and corrector operations adapt Prism and Rust ownership without changing the upstream cop algorithm."
+      ]
     },
     {
       "cop": "Style/RedundantFilterChain",
@@ -20453,7 +20706,7 @@
       "upstream_source": "lib/rubocop/cop/style/send.rb",
       "upstream_sha256": "acd5b7b8df67280b4d093a69d1b773f95ec327993a54a2d1b7e37a69b719cda3",
       "implementations": [
-        "src/cops/prism/source_semantics.rs"
+        "src/cops/prism/compatibility_migration_batch_two.rs"
       ],
       "upstream_callbacks": [
         "on_csend",
@@ -20471,16 +20724,28 @@
         "exact": 9491,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_csend",
+        "on_send"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "RuboCopAST",
+        "SourceRange"
+      ],
+      "dsl_features": [
+        "define_cops",
+        "compatibility_callbacks",
+        "define_compatibility_rule"
+      ],
+      "similarity_score": 5,
+      "structural_status": "near_source_shaped",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "Shared callback dispatch, RuboCop-shaped AST nodes, source ranges, and corrector operations adapt Prism and Rust ownership without changing the upstream cop algorithm."
+      ]
     },
     {
       "cop": "Style/SendWithLiteralMethodName",
@@ -20891,7 +21156,7 @@
       "upstream_source": "lib/rubocop/cop/style/stderr_puts.rb",
       "upstream_sha256": "82de88a6dd47db84c628603b2c74f1bd870241d48ca9f8664f2d763d1038c75e",
       "implementations": [
-        "src/cops/prism/style_rewrites.rs"
+        "src/cops/prism/compatibility_migration_batch_two.rs"
       ],
       "upstream_callbacks": [
         "on_send"
@@ -20911,23 +21176,36 @@
         "exact": 388,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_send"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "RuboCopAST",
+        "SourceRange",
+        "Corrector",
+        "RangeHelp"
+      ],
+      "dsl_features": [
+        "define_cops",
+        "compatibility_callbacks",
+        "define_compatibility_rule"
+      ],
+      "similarity_score": 5,
+      "structural_status": "near_source_shaped",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "Shared callback dispatch, RuboCop-shaped AST nodes, source ranges, and corrector operations adapt Prism and Rust ownership without changing the upstream cop algorithm."
+      ]
     },
     {
       "cop": "Style/StringChars",
       "upstream_source": "lib/rubocop/cop/style/string_chars.rb",
       "upstream_sha256": "19b08f8ef47e6b7b9db856de1e3dd433507d5033e5051af8340d4b58243a11d6",
       "implementations": [
-        "src/cops/prism/redundant_freeze_completion.rs"
+        "src/cops/prism/compatibility_migration_batch_two.rs"
       ],
       "upstream_callbacks": [
         "on_csend",
@@ -20948,16 +21226,30 @@
         "exact": 32,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_csend",
+        "on_send"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "RuboCopAST",
+        "SourceRange",
+        "Corrector",
+        "RangeHelp"
+      ],
+      "dsl_features": [
+        "define_cops",
+        "compatibility_callbacks",
+        "define_compatibility_rule"
+      ],
+      "similarity_score": 5,
+      "structural_status": "near_source_shaped",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "Shared callback dispatch, RuboCop-shaped AST nodes, source ranges, and corrector operations adapt Prism and Rust ownership without changing the upstream cop algorithm."
+      ]
     },
     {
       "cop": "Style/StringConcatenation",
@@ -21111,7 +21403,7 @@
       "upstream_source": "lib/rubocop/cop/style/string_methods.rb",
       "upstream_sha256": "fc1038a2da6181b8e390e5709a46df910b7b42123ec9798ea434ccdd666e8d8f",
       "implementations": [
-        "src/cops/prism/style/misc.rs"
+        "src/cops/prism/compatibility_migration_batch_two.rs"
       ],
       "upstream_callbacks": [
         "on_csend",
@@ -21132,16 +21424,30 @@
         "exact": 195,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_csend",
+        "on_send"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "RuboCopAST",
+        "SourceRange",
+        "Corrector",
+        "Configuration"
+      ],
+      "dsl_features": [
+        "define_cops",
+        "compatibility_callbacks",
+        "define_compatibility_rule"
+      ],
+      "similarity_score": 5,
+      "structural_status": "near_source_shaped",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "Shared callback dispatch, RuboCop-shaped AST nodes, source ranges, and corrector operations adapt Prism and Rust ownership without changing the upstream cop algorithm."
+      ]
     },
     {
       "cop": "Style/Strip",
@@ -21256,7 +21562,7 @@
       "upstream_source": "lib/rubocop/cop/style/super_with_args_parentheses.rb",
       "upstream_sha256": "30965081a84574d698748e85a5ed69a50c105fd617f04a0f265937cb8361261f",
       "implementations": [
-        "src/cops/prism/style_compat.rs"
+        "src/cops/prism/compatibility_migration_batch_two.rs"
       ],
       "upstream_callbacks": [
         "on_super"
@@ -21275,16 +21581,28 @@
         "exact": 175,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_super"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "RuboCopAST",
+        "SourceRange",
+        "Corrector"
+      ],
+      "dsl_features": [
+        "define_cops",
+        "compatibility_callbacks",
+        "define_compatibility_rule"
+      ],
+      "similarity_score": 5,
+      "structural_status": "near_source_shaped",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "Shared callback dispatch, RuboCop-shaped AST nodes, source ranges, and corrector operations adapt Prism and Rust ownership without changing the upstream cop algorithm."
+      ]
     },
     {
       "cop": "Style/SwapValues",
@@ -21372,7 +21690,7 @@
       "upstream_source": "lib/rubocop/cop/style/symbol_literal.rb",
       "upstream_sha256": "2e0d7e48912553a51be6b33d867551bccaf6d9eecb2380e069c782cdbf13c377",
       "implementations": [
-        "src/cops/prism/symbol_literal_rules.rs"
+        "src/cops/prism/compatibility_migration_batch_two.rs"
       ],
       "upstream_callbacks": [
         "on_sym"
@@ -21391,16 +21709,28 @@
         "exact": 588,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_sym"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "RuboCopAST",
+        "SourceRange",
+        "Corrector"
+      ],
+      "dsl_features": [
+        "define_cops",
+        "compatibility_callbacks",
+        "define_compatibility_rule"
+      ],
+      "similarity_score": 5,
+      "structural_status": "near_source_shaped",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "Shared callback dispatch, RuboCop-shaped AST nodes, source ranges, and corrector operations adapt Prism and Rust ownership without changing the upstream cop algorithm."
+      ]
     },
     {
       "cop": "Style/SymbolProc",
@@ -21929,7 +22259,7 @@
       "upstream_source": "lib/rubocop/cop/style/unless_else.rb",
       "upstream_sha256": "067bb5e731711845fb009cc59d572d73b1ce79cbd5b52d7369578e65f2f05e1c",
       "implementations": [
-        "src/cops/prism/style_source.rs"
+        "src/cops/prism/compatibility_migration_batch_two.rs"
       ],
       "upstream_callbacks": [
         "on_if"
@@ -21948,16 +22278,28 @@
         "exact": 22,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_if"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "RuboCopAST",
+        "SourceRange",
+        "Corrector"
+      ],
+      "dsl_features": [
+        "define_cops",
+        "compatibility_callbacks",
+        "define_compatibility_rule"
+      ],
+      "similarity_score": 5,
+      "structural_status": "near_source_shaped",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "Shared callback dispatch, RuboCop-shaped AST nodes, source ranges, and corrector operations adapt Prism and Rust ownership without changing the upstream cop algorithm."
+      ]
     },
     {
       "cop": "Style/UnlessLogicalOperators",
@@ -22072,7 +22414,7 @@
       "upstream_source": "lib/rubocop/cop/style/when_then.rb",
       "upstream_sha256": "52134c45f32ea3ddda6c8a3cb8b014c33cd8d6994a5c309a1cc84595442feb3d",
       "implementations": [
-        "src/cops/prism/branch_layout_rules.rs"
+        "src/cops/prism/compatibility_migration_batch_two.rs"
       ],
       "upstream_callbacks": [
         "on_when"
@@ -22091,23 +22433,35 @@
         "exact": 166,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_when"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "RuboCopAST",
+        "SourceRange",
+        "Corrector"
+      ],
+      "dsl_features": [
+        "define_cops",
+        "compatibility_callbacks",
+        "define_compatibility_rule"
+      ],
+      "similarity_score": 5,
+      "structural_status": "near_source_shaped",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "Shared callback dispatch, RuboCop-shaped AST nodes, source ranges, and corrector operations adapt Prism and Rust ownership without changing the upstream cop algorithm."
+      ]
     },
     {
       "cop": "Style/WhileUntilDo",
       "upstream_source": "lib/rubocop/cop/style/while_until_do.rb",
       "upstream_sha256": "b8bc4923e04ea38ea98a12b4f86f48eec7f63d9e4d88f82af9da0fcf0b0463d5",
       "implementations": [
-        "src/cops/prism/while_until_do_rules.rs"
+        "src/cops/prism/compatibility_migration_batch_two.rs"
       ],
       "upstream_callbacks": [
         "on_until",
@@ -22127,16 +22481,29 @@
         "exact": 29,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_until",
+        "on_while"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "RuboCopAST",
+        "SourceRange",
+        "Corrector"
+      ],
+      "dsl_features": [
+        "define_cops",
+        "compatibility_callbacks",
+        "define_compatibility_rule"
+      ],
+      "similarity_score": 5,
+      "structural_status": "near_source_shaped",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "Shared callback dispatch, RuboCop-shaped AST nodes, source ranges, and corrector operations adapt Prism and Rust ownership without changing the upstream cop algorithm."
+      ]
     },
     {
       "cop": "Style/WhileUntilModifier",

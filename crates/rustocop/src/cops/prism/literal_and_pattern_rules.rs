@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-
 use super::*;
 
 mod branch_rules;
@@ -15,21 +13,6 @@ define_cops! {
 }
 
 const MIXED_CASE_RANGE_MESSAGE: &str = "Ranges from upper to lower case ASCII letters may include unintended characters. Instead of `A-z` (which also includes several symbols) specify each range individually: `A-Za-z` and individually specify any symbols.";
-
-fn duplicate_case_condition(node: &ruby_prism::CaseNode<'_>, context: &mut CopContext<'_, '_>) {
-    let mut seen = HashSet::new();
-    for condition in node.conditions().iter() {
-        let Some(branch) = condition.as_when_node() else {
-            continue;
-        };
-        for value in branch.conditions().iter() {
-            let source = context.source_file().node(&value);
-            if !seen.insert(source) {
-                context.report("Duplicate `when` condition detected.", value.location());
-            }
-        }
-    }
-}
 
 fn empty_case_condition(node: &ruby_prism::CaseNode<'_>, context: &mut CopContext<'_, '_>) {
     if node.predicate().is_some()
@@ -236,26 +219,6 @@ fn expand_mixed_range(start: u8, end: u8) -> String {
     }
     expansion.push(end as char);
     expansion
-}
-
-fn unified_integer(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
-    let class = [b"Fixnum".as_slice(), b"Bignum".as_slice()]
-        .into_iter()
-        .find(|class| node_is_root_constant(node, class));
-    let Some(class) = class else {
-        return;
-    };
-    let class = String::from_utf8_lossy(class);
-    let message = format!("Use `Integer` instead of `{class}`.");
-    if !context.target_ruby_version().at_least(2, 4) {
-        context.report(message, node.location());
-        return;
-    }
-    let edit = node
-        .as_constant_path_node()
-        .map(|constant| constant.name_loc())
-        .unwrap_or_else(|| node.location());
-    context.replace(message, node.location(), edit, "Integer");
 }
 
 fn exponential_notation(node: &ruby_prism::FloatNode<'_>, context: &mut CopContext<'_, '_>) {

@@ -4,37 +4,6 @@ define_cops! {
     AsciiComments => "Style/AsciiComments" => source(ascii_comments),
 }
 
-fn env_home(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
-    if !root_constant(node.receiver(), b"ENV") {
-        return;
-    }
-    let arguments = node
-        .arguments()
-        .map(|arguments| arguments.arguments().iter().collect::<Vec<_>>())
-        .unwrap_or_default();
-    let home = arguments
-        .first()
-        .and_then(static_string)
-        .is_some_and(|value| value == b"HOME");
-    let supported = match call_name(node) {
-        b"[]" => arguments.len() == 1 && home,
-        b"fetch" => {
-            home && (arguments.len() == 1
-                || arguments.len() == 2 && arguments[1].as_nil_node().is_some())
-        }
-        _ => false,
-    };
-    if supported {
-        let range = context.source_file().node_range(&node.as_node());
-        context.replace(
-            "Use `Dir.home` instead.",
-            range.clone(),
-            range,
-            "Dir.home",
-        );
-    }
-}
-
 fn ascii_comments(context: &mut CopContext<'_, '_>) {
     let source = context.source();
     let allowed = context.config_values("AllowedChars").to_vec();

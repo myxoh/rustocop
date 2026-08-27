@@ -125,53 +125,6 @@ fn triple_quotes(source: &str, reporter: &mut Reporter<'_>) {
     }
 }
 
-fn or_assignment_to_constant(source: &str, reporter: &mut Reporter<'_>) {
-    #[derive(Default)]
-    struct ConstantOrAssignments {
-        def_depth: usize,
-        operators: Vec<(std::ops::Range<usize>, bool)>,
-    }
-
-    impl<'pr> ruby_prism::Visit<'pr> for ConstantOrAssignments {
-        fn visit_def_node(&mut self, node: &ruby_prism::DefNode<'pr>) {
-            self.def_depth += 1;
-            ruby_prism::visit_def_node(self, node);
-            self.def_depth -= 1;
-        }
-
-        fn visit_constant_or_write_node(&mut self, node: &ruby_prism::ConstantOrWriteNode<'pr>) {
-            let operator = node.operator_loc();
-            self.operators.push((operator.start_offset()..operator.end_offset(), self.def_depth > 0));
-            ruby_prism::visit_constant_or_write_node(self, node);
-        }
-
-        fn visit_constant_path_or_write_node(
-            &mut self,
-            node: &ruby_prism::ConstantPathOrWriteNode<'pr>,
-        ) {
-            let operator = node.operator_loc();
-            self.operators.push((operator.start_offset()..operator.end_offset(), self.def_depth > 0));
-            ruby_prism::visit_constant_path_or_write_node(self, node);
-        }
-    }
-
-    let parsed = ruby_prism::parse(source.as_bytes());
-    let mut assignments = ConstantOrAssignments::default();
-    ruby_prism::Visit::visit(&mut assignments, &parsed.node());
-    for (operator, inside_def) in assignments.operators {
-        if inside_def {
-            reporter.report("Avoid using or-assignment with constants.", operator);
-        } else {
-            reporter.replace(
-                "Avoid using or-assignment with constants.",
-                operator.clone(),
-                operator,
-                "=",
-            );
-        }
-    }
-}
-
 fn ordered_magic_comments(source: &str, reporter: &mut Reporter<'_>) {
     let lines = source_lines(source).collect::<Vec<_>>();
     let leading = lines.iter().take_while(|(offset, line)| {
