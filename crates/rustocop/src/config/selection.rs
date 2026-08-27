@@ -144,6 +144,14 @@ fn selection_matches(selection: &str, cop: &str) -> bool {
 }
 
 pub(super) fn normally_enabled(cop: &str, config: &CopConfig) -> bool {
+    if config.is_compiled()
+        && !config
+            .values("Rustocop", "BuiltInCops")
+            .iter()
+            .any(|name| name == cop)
+    {
+        return false;
+    }
     if config.explicitly_contains(cop, "Enabled") {
         return config.bool(cop, "Enabled").unwrap_or(false);
     }

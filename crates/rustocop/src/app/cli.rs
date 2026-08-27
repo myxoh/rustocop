@@ -1,4 +1,5 @@
 use std::env;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use crate::config::{
@@ -69,7 +70,7 @@ pub(super) fn parse_args(mut args: Vec<String>) -> Result<Command, String> {
             }
             "--config" | "-c" => {
                 let path = take_value(&mut args, &arg)?;
-                apply_config(&mut options.inspection, &path)?;
+                apply_config(&mut options, &path)?;
                 options.config_path = Some(path);
             }
             "--require" | "--plugin" => {
@@ -127,7 +128,7 @@ pub(super) fn parse_args(mut args: Vec<String>) -> Result<Command, String> {
             }
             _ if arg.starts_with("--config=") => {
                 let path = arg.strip_prefix("--config=").unwrap_or_default();
-                apply_config(&mut options.inspection, path)?;
+                apply_config(&mut options, path)?;
                 options.config_path = Some(path.to_string());
             }
             _ if arg.starts_with("--jobs=") => {
@@ -161,6 +162,14 @@ pub(super) fn parse_args(mut args: Vec<String>) -> Result<Command, String> {
             }
             _ if arg.starts_with('-') => return Err(format!("unsupported option {arg}")),
             _ => options.files.push(arg),
+        }
+    }
+
+    if options.config_path.is_none() {
+        if let Some(path) = discover_config_path(&options.files, options.stdin_path.as_deref()) {
+            let path = path.to_string_lossy().to_string();
+            apply_config(&mut options, &path)?;
+            options.config_path = Some(path);
         }
     }
 
@@ -202,14 +211,55 @@ fn parse_jobs(value: &str) -> Result<usize, String> {
         .ok_or_else(|| format!("invalid worker count {value}"))
 }
 
-fn apply_config(config: &mut InspectionConfig, path: &str) -> Result<(), String> {
+fn apply_config(options: &mut RunOptions, path: &str) -> Result<(), String> {
     let cop_config = CopConfig::from_path(path)?;
-    config.target_ruby_version = cop_config
+    options.inspection.target_ruby_version = cop_config
         .value("AllCops", "TargetRubyVersion")
         .and_then(RubyVersion::parse)
         .unwrap_or_default();
-    config.cop_config = Arc::new(cop_config);
+    options.non_native_cops = cop_config.non_native_cops().to_vec();
+    options.inspection.cop_config = Arc::new(cop_config);
     Ok(())
+}
+
+fn discover_config_path(files: &[String], stdin_path: Option<&str>) -> Option<PathBuf> {
+    let current = env::current_dir().ok()?;
+    let target = files.first().map(String::as_str).or(stdin_path);
+    let mut directory = target.map_or_else(
+        || current.clone(),
+        |target| {
+            let path = Path::new(target);
+            let path = if path.is_absolute() {
+                path.to_path_buf()
+            } else {
+                current.join(path)
+            };
+            if path.is_dir() {
+                path
+            } else {
+                path.parent().unwrap_or(&current).to_path_buf()
+            }
+        },
+    );
+    const CANDIDATES: &[&str] = &[
+        ".rustocop.yml",
+        ".config/rustocop/config.yml",
+        "rustocop.yml",
+        ".rubocop.yml",
+        ".config/rubocop/config.yml",
+    ];
+    loop {
+        for candidate in CANDIDATES {
+            let path = directory.join(candidate);
+            if path.is_file() {
+                return Some(path);
+            }
+        }
+        if !directory.pop() {
+            break;
+        }
+    }
+    None
 }
 
 fn apply_config_source(config: &mut InspectionConfig, source: &str, config_path: Option<&str>) {
@@ -376,5 +426,45 @@ mod tests {
             .expect("missing config should fail");
 
         assert!(error.starts_with(&format!("could not read config {missing}:")));
+    }
+
+    #[test]
+    fn discovers_compiled_config_before_rubocop_config() {
+        let directory = std::env::temp_dir().join(format!(
+            "rustocop-cli-config-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::create_dir_all(directory.join("app")).unwrap();
+        std::fs::write(
+            directory.join(".rustocop.yml"),
+            "Rustocop:\n  SchemaVersion: 1\n  BuiltInCops:\n    - Style/StringLiterals\n  NonNativeCops:\n    - RSpec/Focus\nAllCops:\n  DisabledByDefault: true\nStyle/StringLiterals:\n  Enabled: true\n",
+        )
+        .unwrap();
+        std::fs::write(
+            directory.join(".rubocop.yml"),
+            "Style/StringLiterals:\n  Enabled: false\n",
+        )
+        .unwrap();
+        let target = directory.join("app/example.rb");
+        std::fs::write(&target, "'example'\n").unwrap();
+
+        let Command::Run(options) = parse_args(vec![target.to_string_lossy().to_string()]).unwrap()
+        else {
+            panic!("expected run command");
+        };
+
+        assert!(options.inspection.cop_config.is_compiled());
+        assert_eq!(options.non_native_cops, vec!["RSpec/Focus"]);
+        assert!(options.inspection.cop_enabled("Style/StringLiterals"));
+        assert!(!options.inspection.cop_enabled("RSpec/Focus"));
+        assert_eq!(
+            options.config_path.as_deref(),
+            Some(directory.join(".rustocop.yml").to_string_lossy().as_ref())
+        );
+        std::fs::remove_dir_all(directory).unwrap();
     }
 }

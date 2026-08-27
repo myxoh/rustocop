@@ -33,7 +33,7 @@ Gem::Specification.new do |spec|
     "libexec/*"
   ]
   spec.bindir = "exe"
-  spec.executables = ["rustocop"]
+  spec.executables = ["rustocop", "rustocop-config"]
   spec.require_paths = ["lib"]
 
   spec.add_development_dependency "rake", "~> 13.0"

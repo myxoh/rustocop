@@ -162,6 +162,39 @@ RSpec.describe "rustocop executable" do
     end
   end
 
+  it "prefers a compiled Rustocop configuration" do
+    Dir.mktmpdir("rustocop-compiled-config") do |directory|
+      File.write(File.join(directory, ".rubocop.yml"), <<~YAML)
+        AllCops:
+          DisabledByDefault: true
+
+        Style/StringLiterals:
+          Enabled: false
+      YAML
+      File.write(File.join(directory, ".rustocop.yml"), <<~YAML)
+        Rustocop:
+          SchemaVersion: 1
+          BuiltInCops:
+            - Style/StringLiterals
+          NonNativeCops: []
+        AllCops:
+          DisabledByDefault: true
+        Style/StringLiterals:
+          Enabled: true
+          EnforcedStyle: double_quotes
+      YAML
+      path = File.join(directory, "example.rb")
+      File.write(path, "'example'\n")
+
+      result = run_rustocop("--format", "json", path, chdir: directory)
+
+      expect(result.stderr).to eq("")
+      expect(result.status.exitstatus).to eq(1)
+      expect(parsed_json(result).fetch("files").flat_map { |file| file.fetch("offenses") })
+        .to contain_exactly(include("cop_name" => "Style/StringLiterals"))
+    end
+  end
+
   it "keeps resolved path exclusions relative to the discovered config" do
     Dir.mktmpdir("rustocop-resolved-paths") do |directory|
       File.write(File.join(directory, ".rubocop.yml"), <<~YAML)
