@@ -1,10 +1,9 @@
-use super::catalog_cop::{compatibility_custom, custom};
+use super::catalog_cop::compatibility_custom;
 use super::*;
 use std::collections::HashSet;
 
 pub(super) fn cops() -> Vec<Box<dyn Cop>> {
     vec![
-        custom("Lint/ScriptPermission", script_permission),
         compatibility_custom("Lint/RedundantCopDisableDirective", redundant_disable),
     ]
 }

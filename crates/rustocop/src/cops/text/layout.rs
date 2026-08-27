@@ -181,11 +181,8 @@ fn check_line_length(
         .iter()
         .map(|line| format!("{}{}", line.body, line.ending))
         .collect::<String>();
-    if ruby_prism::parse(parsed_source.as_bytes())
-        .errors()
-        .next()
-        .is_some()
-    {
+    let parsed = ruby_prism::parse(parsed_source.as_bytes());
+    if parsed.errors().next().is_some() {
         return;
     }
     let autocorrect = options.autocorrect_for(cop);
@@ -240,9 +237,13 @@ fn check_line_length(
         .bool(cop, "SplitStrings")
         .unwrap_or(false);
     let allow_all_heredocs = allow_heredoc == Some("true");
-    let allowed_heredoc_lines =
-        allowed_line_length_heredoc_lines(lines, allow_all_heredocs, allowed_heredocs);
-    let comment_columns = prism_comment_columns(lines);
+    let allowed_heredoc_lines = allowed_line_length_heredoc_lines(
+        &parsed_source,
+        &parsed,
+        allow_all_heredocs,
+        allowed_heredocs,
+    );
+    let comment_columns = prism_comment_columns(lines, &parsed_source, &parsed);
     let mut heredoc_queue = std::collections::VecDeque::<(String, bool)>::new();
     let mut heredoc_stack = Vec::<(String, bool)>::new();
     let mut heredoc: Option<(String, bool)> = None;
@@ -459,12 +460,11 @@ fn update_line_length_directive(
     }
 }
 
-fn prism_comment_columns(lines: &[SourceLine]) -> Vec<Option<usize>> {
-    let source = lines
-        .iter()
-        .map(|line| format!("{}{}", line.body, line.ending))
-        .collect::<String>();
-    let parsed = ruby_prism::parse(source.as_bytes());
+fn prism_comment_columns(
+    lines: &[SourceLine],
+    source: &str,
+    parsed: &ruby_prism::ParseResult<'_>,
+) -> Vec<Option<usize>> {
     let mut columns = vec![None; lines.len()];
     for comment in parsed.comments() {
         let start = comment.location().start_offset();
@@ -1088,20 +1088,16 @@ fn heredoc_delimiters(line: &str, in_heredoc: bool) -> Vec<String> {
 }
 
 fn allowed_line_length_heredoc_lines(
-    lines: &[SourceLine],
+    source: &str,
+    parsed: &ruby_prism::ParseResult<'_>,
     allow_all: bool,
     allowed_delimiters: &[String],
 ) -> std::collections::HashSet<usize> {
     if !allow_all {
         return std::collections::HashSet::new();
     }
-    let source = lines
-        .iter()
-        .map(|line| format!("{}{}", line.body, line.ending))
-        .collect::<String>();
-    let parsed = ruby_prism::parse(source.as_bytes());
     let mut collector = LineLengthHeredocCollector {
-        source: &source,
+        source,
         allow_all,
         allowed_delimiters,
         lines: std::collections::HashSet::new(),

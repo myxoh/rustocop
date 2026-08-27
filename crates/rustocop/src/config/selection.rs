@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use super::CopConfig;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -72,6 +74,8 @@ impl Default for RubyVersion {
 pub(crate) struct CopSelection {
     requested: Option<Vec<String>>,
     excluded: Vec<String>,
+    requested_lookup: HashSet<String>,
+    excluded_lookup: HashSet<String>,
 }
 
 impl CopSelection {
@@ -86,40 +90,28 @@ impl CopSelection {
     }
 
     pub(crate) fn select_only(&mut self, value: &str) {
-        self.requested = Some(
-            value
-                .split(',')
-                .map(str::trim)
-                .filter(|value| !value.is_empty())
-                .map(str::to_string)
-                .collect(),
-        );
+        let requested = split_selections(value);
+        self.requested_lookup = requested.iter().cloned().collect();
+        self.requested = Some(requested);
     }
 
     pub(crate) fn except(&mut self, value: &str) {
-        self.excluded.extend(
-            value
-                .split(',')
-                .map(str::trim)
-                .filter(|value| !value.is_empty())
-                .map(str::to_string),
-        );
+        let excluded = split_selections(value);
+        self.excluded_lookup.extend(excluded.iter().cloned());
+        self.excluded.extend(excluded);
     }
 
     pub(crate) fn enabled(&self, cop: &str, config: &CopConfig) -> bool {
-        if self
-            .excluded
-            .iter()
-            .any(|selection| selection_matches(selection, cop))
-        {
+        if selection_lookup_matches(&self.excluded_lookup, cop) {
             return false;
         }
-        match &self.requested {
+        match self.requested.as_ref() {
             None => normally_enabled(cop, config),
-            Some(requested) => requested.iter().any(|selection| {
-                selection == cop
-                    || (normally_enabled(cop, config) && selection_matches(selection, cop))
-            }),
+            Some(_) if self.requested_lookup.contains(cop) => true,
+            Some(_) => {
+                selection_lookup_matches_prefix(&self.requested_lookup, cop)
+                    && normally_enabled(cop, config)
+            }
         }
     }
 
@@ -128,19 +120,41 @@ impl CopSelection {
     }
 
     fn from_only(requested: Option<&[&str]>) -> Self {
+        let requested = requested.map(|values| {
+            values
+                .iter()
+                .map(|value| (*value).to_string())
+                .collect::<Vec<_>>()
+        });
         Self {
-            requested: requested
-                .map(|values| values.iter().map(|value| (*value).to_string()).collect()),
+            requested_lookup: requested
+                .iter()
+                .flatten()
+                .cloned()
+                .collect::<HashSet<_>>(),
+            requested,
             excluded: Vec::new(),
+            excluded_lookup: HashSet::new(),
         }
     }
 }
 
-fn selection_matches(selection: &str, cop: &str) -> bool {
-    selection == cop
-        || cop
-            .strip_prefix(selection)
-            .is_some_and(|suffix| suffix.starts_with('/'))
+fn split_selections(value: &str) -> Vec<String> {
+    value
+        .split(',')
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(str::to_string)
+        .collect()
+}
+
+fn selection_lookup_matches(selections: &HashSet<String>, cop: &str) -> bool {
+    selections.contains(cop) || selection_lookup_matches_prefix(selections, cop)
+}
+
+fn selection_lookup_matches_prefix(selections: &HashSet<String>, cop: &str) -> bool {
+    cop.match_indices('/')
+        .any(|(separator, _)| selections.contains(&cop[..separator]))
 }
 
 pub(super) fn normally_enabled(cop: &str, config: &CopConfig) -> bool {

@@ -1,9 +1,9 @@
-use super::super::catalog_cop::{compatibility_custom, custom};
+use super::super::catalog_cop::compatibility_custom;
 use super::*;
 
 pub(super) fn cops() -> Vec<Box<dyn Cop>> {
     vec![
-        custom(
+        compatibility_custom(
             "Layout/SpaceInsideArrayPercentLiteral",
             array_percent_literal_spacing,
         ),
@@ -11,14 +11,14 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
         compatibility_custom("Layout/SpaceAroundOperators", operator_spacing),
         compatibility_custom("Layout/HeredocIndentation", heredoc_indentation),
         compatibility_custom("Layout/SpaceAroundKeyword", space_around_keyword),
-        custom(
+        compatibility_custom(
             "Layout/SpaceInsidePercentLiteralDelimiters",
             percent_literal_delimiter_spacing,
         ),
     ]
 }
 
-fn array_percent_literal_spacing(context: &mut CopContext<'_, '_>) {
+fn array_percent_literal_spacing(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     let source = context.source();
     let bytes = source.as_bytes();
     #[derive(Default)]
@@ -33,9 +33,8 @@ fn array_percent_literal_spacing(context: &mut CopContext<'_, '_>) {
             ruby_prism::visit_array_node(self, node);
         }
     }
-    let parsed = ruby_prism::parse(source.as_bytes());
     let mut literal_starts = ArrayPercentLiteralStarts::default();
-    literal_starts.visit(&parsed.node());
+    literal_starts.visit(&context.prism_result().node());
     let mut start = 0;
     while start + 2 < bytes.len() {
         if !literal_starts.0.contains(&start) {
@@ -122,7 +121,7 @@ fn array_percent_literal_spacing(context: &mut CopContext<'_, '_>) {
     }
 }
 
-fn percent_literal_delimiter_spacing(context: &mut CopContext<'_, '_>) {
+fn percent_literal_delimiter_spacing(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     const MESSAGE: &str = "Do not use spaces inside percent literal delimiters.";
 
     let source = context.source();
@@ -156,9 +155,8 @@ fn percent_literal_delimiter_spacing(context: &mut CopContext<'_, '_>) {
             ruby_prism::visit_interpolated_x_string_node(self, node);
         }
     }
-    let parsed = ruby_prism::parse(source.as_bytes());
     let mut starts = PercentLiteralStarts::default();
-    starts.visit(&parsed.node());
+    starts.visit(&context.prism_result().node());
     let literal_starts = starts.0;
     let mut start = 0;
     while start + 2 < bytes.len() {
@@ -253,8 +251,8 @@ fn space_around_keyword(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     ];
     let source = context.source();
     let file = context.source_file();
-    let literal_ranges = file.literal_ranges();
-    let comment_ranges = file.comment_ranges();
+    let literal_ranges = context.literal_ranges();
+    let comment_ranges = context.comment_ranges();
     let data_section_start = file.data_section_start();
     #[derive(Default)]
     struct DoKeywordOffsets(std::collections::HashSet<usize>);
@@ -267,16 +265,31 @@ fn space_around_keyword(context: &mut CompatibilityCopContext<'_, '_, '_>) {
             ruby_prism::visit_block_node(self, node);
         }
     }
-    let parsed = ruby_prism::parse(source.as_bytes());
+    let parsed = context.prism_result();
     let mut do_keyword_offsets = DoKeywordOffsets::default();
     do_keyword_offsets.visit(&parsed.node());
-    for keyword in KEYWORDS {
-        let mut offsets = context.source_file().code_offsets(keyword);
-        if *keyword == "do" {
-            offsets.extend(do_keyword_offsets.0.iter().copied());
-            offsets.sort_unstable();
-            offsets.dedup();
+    let mut keyword_offsets: [Vec<usize>; KEYWORDS.len()] = std::array::from_fn(|_| Vec::new());
+    let mut keyword_indices_by_first: [Vec<usize>; 256] = std::array::from_fn(|_| Vec::new());
+    for (index, keyword) in KEYWORDS.iter().enumerate() {
+        keyword_indices_by_first[keyword.as_bytes()[0] as usize].push(index);
+    }
+    for start in 0..source.len() {
+        let Some(first) = source.as_bytes().get(start) else {
+            continue;
+        };
+        for index in keyword_indices_by_first[*first as usize].iter().copied() {
+            let keyword = KEYWORDS[index];
+            if source.as_bytes()[start..].starts_with(keyword.as_bytes()) {
+                keyword_offsets[index].push(start);
+            }
         }
+    }
+    if let Some(index) = KEYWORDS.iter().position(|keyword| *keyword == "do") {
+        keyword_offsets[index].extend(do_keyword_offsets.0.iter().copied());
+        keyword_offsets[index].sort_unstable();
+        keyword_offsets[index].dedup();
+    }
+    for (keyword, offsets) in KEYWORDS.iter().zip(keyword_offsets) {
         for start in offsets {
             if data_section_start.is_some_and(|data| data <= start)
                 || comment_ranges
@@ -298,7 +311,9 @@ fn space_around_keyword(context: &mut CompatibilityCopContext<'_, '_, '_>) {
                     .rfind(|byte| !byte.is_ascii_whitespace())
                     .is_some_and(|byte| byte == b'.');
             if matches!(after, Some(b'?' | b'!'))
-                || line.starts_with(&format!("def {keyword}"))
+                || line
+                    .strip_prefix("def ")
+                    .is_some_and(|method| method.starts_with(keyword))
                 || *keyword == "then" && line.starts_with("when ")
                 || continued_selector
                 || matches!(before, Some(b'.' | b':'))

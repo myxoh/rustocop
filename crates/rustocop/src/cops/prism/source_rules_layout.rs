@@ -116,6 +116,13 @@ fn spacing_after(source: &str, context: &mut Reporter<'_>, token: u8, message: &
 }
 
 pub(super) fn interpolation_closing_offsets(source: &str) -> Vec<usize> {
+    let parsed = ruby_prism::parse(source.as_bytes());
+    interpolation_closing_offsets_from(&parsed)
+}
+
+pub(super) fn interpolation_closing_offsets_from(
+    parsed: &ruby_prism::ParseResult<'_>,
+) -> Vec<usize> {
     #[derive(Default)]
     struct Closings(Vec<usize>);
     impl<'pr> Visit<'pr> for Closings {
@@ -124,7 +131,6 @@ pub(super) fn interpolation_closing_offsets(source: &str) -> Vec<usize> {
             ruby_prism::visit_embedded_statements_node(self, node);
         }
     }
-    let parsed = ruby_prism::parse(source.as_bytes());
     let mut closings = Closings::default();
     closings.visit(&parsed.node());
     closings.0
@@ -165,6 +171,14 @@ fn spacing_before(source: &str, context: &mut Reporter<'_>, token: u8, message: 
 }
 
 pub(super) fn ignored_syntax_ranges(source: &str) -> Vec<std::ops::Range<usize>> {
+    let parsed = ruby_prism::parse(source.as_bytes());
+    ignored_syntax_ranges_from(source, &parsed)
+}
+
+pub(super) fn ignored_syntax_ranges_from(
+    source: &str,
+    parsed: &ruby_prism::ParseResult<'_>,
+) -> Vec<std::ops::Range<usize>> {
     #[derive(Default)]
     struct EmbeddedRuby {
         ranges: Vec<std::ops::Range<usize>>,
@@ -191,11 +205,10 @@ pub(super) fn ignored_syntax_ranges(source: &str) -> Vec<std::ops::Range<usize>>
     }
 
     let file = SourceFile::new(source);
-    let parsed = ruby_prism::parse(source.as_bytes());
     let mut embedded = EmbeddedRuby::default();
     embedded.visit(&parsed.node());
-    let mut ranges = file.literal_ranges();
-    let heredocs = file.heredoc_ranges();
+    let mut ranges = SourceFile::literal_ranges_from(parsed);
+    let heredocs = SourceFile::heredoc_ranges_from(parsed);
     for range in &mut ranges {
         if heredocs.contains(range) {
             range.start = file.line_end(range.start).saturating_add(1).min(range.end);
@@ -232,7 +245,7 @@ pub(super) fn ignored_syntax_ranges(source: &str) -> Vec<std::ops::Range<usize>>
             })
             .collect();
     }
-    ranges.extend(file.comment_ranges());
+    ranges.extend(SourceFile::comment_ranges_from(parsed));
     if let Some(start) = file.data_section_start() {
         ranges.push(start..source.len());
     }

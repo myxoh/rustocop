@@ -9,7 +9,6 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
         Box::new(VariableNumber),
         Box::new(VariableName),
         Box::new(UselessAssignment),
-        Box::new(SelfAssignment),
         Box::new(MethodName),
         Box::new(PredicateMethod),
     ]

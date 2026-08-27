@@ -1,7 +1,6 @@
 use super::*;
 
 define_cops! {
-    ToEnumArguments => "Lint/ToEnumArguments" => compatibility_prism_call(to_enum_arguments),
 }
 
 fn to_enum_arguments(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {

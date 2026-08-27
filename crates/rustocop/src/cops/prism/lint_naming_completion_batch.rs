@@ -2,13 +2,12 @@ use super::*;
 use std::collections::{HashMap, HashSet};
 
 define_cops! {
-    UnderscorePrefixedVariableName => "Lint/UnderscorePrefixedVariableName" => compatibility_prism_any_node(underscore_variable),
     HeredocDelimiterNaming => "Naming/HeredocDelimiterNaming" => compatibility_source(heredoc_naming),
+    MethodParameterName => "Naming/MethodParameterName" => compatibility_prism_node(as_def_node, method_parameter_name),
+    UnderscorePrefixedVariableName => "Lint/UnderscorePrefixedVariableName" => compatibility_prism_any_node(underscore_variable),
     DeprecatedConstants => "Lint/DeprecatedConstants" => compatibility_prism_any_node(deprecated_constants),
     RedundantCopEnableDirective => "Lint/RedundantCopEnableDirective" => compatibility_source(redundant_enable),
     UnreachablePatternBranch => "Lint/UnreachablePatternBranch" => compatibility_source(unreachable_pattern),
-    MethodParameterName => "Naming/MethodParameterName" => compatibility_prism_node(as_def_node, method_parameter_name),
-    AccessorMethodName => "Naming/AccessorMethodName" => compatibility_prism_node(as_def_node, accessor_method_name),
 }
 
 fn underscore_variable(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
@@ -180,30 +179,34 @@ fn underscore_prefixed_name(name: &[u8]) -> bool {
 }
 
 fn heredoc_naming(context: &mut CompatibilityCopContext<'_, '_, '_>) {
-    use crate::rubocop::ast::prism::convert as convert_rubocop_ast;
+    static DEFAULT_FORBIDDEN: std::sync::LazyLock<regex::Regex> = std::sync::LazyLock::new(|| {
+        regex::Regex::new(r"(?i)(^|\s)(EO[A-Z]|END)(\s|$)").expect("default regex")
+    });
+    static WORD: std::sync::LazyLock<regex::Regex> = std::sync::LazyLock::new(|| {
+        regex::Regex::new(r"\w").expect("word regex")
+    });
 
-    let source = context.source().to_string();
-    let parsed = ruby_prism::parse(source.as_bytes());
-    if parsed.errors().next().is_some() {
+    let source = context.source();
+    if !context.processed_source().valid_syntax() {
         // Parser can represent a blank quoted delimiter even though Prism
         // rejects it. Only use the lexical fallback for invalid input: on a
         // valid file, the same bytes may occur harmlessly in comments or in a
         // heredoc body and must not be interpreted as Ruby syntax.
-        for range in blank_heredoc_opening_ranges(&source) {
+        for range in blank_heredoc_opening_ranges(source) {
             context.report("Use meaningful heredoc delimiters.", range);
         }
         return;
     }
-    let (ast, root) = convert_rubocop_ast(&source, &parsed.node());
-    let Some(root) = root.map(|root| ast.node(root)) else {
+    let Some(root) = context.processed_source().ast() else {
         return;
     };
     let configured = context.config_values("ForbiddenDelimiters").to_vec();
-    let forbidden = if !context.related_config_explicit(
+    let use_default_forbidden = !context.related_config_explicit(
         "Naming/HeredocDelimiterNaming",
         "ForbiddenDelimiters",
-    ) {
-        vec![regex::Regex::new(r"(?i)(^|\s)(EO[A-Z]|END)(\s|$)").expect("default regex")]
+    );
+    let forbidden = if use_default_forbidden {
+        Vec::new()
     } else {
         configured
             .iter()
@@ -216,10 +219,12 @@ fn heredoc_naming(context: &mut CompatibilityCopContext<'_, '_, '_>) {
             continue;
         }
         let delimiter = heredoc_delimiter(node.source().unwrap_or(""));
-        let meaningful = regex::Regex::new(r"\w")
-            .expect("word regex")
-            .is_match(delimiter)
-            && forbidden.iter().all(|pattern| !pattern.is_match(delimiter));
+        let meaningful = WORD.is_match(delimiter)
+            && if use_default_forbidden {
+                !DEFAULT_FORBIDDEN.is_match(delimiter)
+            } else {
+                forbidden.iter().all(|pattern| !pattern.is_match(delimiter))
+            };
         if meaningful {
             continue;
         }
@@ -231,7 +236,7 @@ fn heredoc_naming(context: &mut CompatibilityCopContext<'_, '_, '_>) {
         if let Some(range) = range {
             context.report(
                 "Use meaningful heredoc delimiters.",
-                heredoc_character_range_to_byte(&source, range),
+                heredoc_character_range_to_byte(source, range),
             );
         }
     }
@@ -377,7 +382,7 @@ fn redundant_enable(context: &mut CompatibilityCopContext<'_, '_, '_>) {
         .collect::<HashSet<_>>();
     let mut disabled = HashSet::new();
     let mut configured_enable_edits = HashMap::new();
-    for comment_range in context.source_file().comment_ranges() {
+    for comment_range in context.comment_ranges() {
         let comment = &context.source()[comment_range.clone()];
         let line_start = context.source()[..comment_range.start]
             .rfind('\n')
@@ -585,7 +590,7 @@ fn redundant_enable_known(
 
 fn unreachable_pattern(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     let lines = context.source_file().lines().collect::<Vec<_>>();
-    let literal_ranges = context.source_file().literal_ranges();
+    let literal_ranges = context.literal_ranges();
     let mut cases = Vec::<(usize, Option<usize>)>::new();
     for (index, (offset, line)) in lines.iter().copied().enumerate() {
         let trimmed = line.trim_start();

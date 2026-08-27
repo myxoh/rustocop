@@ -1,10 +1,6 @@
 use super::*;
 
 define_cops! {
-    EmptyLinesAroundMethodBody => "Layout/EmptyLinesAroundMethodBody" => compatibility_source(empty_method_body),
-    EmptyLinesAroundBlockBody => "Layout/EmptyLinesAroundBlockBody" => compatibility_source(empty_block_body),
-    EmptyLinesAroundArguments => "Layout/EmptyLinesAroundArguments" => compatibility_source(empty_around_arguments),
-    EmptyLinesAroundExceptionHandlingKeywords => "Layout/EmptyLinesAroundExceptionHandlingKeywords" => compatibility_source(empty_exception_keywords),
 }
 
 fn empty_begin_body(context: &mut CompatibilityCopContext<'_, '_, '_>) {

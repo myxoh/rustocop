@@ -1,16 +1,13 @@
 use super::*;
 use crate::rubocop::ast::node::core::NodeRef as RubocopNodeRef;
-use crate::rubocop::ast::prism::convert as convert_rubocop_ast;
 use std::collections::HashSet;
 
 define_cops! {
+    UselessConstantScoping => "Lint/UselessConstantScoping" => compatibility_source(useless_constant_scoping),
     UnusedMethodArgument => "Lint/UnusedMethodArgument" => compatibility_prism_node(as_def_node, unused_method_argument),
-    UselessMethodDefinition => "Lint/UselessMethodDefinition" => compatibility_prism_node(as_def_node, useless_method_definition),
     RedundantAssignment => "Style/RedundantAssignment" => compatibility_source(redundant_assignment),
-    ConstantResolution => "Lint/ConstantResolution" => compatibility_prism_any_node(constant_resolution),
     AmbiguousEndlessMethodDefinition => "Style/AmbiguousEndlessMethodDefinition" => compatibility_prism_node(as_def_node, ambiguous_endless_method_definition),
     NestedMethodDefinition => "Lint/NestedMethodDefinition" => compatibility_prism_node(as_def_node, nested_method_definition),
-    UselessConstantScoping => "Lint/UselessConstantScoping" => compatibility_source(useless_constant_scoping),
     Documentation => "Style/Documentation" => compatibility_prism_any_node(style_documentation),
 }
 
@@ -634,9 +631,7 @@ fn constant_overwritten_in_rescue(
 }
 
 fn redundant_assignment(context: &mut CompatibilityCopContext<'_, '_, '_>) {
-    let parsed = ruby_prism::parse(context.source().as_bytes());
-    let (ast, root) = convert_rubocop_ast(context.source(), &parsed.node());
-    let Some(root) = root.map(|root| ast.node(root)) else {
+    let Some(root) = context.processed_source().ast() else {
         return;
     };
     for definition in root.each_node(&["def", "defs"]) {
@@ -996,9 +991,7 @@ fn nested_method_definition(node: &ruby_prism::DefNode<'_>, context: &mut CopCon
 }
 
 fn useless_constant_scoping(context: &mut CompatibilityCopContext<'_, '_, '_>) {
-    let parsed = ruby_prism::parse(context.source().as_bytes());
-    let (ast, root) = convert_rubocop_ast(context.source(), &parsed.node());
-    let Some(root) = root.map(|root| ast.node(root)) else {
+    let Some(root) = context.processed_source().ast() else {
         return;
     };
     for constant in root.each_node(&["casgn"]) {

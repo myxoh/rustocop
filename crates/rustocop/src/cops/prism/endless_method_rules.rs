@@ -15,8 +15,8 @@ fn endless_method(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     }
     let source_file = context.source_file();
     let lines = source_file.lines().collect::<Vec<_>>();
-    let literal_ranges = source_file.literal_ranges();
-    let comment_ranges = source_file.comment_ranges();
+    let literal_ranges = context.literal_ranges();
+    let comment_ranges = context.comment_ranges();
     for (index, (offset, line)) in lines.iter().copied().enumerate() {
         let Some(def_column) = line.find("def ") else {
             continue;

@@ -1,8 +1,7 @@
-use super::catalog_cop::custom;
+use super::catalog_cop::compatibility_custom;
 use super::source_syntax::top_level_elements;
 use super::*;
 use crate::rubocop::ast::node::core::NodeRef as RubocopNodeRef;
-use crate::rubocop::ast::prism::convert as convert_rubocop_ast;
 use regex::Regex;
 use std::sync::OnceLock;
 
@@ -10,23 +9,22 @@ mod registry;
 
 pub(super) fn cops() -> Vec<Box<dyn Cop>> {
     let mut cops = vec![
-        custom(
+        compatibility_custom(
             "Layout/SpaceAroundBlockParameters",
             space_around_block_parameters,
         ),
-        custom(
+        compatibility_custom(
             "Layout/SpaceInsideReferenceBrackets",
             reference_bracket_spacing,
         ),
-        custom(
+        compatibility_custom(
             "Layout/MultilineOperationIndentation",
             multiline_operation_indentation,
         ),
         Box::new(HashAlignmentCop),
-        Box::new(MultilineMethodCallIndentationCompatCop),
         Box::new(MultilineMethodCallIndentationCop),
-        Box::new(RedundantLineBreakCop),
-        custom(
+        compatibility_custom("Layout/RedundantLineBreak", redundant_line_break_compat),
+        compatibility_custom(
             "Layout/SpaceInsideArrayLiteralBrackets",
             array_literal_spacing,
         ),
@@ -35,7 +33,7 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
     cops
 }
 
-fn space_around_block_parameters(context: &mut CopContext<'_, '_>) {
+fn space_around_block_parameters(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     #[derive(Default)]
     struct ParameterDelimiters {
         blocks: Vec<(usize, usize)>,
@@ -68,7 +66,7 @@ fn space_around_block_parameters(context: &mut CopContext<'_, '_>) {
     }
 
     let mut delimiters = ParameterDelimiters::default();
-    delimiters.visit(&parse(context.source().as_bytes()).node());
+    delimiters.visit(&context.prism_result().node());
     for (opening, closing) in delimiters
         .blocks
         .iter()
@@ -83,7 +81,7 @@ fn space_around_block_parameters(context: &mut CopContext<'_, '_>) {
 }
 
 fn enforce_parameter_spacing(
-    context: &mut CopContext<'_, '_>,
+    context: &mut CompatibilityCopContext<'_, '_, '_>,
     opening: usize,
     closing: usize,
     pipes: bool,
@@ -178,7 +176,7 @@ fn enforce_parameter_spacing(
 }
 
 fn report_parameter_boundary(
-    context: &mut CopContext<'_, '_>,
+    context: &mut CompatibilityCopContext<'_, '_, '_>,
     start: usize,
     actual: usize,
     wanted: usize,
@@ -231,16 +229,6 @@ impl Cop for RedundantLineBreakCop {
 
     fn phase(&self) -> CopPhase {
         CopPhase::Source
-    }
-
-    fn on_source(&self, source: &str, context: &mut Context) {
-        let parsed = ruby_prism::parse(source.as_bytes());
-        let (ast, root) = convert_rubocop_ast(source, &parsed.node());
-        let Some(root) = root.map(|root| ast.node(root)) else {
-            return;
-        };
-        let mut cop = context.cop_context(self.name(), source, &[]);
-        redundant_line_break_compat(root, source, &mut cop);
     }
 
     fn investigation_state(&self) -> Box<dyn Any> {
@@ -398,11 +386,10 @@ impl RedundantLineBreakCop {
     }
 }
 
-fn redundant_line_break_compat(
-    root: RubocopNodeRef<'_>,
-    source: &str,
-    context: &mut CopContext<'_, '_>,
-) {
+fn redundant_line_break_compat(context: &mut CompatibilityCopContext<'_, '_, '_>) {
+    let Some(root) = context.processed_source().ast() else { return };
+    let source = context.source();
+    let buffer = context.source_buffer();
     let inspect_blocks = context.config_bool("InspectBlocks", false);
     let single_line_block_chain = context
         .related_config_value("Layout/SingleLineBlockChain", "Enabled")
@@ -414,10 +401,11 @@ fn redundant_line_break_compat(
             .and_then(|value| value.parse::<usize>().ok())
             .unwrap_or(120)
     });
-    let comment_lines = SourceFile::new(source)
-        .comment_ranges()
-        .into_iter()
-        .map(|range| source[..range.start].bytes().filter(|byte| *byte == b'\n').count() + 1)
+    let comment_lines = context
+        .processed_source()
+        .comments()
+        .iter()
+        .map(|comment| comment.line)
         .collect::<std::collections::HashSet<_>>();
 
     let assignment_ranges = root
@@ -442,6 +430,7 @@ fn redundant_line_break_compat(
                 single_line_block_chain,
                 max_line_length,
                 &comment_lines,
+                buffer,
             )
         {
             candidates.push(node);
@@ -476,6 +465,7 @@ fn redundant_line_break_compat(
             single_line_block_chain,
             max_line_length,
             &comment_lines,
+            buffer,
         ) {
             candidates.push(whole);
         }
@@ -504,7 +494,7 @@ fn redundant_line_break_compat(
         }) {
             continue;
         }
-        let byte_range = redundant_line_break_character_range_to_byte(source, character_range.clone());
+        let byte_range = redundant_line_break_character_range_to_byte(buffer, character_range.clone());
         let replacement = redundant_single_line(&source[byte_range.clone()]).unwrap_or_default();
         context.replace(
             "Redundant line break detected.",
@@ -523,9 +513,10 @@ fn redundant_line_break_compat_offense(
     single_line_block_chain: bool,
     max_line_length: Option<usize>,
     comment_lines: &std::collections::HashSet<usize>,
+    buffer: &crate::rubocop::ast::source::SourceBuffer<'_>,
 ) -> bool {
     if !node.multiline()
-        || redundant_line_break_too_long(node, source, max_line_length)
+        || redundant_line_break_too_long(node, source, max_line_length, buffer)
         || (node.first_line()..=node.last_line()).any(|line| comment_lines.contains(&line))
         || !redundant_line_break_safe_to_split(node)
     {
@@ -535,7 +526,7 @@ fn redundant_line_break_compat_offense(
         let Some((operator, _)) = node.loc("operator") else {
             return false;
         };
-        let byte = redundant_line_break_character_offset_to_byte(source, operator.start);
+        let byte = buffer.byte_position(operator.start).unwrap_or(source.len());
         let line_start = source[..byte].rfind('\n').map_or(0, |index| index + 1);
         let line_end = source[byte..]
             .find('\n')
@@ -615,6 +606,7 @@ fn redundant_line_break_too_long(
     node: RubocopNodeRef<'_>,
     source: &str,
     max: Option<usize>,
+    buffer: &crate::rubocop::ast::source::SourceBuffer<'_>,
 ) -> bool {
     let Some(max) = max else {
         return false;
@@ -622,8 +614,8 @@ fn redundant_line_break_too_long(
     let Some(range) = node.source_range() else {
         return false;
     };
-    let start = redundant_line_break_character_offset_to_byte(source, range.start);
-    let end = redundant_line_break_character_offset_to_byte(source, range.end);
+    let start = buffer.byte_position(range.start).unwrap_or(source.len());
+    let end = buffer.byte_position(range.end).unwrap_or(source.len());
     let line_start = source[..start].rfind('\n').map_or(0, |index| index + 1);
     let line_end = source[end..]
         .find('\n')
@@ -636,19 +628,12 @@ fn redundant_line_break_too_long(
         .is_some_and(|line| leading + line.chars().count() > max)
 }
 
-fn redundant_line_break_character_offset_to_byte(source: &str, offset: usize) -> usize {
-    source
-        .char_indices()
-        .nth(offset)
-        .map_or(source.len(), |(byte, _)| byte)
-}
-
 fn redundant_line_break_character_range_to_byte(
-    source: &str,
+    buffer: &crate::rubocop::ast::source::SourceBuffer<'_>,
     range: std::ops::Range<usize>,
 ) -> std::ops::Range<usize> {
-    redundant_line_break_character_offset_to_byte(source, range.start)
-        ..redundant_line_break_character_offset_to_byte(source, range.end)
+    buffer.byte_position(range.start).unwrap_or(buffer.source().len())
+        ..buffer.byte_position(range.end).unwrap_or(buffer.source().len())
 }
 
 fn redundant_binary_wrapper(node: &Node<'_>) -> bool {
@@ -1057,17 +1042,17 @@ fn redundant_single_line(source: &str) -> Option<String> {
     Some(output)
 }
 
-fn array_literal_spacing(context: &mut CopContext<'_, '_>) {
+fn array_literal_spacing(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     let mut brackets = BracketLocations::default();
-    brackets.visit(&parse(context.source().as_bytes()).node());
+    brackets.visit(&context.prism_result().node());
     for (opening, closing) in brackets.arrays {
         enforce_bracket_spacing(context, opening, closing, "array");
     }
 }
 
-fn reference_bracket_spacing(context: &mut CopContext<'_, '_>) {
+fn reference_bracket_spacing(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     let mut brackets = BracketLocations::default();
-    brackets.visit(&parse(context.source().as_bytes()).node());
+    brackets.visit(&context.prism_result().node());
     for (opening, closing) in brackets.references {
         enforce_bracket_spacing(context, opening, closing, "reference");
     }
@@ -1112,7 +1097,7 @@ impl<'pr> Visit<'pr> for BracketLocations {
 }
 
 fn enforce_bracket_spacing(
-    context: &mut CopContext<'_, '_>,
+    context: &mut CompatibilityCopContext<'_, '_, '_>,
     opening: usize,
     closing: usize,
     kind: &str,
@@ -1256,9 +1241,7 @@ fn enforce_bracket_spacing(
 
 #[allow(clippy::too_many_lines)]
 fn end_alignment(context: &mut CompatibilityCopContext<'_, '_, '_>) {
-    let parsed = ruby_prism::parse(context.source().as_bytes());
-    let (ast, root) = convert_rubocop_ast(context.source(), &parsed.node());
-    let Some(root) = root.map(|root| ast.node(root)) else {
+    let Some(root) = context.processed_source().ast() else {
         return;
     };
     let align_start_of_line = context
@@ -1447,35 +1430,13 @@ fn rescue_alignment_source_end(_source: &str, node: RubocopNodeRef<'_>) -> Optio
 }
 
 fn character_offset_to_byte(source: &str, offset: usize) -> usize {
+    if source.is_ascii() {
+        return offset.min(source.len());
+    }
     source
         .char_indices()
         .nth(offset)
         .map_or(source.len(), |(byte, _)| byte)
-}
-
-struct MultilineMethodCallIndentationCompatCop;
-
-impl Cop for MultilineMethodCallIndentationCompatCop {
-    fn name(&self) -> &'static str {
-        "Layout/MultilineMethodCallIndentation"
-    }
-
-    fn phase(&self) -> CopPhase {
-        CopPhase::Source
-    }
-
-    fn on_source(&self, source: &str, context: &mut Context) {
-        let parsed = ruby_prism::parse(source.as_bytes());
-        let (ast, root) = convert_rubocop_ast(source, &parsed.node());
-        let Some(root) = root.map(|root| ast.node(root)) else {
-            return;
-        };
-        let mut reporter = context.cop_context(self.name(), source, &[]);
-        if reporter.related_config_value("AllCops", "DisabledByDefault") != Some("true") {
-            return;
-        }
-        multiline_method_call_indentation_compat(root, source, &mut reporter);
-    }
 }
 
 struct MultilineMethodCallIndentationCop;
@@ -1483,6 +1444,28 @@ struct MultilineMethodCallIndentationCop;
 impl Cop for MultilineMethodCallIndentationCop {
     fn name(&self) -> &'static str {
         "Layout/MultilineMethodCallIndentation"
+    }
+
+    fn phase(&self) -> CopPhase {
+        CopPhase::NodeAndCompatibility
+    }
+
+    fn on_compatibility_investigation_with_prism<'processed, 'source>(
+        &self,
+        processed_source: &'processed crate::rubocop::ast::processed_source::ProcessedSource<
+            'source,
+        >,
+        prism_result: &'processed ruby_prism::ParseResult<'source>,
+        context: &mut Context,
+        _state: &mut dyn Any,
+    ) {
+        let mut context = CompatibilityCopContext::new_with_prism(
+            context,
+            self.name(),
+            processed_source,
+            prism_result,
+        );
+        multiline_method_call_indentation_compat(&mut context);
     }
 
     fn on_node<'pr>(
@@ -1546,10 +1529,15 @@ impl Cop for MultilineMethodCallIndentationCop {
 }
 
 fn multiline_method_call_indentation_compat(
-    root: RubocopNodeRef<'_>,
-    source: &str,
-    context: &mut CopContext<'_, '_>,
+    context: &mut CompatibilityCopContext<'_, '_, '_>,
 ) {
+    if context.related_config_value("AllCops", "DisabledByDefault") != Some("true") {
+        return;
+    }
+
+    let Some(root) = context.processed_source().ast() else { return };
+    let source = context.source();
+    let source = IndexedMethodSource::new(source);
     let style = context.policy().enforced_style("aligned").to_string();
     let width = context.config_usize("IndentationWidth", 2);
     let normal_width = context
@@ -1563,66 +1551,64 @@ fn multiline_method_call_indentation_compat(
         let Some(receiver) = node.receiver() else {
             continue;
         };
-        let Some(rhs) = method_call_rhs(node, source) else {
+        let Some(rhs) = method_call_rhs(node, &source) else {
             continue;
         };
-        if !method_range_begins_line(rhs.clone(), source) {
+        if !method_range_begins_line(rhs.clone(), &source) {
             continue;
         }
         let pair = node.each_ancestor(&["pair"]).into_iter().next();
         if pair
-            .is_some_and(|pair| method_inside_multiline_chain_arg(node, pair, source))
-            || pair.is_none() && method_not_for_this_cop(node, source)
+            .is_some_and(|pair| method_inside_multiline_chain_arg(node, pair, &source))
+            || pair.is_none() && method_not_for_this_cop(node, &source)
         {
             continue;
         }
         let lhs = method_left_hand_side(receiver);
         let base_receiver = method_base_receiver(node);
-        let actual = method_column(source, rhs.start);
-        let rhs_source = &source[character_offset_to_byte(source, rhs.start)
-            ..character_offset_to_byte(source, rhs.end)];
+        let actual = method_column(&source, rhs.start);
+        let rhs_source = &source[source.byte_position(rhs.start)..source.byte_position(rhs.end)];
         let mut base = None;
         let mut hash_pair_base = None;
         let desired = if let Some(pair) = pair {
             if style == "aligned" {
-                base = method_hash_alignment_base(node, source)
-                    .or_else(|| method_pair_alignment_base(node, lhs, source))
+                base = method_hash_alignment_base(node, &source)
+                    .or_else(|| method_pair_alignment_base(node, lhs, &source))
                     .or_else(|| lhs.source_range());
-                base.as_ref().map_or(actual, |base| method_column(source, base.start))
+                base.as_ref().map_or(actual, |base| method_column(&source, base.start))
             } else if style == "indented" && base_receiver.kind() == "hash" {
                 let key = pair.node_child(0).and_then(RubocopNodeRef::source_range);
-                hash_pair_base = key.as_ref().map(|key| method_column(source, key.start) + width);
-                key.map_or(actual, |key| method_column(source, key.start) + 2 * width)
+                hash_pair_base = key.as_ref().map(|key| method_column(&source, key.start) + width);
+                key.map_or(actual, |key| method_column(&source, key.start) + 2 * width)
             } else {
-                method_line_indentation(lhs, source) + width
+                method_line_indentation(lhs, &source) + width
             }
         } else if style == "aligned" {
-            base = method_semantic_base(node, &rhs, source)
+            base = method_semantic_base(node, &rhs, &source)
                 .or_else(|| method_syntactic_base(node));
             base.as_ref().map_or_else(
-                || method_line_indentation(lhs, source)
+                || method_line_indentation(lhs, &source)
                     + method_correct_indentation(node, width, normal_width),
-                |base| method_column(source, base.start),
+                |base| method_column(&source, base.start),
             )
         } else if style == "indented_relative_to_receiver" {
             base = method_receiver_alignment_base(node);
             base.as_ref().map_or_else(
-                || method_line_indentation(lhs, source) + width,
-                |base| method_column(source, base.start) + width,
+                || method_line_indentation(lhs, &source) + width,
+                |base| method_column(&source, base.start) + width,
             )
         } else {
-            method_line_indentation(lhs, source) + method_correct_indentation(node, width, normal_width)
+            method_line_indentation(lhs, &source) + method_correct_indentation(node, width, normal_width)
         };
         if actual == desired {
             continue;
         }
         let message = if let Some(base) = &base {
-            let base_source = source[character_offset_to_byte(source, base.start)
-                ..character_offset_to_byte(source, base.end)]
+            let base_source = source[source.byte_position(base.start)..source.byte_position(base.end)]
                 .lines()
                 .next()
                 .unwrap_or_default();
-            let base_line = source[..character_offset_to_byte(source, base.start)]
+            let base_line = source[..source.byte_position(base.start)]
                 .bytes()
                 .filter(|byte| *byte == b'\n')
                 .count()
@@ -1633,7 +1619,7 @@ fn multiline_method_call_indentation_compat(
                 format!("Align `{rhs_source}` with `{base_source}` on line {base_line}.")
             }
         } else {
-            let message_base = hash_pair_base.unwrap_or_else(|| method_line_indentation(lhs, source));
+            let message_base = hash_pair_base.unwrap_or_else(|| method_line_indentation(lhs, &source));
             let expected = desired as isize - message_base as isize;
             let used = actual as isize - message_base as isize;
             let noun = if operation_keyword_ancestor(node).is_some() {
@@ -1645,8 +1631,8 @@ fn multiline_method_call_indentation_compat(
             };
             format!("Use {expected} (not {used}) spaces for indenting {noun} spanning multiple lines.")
         };
-        let offense_start = character_offset_to_byte(source, rhs.start);
-        let offense_end = character_offset_to_byte(source, rhs.end);
+        let offense_start = source.byte_position(rhs.start);
+        let offense_end = source.byte_position(rhs.end);
         let line_start = source[..offense_start].rfind('\n').map_or(0, |newline| newline + 1);
         let mut edits = vec![(line_start..offense_start, " ".repeat(desired))];
         if let Some(block) = node.parent().filter(|parent| {
@@ -1655,9 +1641,9 @@ fn multiline_method_call_indentation_compat(
         }) {
             let delta = desired as isize - actual as isize;
             if let Some(body) = block.body().and_then(RubocopNodeRef::source_range) {
-                let body_start = character_offset_to_byte(source, body.start);
-                let body_end = character_offset_to_byte(source, body.end);
-                for (offset, line) in SourceFile::new(source).lines() {
+                let body_start = source.byte_position(body.start);
+                let body_end = source.byte_position(body.end);
+                for (offset, line) in SourceFile::new(&source).lines() {
                     if offset + line.len() <= body_start || offset >= body_end {
                         continue;
                     }
@@ -1670,7 +1656,7 @@ fn multiline_method_call_indentation_compat(
                 }
             }
             if let Some((ending, _)) = block.loc("end") {
-                let end_byte = character_offset_to_byte(source, ending.start);
+                let end_byte = source.byte_position(ending.start);
                 let end_line = source[..end_byte].rfind('\n').map_or(0, |newline| newline + 1);
                 let indentation = source[end_line..end_byte].chars().count();
                 let shifted = (indentation as isize + delta).max(0) as usize;
@@ -1681,7 +1667,36 @@ fn multiline_method_call_indentation_compat(
     }
 }
 
-fn method_call_rhs(node: RubocopNodeRef<'_>, source: &str) -> Option<std::ops::Range<usize>> {
+struct IndexedMethodSource<'source> {
+    source: &'source str,
+    buffer: crate::rubocop::ast::source::SourceBuffer<'source>,
+}
+
+impl<'source> IndexedMethodSource<'source> {
+    fn new(source: &'source str) -> Self {
+        Self {
+            source,
+            buffer: crate::rubocop::ast::source::SourceBuffer::new(source),
+        }
+    }
+
+    fn byte_position(&self, character: usize) -> usize {
+        self.buffer.byte_position(character).unwrap_or(self.source.len())
+    }
+}
+
+impl std::ops::Deref for IndexedMethodSource<'_> {
+    type Target = str;
+
+    fn deref(&self) -> &Self::Target {
+        self.source
+    }
+}
+
+fn method_call_rhs(
+    node: RubocopNodeRef<'_>,
+    source: &IndexedMethodSource<'_>,
+) -> Option<std::ops::Range<usize>> {
     let (dot, dot_source) = node.loc("dot")?;
     let selector = node.loc("selector");
     if let Some((selector, _)) = selector {
@@ -1697,20 +1712,23 @@ fn method_call_rhs(node: RubocopNodeRef<'_>, source: &str) -> Option<std::ops::R
     }
 }
 
-fn method_same_line(source: &str, left: usize, right: usize) -> bool {
-    let left = character_offset_to_byte(source, left);
-    let right = character_offset_to_byte(source, right);
+fn method_same_line(source: &IndexedMethodSource<'_>, left: usize, right: usize) -> bool {
+    let left = source.byte_position(left);
+    let right = source.byte_position(right);
     !source[left.min(right)..left.max(right)].contains('\n')
 }
 
-fn method_range_begins_line(range: std::ops::Range<usize>, source: &str) -> bool {
-    let start = character_offset_to_byte(source, range.start);
+fn method_range_begins_line(
+    range: std::ops::Range<usize>,
+    source: &IndexedMethodSource<'_>,
+) -> bool {
+    let start = source.byte_position(range.start);
     let line_start = source[..start].rfind('\n').map_or(0, |newline| newline + 1);
     source[line_start..start].chars().all(char::is_whitespace)
 }
 
-fn method_column(source: &str, character: usize) -> usize {
-    let byte = character_offset_to_byte(source, character);
+fn method_column(source: &IndexedMethodSource<'_>, character: usize) -> usize {
+    let byte = source.byte_position(character);
     let line_start = source[..byte].rfind('\n').map_or(0, |newline| newline + 1);
     source[line_start..byte].chars().count()
 }
@@ -1741,7 +1759,7 @@ fn method_first_call_with_dot(mut node: RubocopNodeRef<'_>) -> Option<RubocopNod
     Some(node)
 }
 
-fn method_not_for_this_cop(node: RubocopNodeRef<'_>, source: &str) -> bool {
+fn method_not_for_this_cop(node: RubocopNodeRef<'_>, source: &IndexedMethodSource<'_>) -> bool {
     let Some(node_range) = node.source_range() else {
         return true;
     };
@@ -1759,11 +1777,14 @@ fn method_not_for_this_cop(node: RubocopNodeRef<'_>, source: &str) -> bool {
         })
 }
 
-fn method_lexically_return_grouped(node: RubocopNodeRef<'_>, source: &str) -> bool {
+fn method_lexically_return_grouped(
+    node: RubocopNodeRef<'_>,
+    source: &IndexedMethodSource<'_>,
+) -> bool {
     let Some(range) = node.source_range() else {
         return false;
     };
-    let start = character_offset_to_byte(source, range.start);
+    let start = source.byte_position(range.start);
     let before = &source[..start];
     before.rfind('(').is_some_and(|opening| {
         before.rfind(')').is_none_or(|closing| opening > closing)
@@ -1778,7 +1799,7 @@ fn method_lexically_return_grouped(node: RubocopNodeRef<'_>, source: &str) -> bo
 fn method_inside_multiline_chain_arg(
     node: RubocopNodeRef<'_>,
     pair: RubocopNodeRef<'_>,
-    source: &str,
+    source: &IndexedMethodSource<'_>,
 ) -> bool {
     let Some(hash) = pair.parent() else {
         return false;
@@ -1807,10 +1828,9 @@ fn method_dot_selector_range(node: RubocopNodeRef<'_>) -> Option<std::ops::Range
 fn method_semantic_base(
     node: RubocopNodeRef<'_>,
     rhs: &std::ops::Range<usize>,
-    source: &str,
+    source: &IndexedMethodSource<'_>,
 ) -> Option<std::ops::Range<usize>> {
-    let rhs_source = &source[character_offset_to_byte(source, rhs.start)
-        ..character_offset_to_byte(source, rhs.end)];
+    let rhs_source = &source[source.byte_position(rhs.start)..source.byte_position(rhs.end)];
     if !rhs_source.starts_with('.') && !rhs_source.starts_with("&.") {
         return None;
     }
@@ -1821,9 +1841,9 @@ fn method_semantic_base(
     if let Some(above) = node.ancestors().into_iter().find(|ancestor| {
         ancestor.loc("dot").is_some_and(|(dot, _)| {
             method_column(source, dot.start) == actual
-                && source[..character_offset_to_byte(source, dot.start)]
+                && source[..source.byte_position(dot.start)]
                     .bytes().filter(|byte| *byte == b'\n').count() + 2
-                    == source[..character_offset_to_byte(source, rhs.start)]
+                    == source[..source.byte_position(rhs.start)]
                         .bytes().filter(|byte| *byte == b'\n').count() + 1
         })
     }) {
@@ -1881,7 +1901,7 @@ fn method_hash_alignment_base(
 fn method_pair_alignment_base(
     node: RubocopNodeRef<'_>,
     lhs: RubocopNodeRef<'_>,
-    source: &str,
+    source: &IndexedMethodSource<'_>,
 ) -> Option<std::ops::Range<usize>> {
     let first = method_first_call_with_dot(node)?;
     if first.id() == node.id() {
@@ -1913,7 +1933,7 @@ fn method_after_multiline_block_base(
 
 fn method_multiline_block_chain_base(
     node: RubocopNodeRef<'_>,
-    source: &str,
+    source: &IndexedMethodSource<'_>,
 ) -> Option<std::ops::Range<usize>> {
     if node.block_node().is_some() {
         let receiver = node.receiver()?;
@@ -1958,7 +1978,7 @@ fn method_multiline_block_chain_base(
 
 fn method_first_call_alignment_base(
     node: RubocopNodeRef<'_>,
-    source: &str,
+    source: &IndexedMethodSource<'_>,
 ) -> Option<std::ops::Range<usize>> {
     let first = method_first_call_with_dot(node)?;
     let base_receiver = method_base_receiver(first);
@@ -1983,19 +2003,19 @@ fn method_first_call_alignment_base(
     method_dot_selector_range(first)
 }
 
-fn method_range_line(source: &str, character: usize) -> usize {
-    source[..character_offset_to_byte(source, character)]
+fn method_range_line(source: &IndexedMethodSource<'_>, character: usize) -> usize {
+    source[..source.byte_position(character)]
         .bytes()
         .filter(|byte| *byte == b'\n')
         .count()
         + 1
 }
 
-fn method_line_indentation(node: RubocopNodeRef<'_>, source: &str) -> usize {
+fn method_line_indentation(node: RubocopNodeRef<'_>, source: &IndexedMethodSource<'_>) -> usize {
     let Some(range) = node.source_range() else {
         return 0;
     };
-    let byte = character_offset_to_byte(source, range.start);
+    let byte = source.byte_position(range.start);
     let line_start = source[..byte].rfind('\n').map_or(0, |newline| newline + 1);
     source[line_start..]
         .chars()
@@ -2819,11 +2839,9 @@ fn inside_hash_argument_of_multiline_chain(
         })
 }
 
-fn multiline_operation_indentation(context: &mut CopContext<'_, '_>) {
-    let source = context.source().to_string();
-    let parsed = ruby_prism::parse(source.as_bytes());
-    let (ast, root) = convert_rubocop_ast(&source, &parsed.node());
-    let Some(root) = root.map(|root| ast.node(root)) else {
+fn multiline_operation_indentation(context: &mut CompatibilityCopContext<'_, '_, '_>) {
+    let source = context.source();
+    let Some(root) = context.processed_source().ast() else {
         return;
     };
     let style = context.policy().enforced_style("aligned").to_string();
@@ -3552,8 +3570,8 @@ fn report_hash_alignment(
 
 #[allow(clippy::cognitive_complexity, clippy::too_many_lines)]
 fn operator_spacing(context: &mut CompatibilityCopContext<'_, '_, '_>) {
-    let source = context.source().to_owned();
-    let parsed = ruby_prism::parse(source.as_bytes());
+    let source = context.source();
+    let parsed = context.prism_result();
     let exponent_space = context
         .config_value("EnforcedStyleForExponentOperator")
         .is_some_and(|style| style == "space");
@@ -3577,7 +3595,7 @@ fn operator_spacing(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     // regexp arguments). RuboCop's previous scanner selected the narrowest
     // containing range. Keep that exact choice with a sweep-line heap instead of
     // testing every source byte against every literal.
-    let literal_ranges = SourceFile::literal_ranges_from(&parsed);
+    let literal_ranges = SourceFile::literal_ranges_from(parsed);
     let mut literal_events = literal_ranges
         .iter()
         .cloned()
@@ -3586,12 +3604,12 @@ fn operator_spacing(context: &mut CompatibilityCopContext<'_, '_, '_>) {
         .collect::<Vec<_>>();
     literal_events.sort_by_key(|&(start, order, _)| (start, order));
     let mut active_literals = std::collections::BinaryHeap::new();
-    let mut comment_ranges = SourceFile::comment_ranges_from(&parsed);
+    let mut comment_ranges = SourceFile::comment_ranges_from(parsed);
     comment_ranges.sort_by_key(|range| range.start);
     let unary_operator_offsets = unary_operator_offsets(&parsed.node());
     let hash_pair_starts = hash_pair_starts(&parsed.node());
     let (structural_operator_offsets, ternary_operator_offsets) =
-        spacing_structural_operator_offsets(&source, &parsed);
+        spacing_structural_operator_offsets(context.source_buffer(), context.processed_source().ast());
     let mut literal_index = 0;
     let mut comment_index = 0;
 
@@ -3875,14 +3893,13 @@ fn operator_spacing(context: &mut CompatibilityCopContext<'_, '_, '_>) {
 }
 
 fn spacing_structural_operator_offsets(
-    source: &str,
-    parsed: &ruby_prism::ParseResult<'_>,
+    buffer: &crate::rubocop::ast::source::SourceBuffer<'_>,
+    root: Option<RubocopNodeRef<'_>>,
 ) -> (
     std::collections::HashSet<usize>,
     std::collections::HashSet<usize>,
 ) {
-    let (ast, root) = convert_rubocop_ast(source, &parsed.node());
-    let Some(root) = root.map(|root| ast.node(root)) else {
+    let Some(root) = root else {
         return Default::default();
     };
     let mut offsets = std::collections::HashSet::new();
@@ -3908,7 +3925,7 @@ fn spacing_structural_operator_offsets(
                 continue;
             };
             if spacing_operator_at(token, 0).is_some_and(|operator| operator == token) {
-                let offset = character_offset_to_byte(source, range.start);
+                let offset = buffer.byte_position(range.start).unwrap_or(buffer.source().len());
                 offsets.insert(offset);
                 if matches!(name, "question" | "colon") {
                     ternary_offsets.insert(offset);

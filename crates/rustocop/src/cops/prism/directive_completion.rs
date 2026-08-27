@@ -6,7 +6,7 @@ define_cops! {
 }
 
 fn cop_directive_syntax(context: &mut CompatibilityCopContext<'_, '_, '_>) {
-    let comment_ranges = context.source_file().comment_ranges();
+    let comment_ranges = context.comment_ranges();
     for (offset, line) in context.source_file().lines() {
         let Some(comment_start) = line.find("# rubocop:") else {
             continue;
@@ -65,7 +65,7 @@ fn cop_directive_syntax(context: &mut CompatibilityCopContext<'_, '_, '_>) {
 fn missing_cop_enable_directive(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     let source = context.source();
     let maximum = context.config_usize("MaximumRangeSize", usize::MAX);
-    let comment_ranges = context.source_file().comment_ranges();
+    let comment_ranges = context.comment_ranges();
     for (line_index, (offset, line)) in context.source_file().lines().enumerate() {
         let directive = line
             .find("# rubocop:disable ")

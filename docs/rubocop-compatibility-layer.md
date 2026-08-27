@@ -83,6 +83,41 @@ and explicit gaps. An audited cop is not counted as migrated until those gaps
 are resolved through the compatibility layer; behavioral parity alone does not
 close the source-shape gate.
 
+## Canonical runtime implementations
+
+Every built-in cop has exactly one registered runtime implementation. The Rust
+registry test constructs the complete enabled registry and rejects duplicate
+cop names, while the migration-manifest contract requires exactly one canonical
+source path for each of the 606 built-ins.
+
+Canonical selection is behavioral, not based on which file is newer. Each
+candidate must match the cached RuboCop unit contracts; changed candidates are
+then checked against the complete pinned project corpus. The current selection
+matches all 29,610 controlled cases. Across the 50 projects, all 531 exercised
+cops are project-exact, 75 are dormant, and there are zero mismatching offense
+signatures. Dormant cops remain fixture-proven rather than project-proven.
+
+### Per-file runtime architecture
+
+As of `2026-08-27T13:03:29-04:00`, each parsed file owns one indexed
+`SourceBuffer`. Compatibility contexts, ranges, comments, line lookups, and
+callbacks borrow that buffer instead of rebuilding character, byte, and line
+indexes for every cop callback. Compatibility callbacks are also registered by
+the RuboCop AST node kinds they consume, so traversal does not invoke every
+compatibility cop for every node. Source-oriented layout adapters that work
+outside `ProcessedSource` build one equivalent offset index for the complete
+file rather than rescanning from byte zero for every location.
+
+The same cache-disabled 606-cop/50-project comparison remained exact and
+reduced measured native inspection from 833.27 seconds to 758.90 seconds
+(8.9%), while end-to-end wall time fell from 876.06 seconds to 820.16 seconds
+(6.4%). The change has a much larger effect on pathological inputs: a 994 KB
+Unicode file that previously took 34.62 seconds with all cops enabled now has
+a median of 0.35 seconds across three runs (about 99x faster). The difference
+between those figures is intentional: after removing quadratic offset work,
+the full run is dominated by parsing and traversing 85,471 ordinary files and
+materializing 4.34 million diagnostics for exact comparison.
+
 ### Source-shaped migration checkpoint
 
 As of `2026-08-27T00:19:48Z`, a second set of ten cops has been migrated through
@@ -208,7 +243,7 @@ those two cops is exact across all 50 projects.
 
 The refreshed canonical project evidence contains no mismatching built-in
 cops: all 531 cops exercised by RuboCop are `project_exact`, and the remaining
-75 are dormant on this fixed corpus. The completed tree passes all 29,608
+75 are dormant on this fixed corpus. The completed tree passes all 29,610
 cached unit contracts in 2.880 seconds. The earlier migration gates also found
 and fixed contract boundaries in `Layout/IndentationWidth` and
 `Style/Semicolon`; their minimized regressions remain in the unit corpus.

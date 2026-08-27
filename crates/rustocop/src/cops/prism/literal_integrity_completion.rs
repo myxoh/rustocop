@@ -2,7 +2,6 @@ use std::collections::HashSet;
 
 use super::*;
 use crate::rubocop::ast::node::core::NodeRef as RubocopNodeRef;
-use crate::rubocop::ast::prism::convert as convert_rubocop_ast;
 
 mod helpers;
 use helpers::*;
@@ -18,8 +17,8 @@ define_cops! {
 fn duplicate_set_element(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     let source = context.source();
     report_duplicate_percent_symbol_sets(source, context);
-    let comments = context.source_file().comment_ranges();
-    let literals = context.source_file().literal_ranges();
+    let comments = context.comment_ranges();
+    let literals = context.literal_ranges();
     let mut inspected = HashSet::new();
     for (open, _) in source.match_indices('[') {
         if source[..open].ends_with("%i")
@@ -43,8 +42,8 @@ fn report_duplicate_percent_symbol_sets(
     source: &str,
     context: &mut CompatibilityCopContext<'_, '_, '_>,
 ) {
-    let comments = context.source_file().comment_ranges();
-    let literals = context.source_file().literal_ranges();
+    let comments = context.comment_ranges();
+    let literals = context.literal_ranges();
     let mut search = 0;
     while let Some(relative) = source[search..].find("%i[") {
         let literal_start = search + relative;
@@ -181,7 +180,7 @@ fn stable_set_element(value: &str, preceding_source: &str) -> bool {
 }
 
 fn numeric_constant_result(context: &mut CompatibilityCopContext<'_, '_, '_>) {
-    let literal_ranges = context.source_file().literal_ranges();
+    let literal_ranges = context.literal_ranges();
     for (offset, line) in context.source_file().lines() {
         let code = line.split('#').next().unwrap_or(line).trim();
         let start = offset + line.find(code).unwrap_or(0);
@@ -259,7 +258,7 @@ fn symbol_conversion(context: &mut CompatibilityCopContext<'_, '_, '_>) {
 
     let source = context.source();
     let mut nodes = Symbols::default();
-    nodes.visit(&parse(source.as_bytes()).node());
+    nodes.visit(&context.prism_result().node());
     let call_receivers = nodes
         .calls
         .iter()
@@ -770,9 +769,7 @@ fn empty_literal(context: &mut CompatibilityCopContext<'_, '_, '_>) {
             }
         }
     });
-    let parsed = ruby_prism::parse(source.as_bytes());
-    let (ast, root) = convert_rubocop_ast(source, &parsed.node());
-    let Some(root) = root.map(|root| ast.node(root)) else { return };
+    let Some(root) = context.processed_source().ast() else { return };
     for node in root.each_node(&["send"]) {
         let Some((kind, literal)) = empty_literal_kind(node, frozen_strings, string_literal) else {
             continue;

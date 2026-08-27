@@ -1,8 +1,8 @@
 use super::*;
 
 define_cops! {
-    ClosingHeredocIndentation => "Layout/ClosingHeredocIndentation" => compatibility_prism_any_node(closing_heredoc_indentation),
     DisableCopsWithinSourceCodeDirective => "Style/DisableCopsWithinSourceCodeDirective" => compatibility_source(disable_cops_within_source_code_directive),
+    ClosingHeredocIndentation => "Layout/ClosingHeredocIndentation" => compatibility_prism_any_node(closing_heredoc_indentation),
 }
 
 fn redundant_heredoc_delimiter_quotes(context: &mut CopContext<'_, '_>) {
@@ -230,7 +230,7 @@ fn disable_cops_within_source_code_directive(context: &mut CompatibilityCopConte
     let allowed = context.config_values("AllowedCops").to_vec();
     let source = context.source();
     let mut all_disabled = false;
-    for range in context.source_file().comment_ranges() {
+    for range in context.comment_ranges() {
         let comment = source.get(range.clone()).unwrap_or_default();
         let Some((command, list)) = directive(comment) else {
             continue;

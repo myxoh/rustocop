@@ -11,7 +11,7 @@ use crate::rubocop::ast::source::{SourceBuffer, SourceRange};
 
 pub(crate) struct CommentsHelp<'processed, 'source> {
     processed_source: &'processed ProcessedSource<'source>,
-    buffer: SourceBuffer<'source>,
+    buffer: &'processed SourceBuffer<'source>,
     disabled_line_ranges: BTreeMap<String, Vec<Range<usize>>>,
 }
 
@@ -97,7 +97,7 @@ impl<'processed, 'source> CommentsHelp<'processed, 'source> {
     }
 
     pub(crate) fn buffer(&self) -> &SourceBuffer<'source> {
-        &self.buffer
+        self.buffer
     }
 
     pub(crate) fn find_end_line(&self, node: NodeRef<'_>) -> usize {

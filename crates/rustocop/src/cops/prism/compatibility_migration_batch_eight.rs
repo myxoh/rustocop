@@ -37,7 +37,10 @@ define_cops! {
 
 fn check_space_before(context: &mut CompatibilityCopContext<'_, '_, '_>, punctuation: &str, kind: &str) {
     let bytes = context.source().as_bytes();
-    let ignored = super::source_rules_layout::ignored_syntax_ranges(context.source());
+    let ignored = super::source_rules_layout::ignored_syntax_ranges_from(
+        context.source(),
+        context.prism_result(),
+    );
     let punctuation = punctuation.as_bytes()[0];
     for index in 1..bytes.len() {
         if bytes[index] != punctuation || bytes[index - 1] != b' ' || ignored.iter().any(|range| range.start <= index && index < range.end) { continue; }
@@ -52,8 +55,12 @@ fn check_space_before(context: &mut CompatibilityCopContext<'_, '_, '_>, punctua
 
 fn check_space_after(context: &mut CompatibilityCopContext<'_, '_, '_>, punctuation: &str, kind: &str, brace_config: &str, _skip_double_semicolon: bool) {
     let bytes = context.source().as_bytes();
-    let ignored = super::source_rules_layout::ignored_syntax_ranges(context.source());
-    let interpolation_closings = super::source_rules_layout::interpolation_closing_offsets(context.source());
+    let ignored = super::source_rules_layout::ignored_syntax_ranges_from(
+        context.source(),
+        context.prism_result(),
+    );
+    let interpolation_closings =
+        super::source_rules_layout::interpolation_closing_offsets_from(context.prism_result());
     let punctuation = punctuation.as_bytes()[0];
     for index in 0..bytes.len() {
         if bytes[index] != punctuation || ignored.iter().any(|range| range.start <= index && index < range.end) { continue; }

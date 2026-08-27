@@ -1,28 +1,34 @@
 use ruby_prism::{CallNode, Node};
+use std::collections::HashSet;
+use std::sync::LazyLock;
 
 use super::*;
 
 define_cops!(
     DepartmentName => "Migration/DepartmentName" => compatibility_source(department_name),
-    BarePercentLiterals => "Style/BarePercentLiterals" => compatibility_prism_any_node(bare_percent_literals),
     DocumentDynamicEvalDefinition => "Style/DocumentDynamicEvalDefinition" => compatibility_prism_call(document_dynamic_eval_definition),
     ModuleFunction => "Style/ModuleFunction" => compatibility_prism_node(as_module_node, module_function),
     SingleLineBlockParams => "Style/SingleLineBlockParams" => compatibility_prism_node(as_block_node, single_line_block_params),
 );
 
-fn department_name(context: &mut CompatibilityCopContext<'_, '_, '_>) {
-    let source = context.source();
-    let directive = regex::Regex::new(r"\A# *rubocop *: *((?:dis|en)able|todo) +(.*)")
-        .expect("static directive pattern");
-    let cop_names = crate::cops::cop_names();
-    let departments = cop_names
+static DIRECTIVE_PATTERN: LazyLock<regex::Regex> = LazyLock::new(|| {
+    regex::Regex::new(r"\A# *rubocop *: *((?:dis|en)able|todo) +(.*)")
+        .expect("static directive pattern")
+});
+static COP_NAMES: LazyLock<Vec<&'static str>> = LazyLock::new(crate::cops::cop_names);
+static DEPARTMENTS: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
+    COP_NAMES
         .iter()
         .filter_map(|name| name.split_once('/').map(|(department, _)| department))
-        .collect::<std::collections::HashSet<_>>();
+        .collect()
+});
 
-    for comment_range in context.source_file().comment_ranges() {
+fn department_name(context: &mut CompatibilityCopContext<'_, '_, '_>) {
+    let source = context.source();
+
+    for comment_range in context.comment_ranges() {
         let comment = &source[comment_range.clone()];
-        let Some(captures) = directive.captures(comment) else {
+        let Some(captures) = DIRECTIVE_PATTERN.captures(comment) else {
             continue;
         };
         let names = captures.get(2).expect("directive names");
@@ -38,8 +44,8 @@ fn department_name(context: &mut CompatibilityCopContext<'_, '_, '_>) {
                 .any(|character| !character.is_ascii_alphabetic() && !matches!(character, ' ' | ',' | '/'));
             let plain_name = !short_name.is_empty()
                 && short_name.chars().all(|character| character.is_ascii_alphabetic());
-            if plain_name && short_name != "all" && !departments.contains(short_name) {
-                let matches = cop_names
+            if plain_name && short_name != "all" && !DEPARTMENTS.contains(short_name) {
+                let matches = COP_NAMES
                     .iter()
                     .copied()
                     .filter(|name| name.rsplit_once('/').is_some_and(|(_, cop)| cop == short_name))

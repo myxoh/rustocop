@@ -41,6 +41,7 @@ RSpec.describe "RuboCop cop source-shape migration manifest" do
       expect(Digest::SHA256.file(upstream).hexdigest).to eq(row.fetch("upstream_sha256")), row.fetch("cop")
       implementations = row.fetch("implementations").map { |path| File.join(crate_root, path) }
       expect(implementations).not_to be_empty
+      expect(implementations.length).to eq(1), "#{row.fetch('cop')} must have one canonical implementation"
       expect(implementations).to all(satisfy { |path| File.file?(path) })
       expect(implementations.any? { |path| File.read(path).include?(row.fetch("cop")) }).to be(true)
       expect(row.fetch("structural_gaps")).not_to be_empty unless row.fetch("migration_status") == "migrated"

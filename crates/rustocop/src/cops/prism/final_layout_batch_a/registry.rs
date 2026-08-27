@@ -1,4 +1,4 @@
-use super::super::catalog_cop::custom;
+use super::super::catalog_cop::compatibility_custom;
 use super::*;
 
 pub(super) fn cops() -> Vec<Box<dyn Cop>> {
@@ -6,7 +6,7 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
         Box::new(EmptyLineAfterGuardClause),
         Box::new(LineEndStringConcatenationIndentation),
         Box::new(SpaceInsideBlockBraces),
-        custom(
+        compatibility_custom(
             "Layout/SpaceInsideHashLiteralBraces",
             space_inside_hash_literal_braces,
         ),
@@ -97,7 +97,7 @@ fn character_offset_to_byte(source: &str, character: usize) -> usize {
     source.char_indices().nth(character).map_or(source.len(), |(byte, _)| byte)
 }
 
-fn space_inside_hash_literal_braces(context: &mut CopContext<'_, '_>) {
+fn space_inside_hash_literal_braces(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     #[derive(Default)]
     struct HashBraces(Vec<(usize, usize)>);
 
@@ -122,13 +122,17 @@ fn space_inside_hash_literal_braces(context: &mut CopContext<'_, '_>) {
     }
 
     let mut braces = HashBraces::default();
-    braces.visit(&parse(context.source().as_bytes()).node());
+    braces.visit(&context.prism_result().node());
     for (opening, closing) in braces.0 {
         enforce_hash_brace_spacing(context, opening, closing);
     }
 }
 
-fn enforce_hash_brace_spacing(context: &mut CopContext<'_, '_>, opening: usize, closing: usize) {
+fn enforce_hash_brace_spacing(
+    context: &mut CompatibilityCopContext<'_, '_, '_>,
+    opening: usize,
+    closing: usize,
+) {
     let source = context.source();
     if opening >= closing || closing >= source.len() {
         return;
@@ -188,7 +192,7 @@ fn enforce_hash_brace_spacing(context: &mut CopContext<'_, '_>, opening: usize, 
 }
 
 fn report_hash_side(
-    context: &mut CopContext<'_, '_>,
+    context: &mut CompatibilityCopContext<'_, '_, '_>,
     whitespace_start: usize,
     brace: usize,
     want_space: bool,

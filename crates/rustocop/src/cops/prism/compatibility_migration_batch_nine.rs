@@ -244,7 +244,10 @@ impl EmptyLinesRule<'_, '_, '_, '_> {
         let source = self.source();
         let ruby_end = source.find("\n__END__").map_or(source.len(), |offset| offset + 1);
         let content_end = source[..ruby_end].rfind(|character: char| !character.is_whitespace()).map_or(0, |offset| offset + 1);
-        let ignored = super::source_rules_layout::ignored_syntax_ranges(source);
+        let ignored = super::source_rules_layout::ignored_syntax_ranges_from(
+            source,
+            self.prism_result(),
+        );
         for (start, window) in source.as_bytes()[..content_end].windows(3).enumerate() {
             if window != b"\n\n\n" || ignored.iter().any(|range| range.start <= start + 2 && start + 2 < range.end) { continue; }
             let Some(offense) = character_range(self, start + 2..start + 3) else { continue; };
@@ -367,7 +370,10 @@ define_compatibility_rule!(IndentationStyleRule);
 impl IndentationStyleRule<'_, '_, '_, '_> {
     fn on_new_investigation(&mut self) {
         let spaces = self.policy().enforced_style("spaces") == "spaces"; let width = self.config_usize("IndentationWidth", 2);
-        let ignored = super::source_rules_layout::ignored_syntax_ranges(self.source()); let mut offset = 0usize;
+        let ignored = super::source_rules_layout::ignored_syntax_ranges_from(
+            self.source(),
+            self.prism_result(),
+        ); let mut offset = 0usize;
         for line in self.source().split_inclusive('\n') {
             let bare = line.trim_end_matches(['\n', '\r']); if bare.trim() == "__END__" { break; }
             let indentation = bare.len() - bare.trim_start_matches([' ', '\t']).len(); if indentation == 0 { offset += line.len(); continue; }

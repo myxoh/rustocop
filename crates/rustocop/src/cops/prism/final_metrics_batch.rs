@@ -5,7 +5,6 @@ use std::collections::HashSet;
 
 pub(super) fn cops() -> Vec<Box<dyn Cop>> {
     vec![
-        Box::new(BlockNesting),
         Box::new(PerceivedComplexity),
         Box::new(ClassLength),
         Box::new(CyclomaticComplexity),

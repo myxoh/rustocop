@@ -8,7 +8,7 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
 }
 
 fn shadowed_argument(context: &mut CompatibilityCopContext<'_, '_, '_>) {
-    let parsed = ruby_prism::parse(context.source().as_bytes());
+    let parsed = context.prism_result();
     let ignore_implicit = context.config_bool("IgnoreImplicitReferences", false);
     let mut collector = ShadowedArgumentScopes {
         offenses: Vec::new(),
@@ -441,24 +441,13 @@ impl<'pr> ruby_prism::Visit<'pr> for LocalReadNames {
 
 #[allow(clippy::too_many_lines)]
 fn inclusive_language(context: &mut CompatibilityCopContext<'_, '_, '_>) {
-    let terms = context
-        .config_map("FlaggedTerms")
-        .cloned()
-        .unwrap_or_default();
-    let mut configured = terms
-        .into_iter()
-        .filter_map(|(term, encoded)| {
-            (!matches!(encoded.as_str(), "" | "nil" | "null" | "~"))
-                .then(|| (term, inclusive_term_config(&encoded)))
-        })
-        .collect::<Vec<_>>();
-    configured.sort_by(|left, right| left.0.cmp(&right.0));
+    let configured = inclusive_terms(context);
     inclusive_filepath(&configured, context);
 
     let file = context.source_file();
-    let comments = file.comment_ranges();
-    let literals = file.literal_ranges();
-    let heredocs = file.heredoc_ranges();
+    let comments = context.comment_ranges();
+    let literals = context.literal_ranges();
+    let heredocs = context.heredoc_ranges();
     #[derive(Default)]
     struct SymbolRanges(Vec<std::ops::Range<usize>>);
     impl<'pr> ruby_prism::Visit<'pr> for SymbolRanges {
@@ -475,22 +464,11 @@ fn inclusive_language(context: &mut CompatibilityCopContext<'_, '_, '_>) {
             ruby_prism::visit_symbol_node(self, node);
         }
     }
-    let parsed = ruby_prism::parse(context.source().as_bytes());
+    let parsed = context.prism_result();
     let mut symbols = SymbolRanges::default();
     ruby_prism::Visit::visit(&mut symbols, &parsed.node());
-    for (term, config) in configured {
-        let pattern = config.regex.clone().unwrap_or_else(|| regex::escape(&term));
-        let pattern = if config.whole_word {
-            format!(r"(?i)(?<![[:alnum:]])(?:{pattern})(?![[:alnum:]])")
-        } else {
-            format!(r"(?i:{pattern})")
-        };
-        // `regex` does not support look-around; whole-word boundaries are
-        // checked below while the regex supplies the configurable spelling.
-        let pattern = pattern
-            .replace("(?i)(?<![[:alnum:]])(?:", "(?i:")
-            .replace(")(?![[:alnum:]])", ")");
-        let Ok(matcher) = regex::Regex::new(&pattern) else {
+    for (_term, config) in configured.iter() {
+        let Some(matcher) = config.source_matcher.as_ref() else {
             continue;
         };
         let mut reported_comment_tokens = std::collections::HashSet::new();
@@ -506,15 +484,11 @@ fn inclusive_language(context: &mut CompatibilityCopContext<'_, '_, '_>) {
                     continue;
                 }
             }
-            if config.allowed_regex.as_ref().is_some_and(|allowed| {
-                regex::RegexBuilder::new(allowed)
-                    .case_insensitive(true)
-                    .build()
-                    .is_ok_and(|allowed| {
-                        let line = file.line(start);
-                        allowed.is_match(line)
-                    })
-            }) {
+            if config
+                .allowed_matcher
+                .as_ref()
+                .is_some_and(|allowed| allowed.is_match(file.line(start)))
+            {
                 continue;
             }
             let containing_comment = comments
@@ -628,12 +602,73 @@ fn inclusive_method_definition(source: &str, token_start: usize) -> bool {
     after_def.trim_start().trim_end_matches("self.").is_empty()
 }
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 struct InclusiveTermConfig {
     suggestions: Vec<String>,
     regex: Option<String>,
     allowed_regex: Option<String>,
     whole_word: bool,
+    source_matcher: Option<regex::Regex>,
+    filepath_matcher: Option<regex::Regex>,
+    allowed_matcher: Option<regex::Regex>,
+}
+
+fn inclusive_terms(
+    context: &CompatibilityCopContext<'_, '_, '_>,
+) -> std::sync::Arc<Vec<(String, InclusiveTermConfig)>> {
+    use std::collections::HashMap;
+    use std::sync::{Arc, LazyLock, Mutex};
+
+    static CACHE: LazyLock<
+        Mutex<HashMap<Vec<(String, String)>, Arc<Vec<(String, InclusiveTermConfig)>>>>,
+    > = LazyLock::new(|| Mutex::new(HashMap::new()));
+
+    let mut encoded = context
+        .config_map("FlaggedTerms")
+        .cloned()
+        .unwrap_or_default()
+        .into_iter()
+        .filter(|(_, value)| !matches!(value.as_str(), "" | "nil" | "null" | "~"))
+        .collect::<Vec<_>>();
+    encoded.sort_by(|left, right| left.0.cmp(&right.0));
+    if let Some(configured) = CACHE.lock().expect("inclusive term cache").get(&encoded) {
+        return Arc::clone(configured);
+    }
+
+    let configured = Arc::new(
+        encoded
+            .iter()
+            .map(|(term, value)| {
+                let mut config = inclusive_term_config(value);
+                let source_pattern = config
+                    .regex
+                    .clone()
+                    .unwrap_or_else(|| regex::escape(term));
+                config.source_matcher = regex::RegexBuilder::new(&source_pattern)
+                    .case_insensitive(true)
+                    .build()
+                    .ok();
+                config.filepath_matcher = regex::RegexBuilder::new(
+                    config.regex.as_deref().unwrap_or(term),
+                )
+                .case_insensitive(true)
+                .build()
+                .ok();
+                config.allowed_matcher = config.allowed_regex.as_deref().and_then(|pattern| {
+                    regex::RegexBuilder::new(pattern)
+                        .case_insensitive(true)
+                        .build()
+                        .ok()
+                });
+                (term.clone(), config)
+            })
+            .collect(),
+    );
+    CACHE
+        .lock()
+        .expect("inclusive term cache")
+        .insert(encoded, Arc::clone(&configured));
+    configured
 }
 
 fn inclusive_term_config(encoded: &str) -> InclusiveTermConfig {
@@ -704,12 +739,8 @@ fn inclusive_filepath(
         return;
     }
     let mut found = Vec::new();
-    for (term, config) in terms {
-        let matcher = config.regex.as_deref().unwrap_or(term);
-        if let Ok(regex) = regex::RegexBuilder::new(matcher)
-            .case_insensitive(true)
-            .build()
-        {
+    for (_term, config) in terms {
+        if let Some(regex) = config.filepath_matcher.as_ref() {
             found.extend(
                 regex
                     .find_iter(context.path())

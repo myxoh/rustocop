@@ -2,7 +2,6 @@ use super::*;
 
 pub(super) fn cops() -> Vec<Box<dyn Cop>> {
     vec![
-        Box::new(FloatComparison),
         Box::new(SelfAssignment),
     ]
 }
@@ -162,9 +161,10 @@ fn report_compound_self_assignments(source: &str, context: &mut Context, cop: &'
         cop_context.config_bool("AllowRBSInlineAnnotation", false)
     };
     let file = SourceFile::new(source);
-    let mut non_code_ranges = file.literal_ranges();
-    non_code_ranges.extend(file.heredoc_ranges());
-    non_code_ranges.extend(file.comment_ranges());
+    let parsed = ruby_prism::parse(source.as_bytes());
+    let mut non_code_ranges = SourceFile::literal_ranges_from(&parsed);
+    non_code_ranges.extend(SourceFile::heredoc_ranges_from(&parsed));
+    non_code_ranges.extend(SourceFile::comment_ranges_from(&parsed));
     for (offset, line) in file.lines() {
         let code_start = offset + line.len() - line.trim_start().len();
         if non_code_ranges

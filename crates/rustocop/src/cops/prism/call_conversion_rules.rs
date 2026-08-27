@@ -1,7 +1,6 @@
 use super::*;
 
 define_cops! {
-    SendWithMixinArgument => "Lint/SendWithMixinArgument" => compatibility_prism_call(send_with_mixin_argument),
     LambdaCall => "Style/LambdaCall" => compatibility_prism_call(lambda_call),
 }
 

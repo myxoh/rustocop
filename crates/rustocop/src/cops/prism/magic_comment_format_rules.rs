@@ -1,4 +1,5 @@
 use regex::Regex;
+use std::sync::LazyLock;
 
 use super::*;
 
@@ -8,20 +9,40 @@ define_cops! {
     MagicCommentFormat => "Style/MagicCommentFormat" => compatibility_source(on_new_investigation),
 }
 
+static DIRECTIVE_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r"(?i)(coding|encoding|frozen[-_]string[-_]literal|rbs_inline|shareable[-_]constant[-_]value|typed)\s*:",
+    )
+    .expect("static magic-comment regex")
+});
+static VALUE_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r"(?i)(?:coding|encoding|frozen[-_]string[-_]literal|rbs_inline|shareable[-_]constant[-_]value|typed)\s*:\s*([^;\r\n]*)",
+    )
+    .expect("static magic-comment value regex")
+});
+static SIMPLE_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r"(?ix)^\#\s*(?:
+            (?:en)?coding:\s+[[:alnum:]_-]+ |
+            (?:frozen[-_]string[-_]literal|rbs_inline|shareable[-_]constant[-_]value|typed):\s*[[:alnum:]_-]+\s*$
+        )",
+    )
+    .expect("static simple magic-comment regex")
+});
+static EDITOR_TOKEN_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r"(?i)(?:coding|encoding|frozen[-_]string[-_]literal|shareable[-_]constant[-_]value|typed)\s*[:=]\s*[[:alnum:]_-]+",
+    )
+    .expect("static editor magic-comment regex")
+});
+
 fn on_new_investigation(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     MagicCommentFormatRule::new(context).on_new_investigation();
 }
 
 impl MagicCommentFormatRule<'_, '_, '_, '_> {
     fn on_new_investigation(&mut self) {
-        let directive = Regex::new(
-            r"(?i)(coding|encoding|frozen[-_]string[-_]literal|rbs_inline|shareable[-_]constant[-_]value|typed)\s*:",
-        )
-        .expect("static magic-comment regex");
-        let value = Regex::new(
-            r"(?i)(?:coding|encoding|frozen[-_]string[-_]literal|rbs_inline|shareable[-_]constant[-_]value|typed)\s*:\s*([^;\r\n]*)",
-        )
-        .expect("static magic-comment value regex");
         let style = self.policy().enforced_style("snake_case").to_string();
         let directive_case = self.config_value("DirectiveCapitalization").map(str::to_string);
         let value_case = self.config_value("ValueCapitalization").map(str::to_string);
@@ -37,7 +58,7 @@ impl MagicCommentFormatRule<'_, '_, '_, '_> {
             if !valid_magic_comment(trimmed) {
                 continue;
             }
-            for captures in directive.captures_iter(line) {
+            for captures in DIRECTIVE_PATTERN.captures_iter(line) {
                 let Some(matched) = captures.get(1) else { continue };
                 let original = matched.as_str();
                 let separator_wrong = if style == "kebab_case" {
@@ -71,7 +92,7 @@ impl MagicCommentFormatRule<'_, '_, '_, '_> {
             if value_case.is_none() {
                 continue;
             }
-            for captures in value.captures_iter(line) {
+            for captures in VALUE_PATTERN.captures_iter(line) {
                 let Some(matched) = captures.get(1) else { continue };
                 let original = matched.as_str();
                 if !wrong_capitalization(original, value_case.as_deref()) {
@@ -88,23 +109,12 @@ impl MagicCommentFormatRule<'_, '_, '_, '_> {
 }
 
 fn valid_magic_comment(comment: &str) -> bool {
-    let simple = Regex::new(
-        r"(?ix)^\#\s*(?:
-            (?:en)?coding:\s+[[:alnum:]_-]+ |
-            (?:frozen[-_]string[-_]literal|rbs_inline|shareable[-_]constant[-_]value|typed):\s*[[:alnum:]_-]+\s*$
-        )",
-    )
-    .expect("static simple magic-comment regex");
-    if simple.is_match(comment) {
+    if SIMPLE_PATTERN.is_match(comment) {
         return true;
     }
-    let editor_token = Regex::new(
-        r"(?i)(?:coding|encoding|frozen[-_]string[-_]literal|shareable[-_]constant[-_]value|typed)\s*[:=]\s*[[:alnum:]_-]+",
-    )
-    .expect("static editor magic-comment regex");
-    (comment.contains("-*-")) && editor_token.is_match(comment)
+    (comment.contains("-*-")) && EDITOR_TOKEN_PATTERN.is_match(comment)
         || comment.to_ascii_lowercase().starts_with("# vim:")
-            && editor_token.is_match(comment)
+            && EDITOR_TOKEN_PATTERN.is_match(comment)
 }
 
 fn wrong_capitalization(source: &str, expected: Option<&str>) -> bool {

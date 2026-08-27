@@ -1,7 +1,6 @@
 use super::*;
 
 define_cops! {
-    SuppressedException => "Lint/SuppressedException" => compatibility_prism_any_node(suppressed_exception),
     UselessRescue => "Lint/UselessRescue" => compatibility_prism_node(as_rescue_node, useless_rescue),
 }
 

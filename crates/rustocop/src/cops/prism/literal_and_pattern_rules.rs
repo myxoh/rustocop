@@ -4,10 +4,10 @@ mod branch_rules;
 use branch_rules::*;
 
 define_cops! {
+    HashLikeCase => "Style/HashLikeCase" => compatibility_prism_node(as_case_node, hash_like_case),
     EmptyCaseCondition => "Style/EmptyCaseCondition" => compatibility_prism_node(as_case_node, empty_case_condition),
     MixedCaseRange => "Lint/MixedCaseRange" => compatibility_prism_any_node(mixed_case_range),
     ExponentialNotation => "Style/ExponentialNotation" => compatibility_prism_node(as_float_node, exponential_notation),
-    HashLikeCase => "Style/HashLikeCase" => compatibility_prism_node(as_case_node, hash_like_case),
 }
 
 const MIXED_CASE_RANGE_MESSAGE: &str = "Ranges from upper to lower case ASCII letters may include unintended characters. Instead of `A-z` (which also includes several symbols) specify each range individually: `A-Za-z` and individually specify any symbols.";

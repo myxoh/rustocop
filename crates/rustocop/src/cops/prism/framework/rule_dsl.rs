@@ -70,6 +70,9 @@ macro_rules! define_compatibility_callback_rule_cop {
         impl Cop for $type {
             fn name(&self) -> &'static str { $name }
             fn phase(&self) -> CopPhase { CopPhase::CompatibilityNode }
+            fn compatibility_node_interests(&self) -> &'static [CompatibilityNodeInterest] {
+                &[CompatibilityNodeInterest::Kinds(&["send", "csend", "index", "indexasgn"])]
+            }
             fn on_compatibility_node_with_state<'processed, 'source>(
                 &self,
                 node: crate::rubocop::ast::node::core::NodeRef<'processed>,
@@ -90,6 +93,9 @@ macro_rules! define_compatibility_callback_rule_cop {
         impl Cop for $type {
             fn name(&self) -> &'static str { $name }
             fn phase(&self) -> CopPhase { CopPhase::CompatibilityNode }
+            fn compatibility_node_interests(&self) -> &'static [CompatibilityNodeInterest] {
+                &[$($crate::compatibility_callback_interest!($callback)),+]
+            }
             fn on_compatibility_node_with_state<'processed, 'source>(
                 &self,
                 node: crate::rubocop::ast::node::core::NodeRef<'processed>,
@@ -107,19 +113,58 @@ macro_rules! define_compatibility_callback_rule_cop {
 }
 
 #[macro_export]
+macro_rules! compatibility_callback_interest {
+    (on_send) => {
+        $crate::cops::prism::CompatibilityNodeInterest::Kinds(&[
+            "send",
+            "csend",
+            "index",
+            "indexasgn",
+        ])
+    };
+    (on_interpolation) => {
+        $crate::cops::prism::CompatibilityNodeInterest::Kinds(&["begin"])
+    };
+    (on_normal_if_unless) => {
+        $crate::cops::prism::CompatibilityNodeInterest::Kinds(&["if"])
+    };
+    (on_defined) => {
+        $crate::cops::prism::CompatibilityNodeInterest::Kinds(&["defined?"])
+    };
+    (on_block) => {
+        $crate::cops::prism::CompatibilityNodeInterest::Kinds(&["block", "numblock", "itblock"])
+    };
+    (on_while) => {
+        $crate::cops::prism::CompatibilityNodeInterest::Kinds(&["while", "while_post"])
+    };
+    (on_until) => {
+        $crate::cops::prism::CompatibilityNodeInterest::Kinds(&["until", "until_post"])
+    };
+    ($callback:ident) => {
+        $crate::cops::prism::CompatibilityNodeInterest::Callback(stringify!($callback))
+    };
+}
+
+#[macro_export]
 macro_rules! define_compatibility_investigation_rule_cop {
     ($type:ident => $name:literal => $rule:ident::$callback:ident) => {
         struct $type;
         impl Cop for $type {
             fn name(&self) -> &'static str { $name }
             fn phase(&self) -> CopPhase { CopPhase::CompatibilityNode }
-            fn on_compatibility_investigation<'processed, 'source>(
+            fn on_compatibility_investigation_with_prism<'processed, 'source>(
                 &self,
                 processed_source: &'processed crate::rubocop::ast::processed_source::ProcessedSource<'source>,
+                prism_result: &'processed ruby_prism::ParseResult<'source>,
                 context: &mut Context,
                 _state: &mut dyn Any,
             ) {
-                let mut context = CompatibilityCopContext::new(context, self.name(), processed_source);
+                let mut context = CompatibilityCopContext::new_with_prism(
+                    context,
+                    self.name(),
+                    processed_source,
+                    prism_result,
+                );
                 $rule::new(&mut context).$callback();
             }
         }

@@ -85,6 +85,7 @@ fn exposes_path_buffer_lines_and_indexing() {
     );
     assert_eq!(processed.file_path(), "ast/and_node_spec.rb");
     assert_eq!(processed.buffer().source(), SOURCE);
+    assert!(std::ptr::eq(processed.buffer(), processed.buffer()));
     assert_eq!(processed.lines().len(), 6);
     assert_eq!(&processed[0], "# an awesome method");
     assert_eq!(processed.line(0), Some("# an awesome method"));

@@ -55,6 +55,7 @@ impl Engine {
         );
         context.set_enabled_cops(self.enabled_cops.iter().copied());
         context.set_parser_warnings(parsed.warnings());
+        context.set_parser_comments(parsed.comments());
         let has_unrecoverable_parse_errors = parsed
             .errors()
             .any(|error| !is_context_only_parse_error(error.message()));
@@ -138,8 +139,9 @@ impl Engine {
                     {
                         continue;
                     }
-                    self.registry.cops[*index].on_compatibility_investigation(
+                    self.registry.cops[*index].on_compatibility_investigation_with_prism(
                         &processed_source,
+                        &parsed,
                         &mut context,
                         investigation_states[*index].as_mut(),
                     );
@@ -147,7 +149,15 @@ impl Engine {
                 if !has_unrecoverable_parse_errors {
                     if let Some(root) = processed_source.ast() {
                         for node in root.each_node(&[]) {
-                            for index in &self.registry.phases.compatibility_nodes {
+                            let Some(indices) = self
+                                .registry
+                                .phases
+                                .compatibility_nodes_by_kind
+                                .get(node.kind())
+                            else {
+                                continue;
+                            };
+                            for index in indices {
                                 self.registry.cops[*index].on_compatibility_node_with_state(
                                     node,
                                     &processed_source,

@@ -22,7 +22,21 @@ module Rustocop
       paths = sources.filter_map do |path, source|
         path if patterns.any? { |pattern| source.match?(pattern) }
       end
-      return paths.sort unless paths.empty?
+      unless paths.empty?
+        # A few migration files retain an unconstructed legacy `impl Cop` as
+        # reference code. Prefer the single executable DSL/custom registration
+        # when one exists. Runtime uniqueness is enforced independently by the
+        # Rust registry test, so an actually scheduled manual duplicate cannot
+        # be hidden by this source-inventory rule.
+        declarative = paths.select do |path|
+          source = sources.fetch(path)
+          source.match?(/=>\s*"#{quoted}"\s*=>/m) ||
+            source.match?(/(?:custom|report|replace)\(\s*"#{quoted}"/m)
+        end
+        return declarative if declarative.one?
+
+        return paths.sort
+      end
 
       literal = %Q{"#{cop}"}
       paths = sources.filter_map { |path, source| path if source.include?(literal) }

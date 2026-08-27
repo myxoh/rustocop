@@ -28,15 +28,21 @@ impl Cop for CompatibilityCatalogCop {
         CopPhase::CompatibilityNode
     }
 
-    fn on_compatibility_investigation<'processed, 'source>(
+    fn on_compatibility_investigation_with_prism<'processed, 'source>(
         &self,
         processed_source: &'processed crate::rubocop::ast::processed_source::ProcessedSource<
             'source,
         >,
+        prism_result: &'processed ruby_prism::ParseResult<'source>,
         context: &mut Context,
         _state: &mut dyn Any,
     ) {
-        let mut context = CompatibilityCopContext::new(context, self.name(), processed_source);
+        let mut context = CompatibilityCopContext::new_with_prism(
+            context,
+            self.name(),
+            processed_source,
+            prism_result,
+        );
         (self.check)(&mut context);
     }
 }

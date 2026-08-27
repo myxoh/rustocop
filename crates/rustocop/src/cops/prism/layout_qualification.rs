@@ -9,15 +9,12 @@ define_cops! {
 }
 
 fn multiline_assignment_layout(context: &mut CompatibilityCopContext<'_, '_, '_>) {
-    use crate::rubocop::ast::prism::convert as convert_rubocop_ast;
     use crate::rubocop::cop::mixin::check_assignment::extract_rhs;
 
-    let source = context.source().to_string();
+    let source = context.source();
     let supported = context.config_values("SupportedTypes").to_vec();
     let style = context.policy().enforced_style("new_line").to_string();
-    let parsed = ruby_prism::parse(source.as_bytes());
-    let (ast, root) = convert_rubocop_ast(&source, &parsed.node());
-    let Some(root) = root.map(|root| ast.node(root)) else {
+    let Some(root) = context.processed_source().ast() else {
         return;
     };
     let mut corrections = Vec::new();
@@ -496,13 +493,9 @@ fn extra_spacing(_context: &mut CompatibilityCopContext<'_, '_, '_>) {
                     .is_none_or(|byte| *byte == b'\n')
         })
         .map_or(source.len(), |(offset, _)| offset);
-    let mut literal_ranges = context
-        .source_file()
-        .literal_ranges()
-        .into_iter()
-        .collect::<Vec<_>>();
+    let mut literal_ranges = context.literal_ranges();
     literal_ranges.sort_by_key(|range| (range.start, std::cmp::Reverse(range.end)));
-    let mut comment_ranges = context.source_file().comment_ranges();
+    let mut comment_ranges = context.comment_ranges();
     comment_ranges.sort_by_key(|range| (range.start, std::cmp::Reverse(range.end)));
     let tokens = spacing_tokens(&source[..syntax_end], &literal_ranges, &comment_ranges);
     let lines = context
@@ -523,7 +516,6 @@ fn extra_spacing(_context: &mut CompatibilityCopContext<'_, '_, '_>) {
     let alignment_tokens = tokens
         .iter()
         .map(|token| {
-            let line_start = source[..token.start].rfind('\n').map_or(0, |at| at + 1);
             crate::rubocop::cop::mixin::preceding_following_alignment::AlignmentToken {
                 kind: match token.text.as_str() {
                     "=" => "tEQL",
@@ -538,7 +530,7 @@ fn extra_spacing(_context: &mut CompatibilityCopContext<'_, '_, '_>) {
                 }
                 .to_string(),
                 line: token.line + 1,
-                column: source[line_start..token.start].chars().count(),
+                column: token.column,
                 source: token.text.clone(),
                 begin_pos: token.start,
             }
@@ -551,11 +543,8 @@ fn extra_spacing(_context: &mut CompatibilityCopContext<'_, '_, '_>) {
         .iter()
         .cloned()
         .map(|range| {
-            let line = source[..range.start]
-                .bytes()
-                .filter(|byte| *byte == b'\n')
-                .count();
-            let line_start = source[..range.start].rfind('\n').map_or(0, |at| at + 1);
+            let line = context.line_index(range.start);
+            let line_start = context.line_start_at(line);
             (line, source[line_start..range.start].chars().count())
         })
         .collect::<Vec<_>>();
@@ -566,11 +555,8 @@ fn extra_spacing(_context: &mut CompatibilityCopContext<'_, '_, '_>) {
         }
     }
     for range in &comment_ranges {
-        let line = source[..range.start]
-            .bytes()
-            .filter(|byte| *byte == b'\n')
-            .count();
-        let line_start = source[..range.start].rfind('\n').map_or(0, |at| at + 1);
+        let line = context.line_index(range.start);
+        let line_start = context.line_start_at(line);
         if source[line_start..range.start].trim().is_empty() {
             full_line_comment_lines.insert(line);
         }
@@ -615,10 +601,9 @@ fn extra_spacing(_context: &mut CompatibilityCopContext<'_, '_, '_>) {
             continue;
         }
         if allow_alignment {
-            let line_start = source[..right.start].rfind('\n').map_or(0, |at| at + 1);
             let range = crate::rubocop::cop::mixin::preceding_following_alignment::AlignmentRange {
                 line: right.line + 1,
-                column: source[line_start..right.start].chars().count(),
+                column: right.column,
                 source: right.text.clone(),
             };
             if alignment.aligned_with_something(&range) {
@@ -638,11 +623,8 @@ fn extra_spacing(_context: &mut CompatibilityCopContext<'_, '_, '_>) {
         for token in &mut inner_tokens {
             token.start += inner.start;
             token.end += inner.start;
-            token.line = source[..token.start]
-                .bytes()
-                .filter(|byte| *byte == b'\n')
-                .count();
-            let inner_line_start = source[..token.start].rfind('\n').map_or(0, |at| at + 1);
+            token.line = context.line_index(token.start);
+            let inner_line_start = context.line_start_at(token.line);
             token.column = source[inner_line_start..token.start].chars().count();
         }
         for pair in inner_tokens.windows(2) {
@@ -692,11 +674,8 @@ fn extra_spacing(_context: &mut CompatibilityCopContext<'_, '_, '_>) {
             .find(char::is_whitespace)
             .map_or(literal.end, |relative| token_start + relative);
         if allow_alignment {
-            let line = source[..token_start]
-                .bytes()
-                .filter(|byte| *byte == b'\n')
-                .count();
-            let line_start = source[..token_start].rfind('\n').map_or(0, |at| at + 1);
+            let line = context.line_index(token_start);
+            let line_start = context.line_start_at(line);
             let range = crate::rubocop::cop::mixin::preceding_following_alignment::AlignmentRange {
                 line: line + 1,
                 column: source[line_start..token_start].chars().count(),
@@ -713,14 +692,11 @@ fn extra_spacing(_context: &mut CompatibilityCopContext<'_, '_, '_>) {
     }
     if !allow_trailing_comments {
         for range in &comment_ranges {
-            let line_number = source[..range.start]
-                .bytes()
-                .filter(|byte| *byte == b'\n')
-                .count();
+            let line_number = context.line_index(range.start);
             if allow_alignment && aligned_comment_lines.contains(&line_number) {
                 continue;
             }
-            let line_start = source[..range.start].rfind('\n').map_or(0, |at| at + 1);
+            let line_start = context.line_start_at(line_number);
             let whitespace_start = source[line_start..range.start]
                 .trim_end_matches([' ', '\t'])
                 .len()
@@ -784,7 +760,10 @@ fn spacing_tokens(
         }
         let start = offset;
         let token_line = line;
-        let token_column = start.saturating_sub(line_start);
+        // Parser/RuboCop columns count characters, not UTF-8 bytes. Restrict
+        // the scan to the current line so this stays linear in practical line
+        // length without changing non-ASCII alignment semantics.
+        let token_column = source[line_start..start].chars().count();
         let mut emitted_start = start;
         let mut emitted_end = None;
         let mut emitted_line = token_line;
@@ -1641,4 +1620,22 @@ fn hash_pair_indentation_edits(
             .map(|relative| start + relative + 1);
     }
     edits
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn extra_spacing_tokens_use_character_columns_after_unicode() {
+        let source = "'café'  | true\n";
+        let tokens = spacing_tokens(source, &[], &[]);
+        let pipe = tokens
+            .iter()
+            .find(|token| token.text == "|")
+            .expect("pipe token");
+
+        assert_eq!(pipe.column, source[..pipe.start].chars().count());
+        assert_ne!(pipe.column, pipe.start);
+    }
 }

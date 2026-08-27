@@ -819,7 +819,7 @@ fn regexp_escape_end(bytes: &[u8], start: usize, limit: usize) -> usize {
 }
 
 fn out_of_range_ref(context: &mut CompatibilityCopContext<'_, '_, '_>) {
-    let parsed = parse(context.source().as_bytes());
+    let parsed = context.prism_result();
     let mut collector = OutOfRangeRefCollector {
         source: context.source(),
         valid_ref: Some(0),

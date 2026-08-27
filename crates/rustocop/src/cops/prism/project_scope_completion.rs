@@ -7,14 +7,13 @@ use super::*;
 mod scope_rules;
 
 define_cops! {
+    DeprecatedAttributeAssignment => "Gemspec/DeprecatedAttributeAssignment" => compatibility_source(deprecated_gemspec_attribute),
     DuplicatedGroup => "Bundler/DuplicatedGroup" => compatibility_source(duplicated_group),
     DevelopmentDependencies => "Gemspec/DevelopmentDependencies" => compatibility_source(development_dependencies),
-    DeprecatedAttributeAssignment => "Gemspec/DeprecatedAttributeAssignment" => compatibility_source(deprecated_gemspec_attribute),
     DuplicateMatchPattern => "Lint/DuplicateMatchPattern" => compatibility_prism_callbacks(DuplicateMatchPatternRule, [on_case_match]),
     ConstantName => "Naming/ConstantName" => compatibility_prism_any_node(constant_name),
-    ConstantVisibility => "Style/ConstantVisibility" => compatibility_source(constant_visibility),
-    RedundantSelfAssignment => "Style/RedundantSelfAssignment" => compatibility_prism_any_node(scope_rules::redundant_self_assignment),
     TopLevelMethodDefinition => "Style/TopLevelMethodDefinition" => compatibility_prism_any_node(top_level_method_definition),
+    RedundantSelfAssignment => "Style/RedundantSelfAssignment" => compatibility_prism_any_node(scope_rules::redundant_self_assignment),
 }
 
 fn top_level_method_definition(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
@@ -375,7 +374,7 @@ fn constant_visibility(context: &mut CompatibilityCopContext<'_, '_, '_>) {
         }
     }
 
-    let parsed = parse(context.source().as_bytes());
+    let parsed = context.prism_result();
     let mut bodies = ClassOrModuleBodies::default();
     bodies.visit(&parsed.node());
     for statements in bodies.0 {

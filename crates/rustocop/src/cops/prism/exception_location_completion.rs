@@ -10,9 +10,9 @@ fn suppressed_exception_in_number_conversion(context: &mut CompatibilityCopConte
         return;
     }
     let source = context.source();
-    let mut non_code_ranges = context.source_file().literal_ranges();
-    non_code_ranges.extend(context.source_file().heredoc_ranges());
-    non_code_ranges.extend(context.source_file().comment_ranges());
+    let mut non_code_ranges = context.literal_ranges();
+    non_code_ranges.extend(context.heredoc_ranges());
+    non_code_ranges.extend(context.comment_ranges());
     for method in ["Integer", "Float", "BigDecimal", "Complex", "Rational"] {
         let mut search = 0;
         while let Some(relative) = source[search..].find(&format!("{method}(")) {
@@ -125,7 +125,7 @@ fn eval_with_location_ast(context: &mut CompatibilityCopContext<'_, '_, '_>) {
         }
     }
 
-    let parsed = ruby_prism::parse(context.source().as_bytes());
+    let parsed = context.prism_result();
     let mut calls = EvalCalls::default();
     ruby_prism::Visit::visit(&mut calls, &parsed.node());
     for call in calls.0 {

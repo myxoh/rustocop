@@ -2,7 +2,7 @@ use std::ops::Range;
 
 /// Rust translation of the source geometry exposed by
 /// `Parser::Source::Buffer` and `Parser::Source::Range` to RuboCop.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub(crate) struct SourceBuffer<'source> {
     source: &'source str,
     char_to_byte: Vec<usize>,
@@ -97,6 +97,20 @@ impl<'source> SourceBuffer<'source> {
 
     pub(crate) fn character_position(&self, byte_offset: usize) -> Option<usize> {
         self.char_to_byte.binary_search(&byte_offset).ok()
+    }
+
+    pub(crate) fn line_index_for_byte(&self, byte_offset: usize) -> usize {
+        let byte_offset = byte_offset.min(self.source.len());
+        let character_offset = self.character_position(byte_offset).unwrap_or_else(|| {
+            self.char_to_byte
+                .partition_point(|position| *position < byte_offset)
+        });
+        self.line_index(character_offset)
+    }
+
+    pub(crate) fn line_start_byte_at_index(&self, index: usize) -> usize {
+        self.byte_position(self.line_start(index + 1))
+            .unwrap_or(self.source.len())
     }
 
     fn line_index(&self, offset: usize) -> usize {

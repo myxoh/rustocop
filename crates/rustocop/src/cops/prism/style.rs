@@ -2,15 +2,12 @@ use super::*;
 
 
 pub(super) fn cops() -> Vec<Box<dyn Cop>> {
-    let mut cops: Vec<Box<dyn Cop>> = vec![
+    vec![
         Box::new(MethodCallWithoutArgsParentheses),
         Box::new(NilComparison),
-        Box::new(NotKeyword),
-    ];
-    cops
+    ]
 }
 
-define_node_cop!(CharacterLiteral => "Style/CharacterLiteral" => as_string_node => character_literal);
 
 fn character_literal(string: &ruby_prism::StringNode<'_>, context: &mut CopContext<'_, '_>) {
     let location = string.location();

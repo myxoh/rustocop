@@ -64,6 +64,7 @@ pub(crate) struct Context {
     cop_config: Arc<CopConfig>,
     enabled_cops: HashSet<&'static str>,
     parser_warnings: Vec<(String, Range<usize>)>,
+    directive_comments: Option<HashSet<usize>>,
     line_starts: Vec<usize>,
     findings: Vec<Finding>,
     corrections: Vec<Correction>,
@@ -87,6 +88,7 @@ impl Context {
             cop_config,
             enabled_cops: HashSet::new(),
             parser_warnings: Vec::new(),
+            directive_comments: None,
             line_starts: Vec::new(),
             findings: Vec::new(),
             corrections: Vec::new(),
@@ -120,6 +122,17 @@ impl Context {
         self.parser_warnings
             .iter()
             .any(|(warning, range)| range.start == offset && warning.contains(message))
+    }
+
+    pub(super) fn set_parser_comments<'pr>(
+        &mut self,
+        comments: impl Iterator<Item = ruby_prism::Comment<'pr>>,
+    ) {
+        self.directive_comments = Some(
+            comments
+                .map(|comment| comment.location().start_offset())
+                .collect(),
+        );
     }
 
     fn cop_enabled(&self, cop_name: &str) -> bool {
@@ -340,7 +353,17 @@ impl Context {
         let disabled = if self.ignore_disable_comments {
             vec![false; self.findings.len()]
         } else {
-            disabled_findings(source, &self.findings)
+            let parsed_comments;
+            let directive_comments = if let Some(comments) = self.directive_comments.as_ref() {
+                comments
+            } else {
+                parsed_comments = ruby_prism::parse(source.as_bytes())
+                    .comments()
+                    .map(|comment| comment.location().start_offset())
+                    .collect::<HashSet<_>>();
+                &parsed_comments
+            };
+            disabled_findings(source, &self.findings, directive_comments)
         };
         self.corrections
             .retain(|correction| !disabled[correction.finding_index]);
@@ -447,11 +470,11 @@ impl DisabledState {
     }
 }
 
-fn disabled_findings(source: &str, findings: &[Finding]) -> Vec<bool> {
-    let directive_comments = ruby_prism::parse(source.as_bytes())
-        .comments()
-        .map(|comment| comment.location().start_offset())
-        .collect::<HashSet<_>>();
+fn disabled_findings(
+    source: &str,
+    findings: &[Finding],
+    directive_comments: &HashSet<usize>,
+) -> Vec<bool> {
     let mut state = DisabledState::default();
     let mut line_starts = Vec::new();
     let mut states = Vec::new();

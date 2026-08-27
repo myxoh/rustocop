@@ -16,8 +16,8 @@ define_cops! {
 fn space_around_method_call_operator(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     let file = context.source_file();
     let source = context.source();
-    let literal_ranges = file.literal_ranges();
-    let comment_ranges = file.comment_ranges();
+    let literal_ranges = context.literal_ranges();
+    let comment_ranges = context.comment_ranges();
     let data_section_start = file.data_section_start();
     let mut operators = file.code_offsets("::");
     operators.extend(file.code_offsets("&."));

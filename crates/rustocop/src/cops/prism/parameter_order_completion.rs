@@ -3,7 +3,6 @@ use super::*;
 
 define_cops! {
     KeywordParametersOrder => "Style/KeywordParametersOrder" => compatibility_prism_any_node(keyword_parameters_order),
-    ItAssignment => "Style/ItAssignment" => compatibility_prism_any_node(it_assignment),
 }
 
 fn it_assignment(node: &Node<'_>, context: &mut CopContext<'_, '_>) {

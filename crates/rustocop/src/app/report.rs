@@ -1,4 +1,5 @@
 use std::env;
+use std::io::{BufWriter, Write};
 
 use crate::config::RunOptions;
 use crate::engine::InspectionResult;
@@ -112,40 +113,50 @@ fn write_simple_report(results: &[InspectionResult], offense_count: usize) {
         .filter(|offense| offense.correctable && !offense.corrected)
         .count();
 
+    let stdout = std::io::stdout();
+    let mut output = BufWriter::new(stdout.lock());
     for result in results.iter().filter(|result| !result.offenses.is_empty()) {
-        println!("== {} ==", result.path);
+        writeln!(output, "== {} ==", result.path).expect("write simple report");
         for offense in &result.offenses {
             let label = correction_label(offense)
                 .map(|label| format!(" [{label}]"))
                 .unwrap_or_default();
-            println!(
+            writeln!(
+                output,
                 "C:{:>3}:{:>3}:{} {}: {}",
                 offense.line, offense.column, label, offense.cop_name, offense.message
-            );
+            )
+            .expect("write simple report");
         }
     }
 
-    println!();
-    print!(
+    writeln!(output).expect("write simple report");
+    write!(
+        output,
         "{} {} inspected, {} {} detected",
         results.len(),
         pluralize("file", results.len()),
         offense_count,
         pluralize("offense", offense_count)
-    );
+    )
+    .expect("write simple report");
     if corrected_count > 0 {
-        print!(
+        write!(
+            output,
             ", {corrected_count} {} corrected",
             pluralize("offense", corrected_count)
-        );
+        )
+        .expect("write simple report");
     }
     if correctable_count > 0 {
-        print!(
+        write!(
+            output,
             ", {correctable_count} {} autocorrectable",
             pluralize("offense", correctable_count)
-        );
+        )
+        .expect("write simple report");
     }
-    println!();
+    writeln!(output).expect("write simple report");
 }
 
 fn correction_label(offense: &Offense) -> Option<&'static str> {

@@ -1,5 +1,5 @@
 use crate::rubocop::ast::node::core::NodeRef as RubocopNodeRef;
-use crate::rubocop::ast::processed_source::{ParserEngine, ProcessedSource};
+use crate::rubocop::ast::processed_source::ProcessedSource;
 use crate::rubocop::cop::mixin::statement_modifier::StatementModifier;
 
 use super::*;
@@ -11,18 +11,11 @@ define_cops! {
 const MODIFIER_MESSAGE: &str = "Favor modifier `{keyword}` usage when having a single-line body. Another good alternative is the usage of control flow `&&`/`||`.";
 
 fn if_unless_modifier(context: &mut CompatibilityCopContext<'_, '_, '_>) {
-    let source = context.source().to_owned();
-    if !if_unless_modifier_has_keyword(&source) {
+    let source = context.source();
+    if !if_unless_modifier_has_keyword(source) {
         return;
     }
-    let version = context.target_ruby_version();
-    let ruby_version = format!("{}.{}", version.major(), version.minor())
-        .parse()
-        .unwrap_or(3.4);
-    let Ok(processed) = ProcessedSource::new(&source, ruby_version, None, ParserEngine::Whitequark)
-    else {
-        return;
-    };
+    let processed = context.processed_source();
     let Some(root) = processed.ast() else {
         return;
     };
@@ -31,7 +24,7 @@ fn if_unless_modifier(context: &mut CompatibilityCopContext<'_, '_, '_>) {
         .and_then(|value| value.parse().ok())
         .or(Some(120));
     let statement_modifier = StatementModifier::new(
-        &processed,
+        processed,
         max_line_length,
         "Style/IfUnlessModifier",
     );
@@ -62,7 +55,7 @@ fn if_unless_modifier(context: &mut CompatibilityCopContext<'_, '_, '_>) {
             node,
             &statement_modifier,
             context,
-            &source,
+            source,
         ) {
             let replacement = statement_modifier.to_modifier_form(node);
             let Some(node_range) = node.source_range() else {
@@ -71,18 +64,18 @@ fn if_unless_modifier(context: &mut CompatibilityCopContext<'_, '_, '_>) {
             let message = MODIFIER_MESSAGE.replace("{keyword}", keyword);
             context.replace(
                 message,
-                if_unless_modifier_character_range_to_byte(&source, keyword_range),
-                if_unless_modifier_character_range_to_byte(&source, node_range),
+                if_unless_modifier_character_range_to_byte(source, keyword_range),
+                if_unless_modifier_character_range_to_byte(source, node_range),
                 replacement,
             );
-        } else if if_unless_modifier_too_long(node, context, &processed, max_line_length) {
+        } else if if_unless_modifier_too_long(node, context, processed, max_line_length) {
             if_unless_modifier_report_long(
                 node,
                 keyword,
                 keyword_range,
                 context,
-                &processed,
-                &source,
+                processed,
+                source,
             );
         }
     }
@@ -305,8 +298,10 @@ fn if_unless_modifier_another_statement_same_line(node: RubocopNodeRef<'_>) -> b
 }
 
 fn if_unless_modifier_uri_is_allowed_excess(line: &str, max: usize) -> bool {
-    let uri = regex::Regex::new(r"(?:http|https|ftp)://[^\s<>]+").unwrap();
-    let Some(found) = uri.find_iter(line).last() else {
+    static URI: std::sync::LazyLock<regex::Regex> = std::sync::LazyLock::new(|| {
+        regex::Regex::new(r"(?:http|https|ftp)://[^\s<>]+").expect("static URI regex")
+    });
+    let Some(found) = URI.find_iter(line).last() else {
         return false;
     };
     let start = line[..found.start()].chars().count();

@@ -6,10 +6,10 @@ mod negated_conditions;
 use negated_conditions::*;
 
 define_cops!(
+    NonLocalExitFromIterator => "Lint/NonLocalExitFromIterator" => compatibility_prism_node(as_return_node, non_local_exit_from_iterator),
     NegatedIf => "Style/NegatedIf" => compatibility_prism_node(as_if_node, negated_if),
     NegatedUnless => "Style/NegatedUnless" => compatibility_prism_node(as_unless_node, negated_unless),
     NonNilCheck => "Style/NonNilCheck" => compatibility_prism_any_node(non_nil_check),
-    NonLocalExitFromIterator => "Lint/NonLocalExitFromIterator" => compatibility_prism_node(as_return_node, non_local_exit_from_iterator),
 );
 
 fn non_nil_check(node: &Node<'_>, context: &mut CopContext<'_, '_>) {

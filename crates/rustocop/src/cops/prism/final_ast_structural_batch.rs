@@ -1,6 +1,6 @@
 use super::*;
+use super::catalog_cop::compatibility_custom;
 use crate::rubocop::ast::node::core::NodeRef as RubocopNodeRef;
-use crate::rubocop::ast::prism::convert as convert_rubocop_ast;
 use std::collections::{HashMap, HashSet};
 define_compatibility_rule!(LiteralInInterpolationRule);
 define_compatibility_callback_rule_cop!(LiteralInInterpolation => "Lint/LiteralInInterpolation" => LiteralInInterpolationRule [on_interpolation]);
@@ -15,7 +15,7 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
         Box::new(RedundantTypeConversion),
         Box::new(ConditionalAssignment),
         Box::new(Debugger),
-        Box::new(UselessAccessModifier),
+        compatibility_custom("Lint/UselessAccessModifier", useless_access_modifier),
         Box::new(ArgumentsForwarding),
         Box::new(Void),
         Box::new(LiteralInInterpolation),
@@ -1955,54 +1955,8 @@ fn range_hash_receiver(node: &Node<'_>) -> bool {
     })
 }
 
-struct UselessAccessModifier;
-
-impl Cop for UselessAccessModifier {
-    fn name(&self) -> &'static str {
-        "Lint/UselessAccessModifier"
-    }
-
-    fn on_node<'pr>(
-        &self,
-        node: &Node<'pr>,
-        ancestors: &[Node<'pr>],
-        source: &str,
-        context: &mut Context,
-    ) {
-        if node.as_program_node().is_none() || !prism_access_modifier_candidate(node) {
-            return;
-        }
-        let mut context = context.cop_context(self.name(), source, ancestors);
-        useless_access_modifier(node, &mut context);
-    }
-}
-
-fn prism_access_modifier_candidate(node: &Node<'_>) -> bool {
-    struct Candidate(bool);
-
-    impl<'pr> Visit<'pr> for Candidate {
-        fn visit_call_node(&mut self, node: &ruby_prism::CallNode<'pr>) {
-            if node.receiver().is_none()
-                && matches!(
-                    node.name().as_slice(),
-                    b"private" | b"protected" | b"public" | b"private_class_method"
-                )
-            {
-                self.0 = true;
-                return;
-            }
-            ruby_prism::visit_call_node(self, node);
-        }
-    }
-
-    let mut candidate = Candidate(false);
-    candidate.visit(node);
-    candidate.0
-}
-
-fn useless_access_modifier(root_node: &Node<'_>, context: &mut CopContext<'_, '_>) {
-    let (ast, root) = convert_rubocop_ast(context.source(), root_node);
-    let Some(root) = root.map(|root| ast.node(root)) else {
+fn useless_access_modifier(context: &mut CompatibilityCopContext<'_, '_, '_>) {
+    let Some(root) = context.processed_source().ast() else {
         return;
     };
     let mut checker = UselessAccessModifierChecker {
@@ -2016,15 +1970,15 @@ fn useless_access_modifier(root_node: &Node<'_>, context: &mut CopContext<'_, '_
     checker.check(root);
 }
 
-struct UselessAccessModifierChecker<'context, 'config, 'source> {
+struct UselessAccessModifierChecker<'borrow, 'context, 'processed, 'source> {
     context_creating: Vec<String>,
     method_creating: Vec<String>,
     active_support: bool,
     reported: HashSet<std::ops::Range<usize>>,
-    context: &'context mut CopContext<'config, 'source>,
+    context: &'borrow mut CompatibilityCopContext<'context, 'processed, 'source>,
 }
 
-impl UselessAccessModifierChecker<'_, '_, '_> {
+impl UselessAccessModifierChecker<'_, '_, '_, '_> {
     fn check(&mut self, root: RubocopNodeRef<'_>) {
         if root.kind() == "begin" {
             for child in root.child_nodes() {

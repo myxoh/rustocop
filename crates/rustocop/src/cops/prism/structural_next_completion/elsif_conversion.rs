@@ -1,10 +1,10 @@
 use super::*;
 
 pub(super) fn if_inside_else(context: &mut CompatibilityCopContext<'_, '_, '_>) {
-    let parsed = parse(context.source().as_bytes());
+    let parsed = context.prism_result();
     let mut collector = IfInsideElseCollector {
         allow_modifier: context.config_bool("AllowIfModifier", false),
-        comments: context.source_file().comment_ranges(),
+        comments: context.comment_ranges(),
         offsets: std::collections::HashSet::new(),
     };
     collector.visit(&parsed.node());

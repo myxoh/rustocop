@@ -1,6 +1,5 @@
 use super::*;
 use crate::rubocop::ast::node::core::NodeRef as RubocopNodeRef;
-use crate::rubocop::ast::prism::convert as convert_rubocop_ast;
 
 define_cops! {
     AccessorGrouping => "Style/AccessorGrouping" => compatibility_source(accessor_grouping),
@@ -300,9 +299,7 @@ fn flush_accessor_group(group: &mut Vec<AccessorLine>, context: &mut Compatibili
 }
 
 fn grouped_accessors(context: &mut CompatibilityCopContext<'_, '_, '_>, lines: &[(usize, &str)]) {
-    let parsed = ruby_prism::parse(context.source().as_bytes());
-    let (ast, root) = convert_rubocop_ast(context.source(), &parsed.node());
-    let Some(root) = root.map(|root| ast.node(root)) else { return };
+    let Some(root) = context.processed_source().ast() else { return };
     for scope in root.each_node(&["class", "module", "sclass"]) {
         let Some(body) = scope.body() else { continue };
         let sends = if body.kind() == "begin" {

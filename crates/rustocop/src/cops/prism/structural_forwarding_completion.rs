@@ -1,6 +1,5 @@
 use super::*;
 use crate::rubocop::ast::node::core::NodeRef as RubocopNodeRef;
-use crate::rubocop::ast::prism::convert as convert_rubocop_ast;
 
 define_cops! {
     ArrayCoercion => "Style/ArrayCoercion" => compatibility_prism_any_node(array_coercion),
@@ -193,10 +192,8 @@ fn comparison_variable(node: &Node<'_>, allow_methods: bool) -> bool {
 }
 
 fn explicit_block_argument(context: &mut CompatibilityCopContext<'_, '_, '_>) {
-    let source = context.source().to_owned();
-    let parsed = ruby_prism::parse(source.as_bytes());
-    let (ast, root) = convert_rubocop_ast(&source, &parsed.node());
-    let Some(root) = root.map(|root| ast.node(root)) else {
+    let source = context.source();
+    let Some(root) = context.processed_source().ast() else {
         return;
     };
     let mut edited_definitions = std::collections::HashSet::new();
@@ -265,7 +262,7 @@ fn explicit_block_argument(context: &mut CompatibilityCopContext<'_, '_, '_>) {
         let block_name = existing_block_argument
             .and_then(|node| node.symbol_child(0))
             .unwrap_or(if existing_block_argument.is_some() { "" } else { "block" });
-        let block_range = explicit_character_range_to_byte(&source, offense_range);
+        let block_range = explicit_character_range_to_byte(source, offense_range);
         let Some(mut send_range) = send.source_range() else {
             continue;
         };

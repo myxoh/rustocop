@@ -129,6 +129,7 @@ impl SourceToken {
 #[derive(Clone, Debug)]
 pub(crate) struct ProcessedSource<'source> {
     raw_source: &'source str,
+    buffer: SourceBuffer<'source>,
     path: Option<PathBuf>,
     ruby_version: f64,
     parser_engine: ParserEngine,
@@ -346,6 +347,7 @@ impl<'source> ProcessedSource<'source> {
         };
         Self {
             raw_source: source,
+            buffer: SourceBuffer::new(source),
             path,
             ruby_version,
             parser_engine,
@@ -362,8 +364,8 @@ impl<'source> ProcessedSource<'source> {
         }
     }
 
-    pub(crate) fn buffer(&self) -> SourceBuffer<'source> {
-        SourceBuffer::new(self.raw_source)
+    pub(crate) fn buffer(&self) -> &SourceBuffer<'source> {
+        &self.buffer
     }
     pub(crate) fn raw_source(&self) -> &'source str {
         self.raw_source

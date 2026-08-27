@@ -11,7 +11,6 @@ mod source_registry {
     use super::*;
 
     declare_source_cops! {
-        RubyVersionGlobalsUsage => "Gemspec/RubyVersionGlobalsUsage" => super::ruby_version_globals,
         AttributeAssignment => "Gemspec/AttributeAssignment" => super::attribute_assignment,
     }
 }

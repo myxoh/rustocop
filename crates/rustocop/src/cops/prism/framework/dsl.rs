@@ -46,6 +46,11 @@ macro_rules! def_node_matcher {
 }
 
 macro_rules! declare_cops {
+    () => {
+        pub(super) fn cops() -> Vec<Box<dyn Cop>> {
+            Vec::new()
+        }
+    };
     ($($cop:expr),+ $(,)?) => {
         pub(super) fn cops() -> Vec<Box<dyn Cop>> {
             vec![$(Box::new($cop) as Box<dyn Cop>),+]
@@ -58,6 +63,11 @@ macro_rules! declare_cops {
 /// The handler signature is `fn(&str, &mut Reporter<'_>)`; registration, the
 /// marker type, `Cop::name`, and reporter scoping are generated here.
 macro_rules! declare_source_cops {
+    () => {
+        pub(super) fn cops() -> Vec<Box<dyn Cop>> {
+            Vec::new()
+        }
+    };
     ($($type:ident => $name:literal => $check:path),+ $(,)?) => {
         declare_cops!($($type),+);
 
@@ -215,6 +225,11 @@ macro_rules! define_parse_error_and_source_cop {
 /// Declares and registers a homogeneous set of concise cop callbacks. A cop's
 /// name appears exactly once and no public inventory needs a matching edit.
 macro_rules! define_cops {
+    () => {
+        pub(super) fn cops() -> Vec<Box<dyn Cop>> {
+            Vec::new()
+        }
+    };
     ($($type:ident => $name:literal => $kind:ident($($arguments:tt)*)),+ $(,)?) => {
         declare_cops!($($type),+);
         $(define_cop_entry!($type => $name => $kind($($arguments)*));)+
@@ -228,13 +243,19 @@ macro_rules! define_cop_entry {
         impl Cop for $type {
             fn name(&self) -> &'static str { $name }
             fn phase(&self) -> CopPhase { CopPhase::CompatibilityNode }
-            fn on_compatibility_investigation<'processed, 'source>(
+            fn on_compatibility_investigation_with_prism<'processed, 'source>(
                 &self,
                 processed_source: &'processed crate::rubocop::ast::processed_source::ProcessedSource<'source>,
+                prism_result: &'processed ruby_prism::ParseResult<'source>,
                 context: &mut Context,
                 _state: &mut dyn Any,
             ) {
-                let mut context = CompatibilityCopContext::new(context, self.name(), processed_source);
+                let mut context = CompatibilityCopContext::new_with_prism(
+                    context,
+                    self.name(),
+                    processed_source,
+                    prism_result,
+                );
                 $check(&mut context);
             }
         }
@@ -254,20 +275,8 @@ macro_rules! define_cop_entry {
     ($type:ident => $name:literal => compatibility_prism_call($check:path)) => {
         define_call_cop!($type => $name => $check);
     };
-    ($type:ident => $name:literal => compatibility_prism_call($check:path)) => {
-        define_call_cop!($type => $name => $check);
-    };
     ($type:ident => $name:literal => compatibility_prism_node($cast:ident, $check:path)) => {
         define_node_cop!($type => $name => $cast => $check);
-    };
-    ($type:ident => $name:literal => compatibility_prism_node($cast:ident, $check:path)) => {
-        define_node_cop!($type => $name => $cast => $check);
-    };
-    ($type:ident => $name:literal => compatibility_prism_call_rule($rule:ident, $callback:ident)) => {
-        define_call_rule_cop!($type => $name => $rule::$callback);
-    };
-    ($type:ident => $name:literal => compatibility_prism_call_rule($rule:ident, $callback:ident, restrict [$($method:literal),+ $(,)?])) => {
-        define_call_rule_cop!($type => $name => $rule::$callback restrict [$($method),+]);
     };
     ($type:ident => $name:literal => compatibility_prism_call_rule($rule:ident, $callback:ident)) => {
         define_call_rule_cop!($type => $name => $rule::$callback);
@@ -278,17 +287,8 @@ macro_rules! define_cop_entry {
     ($type:ident => $name:literal => compatibility_prism_stateful_call_rule($rule:ident, $state:ident, $callback:ident, restrict [$($method:literal),+ $(,)?])) => {
         define_stateful_call_rule_cop!($type => $name => $rule<$state>::$callback restrict [$($method),+]);
     };
-    ($type:ident => $name:literal => compatibility_prism_stateful_call_rule($rule:ident, $state:ident, $callback:ident, restrict [$($method:literal),+ $(,)?])) => {
-        define_stateful_call_rule_cop!($type => $name => $rule<$state>::$callback restrict [$($method),+]);
-    };
     ($type:ident => $name:literal => compatibility_prism_node_rule($cast:ident, $rule:ident, $callback:ident)) => {
         define_node_rule_cop!($type => $name => $cast => $rule::$callback);
-    };
-    ($type:ident => $name:literal => compatibility_prism_node_rule($cast:ident, $rule:ident, $callback:ident)) => {
-        define_node_rule_cop!($type => $name => $cast => $rule::$callback);
-    };
-    ($type:ident => $name:literal => compatibility_prism_stateful_node_rule($cast:ident, $rule:ident, $state:ident, $callback:ident)) => {
-        define_stateful_node_rule_cop!($type => $name => $cast => $rule<$state>::$callback);
     };
     ($type:ident => $name:literal => compatibility_prism_stateful_node_rule($cast:ident, $rule:ident, $state:ident, $callback:ident)) => {
         define_stateful_node_rule_cop!($type => $name => $cast => $rule<$state>::$callback);
@@ -299,24 +299,9 @@ macro_rules! define_cop_entry {
     ($type:ident => $name:literal => compatibility_prism_node_rule_aliases($rule:ident, $callback:ident => [$($cast:ident),+ $(,)?])) => {
         define_any_node_rule_cop!($type => $name => $rule::$callback aliases [$($cast),+]);
     };
-    ($type:ident => $name:literal => compatibility_prism_node_rule_aliases($rule:ident, $callback:ident => [$($cast:ident),+ $(,)?])) => {
-        define_any_node_rule_cop!($type => $name => $rule::$callback aliases [$($cast),+]);
-    };
-    ($type:ident => $name:literal => rubocop_callbacks($rule:ident, [on_send restrict [$($method:literal),+ $(,)?]])) => {
-        define_rule!($rule);
-        define_rubocop_callback_rule_cop!($type => $name => $rule [on_send restrict [$($method),+]]);
-    };
     ($type:ident => $name:literal => compatibility_prism_callbacks($rule:ident, [on_send restrict [$($method:literal),+ $(,)?]])) => {
         define_rule!($rule);
         define_rubocop_callback_rule_cop!($type => $name => $rule [on_send restrict [$($method),+]]);
-    };
-    ($type:ident => $name:literal => rubocop_callbacks($rule:ident, [on_block, on_send restrict [$($method:literal),+ $(,)?]])) => {
-        define_rule!($rule);
-        define_rubocop_callback_rule_cop!($type => $name => $rule [on_block, on_send restrict [$($method),+]]);
-    };
-    ($type:ident => $name:literal => rubocop_callbacks($rule:ident, [$($callback:ident),+ $(,)?])) => {
-        define_rule!($rule);
-        define_rubocop_callback_rule_cop!($type => $name => $rule [$($callback),+]);
     };
     ($type:ident => $name:literal => compatibility_prism_recovery_callbacks($rule:ident, [$($callback:ident),+ $(,)?])) => {
         define_rule!($rule);
@@ -334,22 +319,8 @@ macro_rules! define_cop_entry {
         define_rule!($rule);
         define_rubocop_callback_rule_cop!($type => $name => $rule [$($callback),+]);
     };
-    ($type:ident => $name:literal => recovery_rubocop_callbacks($rule:ident, [$($callback:ident),+ $(,)?])) => {
-        define_rule!($rule);
-        define_recovery_rubocop_callback_rule_cop!($type => $name => $rule [$($callback),+]);
-    };
-    ($type:ident => $name:literal => stateful_rubocop_callbacks($rule:ident, $state:ident, [$($callback:ident),+ $(,)?])) => {
-        define_stateful_rule!($rule, $state);
-        define_stateful_rubocop_callback_rule_cop!($type => $name => $rule<$state> [$($callback),+]);
-    };
     ($type:ident => $name:literal => compatibility_prism_any_node($check:path)) => {
         define_any_node_cop!($type => $name => $check);
-    };
-    ($type:ident => $name:literal => compatibility_prism_any_node($check:path)) => {
-        define_any_node_cop!($type => $name => $check);
-    };
-    ($type:ident => $name:literal => compatibility_prism_parse_error_and_source($parse:path, $source:path)) => {
-        define_parse_error_and_source_cop!($type => $name => $parse, $source);
     };
     ($type:ident => $name:literal => compatibility_prism_parse_error_and_source($parse:path, $source:path)) => {
         define_parse_error_and_source_cop!($type => $name => $parse, $source);

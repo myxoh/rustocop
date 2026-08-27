@@ -228,10 +228,10 @@ fn space_inside_parens(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     let compact = style == "compact";
     let source = context.source();
     let file = context.source_file();
-    let literal_ranges = file.literal_ranges();
-    let heredoc_ranges = file.heredoc_ranges();
-    let embedded_code_ranges = embedded_code_ranges(source);
-    let comment_ranges = file.comment_ranges();
+    let literal_ranges = context.literal_ranges();
+    let heredoc_ranges = context.heredoc_ranges();
+    let embedded_code_ranges = embedded_code_ranges(context.prism_result());
+    let comment_ranges = context.comment_ranges();
     let data_section_start = file.data_section_start();
     let inside_literal = |offset| {
         let embedded = embedded_code_ranges
@@ -351,7 +351,9 @@ fn space_inside_parens(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     }
 }
 
-fn embedded_code_ranges(source: &str) -> Vec<std::ops::Range<usize>> {
+fn embedded_code_ranges(
+    parsed: &ruby_prism::ParseResult<'_>,
+) -> Vec<std::ops::Range<usize>> {
     #[derive(Default)]
     struct EmbeddedCode(Vec<std::ops::Range<usize>>);
 
@@ -368,7 +370,6 @@ fn embedded_code_ranges(source: &str) -> Vec<std::ops::Range<usize>> {
         }
     }
 
-    let parsed = ruby_prism::parse(source.as_bytes());
     let mut embedded = EmbeddedCode::default();
     ruby_prism::Visit::visit(&mut embedded, &parsed.node());
     embedded.0
@@ -771,7 +772,7 @@ fn comment_indentation(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     let outdent_modifiers = context
         .related_config_value("Layout/AccessModifierIndentation", "EnforcedStyle")
         == Some("outdent");
-    let comment_ranges = context.source_file().comment_ranges();
+    let comment_ranges = context.comment_ranges();
 
     let comments = lines[..data_index]
         .iter()

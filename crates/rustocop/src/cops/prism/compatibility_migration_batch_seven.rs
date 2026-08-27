@@ -3,21 +3,9 @@ use crate::rubocop::ast::node::core::NodeRef;
 
 define_cops! {
     NotCompatibility => "Style/Not" => compatibility_callbacks(NotRule, [on_send restrict ["!"]]),
-    NilComparisonCompatibility => "Style/NilComparison" => compatibility_callbacks(NilComparisonRule, [on_send]),
-    RedundantExceptionCompatibility => "Style/RedundantException" => compatibility_callbacks(RedundantExceptionRule, [on_send restrict ["raise", "fail"]]),
-    ComparableBetweenCompatibility => "Style/ComparableBetween" => compatibility_callbacks(ComparableBetweenRule, [on_and]),
     SendWithMixinArgumentCompatibility => "Lint/SendWithMixinArgument" => compatibility_callbacks(SendWithMixinArgumentRule, [on_send]),
-    DataInheritanceCompatibility => "Style/DataInheritance" => compatibility_callbacks(DataInheritanceRule, [on_class]),
-    DeprecatedAttributeAssignmentCompatibility => "Gemspec/DeprecatedAttributeAssignment" => compatibility_callbacks(DeprecatedAttributeAssignmentRule, [on_block]),
-    RedundantSelfAssignmentBranchCompatibility => "Style/RedundantSelfAssignmentBranch" => compatibility_callbacks(RedundantSelfAssignmentBranchRule, [on_lvasgn]),
     ConstantDefinitionInBlockCompatibility => "Lint/ConstantDefinitionInBlock" => compatibility_callbacks(ConstantDefinitionInBlockRule, [on_casgn, on_class, on_module]),
-    IncompatibleIoSelectCompatibility => "Lint/IncompatibleIoSelectWithFiberScheduler" => compatibility_callbacks(IncompatibleIoSelectRule, [on_send restrict ["select"]]),
-    ArrayCoercionCompatibility => "Style/ArrayCoercion" => compatibility_callbacks(ArrayCoercionRule, [on_array, on_if]),
-    DisableDirectiveCompatibility => "Style/DisableCopsWithinSourceCodeDirective" => compatibility_investigation(DisableDirectiveRule, on_new_investigation),
-    OrAssignmentCompatibility => "Style/OrAssignment" => compatibility_callbacks(OrAssignmentRule, [on_cvasgn, on_gvasgn, on_if, on_ivasgn, on_lvasgn]),
     AttrCompatibility => "Style/Attr" => compatibility_callbacks(AttrRule, [on_send restrict ["attr"]]),
-    PercentStringArrayCompatibility => "Lint/PercentStringArray" => compatibility_callbacks(PercentStringArrayRule, [on_array, on_percent_literal]),
-    LambdaCallCompatibility => "Style/LambdaCall" => compatibility_callbacks(LambdaCallRule, [on_send]),
     BarePercentLiteralsCompatibility => "Style/BarePercentLiterals" => compatibility_callbacks(BarePercentLiteralsRule, [on_dstr, on_str]),
 }
 

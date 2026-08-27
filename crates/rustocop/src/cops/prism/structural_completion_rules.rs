@@ -18,12 +18,11 @@ define_cops!(
 
 fn multiline_memoization(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     let source = context.source();
-    let parsed = parse(source.as_bytes());
     let mut collector = MultilineMemoizationCollector {
         source,
         candidates: Vec::new(),
     };
-    collector.visit(&parsed.node());
+    collector.visit(&context.prism_result().node());
     let style = context.policy().enforced_style("keyword").to_string();
     for candidate in collector.candidates {
         if style == "keyword" {

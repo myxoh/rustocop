@@ -1,6 +1,5 @@
 use super::*;
 use crate::rubocop::ast::node::core::NodeRef as RubocopNodeRef;
-use crate::rubocop::ast::prism::convert as convert_rubocop_ast;
 
 #[derive(Default)]
 struct WordArrayState {
@@ -383,12 +382,10 @@ fn bare_symbol(value: &str) -> bool {
 }
 
 fn fetch_env_var(context: &mut CompatibilityCopContext<'_, '_, '_>) {
-    let source = context.source().to_string();
+    let source = context.source();
     let default_to_nil = context.config_bool("DefaultToNil", true);
     let allowed = context.config_values("AllowedVars").to_vec();
-    let parsed = ruby_prism::parse(source.as_bytes());
-    let (ast, root) = convert_rubocop_ast(&source, &parsed.node());
-    let Some(root) = root.map(|root| ast.node(root)) else {
+    let Some(root) = context.processed_source().ast() else {
         return;
     };
 
@@ -428,7 +425,7 @@ fn fetch_env_var(context: &mut CompatibilityCopContext<'_, '_, '_>) {
             .take(node_range.end - node_range.start)
             .collect::<String>();
         let default = if default_to_nil { ", nil" } else { "" };
-        let byte_range = fetch_env_character_range_to_byte(&source, node_range);
+        let byte_range = fetch_env_character_range_to_byte(source, node_range);
         context.replace(
             format!("Use `ENV.fetch({key}{default})` instead of `{original}`."),
             byte_range.clone(),

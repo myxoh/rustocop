@@ -1,10 +1,10 @@
 {
   "version": 2,
   "kind": "project_compatibility",
-  "updated_at": "2026-08-27T07:03:56-04:00",
+  "updated_at": "2026-08-27T13:02:57-04:00",
   "rust_commit": null,
-  "cop_source_sha256": "88055a6564dbf70c48605b68d64609e06b4f79b9c6a3bdfc6dd6f072ad3a85bf",
-  "native_sha256": "0589ddb4e65837bb1eb7bc57f01b8465a4fd69fb2294ed35ce2464952e2e78b0",
+  "cop_source_sha256": "7b783b34c545fd1673c5be226a501f69066829b78e1ca4c4fa05c376caed09ac",
+  "native_sha256": "4efae3b72476bbfdfd924aaee96de900cf0d4173ba41d13bd76600872b75c4c9",
   "rubocop_version": "1.87.0",
   "rubocop_reference": {
     "path": "spec/compatibility_evidence/project_rubocop_reference.json.gz",

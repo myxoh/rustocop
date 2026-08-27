@@ -1,9 +1,7 @@
 use super::*;
 
 pub(super) fn cops() -> Vec<Box<dyn Cop>> {
-    vec![
-        Box::new(ArrayFirstLast),
-    ]
+    vec![Box::new(ArrayFirstLast)]
 }
 
 struct ArrayFirstLast;

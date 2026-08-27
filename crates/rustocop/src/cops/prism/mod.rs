@@ -290,22 +290,27 @@ use source_file::{SourceEdit, SourceFile};
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(super) enum CopPhase {
     Source,
+    SourceAndNode,
     Node,
+    NodeAndCompatibility,
     CompatibilityNode,
     ParseErrorAndSource,
 }
 
 impl CopPhase {
     const fn visits_source(self) -> bool {
-        matches!(self, Self::Source | Self::ParseErrorAndSource)
+        matches!(
+            self,
+            Self::Source | Self::SourceAndNode | Self::ParseErrorAndSource
+        )
     }
 
     const fn visits_nodes(self) -> bool {
-        matches!(self, Self::Node)
+        matches!(self, Self::Node | Self::SourceAndNode | Self::NodeAndCompatibility)
     }
 
     const fn visits_compatibility_nodes(self) -> bool {
-        matches!(self, Self::CompatibilityNode)
+        matches!(self, Self::CompatibilityNode | Self::NodeAndCompatibility)
     }
 
     const fn visits_parse_errors(self) -> bool {
@@ -358,6 +363,9 @@ pub(super) trait Cop: Sync {
         _state: &mut dyn Any,
     ) {
     }
+    fn compatibility_node_interests(&self) -> &'static [CompatibilityNodeInterest] {
+        &[]
+    }
     fn on_compatibility_investigation<'processed, 'source>(
         &self,
         _processed_source: &'processed crate::rubocop::ast::processed_source::ProcessedSource<
@@ -367,7 +375,25 @@ pub(super) trait Cop: Sync {
         _state: &mut dyn Any,
     ) {
     }
+    fn on_compatibility_investigation_with_prism<'processed, 'source>(
+        &self,
+        processed_source: &'processed crate::rubocop::ast::processed_source::ProcessedSource<
+            'source,
+        >,
+        prism_result: &'processed ruby_prism::ParseResult<'source>,
+        context: &mut Context,
+        state: &mut dyn Any,
+    ) {
+        let _ = prism_result;
+        self.on_compatibility_investigation(processed_source, context, state);
+    }
     fn on_call(&self, _node: &CallNode<'_>, _context: &mut Context) {}
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum CompatibilityNodeInterest {
+    Callback(&'static str),
+    Kinds(&'static [&'static str]),
 }
 
 type Provider = fn() -> Vec<Box<dyn Cop>>;

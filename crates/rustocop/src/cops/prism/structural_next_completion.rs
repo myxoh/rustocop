@@ -18,8 +18,8 @@ fn case_like_if(context: &mut CompatibilityCopContext<'_, '_, '_>) {
         .config_value("MinBranchesCount")
         .and_then(|value| value.parse::<usize>().ok())
         .unwrap_or(3);
-    let mut literal_ranges = context.source_file().literal_ranges();
-    literal_ranges.extend(context.source_file().heredoc_ranges());
+    let mut literal_ranges = context.literal_ranges();
+    literal_ranges.extend(context.heredoc_ranges());
     let mut reported = Vec::new();
     let mut index = 0usize;
     while index < lines.len() {
@@ -224,7 +224,7 @@ fn ast_case_like_if(
         candidates.push(Candidate { offense, edits });
     }
 
-    let parsed = ruby_prism::parse(context.source().as_bytes());
+    let parsed = context.prism_result();
     let mut finder = Finder {
         file: context.source_file(),
         minimum,

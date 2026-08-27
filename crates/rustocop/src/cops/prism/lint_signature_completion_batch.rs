@@ -1,6 +1,5 @@
 use super::*;
 use crate::rubocop::ast::node::core::NodeRef as RubocopNodeRef;
-use crate::rubocop::ast::prism::convert as convert_rubocop_ast;
 use std::collections::HashMap;
 
 define_cops! {
@@ -723,10 +722,8 @@ fn unused_block_message(
 }
 
 fn ambiguous_range(context: &mut CompatibilityCopContext<'_, '_, '_>) {
-    let source = context.source().to_string();
-    let parsed = ruby_prism::parse(source.as_bytes());
-    let (ast, root) = convert_rubocop_ast(&source, &parsed.node());
-    let Some(root) = root.map(|root| ast.node(root)) else {
+    let source = context.source();
+    let Some(root) = context.processed_source().ast() else {
         return;
     };
     let require_method_chains = context.config_bool("RequireParenthesesForMethodChains", false);
@@ -738,7 +735,7 @@ fn ambiguous_range(context: &mut CompatibilityCopContext<'_, '_, '_>) {
             let Some(character_range) = boundary.source_range() else {
                 continue;
             };
-            let byte_range = ambiguous_range_character_range_to_byte(&source, character_range);
+            let byte_range = ambiguous_range_character_range_to_byte(source, character_range);
             context.replace_many(
                 "Wrap complex range boundaries with parentheses to avoid ambiguity.",
                 byte_range.clone(),
@@ -800,8 +797,8 @@ fn ambiguous_range_character_range_to_byte(
 
 fn non_atomic_file_operation(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     let lines = context.source_file().lines().collect::<Vec<_>>();
-    let mut literal_ranges = context.source_file().literal_ranges();
-    literal_ranges.extend(context.source_file().heredoc_ranges());
+    let mut literal_ranges = context.literal_ranges();
+    literal_ranges.extend(context.heredoc_ranges());
     for (index, (condition_offset, condition_line)) in lines.iter().copied().enumerate() {
         let first_content = condition_offset + condition_line.len() - condition_line.trim_start().len();
         if literal_ranges
@@ -1756,7 +1753,7 @@ fn documentation_method(context: &mut CompatibilityCopContext<'_, '_, '_>) {
 
     }
 
-    let parsed = parse(context.source().as_bytes());
+    let parsed = context.prism_result();
     let mut definition_ranges = DefinitionRanges::default();
     definition_ranges.visit(&parsed.node());
     let lines = context.source_file().lines().collect::<Vec<_>>();

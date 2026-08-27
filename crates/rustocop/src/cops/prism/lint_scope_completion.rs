@@ -1,8 +1,7 @@
 use super::*;
 
-declare_cops!(EmptyBlock, MissingSuper);
+declare_cops!(EmptyBlock);
 define_any_node_cop!(EmptyBlock => "Lint/EmptyBlock" => empty_node);
-define_node_cop!(MissingSuper => "Lint/MissingSuper" => as_def_node => missing_super);
 
 fn empty_node(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
     if let Some(lambda) = node.as_lambda_node() {

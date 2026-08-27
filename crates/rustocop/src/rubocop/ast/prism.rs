@@ -112,7 +112,7 @@ impl Converter<'_> {
     #[allow(clippy::too_many_lines)] // One dispatch table mirrors Prism node families.
     fn enter(&mut self, node: Node<'_>) {
         let raw = raw_name(&node);
-        if transparent(&raw) {
+        if transparent(raw) {
             self.frames.push(Frame::Transparent);
             return;
         }
@@ -340,12 +340,12 @@ impl Converter<'_> {
         let kind = if self.pattern_depth > 0 && raw.ends_with("TargetNode") {
             "match_var"
         } else if self.multiple_assignment_depth > 0 {
-            match raw.as_str() {
+            match raw {
                 "ConstantTargetNode" | "ConstantPathTargetNode" => "casgn",
                 "CallTargetNode" => "send",
                 "IndexTargetNode" => "indexasgn",
                 "ImplicitRestNode" => "splat",
-                _ => parser_kind(&raw, self.source_for(&node)),
+                _ => parser_kind(raw, self.source_for(&node)),
             }
         } else if raw == "SplatNode"
             && self
@@ -354,7 +354,7 @@ impl Converter<'_> {
         {
             "restarg"
         } else {
-            parser_kind(&raw, self.source_for(&node))
+            parser_kind(raw, self.source_for(&node))
         };
         // Prism can retain MatchLastLineNode for the regexp nested under `!`
         // after RuboCop has corrected `if !/foo/` to `if !/foo/ =~ $_`.
@@ -371,13 +371,13 @@ impl Converter<'_> {
         } else {
             kind
         };
-        let children = scalar_children(&raw, kind, self.source_for(&node));
+        let children = scalar_children(raw, kind, self.source_for(&node));
         let id = self
             .ast
             .add_node(kind, children, Some(self.location(&node)));
         self.attach(id);
         let node_source = self.source_for(&node).to_owned();
-        self.set_delimiter_locations(id, &raw, &node_source);
+        self.set_delimiter_locations(id, raw, &node_source);
         if kind == "const" {
             let range = self.location(&node);
             let name = node_source.rsplit("::").next().unwrap_or(&node_source);
@@ -2151,18 +2151,171 @@ fn transparent(raw: &str) -> bool {
     )
 }
 
-fn raw_name(node: &Node<'_>) -> String {
-    // `Node` deliberately exposes typed downcasts rather than a public numeric
-    // kind. These tests cover the complete 151-variant Prism 1.9 node enum; the
-    // fallback is only for a future Prism release adding a new variant.
-    if node.as_call_node().is_some() {
-        return "CallNode".into();
-    }
-    let debug = format!("{node:?}");
-    let name = debug
-        .split_once('(')
-        .map_or(debug.as_str(), |(name, _)| name);
-    name.to_owned()
+macro_rules! prism_node_name {
+    ($node:expr, $($cast:ident => $name:literal),+ $(,)?) => {{
+        $(if $node.$cast().is_some() { return $name; })+
+        unreachable!("ruby-prism added a node variant without updating prism_node_name")
+    }};
+}
+
+fn raw_name(node: &Node<'_>) -> &'static str {
+    // ruby-prism exposes typed downcasts but no public node-kind scalar. Keep
+    // this exhaustive list in generated binding order so classification never
+    // recursively Debug-formats an AST merely to recover its variant name.
+    prism_node_name!(
+        node,
+        as_call_node => "CallNode",
+        as_alias_global_variable_node => "AliasGlobalVariableNode",
+        as_alias_method_node => "AliasMethodNode",
+        as_alternation_pattern_node => "AlternationPatternNode",
+        as_and_node => "AndNode",
+        as_arguments_node => "ArgumentsNode",
+        as_array_node => "ArrayNode",
+        as_array_pattern_node => "ArrayPatternNode",
+        as_assoc_node => "AssocNode",
+        as_assoc_splat_node => "AssocSplatNode",
+        as_back_reference_read_node => "BackReferenceReadNode",
+        as_begin_node => "BeginNode",
+        as_block_argument_node => "BlockArgumentNode",
+        as_block_local_variable_node => "BlockLocalVariableNode",
+        as_block_node => "BlockNode",
+        as_block_parameter_node => "BlockParameterNode",
+        as_block_parameters_node => "BlockParametersNode",
+        as_break_node => "BreakNode",
+        as_call_and_write_node => "CallAndWriteNode",
+        as_call_operator_write_node => "CallOperatorWriteNode",
+        as_call_or_write_node => "CallOrWriteNode",
+        as_call_target_node => "CallTargetNode",
+        as_capture_pattern_node => "CapturePatternNode",
+        as_case_match_node => "CaseMatchNode",
+        as_case_node => "CaseNode",
+        as_class_node => "ClassNode",
+        as_class_variable_and_write_node => "ClassVariableAndWriteNode",
+        as_class_variable_operator_write_node => "ClassVariableOperatorWriteNode",
+        as_class_variable_or_write_node => "ClassVariableOrWriteNode",
+        as_class_variable_read_node => "ClassVariableReadNode",
+        as_class_variable_target_node => "ClassVariableTargetNode",
+        as_class_variable_write_node => "ClassVariableWriteNode",
+        as_constant_and_write_node => "ConstantAndWriteNode",
+        as_constant_operator_write_node => "ConstantOperatorWriteNode",
+        as_constant_or_write_node => "ConstantOrWriteNode",
+        as_constant_path_and_write_node => "ConstantPathAndWriteNode",
+        as_constant_path_node => "ConstantPathNode",
+        as_constant_path_operator_write_node => "ConstantPathOperatorWriteNode",
+        as_constant_path_or_write_node => "ConstantPathOrWriteNode",
+        as_constant_path_target_node => "ConstantPathTargetNode",
+        as_constant_path_write_node => "ConstantPathWriteNode",
+        as_constant_read_node => "ConstantReadNode",
+        as_constant_target_node => "ConstantTargetNode",
+        as_constant_write_node => "ConstantWriteNode",
+        as_def_node => "DefNode",
+        as_defined_node => "DefinedNode",
+        as_else_node => "ElseNode",
+        as_embedded_statements_node => "EmbeddedStatementsNode",
+        as_embedded_variable_node => "EmbeddedVariableNode",
+        as_ensure_node => "EnsureNode",
+        as_false_node => "FalseNode",
+        as_find_pattern_node => "FindPatternNode",
+        as_flip_flop_node => "FlipFlopNode",
+        as_float_node => "FloatNode",
+        as_for_node => "ForNode",
+        as_forwarding_arguments_node => "ForwardingArgumentsNode",
+        as_forwarding_parameter_node => "ForwardingParameterNode",
+        as_forwarding_super_node => "ForwardingSuperNode",
+        as_global_variable_and_write_node => "GlobalVariableAndWriteNode",
+        as_global_variable_operator_write_node => "GlobalVariableOperatorWriteNode",
+        as_global_variable_or_write_node => "GlobalVariableOrWriteNode",
+        as_global_variable_read_node => "GlobalVariableReadNode",
+        as_global_variable_target_node => "GlobalVariableTargetNode",
+        as_global_variable_write_node => "GlobalVariableWriteNode",
+        as_hash_node => "HashNode",
+        as_hash_pattern_node => "HashPatternNode",
+        as_if_node => "IfNode",
+        as_imaginary_node => "ImaginaryNode",
+        as_implicit_node => "ImplicitNode",
+        as_implicit_rest_node => "ImplicitRestNode",
+        as_in_node => "InNode",
+        as_index_and_write_node => "IndexAndWriteNode",
+        as_index_operator_write_node => "IndexOperatorWriteNode",
+        as_index_or_write_node => "IndexOrWriteNode",
+        as_index_target_node => "IndexTargetNode",
+        as_instance_variable_and_write_node => "InstanceVariableAndWriteNode",
+        as_instance_variable_operator_write_node => "InstanceVariableOperatorWriteNode",
+        as_instance_variable_or_write_node => "InstanceVariableOrWriteNode",
+        as_instance_variable_read_node => "InstanceVariableReadNode",
+        as_instance_variable_target_node => "InstanceVariableTargetNode",
+        as_instance_variable_write_node => "InstanceVariableWriteNode",
+        as_integer_node => "IntegerNode",
+        as_interpolated_match_last_line_node => "InterpolatedMatchLastLineNode",
+        as_interpolated_regular_expression_node => "InterpolatedRegularExpressionNode",
+        as_interpolated_string_node => "InterpolatedStringNode",
+        as_interpolated_symbol_node => "InterpolatedSymbolNode",
+        as_interpolated_x_string_node => "InterpolatedXStringNode",
+        as_it_local_variable_read_node => "ItLocalVariableReadNode",
+        as_it_parameters_node => "ItParametersNode",
+        as_keyword_hash_node => "KeywordHashNode",
+        as_keyword_rest_parameter_node => "KeywordRestParameterNode",
+        as_lambda_node => "LambdaNode",
+        as_local_variable_and_write_node => "LocalVariableAndWriteNode",
+        as_local_variable_operator_write_node => "LocalVariableOperatorWriteNode",
+        as_local_variable_or_write_node => "LocalVariableOrWriteNode",
+        as_local_variable_read_node => "LocalVariableReadNode",
+        as_local_variable_target_node => "LocalVariableTargetNode",
+        as_local_variable_write_node => "LocalVariableWriteNode",
+        as_match_last_line_node => "MatchLastLineNode",
+        as_match_predicate_node => "MatchPredicateNode",
+        as_match_required_node => "MatchRequiredNode",
+        as_match_write_node => "MatchWriteNode",
+        as_missing_node => "MissingNode",
+        as_module_node => "ModuleNode",
+        as_multi_target_node => "MultiTargetNode",
+        as_multi_write_node => "MultiWriteNode",
+        as_next_node => "NextNode",
+        as_nil_node => "NilNode",
+        as_no_keywords_parameter_node => "NoKeywordsParameterNode",
+        as_numbered_parameters_node => "NumberedParametersNode",
+        as_numbered_reference_read_node => "NumberedReferenceReadNode",
+        as_optional_keyword_parameter_node => "OptionalKeywordParameterNode",
+        as_optional_parameter_node => "OptionalParameterNode",
+        as_or_node => "OrNode",
+        as_parameters_node => "ParametersNode",
+        as_parentheses_node => "ParenthesesNode",
+        as_pinned_expression_node => "PinnedExpressionNode",
+        as_pinned_variable_node => "PinnedVariableNode",
+        as_post_execution_node => "PostExecutionNode",
+        as_pre_execution_node => "PreExecutionNode",
+        as_program_node => "ProgramNode",
+        as_range_node => "RangeNode",
+        as_rational_node => "RationalNode",
+        as_redo_node => "RedoNode",
+        as_regular_expression_node => "RegularExpressionNode",
+        as_required_keyword_parameter_node => "RequiredKeywordParameterNode",
+        as_required_parameter_node => "RequiredParameterNode",
+        as_rescue_modifier_node => "RescueModifierNode",
+        as_rescue_node => "RescueNode",
+        as_rest_parameter_node => "RestParameterNode",
+        as_retry_node => "RetryNode",
+        as_return_node => "ReturnNode",
+        as_self_node => "SelfNode",
+        as_shareable_constant_node => "ShareableConstantNode",
+        as_singleton_class_node => "SingletonClassNode",
+        as_source_encoding_node => "SourceEncodingNode",
+        as_source_file_node => "SourceFileNode",
+        as_source_line_node => "SourceLineNode",
+        as_splat_node => "SplatNode",
+        as_statements_node => "StatementsNode",
+        as_string_node => "StringNode",
+        as_super_node => "SuperNode",
+        as_symbol_node => "SymbolNode",
+        as_true_node => "TrueNode",
+        as_undef_node => "UndefNode",
+        as_unless_node => "UnlessNode",
+        as_until_node => "UntilNode",
+        as_when_node => "WhenNode",
+        as_while_node => "WhileNode",
+        as_x_string_node => "XStringNode",
+        as_yield_node => "YieldNode",
+    )
 }
 
 fn parser_kind(raw: &str, source: &str) -> &'static str {

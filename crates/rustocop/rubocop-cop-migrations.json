@@ -1,6 +1,6 @@
 {
   "format_version": 2,
-  "updated_at": "2026-08-27T07:05:36-04:00",
+  "updated_at": "2026-08-27T13:03:56-04:00",
   "rubocop_version": "1.87.0",
   "rubocop_commit": "e5b788dba181ad94de30cfbad661c5d6aa08a4e5",
   "sampling": {
@@ -330,8 +330,7 @@
       "upstream_source": "lib/rubocop/cop/gemspec/add_runtime_dependency.rb",
       "upstream_sha256": "6ccec696d9f58055e967a8b41f3eb7139f3c1e587c97a0b9576e42c27d69c3dc",
       "implementations": [
-        "src/cops/prism/compatibility_migration_batch_six.rs",
-        "src/cops/prism/source_rules.rs"
+        "src/cops/prism/compatibility_migration_batch_six.rs"
       ],
       "upstream_callbacks": [
         "on_send"
@@ -463,7 +462,6 @@
       "upstream_source": "lib/rubocop/cop/gemspec/deprecated_attribute_assignment.rb",
       "upstream_sha256": "55ce787d1fe89ff03f7700bfd77267482e0f1c2f3bc5f583a42810abf15ddcfa",
       "implementations": [
-        "src/cops/prism/compatibility_migration_batch_seven.rs",
         "src/cops/prism/project_scope_completion.rs"
       ],
       "upstream_callbacks": [
@@ -485,24 +483,22 @@
         "classification": "dormant"
       },
       "rust_callbacks": [
-        "on_block"
+        "on_new_investigation"
       ],
       "compatibility_components": [
         "CompatibilityCopContext",
         "ProcessedSource",
-        "RuboCopAST"
+        "SourceBuffer"
       ],
       "dsl_features": [
-        "define_cops",
-        "compatibility_callbacks",
-        "define_compatibility_rule"
+        "compatibility_source"
       ],
-      "similarity_score": 4,
-      "structural_status": "source_shaped_with_parser_adaptation",
+      "similarity_score": 3,
+      "structural_status": "source_shaped_with_source_adapter",
       "migration_status": "migrated",
       "structural_gaps": [],
       "documented_adaptations": [
-        "Parser-shaped nodes, locations, callbacks, configuration, and corrections are supplied by the shared Prism compatibility layer."
+        "The upstream investigation callback retains its source-oriented helpers while ProcessedSource, configuration, diagnostics, and corrections are supplied by CompatibilityCopContext."
       ]
     },
     {
@@ -727,7 +723,6 @@
       "upstream_source": "lib/rubocop/cop/gemspec/ruby_version_globals_usage.rb",
       "upstream_sha256": "cc91b7ee63da824379297ef6fe7c2ec5e7e27821e762e240ea235e0c0091cf24",
       "implementations": [
-        "src/cops/prism/additional_rules.rs",
         "src/cops/prism/compatibility_migration_batch_six.rs"
       ],
       "upstream_callbacks": [
@@ -1941,7 +1936,6 @@
       "upstream_source": "lib/rubocop/cop/layout/empty_lines_around_arguments.rb",
       "upstream_sha256": "e96385916079503bd86134b583090dd8c474dd0d0a8cfd20243509c4f1fe4696",
       "implementations": [
-        "src/cops/prism/layout_body_completion.rs",
         "src/cops/prism/layout_body_qualification.rs"
       ],
       "upstream_callbacks": [
@@ -1964,22 +1958,23 @@
         "classification": "project_exact"
       },
       "rust_callbacks": [
-        "on_new_investigation"
+        "on_csend",
+        "on_send"
       ],
       "compatibility_components": [
-        "CompatibilityCopContext",
-        "ProcessedSource",
-        "SourceBuffer"
+        "CopContext",
+        "PrismAST",
+        "RuboCopCallbackDSL"
       ],
       "dsl_features": [
-        "compatibility_source"
+        "compatibility_prism_call"
       ],
-      "similarity_score": 3,
-      "structural_status": "source_shaped_with_source_adapter",
+      "similarity_score": 4,
+      "structural_status": "source_shaped_with_prism_adaptation",
       "migration_status": "migrated",
       "structural_gaps": [],
       "documented_adaptations": [
-        "The upstream investigation callback retains its source-oriented helpers while ProcessedSource, configuration, diagnostics, and corrections are supplied by CompatibilityCopContext."
+        "The Ruby callback and helper structure is retained while the shared DSL maps callbacks and source ranges onto typed Prism nodes."
       ]
     },
     {
@@ -2083,7 +2078,6 @@
       "upstream_source": "lib/rubocop/cop/layout/empty_lines_around_block_body.rb",
       "upstream_sha256": "64c084885c33e7927d1fbf85b6ce112ff8a3e5cfa686bfb08994ad86322a6623",
       "implementations": [
-        "src/cops/prism/layout_body_completion.rs",
         "src/cops/prism/layout_body_qualification.rs"
       ],
       "upstream_callbacks": [
@@ -2107,22 +2101,24 @@
         "classification": "project_exact"
       },
       "rust_callbacks": [
-        "on_new_investigation"
+        "on_block",
+        "on_itblock",
+        "on_numblock"
       ],
       "compatibility_components": [
-        "CompatibilityCopContext",
-        "ProcessedSource",
-        "SourceBuffer"
+        "CopContext",
+        "PrismAST",
+        "RuboCopCallbackDSL"
       ],
       "dsl_features": [
-        "compatibility_source"
+        "compatibility_prism_node"
       ],
-      "similarity_score": 3,
-      "structural_status": "source_shaped_with_source_adapter",
+      "similarity_score": 4,
+      "structural_status": "source_shaped_with_prism_adaptation",
       "migration_status": "migrated",
       "structural_gaps": [],
       "documented_adaptations": [
-        "The upstream investigation callback retains its source-oriented helpers while ProcessedSource, configuration, diagnostics, and corrections are supplied by CompatibilityCopContext."
+        "The Ruby callback and helper structure is retained while the shared DSL maps callbacks and source ranges onto typed Prism nodes."
       ]
     },
     {
@@ -2176,7 +2172,6 @@
       "upstream_source": "lib/rubocop/cop/layout/empty_lines_around_exception_handling_keywords.rb",
       "upstream_sha256": "f23891893cb940ee533a494ab7e59e10d95d724a9aed0e62e188b7772b3fb745",
       "implementations": [
-        "src/cops/prism/layout_body_completion.rs",
         "src/cops/prism/layout_body_qualification.rs"
       ],
       "upstream_callbacks": [
@@ -2202,22 +2197,26 @@
         "classification": "project_exact"
       },
       "rust_callbacks": [
-        "on_new_investigation"
+        "on_block",
+        "on_def",
+        "on_defs",
+        "on_kwbegin",
+        "on_numblock"
       ],
       "compatibility_components": [
-        "CompatibilityCopContext",
-        "ProcessedSource",
-        "SourceBuffer"
+        "CopContext",
+        "PrismAST",
+        "RuboCopCallbackDSL"
       ],
       "dsl_features": [
-        "compatibility_source"
+        "compatibility_prism_node"
       ],
-      "similarity_score": 3,
-      "structural_status": "source_shaped_with_source_adapter",
+      "similarity_score": 4,
+      "structural_status": "source_shaped_with_prism_adaptation",
       "migration_status": "migrated",
       "structural_gaps": [],
       "documented_adaptations": [
-        "The upstream investigation callback retains its source-oriented helpers while ProcessedSource, configuration, diagnostics, and corrections are supplied by CompatibilityCopContext."
+        "The Ruby callback and helper structure is retained while the shared DSL maps callbacks and source ranges onto typed Prism nodes."
       ]
     },
     {
@@ -2225,7 +2224,6 @@
       "upstream_source": "lib/rubocop/cop/layout/empty_lines_around_method_body.rb",
       "upstream_sha256": "c8a46e34e11cc929ec10725ae60562de84f6c713c444f391f379e3662592c063",
       "implementations": [
-        "src/cops/prism/layout_body_completion.rs",
         "src/cops/prism/layout_body_qualification.rs"
       ],
       "upstream_callbacks": [
@@ -2248,22 +2246,23 @@
         "classification": "project_exact"
       },
       "rust_callbacks": [
-        "on_new_investigation"
+        "on_def",
+        "on_defs"
       ],
       "compatibility_components": [
-        "CompatibilityCopContext",
-        "ProcessedSource",
-        "SourceBuffer"
+        "CopContext",
+        "PrismAST",
+        "RuboCopCallbackDSL"
       ],
       "dsl_features": [
-        "compatibility_source"
+        "compatibility_prism_node"
       ],
-      "similarity_score": 3,
-      "structural_status": "source_shaped_with_source_adapter",
+      "similarity_score": 4,
+      "structural_status": "source_shaped_with_prism_adaptation",
       "migration_status": "migrated",
       "structural_gaps": [],
       "documented_adaptations": [
-        "The upstream investigation callback retains its source-oriented helpers while ProcessedSource, configuration, diagnostics, and corrections are supplied by CompatibilityCopContext."
+        "The Ruby callback and helper structure is retained while the shared DSL maps callbacks and source ranges onto typed Prism nodes."
       ]
     },
     {
@@ -6039,8 +6038,7 @@
       "upstream_source": "lib/rubocop/cop/lint/binary_operator_with_identical_operands.rb",
       "upstream_sha256": "025d9915c49301701b1e232c550358bf7b334f73069154cc3da2b018f4ded2dc",
       "implementations": [
-        "src/cops/prism/compatibility_migration_batch_five.rs",
-        "src/cops/prism/lint_suspicious_calls.rs"
+        "src/cops/prism/compatibility_migration_batch_five.rs"
       ],
       "upstream_callbacks": [
         "on_and",
@@ -6132,8 +6130,7 @@
       "upstream_source": "lib/rubocop/cop/lint/circular_argument_reference.rb",
       "upstream_sha256": "22f8cf98bd33e1562e4b8a71a2d29b69a8fd6a1896a1c23a2a9c0d2edb1047ef",
       "implementations": [
-        "src/cops/prism/argument_and_inheritance_rules.rs",
-        "src/cops/prism/compatibility_migration_batch_six.rs"
+        "src/cops/prism/argument_and_inheritance_rules.rs"
       ],
       "upstream_callbacks": [
         "on_kwoptarg",
@@ -6158,21 +6155,19 @@
         "on_optarg"
       ],
       "compatibility_components": [
-        "CompatibilityCopContext",
-        "ProcessedSource",
-        "RuboCopAST"
+        "CopContext",
+        "PrismAST",
+        "RuboCopCallbackDSL"
       ],
       "dsl_features": [
-        "define_cops",
-        "compatibility_callbacks",
-        "define_compatibility_rule"
+        "compatibility_prism_any_node"
       ],
       "similarity_score": 4,
-      "structural_status": "source_shaped_with_parser_adaptation",
+      "structural_status": "source_shaped_with_prism_adaptation",
       "migration_status": "migrated",
       "structural_gaps": [],
       "documented_adaptations": [
-        "Parser-shaped nodes, locations, callbacks, configuration, and corrections are supplied by the shared Prism compatibility layer."
+        "The Ruby callback and helper structure is retained while the shared DSL maps callbacks and source ranges onto typed Prism nodes."
       ]
     },
     {
@@ -6180,8 +6175,7 @@
       "upstream_source": "lib/rubocop/cop/lint/constant_definition_in_block.rb",
       "upstream_sha256": "9c3ecbaf00d5b0930fc3fe89a15118a4746aff640013b85deb01a612e77c68a1",
       "implementations": [
-        "src/cops/prism/compatibility_migration_batch_seven.rs",
-        "src/cops/prism/final_scope_batch_a.rs"
+        "src/cops/prism/compatibility_migration_batch_seven.rs"
       ],
       "upstream_callbacks": [
         "on_casgn",
@@ -6322,8 +6316,7 @@
       "upstream_source": "lib/rubocop/cop/lint/constant_resolution.rb",
       "upstream_sha256": "519b8a48ef2793858b6bde0c91740551db0846fe5779a979de151060952b2d6e",
       "implementations": [
-        "src/cops/prism/compatibility_migration_batch_six.rs",
-        "src/cops/prism/semantic_gap_completion.rs"
+        "src/cops/prism/compatibility_migration_batch_six.rs"
       ],
       "upstream_callbacks": [
         "on_const"
@@ -6366,7 +6359,6 @@
       "upstream_source": "lib/rubocop/cop/lint/cop_directive_syntax.rb",
       "upstream_sha256": "5a8969baf7c1e031dc87f08d0ec726ce4fce2f09c5e4d36b694db9f3181fd1d2",
       "implementations": [
-        "src/cops/prism/compatibility_migration_batch_six.rs",
         "src/cops/prism/directive_completion.rs"
       ],
       "upstream_callbacks": [
@@ -6390,19 +6382,17 @@
       "compatibility_components": [
         "CompatibilityCopContext",
         "ProcessedSource",
-        "RuboCopAST"
+        "SourceBuffer"
       ],
       "dsl_features": [
-        "define_cops",
-        "compatibility_investigation",
-        "define_compatibility_rule"
+        "compatibility_source"
       ],
-      "similarity_score": 4,
-      "structural_status": "source_shaped_with_parser_adaptation",
+      "similarity_score": 3,
+      "structural_status": "source_shaped_with_source_adapter",
       "migration_status": "migrated",
       "structural_gaps": [],
       "documented_adaptations": [
-        "Parser-shaped nodes, locations, callbacks, configuration, and corrections are supplied by the shared Prism compatibility layer."
+        "The upstream investigation callback retains its source-oriented helpers while ProcessedSource, configuration, diagnostics, and corrections are supplied by CompatibilityCopContext."
       ]
     },
     {
@@ -7255,7 +7245,6 @@
       "upstream_source": "lib/rubocop/cop/lint/empty_block.rb",
       "upstream_sha256": "eb2e60eab069fb80d7333da170911629e34a16adfea822376e8e4bd16362ed1e",
       "implementations": [
-        "src/cops/prism/compatibility_migration_batch_six.rs",
         "src/cops/prism/lint_scope_completion.rs"
       ],
       "upstream_callbacks": [
@@ -7299,8 +7288,7 @@
       "upstream_source": "lib/rubocop/cop/lint/empty_class.rb",
       "upstream_sha256": "3ab6acb561f87c114cc9b045ea5b4acf5d545798c2dfe043da7c18ef80ece881",
       "implementations": [
-        "src/cops/prism/compatibility_migration_batch_six.rs",
-        "src/cops/prism/empty_class_rules.rs"
+        "src/cops/prism/compatibility_migration_batch_six.rs"
       ],
       "upstream_callbacks": [
         "on_class",
@@ -7791,8 +7779,7 @@
       "upstream_source": "lib/rubocop/cop/lint/float_comparison.rb",
       "upstream_sha256": "142616ae8e16c743e61ec6f9a7470155d14df78cd4464bc80adacc588d6d394a",
       "implementations": [
-        "src/cops/prism/compatibility_migration_batch_six.rs",
-        "src/cops/prism/lint.rs"
+        "src/cops/prism/compatibility_migration_batch_six.rs"
       ],
       "upstream_callbacks": [
         "on_case",
@@ -8146,7 +8133,6 @@
       "upstream_source": "lib/rubocop/cop/lint/incompatible_io_select_with_fiber_scheduler.rb",
       "upstream_sha256": "9fbab0bb412850307972dfce4d81fe817124d8e8beaec95933a8864f30b7d7b7",
       "implementations": [
-        "src/cops/prism/compatibility_migration_batch_seven.rs",
         "src/cops/prism/io_scheduler_rules.rs"
       ],
       "upstream_callbacks": [
@@ -8170,21 +8156,19 @@
         "on_send"
       ],
       "compatibility_components": [
-        "CompatibilityCopContext",
-        "ProcessedSource",
-        "RuboCopAST"
+        "CopContext",
+        "PrismAST",
+        "RuboCopCallbackDSL"
       ],
       "dsl_features": [
-        "define_cops",
-        "compatibility_callbacks",
-        "define_compatibility_rule"
+        "compatibility_prism_call"
       ],
       "similarity_score": 4,
-      "structural_status": "source_shaped_with_parser_adaptation",
+      "structural_status": "source_shaped_with_prism_adaptation",
       "migration_status": "migrated",
       "structural_gaps": [],
       "documented_adaptations": [
-        "Parser-shaped nodes, locations, callbacks, configuration, and corrections are supplied by the shared Prism compatibility layer."
+        "The Ruby callback and helper structure is retained while the shared DSL maps callbacks and source ranges onto typed Prism nodes."
       ]
     },
     {
@@ -8192,8 +8176,7 @@
       "upstream_source": "lib/rubocop/cop/lint/ineffective_access_modifier.rb",
       "upstream_sha256": "b2e580cb4da696cc4f6de7ce41bc2ba137d3b56560e24f36722e8ddaf01357cd",
       "implementations": [
-        "src/cops/prism/compatibility_migration_batch_six.rs",
-        "src/cops/prism/declaration_semantics.rs"
+        "src/cops/prism/compatibility_migration_batch_six.rs"
       ],
       "upstream_callbacks": [
         "on_class",
@@ -8484,8 +8467,7 @@
       "upstream_source": "lib/rubocop/cop/lint/literal_assignment_in_condition.rb",
       "upstream_sha256": "0c580bf9df1b2932f14868fb1ac70088f34288e2b5281d46a7541b4c261dc623",
       "implementations": [
-        "src/cops/prism/compatibility_migration_batch_six.rs",
-        "src/cops/prism/restored_structural_cops.rs"
+        "src/cops/prism/compatibility_migration_batch_six.rs"
       ],
       "upstream_callbacks": [
         "on_if",
@@ -8580,8 +8562,7 @@
       "upstream_source": "lib/rubocop/cop/lint/loop.rb",
       "upstream_sha256": "07520f7820dd9ffb8f7ba124c65450634568f4e9c5c46ad6db87fa7d3eae51f9",
       "implementations": [
-        "src/cops/prism/compatibility_migration_batch_six.rs",
-        "src/cops/prism/lint_control_flow.rs"
+        "src/cops/prism/compatibility_migration_batch_six.rs"
       ],
       "upstream_callbacks": [
         "on_until_post",
@@ -8671,8 +8652,7 @@
       "upstream_source": "lib/rubocop/cop/lint/missing_super.rb",
       "upstream_sha256": "c4a5efa39e4ff589291ec299a2caefc2473930c22c1db68bac8458a4c6c4a3f1",
       "implementations": [
-        "src/cops/prism/compatibility_migration_batch_six.rs",
-        "src/cops/prism/lint_scope_completion.rs"
+        "src/cops/prism/compatibility_migration_batch_six.rs"
       ],
       "upstream_callbacks": [
         "on_def",
@@ -8899,7 +8879,6 @@
       "upstream_source": "lib/rubocop/cop/lint/nested_percent_literal.rb",
       "upstream_sha256": "3c0a5fce337073397de8e598e7ce64b783e53139c310b2e7204a6b670154a0ed",
       "implementations": [
-        "src/cops/prism/additional_rules_literals.rs",
         "src/cops/prism/compatibility_migration_batch_six.rs"
       ],
       "upstream_callbacks": [
@@ -8993,8 +8972,7 @@
       "upstream_source": "lib/rubocop/cop/lint/no_return_in_begin_end_blocks.rb",
       "upstream_sha256": "165fb9edb9fa97e7e3b25937a245c7a4a6cf8a955b79ab3c01238a018dd22a5a",
       "implementations": [
-        "src/cops/prism/compatibility_migration_batch_six.rs",
-        "src/cops/prism/restored_structural_cops.rs"
+        "src/cops/prism/compatibility_migration_batch_six.rs"
       ],
       "upstream_callbacks": [
         "on_casgn",
@@ -9140,7 +9118,6 @@
       "upstream_source": "lib/rubocop/cop/lint/non_local_exit_from_iterator.rb",
       "upstream_sha256": "4bcf3818ed6997946ebb23058d2a6667dd11f99f0382aa55caf6e33ddaf86375",
       "implementations": [
-        "src/cops/prism/compatibility_migration_batch_six.rs",
         "src/cops/prism/conditional_semantics_rules.rs"
       ],
       "upstream_callbacks": [
@@ -9162,21 +9139,19 @@
         "on_return"
       ],
       "compatibility_components": [
-        "CompatibilityCopContext",
-        "ProcessedSource",
-        "RuboCopAST"
+        "CopContext",
+        "PrismAST",
+        "RuboCopCallbackDSL"
       ],
       "dsl_features": [
-        "define_cops",
-        "compatibility_callbacks",
-        "define_compatibility_rule"
+        "compatibility_prism_node"
       ],
       "similarity_score": 4,
-      "structural_status": "source_shaped_with_parser_adaptation",
+      "structural_status": "source_shaped_with_prism_adaptation",
       "migration_status": "migrated",
       "structural_gaps": [],
       "documented_adaptations": [
-        "Parser-shaped nodes, locations, callbacks, configuration, and corrections are supplied by the shared Prism compatibility layer."
+        "The Ruby callback and helper structure is retained while the shared DSL maps callbacks and source ranges onto typed Prism nodes."
       ]
     },
     {
@@ -9231,8 +9206,7 @@
       "upstream_source": "lib/rubocop/cop/lint/numbered_parameter_assignment.rb",
       "upstream_sha256": "4597b00520a7573d3dd5ae6d38ddaf6cbda2027ca8efe35aa4426f51df3877c1",
       "implementations": [
-        "src/cops/prism/argument_and_inheritance_rules.rs",
-        "src/cops/prism/compatibility_migration_batch_six.rs"
+        "src/cops/prism/argument_and_inheritance_rules.rs"
       ],
       "upstream_callbacks": [
         "on_lvasgn"
@@ -9502,7 +9476,6 @@
       "upstream_source": "lib/rubocop/cop/lint/percent_string_array.rb",
       "upstream_sha256": "7b9d21b3d3a13223fb19cb7e4b492a6e49661a5a72133e13a5fd09f1174616b2",
       "implementations": [
-        "src/cops/prism/compatibility_migration_batch_seven.rs",
         "src/cops/prism/percent_string_rules.rs"
       ],
       "upstream_callbacks": [
@@ -9529,21 +9502,19 @@
         "on_percent_literal"
       ],
       "compatibility_components": [
-        "CompatibilityCopContext",
-        "ProcessedSource",
-        "RuboCopAST"
+        "CopContext",
+        "PrismAST",
+        "RuboCopCallbackDSL"
       ],
       "dsl_features": [
-        "define_cops",
-        "compatibility_callbacks",
-        "define_compatibility_rule"
+        "compatibility_prism_node"
       ],
       "similarity_score": 4,
-      "structural_status": "source_shaped_with_parser_adaptation",
+      "structural_status": "source_shaped_with_prism_adaptation",
       "migration_status": "migrated",
       "structural_gaps": [],
       "documented_adaptations": [
-        "Parser-shaped nodes, locations, callbacks, configuration, and corrections are supplied by the shared Prism compatibility layer."
+        "The Ruby callback and helper structure is retained while the shared DSL maps callbacks and source ranges onto typed Prism nodes."
       ]
     },
     {
@@ -10279,8 +10250,7 @@
       "upstream_source": "lib/rubocop/cop/lint/require_parentheses.rb",
       "upstream_sha256": "b89d5d6854f63cb19262df0c4d63ce76927bc40b48c2387c0dc64addf86526a4",
       "implementations": [
-        "src/cops/prism/compatibility_migration_batch_six.rs",
-        "src/cops/prism/resource_and_precedence_rules.rs"
+        "src/cops/prism/compatibility_migration_batch_six.rs"
       ],
       "upstream_callbacks": [
         "on_csend",
@@ -10642,8 +10612,7 @@
       "upstream_source": "lib/rubocop/cop/lint/safe_navigation_with_empty.rb",
       "upstream_sha256": "609704ca53cc194097e34ad9c4bdfdc4b91378c1a6c42c331f79a18f3a05cfe4",
       "implementations": [
-        "src/cops/prism/compatibility_migration_batch_four.rs",
-        "src/cops/prism/lint_control_flow.rs"
+        "src/cops/prism/compatibility_migration_batch_four.rs"
       ],
       "upstream_callbacks": [
         "on_if"
@@ -10688,8 +10657,7 @@
       "upstream_source": "lib/rubocop/cop/lint/script_permission.rb",
       "upstream_sha256": "1174fe8718092fdc9752eb56afd0319606f9e9dd5b70296a702a001c2f882d83",
       "implementations": [
-        "src/cops/prism/compatibility_migration_batch_six.rs",
-        "src/cops/prism/final_file_metadata_batch.rs"
+        "src/cops/prism/compatibility_migration_batch_six.rs"
       ],
       "upstream_callbacks": [
         "on_new_investigation"
@@ -10793,7 +10761,6 @@
       "upstream_source": "lib/rubocop/cop/lint/send_with_mixin_argument.rb",
       "upstream_sha256": "fea4c3704875139933ba910d14e03f25df88c22fbe7224049730f8dedcfd2d01",
       "implementations": [
-        "src/cops/prism/call_conversion_rules.rs",
         "src/cops/prism/compatibility_migration_batch_seven.rs"
       ],
       "upstream_callbacks": [
@@ -11052,16 +11019,15 @@
       "upstream_source": "lib/rubocop/cop/lint/suppressed_exception.rb",
       "upstream_sha256": "275630e958fe59445708b52cb2409d21a8ad35e3724c090eaae4b6c677c9561d",
       "implementations": [
-        "src/cops/prism/compatibility_migration_batch_six.rs",
-        "src/cops/prism/rescue_rules.rs"
+        "src/cops/prism/compatibility_migration_batch_six.rs"
       ],
       "upstream_callbacks": [
         "on_resbody"
       ],
       "upstream_mixins": [],
       "fixtures": {
-        "passed": 25,
-        "total": 25,
+        "passed": 27,
+        "total": 27,
         "status": "compatible"
       },
       "projects": {
@@ -11228,8 +11194,7 @@
       "upstream_source": "lib/rubocop/cop/lint/to_enum_arguments.rb",
       "upstream_sha256": "2d998120ec3ba21f8d5b354a1b53b84e1ffa5c6657ea4a1bcc67ccd6e8971889",
       "implementations": [
-        "src/cops/prism/compatibility_migration_batch_six.rs",
-        "src/cops/prism/enum_argument_rules.rs"
+        "src/cops/prism/compatibility_migration_batch_six.rs"
       ],
       "upstream_callbacks": [
         "on_send"
@@ -11409,7 +11374,6 @@
       "upstream_source": "lib/rubocop/cop/lint/triple_quotes.rb",
       "upstream_sha256": "c5b55adb986ee4212e1de75fe289d3310568b0e45fc9a7b6d6002bd6eb47aae8",
       "implementations": [
-        "src/cops/prism/additional_rules_more.rs",
         "src/cops/prism/compatibility_migration_batch_six.rs"
       ],
       "upstream_callbacks": [
@@ -11541,7 +11505,6 @@
       "upstream_source": "lib/rubocop/cop/lint/unexpected_block_arity.rb",
       "upstream_sha256": "b873294de503932a74a1f52b7a8870f760be3995bd84457cfee4f13e33e8cdd9",
       "implementations": [
-        "src/cops/prism/block_arity_rules.rs",
         "src/cops/prism/compatibility_migration_batch_six.rs"
       ],
       "upstream_callbacks": [
@@ -11916,8 +11879,7 @@
       "upstream_source": "lib/rubocop/cop/lint/uri_escape_unescape.rb",
       "upstream_sha256": "ae3546739885fdd04d06dc557f6fd2214295aaee5f131c82a913cfd89471091a",
       "implementations": [
-        "src/cops/prism/compatibility_migration_batch_six.rs",
-        "src/cops/prism/uri_escape_unescape_rules.rs"
+        "src/cops/prism/compatibility_migration_batch_six.rs"
       ],
       "upstream_callbacks": [
         "on_send"
@@ -12104,7 +12066,6 @@
       "upstream_source": "lib/rubocop/cop/lint/useless_constant_scoping.rb",
       "upstream_sha256": "34405c68b23fae73c97af7060db28c12170da6e6b84cb4f19b77e85397c8b68c",
       "implementations": [
-        "src/cops/prism/compatibility_migration_batch_six.rs",
         "src/cops/prism/semantic_gap_completion.rs"
       ],
       "upstream_callbacks": [
@@ -12123,24 +12084,22 @@
         "classification": "project_exact"
       },
       "rust_callbacks": [
-        "on_casgn"
+        "on_new_investigation"
       ],
       "compatibility_components": [
         "CompatibilityCopContext",
         "ProcessedSource",
-        "RuboCopAST"
+        "SourceBuffer"
       ],
       "dsl_features": [
-        "define_cops",
-        "compatibility_callbacks",
-        "define_compatibility_rule"
+        "compatibility_source"
       ],
-      "similarity_score": 4,
-      "structural_status": "source_shaped_with_parser_adaptation",
+      "similarity_score": 3,
+      "structural_status": "source_shaped_with_source_adapter",
       "migration_status": "migrated",
       "structural_gaps": [],
       "documented_adaptations": [
-        "Parser-shaped nodes, locations, callbacks, configuration, and corrections are supplied by the shared Prism compatibility layer."
+        "The upstream investigation callback retains its source-oriented helpers while ProcessedSource, configuration, diagnostics, and corrections are supplied by CompatibilityCopContext."
       ]
     },
     {
@@ -12282,8 +12241,7 @@
       "upstream_source": "lib/rubocop/cop/lint/useless_method_definition.rb",
       "upstream_sha256": "078d5e926e9da94036ca3ffcc7eb810efd3c0b497108b8e273c5f46f5d4f5d65",
       "implementations": [
-        "src/cops/prism/compatibility_migration_batch_six.rs",
-        "src/cops/prism/semantic_gap_completion.rs"
+        "src/cops/prism/compatibility_migration_batch_six.rs"
       ],
       "upstream_callbacks": [
         "on_def",
@@ -12421,7 +12379,6 @@
       "upstream_source": "lib/rubocop/cop/lint/useless_rescue.rb",
       "upstream_sha256": "fe60acb9121feaedef4c59efe7ac1da0c08996e3d84836865f99e482008e7bca",
       "implementations": [
-        "src/cops/prism/compatibility_migration_batch_six.rs",
         "src/cops/prism/rescue_rules.rs"
       ],
       "upstream_callbacks": [
@@ -12443,21 +12400,19 @@
         "on_rescue"
       ],
       "compatibility_components": [
-        "CompatibilityCopContext",
-        "ProcessedSource",
-        "RuboCopAST"
+        "CopContext",
+        "PrismAST",
+        "RuboCopCallbackDSL"
       ],
       "dsl_features": [
-        "define_cops",
-        "compatibility_callbacks",
-        "define_compatibility_rule"
+        "compatibility_prism_node"
       ],
       "similarity_score": 4,
-      "structural_status": "source_shaped_with_parser_adaptation",
+      "structural_status": "source_shaped_with_prism_adaptation",
       "migration_status": "migrated",
       "structural_gaps": [],
       "documented_adaptations": [
-        "Parser-shaped nodes, locations, callbacks, configuration, and corrections are supplied by the shared Prism compatibility layer."
+        "The Ruby callback and helper structure is retained while the shared DSL maps callbacks and source ranges onto typed Prism nodes."
       ]
     },
     {
@@ -12465,7 +12420,6 @@
       "upstream_source": "lib/rubocop/cop/lint/useless_ruby2_keywords.rb",
       "upstream_sha256": "813f668be515f16444d4fc7475b1668758ce003b4e82a1bddff8830f5cd20f0c",
       "implementations": [
-        "src/cops/prism/compatibility_migration_batch_six.rs",
         "src/cops/prism/ruby2_keywords_rules.rs"
       ],
       "upstream_callbacks": [
@@ -12487,21 +12441,19 @@
         "on_send"
       ],
       "compatibility_components": [
-        "CompatibilityCopContext",
-        "ProcessedSource",
-        "RuboCopAST"
+        "CopContext",
+        "PrismAST",
+        "RuboCopCallbackDSL"
       ],
       "dsl_features": [
-        "define_cops",
-        "compatibility_callbacks",
-        "define_compatibility_rule"
+        "compatibility_prism_call"
       ],
       "similarity_score": 4,
-      "structural_status": "source_shaped_with_parser_adaptation",
+      "structural_status": "source_shaped_with_prism_adaptation",
       "migration_status": "migrated",
       "structural_gaps": [],
       "documented_adaptations": [
-        "Parser-shaped nodes, locations, callbacks, configuration, and corrections are supplied by the shared Prism compatibility layer."
+        "The Ruby callback and helper structure is retained while the shared DSL maps callbacks and source ranges onto typed Prism nodes."
       ]
     },
     {
@@ -12752,8 +12704,7 @@
       "upstream_source": "lib/rubocop/cop/metrics/block_nesting.rb",
       "upstream_sha256": "4c84f0c855b0a8cf471a2cce0ba86396641780a5249621f72f72c57dbecea828",
       "implementations": [
-        "src/cops/prism/compatibility_migration_batch_six.rs",
-        "src/cops/prism/final_metrics_batch.rs"
+        "src/cops/prism/compatibility_migration_batch_six.rs"
       ],
       "upstream_callbacks": [
         "on_new_investigation"
@@ -12843,8 +12794,7 @@
       "upstream_source": "lib/rubocop/cop/metrics/collection_literal_length.rb",
       "upstream_sha256": "4c69e2a8a6a52b02d946121990e5ce098d543cd0fbf568263ecb39c6ec0d5365",
       "implementations": [
-        "src/cops/prism/compatibility_migration_batch_six.rs",
-        "src/cops/prism/metrics_naming_completion.rs"
+        "src/cops/prism/compatibility_migration_batch_six.rs"
       ],
       "upstream_callbacks": [
         "on_array",
@@ -13043,7 +12993,6 @@
       "upstream_source": "lib/rubocop/cop/metrics/parameter_lists.rb",
       "upstream_sha256": "d94f99fe738e703b1fb3b6bb59863296f383da31a42b4edc903592f07c5dfa54",
       "implementations": [
-        "src/cops/prism/compatibility_migration_batch_six.rs",
         "src/cops/prism/metrics_naming_completion.rs"
       ],
       "upstream_callbacks": [
@@ -13069,21 +13018,19 @@
         "on_defs"
       ],
       "compatibility_components": [
-        "CompatibilityCopContext",
-        "ProcessedSource",
-        "RuboCopAST"
+        "CopContext",
+        "PrismAST",
+        "RuboCopCallbackDSL"
       ],
       "dsl_features": [
-        "define_cops",
-        "compatibility_callbacks",
-        "define_compatibility_rule"
+        "compatibility_prism_any_node"
       ],
       "similarity_score": 4,
-      "structural_status": "source_shaped_with_parser_adaptation",
+      "structural_status": "source_shaped_with_prism_adaptation",
       "migration_status": "migrated",
       "structural_gaps": [],
       "documented_adaptations": [
-        "Parser-shaped nodes, locations, callbacks, configuration, and corrections are supplied by the shared Prism compatibility layer."
+        "The Ruby callback and helper structure is retained while the shared DSL maps callbacks and source ranges onto typed Prism nodes."
       ]
     },
     {
@@ -13184,8 +13131,7 @@
       "upstream_source": "lib/rubocop/cop/naming/accessor_method_name.rb",
       "upstream_sha256": "d3838a528533667ef662105a77754738fe4f54695784124ec3769e582a821247",
       "implementations": [
-        "src/cops/prism/compatibility_migration_batch_six.rs",
-        "src/cops/prism/lint_naming_completion_batch.rs"
+        "src/cops/prism/compatibility_migration_batch_six.rs"
       ],
       "upstream_callbacks": [
         "on_def",
@@ -13456,7 +13402,6 @@
       "upstream_source": "lib/rubocop/cop/naming/constant_name.rb",
       "upstream_sha256": "a95e36b44a55ab8904558e6a51ff45f9e131c72b512ffbc20df2b7656d039fa6",
       "implementations": [
-        "src/cops/prism/compatibility_migration_batch_six.rs",
         "src/cops/prism/project_scope_completion.rs"
       ],
       "upstream_callbacks": [
@@ -13478,21 +13423,19 @@
         "on_casgn"
       ],
       "compatibility_components": [
-        "CompatibilityCopContext",
-        "ProcessedSource",
-        "RuboCopAST"
+        "CopContext",
+        "PrismAST",
+        "RuboCopCallbackDSL"
       ],
       "dsl_features": [
-        "define_cops",
-        "compatibility_callbacks",
-        "define_compatibility_rule"
+        "compatibility_prism_any_node"
       ],
       "similarity_score": 4,
-      "structural_status": "source_shaped_with_parser_adaptation",
+      "structural_status": "source_shaped_with_prism_adaptation",
       "migration_status": "migrated",
       "structural_gaps": [],
       "documented_adaptations": [
-        "Parser-shaped nodes, locations, callbacks, configuration, and corrections are supplied by the shared Prism compatibility layer."
+        "The Ruby callback and helper structure is retained while the shared DSL maps callbacks and source ranges onto typed Prism nodes."
       ]
     },
     {
@@ -13586,7 +13529,6 @@
       "upstream_source": "lib/rubocop/cop/naming/heredoc_delimiter_naming.rb",
       "upstream_sha256": "0acc1c1ecfa95b3310047fe862ced4b6ead5f184c372c2acd44d469bcf69f083",
       "implementations": [
-        "src/cops/prism/compatibility_migration_batch_six.rs",
         "src/cops/prism/lint_naming_completion_batch.rs"
       ],
       "upstream_callbacks": [
@@ -13607,24 +13549,22 @@
         "classification": "project_exact"
       },
       "rust_callbacks": [
-        "on_heredoc"
+        "on_new_investigation"
       ],
       "compatibility_components": [
         "CompatibilityCopContext",
         "ProcessedSource",
-        "RuboCopAST"
+        "SourceBuffer"
       ],
       "dsl_features": [
-        "define_cops",
-        "compatibility_callbacks",
-        "define_compatibility_rule"
+        "compatibility_source"
       ],
-      "similarity_score": 4,
-      "structural_status": "source_shaped_with_parser_adaptation",
+      "similarity_score": 3,
+      "structural_status": "source_shaped_with_source_adapter",
       "migration_status": "migrated",
       "structural_gaps": [],
       "documented_adaptations": [
-        "Parser-shaped nodes, locations, callbacks, configuration, and corrections are supplied by the shared Prism compatibility layer."
+        "The upstream investigation callback retains its source-oriented helpers while ProcessedSource, configuration, diagnostics, and corrections are supplied by CompatibilityCopContext."
       ]
     },
     {
@@ -13775,7 +13715,6 @@
       "upstream_source": "lib/rubocop/cop/naming/method_parameter_name.rb",
       "upstream_sha256": "30b9e547f863b9a297dd12b10465c3608979ebc74938ffddf2cf60ce0249bf45",
       "implementations": [
-        "src/cops/prism/compatibility_migration_batch_six.rs",
         "src/cops/prism/lint_naming_completion_batch.rs"
       ],
       "upstream_callbacks": [
@@ -13801,21 +13740,19 @@
         "on_defs"
       ],
       "compatibility_components": [
-        "CompatibilityCopContext",
-        "ProcessedSource",
-        "RuboCopAST"
+        "CopContext",
+        "PrismAST",
+        "RuboCopCallbackDSL"
       ],
       "dsl_features": [
-        "define_cops",
-        "compatibility_callbacks",
-        "define_compatibility_rule"
+        "compatibility_prism_node"
       ],
       "similarity_score": 4,
-      "structural_status": "source_shaped_with_parser_adaptation",
+      "structural_status": "source_shaped_with_prism_adaptation",
       "migration_status": "migrated",
       "structural_gaps": [],
       "documented_adaptations": [
-        "Parser-shaped nodes, locations, callbacks, configuration, and corrections are supplied by the shared Prism compatibility layer."
+        "The Ruby callback and helper structure is retained while the shared DSL maps callbacks and source ranges onto typed Prism nodes."
       ]
     },
     {
@@ -14087,8 +14024,7 @@
       "upstream_source": "lib/rubocop/cop/security/compound_hash.rb",
       "upstream_sha256": "da51451535643ca9562076b99f3be8f7f59bb13b2b0e0e47011bdc78f2f6db57",
       "implementations": [
-        "src/cops/prism/compatibility_migration_batch_six.rs",
-        "src/cops/prism/security.rs"
+        "src/cops/prism/compatibility_migration_batch_six.rs"
       ],
       "upstream_callbacks": [
         "on_csend",
@@ -14178,8 +14114,7 @@
       "upstream_source": "lib/rubocop/cop/security/io_methods.rb",
       "upstream_sha256": "708dba96c26c677febfe53c273b288599874fa1a591f65784d2209d8003ba578",
       "implementations": [
-        "src/cops/prism/compatibility_migration_batch_four.rs",
-        "src/cops/prism/security.rs"
+        "src/cops/prism/compatibility_migration_batch_four.rs"
       ],
       "upstream_callbacks": [
         "on_send"
@@ -14312,8 +14247,7 @@
       "upstream_source": "lib/rubocop/cop/security/open.rb",
       "upstream_sha256": "ef278d0c935cffebbf3c06f240eb5b656dd470e4f26f9e80d2c70463c3f2da8d",
       "implementations": [
-        "src/cops/prism/compatibility_migration_batch_six.rs",
-        "src/cops/prism/security.rs"
+        "src/cops/prism/compatibility_migration_batch_six.rs"
       ],
       "upstream_callbacks": [
         "on_send"
@@ -14356,8 +14290,7 @@
       "upstream_source": "lib/rubocop/cop/security/yaml_load.rb",
       "upstream_sha256": "8e9ec008070c7c2edf81746e6be24dd6e4ac143bd0c99f08af3dcb253fdc3e18",
       "implementations": [
-        "src/cops/prism/compatibility_migration_batch_four.rs",
-        "src/cops/prism/security.rs"
+        "src/cops/prism/compatibility_migration_batch_four.rs"
       ],
       "upstream_callbacks": [
         "on_send"
@@ -14693,7 +14626,6 @@
       "upstream_source": "lib/rubocop/cop/style/array_coercion.rb",
       "upstream_sha256": "a8ad76bb01a2776fb642b79c4a0780b55f063918877448c6e7e25a3b05ebec95",
       "implementations": [
-        "src/cops/prism/compatibility_migration_batch_seven.rs",
         "src/cops/prism/structural_forwarding_completion.rs"
       ],
       "upstream_callbacks": [
@@ -14719,21 +14651,19 @@
         "on_if"
       ],
       "compatibility_components": [
-        "CompatibilityCopContext",
-        "ProcessedSource",
-        "RuboCopAST"
+        "CopContext",
+        "PrismAST",
+        "RuboCopCallbackDSL"
       ],
       "dsl_features": [
-        "define_cops",
-        "compatibility_callbacks",
-        "define_compatibility_rule"
+        "compatibility_prism_any_node"
       ],
       "similarity_score": 4,
-      "structural_status": "source_shaped_with_parser_adaptation",
+      "structural_status": "source_shaped_with_prism_adaptation",
       "migration_status": "migrated",
       "structural_gaps": [],
       "documented_adaptations": [
-        "Parser-shaped nodes, locations, callbacks, configuration, and corrections are supplied by the shared Prism compatibility layer."
+        "The Ruby callback and helper structure is retained while the shared DSL maps callbacks and source ranges onto typed Prism nodes."
       ]
     },
     {
@@ -14741,7 +14671,6 @@
       "upstream_source": "lib/rubocop/cop/style/array_first_last.rb",
       "upstream_sha256": "e78fda95313a58b5a10aacf08d63c07a093e975060b172ce41508834cca4c8b5",
       "implementations": [
-        "src/cops/prism/compatibility_migration_batch_six.rs",
         "src/cops/prism/style_collections.rs"
       ],
       "upstream_callbacks": [
@@ -14979,8 +14908,7 @@
       "upstream_source": "lib/rubocop/cop/style/attr.rb",
       "upstream_sha256": "1c75ec0b1dac485d885836fa02a71a6e37731591a1992d087c9df50fa1c2b0af",
       "implementations": [
-        "src/cops/prism/compatibility_migration_batch_seven.rs",
-        "src/cops/prism/declaration_completion_rules.rs"
+        "src/cops/prism/compatibility_migration_batch_seven.rs"
       ],
       "upstream_callbacks": [
         "on_send"
@@ -15069,7 +14997,6 @@
       "upstream_source": "lib/rubocop/cop/style/bare_percent_literals.rb",
       "upstream_sha256": "5ec08201de81a9c92339c01b8a924ebfb69c454cff399305814cedf8517d67c4",
       "implementations": [
-        "src/cops/prism/compatibility_lexical_rules.rs",
         "src/cops/prism/compatibility_migration_batch_seven.rs"
       ],
       "upstream_callbacks": [
@@ -15446,8 +15373,7 @@
       "upstream_source": "lib/rubocop/cop/style/character_literal.rb",
       "upstream_sha256": "f98d6b13bd2ced21db156d43f9ac52e91d6e115df4165c91609dd5f7a71cb8db",
       "implementations": [
-        "src/cops/prism/compatibility_migration_batch_four.rs",
-        "src/cops/prism/style.rs"
+        "src/cops/prism/compatibility_migration_batch_four.rs"
       ],
       "upstream_callbacks": [
         "on_regexp",
@@ -16232,7 +16158,6 @@
       "upstream_source": "lib/rubocop/cop/style/comparable_between.rb",
       "upstream_sha256": "c05fe1932608e69d7a48fa5d6b96d37489867b4c60f3554ec96a2f8db5fba061",
       "implementations": [
-        "src/cops/prism/compatibility_migration_batch_seven.rs",
         "src/cops/prism/predicate_conversion_rules.rs"
       ],
       "upstream_callbacks": [
@@ -16256,21 +16181,19 @@
         "on_and"
       ],
       "compatibility_components": [
-        "CompatibilityCopContext",
-        "ProcessedSource",
-        "RuboCopAST"
+        "CopContext",
+        "PrismAST",
+        "RuboCopCallbackDSL"
       ],
       "dsl_features": [
-        "define_cops",
-        "compatibility_callbacks",
-        "define_compatibility_rule"
+        "compatibility_prism_node"
       ],
       "similarity_score": 4,
-      "structural_status": "source_shaped_with_parser_adaptation",
+      "structural_status": "source_shaped_with_prism_adaptation",
       "migration_status": "migrated",
       "structural_gaps": [],
       "documented_adaptations": [
-        "Parser-shaped nodes, locations, callbacks, configuration, and corrections are supplied by the shared Prism compatibility layer."
+        "The Ruby callback and helper structure is retained while the shared DSL maps callbacks and source ranges onto typed Prism nodes."
       ]
     },
     {
@@ -16442,8 +16365,7 @@
       "upstream_source": "lib/rubocop/cop/style/constant_visibility.rb",
       "upstream_sha256": "c96c7f93e84bea2204e201fbc299a6384f3d98df2717c08d9fd419839219eb19",
       "implementations": [
-        "src/cops/prism/compatibility_migration_batch_six.rs",
-        "src/cops/prism/project_scope_completion.rs"
+        "src/cops/prism/compatibility_migration_batch_six.rs"
       ],
       "upstream_callbacks": [
         "on_casgn"
@@ -16530,7 +16452,6 @@
       "upstream_source": "lib/rubocop/cop/style/data_inheritance.rb",
       "upstream_sha256": "80489af6ae49d663a66dfc9ecb86a6a265ac1c64daef507c1089dd25cf18784b",
       "implementations": [
-        "src/cops/prism/compatibility_migration_batch_seven.rs",
         "src/cops/prism/declaration_completion_rules.rs"
       ],
       "upstream_callbacks": [
@@ -16556,21 +16477,19 @@
         "on_class"
       ],
       "compatibility_components": [
-        "CompatibilityCopContext",
-        "ProcessedSource",
-        "RuboCopAST"
+        "CopContext",
+        "PrismAST",
+        "RuboCopCallbackDSL"
       ],
       "dsl_features": [
-        "define_cops",
-        "compatibility_callbacks",
-        "define_compatibility_rule"
+        "compatibility_prism_node"
       ],
       "similarity_score": 4,
-      "structural_status": "source_shaped_with_parser_adaptation",
+      "structural_status": "source_shaped_with_prism_adaptation",
       "migration_status": "migrated",
       "structural_gaps": [],
       "documented_adaptations": [
-        "Parser-shaped nodes, locations, callbacks, configuration, and corrections are supplied by the shared Prism compatibility layer."
+        "The Ruby callback and helper structure is retained while the shared DSL maps callbacks and source ranges onto typed Prism nodes."
       ]
     },
     {
@@ -16812,7 +16731,6 @@
       "upstream_source": "lib/rubocop/cop/style/disable_cops_within_source_code_directive.rb",
       "upstream_sha256": "992d39bb25eb21a88bb6471d4b0a1532b993918db876b48d3d2212d824aaae87",
       "implementations": [
-        "src/cops/prism/compatibility_migration_batch_seven.rs",
         "src/cops/prism/lexical_completion.rs"
       ],
       "upstream_callbacks": [
@@ -16838,19 +16756,17 @@
       "compatibility_components": [
         "CompatibilityCopContext",
         "ProcessedSource",
-        "RuboCopAST"
+        "SourceBuffer"
       ],
       "dsl_features": [
-        "define_cops",
-        "compatibility_investigation",
-        "define_compatibility_rule"
+        "compatibility_source"
       ],
-      "similarity_score": 4,
-      "structural_status": "source_shaped_with_parser_adaptation",
+      "similarity_score": 3,
+      "structural_status": "source_shaped_with_source_adapter",
       "migration_status": "migrated",
       "structural_gaps": [],
       "documented_adaptations": [
-        "Parser-shaped nodes, locations, callbacks, configuration, and corrections are supplied by the shared Prism compatibility layer."
+        "The upstream investigation callback retains its source-oriented helpers while ProcessedSource, configuration, diagnostics, and corrections are supplied by CompatibilityCopContext."
       ]
     },
     {
@@ -16899,8 +16815,7 @@
       "upstream_source": "lib/rubocop/cop/style/documentation.rb",
       "upstream_sha256": "f19f57a7188f7b4e9dea11a3ce36594c101416004ee6343d0ceb88092b644600",
       "implementations": [
-        "src/cops/prism/semantic_gap_completion.rs",
-        "src/cops/text/style_declarations.rs"
+        "src/cops/prism/semantic_gap_completion.rs"
       ],
       "upstream_callbacks": [
         "on_class",
@@ -18176,8 +18091,7 @@
       "upstream_source": "lib/rubocop/cop/style/file_open.rb",
       "upstream_sha256": "30b9c846f9c2cf527e0a429fea51134672a99b742a176cc4202977116b85b9e4",
       "implementations": [
-        "src/cops/prism/compatibility_migration_batch_six.rs",
-        "src/cops/prism/resource_and_precedence_rules.rs"
+        "src/cops/prism/compatibility_migration_batch_six.rs"
       ],
       "upstream_callbacks": [
         "on_csend",
@@ -18265,8 +18179,7 @@
       "upstream_source": "lib/rubocop/cop/style/file_touch.rb",
       "upstream_sha256": "962765039ac403e8e6198a5473cd827f05520ecdb621b91fe1adbcd951ac840a",
       "implementations": [
-        "src/cops/prism/compatibility_migration_batch_six.rs",
-        "src/cops/prism/style_compat.rs"
+        "src/cops/prism/compatibility_migration_batch_six.rs"
       ],
       "upstream_callbacks": [
         "on_send"
@@ -18586,8 +18499,7 @@
       "upstream_source": "lib/rubocop/cop/style/global_std_stream.rb",
       "upstream_sha256": "a9c577eef634172dcfffe4777628ea1f28cd766e4f1bd30680d815cde1f1df4b",
       "implementations": [
-        "src/cops/prism/compatibility_migration_batch_six.rs",
-        "src/cops/prism/style_compat.rs"
+        "src/cops/prism/compatibility_migration_batch_six.rs"
       ],
       "upstream_callbacks": [
         "on_const"
@@ -18963,7 +18875,6 @@
       "upstream_source": "lib/rubocop/cop/style/hash_like_case.rb",
       "upstream_sha256": "3c571eb67ddd84c9bcfd3a02624853c83de9d33405b20c4b33c05483ea141409",
       "implementations": [
-        "src/cops/prism/compatibility_migration_batch_six.rs",
         "src/cops/prism/literal_and_pattern_rules.rs"
       ],
       "upstream_callbacks": [
@@ -18987,21 +18898,19 @@
         "on_case"
       ],
       "compatibility_components": [
-        "CompatibilityCopContext",
-        "ProcessedSource",
-        "RuboCopAST"
+        "CopContext",
+        "PrismAST",
+        "RuboCopCallbackDSL"
       ],
       "dsl_features": [
-        "define_cops",
-        "compatibility_callbacks",
-        "define_compatibility_rule"
+        "compatibility_prism_node"
       ],
       "similarity_score": 4,
-      "structural_status": "source_shaped_with_parser_adaptation",
+      "structural_status": "source_shaped_with_prism_adaptation",
       "migration_status": "migrated",
       "structural_gaps": [],
       "documented_adaptations": [
-        "Parser-shaped nodes, locations, callbacks, configuration, and corrections are supplied by the shared Prism compatibility layer."
+        "The Ruby callback and helper structure is retained while the shared DSL maps callbacks and source ranges onto typed Prism nodes."
       ]
     },
     {
@@ -19849,8 +19758,7 @@
       "upstream_source": "lib/rubocop/cop/style/it_assignment.rb",
       "upstream_sha256": "85e33a9896f380de72c21e7c68e125456bf79e417e3aa98eb30f3273cfc63e1f",
       "implementations": [
-        "src/cops/prism/compatibility_migration_batch_six.rs",
-        "src/cops/prism/parameter_order_completion.rs"
+        "src/cops/prism/compatibility_migration_batch_six.rs"
       ],
       "upstream_callbacks": [
         "on_arg",
@@ -19956,8 +19864,7 @@
       "upstream_source": "lib/rubocop/cop/style/keyword_arguments_merging.rb",
       "upstream_sha256": "3fbd752a896fec99ce7d521df03fcb409d44571400745f74bc035d344cd65367",
       "implementations": [
-        "src/cops/prism/compatibility_migration_batch_six.rs",
-        "src/cops/prism/resource_and_precedence_rules.rs"
+        "src/cops/prism/compatibility_migration_batch_six.rs"
       ],
       "upstream_callbacks": [
         "on_kwsplat"
@@ -20002,7 +19909,6 @@
       "upstream_source": "lib/rubocop/cop/style/keyword_parameters_order.rb",
       "upstream_sha256": "49b5fc8de3f138cdc3e5e38f255ace9c2bb7ef1ad2914c7b10db830d432c9f89",
       "implementations": [
-        "src/cops/prism/compatibility_migration_batch_six.rs",
         "src/cops/prism/parameter_order_completion.rs"
       ],
       "upstream_callbacks": [
@@ -20027,21 +19933,19 @@
         "on_kwoptarg"
       ],
       "compatibility_components": [
-        "CompatibilityCopContext",
-        "ProcessedSource",
-        "RuboCopAST"
+        "CopContext",
+        "PrismAST",
+        "RuboCopCallbackDSL"
       ],
       "dsl_features": [
-        "define_cops",
-        "compatibility_callbacks",
-        "define_compatibility_rule"
+        "compatibility_prism_any_node"
       ],
       "similarity_score": 4,
-      "structural_status": "source_shaped_with_parser_adaptation",
+      "structural_status": "source_shaped_with_prism_adaptation",
       "migration_status": "migrated",
       "structural_gaps": [],
       "documented_adaptations": [
-        "Parser-shaped nodes, locations, callbacks, configuration, and corrections are supplied by the shared Prism compatibility layer."
+        "The Ruby callback and helper structure is retained while the shared DSL maps callbacks and source ranges onto typed Prism nodes."
       ]
     },
     {
@@ -20097,8 +20001,7 @@
       "upstream_source": "lib/rubocop/cop/style/lambda_call.rb",
       "upstream_sha256": "a1af9a849c8fb1d180039aa5cbb92ab1c921d456d85f6d035fc77c33ccd03028",
       "implementations": [
-        "src/cops/prism/call_conversion_rules.rs",
-        "src/cops/prism/compatibility_migration_batch_seven.rs"
+        "src/cops/prism/call_conversion_rules.rs"
       ],
       "upstream_callbacks": [
         "on_csend",
@@ -20120,24 +20023,23 @@
         "classification": "project_exact"
       },
       "rust_callbacks": [
+        "on_csend",
         "on_send"
       ],
       "compatibility_components": [
-        "CompatibilityCopContext",
-        "ProcessedSource",
-        "RuboCopAST"
+        "CopContext",
+        "PrismAST",
+        "RuboCopCallbackDSL"
       ],
       "dsl_features": [
-        "define_cops",
-        "compatibility_callbacks",
-        "define_compatibility_rule"
+        "compatibility_prism_call"
       ],
       "similarity_score": 4,
-      "structural_status": "source_shaped_with_parser_adaptation",
+      "structural_status": "source_shaped_with_prism_adaptation",
       "migration_status": "migrated",
       "structural_gaps": [],
       "documented_adaptations": [
-        "Parser-shaped nodes, locations, callbacks, configuration, and corrections are supplied by the shared Prism compatibility layer."
+        "The Ruby callback and helper structure is retained while the shared DSL maps callbacks and source ranges onto typed Prism nodes."
       ]
     },
     {
@@ -20662,7 +20564,6 @@
       "upstream_source": "lib/rubocop/cop/style/min_max.rb",
       "upstream_sha256": "e9839ff5cbc662ce4c59c65d56638f9624be06bb68221e50b0d1c338e31a5729",
       "implementations": [
-        "src/cops/prism/compatibility_migration_batch_six.rs",
         "src/cops/prism/style_compat.rs"
       ],
       "upstream_callbacks": [
@@ -20805,7 +20706,6 @@
       "upstream_source": "lib/rubocop/cop/style/missing_respond_to_missing.rb",
       "upstream_sha256": "28ae8e439272326176a9089c22ac2641d9c45c235d447a284ff834e260c44193",
       "implementations": [
-        "src/cops/prism/compatibility_migration_batch_six.rs",
         "src/cops/prism/declaration_semantics.rs"
       ],
       "upstream_callbacks": [
@@ -20829,21 +20729,19 @@
         "on_defs"
       ],
       "compatibility_components": [
-        "CompatibilityCopContext",
-        "ProcessedSource",
-        "RuboCopAST"
+        "CopContext",
+        "PrismAST",
+        "RuboCopCallbackDSL"
       ],
       "dsl_features": [
-        "define_cops",
-        "compatibility_callbacks",
-        "define_compatibility_rule"
+        "compatibility_prism_node"
       ],
       "similarity_score": 4,
-      "structural_status": "source_shaped_with_parser_adaptation",
+      "structural_status": "source_shaped_with_prism_adaptation",
       "migration_status": "migrated",
       "structural_gaps": [],
       "documented_adaptations": [
-        "Parser-shaped nodes, locations, callbacks, configuration, and corrections are supplied by the shared Prism compatibility layer."
+        "The Ruby callback and helper structure is retained while the shared DSL maps callbacks and source ranges onto typed Prism nodes."
       ]
     },
     {
@@ -21968,7 +21866,6 @@
       "upstream_source": "lib/rubocop/cop/style/nil_comparison.rb",
       "upstream_sha256": "38aa5f1b0bd693ba216232436769dba898a0f8bbb1ad754c718d0fbe30792778",
       "implementations": [
-        "src/cops/prism/compatibility_migration_batch_seven.rs",
         "src/cops/prism/style.rs"
       ],
       "upstream_callbacks": [
@@ -22108,8 +22005,7 @@
       "upstream_source": "lib/rubocop/cop/style/not.rb",
       "upstream_sha256": "e7ecf91581a01653cd1a26025f6adf294998ad59003b362e5018bef029b9eef3",
       "implementations": [
-        "src/cops/prism/compatibility_migration_batch_seven.rs",
-        "src/cops/prism/style.rs"
+        "src/cops/prism/compatibility_migration_batch_seven.rs"
       ],
       "upstream_callbacks": [
         "on_send"
@@ -22752,8 +22648,7 @@
       "upstream_source": "lib/rubocop/cop/style/or_assignment.rb",
       "upstream_sha256": "2a124721733e97bb40c1250cdefad329ed5fc6942c0bc30c5582c0715446ef95",
       "implementations": [
-        "src/cops/prism/assignment_rewrite_rules.rs",
-        "src/cops/prism/compatibility_migration_batch_seven.rs"
+        "src/cops/prism/assignment_rewrite_rules.rs"
       ],
       "upstream_callbacks": [
         "on_cvasgn",
@@ -22784,21 +22679,19 @@
         "on_lvasgn"
       ],
       "compatibility_components": [
-        "CompatibilityCopContext",
-        "ProcessedSource",
-        "RuboCopAST"
+        "CopContext",
+        "PrismAST",
+        "RuboCopCallbackDSL"
       ],
       "dsl_features": [
-        "define_cops",
-        "compatibility_callbacks",
-        "define_compatibility_rule"
+        "compatibility_prism_node_rule_aliases"
       ],
       "similarity_score": 4,
-      "structural_status": "source_shaped_with_parser_adaptation",
+      "structural_status": "source_shaped_with_prism_adaptation",
       "migration_status": "migrated",
       "structural_gaps": [],
       "documented_adaptations": [
-        "Parser-shaped nodes, locations, callbacks, configuration, and corrections are supplied by the shared Prism compatibility layer."
+        "The Ruby callback and helper structure is retained while the shared DSL maps callbacks and source ranges onto typed Prism nodes."
       ]
     },
     {
@@ -23475,8 +23368,7 @@
       "upstream_source": "lib/rubocop/cop/style/redundant_array_constructor.rb",
       "upstream_sha256": "2d3c6b3796d68ff052a505d0f9a40b5ad4074382476da4287acfa4f5875b0323",
       "implementations": [
-        "src/cops/prism/compatibility_migration_batch_four.rs",
-        "src/cops/prism/style.rs"
+        "src/cops/prism/compatibility_migration_batch_four.rs"
       ],
       "upstream_callbacks": [
         "on_send"
@@ -23521,8 +23413,7 @@
       "upstream_source": "lib/rubocop/cop/style/redundant_array_flatten.rb",
       "upstream_sha256": "17ef210ca1ad650ef260f91fcb27a6cc7466f08734e01b6b91283c6083c9e1c3",
       "implementations": [
-        "src/cops/prism/compatibility_migration_batch_four.rs",
-        "src/cops/prism/style_collections.rs"
+        "src/cops/prism/compatibility_migration_batch_four.rs"
       ],
       "upstream_callbacks": [
         "on_csend",
@@ -23814,8 +23705,7 @@
       "upstream_source": "lib/rubocop/cop/style/redundant_constant_base.rb",
       "upstream_sha256": "6fd03a1b18722d61076382834328f420640c53daf19f2e62d12685f359fa5880",
       "implementations": [
-        "src/cops/prism/compatibility_migration_batch_six.rs",
-        "src/cops/prism/restored_structural_cops.rs"
+        "src/cops/prism/compatibility_migration_batch_six.rs"
       ],
       "upstream_callbacks": [
         "on_cbase"
@@ -23994,7 +23884,6 @@
       "upstream_source": "lib/rubocop/cop/style/redundant_exception.rb",
       "upstream_sha256": "5c435619b94a892287749e8c1837ecc1e9ea836ba035c677ab58557700a0ba93",
       "implementations": [
-        "src/cops/prism/compatibility_migration_batch_seven.rs",
         "src/cops/prism/exception_argument_rules.rs"
       ],
       "upstream_callbacks": [
@@ -24018,21 +23907,19 @@
         "on_send"
       ],
       "compatibility_components": [
-        "CompatibilityCopContext",
-        "ProcessedSource",
-        "RuboCopAST"
+        "CopContext",
+        "PrismAST",
+        "RuboCopCallbackDSL"
       ],
       "dsl_features": [
-        "define_cops",
-        "compatibility_callbacks",
-        "define_compatibility_rule"
+        "compatibility_prism_call"
       ],
       "similarity_score": 4,
-      "structural_status": "source_shaped_with_parser_adaptation",
+      "structural_status": "source_shaped_with_prism_adaptation",
       "migration_status": "migrated",
       "structural_gaps": [],
       "documented_adaptations": [
-        "Parser-shaped nodes, locations, callbacks, configuration, and corrections are supplied by the shared Prism compatibility layer."
+        "The Ruby callback and helper structure is retained while the shared DSL maps callbacks and source ranges onto typed Prism nodes."
       ]
     },
     {
@@ -24222,8 +24109,7 @@
       "upstream_source": "lib/rubocop/cop/style/redundant_freeze.rb",
       "upstream_sha256": "4c1a503ffb6b9fa73dbdd80a2a4a9c732151a31ab2718876ceb4d56ecc8b1dec",
       "implementations": [
-        "src/cops/prism/compatibility_migration_batch_five.rs",
-        "src/cops/prism/redundant_freeze_completion.rs"
+        "src/cops/prism/compatibility_migration_batch_five.rs"
       ],
       "upstream_callbacks": [
         "on_send"
@@ -24990,7 +24876,6 @@
       "upstream_source": "lib/rubocop/cop/style/redundant_self_assignment_branch.rb",
       "upstream_sha256": "74612d46c4ce3d53f0beb590ee5373102673c8037dbe9beb4b1b3dee88e26fab",
       "implementations": [
-        "src/cops/prism/compatibility_migration_batch_seven.rs",
         "src/cops/prism/redundant_self_assignment_branch_rules.rs"
       ],
       "upstream_callbacks": [
@@ -25014,21 +24899,19 @@
         "on_lvasgn"
       ],
       "compatibility_components": [
-        "CompatibilityCopContext",
-        "ProcessedSource",
-        "RuboCopAST"
+        "CopContext",
+        "PrismAST",
+        "RuboCopCallbackDSL"
       ],
       "dsl_features": [
-        "define_cops",
-        "compatibility_callbacks",
-        "define_compatibility_rule"
+        "compatibility_prism_node_rule"
       ],
       "similarity_score": 4,
-      "structural_status": "source_shaped_with_parser_adaptation",
+      "structural_status": "source_shaped_with_prism_adaptation",
       "migration_status": "migrated",
       "structural_gaps": [],
       "documented_adaptations": [
-        "Parser-shaped nodes, locations, callbacks, configuration, and corrections are supplied by the shared Prism compatibility layer."
+        "The Ruby callback and helper structure is retained while the shared DSL maps callbacks and source ranges onto typed Prism nodes."
       ]
     },
     {
@@ -25082,8 +24965,7 @@
       "upstream_source": "lib/rubocop/cop/style/redundant_sort_by.rb",
       "upstream_sha256": "7f86ae375c148432062dd12e3496822aeb63ba557af03444e81e0b5d6430fea4",
       "implementations": [
-        "src/cops/prism/compatibility_migration_batch_eight.rs",
-        "src/cops/prism/style_collections.rs"
+        "src/cops/prism/compatibility_migration_batch_eight.rs"
       ],
       "upstream_callbacks": [
         "on_block",
@@ -25818,8 +25700,7 @@
       "upstream_source": "lib/rubocop/cop/style/self_assignment.rb",
       "upstream_sha256": "05d8c62b85e0630e349860b8ae5c5dab33d3f8b64c253075f0b77ad73b5817dd",
       "implementations": [
-        "src/cops/prism/compatibility_migration_batch_six.rs",
-        "src/cops/prism/final_scope_batch_b.rs"
+        "src/cops/prism/compatibility_migration_batch_six.rs"
       ],
       "upstream_callbacks": [
         "on_cvasgn",
@@ -27264,7 +27145,6 @@
       "upstream_source": "lib/rubocop/cop/style/top_level_method_definition.rb",
       "upstream_sha256": "d0dff4e686b5945850f8df799b724f2aaf7c9e584afa70f29224384ad378df9e",
       "implementations": [
-        "src/cops/prism/compatibility_migration_batch_six.rs",
         "src/cops/prism/project_scope_completion.rs"
       ],
       "upstream_callbacks": [
@@ -27296,21 +27176,19 @@
         "on_send"
       ],
       "compatibility_components": [
-        "CompatibilityCopContext",
-        "ProcessedSource",
-        "RuboCopAST"
+        "CopContext",
+        "PrismAST",
+        "RuboCopCallbackDSL"
       ],
       "dsl_features": [
-        "define_cops",
-        "compatibility_callbacks",
-        "define_compatibility_rule"
+        "compatibility_prism_any_node"
       ],
       "similarity_score": 4,
-      "structural_status": "source_shaped_with_parser_adaptation",
+      "structural_status": "source_shaped_with_prism_adaptation",
       "migration_status": "migrated",
       "structural_gaps": [],
       "documented_adaptations": [
-        "Parser-shaped nodes, locations, callbacks, configuration, and corrections are supplied by the shared Prism compatibility layer."
+        "The Ruby callback and helper structure is retained while the shared DSL maps callbacks and source ranges onto typed Prism nodes."
       ]
     },
     {
@@ -27553,8 +27431,7 @@
       "upstream_source": "lib/rubocop/cop/style/trailing_comma_in_block_args.rb",
       "upstream_sha256": "a236e0e7a5b6d036a6074502b4ed966f0f38d874001249fba6b1cc34d07b3649",
       "implementations": [
-        "src/cops/prism/compatibility_migration_batch_nine.rs",
-        "src/cops/prism/style_compat.rs"
+        "src/cops/prism/compatibility_migration_batch_nine.rs"
       ],
       "upstream_callbacks": [
         "on_block"

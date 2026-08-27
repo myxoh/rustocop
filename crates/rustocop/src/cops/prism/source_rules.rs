@@ -6,7 +6,6 @@ mod project_files;
 use project_files::*;
 
 declare_source_cops! {
-    AddRuntimeDependency => "Gemspec/AddRuntimeDependency" => add_runtime_dependency,
     DuplicatedGem => "Bundler/DuplicatedGem" => duplicated_gem,
 }
 

@@ -1,0 +1,5 @@
+interface:
+  display_name: "Rustocop Structural Parity"
+  short_description: "Advance one independently verified RuboCop parity item"
+  default_prompt: "Use $rustocop-structural-parity to advance exactly one eligible Rustocop structural-parity item by one state transition."
+

@@ -3,7 +3,6 @@ use super::*;
 
 define_cops! {
     ParameterLists => "Metrics/ParameterLists" => compatibility_prism_any_node(parameter_lists),
-    CollectionLiteralLength => "Metrics/CollectionLiteralLength" => compatibility_prism_any_node(collection_literal_length),
     BlockParameterName => "Naming/BlockParameterName" => compatibility_prism_any_node(block_parameter_name),
     PredicatePrefix => "Naming/PredicatePrefix" => compatibility_prism_any_node(predicate_prefix),
 }

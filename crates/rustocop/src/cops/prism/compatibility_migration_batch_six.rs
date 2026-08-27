@@ -2,56 +2,38 @@ use super::*;
 use crate::rubocop::ast::node::core::NodeRef;
 
 define_cops! {
-    NumberedParameterAssignmentCompatibility => "Lint/NumberedParameterAssignment" => compatibility_callbacks(NumberedParameterAssignmentRule, [on_lvasgn]),
     NoReturnInBeginEndBlocksCompatibility => "Lint/NoReturnInBeginEndBlocks" => compatibility_callbacks(NoReturnInBeginEndBlocksRule, [on_casgn, on_cvasgn, on_gvasgn, on_ivasgn, on_lvasgn, on_op_asgn, on_or_asgn]),
     AddRuntimeDependencyCompatibility => "Gemspec/AddRuntimeDependency" => compatibility_callbacks(AddRuntimeDependencyRule, [on_send restrict ["add_runtime_dependency"]]),
-    UselessConstantScopingCompatibility => "Lint/UselessConstantScoping" => compatibility_callbacks(UselessConstantScopingRule, [on_casgn]),
     AccessorMethodNameCompatibility => "Naming/AccessorMethodName" => compatibility_callbacks(AccessorMethodNameRule, [on_def, on_defs]),
     UriEscapeUnescapeCompatibility => "Lint/UriEscapeUnescape" => compatibility_callbacks(UriEscapeUnescapeRule, [on_send restrict ["escape", "encode", "unescape", "decode"]]),
-    ConstantNameCompatibility => "Naming/ConstantName" => compatibility_callbacks(ConstantNameRule, [on_casgn]),
-    MissingRespondToMissingCompatibility => "Style/MissingRespondToMissing" => compatibility_callbacks(MissingRespondToMissingRule, [on_def, on_defs]),
     CollectionLiteralLengthCompatibility => "Metrics/CollectionLiteralLength" => compatibility_callbacks(CollectionLiteralLengthRule, [on_array, on_hash, on_index, on_send]),
     FileOpenCompatibility => "Style/FileOpen" => compatibility_callbacks(FileOpenRule, [on_send restrict ["open"]]),
     RubyVersionGlobalsUsageCompatibility => "Gemspec/RubyVersionGlobalsUsage" => compatibility_callbacks(RubyVersionGlobalsUsageRule, [on_const]),
     LiteralAssignmentInConditionCompatibility => "Lint/LiteralAssignmentInCondition" => compatibility_callbacks(LiteralAssignmentInConditionRule, [on_if, on_until, on_while]),
-    NonLocalExitFromIteratorCompatibility => "Lint/NonLocalExitFromIterator" => compatibility_callbacks(NonLocalExitFromIteratorRule, [on_return]),
-    TopLevelMethodDefinitionCompatibility => "Style/TopLevelMethodDefinition" => compatibility_callbacks(TopLevelMethodDefinitionRule, [on_block, on_def, on_defs, on_itblock, on_numblock, on_send]),
-    HeredocDelimiterNamingCompatibility => "Naming/HeredocDelimiterNaming" => compatibility_callbacks(HeredocDelimiterNamingRule, [on_heredoc]),
-    MethodParameterNameCompatibility => "Naming/MethodParameterName" => compatibility_callbacks(MethodParameterNameRule, [on_def, on_defs]),
-    UselessRescueCompatibility => "Lint/UselessRescue" => compatibility_callbacks(UselessRescueRule, [on_rescue]),
-    CopDirectiveSyntaxCompatibility => "Lint/CopDirectiveSyntax" => compatibility_investigation(CopDirectiveSyntaxRule, on_new_investigation),
     OpenCompatibility => "Security/Open" => compatibility_callbacks(OpenRule, [on_send restrict ["open"]]),
     RequireParenthesesCompatibility => "Lint/RequireParentheses" => compatibility_callbacks(RequireParenthesesRule, [on_csend, on_send]),
     UnexpectedBlockArityCompatibility => "Lint/UnexpectedBlockArity" => compatibility_callbacks(UnexpectedBlockArityRule, [on_block, on_itblock, on_numblock]),
     ConstantResolutionCompatibility => "Lint/ConstantResolution" => compatibility_callbacks(ConstantResolutionRule, [on_const]),
     NestedPercentLiteralCompatibility => "Lint/NestedPercentLiteral" => compatibility_callbacks(NestedPercentLiteralRule, [on_array, on_percent_literal]),
     ItAssignmentCompatibility => "Style/ItAssignment" => compatibility_callbacks(ItAssignmentRule, [on_arg, on_blockarg, on_kwarg, on_kwoptarg, on_kwrestarg, on_lvasgn, on_optarg, on_restarg]),
-    EmptyBlockCompatibility => "Lint/EmptyBlock" => compatibility_callbacks(EmptyBlockRule, [on_block]),
-    MinMaxCompatibility => "Style/MinMax" => compatibility_callbacks(MinMaxRule, [on_array, on_return]),
     EmptyClassCompatibility => "Lint/EmptyClass" => compatibility_callbacks(EmptyClassRule, [on_class, on_sclass]),
     BlockNestingCompatibility => "Metrics/BlockNesting" => compatibility_investigation(BlockNestingRule, on_new_investigation),
     KeywordArgumentsMergingCompatibility => "Style/KeywordArgumentsMerging" => compatibility_callbacks(KeywordArgumentsMergingRule, [on_kwsplat]),
     ToEnumArgumentsCompatibility => "Lint/ToEnumArguments" => compatibility_callbacks(ToEnumArgumentsRule, [on_send restrict ["to_enum", "enum_for"]]),
     TripleQuotesCompatibility => "Lint/TripleQuotes" => compatibility_callbacks(TripleQuotesRule, [on_dstr]),
-    HashLikeCaseCompatibility => "Style/HashLikeCase" => compatibility_callbacks(HashLikeCaseRule, [on_case]),
     ConstantVisibilityCompatibility => "Style/ConstantVisibility" => compatibility_callbacks(ConstantVisibilityRule, [on_casgn]),
     ScriptPermissionCompatibility => "Lint/ScriptPermission" => compatibility_investigation(ScriptPermissionRule, on_new_investigation),
     FileTouchCompatibility => "Style/FileTouch" => compatibility_callbacks(FileTouchRule, [on_send restrict ["open"]]),
     UselessMethodDefinitionCompatibility => "Lint/UselessMethodDefinition" => compatibility_callbacks(UselessMethodDefinitionRule, [on_def, on_defs]),
     CompoundHashCompatibility => "Security/CompoundHash" => compatibility_callbacks(CompoundHashRule, [on_csend, on_op_asgn, on_send]),
     IneffectiveAccessModifierCompatibility => "Lint/IneffectiveAccessModifier" => compatibility_callbacks(IneffectiveAccessModifierRule, [on_class, on_module]),
-    UselessRuby2KeywordsCompatibility => "Lint/UselessRuby2Keywords" => compatibility_callbacks(UselessRuby2KeywordsRule, [on_send restrict ["ruby2_keywords"]]),
     FloatComparisonCompatibility => "Lint/FloatComparison" => compatibility_callbacks(FloatComparisonRule, [on_case, on_csend, on_send]),
-    ParameterListsCompatibility => "Metrics/ParameterLists" => compatibility_callbacks(ParameterListsRule, [on_args, on_def, on_defs]),
     MissingSuperCompatibility => "Lint/MissingSuper" => compatibility_callbacks(MissingSuperRule, [on_def, on_defs]),
     SuppressedExceptionCompatibility => "Lint/SuppressedException" => compatibility_callbacks(SuppressedExceptionRule, [on_resbody]),
-    CircularArgumentReferenceCompatibility => "Lint/CircularArgumentReference" => compatibility_callbacks(CircularArgumentReferenceRule, [on_kwoptarg, on_optarg]),
     SelfAssignmentCompatibility => "Style/SelfAssignment" => compatibility_callbacks(SelfAssignmentRule, [on_cvasgn, on_ivasgn, on_lvasgn]),
-    KeywordParametersOrderCompatibility => "Style/KeywordParametersOrder" => compatibility_callbacks(KeywordParametersOrderRule, [on_kwoptarg]),
     LoopCompatibility => "Lint/Loop" => compatibility_callbacks(LoopRule, [on_until_post, on_while_post]),
     RedundantConstantBaseCompatibility => "Style/RedundantConstantBase" => compatibility_callbacks(RedundantConstantBaseRule, [on_cbase]),
     GlobalStdStreamCompatibility => "Style/GlobalStdStream" => compatibility_callbacks(GlobalStdStreamRule, [on_const]),
-    ArrayFirstLastCompatibility => "Style/ArrayFirstLast" => compatibility_callbacks(ArrayFirstLastRule, [on_csend, on_send]),
 }
 
 define_compatibility_rule!(NumberedParameterAssignmentRule);
@@ -931,7 +913,15 @@ impl SuppressedExceptionRule<'_, '_, '_, '_> {
         if node.body().is_some() && !nil_body { return; }
         if self.config_bool("AllowComments", true) {
             let end_line = node.each_ancestor(&["kwbegin", "def", "defs", "block", "numblock", "itblock"]).first().map_or(node.last_line(), |ancestor| ancestor.last_line());
-            if self.processed_source().comments().iter().any(|comment| comment.line > node.first_line() && comment.line <= end_line) { return; }
+            let has_standalone_comment = self.processed_source().comments().iter().any(|comment| {
+                comment.line > node.first_line()
+                    && comment.line <= end_line
+                    && self
+                        .processed_source()
+                        .line(comment.line.saturating_sub(1))
+                        .is_some_and(|line| line.trim_start().starts_with('#'))
+            });
+            if has_standalone_comment { return; }
         }
         if self.config_bool("AllowNil", true) && nil_body { return; }
         let mut range = node.source_range().unwrap_or_default();

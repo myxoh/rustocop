@@ -23,7 +23,7 @@ fn copyright(context: &mut CompatibilityCopContext<'_, '_, '_>) {
             !line.is_empty() && !line.starts_with('#')
         })
         .map_or(context.source().len(), |(offset, _)| offset);
-    let mut comments = context.source_file().comment_ranges().into_iter().fold(
+    let mut comments = context.comment_ranges().into_iter().fold(
         String::new(),
         |mut text, range| {
             if range.start >= first_code {
@@ -134,7 +134,7 @@ fn unescape_config(value: &str) -> String {
 
 fn commented_keyword(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     let source = context.source();
-    for comment_range in context.source_file().comment_ranges() {
+    for comment_range in context.comment_ranges() {
         let offset = context.source_file().line_start(comment_range.start);
         let line_end = source[offset..]
             .find('\n')
@@ -198,7 +198,7 @@ fn comment_annotation(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     let keywords = context.config_values("Keywords").to_vec();
     let require_colon = context.config_bool("RequireColon", true);
     let mut previous_comment_line = None;
-    for comment_range in context.source_file().comment_ranges() {
+    for comment_range in context.comment_ranges() {
         if context.source().as_bytes().get(comment_range.start) != Some(&b'#') {
             continue;
         }

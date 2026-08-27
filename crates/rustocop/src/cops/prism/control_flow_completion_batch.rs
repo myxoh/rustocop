@@ -6,8 +6,8 @@ define_cops! {
 
 fn combinable_loops(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     let lines = context.source_file().lines().collect::<Vec<_>>();
-    let mut non_code_ranges = context.source_file().heredoc_ranges();
-    non_code_ranges.extend(context.source_file().comment_ranges());
+    let mut non_code_ranges = context.heredoc_ranges();
+    non_code_ranges.extend(context.comment_ranges());
     let parsed = lines
         .iter()
         .map(|(offset, line)| {
@@ -410,9 +410,9 @@ fn parse_combinable_loop(offset: usize, line: &str) -> Option<CombinableLoop<'_>
 }
 
 fn each_for_simple_loop(context: &mut CompatibilityCopContext<'_, '_, '_>) {
-    let mut non_code_ranges = context.source_file().literal_ranges();
-    non_code_ranges.extend(context.source_file().heredoc_ranges());
-    non_code_ranges.extend(context.source_file().comment_ranges());
+    let mut non_code_ranges = context.literal_ranges();
+    non_code_ranges.extend(context.heredoc_ranges());
+    non_code_ranges.extend(context.comment_ranges());
     for (offset, line) in context.source_file().lines() {
         let Some(each) = line.find(".each") else { continue };
         if line

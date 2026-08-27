@@ -18,8 +18,8 @@ impl RedundantLineContinuationRule<'_, '_, '_, '_> {
         let ruby_end = source.find("\n__END__\n").map_or(source.len(), |at| at + 1);
         let ruby_source = &source[..ruby_end];
         let logical_end = ruby_source.trim_end_matches(['\n', '\r']).len();
-        let literal_ranges = self.source_file().literal_ranges();
-        let comment_ranges = self.source_file().comment_ranges();
+        let literal_ranges = self.literal_ranges();
+        let comment_ranges = self.comment_ranges();
         for (slash, _) in ruby_source.match_indices("\\\n") {
             if slash + 2 >= logical_end {
                 continue;

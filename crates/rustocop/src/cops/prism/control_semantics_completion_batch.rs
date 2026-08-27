@@ -1,4 +1,4 @@
-use ruby_prism::{parse, BlockNode, ForNode, Node, Visit};
+use ruby_prism::{BlockNode, ForNode, Node, Visit};
 use std::collections::{HashMap, HashSet};
 
 use super::*;
@@ -218,9 +218,8 @@ fn navigation_operator_method(call: &ruby_prism::CallNode<'_>) -> bool {
 
 fn combinable_defined(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     let source = context.source();
-    let file = context.source_file();
-    let literals = file.literal_ranges();
-    let comments = file.comment_ranges();
+    let literals = context.literal_ranges();
+    let comments = context.comment_ranges();
     let mut search = 0;
     while let Some(relative) = source[search..].find("defined?(") {
         let chain_start = search + relative;
@@ -447,7 +446,7 @@ fn for_collection_needs_parentheses(node: &Node<'_>, source: &str) -> bool {
 #[allow(clippy::cognitive_complexity, clippy::too_many_lines)]
 fn class_module_children(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     let lines = context.source_file().lines().collect::<Vec<_>>();
-    let definitions = definition_offsets(context.source());
+    let definitions = definition_offsets(context.prism_result());
     let mut compact_covered_until = 0usize;
     for (index, (offset, line)) in lines.iter().copied().enumerate() {
         let declaration = [("class ", "EnforcedStyleForClasses"), ("module ", "EnforcedStyleForModules")]
@@ -716,7 +715,7 @@ struct DefinitionOffsets {
     ends: HashMap<usize, usize>,
 }
 
-fn definition_offsets(source: &str) -> DefinitionOffsets {
+fn definition_offsets(parsed: &ruby_prism::ParseResult<'_>) -> DefinitionOffsets {
     #[derive(Default)]
     struct Collector {
         definitions: DefinitionOffsets,
@@ -761,7 +760,6 @@ fn definition_offsets(source: &str) -> DefinitionOffsets {
         }
     }
 
-    let parsed = parse(source.as_bytes());
     let mut collector = Collector::default();
     collector.visit(&parsed.node());
     collector.definitions

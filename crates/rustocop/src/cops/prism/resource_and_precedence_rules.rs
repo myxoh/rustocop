@@ -3,9 +3,6 @@ use ruby_prism::{CallNode, Node};
 use super::*;
 
 define_cops! {
-    RequireParentheses => "Lint/RequireParentheses" => compatibility_prism_call(require_parentheses),
-    FileOpen => "Style/FileOpen" => compatibility_prism_call(file_open),
-    KeywordArgumentsMerging => "Style/KeywordArgumentsMerging" => compatibility_prism_call(keyword_arguments_merging),
 }
 
 fn require_parentheses(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {

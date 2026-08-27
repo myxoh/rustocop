@@ -7,7 +7,6 @@ mod naming;
 pub(super) fn cops() -> Vec<Box<dyn Cop>> {
     let mut cops = vec![
         Box::new(ShadowedException) as Box<dyn Cop>,
-        Box::new(ConstantDefinitionInBlock),
         Box::new(ShadowingOuterLocalVariable),
         Box::new(HeredocDelimiterCase) as Box<dyn Cop>,
         Box::new(BlockForwarding) as Box<dyn Cop>,
@@ -23,7 +22,6 @@ define_any_node_cop!(ShadowingOuterLocalVariable => "Lint/ShadowingOuterLocalVar
 define_node_cop!(BlockForwarding => "Naming/BlockForwarding" => as_def_node => block_forwarding);
 define_node_cop!(RescuedExceptionsVariableName => "Naming/RescuedExceptionsVariableName" => as_rescue_node => rescued_exception_name);
 define_node_cop!(ShadowedException => "Lint/ShadowedException" => as_rescue_node => shadowed_exception);
-define_any_node_cop!(ConstantDefinitionInBlock => "Lint/ConstantDefinitionInBlock" => constant_in_block);
 
 fn ambiguous_assignment(context: &mut CopContext<'_, '_>) {
     struct AssignmentOperators<'pr>(Vec<ruby_prism::Location<'pr>>);
@@ -1396,7 +1394,7 @@ fn constant_reassignment(context: &mut CompatibilityCopContext<'_, '_, '_>) {
 
     let mut assigned = HashSet::new();
     let mut scopes = Vec::<Scope>::new();
-    let heredocs = context.source_file().heredoc_ranges();
+    let heredocs = context.heredoc_ranges();
     for (offset, line) in context.source_file().lines() {
         if heredocs
             .iter()

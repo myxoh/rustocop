@@ -152,7 +152,8 @@ impl CompatibilityCorrector<'_, '_> {
 pub(super) struct CompatibilityCopContext<'context, 'processed, 'source> {
     reporter: Reporter<'context>,
     processed_source: &'processed ProcessedSource<'source>,
-    buffer: SourceBuffer<'source>,
+    prism_result: Option<&'processed ruby_prism::ParseResult<'source>>,
+    buffer: &'processed SourceBuffer<'source>,
 }
 
 impl<'context, 'processed, 'source> CompatibilityCopContext<'context, 'processed, 'source> {
@@ -164,6 +165,21 @@ impl<'context, 'processed, 'source> CompatibilityCopContext<'context, 'processed
         Self {
             reporter: context.reporter(cop_name),
             processed_source,
+            prism_result: None,
+            buffer: processed_source.buffer(),
+        }
+    }
+
+    pub(super) fn new_with_prism(
+        context: &'context mut Context,
+        cop_name: &'static str,
+        processed_source: &'processed ProcessedSource<'source>,
+        prism_result: &'processed ruby_prism::ParseResult<'source>,
+    ) -> Self {
+        Self {
+            reporter: context.reporter(cop_name),
+            processed_source,
+            prism_result: Some(prism_result),
             buffer: processed_source.buffer(),
         }
     }
@@ -180,46 +196,52 @@ impl<'context, 'processed, 'source> CompatibilityCopContext<'context, 'processed
         super::SourceFile::new(self.source())
     }
 
+    /// Literal locations from the Prism result already produced by the engine.
+    ///
+    /// Keeping these helpers on the compatibility context is important: the
+    /// source-only `SourceFile` fallback has to parse independently because it
+    /// has no parser-result lifetime. Compatibility cops must never pay that
+    /// fallback cost.
+    pub(super) fn literal_ranges(&self) -> Vec<Range<usize>> {
+        super::SourceFile::literal_ranges_from(self.prism_result())
+    }
+
+    pub(super) fn heredoc_ranges(&self) -> Vec<Range<usize>> {
+        super::SourceFile::heredoc_ranges_from(self.prism_result())
+    }
+
+    pub(super) fn comment_ranges(&self) -> Vec<Range<usize>> {
+        super::SourceFile::comment_ranges_from(self.prism_result())
+    }
+
     pub(super) fn line_index(&self, offset: usize) -> usize {
-        self.source().as_bytes()[..offset.min(self.source().len())]
-            .iter()
-            .filter(|byte| **byte == b'\n')
-            .count()
+        self.buffer.line_index_for_byte(offset)
     }
 
     pub(super) fn line_start_at(&self, index: usize) -> usize {
-        if index == 0 {
-            return 0;
-        }
-        self.source()
-            .match_indices('\n')
-            .nth(index - 1)
-            .map_or(self.source().len(), |(offset, _)| offset + 1)
+        self.buffer.line_start_byte_at_index(index)
     }
 
     pub(super) fn line_at(&self, index: usize) -> &'source str {
-        let start = self.line_start_at(index);
-        let end = self
-            .source()
-            .get(start..)
-            .and_then(|tail| tail.find('\n').map(|offset| start + offset))
-            .unwrap_or(self.source().len());
-        self.source()[start..end]
-            .strip_suffix('\r')
-            .unwrap_or(&self.source()[start..end])
+        self.buffer.source_line(index + 1)
     }
 
     pub(super) fn processed_source(&self) -> &'processed ProcessedSource<'source> {
         self.processed_source
     }
 
-    pub(super) fn source_buffer(&self) -> &SourceBuffer<'source> {
-        &self.buffer
+    pub(super) fn prism_result(&self) -> &'processed ruby_prism::ParseResult<'source> {
+        self.prism_result
+            .expect("investigation compatibility context has a shared Prism result")
+    }
+
+    pub(super) fn source_buffer(&self) -> &'processed SourceBuffer<'source> {
+        self.buffer
     }
 
     pub(super) fn source_range(&self, node: NodeRef<'_>) -> Option<SourceRange<'_, 'source>> {
         let range = node.source_range()?;
-        Some(SourceRange::new(&self.buffer, range.start, range.end))
+        Some(SourceRange::new(self.buffer, range.start, range.end))
     }
 
     /// Return the runtime value RuboCop's Parser-shaped AST exposes for a
