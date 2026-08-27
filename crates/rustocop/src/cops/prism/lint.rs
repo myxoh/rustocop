@@ -2,12 +2,8 @@ use super::*;
 
 pub(super) fn cops() -> Vec<Box<dyn Cop>> {
     vec![
-        Box::new(BooleanSymbol),
-        Box::new(EmptyExpression),
-        Box::new(FlipFlop),
         Box::new(FloatComparison),
         Box::new(FloatOutOfRange),
-        Box::new(IdentityComparison),
         Box::new(RegexpAsCondition),
         Box::new(SelfAssignment),
         Box::new(ToJson),

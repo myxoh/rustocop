@@ -120,7 +120,8 @@ correction_alternatives = cases.each_with_object(Hash.new { |hash, key| hash[key
 
   key = JSON.generate([
     test_case.fetch("cop"), test_case.fetch("source"), test_case.fetch("path"),
-    test_case.fetch("ruby_version"), test_case.fetch("config")
+    test_case.fetch("ruby_version"), test_case.fetch("config"),
+    test_case.fetch("correction_loop", true)
   ])
   grouped[key] << test_case.fetch("correction")
 end
@@ -214,15 +215,18 @@ workers = Array.new(options[:jobs]) do
           source_path = File.join(directory, relative_path)
           FileUtils.mkdir_p(File.dirname(source_path))
           File.binwrite(source_path, source)
-          _correction_stdout, correction_stderr, correction_status = Open3.capture3(
-            native, "-A", "--format", "json", "--only", test_case.fetch("cop"),
-            "--config", test_case.fetch("config_path"), source_path
+          correction_command = [native, "-A", "--format", "json"]
+          correction_command << "--no-correction-loop" unless test_case.fetch("correction_loop", true)
+          correction_command.concat(
+            ["--only", test_case.fetch("cop"), "--config", test_case.fetch("config_path"), source_path]
           )
+          _correction_stdout, correction_stderr, correction_status = Open3.capture3(*correction_command)
           acceptable_status = correction_status.success? || correction_status.exitstatus == 1
           actual_correction = File.binread(source_path)
           correction_key = JSON.generate([
             test_case.fetch("cop"), test_case.fetch("source"), test_case.fetch("path"),
-            test_case.fetch("ruby_version"), test_case.fetch("config")
+            test_case.fetch("ruby_version"), test_case.fetch("config"),
+            test_case.fetch("correction_loop", true)
           ])
           alternatives = correction_alternatives.fetch(correction_key, []).map do |correction|
             if correction.is_a?(Hash) && correction.key?("$hex")

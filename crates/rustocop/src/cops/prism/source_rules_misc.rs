@@ -1,7 +1,6 @@
 use super::*;
 
 define_cops! {
-    EnvHome => "Style/EnvHome" => call(env_home),
     AsciiComments => "Style/AsciiComments" => source(ascii_comments),
 }
 

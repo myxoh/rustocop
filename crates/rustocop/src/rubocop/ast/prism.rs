@@ -396,7 +396,26 @@ impl Converter<'_> {
             self.set_location(send, "begin", location);
         }
         if let Some(location) = node.closing_loc() {
+            let location_end = location.end_offset();
             self.set_location(send, "end", location);
+            // Prism extends a call containing a heredoc argument through the
+            // heredoc body. Parser's send expression ends at the call's
+            // closing delimiter; heredoc body/end remain separate locations.
+            let has_heredoc_argument = self
+                .ast
+                .node(send)
+                .arguments()
+                .into_iter()
+                .any(|argument| argument.heredoc());
+            if has_heredoc_argument {
+                if let Some(current) = self.ast.node(send).source_range() {
+                    let closing_end = self.character_range(location_end..location_end).end;
+                    if closing_end < current.end {
+                        self.ast
+                            .set_source_range(send, Some(current.start..closing_end));
+                    }
+                }
+            }
         }
         if let Some(location) = node.call_operator_loc() {
             self.set_location(send, "dot", location);
@@ -948,7 +967,16 @@ impl<'pr> Visit<'pr> for Converter<'_> {
         if node.exceptions().is_empty() {
             self.ast.append_child(resbody, NodeValue::Nil);
         } else {
-            let exceptions = self.ast.add_node("array", Vec::new(), None);
+            let exception_range =
+                node.exceptions()
+                    .first()
+                    .zip(node.exceptions().last())
+                    .map(|(first, last)| {
+                        self.character_range(
+                            first.location().start_offset()..last.location().end_offset(),
+                        )
+                    });
+            let exceptions = self.ast.add_node("array", Vec::new(), exception_range);
             self.ast.append_child(resbody, NodeValue::Node(exceptions));
             self.with_parent(exceptions, |this| {
                 for exception in &node.exceptions() {
@@ -1064,6 +1092,22 @@ impl<'pr> Visit<'pr> for Converter<'_> {
             return;
         }
         if body.is_empty() {
+            return;
+        }
+        // Parser stores interpolation statements directly under the `begin`
+        // representing `#{...}`. Prism's StatementsNode would otherwise add
+        // a second synthetic `begin`, changing RuboCop callback semantics.
+        if self.current_parent().is_some_and(|parent| {
+            self.ast.node(parent).kind() == "begin"
+                && self
+                    .ast
+                    .node(parent)
+                    .source()
+                    .is_some_and(|source| source.starts_with("#{"))
+        }) {
+            for statement in &body {
+                self.visit(&statement);
+            }
             return;
         }
         let begin = self
@@ -1359,6 +1403,24 @@ impl<'pr> Visit<'pr> for Converter<'_> {
             self.visit_statements_node(&statements);
         } else {
             self.ast.append_child(when_node, NodeValue::Nil);
+            // Parser's empty `when` expression ends at the final condition;
+            // Prism extends the node through a trailing comment. RuboCop uses
+            // the Parser-shaped range for both offenses and CommentsHelp.
+            if let Some(end) = self
+                .ast
+                .node(when_node)
+                .conditions()
+                .last()
+                .and_then(|condition| condition.source_range())
+                .map(|range| range.end)
+            {
+                let start = self
+                    .character_range(
+                        node.keyword_loc().start_offset()..node.keyword_loc().start_offset(),
+                    )
+                    .start;
+                self.ast.set_source_range(when_node, Some(start..end));
+            }
         }
         self.set_location(when_node, "keyword", node.keyword_loc());
         if let Some(location) = node.then_keyword_loc() {

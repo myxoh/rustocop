@@ -23,11 +23,12 @@ module UpstreamCopCapture
     result = rustocop_without_investigation_capture { super }
 
     if source
-      capture_upstream_case(source, nil, correction: correction)
+      capture_upstream_case(source, nil, correction: correction, correction_loop: loop)
     else
       raise "captured correction has no preceding source" unless rustocop_capture_cases.last
 
       rustocop_capture_cases.last["correction"] = correction
+      rustocop_capture_cases.last["correction_loop"] = loop
     end
 
     result
@@ -102,7 +103,13 @@ module UpstreamCopCapture
     capture_upstream_case(processed_source.raw_source, offenses, file: processed_source.buffer.name)
   end
 
-  def capture_upstream_case(source, offenses, file: nil, correction: :unspecified)
+  def capture_upstream_case(
+    source,
+    offenses,
+    file: nil,
+    correction: :unspecified,
+    correction_loop: true
+  )
     path = capture_path(file)
     runtime_config = capture_json_value(
       cop.config.to_h.merge(cop.class.cop_name => cop.config.for_cop(cop.class))
@@ -129,7 +136,10 @@ module UpstreamCopCapture
         File.stat(path).mode & 0o777
       end
     end
-    test_case["correction"] = correction unless correction == :unspecified
+    unless correction == :unspecified
+      test_case["correction"] = correction
+      test_case["correction_loop"] = correction_loop
+    end
     rustocop_capture_cases << test_case
   end
 

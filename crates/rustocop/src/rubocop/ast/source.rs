@@ -95,6 +95,10 @@ impl<'source> SourceBuffer<'source> {
         self.char_to_byte.get(character_offset).copied()
     }
 
+    pub(crate) fn character_position(&self, byte_offset: usize) -> Option<usize> {
+        self.char_to_byte.binary_search(&byte_offset).ok()
+    }
+
     fn line_index(&self, offset: usize) -> usize {
         let offset = offset.min(self.len());
         self.line_starts.partition_point(|start| *start <= offset) - 1
@@ -121,6 +125,25 @@ impl<'buffer, 'source> SourceRange<'buffer, 'source> {
             begin_pos,
             end_pos,
         }
+    }
+
+    pub(crate) fn from_byte_range(
+        buffer: &'buffer SourceBuffer<'source>,
+        range: Range<usize>,
+    ) -> Option<Self> {
+        Some(Self::new(
+            buffer,
+            buffer.character_position(range.start)?,
+            buffer.character_position(range.end)?,
+        ))
+    }
+
+    pub(crate) fn byte_range(self) -> Range<usize> {
+        self.buffer.byte_position(self.begin_pos).unwrap_or(0)
+            ..self
+                .buffer
+                .byte_position(self.end_pos)
+                .unwrap_or(self.buffer.source().len())
     }
 
     pub(crate) fn buffer(self) -> &'buffer SourceBuffer<'source> {
@@ -163,6 +186,10 @@ impl<'buffer, 'source> SourceRange<'buffer, 'source> {
             self.begin_pos,
             self.begin_pos.saturating_add(size).min(self.buffer.len()),
         )
+    }
+
+    pub(crate) fn end(self) -> Self {
+        Self::new(self.buffer, self.end_pos, self.end_pos)
     }
 
     pub(crate) fn line(self) -> usize {

@@ -10,7 +10,6 @@ define_cops! {
     InitialIndentation => "Layout/InitialIndentation" => source(initial_indentation),
     DuplicateMagicComment => "Lint/DuplicateMagicComment" => source(duplicate_magic_comment),
     DoubleCopDisableDirective => "Style/DoubleCopDisableDirective" => source(double_cop_disable_directive),
-    EmptyInterpolation => "Lint/EmptyInterpolation" => any_node(empty_interpolation),
     RequireRangeParentheses => "Lint/RequireRangeParentheses" => node(as_range_node, require_range_parentheses),
     AsciiIdentifiers => "Naming/AsciiIdentifiers" => source(ascii_identifiers),
     MultilineIfThen => "Style/MultilineIfThen" => any_node(multiline_if_then),
@@ -18,7 +17,6 @@ define_cops! {
     InPatternThen => "Style/InPatternThen" => node(as_in_node, in_pattern_then),
     EmptyEnsure => "Lint/EmptyEnsure" => node(as_begin_node, empty_ensure),
     BigDecimalNew => "Lint/BigDecimalNew" => call(big_decimal_new),
-    ColonMethodDefinition => "Style/ColonMethodDefinition" => node(as_def_node, colon_method_definition),
     EnsureReturn => "Lint/EnsureReturn" => node(as_begin_node, ensure_return),
     VariableInterpolation => "Style/VariableInterpolation" => node(as_embedded_variable_node, variable_interpolation),
 }

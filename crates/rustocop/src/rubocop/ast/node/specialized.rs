@@ -671,6 +671,7 @@ impl<'ast> NodeRef<'ast> {
     pub(crate) fn attribute_accessor(self) -> bool {
         self.kind() == "send"
             && self.value(0).is_some_and(|v| matches!(v, NodeValue::Nil))
+            && self.has_arguments()
             && matches!(
                 self.method_name(),
                 Some("attr_reader" | "attr_writer" | "attr_accessor" | "attr")

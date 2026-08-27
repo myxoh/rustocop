@@ -101,6 +101,38 @@ impl Engine {
             },
         };
         runner.visit(&parsed.node());
+        drop(runner);
+        if !has_unrecoverable_parse_errors && !self.registry.phases.compatibility_nodes.is_empty() {
+            let processed_source =
+                crate::rubocop::ast::processed_source::ProcessedSource::from_prism_result(
+                    source,
+                    target_ruby_version.as_f64(),
+                    Some(path.into()),
+                    crate::rubocop::ast::processed_source::ParserEngine::Default,
+                    &parsed,
+                );
+            if let Ok(processed_source) = processed_source {
+                for index in &self.registry.phases.compatibility_nodes {
+                    self.registry.cops[*index].on_compatibility_investigation(
+                        &processed_source,
+                        &mut context,
+                        investigation_states[*index].as_mut(),
+                    );
+                }
+                if let Some(root) = processed_source.ast() {
+                    for node in root.each_node(&[]) {
+                        for index in &self.registry.phases.compatibility_nodes {
+                            self.registry.cops[*index].on_compatibility_node_with_state(
+                                node,
+                                &processed_source,
+                                &mut context,
+                                investigation_states[*index].as_mut(),
+                            );
+                        }
+                    }
+                }
+            }
+        }
         context.finish(source)
     }
 }

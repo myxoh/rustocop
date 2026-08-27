@@ -4,7 +4,6 @@ define_cops! {
     EmptyFile => "Lint/EmptyFile" => source(empty_file),
     NumericLiteralPrefix => "Style/NumericLiteralPrefix" => any_node(numeric_literal_prefix),
     NestedPercentLiteral => "Lint/NestedPercentLiteral" => node(as_array_node, nested_percent_literal),
-    RescueException => "Lint/RescueException" => node(as_rescue_node, rescue_exception),
     OpenStructUse => "Style/OpenStructUse" => any_node(open_struct_use),
 }
 

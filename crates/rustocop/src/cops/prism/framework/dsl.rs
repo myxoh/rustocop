@@ -245,6 +245,15 @@ macro_rules! define_cops {
 }
 
 macro_rules! define_cop_entry {
+    ($type:ident => $name:literal => compatibility_investigation($rule:ident, $callback:ident)) => {
+        $crate::define_compatibility_investigation_rule_cop!($type => $name => $rule::$callback);
+    };
+    ($type:ident => $name:literal => compatibility_callbacks($rule:ident, [$($callback:ident),+ $(,)?])) => {
+        define_compatibility_callback_rule_cop!($type => $name => $rule [$($callback),+]);
+    };
+    ($type:ident => $name:literal => compatibility_callbacks($rule:ident, [on_send restrict [$($method:literal),+ $(,)?]])) => {
+        define_compatibility_callback_rule_cop!($type => $name => $rule [on_send restrict [$($method),+]]);
+    };
     ($type:ident => $name:literal => recovered_node($cast:ident, $check:path)) => {
         define_node_cop!($type => $name => recovered $cast => $check);
     };

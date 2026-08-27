@@ -5,7 +5,6 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
         Box::new(Eval),
         Box::new(CompoundHash),
         Box::new(JsonLoad),
-        Box::new(MarshalLoad),
         Box::new(Open),
         Box::new(IoMethods),
         Box::new(YamlLoad),

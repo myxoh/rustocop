@@ -5,6 +5,7 @@ use super::*;
 define_rule!(RedundantRegexpEscapeRule);
 define_rule!(RedundantRegexpConstructorRule);
 define_rule!(RedundantRegexpArgumentRule);
+define_compatibility_rule!(RedundantRegexpCharacterClassRule);
 
 const ESCAPE_MSG: &str = "Redundant escape inside regexp literal";
 const CLASS_MSG: &str =
@@ -21,7 +22,7 @@ define_cops! {
         on_send,
         restrict [b"new", b"compile"]
     ),
-    RedundantRegexpCharacterClass => "Style/RedundantRegexpCharacterClass" => rubocop_callbacks(RedundantRegexpCharacterClassRule, [on_regexp]),
+    RedundantRegexpCharacterClass => "Style/RedundantRegexpCharacterClass" => compatibility_callbacks(RedundantRegexpCharacterClassRule, [on_regexp]),
     RedundantRegexpArgument => "Style/RedundantRegexpArgument" => call_rule(
         RedundantRegexpArgumentRule,
         on_send,
@@ -75,9 +76,9 @@ impl RedundantRegexpEscapeRule<'_, '_, '_> {
     }
 }
 
-impl RedundantRegexpCharacterClassRule<'_, '_, '_> {
-    fn on_regexp(&mut self, node: &Node<'_>) {
-        let Some(regexp) = RegexpView::new(node, self.source()) else {
+impl RedundantRegexpCharacterClassRule<'_, '_, '_, '_> {
+    fn on_regexp(&mut self, node: crate::rubocop::ast::node::core::NodeRef<'_>) {
+        let Some(regexp) = RegexpView::new_compatibility(node, self.source_buffer()) else {
             return;
         };
         for part in &regexp.parts {
@@ -95,6 +96,8 @@ impl RedundantRegexpCharacterClassRule<'_, '_, '_> {
                 let message = CLASS_MSG
                     .replace("{class}", class)
                     .replace("{element}", &element);
+                let Some(location) = crate::rubocop::ast::source::SourceRange::from_byte_range(self.source_buffer(), location) else { continue; };
+                let location = self.owned_range(location);
                 add_offense!(self, location.clone(), message: message, |corrector| {
                     corrector.replace(location, element);
                 });
@@ -159,6 +162,27 @@ struct RegexpView {
 }
 
 impl RegexpView {
+    fn new_compatibility(
+        node: crate::rubocop::ast::node::core::NodeRef<'_>,
+        buffer: &crate::rubocop::ast::source::SourceBuffer<'_>,
+    ) -> Option<Self> {
+        let opening = node.loc("begin")?.1.as_str();
+        let closing = node.loc("end")?.1.as_str();
+        let parts = node.child_nodes().into_iter()
+            .filter(|part| part.kind() == "str")
+            .filter_map(|part| part.source_range())
+            .filter_map(|range| {
+                Some(buffer.byte_position(range.start)?..buffer.byte_position(range.end)?)
+            })
+            .collect();
+        Some(Self {
+            parts,
+            opening_delimiter: opening.chars().last()?,
+            closing_delimiter: closing.chars().next()?,
+            extended: node.regexp_extended(),
+        })
+    }
+
     fn new(node: &Node<'_>, source: &str) -> Option<Self> {
         let (opening, closing, parts) = if let Some(regexp) = node.as_regular_expression_node() {
             let content = regexp.content_loc();

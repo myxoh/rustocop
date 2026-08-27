@@ -8,7 +8,7 @@ use std::io;
 use std::ops::{Index, Range};
 use std::path::{Path, PathBuf};
 
-use ruby_prism::{parse as prism_parse, CommentType};
+use ruby_prism::{parse as prism_parse, CommentType, ParseResult};
 
 use super::node::core::{Ast, NodeId, NodeRef};
 use super::prism;
@@ -221,6 +221,39 @@ impl<'source> ProcessedSource<'source> {
     ) -> Result<Self, ParserEngineError> {
         let parser_engine = normalize_parser_engine(parser_engine, ruby_version)?;
         let parsed = prism_parse(source.as_bytes());
+        Ok(Self::from_prism_result_unchecked(
+            source,
+            ruby_version,
+            path,
+            parser_engine,
+            &parsed,
+        ))
+    }
+
+    pub(crate) fn from_prism_result(
+        source: &'source str,
+        ruby_version: f64,
+        path: Option<PathBuf>,
+        parser_engine: ParserEngine,
+        parsed: &ParseResult<'_>,
+    ) -> Result<Self, ParserEngineError> {
+        let parser_engine = normalize_parser_engine(parser_engine, ruby_version)?;
+        Ok(Self::from_prism_result_unchecked(
+            source,
+            ruby_version,
+            path,
+            parser_engine,
+            parsed,
+        ))
+    }
+
+    fn from_prism_result_unchecked(
+        source: &'source str,
+        ruby_version: f64,
+        path: Option<PathBuf>,
+        parser_engine: ParserEngine,
+        parsed: &ParseResult<'_>,
+    ) -> Self {
         let positions = SourcePositionIndex::new(source);
         let diagnostics: Vec<_> = parsed
             .warnings()
@@ -288,7 +321,7 @@ impl<'source> ProcessedSource<'source> {
         } else {
             (Ast::new(source), None)
         };
-        Ok(Self {
+        Self {
             raw_source: source,
             path,
             ruby_version,
@@ -303,7 +336,7 @@ impl<'source> ProcessedSource<'source> {
             parser_error: None,
             ast,
             ast_root,
-        })
+        }
     }
 
     pub(crate) fn buffer(&self) -> SourceBuffer<'source> {

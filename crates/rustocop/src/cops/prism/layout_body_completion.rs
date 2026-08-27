@@ -3,7 +3,6 @@ use super::*;
 define_cops! {
     EmptyLinesAroundBeginBody => "Layout/EmptyLinesAroundBeginBody" => source(empty_begin_body),
     EmptyLinesAroundMethodBody => "Layout/EmptyLinesAroundMethodBody" => source(empty_method_body),
-    EmptyLinesAroundAttributeAccessor => "Layout/EmptyLinesAroundAttributeAccessor" => source(empty_around_accessor),
     EmptyLinesAroundBlockBody => "Layout/EmptyLinesAroundBlockBody" => source(empty_block_body),
     EmptyLinesAroundArguments => "Layout/EmptyLinesAroundArguments" => source(empty_around_arguments),
     EmptyLinesAroundExceptionHandlingKeywords => "Layout/EmptyLinesAroundExceptionHandlingKeywords" => source(empty_exception_keywords),
@@ -53,33 +52,6 @@ fn empty_method_body(context: &mut CopContext<'_, '_>) {
     );
 }
 
-fn empty_around_accessor(context: &mut CopContext<'_, '_>) {
-    let lines = context.source_file().lines().collect::<Vec<_>>();
-    for (index, (offset, line)) in lines.iter().copied().enumerate() {
-        let trimmed = line.trim_start();
-        if !["attr_reader", "attr_writer", "attr_accessor", "attr"]
-            .iter()
-            .any(|name| trimmed.starts_with(name))
-        {
-            continue;
-        }
-        if index + 1 < lines.len() && !lines[index + 1].1.trim().is_empty() {
-            let offense_end = offset
-                + trimmed
-                    .split('#')
-                    .next()
-                    .unwrap_or(trimmed)
-                    .trim_end()
-                    .len();
-            context.insert(
-                "Add an empty line after attribute accessor.",
-                offset..offense_end,
-                offset + line.len() + 1,
-                "\n",
-            );
-        }
-    }
-}
 
 fn empty_block_body(context: &mut CopContext<'_, '_>) {
     let lines = context.source_file().lines().collect::<Vec<_>>();

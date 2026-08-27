@@ -2,7 +2,6 @@ use super::*;
 
 declare_source_cops! {
     EmptyLines => "Layout/EmptyLines" => empty_lines,
-    SpaceBeforeComment => "Layout/SpaceBeforeComment" => space_before_comment,
     SpaceAfterSemicolon => "Layout/SpaceAfterSemicolon" => space_after_semicolon,
     SpaceAfterComma => "Layout/SpaceAfterComma" => space_after_comma,
     SpaceBeforeSemicolon => "Layout/SpaceBeforeSemicolon" => space_before_semicolon,

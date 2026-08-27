@@ -12,7 +12,6 @@ pub(crate) use crate::model::{push_offense, CorrectionStatus, Offense, SourceLin
 pub(crate) const LEGACY_COP_NAMES: &[&str] = &[
     "Layout/LineLength",
     "Layout/TrailingWhitespace",
-    "Lint/TrailingCommaInAttributeDeclaration",
     "Lint/UselessElseWithoutRescue",
     "RSpec/EmptyExampleGroup",
     "RSpec/ExampleLength",

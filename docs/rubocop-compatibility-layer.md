@@ -5,9 +5,11 @@ Rustocop targets RuboCop 1.87.0. The compatibility layer under
 boundaries into Rust while preserving names, control flow, and source
 provenance closely enough for static review.
 
-The layer is deliberately separate from existing cops. Adding or testing a
-translation does not by itself authorize migrating a cop to use it; each
-migration has its own fixture and project-parity gates.
+The layer is the implementation foundation for source-shaped cops. A cop
+migration still has its own fixture and project-parity gates, but parser
+translation, callback dispatch, configuration, ranges, comments, corrections,
+and investigation lifecycle belong in the shared layer rather than in
+cop-local substitutes.
 
 ## Completion status
 
@@ -79,6 +81,35 @@ native implementation, fixture/project evidence, structural similarity score,
 and explicit gaps. An audited cop is not counted as migrated until those gaps
 are resolved through the compatibility layer; behavioral parity alone does not
 close the source-shape gate.
+
+### Source-shaped migration checkpoint
+
+As of `2026-08-27T00:19:48Z`, a second set of ten cops has been migrated through
+the compatibility callback and investigation adapters:
+
+- `Layout/DotPosition`, `Layout/EmptyLineBetweenDefs`,
+  `Layout/EmptyLinesAroundAttributeAccessor`,
+  `Layout/LineContinuationSpacing`, and `Layout/SpaceInsideRangeLiteral`;
+- `Lint/EmptyWhen`, `Lint/LiteralInInterpolation`, `Lint/RescueType`, and
+  `Lint/TrailingCommaInAttributeDeclaration`;
+- `Style/RedundantRegexpCharacterClass`.
+
+These implementations share one already-parsed `ProcessedSource`, RuboCop AST
+and source ranges, callback dispatch, `RangeHelp`, `CommentsHelp`,
+`AllowedMethods`, configuration access, directive handling, and corrector
+operations. Parser-versus-Prism differences needed by these cops were fixed in
+the shared AST adapter instead of being hidden in individual cops. The common
+DSL now supports both node callbacks and RuboCop's source-wide
+`on_new_investigation` lifecycle.
+
+All 655 focused cached fixtures pass, as do all 29,585 cached fixtures across
+the repository. A fresh run of the pinned upstream examples produced 638/638
+matching cases for all ten cops. A fresh scoped comparison against the complete
+50-project corpus classified eight exercised cops as `project_exact` and the
+other two as dormant, with zero mismatch signatures and zero unmatched
+offenses. The full generated compatibility table remains conservative: any
+changed shared implementation invalidates older global evidence until the next
+complete project refresh.
 
 ## Translation rules
 

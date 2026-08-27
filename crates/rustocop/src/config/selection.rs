@@ -56,6 +56,10 @@ impl RubyVersion {
     pub(crate) fn minor(self) -> u16 {
         self.minor
     }
+
+    pub(crate) fn as_f64(self) -> f64 {
+        f64::from(self.major) + f64::from(self.minor) / 10.0
+    }
 }
 
 impl Default for RubyVersion {

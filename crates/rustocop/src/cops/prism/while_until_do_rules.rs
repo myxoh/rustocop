@@ -4,9 +4,7 @@ define_rule!(WhileUntilDoRule);
 
 const MSG: &str = "Do not use `do` with multi-line `{keyword}`.";
 
-define_cops!(
-    WhileUntilDo => "Style/WhileUntilDo" => node_rule_aliases(WhileUntilDoRule, on_while => [as_while_node, as_until_node]),
-);
+define_cops!();
 
 impl WhileUntilDoRule<'_, '_, '_> {
     fn on_while(&mut self, node: &Node<'_>) {

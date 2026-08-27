@@ -1,7 +1,7 @@
 use super::catalog_cop::custom;
 use super::*;
-define_rule!(LineContinuationSpacingRule);
-define_rubocop_callback_rule_cop!(LayoutLineContinuationSpacing => "Layout/LineContinuationSpacing" => LineContinuationSpacingRule [on_program]);
+define_compatibility_rule!(LineContinuationSpacingRule);
+crate::define_compatibility_investigation_rule_cop!(LayoutLineContinuationSpacing => "Layout/LineContinuationSpacing" => LineContinuationSpacingRule::on_new_investigation);
 
 mod registry;
 
@@ -22,62 +22,52 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
     cops
 }
 
-impl LineContinuationSpacingRule<'_, '_, '_> {
-    fn on_program(&mut self, _node: &ruby_prism::ProgramNode<'_>) {
-        self.check_line_continuation_spacing();
+impl LineContinuationSpacingRule<'_, '_, '_, '_> {
+    fn on_new_investigation(&mut self) {
+        return_unless!(self.source().contains('\\'));
+        let last_line = self.processed_source().tokens().last().map_or(self.processed_source().lines().len(), |token| token.line);
+        let ignored = self.ignored_ranges();
+        let no_space = self.policy().enforced_style("space") == "no_space";
+        let mut byte_offset = 0;
+        for (index, line) in self.source().split_inclusive('\n').enumerate() {
+            if index >= last_line { break; }
+            let without_newline = line.trim_end_matches(['\n', '\r']);
+            let Some(slash_byte) = without_newline.rfind('\\') else { byte_offset += line.len(); continue; };
+            if slash_byte + 1 != without_newline.len() { byte_offset += line.len(); continue; }
+            let whitespace_start = without_newline[..slash_byte].trim_end_matches(char::is_whitespace).len();
+            let spaces = slash_byte - whitespace_start;
+            let offensive = if no_space { (spaces > 0).then_some(whitespace_start..slash_byte + 1) }
+                else { (spaces != 1).then_some(whitespace_start..slash_byte + 1) };
+            let Some(offensive) = offensive else { byte_offset += line.len(); continue; };
+            let absolute = byte_offset + offensive.start..byte_offset + offensive.end;
+            let Some(range) = crate::rubocop::ast::source::SourceRange::from_byte_range(self.source_buffer(), absolute) else { byte_offset += line.len(); continue; };
+            if ignored.iter().any(|ignored| ignored.start <= range.begin_pos() && ignored.end >= range.end_pos()) { byte_offset += line.len(); continue; }
+            let range = self.owned_range(range);
+            let message = if no_space { "Use zero spaces in front of backslash." } else { "Use one space in front of backslash." };
+            let replacement = if no_space { "\\" } else { " \\" };
+            add_offense!(self, range.clone(), message: message, |corrector| { corrector.replace(range, replacement); });
+            byte_offset += line.len();
+        }
     }
 
-    fn check_line_continuation_spacing(&mut self) {
-        let source = self.source();
-        let trimmed_source = source.trim_start();
-        if ["%i", "%I", "%q", "%Q", "%r", "%x", "%W", "%w", "/", "`"]
-            .iter()
-            .any(|prefix| trimmed_source.starts_with(prefix))
-        {
-            return;
-        }
-        let space_style = self.policy().enforced_style("space") == "space";
-        let heredoc_ranges = self.source_file().heredoc_ranges();
-        for (offset, line) in self.source_file().lines() {
-            if line.trim() == "__END__" {
-                break;
-            }
-            if !line.trim_end().ends_with('\\') || line.trim_start().starts_with('#') {
-                continue;
-            }
-            let slash = line.rfind('\\').unwrap_or(0);
-            if slash >= 2 && line.as_bytes()[slash - 2..slash] == *b"?\\" {
-                continue;
-            }
-            if heredoc_ranges
-                .iter()
-                .any(|range| range.start <= offset + slash && offset + slash < range.end)
-            {
-                continue;
-            }
-            if !self
-                .source_file()
-                .code_offsets("\\")
-                .contains(&(offset + slash))
-            {
-                continue;
-            }
-            let spaces = line[..slash].len() - line[..slash].trim_end().len();
-            if space_style && spaces != 1 {
-                self.replace(
-                    "Use one space in front of backslash.",
-                    offset + slash - spaces..offset + slash + 1,
-                    offset + slash - spaces..offset + slash,
-                    " ",
-                );
-            } else if !space_style && spaces > 0 {
-                self.remove(
-                    "Use zero spaces in front of backslash.",
-                    offset + slash - spaces..offset + slash + 1,
-                    offset + slash - spaces..offset + slash,
-                );
+    fn ignored_ranges(&self) -> Vec<std::ops::Range<usize>> {
+        let mut ranges = Vec::new();
+        if let Some(ast) = self.processed_source().ast() {
+            for literal in ast.each_node(&["str", "dstr", "array"]) {
+                let range = if literal.kind() == "array" {
+                    literal.percent_literal(None).then(|| self.source_range(literal)).flatten()
+                } else if literal.heredoc() {
+                    literal.loc("heredoc_body").map(|(range, _)| crate::rubocop::ast::source::SourceRange::new(self.source_buffer(), range.start, range.end))
+                } else if literal.loc("begin").is_some() || literal.parent().is_some_and(|parent| matches!(parent.kind(), "regexp" | "xstr")) {
+                    self.source_range(literal)
+                } else { None };
+                if let Some(range) = range { ranges.push(range.begin_pos()..range.end_pos()); }
             }
         }
+        ranges.extend(self.processed_source().comments().iter().map(|comment| {
+            comment.range.clone()
+        }));
+        ranges
     }
 }
 
@@ -232,58 +222,6 @@ fn closes_immediately_after_heredoc(source: &str, closing: usize) -> bool {
     source[..closing_line]
         .lines()
         .any(|line| line.contains("<<") && line.contains(preceding))
-}
-
-fn line_continuation_spacing(context: &mut CopContext<'_, '_>) {
-    let trimmed_source = context.source().trim_start();
-    if ["%i", "%I", "%q", "%Q", "%r", "%x", "%W", "%w", "/", "`"]
-        .iter()
-        .any(|prefix| trimmed_source.starts_with(prefix))
-    {
-        return;
-    }
-    let space_style = context.policy().enforced_style("space") == "space";
-    let heredoc_ranges = context.source_file().heredoc_ranges();
-    for (offset, line) in context.source_file().lines() {
-        if line.trim() == "__END__" {
-            break;
-        }
-        if !line.trim_end().ends_with('\\') || line.trim_start().starts_with('#') {
-            continue;
-        }
-        let slash = line.rfind('\\').unwrap_or(0);
-        if slash >= 2 && line.as_bytes()[slash - 2..slash] == *b"?\\" {
-            continue;
-        }
-        if heredoc_ranges
-            .iter()
-            .any(|range| range.start <= offset + slash && offset + slash < range.end)
-        {
-            continue;
-        }
-        if !context
-            .source_file()
-            .code_offsets("\\")
-            .contains(&(offset + slash))
-        {
-            continue;
-        }
-        let spaces = line[..slash].len() - line[..slash].trim_end().len();
-        if space_style && spaces != 1 {
-            context.replace(
-                "Use one space in front of backslash.",
-                offset + slash - spaces..offset + slash + 1,
-                offset + slash - spaces..offset + slash,
-                " ",
-            );
-        } else if !space_style && spaces > 0 {
-            context.remove(
-                "Use zero spaces in front of backslash.",
-                offset + slash - spaces..offset + slash + 1,
-                offset + slash - spaces..offset + slash,
-            );
-        }
-    }
 }
 
 fn space_inside_parens(context: &mut CopContext<'_, '_>) {

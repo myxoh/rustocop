@@ -1,13 +1,112 @@
 use super::*;
+use crate::rubocop::ast::node::core::NodeRef as RubocopNodeRef;
 use unicode_width::UnicodeWidthChar;
+
+define_compatibility_rule!(DotPositionRule);
+define_compatibility_rule!(EmptyLineBetweenDefsCompatibilityRule);
 
 define_cops! {
     BlockAlignment => "Layout/BlockAlignment" => any_node(block_alignment_node),
-    DotPosition => "Layout/DotPosition" => rubocop_callbacks(DotPositionRule, [on_send]),
-    EmptyLineBetweenDefs => "Layout/EmptyLineBetweenDefs" => rubocop_callbacks(EmptyLineBetweenDefsRule, [on_statements]),
+    DotPosition => "Layout/DotPosition" => compatibility_callbacks(DotPositionRule, [on_send]),
+    EmptyLineBetweenDefs => "Layout/EmptyLineBetweenDefs" => compatibility_callbacks(EmptyLineBetweenDefsCompatibilityRule, [on_begin]),
     EmptyLinesAfterModuleInclusion => "Layout/EmptyLinesAfterModuleInclusion" => call(empty_lines_after_module_inclusion),
     EmptyLinesAroundAccessModifier => "Layout/EmptyLinesAroundAccessModifier" => call(empty_lines_around_access_modifier),
     FirstArgumentIndentation => "Layout/FirstArgumentIndentation" => any_node(first_argument_indentation),
+}
+
+impl EmptyLineBetweenDefsCompatibilityRule<'_, '_, '_, '_> {
+    fn on_begin(&mut self, node: RubocopNodeRef<'_>) {
+        for nodes in node.child_nodes().windows(2) {
+            if self.candidate(nodes[0]) && self.candidate(nodes[1]) {
+                self.check_defs(nodes[0], nodes[1]);
+            }
+        }
+    }
+
+    fn candidate(&self, node: RubocopNodeRef<'_>) -> bool {
+        match node.kind() {
+            "def" | "defs" => self.config_bool("EmptyLineBetweenMethodDefs", true),
+            "class" => self.config_bool("EmptyLineBetweenClassDefs", true),
+            "module" => self.config_bool("EmptyLineBetweenModuleDefs", true),
+            "send" => self.macro_candidate(node),
+            "block" | "numblock" | "itblock" => node.send_node().is_some_and(|send| self.macro_candidate(send)),
+            _ => false,
+        }
+    }
+
+    fn macro_candidate(&self, node: RubocopNodeRef<'_>) -> bool {
+        node.receiver().is_none() && node.method_name().is_some_and(|name| self.config_values("DefLikeMacros").iter().any(|configured| configured == name))
+    }
+
+    fn check_defs(&mut self, previous: RubocopNodeRef<'_>, current: RubocopNodeRef<'_>) {
+        let lines = self.lines_between_defs(previous, current);
+        let count = lines.iter().filter(|line| line.trim().is_empty()).count();
+        let (minimum, maximum) = self.empty_line_limits();
+        return_if!((minimum..=maximum).contains(&count));
+        let blank_start = lines.iter().rposition(|line| line.trim().is_empty());
+        let non_blank_end = lines.iter().position(|line| !line.trim().is_empty());
+        return_if!(blank_start.zip(non_blank_end).is_some_and(|(blank, code)| blank > code));
+        return_if!(previous.single_line() && current.single_line() && self.config_bool("AllowAdjacentOneLineDefs", true));
+
+        let expected = if minimum == maximum {
+            format!("{maximum} empty {}", if maximum == 1 { "line" } else { "lines" })
+        } else {
+            format!("{minimum}..{maximum} empty lines")
+        };
+        let kind = match current.kind() {
+            "def" | "defs" => "method",
+            "numblock" | "itblock" => "block",
+            other => other,
+        };
+        let message = format!("Expected {expected} between {kind} definitions; found {count}.");
+        let Some(offense) = self.def_location(current) else { return; };
+        let Some(current_range) = current.source_range() else { return; };
+        let newline_pos = if previous.last_line() == current.first_line() {
+            current_range.start.saturating_sub(1)
+        } else {
+            self.source_buffer().line_range(previous.last_line()).end
+        };
+        let offense = self.owned_range(offense);
+        let removal = (count > maximum).then(|| self.owned_character_range(newline_pos..newline_pos + (count - maximum)));
+        let insertion = (count <= maximum).then(|| {
+            self.owned_range(crate::rubocop::ast::source::SourceRange::new(
+                self.source_buffer(), newline_pos, (newline_pos + 1).min(self.source_buffer().len())
+            ))
+        });
+        add_offense!(self, offense, message: message, |corrector| {
+            if let Some(removal) = removal { corrector.remove(removal); }
+            if let Some(insertion) = insertion { corrector.insert_after(insertion, "\n".repeat(minimum - count)); }
+        });
+    }
+
+    fn lines_between_defs(&self, previous: RubocopNodeRef<'_>, current: RubocopNodeRef<'_>) -> Vec<&str> {
+        let start = previous.last_line();
+        let end = current.first_line().saturating_sub(1);
+        if start >= end { Vec::new() } else { self.processed_source().lines()[start..end].iter().map(String::as_str).collect() }
+    }
+
+    fn empty_line_limits(&self) -> (usize, usize) {
+        let values = self.config_values("NumberOfEmptyLines");
+        if values.is_empty() {
+            let value = self.config_usize("NumberOfEmptyLines", 1);
+            (value, value)
+        } else {
+            (values.first().and_then(|value| value.parse().ok()).unwrap_or(1), values.last().and_then(|value| value.parse().ok()).unwrap_or(1))
+        }
+    }
+
+    fn def_location(&self, node: RubocopNodeRef<'_>) -> Option<crate::rubocop::ast::source::SourceRange<'_, '_>> {
+        if matches!(node.kind(), "block" | "numblock" | "itblock") {
+            self.source_range(node).zip(node.child_nodes().first().and_then(|child| self.source_range(*child))).map(|(node, child)| node.join(child))
+        } else if node.send_type() {
+            self.source_range(node)
+        } else {
+            let keyword = node.loc("keyword")?.0.clone();
+            let end = node.loc("name").map(|location| location.0.end)
+                .or_else(|| node.node_child(0).and_then(|child| child.source_range()).map(|range| range.end))?;
+            Some(crate::rubocop::ast::source::SourceRange::new(self.source_buffer(), keyword.start, end))
+        }
+    }
 }
 
 fn block_alignment_node(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
@@ -18,46 +117,15 @@ fn block_alignment_node(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
     }
 }
 
-impl DotPositionRule<'_, '_, '_> {
-    fn on_send(&mut self, node: &CallNode<'_>) {
-        let (Some(receiver), Some(dot)) = (node.receiver(), node.call_operator_loc()) else {
+impl DotPositionRule<'_, '_, '_, '_> {
+    fn on_send(&mut self, node: RubocopNodeRef<'_>) {
+        let (Some(receiver), Some((dot, operator))) = (node.receiver(), node.loc("dot")) else {
             return;
         };
-        let selector = node.message_loc().or_else(|| node.opening_loc());
-        let Some(selector) = selector else { return };
-        let file = self.source_file();
-        let heredoc_receiver = self.source()
-            [receiver.location().start_offset()..receiver.location().end_offset()]
-            .contains("<<");
-        if file.same_line(selector.start_offset(), receiver.location().end_offset())
-            && !heredoc_receiver
-        {
-            return;
-        }
+        let Some(selector) = self.selector_range(node) else { return; };
+        return_if!(self.proper_dot_position(receiver, selector, dot));
 
-        let selector_line = line_index(self.source(), selector.start_offset());
-        let receiver_line = line_index(self.source(), receiver.location().end_offset());
-        let dot_line = line_index(self.source(), dot.start_offset());
-        if heredoc_receiver
-            && dot_line == selector_line
-            && dot_line == line_index(self.source(), receiver.location().start_offset())
-        {
-            return;
-        }
-        if !heredoc_receiver && selector_line.saturating_sub(receiver_line.max(dot_line)) > 1 {
-            return;
-        }
         let style = self.policy().enforced_style("leading").to_string();
-        let proper = if style == "leading" {
-            dot_line == selector_line
-        } else {
-            dot_line != selector_line
-        };
-        if proper {
-            return;
-        }
-
-        let operator = String::from_utf8_lossy(dot.as_slice()).into_owned();
         let message = if style == "leading" {
             format!("Place the {operator} on the next line, together with the method name.")
         } else {
@@ -65,22 +133,61 @@ impl DotPositionRule<'_, '_, '_> {
                 "Place the {operator} on the previous line, together with the method call receiver."
             )
         };
-        let dot_line_source = line(self.source(), dot_line);
-        let removal = if dot_line_source.trim() == operator {
-            line_start(self.source(), dot_line)..line_start(self.source(), dot_line + 1)
+        let dot_range = crate::rubocop::ast::source::SourceRange::new(self.source_buffer(), dot.start, dot.end);
+        let removal = if self.processed_source().line(dot_range.line().saturating_sub(1)).is_some_and(|line| line.trim() == ".") {
+            self.owned_range(self.range_help().range_by_whole_lines(dot_range, true))
         } else {
-            dot.start_offset()..dot.end_offset()
+            self.owned_range(dot_range)
         };
-        let insertion = if style == "leading" {
-            selector.start_offset()
-        } else {
-            receiver.location().end_offset()
-        };
-        self.replace_many(
-            message,
-            &dot,
-            vec![(removal, String::new()), (insertion..insertion, operator)],
-        );
+        let selector = self.owned_range(selector);
+        let offense = self.owned_character_range(dot.clone());
+        add_offense!(self, offense, message: message, |corrector| {
+            corrector.remove(removal);
+            if style == "leading" { corrector.insert_before(selector, operator); }
+            else { corrector.insert_after(receiver, operator); }
+        });
+    }
+
+    fn proper_dot_position(
+        &self,
+        receiver: RubocopNodeRef<'_>,
+        selector: crate::rubocop::ast::source::SourceRange<'_, '_>,
+        dot: &std::ops::Range<usize>,
+    ) -> bool {
+        if selector.line() == receiver.last_line() { return true; }
+        let receiver_end_line = self.receiver_end_line(receiver);
+        let dot_line = crate::rubocop::ast::source::SourceRange::new(self.source_buffer(), dot.start, dot.end).line();
+        if selector.line().saturating_sub(receiver_end_line.max(dot_line)) > 1 { return true; }
+        match self.policy().enforced_style("leading") {
+            "leading" => dot_line == selector.line(),
+            "trailing" => dot_line != selector.line(),
+            _ => true,
+        }
+    }
+
+    fn receiver_end_line(&self, node: RubocopNodeRef<'_>) -> usize {
+        self.last_heredoc_line(node).unwrap_or(node.last_line())
+    }
+
+    fn last_heredoc_line(&self, node: RubocopNodeRef<'_>) -> Option<usize> {
+        if node.call_type() {
+            node.arguments().into_iter().filter(|arg| self.heredoc(*arg))
+                .filter_map(|arg| arg.loc("heredoc_end").map(|(range, _)| crate::rubocop::ast::source::SourceRange::new(self.source_buffer(), range.start, range.end).line()))
+                .max()
+        } else if self.heredoc(node) {
+            node.loc("heredoc_end").map(|(range, _)| crate::rubocop::ast::source::SourceRange::new(self.source_buffer(), range.start, range.end).line())
+        } else { None }
+    }
+
+    fn heredoc(&self, node: RubocopNodeRef<'_>) -> bool {
+        matches!(node.kind(), "str" | "dstr" | "xstr") && node.heredoc()
+    }
+
+    fn selector_range(&self, node: RubocopNodeRef<'_>) -> Option<crate::rubocop::ast::source::SourceRange<'_, '_>> {
+        if node.call_type() {
+            node.loc("selector").or_else(|| node.loc("begin"))
+                .map(|(range, _)| crate::rubocop::ast::source::SourceRange::new(self.source_buffer(), range.start, range.end))
+        } else { self.source_range(node) }
     }
 }
 
@@ -657,164 +764,6 @@ fn assignment_lhs_target(
         content[..operator].trim_end(),
         line_number + 1
     ))
-}
-
-impl EmptyLineBetweenDefsRule<'_, '_, '_> {
-    fn on_statements(&mut self, statements: &ruby_prism::StatementsNode<'_>) {
-        let children = statements.body().iter().collect::<Vec<_>>();
-        for pair in children.windows(2) {
-            let (Some(previous), Some(current)) = (
-                definition_candidate(&pair[0], self),
-                definition_candidate(&pair[1], self),
-            ) else {
-                continue;
-            };
-            check_definition_pair(self, previous, current);
-        }
-    }
-}
-
-struct DefinitionCandidate<'pr> {
-    location: ruby_prism::Location<'pr>,
-    kind: &'static str,
-    offense: std::ops::Range<usize>,
-}
-
-fn definition_candidate<'pr>(
-    node: &Node<'pr>,
-    context: &CopContext<'_, '_>,
-) -> Option<DefinitionCandidate<'pr>> {
-    if let Some(definition) = node.as_def_node() {
-        if !context.config_bool("EmptyLineBetweenMethodDefs", true) {
-            return None;
-        }
-        return Some(DefinitionCandidate {
-            location: node.location(),
-            kind: "method",
-            offense: definition.def_keyword_loc().start_offset()
-                ..definition.name_loc().end_offset(),
-        });
-    }
-    if let Some(class) = node.as_class_node() {
-        if !context.config_bool("EmptyLineBetweenClassDefs", true) {
-            return None;
-        }
-        return Some(DefinitionCandidate {
-            location: node.location(),
-            kind: "class",
-            offense: class.class_keyword_loc().start_offset()
-                ..class.constant_path().location().end_offset(),
-        });
-    }
-    if let Some(module) = node.as_module_node() {
-        if !context.config_bool("EmptyLineBetweenModuleDefs", true) {
-            return None;
-        }
-        return Some(DefinitionCandidate {
-            location: node.location(),
-            kind: "module",
-            offense: module.module_keyword_loc().start_offset()
-                ..module.constant_path().location().end_offset(),
-        });
-    }
-    let call = node.as_call_node()?;
-    if call.receiver().is_some()
-        || !context
-            .config_values("DefLikeMacros")
-            .iter()
-            .any(|name| name.as_bytes() == call.name().as_slice())
-    {
-        return None;
-    }
-    Some(DefinitionCandidate {
-        location: node.location(),
-        kind: if call.block().is_some() {
-            "block"
-        } else {
-            "send"
-        },
-        offense: node.location().start_offset()..node.location().end_offset(),
-    })
-}
-
-fn check_definition_pair(
-    context: &mut CopContext<'_, '_>,
-    previous: DefinitionCandidate<'_>,
-    current: DefinitionCandidate<'_>,
-) {
-    let source = context.source();
-    let previous_line = line_index(source, previous.location.end_offset());
-    let current_line = line_index(source, current.location.start_offset());
-    let between = (previous_line + 1..current_line)
-        .map(|number| line(source, number))
-        .collect::<Vec<_>>();
-    let count = between.iter().filter(|line| line.trim().is_empty()).count();
-    let values = context.config_values("NumberOfEmptyLines");
-    let (minimum, maximum) = if values.is_empty() {
-        let value = context.config_usize("NumberOfEmptyLines", 1);
-        (value, value)
-    } else {
-        (
-            values
-                .first()
-                .and_then(|value| value.parse().ok())
-                .unwrap_or(1),
-            values
-                .last()
-                .and_then(|value| value.parse().ok())
-                .unwrap_or(1),
-        )
-    };
-    if (minimum..=maximum).contains(&count) {
-        return;
-    }
-    let last_blank = between.iter().rposition(|line| line.trim().is_empty());
-    let first_nonblank = between.iter().position(|line| !line.trim().is_empty());
-    if last_blank
-        .zip(first_nonblank)
-        .is_some_and(|(blank, code)| blank > code)
-    {
-        return;
-    }
-    if context.config_bool("AllowAdjacentOneLineDefs", true)
-        && previous_line == line_index(source, previous.location.start_offset())
-        && current_line == line_index(source, current.location.end_offset())
-    {
-        return;
-    }
-
-    let expected = if minimum == maximum {
-        format!(
-            "{maximum} empty {}",
-            if maximum == 1 { "line" } else { "lines" }
-        )
-    } else {
-        format!("{minimum}..{maximum} empty lines")
-    };
-    let message = format!(
-        "Expected {expected} between {} definitions; found {count}.",
-        current.kind
-    );
-    if previous_line == current_line {
-        let insertion = current.location.start_offset().saturating_sub(1) + 1;
-        context.insert(message, current.offense, insertion, "\n\n");
-        return;
-    }
-    let newline = line_end(source, previous_line);
-    if count > maximum {
-        context.remove(
-            message,
-            current.offense,
-            newline..newline + (count - maximum),
-        );
-    } else {
-        context.insert(
-            message,
-            current.offense,
-            (newline + 1).min(source.len()),
-            "\n".repeat(minimum - count),
-        );
-    }
 }
 
 #[allow(clippy::too_many_lines)]

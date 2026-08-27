@@ -3,8 +3,8 @@ use super::*;
 use crate::rubocop::ast::node::core::NodeRef as RubocopNodeRef;
 use crate::rubocop::ast::prism::convert as convert_rubocop_ast;
 use std::collections::{HashMap, HashSet};
-define_rule!(LiteralInInterpolationRule);
-define_rubocop_callback_rule_cop!(LiteralInInterpolation => "Lint/LiteralInInterpolation" => LiteralInInterpolationRule [on_program]);
+define_compatibility_rule!(LiteralInInterpolationRule);
+define_compatibility_callback_rule_cop!(LiteralInInterpolation => "Lint/LiteralInInterpolation" => LiteralInInterpolationRule [on_interpolation]);
 
 mod registry;
 
@@ -85,44 +85,30 @@ impl<'pr> Visit<'pr> for DuplicateRequireCollector<'_> {
     }
 }
 
-impl LiteralInInterpolationRule<'_, '_, '_> {
-    fn on_program(&mut self, _node: &ruby_prism::ProgramNode<'_>) {
-        let source = self.source();
-        for (opening, closing) in interpolation_ranges(source) {
-            let Some((start, end)) = final_interpolation_expression(source, opening + 2, closing)
-                else {
-                    continue;
-                };
-            let expression = &source[start..end];
-            let expression_is_nested_interpolation = expression_is_dynamic_string(expression);
-            if expression_is_nested_interpolation {
-                continue;
+impl LiteralInInterpolationRule<'_, '_, '_, '_> {
+    fn on_interpolation(&mut self, begin_node: RubocopNodeRef<'_>) {
+        let Some(final_node) = begin_node.last_node_child() else { return; };
+        return_unless!(self.offending(&final_node));
+
+        let expression = final_node.source().unwrap_or("");
+        let opening = begin_node.source_range().map_or(0, |range| range.start);
+        let mut expanded_value =
+            interpolation_literal_value(expression, interpolation_outer_delimiter(self.source(), opening));
+        expanded_value =
+            self.handle_special_regexp_chars(begin_node, expression, expanded_value);
+
+        return_if!(
+            self.in_array_percent_literal(begin_node)
+                && (expanded_value.is_empty()
+                    || expanded_value.chars().any(char::is_whitespace))
+        );
+
+        add_offense!(self, final_node, message: "Literal interpolation detected.", |corrector| {
+            if final_node.kind() == "dstr" {
+                return;
             }
-            if !literal_interpolation_expression(expression) {
-                continue;
-            }
-            if array_percent_interpolation(source, opening, expression) {
-                continue;
-            }
-            if heredoc_trailing_space_interpolation(source, closing, expression)
-                || regexp_array_interpolation(source, opening, expression)
-            {
-                continue;
-            }
-            let direct_regexp = {
-                let line_start = source[..opening].rfind('\n').map_or(0, |at| at + 1);
-                source[line_start..opening].trim_start().starts_with('/')
-            };
-            let replacement = if direct_regexp {
-                decoded_string_literal(expression)
-                    .map(|value| escape_regexp_slashes(&value))
-                    .unwrap_or_else(|| {
-                        interpolation_literal_value(
-                            expression,
-                            interpolation_outer_delimiter(source, opening),
-                        )
-                    })
-            } else if expression.starts_with('"')
+
+            let replacement = if expression.starts_with('"')
                 && expression.ends_with('"')
                 && expression
                     .as_bytes()
@@ -131,237 +117,65 @@ impl LiteralInInterpolationRule<'_, '_, '_> {
             {
                 expression[1..expression.len() - 1].to_string()
             } else {
-                interpolation_literal_value(expression, interpolation_outer_delimiter(source, opening))
+                expanded_value
             };
-            self.replace(
-                "Literal interpolation detected.",
-                start..end,
-                opening..closing + 1,
-                replacement,
-            );
+            corrector.replace(begin_node, replacement);
+        });
+    }
+
+    fn offending(&self, node: &RubocopNodeRef<'_>) -> bool {
+        !self.special_keyword(node)
+            && prints_as_self_compatibility(*node)
+            && !(space_literal_compatibility(*node) && self.ends_heredoc_line(*node))
+            && !self.array_in_regexp(node)
+    }
+
+    fn special_keyword(&self, node: &RubocopNodeRef<'_>) -> bool {
+        (node.kind() == "str" && node.loc("begin").is_none()) || node.source() == Some("__LINE__")
+    }
+
+    fn array_in_regexp(&self, node: &RubocopNodeRef<'_>) -> bool {
+        node.kind() == "array"
+            && node.parent().and_then(RubocopNodeRef::parent).is_some_and(|grandparent| grandparent.kind() == "regexp")
+    }
+
+    fn handle_special_regexp_chars(
+        &self,
+        begin_node: RubocopNodeRef<'_>,
+        expression: &str,
+        value: String,
+    ) -> String {
+        let in_slash_regexp = begin_node.parent().is_some_and(|parent| parent.kind() == "regexp" && parent.slash_literal());
+        if !in_slash_regexp || !value.contains('/') {
+            return value;
         }
+        decoded_string_literal(expression)
+            .map(|decoded| escape_regexp_slashes(&decoded))
+            .unwrap_or_else(|| escape_regexp_slashes(&value))
+    }
+
+    fn ends_heredoc_line(&self, node: RubocopNodeRef<'_>) -> bool {
+        let Some(grandparent) = node.parent().and_then(RubocopNodeRef::parent) else { return false; };
+        if grandparent.kind() != "dstr" || !grandparent.heredoc() { return false; }
+        let Some((_, end)) = grandparent.loc("heredoc_end") else { return false; };
+        let line = self.processed_source().line(node.last_line().saturating_sub(1)).unwrap_or("");
+        node.last_column() + 1 == line.chars().count() && !end.is_empty()
+    }
+
+    fn in_array_percent_literal(&self, begin_node: RubocopNodeRef<'_>) -> bool {
+        let Some(parent) = begin_node.parent().filter(|parent| matches!(parent.kind(), "dstr" | "dsym")) else { return false; };
+        parent.parent().is_some_and(|grandparent| grandparent.kind() == "array" && grandparent.percent_literal(None))
     }
 }
 
-fn interpolation_ranges(source: &str) -> Vec<(usize, usize)> {
-    #[derive(Default)]
-    struct Interpolations(Vec<(usize, usize)>);
-
-    impl<'pr> Visit<'pr> for Interpolations {
-        fn visit_embedded_statements_node(
-            &mut self,
-            node: &ruby_prism::EmbeddedStatementsNode<'pr>,
-        ) {
-            let location = node.location();
-            if location.as_slice().starts_with(b"#{") && location.as_slice().ends_with(b"}") {
-                self.0
-                    .push((location.start_offset(), location.end_offset() - 1));
-            }
-            ruby_prism::visit_embedded_statements_node(self, node);
-        }
-    }
-
-    let parsed = ruby_prism::parse(source.as_bytes());
-    let mut interpolations = Interpolations::default();
-    interpolations.visit(&parsed.node());
-    interpolations.0
+fn prints_as_self_compatibility(node: RubocopNodeRef<'_>) -> bool {
+    node.basic_literal()
+        || (matches!(node.kind(), "array" | "hash" | "pair" | "irange" | "erange")
+            && node.child_nodes().into_iter().all(prints_as_self_compatibility))
 }
 
-fn final_interpolation_expression(
-    source: &str,
-    content_start: usize,
-    content_end: usize,
-) -> Option<(usize, usize)> {
-    let bytes = source.as_bytes();
-    let mut start = content_start;
-    let mut quote = None;
-    let mut nesting = 0usize;
-    let mut index = content_start;
-    while index < content_end {
-        let byte = bytes[index];
-        if let Some(delimiter) = quote {
-            if byte == b'\\' {
-                index += 2;
-                continue;
-            }
-            if byte == delimiter {
-                quote = None;
-            }
-        } else {
-            match byte {
-                b'\'' | b'"' | b'`' => quote = Some(byte),
-                b'(' | b'[' | b'{' => nesting += 1,
-                b')' | b']' | b'}' => nesting = nesting.saturating_sub(1),
-                b';' if nesting == 0 => start = index + 1,
-                _ => {}
-            }
-        }
-        index += 1;
-    }
-    while start < content_end && bytes[start].is_ascii_whitespace() {
-        start += 1;
-    }
-    let mut end = content_end;
-    while end > start && bytes[end - 1].is_ascii_whitespace() {
-        end -= 1;
-    }
-    (start < end).then_some((start, end))
-}
-
-fn literal_interpolation_expression(expression: &str) -> bool {
-    let expression = expression.trim();
-    if expression.contains("#{") || expression.starts_with('`') {
-        return false;
-    }
-    let parsed = ruby_prism::parse(expression.as_bytes());
-    if parsed.errors().count() != 0 {
-        return false;
-    }
-    let Some(node) = parsed.node().as_program_node().and_then(|program| {
-        let body = program.statements().body();
-        (body.len() == 1).then(|| body.first()).flatten()
-    }) else {
-        return false;
-    };
-    node.as_nil_node().is_some()
-        || node.as_true_node().is_some()
-        || node.as_false_node().is_some()
-        || node.as_integer_node().is_some()
-        || node.as_float_node().is_some()
-        || node.as_rational_node().is_some()
-        || node.as_imaginary_node().is_some()
-        || node.as_range_node().is_some_and(|range| {
-            range.left().is_none_or(|bound| interpolation_range_bound(&bound))
-                && range
-                    .right()
-                    .is_none_or(|bound| interpolation_range_bound(&bound))
-        })
-        || node.as_string_node().is_some()
-        || node.as_symbol_node().is_some()
-        || (node.as_array_node().is_some() || node.as_hash_node().is_some())
-            && interpolation_composite_is_literal(expression)
-}
-
-fn interpolation_range_bound(node: &Node<'_>) -> bool {
-    node.as_nil_node().is_some()
-        || node.as_true_node().is_some()
-        || node.as_false_node().is_some()
-        || node.as_integer_node().is_some()
-        || node.as_float_node().is_some()
-        || node.as_rational_node().is_some()
-        || node.as_imaginary_node().is_some()
-        || node.as_string_node().is_some()
-        || node.as_symbol_node().is_some()
-}
-
-fn interpolation_composite_is_literal(expression: &str) -> bool {
-    #[derive(Default)]
-    struct Dynamic(bool);
-
-    impl<'pr> Visit<'pr> for Dynamic {
-        fn visit_call_node(&mut self, _node: &ruby_prism::CallNode<'pr>) {
-            self.0 = true;
-        }
-
-        fn visit_local_variable_read_node(
-            &mut self,
-            _node: &ruby_prism::LocalVariableReadNode<'pr>,
-        ) {
-            self.0 = true;
-        }
-
-        fn visit_instance_variable_read_node(
-            &mut self,
-            _node: &ruby_prism::InstanceVariableReadNode<'pr>,
-        ) {
-            self.0 = true;
-        }
-
-        fn visit_class_variable_read_node(
-            &mut self,
-            _node: &ruby_prism::ClassVariableReadNode<'pr>,
-        ) {
-            self.0 = true;
-        }
-
-        fn visit_global_variable_read_node(
-            &mut self,
-            _node: &ruby_prism::GlobalVariableReadNode<'pr>,
-        ) {
-            self.0 = true;
-        }
-
-        fn visit_constant_read_node(&mut self, _node: &ruby_prism::ConstantReadNode<'pr>) {
-            self.0 = true;
-        }
-
-        fn visit_constant_path_node(&mut self, _node: &ruby_prism::ConstantPathNode<'pr>) {
-            self.0 = true;
-        }
-
-        fn visit_numbered_reference_read_node(
-            &mut self,
-            _node: &ruby_prism::NumberedReferenceReadNode<'pr>,
-        ) {
-            self.0 = true;
-        }
-
-        fn visit_regular_expression_node(
-            &mut self,
-            _node: &ruby_prism::RegularExpressionNode<'pr>,
-        ) {
-            self.0 = true;
-        }
-
-        fn visit_interpolated_regular_expression_node(
-            &mut self,
-            _node: &ruby_prism::InterpolatedRegularExpressionNode<'pr>,
-        ) {
-            self.0 = true;
-        }
-
-        fn visit_self_node(&mut self, _node: &ruby_prism::SelfNode<'pr>) {
-            self.0 = true;
-        }
-    }
-
-    let parsed = ruby_prism::parse(expression.as_bytes());
-    if parsed.errors().count() != 0 {
-        return false;
-    }
-    let mut dynamic = Dynamic::default();
-    dynamic.visit(&parsed.node());
-    !dynamic.0
-}
-
-fn array_percent_interpolation(source: &str, opening: usize, expression: &str) -> bool {
-    let line_start = source[..opening].rfind('\n').map_or(0, |at| at + 1);
-    let prefix = source[line_start..opening].trim_start();
-    if !(prefix.starts_with("%W[") || prefix.starts_with("%I[")) {
-        return false;
-    }
-    let value = interpolation_literal_value(expression, None);
-    value.is_empty() || value.bytes().any(|byte| byte.is_ascii_whitespace())
-}
-
-fn heredoc_trailing_space_interpolation(source: &str, closing: usize, expression: &str) -> bool {
-    let value = interpolation_literal_value(expression, None);
-    if value.is_empty() || !value.bytes().all(|byte| byte.is_ascii_whitespace()) {
-        return false;
-    }
-    let line_end = source[closing + 1..]
-        .find('\n')
-        .map_or(source.len(), |at| closing + 1 + at);
-    source[closing + 1..line_end].trim().is_empty()
-        && source[..closing].lines().any(|line| line.contains("<<"))
-}
-
-fn regexp_array_interpolation(source: &str, opening: usize, expression: &str) -> bool {
-    if !(expression.starts_with('[') || expression.starts_with("%w")) {
-        return false;
-    }
-    let line_start = source[..opening].rfind('\n').map_or(0, |at| at + 1);
-    source[line_start..opening].trim_start().starts_with('/')
+fn space_literal_compatibility(node: RubocopNodeRef<'_>) -> bool {
+    node.kind() == "str" && node.str_content().is_some_and(|value| value.trim().is_empty())
 }
 
 fn interpolation_literal_value(expression: &str, outer_delimiter: Option<u8>) -> String {
@@ -397,24 +211,6 @@ fn interpolation_literal_value(expression: &str, outer_delimiter: Option<u8>) ->
         }
     }
     expression.to_string()
-}
-
-fn expression_is_dynamic_string(expression: &str) -> bool {
-    let expression = expression.trim();
-    if expression.is_empty() {
-        return false;
-    }
-    let parsed = ruby_prism::parse(expression.as_bytes());
-    if parsed.errors().count() != 0 {
-        return false;
-    }
-    let Some(node) = parsed.node().as_program_node().and_then(|program| {
-        let body = program.statements().body();
-        (body.len() == 1).then(|| body.first()).flatten()
-    }) else {
-        return false;
-    };
-    node.as_interpolated_string_node().is_some()
 }
 
 fn decoded_string_literal(expression: &str) -> Option<String> {

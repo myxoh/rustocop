@@ -14,7 +14,6 @@ mod source_registry {
         RubyVersionGlobalsUsage => "Gemspec/RubyVersionGlobalsUsage" => super::ruby_version_globals,
         AttributeAssignment => "Gemspec/AttributeAssignment" => super::attribute_assignment,
         AutoResourceCleanup => "Style/AutoResourceCleanup" => super::auto_resource_cleanup,
-        SpaceAfterMethodName => "Layout/SpaceAfterMethodName" => super::space_after_method_name,
     }
 }
 

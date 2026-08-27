@@ -56,12 +56,18 @@ impl InspectionPlan {
         &self,
         path: &str,
         options: &InspectionConfig,
+        correction_loop: bool,
     ) -> io::Result<InspectionResult> {
         let original = fs::read(path)?;
         let content = source::DecodedSource::from_bytes(&original)?;
         let absolute_path = expanded_path(path);
-        let (offenses, corrected_content, correction_error) =
-            self.inspect_content_with_corrections(&absolute_path, content.as_str(), options);
+        let (offenses, corrected_content, correction_error) = if correction_loop {
+            self.inspect_content_with_corrections(&absolute_path, content.as_str(), options)
+        } else {
+            let (offenses, corrected) =
+                self.inspect_content(&absolute_path, content.as_str(), options);
+            (offenses, corrected, None)
+        };
         if let Some(error) = correction_error {
             return Err(io::Error::other(format!(
                 "autocorrection failed: {}",

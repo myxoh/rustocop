@@ -24,6 +24,7 @@ pub(super) fn parse_args(mut args: Vec<String>) -> Result<Command, String> {
         include_non_native_cops: false,
         non_native_cops: Vec::new(),
         force_exclusion: false,
+        correction_loop: true,
         inspection: InspectionConfig {
             autocorrect: AutocorrectMode::None,
             ignore_disable_comments: false,
@@ -85,6 +86,7 @@ pub(super) fn parse_args(mut args: Vec<String>) -> Result<Command, String> {
                 options.non_native_cops = cop_list(&take_value(&mut args, &arg)?);
             }
             "--force-exclusion" => options.force_exclusion = true,
+            "--no-correction-loop" => options.correction_loop = false,
             "--no-server" | "--display-cop-names" | "--extra-details" => {}
             "--cache" => {
                 if args.first().is_some_and(|value| !value.starts_with('-')) {
@@ -256,6 +258,16 @@ mod tests {
         };
         assert_eq!(safe.inspection.autocorrect, AutocorrectMode::Safe);
         assert_eq!(all.inspection.autocorrect, AutocorrectMode::All);
+    }
+
+    #[test]
+    fn can_limit_autocorrection_to_one_pass_for_spec_compatibility() {
+        let command = parse_args(vec!["-A".into(), "--no-correction-loop".into()]).unwrap();
+        let Command::Run(options) = command else {
+            panic!("expected run command");
+        };
+
+        assert!(!options.correction_loop);
     }
 
     #[test]

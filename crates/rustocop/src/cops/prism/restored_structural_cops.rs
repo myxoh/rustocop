@@ -12,16 +12,17 @@ define_cops! {
     DuplicateHashKey => "Lint/DuplicateHashKey" => node(as_hash_node, duplicate_hash_key),
     InterpolationCheck => "Lint/InterpolationCheck" => node(as_string_node, interpolation_check),
     TopLevelReturnWithArgument => "Lint/TopLevelReturnWithArgument" => node(as_return_node, top_level_return_with_argument),
-    ImplicitRuntimeError => "Style/ImplicitRuntimeError" => call(implicit_runtime_error),
     RedundantConstantBase => "Style/RedundantConstantBase" => any_node(redundant_constant_base),
     ArrayLiteralInRegexp => "Lint/ArrayLiteralInRegexp" => node(as_interpolated_regular_expression_node, array_literal_in_regexp),
     DuplicateRescueException => "Lint/DuplicateRescueException" => node(as_rescue_node, duplicate_rescue_exception),
     LiteralAssignmentInCondition => "Lint/LiteralAssignmentInCondition" => any_node(literal_assignment_in_condition),
     NoReturnInBeginEndBlocks => "Lint/NoReturnInBeginEndBlocks" => node(as_return_node, no_return_in_begin_end_blocks),
-    RescueType => "Lint/RescueType" => rubocop_callbacks(RescueTypeRule, [on_resbody]),
+    RescueType => "Lint/RescueType" => compatibility_callbacks(RescueTypeRule, [on_resbody]),
     FirstMethodParameterLineBreak => "Layout/FirstMethodParameterLineBreak" => node(as_def_node, first_method_parameter_line_break),
     EndBlock => "Style/EndBlock" => node(as_post_execution_node, end_block),
 }
+
+define_compatibility_rule!(RescueTypeRule);
 
 fn end_block(
     node: &ruby_prism::PostExecutionNode<'_>,
@@ -293,20 +294,27 @@ fn assignment_context(node: &Node<'_>) -> bool {
 
 const RESCUE_TYPE_MSG: &str = "Rescuing from `{invalid_exceptions}` will raise a `TypeError` instead of catching the actual exception.";
 
-impl RescueTypeRule<'_, '_, '_> {
-    fn on_resbody(&mut self, node: &RescueNode<'_>) {
-        let exceptions = node.exceptions().iter().collect::<Vec<_>>();
+impl RescueTypeRule<'_, '_, '_, '_> {
+    fn on_resbody(&mut self, node: crate::rubocop::ast::node::core::NodeRef<'_>) {
+        let exceptions = node.exceptions();
         let invalid_exceptions = self.invalid_exceptions(&exceptions);
         return_if!(invalid_exceptions.is_empty());
 
         let invalid_sources = invalid_exceptions
             .iter()
-            .map(|exception| self.source_file().node(exception))
+            .filter_map(|exception| exception.source())
             .collect::<Vec<_>>()
             .join(", ");
-        let last = exceptions.last().expect("invalid rescue has an exception");
-        let offense = node.keyword_loc().start_offset()..last.location().end_offset();
-        let edit = node.keyword_loc().end_offset()..last.location().end_offset();
+        let (Some((keyword, _)), Some(rescued)) = (node.loc("keyword"), node.node_child(0)) else {
+            return;
+        };
+        let Some(rescued_range) = self.source_range(rescued) else { return; };
+        let offense = self.owned_range(crate::rubocop::ast::source::SourceRange::new(
+            self.source_buffer(), keyword.start, rescued_range.end_pos()
+        ));
+        let edit = self.owned_range(crate::rubocop::ast::source::SourceRange::new(
+            self.source_buffer(), keyword.end, rescued_range.end_pos()
+        ));
         let replacement = self.correction(&exceptions);
         let message = RESCUE_TYPE_MSG.replace("{invalid_exceptions}", &invalid_sources);
         add_offense!(self, offense, message: message, |corrector| {
@@ -314,11 +322,11 @@ impl RescueTypeRule<'_, '_, '_> {
         });
     }
 
-    fn correction(&self, exceptions: &[Node<'_>]) -> String {
+    fn correction(&self, exceptions: &[crate::rubocop::ast::node::core::NodeRef<'_>]) -> String {
         let correction = self
             .valid_exceptions(exceptions)
             .iter()
-            .map(|exception| self.source_file().node(exception))
+            .filter_map(|exception| exception.source())
             .collect::<Vec<_>>()
             .join(", ");
         if correction.is_empty() {
@@ -328,30 +336,25 @@ impl RescueTypeRule<'_, '_, '_> {
         }
     }
 
-    fn valid_exceptions<'node>(&self, exceptions: &'node [Node<'_>]) -> Vec<&'node Node<'node>> {
+    fn valid_exceptions<'node>(&self, exceptions: &'node [crate::rubocop::ast::node::core::NodeRef<'node>]) -> Vec<crate::rubocop::ast::node::core::NodeRef<'node>> {
         exceptions
             .iter()
-            .filter(|exception| !invalid_rescue_type(exception))
+            .copied()
+            .filter(|exception| !invalid_rescue_type_compatibility(*exception))
             .collect()
     }
 
-    fn invalid_exceptions<'node>(&self, exceptions: &'node [Node<'_>]) -> Vec<&'node Node<'node>> {
+    fn invalid_exceptions<'node>(&self, exceptions: &'node [crate::rubocop::ast::node::core::NodeRef<'node>]) -> Vec<crate::rubocop::ast::node::core::NodeRef<'node>> {
         exceptions
             .iter()
-            .filter(|exception| invalid_rescue_type(exception))
+            .copied()
+            .filter(|exception| invalid_rescue_type_compatibility(*exception))
             .collect()
     }
 }
 
-fn invalid_rescue_type(node: &Node<'_>) -> bool {
-    node.as_array_node().is_some()
-        || node.as_interpolated_string_node().is_some()
-        || node.as_float_node().is_some()
-        || node.as_hash_node().is_some()
-        || node.as_nil_node().is_some()
-        || node.as_integer_node().is_some()
-        || node.as_string_node().is_some()
-        || node.as_symbol_node().is_some()
+fn invalid_rescue_type_compatibility(node: crate::rubocop::ast::node::core::NodeRef<'_>) -> bool {
+    matches!(node.kind(), "array" | "dstr" | "float" | "hash" | "nil" | "int" | "str" | "sym")
 }
 
 fn first_method_parameter_line_break(node: &DefNode<'_>, context: &mut CopContext<'_, '_>) {

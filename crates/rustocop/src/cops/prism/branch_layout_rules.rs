@@ -3,55 +3,34 @@ use ruby_prism::{ElseNode, InNode, WhenNode};
 use super::*;
 
 define_rule!(WhenThenRule);
+define_compatibility_rule!(EmptyWhenRule);
 
 const WHEN_THEN_MSG: &str =
     "Do not use `when {expression};`. Use `when {expression} then` instead.";
 
 define_cops!(
-    EmptyWhen => "Lint/EmptyWhen" => rubocop_callbacks(EmptyWhenRule, [on_when]),
+    EmptyWhen => "Lint/EmptyWhen" => compatibility_callbacks(EmptyWhenRule, [on_case]),
     ElseLayout => "Lint/ElseLayout" => node(as_else_node, else_layout),
     MultilineInPatternThen => "Style/MultilineInPatternThen" => node(as_in_node, multiline_in_pattern_then),
     MultilineIfModifier => "Style/MultilineIfModifier" => any_node(multiline_if_modifier),
     MultilineWhenThen => "Style/MultilineWhenThen" => node(as_when_node, multiline_when_then),
-    WhenThen => "Style/WhenThen" => node_rule(as_when_node, WhenThenRule, on_when),
 );
 
-impl EmptyWhenRule<'_, '_, '_> {
-    fn on_when(&mut self, node: &WhenNode<'_>) {
-        if node
-            .statements()
-            .is_some_and(|statements| !statements.body().is_empty())
-        {
-            return;
-        }
-        let Some(last_condition) = node.conditions().last() else {
-            return;
-        };
-        if self.config_bool("AllowComments", false) {
-            let tail = &self.source()[last_condition.location().end_offset()..];
-            let mut has_comment = false;
-            for (index, line) in tail.lines().enumerate() {
-                let trimmed = line.trim_start();
-                if index > 0
-                    && matches!(
-                        trimmed.split_whitespace().next(),
-                        Some("when" | "else" | "end")
-                    )
-                {
-                    break;
-                }
-                if trimmed.starts_with('#') || line.contains('#') {
-                    has_comment = true;
-                }
+impl EmptyWhenRule<'_, '_, '_, '_> {
+    fn on_case(&mut self, node: crate::rubocop::ast::node::core::NodeRef<'_>) {
+        for when_node in node.when_branches() {
+            if when_node.body().is_some() || self.allow_comments(when_node) {
+                continue;
             }
-            if has_comment {
-                return;
-            }
+            self.report("Avoid `when` branches without a body.", when_node);
         }
-        self.report(
-            "Avoid `when` branches without a body.",
-            node.keyword_loc().start_offset()..last_condition.location().end_offset(),
-        );
+    }
+
+    fn allow_comments(&self, node: crate::rubocop::ast::node::core::NodeRef<'_>) -> bool {
+        let comments = self.comments_help();
+        self.config_bool("AllowComments", true)
+            && comments.contains_comments(node)
+            && !comments.comments_contain_disables(node, "Lint/EmptyWhen")
     }
 }
 

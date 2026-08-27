@@ -27,6 +27,7 @@ pub(crate) struct RunOptions {
     pub(crate) include_non_native_cops: bool,
     pub(crate) non_native_cops: Vec<String>,
     pub(crate) force_exclusion: bool,
+    pub(crate) correction_loop: bool,
     pub(crate) inspection: InspectionConfig,
 }
 

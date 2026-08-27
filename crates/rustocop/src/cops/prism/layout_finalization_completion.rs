@@ -3,13 +3,11 @@ use super::*;
 define_cops! {
     EmptyComment => "Layout/EmptyComment" => source(empty_comment),
     EmptyLineAfterMagicComment => "Layout/EmptyLineAfterMagicComment" => source(empty_line_after_magic_comment),
-    SpaceAfterNot => "Layout/SpaceAfterNot" => call(space_after_not),
-    SpaceInsideRangeLiteral => "Layout/SpaceInsideRangeLiteral" => rubocop_callbacks(SpaceInsideRangeLiteralRule, [on_irange, on_erange]),
     SpaceAroundEqualsInParameterDefault => "Layout/SpaceAroundEqualsInParameterDefault" => node(as_optional_parameter_node, space_around_parameter_equals),
     SpaceInLambdaLiteral => "Layout/SpaceInLambdaLiteral" => node(as_lambda_node, space_in_lambda_literal),
     TrailingEmptyLines => "Layout/TrailingEmptyLines" => source(trailing_empty_lines),
     TrailingBodyOnMethodDefinition => "Style/TrailingBodyOnMethodDefinition" => node(as_def_node, trailing_method_body),
-    InlineComment => "Style/InlineComment" => source(inline_comment),
+    SpaceInsideRangeLiteralCompatibility => "Layout/SpaceInsideRangeLiteral" => compatibility_callbacks(SpaceInsideRangeLiteralCompatibilityRule, [on_irange, on_erange]),
 }
 
 fn space_after_not(node: &ruby_prism::CallNode<'_>, context: &mut CopContext<'_, '_>) {
@@ -34,36 +32,51 @@ fn space_after_not(node: &ruby_prism::CallNode<'_>, context: &mut CopContext<'_,
     );
 }
 
-impl SpaceInsideRangeLiteralRule<'_, '_, '_> {
-    fn on_irange(&mut self, node: &ruby_prism::RangeNode<'_>) {
+define_compatibility_rule!(SpaceInsideRangeLiteralCompatibilityRule);
+
+impl SpaceInsideRangeLiteralCompatibilityRule<'_, '_, '_, '_> {
+    fn on_irange(&mut self, node: crate::rubocop::ast::node::core::NodeRef<'_>) {
         self.check(node);
     }
 
-    fn on_erange(&mut self, node: &ruby_prism::RangeNode<'_>) {
+    fn on_erange(&mut self, node: crate::rubocop::ast::node::core::NodeRef<'_>) {
         self.check(node);
     }
 
-    fn check(&mut self, node: &ruby_prism::RangeNode<'_>) {
-        let (Some(left), Some(right)) = (node.left(), node.right()) else {
+    fn check(&mut self, node: crate::rubocop::ast::node::core::NodeRef<'_>) {
+        let (Some(_left), Some(_right), Some(expression), Some((_, op))) = (
+            node.range_begin(),
+            node.range_end(),
+            node.source(),
+            node.loc("operator"),
+        ) else {
             return;
         };
-        let operator = node.operator_loc();
-        let whitespace_after = &self.source()[operator.end_offset()..right.location().start_offset()];
-        return_if!(
-            left.location().end_offset() == operator.start_offset()
-                && (operator.end_offset() == right.location().start_offset()
-                    || whitespace_after.starts_with('\n'))
+        let mut expression = expression.to_string();
+        if let Some(operator) = expression.find(&format!("{op}\n")) {
+            let whitespace = expression[operator + op.len() + 1..]
+                .chars()
+                .take_while(|character| character.is_whitespace())
+                .map(char::len_utf8)
+                .sum::<usize>();
+            expression.replace_range(
+                operator..operator + op.len() + 1 + whitespace,
+                op,
+            );
+        }
+        return_unless!(
+            expression.contains(&format!(" {op}"))
+                || expression.contains(&format!("\t{op}"))
+                || expression.contains(&format!("{op} "))
+                || expression.contains(&format!("{op}\t"))
         );
 
-        let source = self.source_file();
-        let replacement = format!(
-            "{}{}{}",
-            source.at(&left.location()),
-            source.at(&operator),
-            source.at(&right.location())
-        );
-        add_offense!(self, node.location(), message: "Space inside range literal.", |corrector| {
-            corrector.replace(node.location(), replacement);
+        let before = expression.find(op).unwrap_or(0);
+        let left = expression[..before].trim_end();
+        let right = expression[before + op.len()..].trim_start();
+        let replacement = format!("{left}{op}{right}");
+        add_offense!(self, node, message: "Space inside range literal.", |corrector| {
+            corrector.replace(node, replacement);
         });
     }
 }

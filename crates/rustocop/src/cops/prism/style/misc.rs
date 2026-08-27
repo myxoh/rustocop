@@ -1,6 +1,6 @@
 use super::*;
 
-declare_cops!(BeginBlock, StringMethods);
+declare_cops!(BeginBlock);
 
 struct BeginBlock;
 
@@ -27,7 +27,6 @@ impl Cop for BeginBlock {
     }
 }
 
-define_call_cop!(StringMethods => "Style/StringMethods" => string_methods);
 
 fn string_methods(node: &CallNode<'_>, reporter: &mut CopContext<'_, '_>) {
     let Ok(method) = std::str::from_utf8(call_name(node)) else {

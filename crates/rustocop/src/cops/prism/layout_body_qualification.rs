@@ -1,9 +1,12 @@
 use super::*;
+use crate::rubocop::ast::node::core::NodeRef as RubocopNodeRef;
+
+define_compatibility_rule!(EmptyLinesAroundAttributeAccessorRule);
 
 define_cops! {
     EmptyLinesAroundBeginBody => "Layout/EmptyLinesAroundBeginBody" => node(as_begin_node, empty_begin_body),
     EmptyLinesAroundMethodBody => "Layout/EmptyLinesAroundMethodBody" => node(as_def_node, empty_method_body),
-    EmptyLinesAroundAttributeAccessor => "Layout/EmptyLinesAroundAttributeAccessor" => rubocop_callbacks(EmptyLinesAroundAttributeAccessorRule, [on_send restrict [b"attr_reader", b"attr_writer", b"attr_accessor", b"attr"]]),
+    EmptyLinesAroundAttributeAccessor => "Layout/EmptyLinesAroundAttributeAccessor" => compatibility_callbacks(EmptyLinesAroundAttributeAccessorRule, [on_send restrict ["attr_reader", "attr_writer", "attr_accessor", "attr"]]),
     EmptyLinesAroundBlockBody => "Layout/EmptyLinesAroundBlockBody" => node(as_block_node, empty_block_body),
     EmptyLinesAroundArguments => "Layout/EmptyLinesAroundArguments" => call(empty_around_arguments),
     EmptyLinesAroundExceptionHandlingKeywords => "Layout/EmptyLinesAroundExceptionHandlingKeywords" => node(as_begin_node, empty_exception_keywords),
@@ -114,105 +117,67 @@ fn empty_around_arguments(node: &CallNode<'_>, context: &mut CopContext<'_, '_>)
     }
 }
 
-impl EmptyLinesAroundAttributeAccessorRule<'_, '_, '_> {
-    fn on_send(&mut self, node: &CallNode<'_>) {
-        if node.receiver().is_some()
-            || !matches!(
-                node.name().as_slice(),
-                b"attr_reader" | b"attr_writer" | b"attr_accessor" | b"attr"
-            )
-        {
-            return;
-        }
-        let source = self.source();
-        let location = node.location();
-        let accessor_line_start = line_start(source, line_index(source, location.start_offset()));
-        if !source[accessor_line_start..location.start_offset()]
-            .trim()
-            .is_empty()
-            || node
-                .arguments()
-                .is_none_or(|arguments| arguments.arguments().is_empty())
-        {
-            return;
-        }
-        if self
-            .ancestors()
-            .iter()
-            .rev()
-            .take(2)
-            .any(|ancestor| ancestor.as_if_node().is_some() || ancestor.as_unless_node().is_some())
-        {
-            return;
-        }
+impl EmptyLinesAroundAttributeAccessorRule<'_, '_, '_, '_> {
+    fn on_send(&mut self, node: RubocopNodeRef<'_>) {
+        return_unless!(node.attribute_accessor());
+        return_if!(self.next_line_empty(node.last_line()));
+        return_if!(self.next_line_empty_or_enable_directive_comment(node.last_line()));
 
-        let current_line = line_index(source, node.location().end_offset());
-        if is_enable_directive(line(source, current_line + 1))
-            && line(source, current_line + 2).is_empty()
-        {
-            return;
-        }
-        let Some(next_code_line) = next_code_line(source, current_line + 1) else {
-            return;
-        };
-        if next_code_line > current_line + 1 && line(source, current_line + 1).trim().is_empty() {
-            return;
-        }
+        let next_line_node = self.next_line_node(node);
+        return_unless!(self.require_empty_line(next_line_node));
 
-        let next = line(source, next_code_line).trim_start();
-        if next == "end"
-            || next.starts_with("end.")
-            || next == "}"
-            || next.starts_with("}.")
-            || is_accessor(next)
-            || allowed_accessor_follower(self, next)
-            || allow_alias_syntax(self, next)
-        {
-            return;
-        }
-
-        let mut insertion_line = current_line + 1;
-        if is_enable_directive(line(source, insertion_line)) {
-            insertion_line += 1;
-        }
-        self.insert(
-            "Add an empty line after attribute accessor.",
-            &location,
-            line_start(source, insertion_line),
-            "\n",
-        );
+        let Some(node_range) = self.autocorrect_range(node) else { return; };
+        add_offense!(self, node, message: "Add an empty line after attribute accessor.", |corrector| {
+            corrector.insert_after(node_range, "\n");
+        });
     }
-}
 
-fn is_accessor(source: &str) -> bool {
-    ["attr_reader", "attr_writer", "attr_accessor", "attr"]
-        .iter()
-        .any(|name| call_name(source) == *name)
-}
+    fn autocorrect_range(&self, node: RubocopNodeRef<'_>) -> Option<CompatibilitySourceRange> {
+        let node_range = self.range_help().range_by_whole_lines(self.source_range(node)?, false);
+        let next_line = node_range.last_line() + 1;
+        if self.next_line_enable_directive_comment(next_line) {
+            self.processed_source().comment_at_line(next_line)
+                .map(|comment| self.owned_character_range(comment.range.clone()))
+        } else {
+            Some(self.owned_range(node_range))
+        }
+    }
 
-fn allowed_accessor_follower(context: &CopContext<'_, '_>, source: &str) -> bool {
-    let name = call_name(source);
-    context
-        .config_values("AllowedMethods")
-        .iter()
-        .any(|allowed| allowed == name)
-}
+    fn next_line_empty_or_enable_directive_comment(&self, line: usize) -> bool {
+        self.next_line_empty(line)
+            || (self.next_line_enable_directive_comment(line + 1)
+                && self.next_line_empty(line + 1))
+    }
 
-fn allow_alias_syntax(context: &CopContext<'_, '_>, source: &str) -> bool {
-    context.config_bool("AllowAliasSyntax", true)
-        && (source.starts_with("alias ") || source.starts_with("alias\t"))
-}
+    fn next_line_enable_directive_comment(&self, line: usize) -> bool {
+        self.processed_source().comment_at_line(line)
+            .is_some_and(|comment| self.directive_comment_enabled(comment))
+    }
 
-fn call_name(source: &str) -> &str {
-    source
-        .split(|character: char| character.is_whitespace() || character == '(')
-        .next()
-        .unwrap_or_default()
-}
+    fn next_line_empty(&self, line: usize) -> bool {
+        self.processed_source().line(line).is_none_or(|next| next.trim().is_empty())
+    }
 
-fn is_enable_directive(source: &str) -> bool {
-    let source = source.trim();
-    source.starts_with("# rubocop:enable") || source.starts_with("# rubocop:todo")
+    fn require_empty_line(&self, node: Option<RubocopNodeRef<'_>>) -> bool {
+        let Some(node) = node else {
+            return false;
+        };
+        !self.allow_alias(node) && !self.attribute_or_allowed_method(node)
+    }
+
+    fn next_line_node<'ast>(&self, node: RubocopNodeRef<'ast>) -> Option<RubocopNodeRef<'ast>> {
+        if node.parent().is_some_and(|parent| parent.kind() == "if") { None } else { node.right_sibling() }
+    }
+
+    fn allow_alias(&self, node: RubocopNodeRef<'_>) -> bool {
+        self.config_bool("AllowAliasSyntax", true) && node.kind() == "alias"
+    }
+
+    fn attribute_or_allowed_method(&self, node: RubocopNodeRef<'_>) -> bool {
+        node.send_type()
+            && (node.attribute_accessor()
+                || node.method_name().is_some_and(|name| self.allowed_methods().allowed_method(name)))
+    }
 }
 
 fn empty_exception_keywords(node: &ruby_prism::BeginNode<'_>, context: &mut CopContext<'_, '_>) {
@@ -539,15 +504,4 @@ fn line(source: &str, line_number: usize) -> &str {
     source[start..end]
         .strip_suffix('\r')
         .unwrap_or(&source[start..end])
-}
-
-fn next_code_line(source: &str, mut line_number: usize) -> Option<usize> {
-    while line_start(source, line_number) < source.len() {
-        let candidate = line(source, line_number).trim_start();
-        if !candidate.is_empty() && !candidate.starts_with('#') {
-            return Some(line_number);
-        }
-        line_number += 1;
-    }
-    None
 }

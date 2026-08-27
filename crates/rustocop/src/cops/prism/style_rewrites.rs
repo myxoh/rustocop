@@ -2,10 +2,7 @@ use super::*;
 
 pub(super) fn cops() -> Vec<Box<dyn Cop>> {
     vec![
-        Box::new(ArrayJoin),
         Box::new(NestedFileDirname),
-        Box::new(ProcLiteral),
-        Box::new(StderrPuts),
         Box::new(Strip),
     ]
 }

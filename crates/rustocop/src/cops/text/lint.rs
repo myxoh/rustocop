@@ -24,16 +24,6 @@ fn check_small_line_cops(
     offenses: &mut Vec<Offense>,
 ) {
     let mut begin_without_rescue = Vec::new();
-    let next_statement_is_definition = (0..lines.len())
-        .map(|index| {
-            lines[index + 1..]
-                .iter()
-                .map(|line| line.body.trim_start())
-                .find(|line| !line.trim().is_empty() && !line.starts_with('#'))
-                .is_some_and(|line| line.starts_with("def "))
-        })
-        .collect::<Vec<_>>();
-
     for (index, line) in lines.iter_mut().enumerate() {
         let original = line.body.clone();
         let trimmed = original.trim_start();
@@ -44,14 +34,6 @@ fn check_small_line_cops(
             index,
             indentation,
             &mut begin_without_rescue,
-            options,
-            offenses,
-        );
-        check_trailing_attribute_comma(
-            index,
-            line,
-            &original,
-            next_statement_is_definition[index],
             options,
             offenses,
         );
@@ -88,40 +70,5 @@ fn check_useless_else(
             4,
             CorrectionStatus::Unavailable,
         );
-    }
-}
-
-fn check_trailing_attribute_comma(
-    index: usize,
-    line: &mut SourceLine,
-    original: &str,
-    next_statement_is_definition: bool,
-    options: &InspectionConfig,
-    offenses: &mut Vec<Offense>,
-) {
-    let trimmed = original.trim_start();
-    if !options.cop_enabled("Lint/TrailingCommaInAttributeDeclaration")
-        || !["attr_reader", "attr_writer", "attr_accessor", "attr"]
-            .iter()
-            .any(|keyword| trimmed.starts_with(keyword))
-        || !trimmed.ends_with(',')
-        || !next_statement_is_definition
-    {
-        return;
-    }
-    let comma = original.rfind(',').expect("trailing comma");
-    push_offense(
-        offenses,
-        "Lint/TrailingCommaInAttributeDeclaration",
-        "Avoid leaving a trailing comma in attribute declarations.",
-        index + 1,
-        comma + 1,
-        1,
-        CorrectionStatus::correctable(
-            options.autocorrect_for("Lint/TrailingCommaInAttributeDeclaration"),
-        ),
-    );
-    if options.autocorrect_for("Lint/TrailingCommaInAttributeDeclaration") {
-        line.body.remove(comma);
     }
 }

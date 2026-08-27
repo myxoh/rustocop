@@ -17,7 +17,6 @@ define_cops! {
     SharedMutableDefault => "Lint/SharedMutableDefault" => call(shared_mutable_default),
     OptionalArguments => "Style/OptionalArguments" => node(as_def_node, optional_arguments),
     OptionalBooleanParameter => "Style/OptionalBooleanParameter" => node(as_def_node, optional_boolean_parameter),
-    Send => "Style/Send" => call(send),
 }
 
 fn send(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {

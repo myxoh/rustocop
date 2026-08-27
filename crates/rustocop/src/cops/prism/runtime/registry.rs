@@ -8,6 +8,7 @@ pub(super) struct Registry {
 pub(super) struct PhasePlan {
     pub(super) source: Vec<usize>,
     pub(super) nodes: Vec<usize>,
+    pub(super) compatibility_nodes: Vec<usize>,
     pub(super) parse_errors: Vec<usize>,
     pub(super) recovered_nodes: Vec<usize>,
 }
@@ -23,6 +24,7 @@ impl PhasePlan {
     fn new(cops: &[Box<dyn Cop>]) -> Self {
         let source = cop_indices(cops, |phase| phase.visits_source());
         let nodes = cop_indices(cops, |phase| phase.visits_nodes());
+        let compatibility_nodes = cop_indices(cops, |phase| phase.visits_compatibility_nodes());
         let parse_errors = cop_indices(cops, |phase| phase.visits_parse_errors());
         let recovered_nodes = cops
             .iter()
@@ -32,6 +34,7 @@ impl PhasePlan {
         Self {
             source,
             nodes,
+            compatibility_nodes,
             parse_errors,
             recovered_nodes,
         }

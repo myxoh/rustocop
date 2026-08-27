@@ -1,6 +1,6 @@
 {
   "format_version": 2,
-  "updated_at": "2026-08-26T17:45:19-04:00",
+  "updated_at": "2026-08-27T00:07:24Z",
   "rubocop_version": "1.87.0",
   "rubocop_commit": "e5b788dba181ad94de30cfbad661c5d6aa08a4e5",
   "sampling": {
@@ -17,7 +17,7 @@
   "target_cops": 606,
   "inventory_cops": 606,
   "audited_cops": 10,
-  "migrated_cops": 1,
+  "migrated_cops": 10,
   "cops": [
     {
       "cop": "Bundler/DuplicatedGem",
@@ -1177,21 +1177,26 @@
         "classification": "project_exact"
       },
       "rust_callbacks": [
-        "on_call"
+        "on_send"
       ],
-      "compatibility_components": [],
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "RangeHelp",
+        "RuboCopAST"
+      ],
       "dsl_features": [
         "define_cops",
-        "call"
+        "compatibility_callbacks",
+        "define_compatibility_rule"
       ],
-      "similarity_score": 4,
-      "structural_status": "source_shaped_with_parser_adaptation",
-      "migration_status": "pending",
-      "structural_gaps": [
-        "RuboCop callback aliases and named range/heredoc helpers are flattened into one Prism callback.",
-        "Translated ConfigurableEnforcedStyle and RangeHelp are bypassed."
-      ],
-      "documented_adaptations": []
+      "similarity_score": 5,
+      "structural_status": "near_source_shaped",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The shared Prism-to-RuboCop AST adapter preserves Parser heredoc call ranges before on_send dispatch."
+      ]
     },
     {
       "cop": "Layout/ElseAlignment",
@@ -1411,21 +1416,26 @@
         "classification": "project_exact"
       },
       "rust_callbacks": [
-        "on_statements"
+        "on_begin"
       ],
-      "compatibility_components": [],
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "RangeHelp",
+        "RuboCopAST"
+      ],
       "dsl_features": [
         "define_cops",
-        "node"
+        "compatibility_callbacks",
+        "define_compatibility_rule"
       ],
-      "similarity_score": 4,
-      "structural_status": "source_shaped_with_parser_adaptation",
-      "migration_status": "pending",
-      "structural_gaps": [
-        "The callback adapts Parser begin nodes to Prism statements nodes.",
-        "RangeHelp calls and several private helpers are inlined into byte/line arithmetic."
-      ],
-      "documented_adaptations": []
+      "similarity_score": 5,
+      "structural_status": "near_source_shaped",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "Parser begin-node sibling traversal is supplied by the shared RuboCop AST adapter."
+      ]
     },
     {
       "cop": "Layout/EmptyLines",
@@ -1585,7 +1595,6 @@
       "upstream_source": "lib/rubocop/cop/layout/empty_lines_around_attribute_accessor.rb",
       "upstream_sha256": "c572eb9a7e91dceb983a79953e079dd8672950c9daba69a47c32883782284b48",
       "implementations": [
-        "src/cops/prism/layout_body_completion.rs",
         "src/cops/prism/layout_body_qualification.rs"
       ],
       "upstream_callbacks": [
@@ -1608,24 +1617,27 @@
         "classification": "project_exact"
       },
       "rust_callbacks": [
-        "on_call"
+        "on_send"
       ],
-      "compatibility_components": [],
+      "compatibility_components": [
+        "AllowedMethods",
+        "CompatibilityCopContext",
+        "DirectiveComment",
+        "ProcessedSource",
+        "RangeHelp",
+        "RuboCopAST"
+      ],
       "dsl_features": [
         "define_cops",
-        "call"
+        "compatibility_callbacks",
+        "define_compatibility_rule"
       ],
-      "similarity_score": 2,
-      "structural_status": "divergent",
-      "migration_status": "pending",
-      "structural_gaps": [
-        "Sibling, alias, allowed-method, and directive-comment behavior is inferred from following-line text.",
-        "Translated AllowedMethods and RangeHelp are bypassed.",
-        "An older unregistered line-oriented implementation remains in the source tree."
-      ],
-      "documented_adaptations": [],
-      "related_inactive_implementations": [
-        "src/cops/prism/layout_body_completion.rs"
+      "similarity_score": 5,
+      "structural_status": "near_source_shaped",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "Directive comments are recognized by the shared compatibility context before correction ranges are selected."
       ]
     },
     {
@@ -2702,20 +2714,25 @@
         "classification": "project_exact"
       },
       "rust_callbacks": [
-        "on_source"
+        "on_new_investigation"
       ],
-      "compatibility_components": [],
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "RangeHelp",
+        "RuboCopAST"
+      ],
       "dsl_features": [
-        "custom_source"
+        "define_compatibility_investigation_rule_cop",
+        "define_compatibility_rule"
       ],
-      "similarity_score": 3,
-      "structural_status": "conceptually_aligned",
-      "migration_status": "pending",
-      "structural_gaps": [
-        "RuboCop's investigate, find_offensive_spacing, ignored_ranges, and style predicates are collapsed into one loop.",
-        "Ignored literal and comment behavior uses native source helpers rather than the translated range API."
-      ],
-      "documented_adaptations": []
+      "similarity_score": 5,
+      "structural_status": "near_source_shaped",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The compatibility investigation adapter maps RuboCop's source-wide on_new_investigation lifecycle onto the shared ProcessedSource."
+      ]
     },
     {
       "cop": "Layout/LineEndStringConcatenationIndentation",
@@ -4329,11 +4346,15 @@
         "on_erange",
         "on_irange"
       ],
-      "compatibility_components": [],
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "RuboCopAST"
+      ],
       "dsl_features": [
         "define_cops",
-        "define_rule",
-        "rubocop_callbacks",
+        "compatibility_callbacks",
+        "define_compatibility_rule",
         "return_if",
         "add_offense"
       ],
@@ -6078,21 +6099,26 @@
         "classification": "project_exact"
       },
       "rust_callbacks": [
-        "on_when"
+        "on_case"
       ],
-      "compatibility_components": [],
+      "compatibility_components": [
+        "CommentsHelp",
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "RuboCopAST"
+      ],
       "dsl_features": [
         "define_cops",
-        "node"
+        "compatibility_callbacks",
+        "define_compatibility_rule"
       ],
-      "similarity_score": 2,
-      "structural_status": "divergent",
-      "migration_status": "pending",
-      "structural_gaps": [
-        "Rust dispatches each when node instead of preserving on_case and when_branches traversal.",
-        "Comment and disable-directive semantics are recreated with source scanning instead of CommentsHelp."
-      ],
-      "documented_adaptations": []
+      "similarity_score": 5,
+      "structural_status": "near_source_shaped",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The shared AST adapter normalizes empty when-node ranges to Parser's final-condition boundary."
+      ]
     },
     {
       "cop": "Lint/EnsureReturn",
@@ -6795,21 +6821,25 @@
         "classification": "project_exact"
       },
       "rust_callbacks": [
-        "on_source"
+        "on_interpolation"
       ],
-      "compatibility_components": [],
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "RangeHelp",
+        "RuboCopAST"
+      ],
       "dsl_features": [
-        "custom_source"
+        "compatibility_callbacks",
+        "define_compatibility_rule"
       ],
-      "similarity_score": 2,
-      "structural_status": "divergent",
-      "migration_status": "pending",
-      "structural_gaps": [
-        "Rust scans interpolation ranges and reparses source fragments instead of receiving on_interpolation nodes.",
-        "Translated Interpolation, PercentLiteral, and RangeHelp behavior is recreated in cop-local helpers.",
-        "Private helper names and branch decomposition no longer align with the upstream source."
-      ],
-      "documented_adaptations": []
+      "similarity_score": 5,
+      "structural_status": "near_source_shaped",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The shared AST adapter flattens Prism interpolation statements to Parser's immediate begin-node children."
+      ]
     },
     {
       "cop": "Lint/Loop",
@@ -8309,11 +8339,15 @@
       "rust_callbacks": [
         "on_resbody"
       ],
-      "compatibility_components": [],
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "RuboCopAST"
+      ],
       "dsl_features": [
         "define_cops",
-        "define_rule",
-        "rubocop_callbacks",
+        "compatibility_callbacks",
+        "define_compatibility_rule",
         "return_if",
         "add_offense"
       ],
@@ -8993,7 +9027,7 @@
       "upstream_source": "lib/rubocop/cop/lint/trailing_comma_in_attribute_declaration.rb",
       "upstream_sha256": "e376fbe80cdebb3d0e3eb3dcb2f789068734c7e226b181ded5b300936a7223b3",
       "implementations": [
-        "src/cops/text/lint.rs"
+        "src/cops/prism/trailing_comma_in_attribute_declaration_rules.rs"
       ],
       "upstream_callbacks": [
         "on_send"
@@ -9014,18 +9048,25 @@
         "classification": "dormant"
       },
       "rust_callbacks": [
-        "line_scan"
+        "on_send"
       ],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": 1,
-      "structural_status": "divergent",
-      "migration_status": "pending",
-      "structural_gaps": [
-        "A legacy starts_with/ends_with line heuristic replaces the on_send AST implementation.",
-        "attribute_accessor?, last_argument.def_type?, and range_with_surrounding_space are not represented."
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "RangeHelp",
+        "RuboCopAST"
       ],
-      "documented_adaptations": []
+      "dsl_features": [
+        "compatibility_callbacks",
+        "define_compatibility_rule"
+      ],
+      "similarity_score": 5,
+      "structural_status": "near_source_shaped",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "Prism calls are dispatched as RuboCop send nodes before RangeHelp selects the trailing comma."
+      ]
     },
     {
       "cop": "Lint/TripleQuotes",
@@ -19451,21 +19492,24 @@
       "rust_callbacks": [
         "on_regexp"
       ],
-      "compatibility_components": [],
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "RuboCopAST"
+      ],
       "dsl_features": [
         "define_cops",
-        "define_rule",
-        "node_rule_aliases",
+        "compatibility_callbacks",
+        "define_compatibility_rule",
         "add_offense"
       ],
-      "similarity_score": 4,
-      "structural_status": "source_shaped_with_parser_adaptation",
-      "migration_status": "pending",
-      "structural_gaps": [
-        "Regexp expression traversal and redundancy predicates are consolidated behind Rust-specific helpers.",
-        "The cop is not registered as a compatibility-layer consumer."
-      ],
-      "documented_adaptations": []
+      "similarity_score": 5,
+      "structural_status": "near_source_shaped",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "Regexp literal parts use shared RuboCop AST character ranges before the native regexp parser checks each class."
+      ]
     },
     {
       "cop": "Style/RedundantRegexpConstructor",

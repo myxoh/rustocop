@@ -1,7 +1,6 @@
 use super::*;
 
 define_cops! {
-    SymbolLiteral => "Style/SymbolLiteral" => node(as_symbol_node, symbol_literal),
 }
 
 fn symbol_literal(node: &ruby_prism::SymbolNode<'_>, context: &mut CopContext<'_, '_>) {

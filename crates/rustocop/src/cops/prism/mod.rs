@@ -3,6 +3,8 @@ use std::any::Any;
 use std::sync::Arc;
 #[path = "framework/catalog_cop.rs"]
 mod catalog_cop;
+#[path = "framework/compatibility_context.rs"]
+mod compatibility_context;
 #[path = "framework/context_node_facade.rs"]
 mod context_node_facade;
 #[path = "framework/cop_context.rs"]
@@ -76,6 +78,7 @@ cop_modules!(
     class_methods_completion,
     class_vars_rules,
     compact_syntax_completion,
+    compatibility_migration_batch_two,
     compatibility_lexical_rules,
     comparable_clamp_rules,
     control_flow_completion_batch,
@@ -242,7 +245,6 @@ cop_modules!(
     style_global_vars,
     style_metadata_completion,
     symbol_proc_rules,
-    symbol_literal_rules,
     super_arguments_rules,
     style_rewrites,
     style_source,
@@ -250,10 +252,10 @@ cop_modules!(
     structural_next_completion,
     structural_forwarding_completion,
     trailing_comma_completion,
+    trailing_comma_in_attribute_declaration_rules,
     trailing_argument_comma_rules,
     trailing_underscore_rules,
     uri_regexp_rules,
-    while_until_do_rules,
     yoda_condition_rules,
     string_conversion_rules,
     source_rules,
@@ -267,6 +269,7 @@ cop_modules!(
 );
 
 use crate::config::{CopConfig, RubyVersion, SourceEncoding};
+use compatibility_context::{CompatibilityCopContext, CompatibilitySourceRange};
 use context_node_facade::*;
 use cop_context::CopContext;
 use cop_policy::CopPolicy;
@@ -287,6 +290,7 @@ use source_file::{SourceEdit, SourceFile};
 pub(super) enum CopPhase {
     Source,
     Node,
+    CompatibilityNode,
     ParseErrorAndSource,
 }
 
@@ -297,6 +301,10 @@ impl CopPhase {
 
     const fn visits_nodes(self) -> bool {
         matches!(self, Self::Node)
+    }
+
+    const fn visits_compatibility_nodes(self) -> bool {
+        matches!(self, Self::CompatibilityNode)
     }
 
     const fn visits_parse_errors(self) -> bool {
@@ -338,6 +346,25 @@ pub(super) trait Cop: Sync {
         if let Some(call) = node.as_call_node() {
             self.on_call(&call, context);
         }
+    }
+    fn on_compatibility_node_with_state<'processed, 'source>(
+        &self,
+        _node: crate::rubocop::ast::node::core::NodeRef<'processed>,
+        _processed_source: &'processed crate::rubocop::ast::processed_source::ProcessedSource<
+            'source,
+        >,
+        _context: &mut Context,
+        _state: &mut dyn Any,
+    ) {
+    }
+    fn on_compatibility_investigation<'processed, 'source>(
+        &self,
+        _processed_source: &'processed crate::rubocop::ast::processed_source::ProcessedSource<
+            'source,
+        >,
+        _context: &mut Context,
+        _state: &mut dyn Any,
+    ) {
     }
     fn on_call(&self, _node: &CallNode<'_>, _context: &mut Context) {}
 }

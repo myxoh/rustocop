@@ -29,6 +29,246 @@ macro_rules! define_rule {
     };
 }
 
+macro_rules! define_compatibility_rule {
+    ($rule:ident) => {
+        struct $rule<'rule, 'context, 'processed, 'source> {
+            context: &'rule mut CompatibilityCopContext<'context, 'processed, 'source>,
+        }
+
+        impl<'rule, 'context, 'processed, 'source> $rule<'rule, 'context, 'processed, 'source> {
+            fn new(
+                context: &'rule mut CompatibilityCopContext<'context, 'processed, 'source>,
+            ) -> Self {
+                Self { context }
+            }
+        }
+
+        impl<'rule, 'context, 'processed, 'source> std::ops::Deref
+            for $rule<'rule, 'context, 'processed, 'source>
+        {
+            type Target = CompatibilityCopContext<'context, 'processed, 'source>;
+
+            fn deref(&self) -> &Self::Target {
+                self.context
+            }
+        }
+
+        impl<'rule, 'context, 'processed, 'source> std::ops::DerefMut
+            for $rule<'rule, 'context, 'processed, 'source>
+        {
+            fn deref_mut(&mut self) -> &mut Self::Target {
+                self.context
+            }
+        }
+    };
+}
+
+macro_rules! define_compatibility_callback_rule_cop {
+    ($type:ident => $name:literal => $rule:ident [on_send restrict [$($method:literal),+ $(,)?]]) => {
+        struct $type;
+
+        impl Cop for $type {
+            fn name(&self) -> &'static str { $name }
+            fn phase(&self) -> CopPhase { CopPhase::CompatibilityNode }
+            fn on_compatibility_node_with_state<'processed, 'source>(
+                &self,
+                node: crate::rubocop::ast::node::core::NodeRef<'processed>,
+                processed_source: &'processed crate::rubocop::ast::processed_source::ProcessedSource<'source>,
+                context: &mut Context,
+                _state: &mut dyn Any,
+            ) {
+                if !matches!(node.kind(), "send" | "csend" | "index" | "indexasgn")
+                    || ![$($method),+].contains(&node.method_name().unwrap_or("")) { return; }
+                let mut context = CompatibilityCopContext::new(context, self.name(), processed_source);
+                $rule::new(&mut context).on_send(node);
+            }
+        }
+    };
+    ($type:ident => $name:literal => $rule:ident [$($callback:ident),+ $(,)?]) => {
+        struct $type;
+
+        impl Cop for $type {
+            fn name(&self) -> &'static str { $name }
+            fn phase(&self) -> CopPhase { CopPhase::CompatibilityNode }
+            fn on_compatibility_node_with_state<'processed, 'source>(
+                &self,
+                node: crate::rubocop::ast::node::core::NodeRef<'processed>,
+                processed_source: &'processed crate::rubocop::ast::processed_source::ProcessedSource<'source>,
+                context: &mut Context,
+                _state: &mut dyn Any,
+            ) {
+                if !($($crate::compatibility_callback_matches!(node, $callback))||+) { return; }
+                let mut context = CompatibilityCopContext::new(context, self.name(), processed_source);
+                let mut rule = $rule::new(&mut context);
+                $($crate::dispatch_compatibility_callback!(rule, node, $callback);)+
+            }
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! define_compatibility_investigation_rule_cop {
+    ($type:ident => $name:literal => $rule:ident::$callback:ident) => {
+        struct $type;
+        impl Cop for $type {
+            fn name(&self) -> &'static str { $name }
+            fn phase(&self) -> CopPhase { CopPhase::CompatibilityNode }
+            fn on_compatibility_investigation<'processed, 'source>(
+                &self,
+                processed_source: &'processed crate::rubocop::ast::processed_source::ProcessedSource<'source>,
+                context: &mut Context,
+                _state: &mut dyn Any,
+            ) {
+                let mut context = CompatibilityCopContext::new(context, self.name(), processed_source);
+                $rule::new(&mut context).$callback();
+            }
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! compatibility_callback_matches {
+    ($node:ident, on_send) => {
+        matches!($node.kind(), "send" | "csend" | "index" | "indexasgn")
+    };
+    ($node:ident, on_case) => {
+        $node.kind() == "case"
+    };
+    ($node:ident, on_interpolation) => {
+        $node.kind() == "begin"
+            && $node
+                .parent()
+                .is_some_and(|parent| matches!(parent.kind(), "dstr" | "dsym" | "xstr" | "regexp"))
+    };
+    ($node:ident, on_resbody) => {
+        $node.kind() == "resbody"
+    };
+    ($node:ident, on_irange) => {
+        $node.kind() == "irange"
+    };
+    ($node:ident, on_erange) => {
+        $node.kind() == "erange"
+    };
+    ($node:ident, on_regexp) => {
+        $node.kind() == "regexp"
+    };
+    ($node:ident, on_begin) => {
+        $node.kind() == "begin"
+    };
+    ($node:ident, on_class) => {
+        $node.kind() == "class"
+    };
+    ($node:ident, on_module) => {
+        $node.kind() == "module"
+    };
+    ($node:ident, on_sclass) => {
+        $node.kind() == "sclass"
+    };
+    ($node:ident, on_normal_if_unless) => {
+        $node.kind() == "if" && !$node.ternary()
+    };
+    ($node:ident, on_block) => {
+        matches!($node.kind(), "block" | "numblock" | "itblock")
+    };
+    ($node:ident, on_while) => {
+        matches!($node.kind(), "while" | "while_post")
+    };
+    ($node:ident, on_until) => {
+        matches!($node.kind(), "until" | "until_post")
+    };
+    ($node:ident, $callback:ident) => {
+        $node.kind() == stringify!($callback).strip_prefix("on_").unwrap_or("")
+    };
+}
+
+#[macro_export]
+macro_rules! dispatch_compatibility_callback {
+    ($rule:ident, $node:ident, on_send) => {
+        if matches!($node.kind(), "send" | "csend" | "index" | "indexasgn") {
+            $rule.on_send($node);
+        }
+    };
+    ($rule:ident, $node:ident, on_case) => {
+        if $node.kind() == "case" {
+            $rule.on_case($node);
+        }
+    };
+    ($rule:ident, $node:ident, on_interpolation) => {
+        if $node.kind() == "begin"
+            && $node
+                .parent()
+                .is_some_and(|parent| matches!(parent.kind(), "dstr" | "dsym" | "xstr" | "regexp"))
+        {
+            $rule.on_interpolation($node);
+        }
+    };
+    ($rule:ident, $node:ident, on_resbody) => {
+        if $node.kind() == "resbody" {
+            $rule.on_resbody($node);
+        }
+    };
+    ($rule:ident, $node:ident, on_irange) => {
+        if $node.kind() == "irange" {
+            $rule.on_irange($node);
+        }
+    };
+    ($rule:ident, $node:ident, on_erange) => {
+        if $node.kind() == "erange" {
+            $rule.on_erange($node);
+        }
+    };
+    ($rule:ident, $node:ident, on_regexp) => {
+        if $node.kind() == "regexp" {
+            $rule.on_regexp($node);
+        }
+    };
+    ($rule:ident, $node:ident, on_begin) => {
+        if $node.kind() == "begin" {
+            $rule.on_begin($node);
+        }
+    };
+    ($rule:ident, $node:ident, on_class) => {
+        if $node.kind() == "class" {
+            $rule.on_class($node);
+        }
+    };
+    ($rule:ident, $node:ident, on_module) => {
+        if $node.kind() == "module" {
+            $rule.on_module($node);
+        }
+    };
+    ($rule:ident, $node:ident, on_sclass) => {
+        if $node.kind() == "sclass" {
+            $rule.on_sclass($node);
+        }
+    };
+    ($rule:ident, $node:ident, on_normal_if_unless) => {
+        if $node.kind() == "if" && !$node.ternary() {
+            $rule.on_normal_if_unless($node);
+        }
+    };
+    ($rule:ident, $node:ident, on_block) => {
+        if matches!($node.kind(), "block" | "numblock" | "itblock") {
+            $rule.on_block($node);
+        }
+    };
+    ($rule:ident, $node:ident, on_while) => {
+        if matches!($node.kind(), "while" | "while_post") {
+            $rule.on_while($node);
+        }
+    };
+    ($rule:ident, $node:ident, on_until) => {
+        if matches!($node.kind(), "until" | "until_post") {
+            $rule.on_until($node);
+        }
+    };
+    ($rule:ident, $node:ident, $callback:ident) => {
+        if $node.kind() == stringify!($callback).strip_prefix("on_").unwrap_or("") {
+            $rule.$callback($node);
+        }
+    };
+}
+
 macro_rules! define_stateful_rule {
     ($rule:ident, $state:ident) => {
         struct $rule<'rule, 'context, 'pr> {
@@ -201,6 +441,11 @@ macro_rules! define_any_node_rule_cop {
 /// specific cast. Callbacks such as `on_casgn` deliberately cover several
 /// Prism write nodes because Parser exposes them as one RuboCop event.
 macro_rules! dispatch_rubocop_callback {
+    ($rule:ident, $node:ident, on_interpolation) => {
+        if let Some(typed_node) = $node.as_embedded_statements_node() {
+            $rule.on_interpolation(&typed_node);
+        }
+    };
     ($rule:ident, $node:ident, on_send) => {
         if let Some(typed_node) = $node.as_call_node() {
             $rule.on_send(&typed_node);
@@ -307,7 +552,10 @@ macro_rules! dispatch_rubocop_callback {
         }
     };
     ($rule:ident, $node:ident, on_irange) => {
-        if let Some(typed_node) = $node.as_range_node().filter(|range| !range.is_exclude_end()) {
+        if let Some(typed_node) = $node
+            .as_range_node()
+            .filter(|range| !range.is_exclude_end())
+        {
             $rule.on_irange(&typed_node);
         }
     };
@@ -344,6 +592,9 @@ macro_rules! dispatch_rubocop_callback {
 }
 
 macro_rules! rubocop_callback_matches {
+    ($node:ident, on_interpolation) => {
+        $node.as_embedded_statements_node().is_some()
+    };
     ($node:ident, on_send) => {
         $node.as_call_node().is_some()
     };
@@ -408,10 +659,14 @@ macro_rules! rubocop_callback_matches {
         $node.as_rescue_node().is_some()
     };
     ($node:ident, on_irange) => {
-        $node.as_range_node().is_some_and(|range| !range.is_exclude_end())
+        $node
+            .as_range_node()
+            .is_some_and(|range| !range.is_exclude_end())
     };
     ($node:ident, on_erange) => {
-        $node.as_range_node().is_some_and(|range| range.is_exclude_end())
+        $node
+            .as_range_node()
+            .is_some_and(|range| range.is_exclude_end())
     };
     ($node:ident, on_yield) => {
         $node.as_yield_node().is_some()
@@ -523,9 +778,9 @@ macro_rules! define_stateful_rubocop_callback_rule_cop {
 }
 
 pub(super) use {
-    define_any_node_rule_cop, define_call_rule_cop, define_node_rule_cop,
-    define_recovery_rubocop_callback_rule_cop, define_rubocop_callback_rule_cop, define_rule,
-    define_stateful_call_rule_cop, define_stateful_node_rule_cop,
-    define_stateful_rubocop_callback_rule_cop, define_stateful_rule, dispatch_rubocop_callback,
-    rubocop_callback_matches,
+    define_any_node_rule_cop, define_call_rule_cop, define_compatibility_callback_rule_cop,
+    define_compatibility_rule, define_node_rule_cop, define_recovery_rubocop_callback_rule_cop,
+    define_rubocop_callback_rule_cop, define_rule, define_stateful_call_rule_cop,
+    define_stateful_node_rule_cop, define_stateful_rubocop_callback_rule_cop, define_stateful_rule,
+    dispatch_rubocop_callback, rubocop_callback_matches,
 };

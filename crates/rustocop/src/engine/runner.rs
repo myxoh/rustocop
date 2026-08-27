@@ -23,7 +23,7 @@ pub(crate) fn inspect_files(
     if worker_count <= 1 {
         return files
             .iter()
-            .map(|path| plan.inspect_file(path, &options.inspection))
+            .map(|path| plan.inspect_file(path, &options.inspection, options.correction_loop))
             .collect();
     }
 
@@ -39,7 +39,10 @@ pub(crate) fn inspect_files(
                         let Some(path) = files.get(index) else {
                             return Ok(results);
                         };
-                        results.push((index, plan.inspect_file(path, &options.inspection)?));
+                        results.push((
+                            index,
+                            plan.inspect_file(path, &options.inspection, options.correction_loop)?,
+                        ));
                     }
                 })
             })
@@ -121,6 +124,7 @@ mod tests {
             include_non_native_cops: false,
             non_native_cops: Vec::new(),
             force_exclusion: false,
+            correction_loop: true,
             inspection: InspectionConfig {
                 autocorrect: AutocorrectMode::None,
                 ignore_disable_comments: false,
