@@ -81,6 +81,7 @@ cop_modules!(
     compatibility_migration_batch_three,
     compatibility_migration_batch_four,
     compatibility_migration_batch_five,
+    compatibility_migration_batch_six,
     compatibility_lexical_rules,
     comparable_clamp_rules,
     control_flow_completion_batch,

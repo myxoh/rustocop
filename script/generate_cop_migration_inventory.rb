@@ -50,6 +50,7 @@ registry = RuboCop::Cop::Registry.global
 source_shaped_batches = %w[
   compatibility_migration_batch_four.rs
   compatibility_migration_batch_five.rs
+  compatibility_migration_batch_six.rs
 ].each_with_object({}) do |file, reviews|
   path = File.join(crate_root, "src", "cops", "prism", file)
   registrations = File.read(path).split(/^}\s*$/, 2).first
