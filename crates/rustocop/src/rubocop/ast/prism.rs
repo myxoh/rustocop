@@ -291,6 +291,34 @@ impl Converter<'_> {
             }
         }
 
+        if let Some(super_node) = node.as_forwarding_super_node() {
+            if let Some(block) = super_node.block() {
+                let mut super_end = block.opening_loc().start_offset();
+                while super_end > node.location().start_offset()
+                    && self.source.as_bytes()[super_end - 1].is_ascii_whitespace()
+                {
+                    super_end -= 1;
+                }
+                let outer = self.ast.add_node(
+                    implicit_block_kind(block.parameters()),
+                    Vec::new(),
+                    Some(self.location(&node)),
+                );
+                self.attach(outer);
+                let inner = self.ast.add_node(
+                    "zsuper",
+                    Vec::new(),
+                    Some(self.character_range(node.location().start_offset()..super_end)),
+                );
+                self.ast.append_child(outer, NodeValue::Node(inner));
+                self.frames.push(Frame::Super {
+                    outer,
+                    super_node: inner,
+                });
+                return;
+            }
+        }
+
         let kind = if self.pattern_depth > 0 && raw.ends_with("TargetNode") {
             "match_var"
         } else if self.multiple_assignment_depth > 0 {
@@ -310,6 +338,21 @@ impl Converter<'_> {
         } else {
             parser_kind(&raw, self.source_for(&node))
         };
+        // Prism can retain MatchLastLineNode for the regexp nested under `!`
+        // after RuboCop has corrected `if !/foo/` to `if !/foo/ =~ $_`.
+        // Parser classifies that regexp as an ordinary `regexp`; preserving
+        // the MatchLastLine kind would make a correction loop add `=~ $_`
+        // again. Normalize the explicit match operand at the adapter boundary.
+        let kind = if kind == "match_current_line"
+            && self
+                .source
+                .get(node.location().end_offset()..)
+                .is_some_and(|tail| tail.trim_start().starts_with("=~"))
+        {
+            "regexp"
+        } else {
+            kind
+        };
         let children = scalar_children(&raw, kind, self.source_for(&node));
         let id = self
             .ast
@@ -323,8 +366,51 @@ impl Converter<'_> {
             let start = range.end.saturating_sub(name.chars().count());
             self.ast.set_location(id, "name", start..range.end, name);
         }
+        if matches!(
+            kind,
+            "lvar"
+                | "ivar"
+                | "cvar"
+                | "gvar"
+                | "lvasgn"
+                | "ivasgn"
+                | "cvasgn"
+                | "gvasgn"
+                | "arg"
+                | "optarg"
+                | "restarg"
+                | "kwarg"
+                | "kwoptarg"
+                | "kwrestarg"
+                | "blockarg"
+                | "shadowarg"
+        ) {
+            if let Some(name) = self.ast.node(id).symbol_child(0).map(str::to_owned) {
+                let range = self.location(&node);
+                self.ast.set_location(
+                    id,
+                    "name",
+                    range.start..range.start + name.chars().count(),
+                    &name,
+                );
+            }
+        }
+        if matches!(kind, "lvasgn" | "ivasgn" | "cvasgn" | "gvasgn" | "casgn")
+            && !raw.ends_with("TargetNode")
+        {
+            if let Some(relative) = node_source.find('=') {
+                let begin = self.location(&node).start + node_source[..relative].chars().count();
+                self.ast.set_location(id, "operator", begin..begin + 1, "=");
+            }
+        }
         if raw == "UnlessNode" {
             self.set_keyword_location(id, "unless");
+        }
+        if raw == "PreExecutionNode" {
+            self.set_keyword_location(id, "BEGIN");
+        }
+        if raw == "PostExecutionNode" {
+            self.set_keyword_location(id, "END");
         }
         self.frames.push(Frame::Node(id));
     }
@@ -355,22 +441,23 @@ impl Converter<'_> {
                 (Some("["), source.ends_with(']').then_some("]"))
             }
             "ArrayNode" if source.starts_with('%') => {
-                let opening_end = source
-                    .char_indices()
-                    .find(|(_, character)| matches!(character, '(' | '[' | '{' | '<'))
-                    .map(|(index, character)| index + character.len_utf8());
+                // Percent arrays accept both paired delimiters (`%W(...)`) and
+                // arbitrary single-character delimiters (`%W'...'`). Prism's
+                // opening location includes the `%W`/`%w` sigil and delimiter.
+                let delimiter = source.char_indices().nth(2);
+                let opening_end = delimiter.map(|(index, character)| index + character.len_utf8());
                 let opening = opening_end.and_then(|end| source.get(..end));
-                let closing = source
-                    .chars()
-                    .last()
-                    .map(|character| match character {
-                        ')' => ")",
-                        ']' => "]",
-                        '}' => "}",
-                        '>' => ">",
-                        _ => "",
-                    })
-                    .filter(|value| !value.is_empty());
+                let closing_character = delimiter.map(|(_, character)| match character {
+                    '(' => ')',
+                    '[' => ']',
+                    '{' => '}',
+                    '<' => '>',
+                    other => other,
+                });
+                let closing = closing_character.and_then(|expected| {
+                    let (index, actual) = source.char_indices().next_back()?;
+                    (actual == expected).then(|| &source[index..])
+                });
                 (opening, closing)
             }
             "HashNode" | "KeywordHashNode" if source.starts_with('{') => {
@@ -1043,6 +1130,9 @@ impl<'pr> Visit<'pr> for Converter<'_> {
         if let Some(operator) = node.operator_loc() {
             self.set_location(resbody, "operator", operator);
         }
+        if let Some(assoc) = node.operator_loc() {
+            self.set_location(resbody, "assoc", assoc);
+        }
         let clause_start = node.keyword_loc().start_offset();
         let clause_end = node
             .statements()
@@ -1267,14 +1357,18 @@ impl<'pr> Visit<'pr> for Converter<'_> {
             unreachable!()
         };
         self.visit(&node.predicate());
-        if let Some(statements) = node.statements() {
-            self.visit_statements_node(&statements);
-        } else {
-            self.ast.append_child(conditional, NodeValue::Nil);
-        }
+        // Parser represents `unless condition; body; else other; end` using
+        // the `if` node shape `(if condition other body)`. Preserve that
+        // branch order so rubocop-ast's `if_branch`/`else_branch` queries
+        // remain authoritative over the Prism tree.
         if let Some(otherwise) = node.else_clause() {
             self.set_location(conditional, "else", otherwise.else_keyword_loc());
             self.visit(&otherwise.as_node());
+        } else {
+            self.ast.append_child(conditional, NodeValue::Nil);
+        }
+        if let Some(statements) = node.statements() {
+            self.visit_statements_node(&statements);
         } else {
             self.ast.append_child(conditional, NodeValue::Nil);
         }
@@ -1433,6 +1527,21 @@ impl<'pr> Visit<'pr> for Converter<'_> {
         self.set_location(in_pattern, "keyword", node.in_loc());
         if let Some(location) = node.then_loc() {
             self.set_location(in_pattern, "begin", location);
+        } else if let Some(first_statement) = node
+            .statements()
+            .and_then(|statements| statements.body().first())
+        {
+            let gap = pattern.location().end_offset()..first_statement.location().start_offset();
+            if let Some(relative) = self
+                .source
+                .get(gap.clone())
+                .and_then(|source| source.find(';'))
+            {
+                let bytes = gap.start + relative..gap.start + relative + 1;
+                let range = self.character_range(bytes.clone());
+                let text = self.source.get(bytes).unwrap_or("");
+                self.ast.set_location(in_pattern, "begin", range, text);
+            }
         }
     }
 
@@ -1860,11 +1969,16 @@ impl<'pr> Visit<'pr> for Converter<'_> {
     }
 
     fn visit_forwarding_super_node(&mut self, node: &ForwardingSuperNode<'pr>) {
-        let Frame::Node(super_node) = *self.frames.last().expect("forwarding-super frame") else {
-            unreachable!()
+        let frame = *self.frames.last().expect("forwarding-super frame");
+        let super_node = match frame {
+            Frame::Node(super_node) | Frame::Super { super_node, .. } => super_node,
+            Frame::Transparent | Frame::Call { .. } => unreachable!(),
         };
         self.ast.clear_children(super_node);
-        if let Some(block) = node.block() {
+        if let Frame::Super { outer, .. } = frame {
+            let block = node.block().expect("block forwarding-super frame");
+            self.populate_block(&block, outer);
+        } else if let Some(block) = node.block() {
             self.visit(&block.as_node());
         }
         let start = node.location().start_offset();
@@ -2018,7 +2132,7 @@ fn parser_kind(raw: &str, source: &str) -> &'static str {
         "ClassNode" => "class",
         "ClassVariableReadNode" => "cvar",
         "ClassVariableTargetNode" | "ClassVariableWriteNode" => "cvasgn",
-        "ConstantPathNode" | "ConstantReadNode" | "ConstantTargetNode" => "const",
+        "ConstantPathNode" | "ConstantReadNode" => "const",
         "ConstantPathWriteNode" | "ConstantWriteNode" => "casgn",
         "DefNode" => "def",
         "DefinedNode" => "defined?",
@@ -2049,7 +2163,8 @@ fn parser_kind(raw: &str, source: &str) -> &'static str {
         "InstanceVariableReadNode" => "ivar",
         "InstanceVariableTargetNode" | "InstanceVariableWriteNode" => "ivasgn",
         "IntegerNode" => "int",
-        "InterpolatedMatchLastLineNode" | "InterpolatedRegularExpressionNode" => "regexp",
+        "InterpolatedMatchLastLineNode" => "match_current_line",
+        "InterpolatedRegularExpressionNode" => "regexp",
         "InterpolatedStringNode" => "dstr",
         "InterpolatedSymbolNode" => "dsym",
         "InterpolatedXStringNode" => "xstr",
@@ -2059,7 +2174,9 @@ fn parser_kind(raw: &str, source: &str) -> &'static str {
         "LambdaNode" => "lambda",
         "LocalVariableReadNode" => "lvar",
         "LocalVariableTargetNode" | "LocalVariableWriteNode" => "lvasgn",
-        "MatchLastLineNode" | "RegularExpressionNode" => "regexp",
+        "ConstantTargetNode" | "ConstantPathTargetNode" => "casgn",
+        "MatchLastLineNode" => "match_current_line",
+        "RegularExpressionNode" => "regexp",
         "MatchPredicateNode" => "match_pattern_p",
         "MatchRequiredNode" => "match_pattern",
         "MatchWriteNode" => "match_with_lvasgn",

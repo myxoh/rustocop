@@ -8,33 +8,16 @@ use super::source_syntax::top_level_elements;
 use super::*;
 
 define_cops! {
-    DuplicateHashKey => "Lint/DuplicateHashKey" => node(as_hash_node, duplicate_hash_key),
-    InterpolationCheck => "Lint/InterpolationCheck" => node(as_string_node, interpolation_check),
-    TopLevelReturnWithArgument => "Lint/TopLevelReturnWithArgument" => node(as_return_node, top_level_return_with_argument),
     RedundantConstantBase => "Style/RedundantConstantBase" => any_node(redundant_constant_base),
     ArrayLiteralInRegexp => "Lint/ArrayLiteralInRegexp" => node(as_interpolated_regular_expression_node, array_literal_in_regexp),
-    DuplicateRescueException => "Lint/DuplicateRescueException" => node(as_rescue_node, duplicate_rescue_exception),
     LiteralAssignmentInCondition => "Lint/LiteralAssignmentInCondition" => any_node(literal_assignment_in_condition),
     NoReturnInBeginEndBlocks => "Lint/NoReturnInBeginEndBlocks" => node(as_return_node, no_return_in_begin_end_blocks),
     RescueType => "Lint/RescueType" => compatibility_callbacks(RescueTypeRule, [on_resbody]),
     FirstMethodParameterLineBreak => "Layout/FirstMethodParameterLineBreak" => node(as_def_node, first_method_parameter_line_break),
-    EndBlock => "Style/EndBlock" => node(as_post_execution_node, end_block),
 }
 
 define_compatibility_rule!(RescueTypeRule);
 
-fn end_block(
-    node: &ruby_prism::PostExecutionNode<'_>,
-    context: &mut CopContext<'_, '_>,
-) {
-    let keyword = node.keyword_loc();
-    context.replace(
-        "Avoid the use of `END` blocks. Use `Kernel#at_exit` instead.",
-        &keyword,
-        &keyword,
-        "at_exit",
-    );
-}
 
 fn array_literal_in_regexp(
     node: &InterpolatedRegularExpressionNode<'_>,

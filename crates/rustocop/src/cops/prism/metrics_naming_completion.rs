@@ -4,7 +4,6 @@ use super::*;
 define_cops! {
     ParameterLists => "Metrics/ParameterLists" => any_node(parameter_lists),
     CollectionLiteralLength => "Metrics/CollectionLiteralLength" => any_node(collection_literal_length),
-    BinaryOperatorParameterName => "Naming/BinaryOperatorParameterName" => node(as_def_node, binary_operator_parameter_name),
     BlockParameterName => "Naming/BlockParameterName" => any_node(block_parameter_name),
     PredicatePrefix => "Naming/PredicatePrefix" => any_node(predicate_prefix),
 }

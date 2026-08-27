@@ -24,7 +24,11 @@ fn partitions_cops_by_the_work_they_perform() {
     );
     assert_eq!(
         indices_for(&registry.phases.nodes),
-        ["Security/Eval", "Security/CompoundHash"]
+        ["Security/CompoundHash"]
+    );
+    assert_eq!(
+        indices_for(&registry.phases.compatibility_nodes),
+        ["Security/Eval"]
     );
     assert_eq!(indices_for(&registry.phases.parse_errors), ["Lint/Syntax"]);
 }

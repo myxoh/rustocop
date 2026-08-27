@@ -7,9 +7,6 @@ use project_files::*;
 
 declare_source_cops! {
     AddRuntimeDependency => "Gemspec/AddRuntimeDependency" => add_runtime_dependency,
-    ClassAndModuleCamelCase => "Naming/ClassAndModuleCamelCase" => camel_case,
-    ClassMethods => "Style/ClassMethods" => class_methods,
-    DuplicateElsifCondition => "Lint/DuplicateElsifCondition" => duplicate_elsif,
     DuplicatedGem => "Bundler/DuplicatedGem" => duplicated_gem,
 }
 

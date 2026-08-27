@@ -6,10 +6,8 @@ use std::collections::HashSet;
 define_cops! {
     UnusedMethodArgument => "Lint/UnusedMethodArgument" => node(as_def_node, unused_method_argument),
     UselessMethodDefinition => "Lint/UselessMethodDefinition" => node(as_def_node, useless_method_definition),
-    ConstantOverwrittenInRescue => "Lint/ConstantOverwrittenInRescue" => node(as_rescue_node, constant_overwritten_in_rescue),
     RedundantAssignment => "Style/RedundantAssignment" => source(redundant_assignment),
     ConstantResolution => "Lint/ConstantResolution" => any_node(constant_resolution),
-    ReturnInVoidContext => "Lint/ReturnInVoidContext" => node(as_return_node, return_in_void_context),
     AmbiguousEndlessMethodDefinition => "Style/AmbiguousEndlessMethodDefinition" => node(as_def_node, ambiguous_endless_method_definition),
     NestedMethodDefinition => "Lint/NestedMethodDefinition" => node(as_def_node, nested_method_definition),
     UselessConstantScoping => "Lint/UselessConstantScoping" => source(useless_constant_scoping),

@@ -2,7 +2,6 @@ use super::*;
 
 define_cops! {
     IneffectiveAccessModifier => "Lint/IneffectiveAccessModifier" => node(as_def_node, ineffective_access_modifier),
-    DefWithParentheses => "Style/DefWithParentheses" => node(as_def_node, def_with_parentheses),
     MissingRespondToMissing => "Style/MissingRespondToMissing" => node(as_def_node, missing_respond_to_missing),
 }
 

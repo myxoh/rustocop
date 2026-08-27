@@ -1,8 +1,6 @@
 use super::*;
 
-define_cops! {
-    EmptyLambdaParameter => "Style/EmptyLambdaParameter" => node(as_lambda_node, on_lambda),
-}
+pub(super) fn cops() -> Vec<Box<dyn Cop>> { Vec::new() }
 
 fn on_lambda(node: &ruby_prism::LambdaNode<'_>, context: &mut CopContext<'_, '_>) {
     let Some(parameters) = node

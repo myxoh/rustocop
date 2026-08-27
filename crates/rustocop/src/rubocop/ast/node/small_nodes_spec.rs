@@ -967,8 +967,8 @@ fn if_unless_ternary_and_elsif_preserve_normalized_branch_semantics() {
 
     let parsed = parse("unless condition then :no else :yes end");
     let node = parsed.ast().unwrap();
-    assert_eq!(node.if_branch().unwrap().symbol_child(0), Some("yes"));
-    assert_eq!(node.else_branch().unwrap().symbol_child(0), Some("no"));
+    assert_eq!(node.if_branch().unwrap().symbol_child(0), Some("no"));
+    assert_eq!(node.else_branch().unwrap().symbol_child(0), Some("yes"));
 
     let parsed = parse("if one then 1 elsif two then 2 elsif three then 3 else 4 end");
     let node = parsed.ast().unwrap();

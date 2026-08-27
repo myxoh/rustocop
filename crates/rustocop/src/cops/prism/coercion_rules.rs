@@ -1,8 +1,6 @@
 use super::*;
 
-define_cops! {
-    RedundantStringCoercion => "Lint/RedundantStringCoercion" => call(redundant_string_coercion),
-}
+pub(super) fn cops() -> Vec<Box<dyn Cop>> { Vec::new() }
 
 fn redundant_string_coercion(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     if call_name(node) != b"to_s" || argument_count(node) != 0 {

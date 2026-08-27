@@ -12,7 +12,6 @@ define_stateful_rule!(WordArrayRule, WordArrayState);
 const PERCENT_MSG: &str = "Use `%w` or `%W` for an array of words.";
 
 define_cops! {
-    RedundantCapitalW => "Style/RedundantCapitalW" => node(as_array_node, redundant_capital_w),
     SymbolArray => "Style/SymbolArray" => node(as_array_node, symbol_array),
     FetchEnvVar => "Style/FetchEnvVar" => source(fetch_env_var),
     StringConcatenation => "Style/StringConcatenation" => call(string_concatenation),

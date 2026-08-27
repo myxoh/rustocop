@@ -43,14 +43,14 @@ RSpec.describe "cop authoring tools" do
       "Style/GeneratedFamilyExample",
       "call",
       "--family",
-      "style_calls",
+      "collection_query_rules",
       "--dry-run"
     )
 
     expect(status).to be_success
     expect(stderr).to eq("")
     expect(stdout).to include(
-      "crates/rustocop/src/cops/prism/style_calls.rs",
+      "crates/rustocop/src/cops/prism/collection_query_rules.rs",
       "Append to the existing define_cops! block",
       'GeneratedFamilyExample => "Style/GeneratedFamilyExample" => call(generated_family_example)',
       "fn generated_family_example(node: &CallNode<'_>",

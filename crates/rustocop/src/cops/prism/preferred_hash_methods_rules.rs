@@ -1,8 +1,6 @@
 use super::*;
 
-define_cops! {
-    PreferredHashMethods => "Style/PreferredHashMethods" => call(preferred_hash_methods),
-}
+pub(super) fn cops() -> Vec<Box<dyn Cop>> { Vec::new() }
 
 fn preferred_hash_methods(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     if argument_count(node) == 0 {

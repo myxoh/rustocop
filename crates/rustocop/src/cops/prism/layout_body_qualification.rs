@@ -4,7 +4,6 @@ use crate::rubocop::ast::node::core::NodeRef as RubocopNodeRef;
 define_compatibility_rule!(EmptyLinesAroundAttributeAccessorRule);
 
 define_cops! {
-    EmptyLinesAroundBeginBody => "Layout/EmptyLinesAroundBeginBody" => node(as_begin_node, empty_begin_body),
     EmptyLinesAroundMethodBody => "Layout/EmptyLinesAroundMethodBody" => node(as_def_node, empty_method_body),
     EmptyLinesAroundAttributeAccessor => "Layout/EmptyLinesAroundAttributeAccessor" => compatibility_callbacks(EmptyLinesAroundAttributeAccessorRule, [on_send restrict ["attr_reader", "attr_writer", "attr_accessor", "attr"]]),
     EmptyLinesAroundBlockBody => "Layout/EmptyLinesAroundBlockBody" => node(as_block_node, empty_block_body),

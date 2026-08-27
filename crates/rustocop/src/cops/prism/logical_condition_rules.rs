@@ -1,7 +1,6 @@
 use super::*;
 
 define_cops! {
-    MultipleComparison => "Lint/MultipleComparison" => call(multiple_comparison),
     UnlessLogicalOperators => "Style/UnlessLogicalOperators" => node(as_unless_node, unless_logical_operators),
 }
 

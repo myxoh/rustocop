@@ -2,7 +2,6 @@ use super::*;
 
 define_cops! {
     ItWithoutArgumentsInBlock => "Lint/ItWithoutArgumentsInBlock" => node(as_it_local_variable_read_node, it_without_arguments_in_block),
-    NumberedParametersLimit => "Style/NumberedParametersLimit" => node(as_block_node, numbered_parameters_limit),
 }
 
 fn it_without_arguments_in_block(

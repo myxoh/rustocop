@@ -3,12 +3,9 @@ use super::*;
 define_cops! {
     SendWithMixinArgument => "Lint/SendWithMixinArgument" => call(send_with_mixin_argument),
     CaseEquality => "Style/CaseEquality" => call(case_equality),
-    ExactRegexpMatch => "Style/ExactRegexpMatch" => call(exact_regexp_match),
     IpAddresses => "Style/IpAddresses" => node(as_string_node, ip_addresses),
     LambdaCall => "Style/LambdaCall" => call(lambda_call),
     ObjectThen => "Style/ObjectThen" => call(object_then),
-    ReverseFind => "Style/ReverseFind" => call(reverse_find),
-    UnpackFirst => "Style/UnpackFirst" => call(unpack_first),
 }
 
 fn object_then(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {

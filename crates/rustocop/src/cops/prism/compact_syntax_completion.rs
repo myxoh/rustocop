@@ -10,7 +10,6 @@ const WHILE_UNTIL_MODIFIER_MSG: &str =
 define_cops! {
     FileRead => "Style/FileRead" => call(file_read),
     FileWrite => "Style/FileWrite" => rubocop_callbacks(FileWriteRule, [on_send restrict [b"open"]]),
-    WhileUntilModifier => "Style/WhileUntilModifier" => node_rule_aliases(WhileUntilModifierRule, on_while => [as_while_node, as_until_node]),
 }
 
 fn file_read(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {

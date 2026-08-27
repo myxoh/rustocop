@@ -1,8 +1,6 @@
 use super::*;
 
-define_cops! {
-    MixinUsage => "Style/MixinUsage" => call(mixin_usage),
-}
+pub(super) fn cops() -> Vec<Box<dyn Cop>> { Vec::new() }
 
 fn mixin_usage(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     let method = call_name(node);

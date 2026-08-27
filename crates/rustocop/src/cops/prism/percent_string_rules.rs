@@ -2,7 +2,6 @@ use super::*;
 
 define_cops! {
     PercentStringArray => "Lint/PercentStringArray" => node(as_array_node, percent_string_array),
-    PercentSymbolArray => "Lint/PercentSymbolArray" => node(as_array_node, percent_symbol_array),
     RedundantPercentQ => "Style/RedundantPercentQ" => any_node(redundant_percent_q),
 }
 

@@ -1,7 +1,6 @@
 use super::*;
 
 define_cops! {
-    NextWithoutAccumulator => "Lint/NextWithoutAccumulator" => node(as_next_node, next_without_accumulator),
     UnexpectedBlockArity => "Lint/UnexpectedBlockArity" => call(unexpected_block_arity),
 }
 

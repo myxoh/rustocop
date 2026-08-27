@@ -1,12 +1,8 @@
 use super::*;
 
-define_cops! {
-    DataDefineOverride => "Lint/DataDefineOverride" => call(data_define_override),
-    StructNewOverride => "Lint/StructNewOverride" => call(struct_new_override),
-    MixedRegexpCaptureTypes => "Lint/MixedRegexpCaptureTypes" => node(as_regular_expression_node, mixed_regexp_capture_types),
-}
+pub(super) fn cops() -> Vec<Box<dyn Cop>> { Vec::new() }
 
-const DATA_METHODS: &[&[u8]] = &[
+pub(super) const DATA_METHODS: &[&[u8]] = &[
     b"!",
     b"!=",
     b"!~",
@@ -65,7 +61,7 @@ const DATA_METHODS: &[&[u8]] = &[
     b"yield_self",
 ];
 
-const STRUCT_METHODS: &[&[u8]] = &[
+pub(super) const STRUCT_METHODS: &[&[u8]] = &[
     b"!",
     b"!=",
     b"!~",
@@ -273,7 +269,7 @@ fn mixed_regexp_capture_types(
     }
 }
 
-fn capture_types(pattern: &[u8], extended: bool) -> (bool, bool) {
+pub(super) fn capture_types(pattern: &[u8], extended: bool) -> (bool, bool) {
     let mut named = false;
     let mut numbered = false;
     let mut escaped = false;

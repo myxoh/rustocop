@@ -7,9 +7,6 @@ define_compatibility_rule!(EmptyWhenRule);
 define_cops!(
     EmptyWhen => "Lint/EmptyWhen" => compatibility_callbacks(EmptyWhenRule, [on_case]),
     ElseLayout => "Lint/ElseLayout" => node(as_else_node, else_layout),
-    MultilineInPatternThen => "Style/MultilineInPatternThen" => node(as_in_node, multiline_in_pattern_then),
-    MultilineIfModifier => "Style/MultilineIfModifier" => any_node(multiline_if_modifier),
-    MultilineWhenThen => "Style/MultilineWhenThen" => node(as_when_node, multiline_when_then),
 );
 
 impl EmptyWhenRule<'_, '_, '_, '_> {

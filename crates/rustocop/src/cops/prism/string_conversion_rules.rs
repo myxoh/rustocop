@@ -5,7 +5,6 @@ use super::*;
 define_cops! {
     ImplicitStringConcatenation => "Lint/ImplicitStringConcatenation" => node(as_interpolated_string_node, implicit_string_concatenation),
     RedundantInterpolation => "Style/RedundantInterpolation" => node(as_interpolated_string_node, redundant_interpolation),
-    RedundantInterpolationUnfreeze => "Style/RedundantInterpolationUnfreeze" => call(redundant_interpolation_unfreeze),
     StringLiterals => "Style/StringLiterals" => any_node(string_literals),
     StringLiteralsInInterpolation => "Style/StringLiteralsInInterpolation" => node(as_string_node, string_literals_in_interpolation),
 }

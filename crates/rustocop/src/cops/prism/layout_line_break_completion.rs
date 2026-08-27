@@ -4,7 +4,6 @@ use super::*;
 define_cops! {
     MultilineHashKeyLineBreaks => "Layout/MultilineHashKeyLineBreaks" => any_node(multiline_hash_key_line_breaks),
     SingleLineBlockChain => "Layout/SingleLineBlockChain" => any_node(single_line_block_chain),
-    ConditionPosition => "Layout/ConditionPosition" => any_node(condition_position),
 }
 
 #[allow(dead_code)]

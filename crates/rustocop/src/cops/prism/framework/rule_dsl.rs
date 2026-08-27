@@ -155,6 +155,9 @@ macro_rules! compatibility_callback_matches {
     ($node:ident, on_begin) => {
         $node.kind() == "begin"
     };
+    ($node:ident, on_defined) => {
+        $node.kind() == "defined?"
+    };
     ($node:ident, on_class) => {
         $node.kind() == "class"
     };
@@ -225,6 +228,11 @@ macro_rules! dispatch_compatibility_callback {
     ($rule:ident, $node:ident, on_begin) => {
         if $node.kind() == "begin" {
             $rule.on_begin($node);
+        }
+    };
+    ($rule:ident, $node:ident, on_defined) => {
+        if $node.kind() == "defined?" {
+            $rule.on_defined($node);
         }
     };
     ($rule:ident, $node:ident, on_class) => {

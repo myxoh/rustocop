@@ -14,8 +14,6 @@ const YODA_EXPRESSION_MSG: &str = "Non-literal operand (`{source}`) should be fi
 define_cops!(
     MultilineMemoization => "Style/MultilineMemoization" => source(multiline_memoization),
     StaticClass => "Style/StaticClass" => node(as_class_node, static_class),
-    TrailingBodyOnClass => "Style/TrailingBodyOnClass" => any_node(trailing_body_on_class),
-    TrailingBodyOnModule => "Style/TrailingBodyOnModule" => node(as_module_node, trailing_body_on_module),
     YodaExpression => "Style/YodaExpression" => stateful_call_rule(YodaExpressionRule, YodaExpressionState, on_send, restrict [b"*", b"+", b"&", b"|", b"^"]),
 );
 

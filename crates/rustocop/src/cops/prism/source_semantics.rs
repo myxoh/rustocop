@@ -11,12 +11,6 @@ define_cops! {
     GemVersion => "Bundler/GemVersion" => source(gem_version),
     MultilineArrayLineBreaks => "Layout/MultilineArrayLineBreaks" => any_node(multiline_array_line_breaks),
     ErbNewArguments => "Lint/ErbNewArguments" => call(erb_new_arguments),
-    HashNewWithKeywordArgumentsAsDefault => "Lint/HashNewWithKeywordArgumentsAsDefault" => source(hash_new_with_keyword_arguments_as_default),
-    LambdaWithoutLiteralBlock => "Lint/LambdaWithoutLiteralBlock" => call(lambda_without_literal_block),
-    RequireRelativeSelfPath => "Lint/RequireRelativeSelfPath" => source(require_relative_self_path),
-    SharedMutableDefault => "Lint/SharedMutableDefault" => call(shared_mutable_default),
-    OptionalArguments => "Style/OptionalArguments" => node(as_def_node, optional_arguments),
-    OptionalBooleanParameter => "Style/OptionalBooleanParameter" => node(as_def_node, optional_boolean_parameter),
 }
 
 fn gem_version(context: &mut CopContext<'_, '_>) {

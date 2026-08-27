@@ -1,11 +1,7 @@
 use super::*;
 
 pub(super) fn cops() -> Vec<Box<dyn Cop>> {
-    vec![
-        Box::new(BinaryOperatorWithIdenticalOperands),
-        Box::new(HashCompareByIdentity),
-        Box::new(RandOne),
-    ]
+    Vec::new()
 }
 
 struct BinaryOperatorWithIdenticalOperands;
@@ -133,85 +129,4 @@ fn equivalent_lists<'pr>(
             .iter()
             .zip(&right)
             .all(|(left, right)| equivalent_operands(left, right, source))
-}
-
-struct HashCompareByIdentity;
-
-impl Cop for HashCompareByIdentity {
-    fn name(&self) -> &'static str {
-        "Lint/HashCompareByIdentity"
-    }
-
-    fn on_call(&self, node: &CallNode<'_>, context: &mut Context) {
-        if !matches!(
-            call_name(node),
-            b"key?" | b"has_key?" | b"fetch" | b"[]" | b"[]="
-        ) {
-            return;
-        }
-        let Some(key_call) = first_argument(node).and_then(|argument| argument.as_call_node())
-        else {
-            return;
-        };
-        if !match_call(&key_call)
-            .named(b"object_id")
-            .without_arguments()
-            .matches()
-        {
-            return;
-        }
-        context.report(
-            self.name(),
-            "Use `Hash#compare_by_identity` instead of using `object_id` for keys.",
-            node.location(),
-        );
-    }
-}
-
-struct RandOne;
-
-impl Cop for RandOne {
-    fn name(&self) -> &'static str {
-        "Lint/RandOne"
-    }
-
-    fn on_node<'pr>(
-        &self,
-        node: &Node<'pr>,
-        _ancestors: &[Node<'pr>],
-        source: &str,
-        context: &mut Context,
-    ) {
-        let Some(call) = node.as_call_node() else {
-            return;
-        };
-        if !match_call(&call)
-            .named(b"rand")
-            .on_implicit_or_root_constant(b"Kernel")
-            .with_argument_count(1)
-            .matches()
-        {
-            return;
-        }
-        let Some(argument) = only_argument(&call) else {
-            return;
-        };
-        let one = argument
-            .as_integer_node()
-            .and_then(|integer| TryInto::<i32>::try_into(integer.value()).ok())
-            .is_some_and(|value| value.abs() == 1)
-            || argument
-                .as_float_node()
-                .is_some_and(|float| float.value().abs() == 1.0);
-        if !one {
-            return;
-        }
-        let location = call.location();
-        let method = source_at(source, &location);
-        context.report(
-            self.name(),
-            format!("`{method}` always returns `0`. Perhaps you meant `rand(2)` or `rand`?"),
-            location,
-        );
-    }
 }

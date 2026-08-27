@@ -2,9 +2,7 @@ use ruby_prism::Location;
 
 use super::*;
 
-define_cops! {
-    NilLambda => "Style/NilLambda" => any_node(nil_lambda),
-}
+pub(super) fn cops() -> Vec<Box<dyn Cop>> { Vec::new() }
 
 fn nil_lambda(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
     if let Some(lambda) = node.as_lambda_node() {

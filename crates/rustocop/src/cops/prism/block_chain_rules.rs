@@ -1,8 +1,6 @@
 use super::*;
 
-define_cops! {
-    MultilineBlockChain => "Style/MultilineBlockChain" => call(multiline_block_chain),
-}
+pub(super) fn cops() -> Vec<Box<dyn Cop>> { Vec::new() }
 
 fn multiline_block_chain(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     let Some(_) = node.block().and_then(|block| block.as_block_node()) else {

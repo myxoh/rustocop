@@ -10,7 +10,28 @@ define_cops! {
     NumberedParameterAssignment => "Lint/NumberedParameterAssignment" => recovered_node(as_local_variable_write_node, numbered_parameter_assignment),
     RaiseException => "Lint/RaiseException" => call(raise_exception),
     DateTime => "Style/DateTime" => call(date_time),
-    YAMLFileRead => "Style/YAMLFileRead" => call_rule(YamlFileReadRule, on_send, restrict [b"load", b"safe_load", b"parse"]),
+}
+
+fn numbered_parameter_assignment(
+    node: &ruby_prism::LocalVariableWriteNode<'_>,
+    context: &mut CopContext<'_, '_>,
+) {
+    let name = node.name().as_slice();
+    let Some(digits) = name.strip_prefix(b"_") else {
+        return;
+    };
+    if digits.is_empty() || !digits.iter().all(u8::is_ascii_digit) {
+        return;
+    }
+    let Ok(number) = String::from_utf8_lossy(digits).parse::<usize>() else {
+        return;
+    };
+    let message = if (1..=9).contains(&number) {
+        format!("`_{number}` is reserved for numbered parameter; consider another name.")
+    } else {
+        format!("`_{number}` is similar to numbered parameter; consider another name.")
+    };
+    context.report(message, node.location());
 }
 
 fn raise_exception(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
@@ -98,27 +119,6 @@ fn circular_argument_reference(node: &Node<'_>, context: &mut CopContext<'_, '_>
     );
 }
 
-fn numbered_parameter_assignment(
-    node: &ruby_prism::LocalVariableWriteNode<'_>,
-    context: &mut CopContext<'_, '_>,
-) {
-    let name = node.name().as_slice();
-    let Some(digits) = name.strip_prefix(b"_") else {
-        return;
-    };
-    if digits.is_empty() || !digits.iter().all(u8::is_ascii_digit) {
-        return;
-    }
-    let Ok(number) = String::from_utf8_lossy(digits).parse::<usize>() else {
-        return;
-    };
-    let message = if (1..=9).contains(&number) {
-        format!("`_{number}` is reserved for numbered parameter; consider another name.")
-    } else {
-        format!("`_{number}` is similar to numbered parameter; consider another name.")
-    };
-    context.report(message, node.location());
-}
 
 fn inherit_exception(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
     let exception = if let Some(class) = node.as_class_node() {

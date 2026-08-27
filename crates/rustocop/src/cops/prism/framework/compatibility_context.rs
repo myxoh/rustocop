@@ -286,6 +286,10 @@ impl<'context, 'processed, 'source> CompatibilityCopContext<'context, 'processed
         self.reporter.config_values(key)
     }
 
+    pub(super) fn related_config_value(&self, cop_name: &str, key: &str) -> Option<&str> {
+        self.reporter.related_config_value(cop_name, key)
+    }
+
     pub(super) fn config_map(
         &self,
         key: &str,

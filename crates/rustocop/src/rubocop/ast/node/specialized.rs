@@ -325,7 +325,9 @@ impl<'ast> NodeRef<'ast> {
     }
 
     pub(crate) fn send_node(self) -> Option<Self> {
-        self.node_child(0).filter(|node| node.call_type())
+        matches!(self.kind(), "block" | "numblock" | "itblock")
+            .then(|| self.node_child(0))
+            .flatten()
     }
     pub(crate) fn arguments_node(self) -> Option<Self> {
         match self.kind() {
@@ -373,6 +375,7 @@ impl<'ast> NodeRef<'ast> {
     pub(crate) fn body(self) -> Option<Self> {
         match self.kind() {
             "block" | "numblock" | "itblock" | "class" | "for" | "resbody" => self.node_child(2),
+            "while" | "until" | "while_post" | "until_post" => self.node_child(1),
             "def" => self.node_child(2),
             "defs" => self.node_child(3),
             "module" | "sclass" => self.node_child(1),
@@ -446,7 +449,9 @@ impl<'ast> NodeRef<'ast> {
             "block" | "numblock" | "itblock" => matches!(self.method_name(), Some("each" | "tap")),
             "def" | "defs" => {
                 (self.kind() == "def" && self.method_name() == Some("initialize"))
-                    || self.method_name().is_some_and(|name| name.ends_with('='))
+                    || self.method_name().is_some_and(|name| {
+                        name.ends_with('=') && !matches!(name, "==" | "===" | "!=" | "<=" | ">=")
+                    })
             }
             "ensure" => true,
             "for" => true,
@@ -516,7 +521,15 @@ impl<'ast> NodeRef<'ast> {
         }
     }
     pub(crate) fn lambda_literal(self) -> bool {
-        self.kind() == "lambda" || self.lambda_block()
+        // rubocop-ast reserves `lambda_literal?` for the `->` form. A
+        // `lambda { ... }` command is a lambda block, but not a literal for
+        // cops such as Style/EmptyLambdaParameter.
+        self.kind() == "lambda"
+            || self.source() == Some("->")
+            || matches!(self.kind(), "block" | "numblock" | "itblock")
+                && self
+                    .send_node()
+                    .is_some_and(|send| send.source() == Some("->"))
     }
     pub(crate) fn forwarded_arguments(self) -> Vec<Self> {
         (self.kind() == "forward_args")
@@ -828,6 +841,8 @@ impl<'ast> NodeRef<'ast> {
     pub(crate) fn value_node(self) -> Option<Self> {
         match self.kind() {
             "pair" => self.node_child(1),
+            "lvasgn" | "ivasgn" | "cvasgn" | "gvasgn" => self.node_child(1),
+            "casgn" => self.node_child(2),
             "kwsplat" | "forwarded_kwrestarg" => Some(self),
             _ => None,
         }

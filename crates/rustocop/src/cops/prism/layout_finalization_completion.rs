@@ -6,7 +6,6 @@ define_cops! {
     SpaceAroundEqualsInParameterDefault => "Layout/SpaceAroundEqualsInParameterDefault" => node(as_optional_parameter_node, space_around_parameter_equals),
     SpaceInLambdaLiteral => "Layout/SpaceInLambdaLiteral" => node(as_lambda_node, space_in_lambda_literal),
     TrailingEmptyLines => "Layout/TrailingEmptyLines" => source(trailing_empty_lines),
-    TrailingBodyOnMethodDefinition => "Style/TrailingBodyOnMethodDefinition" => node(as_def_node, trailing_method_body),
     SpaceInsideRangeLiteralCompatibility => "Layout/SpaceInsideRangeLiteral" => compatibility_callbacks(SpaceInsideRangeLiteralCompatibilityRule, [on_irange, on_erange]),
 }
 

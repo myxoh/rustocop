@@ -1,8 +1,6 @@
 use super::*;
 
-define_cops! {
-    ArrayIntersectWithSingleElement => "Style/ArrayIntersectWithSingleElement" => call(array_intersect_with_single_element),
-}
+pub(super) fn cops() -> Vec<Box<dyn Cop>> { Vec::new() }
 
 fn array_intersect_with_single_element(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     if call_name(node) != b"intersect?"

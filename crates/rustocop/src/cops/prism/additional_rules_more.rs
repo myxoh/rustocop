@@ -2,8 +2,6 @@ use super::source_helpers::*;
 use super::*;
 
 declare_source_cops! {
-    LeadingEmptyLines => "Layout/LeadingEmptyLines" => leading_empty_lines,
-    EmptyBlockParameter => "Style/EmptyBlockParameter" => empty_block_parameter,
     TripleQuotes => "Lint/TripleQuotes" => triple_quotes,
     OrderedMagicComments => "Lint/OrderedMagicComments" => ordered_magic_comments,
 }

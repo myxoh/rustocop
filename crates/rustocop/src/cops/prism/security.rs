@@ -2,12 +2,8 @@ use super::*;
 
 pub(super) fn cops() -> Vec<Box<dyn Cop>> {
     vec![
-        Box::new(Eval),
         Box::new(CompoundHash),
-        Box::new(JsonLoad),
         Box::new(Open),
-        Box::new(IoMethods),
-        Box::new(YamlLoad),
     ]
 }
 
@@ -40,36 +36,6 @@ impl Cop for YamlLoad {
     }
 }
 
-struct Eval;
-
-impl Cop for Eval {
-    fn name(&self) -> &'static str {
-        "Security/Eval"
-    }
-
-    fn on_call(&self, node: &CallNode<'_>, context: &mut Context) {
-        let Some(code) = match_call(node)
-            .named(b"eval")
-            .with_receiver_matching(eval_receiver)
-            .capture_first_argument()
-        else {
-            return;
-        };
-        if code.as_string_node().is_some() || recursive_literal_string(&code) {
-            return;
-        }
-
-        if let Some(selector) = node.message_loc() {
-            context.report(
-                self.name(),
-                "The use of `eval` is a serious security risk.",
-                selector,
-            );
-        }
-    }
-}
-
-struct JsonLoad;
 
 struct CompoundHash;
 
@@ -175,37 +141,6 @@ fn compound_hash_operator_write(node: &Node<'_>, source: &str) -> bool {
         && ["^=", "+=", "*=", "|="]
             .iter()
             .any(|operator| node_source(source, node).contains(operator))
-}
-
-impl Cop for JsonLoad {
-    fn name(&self) -> &'static str {
-        "Security/JSONLoad"
-    }
-
-    fn on_call(&self, node: &CallNode<'_>, context: &mut Context) {
-        let method = call_name(node);
-        if !match_call(node)
-            .named_any(&[b"load", b"restore"])
-            .on_root_constant(b"JSON")
-            .matches()
-            || has_keyword(node, b"create_additions")
-        {
-            return;
-        }
-
-        if let Some(selector) = node.message_loc() {
-            context.replace(
-                self.name(),
-                format!(
-                    "Prefer `JSON.parse` over `JSON.{}`.",
-                    String::from_utf8_lossy(method)
-                ),
-                &selector,
-                &selector,
-                "parse",
-            );
-        }
-    }
 }
 
 struct Open;

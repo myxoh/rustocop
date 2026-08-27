@@ -3,7 +3,6 @@ use super::*;
 pub(super) fn cops() -> Vec<Box<dyn Cop>> {
     vec![
         Box::new(ArrayFirstLast),
-        Box::new(RedundantArrayFlatten),
         Box::new(RedundantSortBy),
     ]
 }
@@ -131,9 +130,9 @@ fn chained_bracket_call(call: &CallNode<'_>, ancestors: &[Node<'_>]) -> bool {
     })
 }
 
-struct RedundantArrayFlatten;
+/* migrated to compatibility_migration_batch_four */
 
-impl Cop for RedundantArrayFlatten {
+/*impl Cop for RedundantArrayFlatten {
     fn name(&self) -> &'static str {
         "Style/RedundantArrayFlatten"
     }
@@ -164,7 +163,7 @@ impl Cop for RedundantArrayFlatten {
             offense,
         );
     }
-}
+}*/
 
 fn join_without_separator(call: &CallNode<'_>) -> bool {
     call.arguments().is_none_or(|arguments| {

@@ -7,17 +7,9 @@ mod interpolation;
 use interpolation::*;
 
 define_cops! {
-    InitialIndentation => "Layout/InitialIndentation" => source(initial_indentation),
     DuplicateMagicComment => "Lint/DuplicateMagicComment" => source(duplicate_magic_comment),
-    DoubleCopDisableDirective => "Style/DoubleCopDisableDirective" => source(double_cop_disable_directive),
-    RequireRangeParentheses => "Lint/RequireRangeParentheses" => node(as_range_node, require_range_parentheses),
     AsciiIdentifiers => "Naming/AsciiIdentifiers" => source(ascii_identifiers),
-    MultilineIfThen => "Style/MultilineIfThen" => any_node(multiline_if_then),
     ReturnNil => "Style/ReturnNil" => node(as_return_node, return_nil),
-    InPatternThen => "Style/InPatternThen" => node(as_in_node, in_pattern_then),
-    EmptyEnsure => "Lint/EmptyEnsure" => node(as_begin_node, empty_ensure),
-    BigDecimalNew => "Lint/BigDecimalNew" => call(big_decimal_new),
-    VariableInterpolation => "Style/VariableInterpolation" => node(as_embedded_variable_node, variable_interpolation),
 }
 
 fn big_decimal_new(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {

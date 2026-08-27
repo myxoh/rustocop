@@ -1,7 +1,6 @@
 use super::*;
 
 define_cops! {
-    EmptyLinesAroundBeginBody => "Layout/EmptyLinesAroundBeginBody" => source(empty_begin_body),
     EmptyLinesAroundMethodBody => "Layout/EmptyLinesAroundMethodBody" => source(empty_method_body),
     EmptyLinesAroundBlockBody => "Layout/EmptyLinesAroundBlockBody" => source(empty_block_body),
     EmptyLinesAroundArguments => "Layout/EmptyLinesAroundArguments" => source(empty_around_arguments),

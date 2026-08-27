@@ -324,6 +324,11 @@ impl<'source> ProcessedSource<'source> {
                     column: positions.column_for_byte(byte_range.start),
                 }
             }));
+            // Replacing the lightweight lexer's comments with Prism's
+            // authoritative comments must preserve Parser's source ordering.
+            // Several RuboCop APIs (notably `ProcessedSource#tokens[0]`) rely
+            // on this invariant.
+            tokens.sort_by_key(|token| (token.range.start, token.range.end));
             tokens
         } else {
             Vec::new()

@@ -1,8 +1,6 @@
 use super::*;
 
-define_cops! {
-    FileEmpty => "Style/FileEmpty" => call(file_empty),
-}
+pub(super) fn cops() -> Vec<Box<dyn Cop>> { Vec::new() }
 
 fn file_empty(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     if !context.target_ruby_version().at_least(2, 4) {

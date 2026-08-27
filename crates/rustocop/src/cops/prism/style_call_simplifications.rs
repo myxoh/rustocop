@@ -1,8 +1,6 @@
 use super::*;
 
-define_cops! {
-    SingleArgumentDig => "Style/SingleArgumentDig" => call(single_argument_dig),
-}
+pub(super) fn cops() -> Vec<Box<dyn Cop>> { Vec::new() }
 
 fn single_argument_dig(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     if !match_call(node)

@@ -1,7 +1,7 @@
 use super::*;
 
 pub(super) fn cops() -> Vec<Box<dyn Cop>> {
-    vec![Box::new(RedundantFreeze)]
+    Vec::new()
 }
 
 struct RedundantFreeze;

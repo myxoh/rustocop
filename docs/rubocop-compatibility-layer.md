@@ -165,6 +165,28 @@ compatibility token stream is not yet a complete replacement for RuboCop's
 lexer. The other 88 candidates were not relabeled or modified after that
 shared-layer boundary failed.
 
+As of `2026-08-27T01:57:51-04:00`, the migration ledger covers 148 of the 606
+built-in cops. The next 100 cops were migrated one at a time through the shared
+compatibility callback or investigation lifecycle and are registered in
+`compatibility_migration_batch_four.rs` and
+`compatibility_migration_batch_five.rs`. Superseded registrations were removed
+so the compatibility implementations are the production paths.
+
+The cohort passes all 1,351 cached RuboCop unit contracts. The authoritative
+scoped comparison against all 50 pinned projects classified all 70 exercised
+cops as `project_exact`; the remaining 30 are dormant in this fixed corpus.
+Rustocop and RuboCop produced the same 26,206 complete offense signatures, with
+zero mismatch signatures, zero unmatched offenses, and no native crash. The
+project-derived gaps strengthened shared Parser-shaped AST locations and body
+semantics rather than adding repository-specific branches, including arbitrary
+percent-array delimiters and physical-line handling for `begin` bodies.
+
+The machine-readable migration inventory was regenerated at an ISO 8601
+timestamp and now reports `148/606` audited and migrated cops. Each of these
+rows retains the pinned RuboCop source hash, effective callbacks, native source
+path, fixture/project evidence, structural classification, and documented
+parser adaptation.
+
 ## Translation rules
 
 1. Mirror the RuboCop source path and module boundary where practical.

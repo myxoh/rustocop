@@ -3,8 +3,6 @@ use super::*;
 define_cops! {
     BitwisePredicate => "Style/BitwisePredicate" => call(bitwise_predicate),
     ComparableBetween => "Style/ComparableBetween" => node(as_and_node, comparable_between),
-    DirEmpty => "Style/DirEmpty" => call(dir_empty),
-    EvenOdd => "Style/EvenOdd" => call(even_odd),
     MinMaxComparison => "Style/MinMaxComparison" => node(as_if_node, min_max_comparison),
 }
 

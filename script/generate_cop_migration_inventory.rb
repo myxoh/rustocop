@@ -42,6 +42,43 @@ rust_sources = Rustocop::CopImplementationInventory.sources(root: root)
 rubocop_root = Gem::Specification.find_by_name("rubocop").full_gem_path
 registry = RuboCop::Cop::Registry.global
 
+# These files contain cohorts that were reviewed cop-by-cop against the pinned
+# RuboCop implementation, the cached unit contracts, freshly captured upstream
+# examples, and the complete 50-project reference. Keeping the cohort mapping
+# beside the generator makes the structural claim reproducible instead of
+# relying on a hand-edited count in the generated JSON.
+source_shaped_batches = %w[
+  compatibility_migration_batch_four.rs
+  compatibility_migration_batch_five.rs
+].each_with_object({}) do |file, reviews|
+  path = File.join(crate_root, "src", "cops", "prism", file)
+  registrations = File.read(path).split(/^}\s*$/, 2).first
+  registrations.each_line do |line|
+    cop = line[/=>\s*"([^"]+)"\s*=>/, 1]
+    next unless cop
+
+    callbacks = line.scan(/\bon_[a-z_]+\b/).uniq
+    reviews[cop] = {
+      "rust_callbacks" => callbacks,
+      "compatibility_components" => [
+        "CompatibilityCopContext", "ProcessedSource", "RuboCopAST"
+      ],
+      "dsl_features" => [
+        "define_cops",
+        line.include?("compatibility_investigation") ? "compatibility_investigation" : "compatibility_callbacks",
+        "define_compatibility_rule"
+      ],
+      "similarity_score" => 4,
+      "structural_status" => "source_shaped_with_parser_adaptation",
+      "migration_status" => "migrated",
+      "structural_gaps" => [],
+      "documented_adaptations" => [
+        "Parser-shaped nodes, locations, callbacks, configuration, and corrections are supplied by the shared Prism compatibility layer."
+      ]
+    }
+  end
+end
+
 rows = active.map do |cop|
   cop_class = registry.find { |candidate| candidate.cop_name == cop }
   abort "RuboCop class not found for #{cop}" unless cop_class
@@ -50,6 +87,12 @@ rows = active.map do |cop|
   upstream_source = Pathname(source).relative_path_from(Pathname(rubocop_root)).to_s
   source_text = File.read(source)
   callbacks = cop_class.instance_methods(false).grep(/^on_/).map(&:to_s).sort
+  # Some cops receive their callback entirely from an included RuboCop mixin
+  # (for example StringHelp). The reviewed Rust registration records that
+  # effective callback even though it is absent from instance_methods(false).
+  if callbacks.empty? && source_shaped_batches.key?(cop)
+    callbacks = source_shaped_batches.fetch(cop).fetch("rust_callbacks")
+  end
   mixins = source_text.scan(/^\s+(?:include|extend)\s+([A-Z][A-Za-z0-9_:]*)\s*$/).flatten.uniq.sort
   implementations = Rustocop::CopImplementationInventory.registration_paths(
     cop, sources: rust_sources
@@ -71,6 +114,7 @@ rows = active.map do |cop|
     "dsl_features", "similarity_score", "structural_status", "migration_status",
     "structural_gaps", "documented_adaptations"
   )
+  reviewed = reviewed.merge(source_shaped_batches.fetch(cop, {}))
   mechanical.merge(
     {
       "rust_callbacks" => [],

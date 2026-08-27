@@ -6,10 +6,8 @@ mod negated_conditions;
 use negated_conditions::*;
 
 define_cops!(
-    IfUnlessModifierOfIfUnless => "Style/IfUnlessModifierOfIfUnless" => any_node(if_unless_modifier_of_if_unless),
     NegatedIf => "Style/NegatedIf" => node(as_if_node, negated_if),
     NegatedUnless => "Style/NegatedUnless" => node(as_unless_node, negated_unless),
-    NegatedWhile => "Style/NegatedWhile" => any_node(negated_while),
     NonNilCheck => "Style/NonNilCheck" => any_node(non_nil_check),
     NonLocalExitFromIterator => "Lint/NonLocalExitFromIterator" => node(as_return_node, non_local_exit_from_iterator),
 );

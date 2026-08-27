@@ -11,7 +11,6 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
         Box::new(ShadowingOuterLocalVariable),
         Box::new(HeredocDelimiterCase) as Box<dyn Cop>,
         Box::new(BlockForwarding) as Box<dyn Cop>,
-        custom("Lint/AmbiguousAssignment", ambiguous_assignment),
         Box::new(RescuedExceptionsVariableName) as Box<dyn Cop>,
         custom("Lint/ConstantReassignment", constant_reassignment),
     ];

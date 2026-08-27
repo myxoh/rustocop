@@ -6,7 +6,6 @@ define_cops! {
     RequireParentheses => "Lint/RequireParentheses" => call(require_parentheses),
     FileOpen => "Style/FileOpen" => call(file_open),
     KeywordArgumentsMerging => "Style/KeywordArgumentsMerging" => call(keyword_arguments_merging),
-    MethodCalledOnDoEndBlock => "Style/MethodCalledOnDoEndBlock" => call(method_called_on_do_end_block),
 }
 
 fn require_parentheses(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {

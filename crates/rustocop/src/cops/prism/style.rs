@@ -1,16 +1,12 @@
 use super::*;
 
-mod misc;
 
 pub(super) fn cops() -> Vec<Box<dyn Cop>> {
     let mut cops: Vec<Box<dyn Cop>> = vec![
-        Box::new(CharacterLiteral),
         Box::new(MethodCallWithoutArgsParentheses),
         Box::new(NilComparison),
         Box::new(NotKeyword),
-        Box::new(RedundantArrayConstructor),
     ];
-    cops.extend(misc::cops());
     cops
 }
 

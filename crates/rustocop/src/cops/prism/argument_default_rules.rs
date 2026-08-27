@@ -7,19 +7,9 @@ define_rule!(RedundantArgumentRule);
 define_rule!(OptionHashRule);
 
 define_cops! {
-    RedundantCurrentDirectoryInPath => "Style/RedundantCurrentDirectoryInPath" => call_rule(
-        RedundantCurrentDirectoryInPathRule,
-        on_send,
-        restrict [b"require_relative"]
-    ),
     RedundantArgument => "Style/RedundantArgument" => call_rule(
         RedundantArgumentRule,
         on_send
-    ),
-    OptionHash => "Style/OptionHash" => node_rule(
-        as_optional_parameter_node,
-        OptionHashRule,
-        on_optarg
     ),
 }
 

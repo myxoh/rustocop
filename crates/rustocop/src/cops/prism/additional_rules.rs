@@ -13,25 +13,16 @@ mod source_registry {
     declare_source_cops! {
         RubyVersionGlobalsUsage => "Gemspec/RubyVersionGlobalsUsage" => super::ruby_version_globals,
         AttributeAssignment => "Gemspec/AttributeAssignment" => super::attribute_assignment,
-        AutoResourceCleanup => "Style/AutoResourceCleanup" => super::auto_resource_cleanup,
     }
 }
 
 define_call_cop!(InsecureProtocolSource => "Bundler/InsecureProtocolSource" => insecure_protocol_source);
-define_call_cop!(EachWithObjectArgument => "Lint/EachWithObjectArgument" => each_with_object_argument);
-define_call_cop!(RefinementImportMethods => "Lint/RefinementImportMethods" => refinement_import_methods);
 define_node_cop!(DisjunctiveAssignmentInConstructor => "Lint/DisjunctiveAssignmentInConstructor" => as_def_node => disjunctive_assignment);
-define_node_cop!(UselessDefined => "Lint/UselessDefined" => as_defined_node => useless_defined);
-define_node_cop!(EmptyHeredoc => "Style/EmptyHeredoc" => as_string_node => empty_heredoc);
 
 pub(super) fn cops() -> Vec<Box<dyn Cop>> {
     let mut cops = source_registry::cops();
     cops.push(Box::new(InsecureProtocolSource));
-    cops.push(Box::new(EachWithObjectArgument));
-    cops.push(Box::new(RefinementImportMethods));
     cops.push(Box::new(DisjunctiveAssignmentInConstructor));
-    cops.push(Box::new(UselessDefined));
-    cops.push(Box::new(EmptyHeredoc));
     cops
 }
 

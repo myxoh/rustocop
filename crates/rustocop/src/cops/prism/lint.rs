@@ -3,67 +3,10 @@ use super::*;
 pub(super) fn cops() -> Vec<Box<dyn Cop>> {
     vec![
         Box::new(FloatComparison),
-        Box::new(FloatOutOfRange),
-        Box::new(RegexpAsCondition),
         Box::new(SelfAssignment),
     ]
 }
 
-define_any_node_cop!(RegexpAsCondition => "Lint/RegexpAsCondition" => regexp_as_condition);
-
-fn regexp_as_condition(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
-    if (node.as_match_last_line_node().is_none()
-        && node.as_interpolated_match_last_line_node().is_none())
-        || !context.ancestors().iter().any(conditional_node)
-    {
-        return;
-    }
-
-    context.insert_after(
-        node,
-        "Do not use regexp literal as a condition. The regexp literal matches `$_` implicitly.",
-        " =~ $_",
-    );
-}
-
-fn conditional_node(node: &Node<'_>) -> bool {
-    node.as_if_node().is_some()
-        || node.as_unless_node().is_some()
-        || node.as_while_node().is_some()
-        || node.as_until_node().is_some()
-        || node.as_for_node().is_some()
-}
-
-struct FloatOutOfRange;
-
-impl Cop for FloatOutOfRange {
-    fn name(&self) -> &'static str {
-        "Lint/FloatOutOfRange"
-    }
-
-    fn on_node<'pr>(
-        &self,
-        node: &Node<'pr>,
-        _ancestors: &[Node<'pr>],
-        source: &str,
-        context: &mut Context,
-    ) {
-        let Some(float) = node.as_float_node() else {
-            return;
-        };
-        let location = float.location();
-        let literal = source_at(source, &location);
-        let nonzero_mantissa = literal
-            .split(['e', 'E'])
-            .next()
-            .is_some_and(|mantissa| mantissa.bytes().any(|byte| matches!(byte, b'1'..=b'9')));
-        if !(float.value().is_infinite() || float.value() == 0.0 && nonzero_mantissa) {
-            return;
-        }
-
-        context.report(self.name(), "Float out of range.", location);
-    }
-}
 
 struct FloatComparison;
 

@@ -3,7 +3,6 @@ use super::*;
 define_cops! {
     NumericLiteralPrefix => "Style/NumericLiteralPrefix" => any_node(numeric_literal_prefix),
     NestedPercentLiteral => "Lint/NestedPercentLiteral" => node(as_array_node, nested_percent_literal),
-    OpenStructUse => "Style/OpenStructUse" => any_node(open_struct_use),
 }
 
 fn numeric_literal_prefix(node: &Node<'_>, context: &mut CopContext<'_, '_>) {

@@ -52,10 +52,13 @@ cached inventory. Each individual RSpec ID is bound to a named executable Rust
 test, its upstream description hash, and reviewable semantic terms or an
 explicit source rule; the complete binding is digest-checked. Its
 [generated progress ledger](docs/rubocop-compatibility-progress.md) tracks the
-source hashes and upstream spec ports. Ten cops now consume the layer through
-reviewed Prism adapters; all 649 of their cached unit contracts pass and all ten
-are exact on the 50-project corpus. Their project-by-project diagnostic coverage
-is tracked in the generated
+source hashes and upstream spec ports. The source-shape migration ledger now
+records 148 cops implemented through the compatibility callback or
+investigation adapters. The latest 100-cop cohort passes 1,351 cached unit
+contracts; all 70 cops exercised by the 50-project corpus are project-exact and
+the other 30 are dormant, with zero unmatched offenses. The original ten
+shared-mixin consumers retain project-by-project diagnostic coverage in the
+generated
 [compatibility-layer adoption report](docs/rubocop-compatibility-adoption.md).
 Shared-layer completion and cop parity remain separate claims.
 The per-cop

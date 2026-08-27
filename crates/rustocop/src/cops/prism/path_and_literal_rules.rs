@@ -2,8 +2,6 @@ use super::*;
 
 define_cops! {
     ExpandPathArguments => "Style/ExpandPathArguments" => call(expand_path_arguments),
-    RedundantDirGlobSort => "Lint/RedundantDirGlobSort" => call(redundant_dir_glob_sort),
-    PercentQLiterals => "Style/PercentQLiterals" => node(as_string_node, percent_q_literals),
     SlicingWithRange => "Style/SlicingWithRange" => call(slicing_with_range),
 }
 

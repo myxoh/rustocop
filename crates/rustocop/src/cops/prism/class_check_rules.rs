@@ -1,8 +1,6 @@
 use super::*;
 
-define_cops! {
-    ClassCheck => "Style/ClassCheck" => call(on_send),
-}
+pub(super) fn cops() -> Vec<Box<dyn Cop>> { Vec::new() }
 
 fn on_send(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     let current = call_name(node);

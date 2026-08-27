@@ -3,46 +3,10 @@ use ruby_prism::CallNode;
 use super::*;
 
 define_cops! {
-    MapToSet => "Style/MapToSet" => rubocop_callbacks(
-        MapToSetRule,
-        [on_send restrict [b"to_set"]]
-    ),
     MapToHash => "Style/MapToHash" => rubocop_callbacks(
         MapToHashRule,
         [on_send restrict [b"to_h"]]
     ),
-}
-
-impl MapToSetRule<'_, '_, '_> {
-    fn on_send(&mut self, node: &CallNode<'_>) {
-        let Some(map) = map_before_conversion(node) else {
-            return;
-        };
-        return_if!(node.block().is_some());
-
-        let method = String::from_utf8_lossy(map.name().as_slice());
-        let message = format!("Pass a block to `to_set` instead of calling `{method}.to_set`.");
-        self.register_offense(node, &map, "to_set", message, false);
-    }
-
-    fn register_offense(
-        &mut self,
-        node: &CallNode<'_>,
-        map: &CallNode<'_>,
-        replacement: &str,
-        message: String,
-        preserve_final_operator: bool,
-    ) {
-        register_map_conversion(
-            self.context,
-            node,
-            map,
-            replacement,
-            message,
-            preserve_final_operator,
-            None,
-        );
-    }
 }
 
 impl MapToHashRule<'_, '_, '_> {
