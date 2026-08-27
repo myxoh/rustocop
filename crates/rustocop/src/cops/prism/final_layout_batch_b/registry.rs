@@ -1,4 +1,4 @@
-use super::super::catalog_cop::custom;
+use super::super::catalog_cop::{compatibility_custom, custom};
 use super::*;
 
 pub(super) fn cops() -> Vec<Box<dyn Cop>> {
@@ -7,10 +7,10 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
             "Layout/SpaceInsideArrayPercentLiteral",
             array_percent_literal_spacing,
         ),
-        custom("Layout/RescueEnsureAlignment", end_alignment),
-        custom("Layout/SpaceAroundOperators", operator_spacing),
-        custom("Layout/HeredocIndentation", heredoc_indentation),
-        custom("Layout/SpaceAroundKeyword", space_around_keyword),
+        compatibility_custom("Layout/RescueEnsureAlignment", end_alignment),
+        compatibility_custom("Layout/SpaceAroundOperators", operator_spacing),
+        compatibility_custom("Layout/HeredocIndentation", heredoc_indentation),
+        compatibility_custom("Layout/SpaceAroundKeyword", space_around_keyword),
         custom(
             "Layout/SpaceInsidePercentLiteralDelimiters",
             percent_literal_delimiter_spacing,
@@ -245,7 +245,7 @@ fn percent_literal_delimiter_spacing(context: &mut CopContext<'_, '_>) {
     }
 }
 
-fn space_around_keyword(context: &mut CopContext<'_, '_>) {
+fn space_around_keyword(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     const KEYWORDS: &[&str] = &[
         "defined?", "BEGIN", "END", "and", "begin", "break", "case", "do", "else", "elsif", "end",
         "ensure", "for", "if", "in", "next", "not", "or", "rescue", "return", "super", "then",

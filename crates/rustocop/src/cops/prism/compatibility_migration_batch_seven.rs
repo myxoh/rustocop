@@ -212,7 +212,19 @@ impl DisableDirectiveRule<'_, '_, '_, '_> {
             let Some(rest) = text.strip_prefix("rubocop").map(str::trim_start).and_then(|rest| rest.strip_prefix(':')).map(str::trim_start) else { continue; };
             let mut pieces = rest.splitn(2, char::is_whitespace); let mode = pieces.next().unwrap_or_default(); if !matches!(mode, "enable" | "disable" | "todo") { continue; } let cops = pieces.next().unwrap_or_default().split(',').map(str::trim).filter(|cop| !cop.is_empty()).collect::<Vec<_>>(); let allowed = self.config_values("AllowedCops"); let disallowed = cops.iter().filter(|cop| !allowed.iter().any(|allowed| allowed == **cop)).copied().collect::<Vec<_>>(); if disallowed.is_empty() { continue; }
             let message = if allowed.is_empty() { "RuboCop disable/enable directives are not permitted.".to_owned() } else { format!("RuboCop disable/enable directives for `{}` are not permitted.", disallowed.join("`, `")) };
-            self.report(message, &comment);
+            let retained = cops
+                .iter()
+                .filter(|cop| allowed.iter().any(|allowed| allowed == **cop))
+                .copied()
+                .collect::<Vec<_>>();
+            let replacement = if retained.is_empty() {
+                String::new()
+            } else {
+                format!("# rubocop:{mode} {}", retained.join(", "))
+            };
+            add_offense!(self, &comment, message: message, |corrector| {
+                corrector.replace(&comment, replacement);
+            });
         }
     }
 }

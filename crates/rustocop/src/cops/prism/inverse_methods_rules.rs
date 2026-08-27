@@ -5,7 +5,7 @@ use ruby_prism::{BlockNode, CallNode, Node};
 use super::*;
 
 define_cops! {
-    InverseMethods => "Style/InverseMethods" => rubocop_callbacks(InverseMethodsRule, [on_send, on_block]),
+    InverseMethods => "Style/InverseMethods" => compatibility_prism_callbacks(InverseMethodsRule, [on_send, on_block]),
 }
 
 impl InverseMethodsRule<'_, '_, '_> {

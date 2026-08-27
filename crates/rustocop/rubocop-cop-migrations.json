@@ -1,6 +1,6 @@
 {
   "format_version": 2,
-  "updated_at": "2026-08-27T04:50:32-04:00",
+  "updated_at": "2026-08-27T05:02:05-04:00",
   "rubocop_version": "1.87.0",
   "rubocop_commit": "e5b788dba181ad94de30cfbad661c5d6aa08a4e5",
   "sampling": {
@@ -16,8 +16,8 @@
   },
   "target_cops": 606,
   "inventory_cops": 606,
-  "audited_cops": 268,
-  "migrated_cops": 268,
+  "audited_cops": 368,
+  "migrated_cops": 368,
   "cops": [
     {
       "cop": "Bundler/DuplicatedGem",
@@ -78,16 +78,24 @@
         "exact": 0,
         "classification": "dormant"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_new_investigation"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "SourceBuffer"
+      ],
+      "dsl_features": [
+        "compatibility_source"
+      ],
+      "similarity_score": 3,
+      "structural_status": "source_shaped_with_source_adapter",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The upstream investigation callback retains its source-oriented helpers while ProcessedSource, configuration, diagnostics, and corrections are supplied by CompatibilityCopContext."
+      ]
     },
     {
       "cop": "Bundler/GemComment",
@@ -114,16 +122,24 @@
         "exact": 0,
         "classification": "dormant"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_new_investigation"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "SourceBuffer"
+      ],
+      "dsl_features": [
+        "compatibility_custom"
+      ],
+      "similarity_score": 3,
+      "structural_status": "source_shaped_with_source_adapter",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The upstream investigation callback retains its source-oriented helpers while ProcessedSource, configuration, diagnostics, and corrections are supplied by CompatibilityCopContext."
+      ]
     },
     {
       "cop": "Bundler/GemFilename",
@@ -149,16 +165,24 @@
         "exact": 0,
         "classification": "dormant"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_new_investigation"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "SourceBuffer"
+      ],
+      "dsl_features": [
+        "compatibility_source"
+      ],
+      "similarity_score": 3,
+      "structural_status": "source_shaped_with_source_adapter",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The upstream investigation callback retains its source-oriented helpers while ProcessedSource, configuration, diagnostics, and corrections are supplied by CompatibilityCopContext."
+      ]
     },
     {
       "cop": "Bundler/GemVersion",
@@ -185,16 +209,24 @@
         "exact": 0,
         "classification": "dormant"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_new_investigation"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "SourceBuffer"
+      ],
+      "dsl_features": [
+        "compatibility_source"
+      ],
+      "similarity_score": 3,
+      "structural_status": "source_shaped_with_source_adapter",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The upstream investigation callback retains its source-oriented helpers while ProcessedSource, configuration, diagnostics, and corrections are supplied by CompatibilityCopContext."
+      ]
     },
     {
       "cop": "Bundler/InsecureProtocolSource",
@@ -266,16 +298,24 @@
         "exact": 0,
         "classification": "dormant"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_new_investigation"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "SourceBuffer"
+      ],
+      "dsl_features": [
+        "compatibility_source"
+      ],
+      "similarity_score": 3,
+      "structural_status": "source_shaped_with_source_adapter",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The upstream investigation callback retains its source-oriented helpers while ProcessedSource, configuration, diagnostics, and corrections are supplied by CompatibilityCopContext."
+      ]
     },
     {
       "cop": "Gemspec/AddRuntimeDependency",
@@ -383,16 +423,24 @@
         "exact": 0,
         "classification": "dormant"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_new_investigation"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "SourceBuffer"
+      ],
+      "dsl_features": [
+        "compatibility_custom"
+      ],
+      "similarity_score": 3,
+      "structural_status": "source_shaped_with_source_adapter",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The upstream investigation callback retains its source-oriented helpers while ProcessedSource, configuration, diagnostics, and corrections are supplied by CompatibilityCopContext."
+      ]
     },
     {
       "cop": "Gemspec/DeprecatedAttributeAssignment",
@@ -465,16 +513,24 @@
         "exact": 0,
         "classification": "dormant"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_new_investigation"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "SourceBuffer"
+      ],
+      "dsl_features": [
+        "compatibility_source"
+      ],
+      "similarity_score": 3,
+      "structural_status": "source_shaped_with_source_adapter",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The upstream investigation callback retains its source-oriented helpers while ProcessedSource, configuration, diagnostics, and corrections are supplied by CompatibilityCopContext."
+      ]
     },
     {
       "cop": "Gemspec/DuplicatedAssignment",
@@ -501,16 +557,24 @@
         "exact": 0,
         "classification": "dormant"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_new_investigation"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "SourceBuffer"
+      ],
+      "dsl_features": [
+        "compatibility_source"
+      ],
+      "similarity_score": 3,
+      "structural_status": "source_shaped_with_source_adapter",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The upstream investigation callback retains its source-oriented helpers while ProcessedSource, configuration, diagnostics, and corrections are supplied by CompatibilityCopContext."
+      ]
     },
     {
       "cop": "Gemspec/OrderedDependencies",
@@ -537,16 +601,24 @@
         "exact": 0,
         "classification": "dormant"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_new_investigation"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "SourceBuffer"
+      ],
+      "dsl_features": [
+        "compatibility_source"
+      ],
+      "similarity_score": 3,
+      "structural_status": "source_shaped_with_source_adapter",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The upstream investigation callback retains its source-oriented helpers while ProcessedSource, configuration, diagnostics, and corrections are supplied by CompatibilityCopContext."
+      ]
     },
     {
       "cop": "Gemspec/RequireMFA",
@@ -573,16 +645,24 @@
         "exact": 0,
         "classification": "dormant"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_new_investigation"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "SourceBuffer"
+      ],
+      "dsl_features": [
+        "compatibility_source"
+      ],
+      "similarity_score": 3,
+      "structural_status": "source_shaped_with_source_adapter",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The upstream investigation callback retains its source-oriented helpers while ProcessedSource, configuration, diagnostics, and corrections are supplied by CompatibilityCopContext."
+      ]
     },
     {
       "cop": "Gemspec/RequiredRubyVersion",
@@ -607,16 +687,24 @@
         "exact": 0,
         "classification": "dormant"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_new_investigation"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "SourceBuffer"
+      ],
+      "dsl_features": [
+        "compatibility_source"
+      ],
+      "similarity_score": 3,
+      "structural_status": "source_shaped_with_source_adapter",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The upstream investigation callback retains its source-oriented helpers while ProcessedSource, configuration, diagnostics, and corrections are supplied by CompatibilityCopContext."
+      ]
     },
     {
       "cop": "Gemspec/RubyVersionGlobalsUsage",
@@ -1104,16 +1192,24 @@
         "exact": 170,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_new_investigation"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "SourceBuffer"
+      ],
+      "dsl_features": [
+        "compatibility_custom"
+      ],
+      "similarity_score": 3,
+      "structural_status": "source_shaped_with_source_adapter",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The upstream investigation callback retains its source-oriented helpers while ProcessedSource, configuration, diagnostics, and corrections are supplied by CompatibilityCopContext."
+      ]
     },
     {
       "cop": "Layout/ConditionPosition",
@@ -1664,16 +1760,24 @@
         "exact": 394,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_new_investigation"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "SourceBuffer"
+      ],
+      "dsl_features": [
+        "compatibility_source"
+      ],
+      "similarity_score": 3,
+      "structural_status": "source_shaped_with_source_adapter",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The upstream investigation callback retains its source-oriented helpers while ProcessedSource, configuration, diagnostics, and corrections are supplied by CompatibilityCopContext."
+      ]
     },
     {
       "cop": "Layout/EmptyLinesAroundAttributeAccessor",
@@ -1799,16 +1903,24 @@
         "exact": 742,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_new_investigation"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "SourceBuffer"
+      ],
+      "dsl_features": [
+        "compatibility_source"
+      ],
+      "similarity_score": 3,
+      "structural_status": "source_shaped_with_source_adapter",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The upstream investigation callback retains its source-oriented helpers while ProcessedSource, configuration, diagnostics, and corrections are supplied by CompatibilityCopContext."
+      ]
     },
     {
       "cop": "Layout/EmptyLinesAroundClassBody",
@@ -1877,16 +1989,24 @@
         "exact": 188,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_new_investigation"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "SourceBuffer"
+      ],
+      "dsl_features": [
+        "compatibility_source"
+      ],
+      "similarity_score": 3,
+      "structural_status": "source_shaped_with_source_adapter",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The upstream investigation callback retains its source-oriented helpers while ProcessedSource, configuration, diagnostics, and corrections are supplied by CompatibilityCopContext."
+      ]
     },
     {
       "cop": "Layout/EmptyLinesAroundMethodBody",
@@ -1915,16 +2035,24 @@
         "exact": 320,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_new_investigation"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "SourceBuffer"
+      ],
+      "dsl_features": [
+        "compatibility_source"
+      ],
+      "similarity_score": 3,
+      "structural_status": "source_shaped_with_source_adapter",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The upstream investigation callback retains its source-oriented helpers while ProcessedSource, configuration, diagnostics, and corrections are supplied by CompatibilityCopContext."
+      ]
     },
     {
       "cop": "Layout/EmptyLinesAroundModuleBody",
@@ -2079,16 +2207,24 @@
         "exact": 1905,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_new_investigation"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "SourceBuffer"
+      ],
+      "dsl_features": [
+        "compatibility_source"
+      ],
+      "similarity_score": 3,
+      "structural_status": "source_shaped_with_source_adapter",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The upstream investigation callback retains its source-oriented helpers while ProcessedSource, configuration, diagnostics, and corrections are supplied by CompatibilityCopContext."
+      ]
     },
     {
       "cop": "Layout/FirstArgumentIndentation",
@@ -2502,16 +2638,24 @@
         "exact": 3447,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_new_investigation"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "SourceBuffer"
+      ],
+      "dsl_features": [
+        "compatibility_custom"
+      ],
+      "similarity_score": 3,
+      "structural_status": "source_shaped_with_source_adapter",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The upstream investigation callback retains its source-oriented helpers while ProcessedSource, configuration, diagnostics, and corrections are supplied by CompatibilityCopContext."
+      ]
     },
     {
       "cop": "Layout/IndentationConsistency",
@@ -3046,7 +3190,9 @@
       "implementations": [
         "src/cops/prism/layout_qualification.rs"
       ],
-      "upstream_callbacks": [],
+      "upstream_callbacks": [
+        "on_new_investigation"
+      ],
       "upstream_mixins": [
         "AutoCorrector",
         "CheckAssignment",
@@ -3064,16 +3210,24 @@
         "exact": 17367,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_new_investigation"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "SourceBuffer"
+      ],
+      "dsl_features": [
+        "compatibility_source"
+      ],
+      "similarity_score": 3,
+      "structural_status": "source_shaped_with_source_adapter",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The upstream investigation callback retains its source-oriented helpers while ProcessedSource, configuration, diagnostics, and corrections are supplied by CompatibilityCopContext."
+      ]
     },
     {
       "cop": "Layout/MultilineBlockLayout",
@@ -3513,16 +3667,24 @@
         "exact": 372,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_new_investigation"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "SourceBuffer"
+      ],
+      "dsl_features": [
+        "compatibility_custom"
+      ],
+      "similarity_score": 3,
+      "structural_status": "source_shaped_with_source_adapter",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The upstream investigation callback retains its source-oriented helpers while ProcessedSource, configuration, diagnostics, and corrections are supplied by CompatibilityCopContext."
+      ]
     },
     {
       "cop": "Layout/SingleLineBlockChain",
@@ -3923,16 +4085,24 @@
         "exact": 232,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_new_investigation"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "SourceBuffer"
+      ],
+      "dsl_features": [
+        "compatibility_custom"
+      ],
+      "similarity_score": 3,
+      "structural_status": "source_shaped_with_source_adapter",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The upstream investigation callback retains its source-oriented helpers while ProcessedSource, configuration, diagnostics, and corrections are supplied by CompatibilityCopContext."
+      ]
     },
     {
       "cop": "Layout/SpaceAroundMethodCallOperator",
@@ -3961,16 +4131,24 @@
         "exact": 33,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_new_investigation"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "SourceBuffer"
+      ],
+      "dsl_features": [
+        "compatibility_source"
+      ],
+      "similarity_score": 3,
+      "structural_status": "source_shaped_with_source_adapter",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The upstream investigation callback retains its source-oriented helpers while ProcessedSource, configuration, diagnostics, and corrections are supplied by CompatibilityCopContext."
+      ]
     },
     {
       "cop": "Layout/SpaceAroundOperators",
@@ -4021,16 +4199,24 @@
         "exact": 7084,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_new_investigation"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "SourceBuffer"
+      ],
+      "dsl_features": [
+        "compatibility_custom"
+      ],
+      "similarity_score": 3,
+      "structural_status": "source_shaped_with_source_adapter",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The upstream investigation callback retains its source-oriented helpers while ProcessedSource, configuration, diagnostics, and corrections are supplied by CompatibilityCopContext."
+      ]
     },
     {
       "cop": "Layout/SpaceBeforeBlockBraces",
@@ -4511,16 +4697,24 @@
         "exact": 1012,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_new_investigation"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "SourceBuffer"
+      ],
+      "dsl_features": [
+        "compatibility_custom"
+      ],
+      "similarity_score": 3,
+      "structural_status": "source_shaped_with_source_adapter",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The upstream investigation callback retains its source-oriented helpers while ProcessedSource, configuration, diagnostics, and corrections are supplied by CompatibilityCopContext."
+      ]
     },
     {
       "cop": "Layout/SpaceInsidePercentLiteralDelimiters",
@@ -4960,16 +5154,24 @@
         "exact": 164,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_new_investigation"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "SourceBuffer"
+      ],
+      "dsl_features": [
+        "compatibility_source"
+      ],
+      "similarity_score": 3,
+      "structural_status": "source_shaped_with_source_adapter",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The upstream investigation callback retains its source-oriented helpers while ProcessedSource, configuration, diagnostics, and corrections are supplied by CompatibilityCopContext."
+      ]
     },
     {
       "cop": "Lint/AmbiguousRegexpLiteral",
@@ -5389,16 +5591,24 @@
         "exact": 1,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_new_investigation"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "SourceBuffer"
+      ],
+      "dsl_features": [
+        "compatibility_custom"
+      ],
+      "similarity_score": 3,
+      "structural_status": "source_shaped_with_source_adapter",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The upstream investigation callback retains its source-oriented helpers while ProcessedSource, configuration, diagnostics, and corrections are supplied by CompatibilityCopContext."
+      ]
     },
     {
       "cop": "Lint/ConstantResolution",
@@ -5954,16 +6164,24 @@
         "exact": 0,
         "classification": "dormant"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_case_match"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CopContext",
+        "PrismAST",
+        "RuboCopCallbackDSL"
+      ],
+      "dsl_features": [
+        "compatibility_prism_callbacks"
+      ],
+      "similarity_score": 4,
+      "structural_status": "source_shaped_with_prism_adaptation",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The Ruby callback and helper structure is retained while the shared DSL maps callbacks and source ranges onto typed Prism nodes."
+      ]
     },
     {
       "cop": "Lint/DuplicateMethods",
@@ -6154,16 +6372,24 @@
         "exact": 2,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_new_investigation"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "SourceBuffer"
+      ],
+      "dsl_features": [
+        "compatibility_source"
+      ],
+      "similarity_score": 3,
+      "structural_status": "source_shaped_with_source_adapter",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The upstream investigation callback retains its source-oriented helpers while ProcessedSource, configuration, diagnostics, and corrections are supplied by CompatibilityCopContext."
+      ]
     },
     {
       "cop": "Lint/EachWithObjectArgument",
@@ -7585,16 +7811,24 @@
         "exact": 98,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_new_investigation"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "SourceBuffer"
+      ],
+      "dsl_features": [
+        "compatibility_source"
+      ],
+      "similarity_score": 3,
+      "structural_status": "source_shaped_with_source_adapter",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The upstream investigation callback retains its source-oriented helpers while ProcessedSource, configuration, diagnostics, and corrections are supplied by CompatibilityCopContext."
+      ]
     },
     {
       "cop": "Lint/MissingSuper",
@@ -7979,16 +8213,24 @@
         "exact": 259,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_new_investigation"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "SourceBuffer"
+      ],
+      "dsl_features": [
+        "compatibility_source"
+      ],
+      "similarity_score": 3,
+      "structural_status": "source_shaped_with_source_adapter",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The upstream investigation callback retains its source-oriented helpers while ProcessedSource, configuration, diagnostics, and corrections are supplied by CompatibilityCopContext."
+      ]
     },
     {
       "cop": "Lint/NonDeterministicRequireOrder",
@@ -8180,16 +8422,24 @@
         "exact": 0,
         "classification": "dormant"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_new_investigation"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "SourceBuffer"
+      ],
+      "dsl_features": [
+        "compatibility_source"
+      ],
+      "similarity_score": 3,
+      "structural_status": "source_shaped_with_source_adapter",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The upstream investigation callback retains its source-oriented helpers while ProcessedSource, configuration, diagnostics, and corrections are supplied by CompatibilityCopContext."
+      ]
     },
     {
       "cop": "Lint/OrAssignmentToConstant",
@@ -8308,16 +8558,24 @@
         "exact": 1,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_new_investigation"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "SourceBuffer"
+      ],
+      "dsl_features": [
+        "compatibility_custom"
+      ],
+      "similarity_score": 3,
+      "structural_status": "source_shaped_with_source_adapter",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The upstream investigation callback retains its source-oriented helpers while ProcessedSource, configuration, diagnostics, and corrections are supplied by CompatibilityCopContext."
+      ]
     },
     {
       "cop": "Lint/ParenthesesAsGroupedExpression",
@@ -8565,16 +8823,24 @@
         "exact": 0,
         "classification": "dormant"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_new_investigation"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "SourceBuffer"
+      ],
+      "dsl_features": [
+        "compatibility_custom"
+      ],
+      "similarity_score": 3,
+      "structural_status": "source_shaped_with_source_adapter",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The upstream investigation callback retains its source-oriented helpers while ProcessedSource, configuration, diagnostics, and corrections are supplied by CompatibilityCopContext."
+      ]
     },
     {
       "cop": "Lint/RedundantCopEnableDirective",
@@ -8602,16 +8868,24 @@
         "exact": 20,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_new_investigation"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "SourceBuffer"
+      ],
+      "dsl_features": [
+        "compatibility_source"
+      ],
+      "similarity_score": 3,
+      "structural_status": "source_shaped_with_source_adapter",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The upstream investigation callback retains its source-oriented helpers while ProcessedSource, configuration, diagnostics, and corrections are supplied by CompatibilityCopContext."
+      ]
     },
     {
       "cop": "Lint/RedundantDirGlobSort",
@@ -9617,7 +9891,9 @@
       "implementations": [
         "src/cops/prism/final_scope_batch_a/naming.rs"
       ],
-      "upstream_callbacks": [],
+      "upstream_callbacks": [
+        "on_new_investigation"
+      ],
       "upstream_mixins": [],
       "fixtures": {
         "passed": 56,
@@ -9630,16 +9906,24 @@
         "exact": 101,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_new_investigation"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "SourceBuffer"
+      ],
+      "dsl_features": [
+        "compatibility_custom"
+      ],
+      "similarity_score": 3,
+      "structural_status": "source_shaped_with_source_adapter",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The upstream investigation callback retains its source-oriented helpers while ProcessedSource, configuration, diagnostics, and corrections are supplied by CompatibilityCopContext."
+      ]
     },
     {
       "cop": "Lint/ShadowedException",
@@ -9863,16 +10147,24 @@
         "exact": 4,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_new_investigation"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "SourceBuffer"
+      ],
+      "dsl_features": [
+        "compatibility_source"
+      ],
+      "similarity_score": 3,
+      "structural_status": "source_shaped_with_source_adapter",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The upstream investigation callback retains its source-oriented helpers while ProcessedSource, configuration, diagnostics, and corrections are supplied by CompatibilityCopContext."
+      ]
     },
     {
       "cop": "Lint/SymbolConversion",
@@ -9902,16 +10194,24 @@
         "exact": 1888,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_new_investigation"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "SourceBuffer"
+      ],
+      "dsl_features": [
+        "compatibility_source"
+      ],
+      "similarity_score": 3,
+      "structural_status": "source_shaped_with_source_adapter",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The upstream investigation callback retains its source-oriented helpers while ProcessedSource, configuration, diagnostics, and corrections are supplied by CompatibilityCopContext."
+      ]
     },
     {
       "cop": "Lint/Syntax",
@@ -10471,16 +10771,24 @@
         "exact": 0,
         "classification": "dormant"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_new_investigation"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "SourceBuffer"
+      ],
+      "dsl_features": [
+        "compatibility_source"
+      ],
+      "similarity_score": 3,
+      "structural_status": "source_shaped_with_source_adapter",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The upstream investigation callback retains its source-oriented helpers while ProcessedSource, configuration, diagnostics, and corrections are supplied by CompatibilityCopContext."
+      ]
     },
     {
       "cop": "Lint/UnusedBlockArgument",
@@ -11633,16 +11941,24 @@
         "exact": 1,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_new_investigation"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "SourceBuffer"
+      ],
+      "dsl_features": [
+        "compatibility_source"
+      ],
+      "similarity_score": 3,
+      "structural_status": "source_shaped_with_source_adapter",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The upstream investigation callback retains its source-oriented helpers while ProcessedSource, configuration, diagnostics, and corrections are supplied by CompatibilityCopContext."
+      ]
     },
     {
       "cop": "Naming/AccessorMethodName",
@@ -11965,16 +12281,24 @@
         "exact": 469,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_new_investigation"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "SourceBuffer"
+      ],
+      "dsl_features": [
+        "compatibility_custom"
+      ],
+      "similarity_score": 3,
+      "structural_status": "source_shaped_with_source_adapter",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The upstream investigation callback retains its source-oriented helpers while ProcessedSource, configuration, diagnostics, and corrections are supplied by CompatibilityCopContext."
+      ]
     },
     {
       "cop": "Naming/HeredocDelimiterCase",
@@ -12084,16 +12408,24 @@
         "exact": 480,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_new_investigation"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "SourceBuffer"
+      ],
+      "dsl_features": [
+        "compatibility_custom"
+      ],
+      "similarity_score": 3,
+      "structural_status": "source_shaped_with_source_adapter",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The upstream investigation callback retains its source-oriented helpers while ProcessedSource, configuration, diagnostics, and corrections are supplied by CompatibilityCopContext."
+      ]
     },
     {
       "cop": "Naming/MemoizedInstanceVariableName",
@@ -12807,16 +13139,24 @@
         "exact": 1978,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_new_investigation"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "SourceBuffer"
+      ],
+      "dsl_features": [
+        "compatibility_source"
+      ],
+      "similarity_score": 3,
+      "structural_status": "source_shaped_with_source_adapter",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The upstream investigation callback retains its source-oriented helpers while ProcessedSource, configuration, diagnostics, and corrections are supplied by CompatibilityCopContext."
+      ]
     },
     {
       "cop": "Style/Alias",
@@ -13666,16 +14006,24 @@
         "exact": 52,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_new_investigation"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "SourceBuffer"
+      ],
+      "dsl_features": [
+        "compatibility_source"
+      ],
+      "similarity_score": 3,
+      "structural_status": "source_shaped_with_source_adapter",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The upstream investigation callback retains its source-oriented helpers while ProcessedSource, configuration, diagnostics, and corrections are supplied by CompatibilityCopContext."
+      ]
     },
     {
       "cop": "Style/CharacterLiteral",
@@ -13752,16 +14100,24 @@
         "exact": 7031,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_new_investigation"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "SourceBuffer"
+      ],
+      "dsl_features": [
+        "compatibility_source"
+      ],
+      "similarity_score": 3,
+      "structural_status": "source_shaped_with_source_adapter",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The upstream investigation callback retains its source-oriented helpers while ProcessedSource, configuration, diagnostics, and corrections are supplied by CompatibilityCopContext."
+      ]
     },
     {
       "cop": "Style/ClassCheck",
@@ -14211,16 +14567,24 @@
         "exact": 3,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_new_investigation"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "SourceBuffer"
+      ],
+      "dsl_features": [
+        "compatibility_source"
+      ],
+      "similarity_score": 3,
+      "structural_status": "source_shaped_with_source_adapter",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The upstream investigation callback retains its source-oriented helpers while ProcessedSource, configuration, diagnostics, and corrections are supplied by CompatibilityCopContext."
+      ]
     },
     {
       "cop": "Style/CombinableLoops",
@@ -14249,16 +14613,24 @@
         "exact": 94,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_new_investigation"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "SourceBuffer"
+      ],
+      "dsl_features": [
+        "compatibility_source"
+      ],
+      "similarity_score": 3,
+      "structural_status": "source_shaped_with_source_adapter",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The upstream investigation callback retains its source-oriented helpers while ProcessedSource, configuration, diagnostics, and corrections are supplied by CompatibilityCopContext."
+      ]
     },
     {
       "cop": "Style/CommandLiteral",
@@ -14321,16 +14693,24 @@
         "exact": 544,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_new_investigation"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "SourceBuffer"
+      ],
+      "dsl_features": [
+        "compatibility_source"
+      ],
+      "similarity_score": 3,
+      "structural_status": "source_shaped_with_source_adapter",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The upstream investigation callback retains its source-oriented helpers while ProcessedSource, configuration, diagnostics, and corrections are supplied by CompatibilityCopContext."
+      ]
     },
     {
       "cop": "Style/CommentedKeyword",
@@ -14357,16 +14737,24 @@
         "exact": 1044,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_new_investigation"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "SourceBuffer"
+      ],
+      "dsl_features": [
+        "compatibility_source"
+      ],
+      "similarity_score": 3,
+      "structural_status": "source_shaped_with_source_adapter",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The upstream investigation callback retains its source-oriented helpers while ProcessedSource, configuration, diagnostics, and corrections are supplied by CompatibilityCopContext."
+      ]
     },
     {
       "cop": "Style/ComparableBetween",
@@ -14618,16 +15006,24 @@
         "exact": 85417,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_new_investigation"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "SourceBuffer"
+      ],
+      "dsl_features": [
+        "compatibility_source"
+      ],
+      "similarity_score": 3,
+      "structural_status": "source_shaped_with_source_adapter",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The upstream investigation callback retains its source-oriented helpers while ProcessedSource, configuration, diagnostics, and corrections are supplied by CompatibilityCopContext."
+      ]
     },
     {
       "cop": "Style/DataInheritance",
@@ -15054,16 +15450,24 @@
         "exact": 186456,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_new_investigation"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "SourceBuffer"
+      ],
+      "dsl_features": [
+        "compatibility_source"
+      ],
+      "similarity_score": 3,
+      "structural_status": "source_shaped_with_source_adapter",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The upstream investigation callback retains its source-oriented helpers while ProcessedSource, configuration, diagnostics, and corrections are supplied by CompatibilityCopContext."
+      ]
     },
     {
       "cop": "Style/DoubleCopDisableDirective",
@@ -15511,16 +15915,24 @@
         "exact": 118,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_new_investigation"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "SourceBuffer"
+      ],
+      "dsl_features": [
+        "compatibility_source"
+      ],
+      "similarity_score": 3,
+      "structural_status": "source_shaped_with_source_adapter",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The upstream investigation callback retains its source-oriented helpers while ProcessedSource, configuration, diagnostics, and corrections are supplied by CompatibilityCopContext."
+      ]
     },
     {
       "cop": "Style/EmptyMethod",
@@ -15715,16 +16127,24 @@
         "exact": 3,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_new_investigation"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "SourceBuffer"
+      ],
+      "dsl_features": [
+        "compatibility_source"
+      ],
+      "similarity_score": 3,
+      "structural_status": "source_shaped_with_source_adapter",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The upstream investigation callback retains its source-oriented helpers while ProcessedSource, configuration, diagnostics, and corrections are supplied by CompatibilityCopContext."
+      ]
     },
     {
       "cop": "Style/EnvHome",
@@ -15797,16 +16217,24 @@
         "exact": 504,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_new_investigation"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "SourceBuffer"
+      ],
+      "dsl_features": [
+        "compatibility_source"
+      ],
+      "similarity_score": 3,
+      "structural_status": "source_shaped_with_source_adapter",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The upstream investigation callback retains its source-oriented helpers while ProcessedSource, configuration, diagnostics, and corrections are supplied by CompatibilityCopContext."
+      ]
     },
     {
       "cop": "Style/EvenOdd",
@@ -15960,16 +16388,24 @@
         "exact": 357,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_new_investigation"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "SourceBuffer"
+      ],
+      "dsl_features": [
+        "compatibility_source"
+      ],
+      "similarity_score": 3,
+      "structural_status": "source_shaped_with_source_adapter",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The upstream investigation callback retains its source-oriented helpers while ProcessedSource, configuration, diagnostics, and corrections are supplied by CompatibilityCopContext."
+      ]
     },
     {
       "cop": "Style/ExponentialNotation",
@@ -16030,16 +16466,24 @@
         "exact": 1386,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_new_investigation"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "SourceBuffer"
+      ],
+      "dsl_features": [
+        "compatibility_source"
+      ],
+      "similarity_score": 3,
+      "structural_status": "source_shaped_with_source_adapter",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The upstream investigation callback retains its source-oriented helpers while ProcessedSource, configuration, diagnostics, and corrections are supplied by CompatibilityCopContext."
+      ]
     },
     {
       "cop": "Style/FileEmpty",
@@ -16285,16 +16729,24 @@
         "exact": 202,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_send"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CopContext",
+        "PrismAST",
+        "RuboCopCallbackDSL"
+      ],
+      "dsl_features": [
+        "compatibility_prism_callbacks"
+      ],
+      "similarity_score": 4,
+      "structural_status": "source_shaped_with_prism_adaptation",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The Ruby callback and helper structure is retained while the shared DSL maps callbacks and source ranges onto typed Prism nodes."
+      ]
     },
     {
       "cop": "Style/FloatDivision",
@@ -16360,16 +16812,27 @@
         "exact": 14,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_block",
+        "on_for",
+        "on_itblock",
+        "on_numblock"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CopContext",
+        "PrismAST",
+        "RuboCopCallbackDSL"
+      ],
+      "dsl_features": [
+        "compatibility_prism_callbacks"
+      ],
+      "similarity_score": 4,
+      "structural_status": "source_shaped_with_prism_adaptation",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The Ruby callback and helper structure is retained while the shared DSL maps callbacks and source ranges onto typed Prism nodes."
+      ]
     },
     {
       "cop": "Style/FormatString",
@@ -16396,16 +16859,24 @@
         "exact": 2551,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_send"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CopContext",
+        "PrismAST",
+        "RuboCopCallbackDSL"
+      ],
+      "dsl_features": [
+        "compatibility_prism_callbacks"
+      ],
+      "similarity_score": 4,
+      "structural_status": "source_shaped_with_prism_adaptation",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The Ruby callback and helper structure is retained while the shared DSL maps callbacks and source ranges onto typed Prism nodes."
+      ]
     },
     {
       "cop": "Style/FormatStringToken",
@@ -16434,16 +16905,24 @@
         "exact": 7619,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_str"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CopContext",
+        "PrismAST",
+        "RuboCopCallbackDSL"
+      ],
+      "dsl_features": [
+        "compatibility_prism_callbacks"
+      ],
+      "similarity_score": 4,
+      "structural_status": "source_shaped_with_prism_adaptation",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The Ruby callback and helper structure is retained while the shared DSL maps callbacks and source ranges onto typed Prism nodes."
+      ]
     },
     {
       "cop": "Style/FrozenStringLiteralComment",
@@ -16473,16 +16952,24 @@
         "exact": 14117,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_new_investigation"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "SourceBuffer"
+      ],
+      "dsl_features": [
+        "compatibility_source"
+      ],
+      "similarity_score": 3,
+      "structural_status": "source_shaped_with_source_adapter",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The upstream investigation callback retains its source-oriented helpers while ProcessedSource, configuration, diagnostics, and corrections are supplied by CompatibilityCopContext."
+      ]
     },
     {
       "cop": "Style/GlobalStdStream",
@@ -16607,16 +17094,29 @@
         "exact": 4327,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_block",
+        "on_def",
+        "on_defs",
+        "on_if",
+        "on_itblock",
+        "on_numblock"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CopContext",
+        "PrismAST",
+        "RuboCopCallbackDSL"
+      ],
+      "dsl_features": [
+        "compatibility_prism_recovery_callbacks"
+      ],
+      "similarity_score": 4,
+      "structural_status": "source_shaped_with_prism_adaptation",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The Ruby callback and helper structure is retained while the shared DSL maps callbacks and source ranges onto typed Prism nodes."
+      ]
     },
     {
       "cop": "Style/HashAsLastArrayItem",
@@ -16679,16 +17179,24 @@
         "exact": 156,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_send"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CopContext",
+        "PrismAST",
+        "RuboCopCallbackDSL"
+      ],
+      "dsl_features": [
+        "compatibility_prism_callbacks"
+      ],
+      "similarity_score": 4,
+      "structural_status": "source_shaped_with_prism_adaptation",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The Ruby callback and helper structure is retained while the shared DSL maps callbacks and source ranges onto typed Prism nodes."
+      ]
     },
     {
       "cop": "Style/HashEachMethods",
@@ -16719,16 +17227,27 @@
         "exact": 497,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_block",
+        "on_block_pass",
+        "on_itblock",
+        "on_numblock"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CopContext",
+        "PrismAST",
+        "RuboCopCallbackDSL"
+      ],
+      "dsl_features": [
+        "compatibility_prism_callbacks"
+      ],
+      "similarity_score": 4,
+      "structural_status": "source_shaped_with_prism_adaptation",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The Ruby callback and helper structure is retained while the shared DSL maps callbacks and source ranges onto typed Prism nodes."
+      ]
     },
     {
       "cop": "Style/HashExcept",
@@ -16755,15 +17274,21 @@
         "classification": "project_exact"
       },
       "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "compatibility_components": [
+        "CopContext",
+        "PrismAST",
+        "RuboCopCallbackDSL"
       ],
-      "documented_adaptations": []
+      "dsl_features": [
+        "compatibility_prism_callbacks"
+      ],
+      "similarity_score": 4,
+      "structural_status": "source_shaped_with_prism_adaptation",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The Ruby callback and helper structure is retained while the shared DSL maps callbacks and source ranges onto typed Prism nodes."
+      ]
     },
     {
       "cop": "Style/HashFetchChain",
@@ -16791,16 +17316,25 @@
         "exact": 14,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_csend",
+        "on_send"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CopContext",
+        "PrismAST",
+        "RuboCopCallbackDSL"
+      ],
+      "dsl_features": [
+        "compatibility_prism_callbacks"
+      ],
+      "similarity_score": 4,
+      "structural_status": "source_shaped_with_prism_adaptation",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The Ruby callback and helper structure is retained while the shared DSL maps callbacks and source ranges onto typed Prism nodes."
+      ]
     },
     {
       "cop": "Style/HashLikeCase",
@@ -16911,15 +17445,21 @@
         "classification": "project_exact"
       },
       "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "compatibility_components": [
+        "CopContext",
+        "PrismAST",
+        "RuboCopCallbackDSL"
       ],
-      "documented_adaptations": []
+      "dsl_features": [
+        "compatibility_prism_callbacks"
+      ],
+      "similarity_score": 4,
+      "structural_status": "source_shaped_with_prism_adaptation",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The Ruby callback and helper structure is retained while the shared DSL maps callbacks and source ranges onto typed Prism nodes."
+      ]
     },
     {
       "cop": "Style/HashSyntax",
@@ -16948,16 +17488,24 @@
         "exact": 19082,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_hash"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CopContext",
+        "PrismAST",
+        "RuboCopCallbackDSL"
+      ],
+      "dsl_features": [
+        "compatibility_prism_callbacks"
+      ],
+      "similarity_score": 4,
+      "structural_status": "source_shaped_with_prism_adaptation",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The Ruby callback and helper structure is retained while the shared DSL maps callbacks and source ranges onto typed Prism nodes."
+      ]
     },
     {
       "cop": "Style/HashTransformKeys",
@@ -16988,16 +17536,27 @@
         "exact": 0,
         "classification": "dormant"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_bad_each_with_object",
+        "on_bad_hash_brackets_map",
+        "on_bad_map_to_h",
+        "on_bad_to_h"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CopContext",
+        "PrismAST",
+        "RuboCopCallbackDSL"
+      ],
+      "dsl_features": [
+        "compatibility_prism_callbacks"
+      ],
+      "similarity_score": 4,
+      "structural_status": "source_shaped_with_prism_adaptation",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The Ruby callback and helper structure is retained while the shared DSL maps callbacks and source ranges onto typed Prism nodes."
+      ]
     },
     {
       "cop": "Style/HashTransformValues",
@@ -17028,16 +17587,27 @@
         "exact": 4,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_bad_each_with_object",
+        "on_bad_hash_brackets_map",
+        "on_bad_map_to_h",
+        "on_bad_to_h"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CopContext",
+        "PrismAST",
+        "RuboCopCallbackDSL"
+      ],
+      "dsl_features": [
+        "compatibility_prism_callbacks"
+      ],
+      "similarity_score": 4,
+      "structural_status": "source_shaped_with_prism_adaptation",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The Ruby callback and helper structure is retained while the shared DSL maps callbacks and source ranges onto typed Prism nodes."
+      ]
     },
     {
       "cop": "Style/IdenticalConditionalBranches",
@@ -17066,16 +17636,26 @@
         "exact": 172,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_case",
+        "on_case_match",
+        "on_if"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CopContext",
+        "PrismAST",
+        "RuboCopCallbackDSL"
+      ],
+      "dsl_features": [
+        "compatibility_prism_callbacks"
+      ],
+      "similarity_score": 4,
+      "structural_status": "source_shaped_with_prism_adaptation",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The Ruby callback and helper structure is retained while the shared DSL maps callbacks and source ranges onto typed Prism nodes."
+      ]
     },
     {
       "cop": "Style/IfInsideElse",
@@ -17102,16 +17682,24 @@
         "exact": 191,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_new_investigation"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "SourceBuffer"
+      ],
+      "dsl_features": [
+        "compatibility_source"
+      ],
+      "similarity_score": 3,
+      "structural_status": "source_shaped_with_source_adapter",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The upstream investigation callback retains its source-oriented helpers while ProcessedSource, configuration, diagnostics, and corrections are supplied by CompatibilityCopContext."
+      ]
     },
     {
       "cop": "Style/IfUnlessModifier",
@@ -17142,16 +17730,24 @@
         "exact": 11656,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_new_investigation"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "SourceBuffer"
+      ],
+      "dsl_features": [
+        "compatibility_source"
+      ],
+      "similarity_score": 3,
+      "structural_status": "source_shaped_with_source_adapter",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The upstream investigation callback retains its source-oriented helpers while ProcessedSource, configuration, diagnostics, and corrections are supplied by CompatibilityCopContext."
+      ]
     },
     {
       "cop": "Style/IfUnlessModifierOfIfUnless",
@@ -17224,16 +17820,24 @@
         "exact": 21,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_if"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CopContext",
+        "PrismAST",
+        "RuboCopCallbackDSL"
+      ],
+      "dsl_features": [
+        "compatibility_prism_callbacks"
+      ],
+      "similarity_score": 4,
+      "structural_status": "source_shaped_with_prism_adaptation",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The Ruby callback and helper structure is retained while the shared DSL maps callbacks and source ranges onto typed Prism nodes."
+      ]
     },
     {
       "cop": "Style/IfWithSemicolon",
@@ -17260,16 +17864,24 @@
         "exact": 3,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_normal_if_unless"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CopContext",
+        "PrismAST",
+        "RuboCopCallbackDSL"
+      ],
+      "dsl_features": [
+        "compatibility_prism_callbacks"
+      ],
+      "similarity_score": 4,
+      "structural_status": "source_shaped_with_prism_adaptation",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The Ruby callback and helper structure is retained while the shared DSL maps callbacks and source ranges onto typed Prism nodes."
+      ]
     },
     {
       "cop": "Style/ImplicitRuntimeError",
@@ -17388,16 +18000,27 @@
         "exact": 546,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_until",
+        "on_until_post",
+        "on_while",
+        "on_while_post"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CopContext",
+        "PrismAST",
+        "RuboCopCallbackDSL"
+      ],
+      "dsl_features": [
+        "compatibility_prism_callbacks"
+      ],
+      "similarity_score": 4,
+      "structural_status": "source_shaped_with_prism_adaptation",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The Ruby callback and helper structure is retained while the shared DSL maps callbacks and source ranges onto typed Prism nodes."
+      ]
     },
     {
       "cop": "Style/InlineComment",
@@ -17472,16 +18095,28 @@
         "exact": 153,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_block",
+        "on_csend",
+        "on_itblock",
+        "on_numblock",
+        "on_send"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CopContext",
+        "PrismAST",
+        "RuboCopCallbackDSL"
+      ],
+      "dsl_features": [
+        "compatibility_prism_callbacks"
+      ],
+      "similarity_score": 4,
+      "structural_status": "source_shaped_with_prism_adaptation",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The Ruby callback and helper structure is retained while the shared DSL maps callbacks and source ranges onto typed Prism nodes."
+      ]
     },
     {
       "cop": "Style/InvertibleUnlessCondition",
@@ -17507,16 +18142,24 @@
         "exact": 763,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_if"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CopContext",
+        "PrismAST",
+        "RuboCopCallbackDSL"
+      ],
+      "dsl_features": [
+        "compatibility_prism_callbacks"
+      ],
+      "similarity_score": 4,
+      "structural_status": "source_shaped_with_prism_adaptation",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The Ruby callback and helper structure is retained while the shared DSL maps callbacks and source ranges onto typed Prism nodes."
+      ]
     },
     {
       "cop": "Style/IpAddresses",
@@ -17780,16 +18423,26 @@
         "exact": 3492,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_block",
+        "on_itblock",
+        "on_numblock"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CopContext",
+        "PrismAST",
+        "RuboCopCallbackDSL"
+      ],
+      "dsl_features": [
+        "compatibility_prism_callbacks"
+      ],
+      "similarity_score": 4,
+      "structural_status": "source_shaped_with_prism_adaptation",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The Ruby callback and helper structure is retained while the shared DSL maps callbacks and source ranges onto typed Prism nodes."
+      ]
     },
     {
       "cop": "Style/LambdaCall",
@@ -17901,16 +18554,24 @@
         "exact": 6,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_new_investigation"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "SourceBuffer"
+      ],
+      "dsl_features": [
+        "compatibility_source"
+      ],
+      "similarity_score": 3,
+      "structural_status": "source_shaped_with_source_adapter",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The upstream investigation callback retains its source-oriented helpers while ProcessedSource, configuration, diagnostics, and corrections are supplied by CompatibilityCopContext."
+      ]
     },
     {
       "cop": "Style/MapCompactWithConditionalBlock",
@@ -17937,16 +18598,25 @@
         "exact": 13,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_csend",
+        "on_send"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CopContext",
+        "PrismAST",
+        "RuboCopCallbackDSL"
+      ],
+      "dsl_features": [
+        "compatibility_prism_callbacks"
+      ],
+      "similarity_score": 4,
+      "structural_status": "source_shaped_with_prism_adaptation",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The Ruby callback and helper structure is retained while the shared DSL maps callbacks and source ranges onto typed Prism nodes."
+      ]
     },
     {
       "cop": "Style/MapIntoArray",
@@ -17975,16 +18645,26 @@
         "exact": 129,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_block",
+        "on_itblock",
+        "on_numblock"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CopContext",
+        "PrismAST",
+        "RuboCopCallbackDSL"
+      ],
+      "dsl_features": [
+        "compatibility_prism_callbacks"
+      ],
+      "similarity_score": 4,
+      "structural_status": "source_shaped_with_prism_adaptation",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The Ruby callback and helper structure is retained while the shared DSL maps callbacks and source ranges onto typed Prism nodes."
+      ]
     },
     {
       "cop": "Style/MapJoin",
@@ -18050,16 +18730,25 @@
         "exact": 97,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_csend",
+        "on_send"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CopContext",
+        "PrismAST",
+        "RuboCopCallbackDSL"
+      ],
+      "dsl_features": [
+        "compatibility_prism_callbacks"
+      ],
+      "similarity_score": 4,
+      "structural_status": "source_shaped_with_prism_adaptation",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The Ruby callback and helper structure is retained while the shared DSL maps callbacks and source ranges onto typed Prism nodes."
+      ]
     },
     {
       "cop": "Style/MapToSet",
@@ -18139,16 +18828,26 @@
         "exact": 838160,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_csend",
+        "on_send",
+        "on_yield"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CopContext",
+        "PrismAST",
+        "RuboCopCallbackDSL"
+      ],
+      "dsl_features": [
+        "compatibility_prism_callbacks"
+      ],
+      "similarity_score": 4,
+      "structural_status": "source_shaped_with_prism_adaptation",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The Ruby callback and helper structure is retained while the shared DSL maps callbacks and source ranges onto typed Prism nodes."
+      ]
     },
     {
       "cop": "Style/MethodCallWithoutArgsParentheses",
@@ -18264,16 +18963,25 @@
         "exact": 926,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_def",
+        "on_defs"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CopContext",
+        "PrismAST",
+        "RuboCopCallbackDSL"
+      ],
+      "dsl_features": [
+        "compatibility_prism_callbacks"
+      ],
+      "similarity_score": 4,
+      "structural_status": "source_shaped_with_prism_adaptation",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The Ruby callback and helper structure is retained while the shared DSL maps callbacks and source ranges onto typed Prism nodes."
+      ]
     },
     {
       "cop": "Style/MinMax",
@@ -18397,16 +19105,26 @@
         "exact": 40883,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_case",
+        "on_case_match",
+        "on_normal_if_unless"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CopContext",
+        "PrismAST",
+        "RuboCopCallbackDSL"
+      ],
+      "dsl_features": [
+        "compatibility_prism_callbacks"
+      ],
+      "similarity_score": 4,
+      "structural_status": "source_shaped_with_prism_adaptation",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The Ruby callback and helper structure is retained while the shared DSL maps callbacks and source ranges onto typed Prism nodes."
+      ]
     },
     {
       "cop": "Style/MissingRespondToMissing",
@@ -18595,16 +19313,25 @@
         "exact": 31,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_csend",
+        "on_send"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CopContext",
+        "PrismAST",
+        "RuboCopCallbackDSL"
+      ],
+      "dsl_features": [
+        "compatibility_prism_callbacks"
+      ],
+      "similarity_score": 4,
+      "structural_status": "source_shaped_with_prism_adaptation",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The Ruby callback and helper structure is retained while the shared DSL maps callbacks and source ranges onto typed Prism nodes."
+      ]
     },
     {
       "cop": "Style/MultilineBlockChain",
@@ -18822,16 +19549,24 @@
         "exact": 9,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_new_investigation"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "SourceBuffer"
+      ],
+      "dsl_features": [
+        "compatibility_source"
+      ],
+      "similarity_score": 3,
+      "structural_status": "source_shaped_with_source_adapter",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The upstream investigation callback retains its source-oriented helpers while ProcessedSource, configuration, diagnostics, and corrections are supplied by CompatibilityCopContext."
+      ]
     },
     {
       "cop": "Style/MultilineMethodSignature",
@@ -18895,16 +19630,24 @@
         "exact": 148,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_if"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CopContext",
+        "PrismAST",
+        "RuboCopCallbackDSL"
+      ],
+      "dsl_features": [
+        "compatibility_prism_recovery_callbacks"
+      ],
+      "similarity_score": 4,
+      "structural_status": "source_shaped_with_prism_adaptation",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The Ruby callback and helper structure is retained while the shared DSL maps callbacks and source ranges onto typed Prism nodes."
+      ]
     },
     {
       "cop": "Style/MultilineWhenThen",
@@ -19014,16 +19757,24 @@
         "exact": 2202,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_casgn"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CopContext",
+        "PrismAST",
+        "RuboCopCallbackDSL"
+      ],
+      "dsl_features": [
+        "compatibility_prism_callbacks"
+      ],
+      "similarity_score": 4,
+      "structural_status": "source_shaped_with_prism_adaptation",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The Ruby callback and helper structure is retained while the shared DSL maps callbacks and source ranges onto typed Prism nodes."
+      ]
     },
     {
       "cop": "Style/NegatedIf",
@@ -19088,16 +19839,25 @@
         "exact": 279,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_if",
+        "on_new_investigation"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CopContext",
+        "PrismAST",
+        "RuboCopCallbackDSL"
+      ],
+      "dsl_features": [
+        "compatibility_prism_stateful_callbacks"
+      ],
+      "similarity_score": 4,
+      "structural_status": "source_shaped_with_prism_adaptation",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The Ruby callback and helper structure is retained while the shared DSL maps callbacks and source ranges onto typed Prism nodes."
+      ]
     },
     {
       "cop": "Style/NegatedUnless",
@@ -19210,16 +19970,25 @@
         "exact": 8,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_csend",
+        "on_send"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CopContext",
+        "PrismAST",
+        "RuboCopCallbackDSL"
+      ],
+      "dsl_features": [
+        "compatibility_prism_callbacks"
+      ],
+      "similarity_score": 4,
+      "structural_status": "source_shaped_with_prism_adaptation",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The Ruby callback and helper structure is retained while the shared DSL maps callbacks and source ranges onto typed Prism nodes."
+      ]
     },
     {
       "cop": "Style/NestedFileDirname",
@@ -19435,16 +20204,30 @@
         "exact": 319,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_block",
+        "on_for",
+        "on_itblock",
+        "on_new_investigation",
+        "on_numblock",
+        "on_until",
+        "on_while"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CopContext",
+        "PrismAST",
+        "RuboCopCallbackDSL"
+      ],
+      "dsl_features": [
+        "compatibility_prism_callbacks"
+      ],
+      "similarity_score": 4,
+      "structural_status": "source_shaped_with_prism_adaptation",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The Ruby callback and helper structure is retained while the shared DSL maps callbacks and source ranges onto typed Prism nodes."
+      ]
     },
     {
       "cop": "Style/NilComparison",
@@ -20043,16 +20826,24 @@
         "exact": 6,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_send"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CopContext",
+        "PrismAST",
+        "RuboCopCallbackDSL"
+      ],
+      "dsl_features": [
+        "compatibility_prism_call_rule"
+      ],
+      "similarity_score": 4,
+      "structural_status": "source_shaped_with_prism_adaptation",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The Ruby callback and helper structure is retained while the shared DSL maps callbacks and source ranges onto typed Prism nodes."
+      ]
     },
     {
       "cop": "Style/OptionHash",
@@ -20522,16 +21313,25 @@
         "exact": 53,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_csend",
+        "on_send"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CopContext",
+        "PrismAST",
+        "RuboCopCallbackDSL"
+      ],
+      "dsl_features": [
+        "compatibility_prism_call_rule"
+      ],
+      "similarity_score": 4,
+      "structural_status": "source_shaped_with_prism_adaptation",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The Ruby callback and helper structure is retained while the shared DSL maps callbacks and source ranges onto typed Prism nodes."
+      ]
     },
     {
       "cop": "Style/PreferredHashMethods",
@@ -20695,16 +21495,24 @@
         "exact": 1138,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_send"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CopContext",
+        "PrismAST",
+        "RuboCopCallbackDSL"
+      ],
+      "dsl_features": [
+        "compatibility_prism_call_rule"
+      ],
+      "similarity_score": 4,
+      "structural_status": "source_shaped_with_prism_adaptation",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The Ruby callback and helper structure is retained while the shared DSL maps callbacks and source ranges onto typed Prism nodes."
+      ]
     },
     {
       "cop": "Style/RandomWithOffset",
@@ -20768,16 +21576,25 @@
         "exact": 164,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_csend",
+        "on_send"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CopContext",
+        "PrismAST",
+        "RuboCopCallbackDSL"
+      ],
+      "dsl_features": [
+        "compatibility_prism_call_rule"
+      ],
+      "similarity_score": 4,
+      "structural_status": "source_shaped_with_prism_adaptation",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The Ruby callback and helper structure is retained while the shared DSL maps callbacks and source ranges onto typed Prism nodes."
+      ]
     },
     {
       "cop": "Style/RedundantArgument",
@@ -20805,16 +21622,25 @@
         "exact": 303,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_csend",
+        "on_send"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CopContext",
+        "PrismAST",
+        "RuboCopCallbackDSL"
+      ],
+      "dsl_features": [
+        "compatibility_prism_call_rule"
+      ],
+      "similarity_score": 4,
+      "structural_status": "source_shaped_with_prism_adaptation",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The Ruby callback and helper structure is retained while the shared DSL maps callbacks and source ranges onto typed Prism nodes."
+      ]
     },
     {
       "cop": "Style/RedundantArrayConstructor",
@@ -20934,16 +21760,24 @@
         "exact": 201,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_new_investigation"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "SourceBuffer"
+      ],
+      "dsl_features": [
+        "compatibility_source"
+      ],
+      "similarity_score": 3,
+      "structural_status": "source_shaped_with_source_adapter",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The upstream investigation callback retains its source-oriented helpers while ProcessedSource, configuration, diagnostics, and corrections are supplied by CompatibilityCopContext."
+      ]
     },
     {
       "cop": "Style/RedundantBegin",
@@ -21441,16 +22275,25 @@
         "exact": 6,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_csend",
+        "on_send"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CopContext",
+        "PrismAST",
+        "RuboCopCallbackDSL"
+      ],
+      "dsl_features": [
+        "compatibility_prism_call_rule"
+      ],
+      "similarity_score": 4,
+      "structural_status": "source_shaped_with_prism_adaptation",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The Ruby callback and helper structure is retained while the shared DSL maps callbacks and source ranges onto typed Prism nodes."
+      ]
     },
     {
       "cop": "Style/RedundantFormat",
@@ -21726,16 +22569,24 @@
         "exact": 88,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_new_investigation"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "SourceBuffer"
+      ],
+      "dsl_features": [
+        "compatibility_source"
+      ],
+      "similarity_score": 3,
+      "structural_status": "source_shaped_with_source_adapter",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The upstream investigation callback retains its source-oriented helpers while ProcessedSource, configuration, diagnostics, and corrections are supplied by CompatibilityCopContext."
+      ]
     },
     {
       "cop": "Style/RedundantMinMaxBy",

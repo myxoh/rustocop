@@ -3,7 +3,7 @@ use ruby_prism::{BlockNode, LambdaNode};
 use super::*;
 
 define_cops! {
-    Lambda => "Style/Lambda" => rubocop_callbacks(LambdaRule, [on_block, on_lambda]),
+    Lambda => "Style/Lambda" => compatibility_prism_callbacks(LambdaRule, [on_block, on_lambda]),
 }
 
 impl LambdaRule<'_, '_, '_> {

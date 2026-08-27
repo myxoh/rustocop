@@ -3,14 +3,14 @@ use ruby_prism::{CallNode, Node};
 use super::*;
 
 define_cops!(
-    DepartmentName => "Migration/DepartmentName" => source(department_name),
+    DepartmentName => "Migration/DepartmentName" => compatibility_source(department_name),
     BarePercentLiterals => "Style/BarePercentLiterals" => any_node(bare_percent_literals),
     DocumentDynamicEvalDefinition => "Style/DocumentDynamicEvalDefinition" => call(document_dynamic_eval_definition),
     ModuleFunction => "Style/ModuleFunction" => node(as_module_node, module_function),
     SingleLineBlockParams => "Style/SingleLineBlockParams" => node(as_block_node, single_line_block_params),
 );
 
-fn department_name(context: &mut CopContext<'_, '_>) {
+fn department_name(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     let source = context.source();
     let directive = regex::Regex::new(r"\A# *rubocop *: *((?:dis|en)able|todo) +(.*)")
         .expect("static directive pattern");

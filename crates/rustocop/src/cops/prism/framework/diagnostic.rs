@@ -295,7 +295,7 @@ impl Context {
         }
     }
 
-    fn replace_indirectly(
+    pub(super) fn replace_indirectly(
         &mut self,
         cop_name: &'static str,
         message: impl Into<String>,
@@ -315,7 +315,7 @@ impl Context {
         );
     }
 
-    fn replace_many_indirectly(
+    pub(super) fn replace_many_indirectly(
         &mut self,
         cop_name: &'static str,
         message: impl Into<String>,

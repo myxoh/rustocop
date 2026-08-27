@@ -395,7 +395,7 @@ fn inspect(
     target_ruby_version: RubyVersion,
     enabled: &dyn Fn(&str) -> bool,
 ) -> Inspection {
-    Engine::new(enabled, &[]).inspect(
+    Engine::new(enabled, enabled, &[]).inspect(
         "example.rb",
         source,
         if autocorrect {

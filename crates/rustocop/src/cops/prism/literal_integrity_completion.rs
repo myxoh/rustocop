@@ -8,14 +8,14 @@ mod helpers;
 use helpers::*;
 
 define_cops! {
-    DuplicateSetElement => "Lint/DuplicateSetElement" => source(duplicate_set_element),
-    NumericOperationWithConstantResult => "Lint/NumericOperationWithConstantResult" => source(numeric_constant_result),
-    SymbolConversion => "Lint/SymbolConversion" => source(symbol_conversion),
+    DuplicateSetElement => "Lint/DuplicateSetElement" => compatibility_source(duplicate_set_element),
+    NumericOperationWithConstantResult => "Lint/NumericOperationWithConstantResult" => compatibility_source(numeric_constant_result),
+    SymbolConversion => "Lint/SymbolConversion" => compatibility_source(symbol_conversion),
     DoubleNegation => "Style/DoubleNegation" => call(double_negation),
-    EmptyLiteral => "Style/EmptyLiteral" => source(empty_literal),
+    EmptyLiteral => "Style/EmptyLiteral" => compatibility_source(empty_literal),
 }
 
-fn duplicate_set_element(context: &mut CopContext<'_, '_>) {
+fn duplicate_set_element(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     let source = context.source();
     report_duplicate_percent_symbol_sets(source, context);
     let comments = context.source_file().comment_ranges();
@@ -39,7 +39,10 @@ fn duplicate_set_element(context: &mut CopContext<'_, '_>) {
     }
 }
 
-fn report_duplicate_percent_symbol_sets(source: &str, context: &mut CopContext<'_, '_>) {
+fn report_duplicate_percent_symbol_sets(
+    source: &str,
+    context: &mut CompatibilityCopContext<'_, '_, '_>,
+) {
     let comments = context.source_file().comment_ranges();
     let literals = context.source_file().literal_ranges();
     let mut search = 0;
@@ -129,7 +132,7 @@ fn report_duplicate_set_entries(
     open: usize,
     close: usize,
     name: &str,
-    context: &mut CopContext<'_, '_>,
+    context: &mut CompatibilityCopContext<'_, '_, '_>,
 ) {
     let body = &source[open + 1..close];
     let mut seen = Vec::new();
@@ -177,7 +180,7 @@ fn stable_set_element(value: &str, preceding_source: &str) -> bool {
     })
 }
 
-fn numeric_constant_result(context: &mut CopContext<'_, '_>) {
+fn numeric_constant_result(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     let literal_ranges = context.source_file().literal_ranges();
     for (offset, line) in context.source_file().lines() {
         let code = line.split('#').next().unwrap_or(line).trim();
@@ -221,7 +224,7 @@ fn numeric_constant_result(context: &mut CopContext<'_, '_>) {
     }
 }
 
-fn symbol_conversion(context: &mut CopContext<'_, '_>) {
+fn symbol_conversion(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     #[derive(Default)]
     struct Symbols {
         calls: Vec<(std::ops::Range<usize>, std::ops::Range<usize>, bool)>,
@@ -407,7 +410,7 @@ fn bare_symbol_name(value: &str, allow_suffix: bool) -> bool {
         })
 }
 
-fn check_symbol_hash_labels(context: &mut CopContext<'_, '_>) {
+fn check_symbol_hash_labels(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     let source = context.source();
     let style = context.policy().enforced_style("strict");
     let quoted = quoted_hash_labels(source);
@@ -739,7 +742,7 @@ fn line_at(source: &str, offset: usize) -> usize {
     source[..offset].bytes().filter(|byte| *byte == b'\n').count()
 }
 
-fn empty_literal(context: &mut CopContext<'_, '_>) {
+fn empty_literal(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     let source = context.source();
     let string_literal = if context.related_config_value("Style/StringLiterals", "EnforcedStyle")
         == Some("double_quotes")

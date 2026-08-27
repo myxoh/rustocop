@@ -110,7 +110,12 @@ impl RegexpAsConditionRule<'_, '_, '_, '_> {
         if !node.ancestors().into_iter().any(NodeRef::conditional) {
             return;
         }
-        let replacement = format!("{} =~ $_", node.source().unwrap_or_default());
+        let suffix = if node.parent().and_then(NodeRef::method_name) == Some("!") {
+            " =~ $_ =~ $_"
+        } else {
+            " =~ $_"
+        };
+        let replacement = format!("{}{suffix}", node.source().unwrap_or_default());
         add_offense!(self, node, message: "Do not use regexp literal as a condition. The regexp literal matches `$_` implicitly.", |corrector| {
             corrector.replace(node, replacement);
         });

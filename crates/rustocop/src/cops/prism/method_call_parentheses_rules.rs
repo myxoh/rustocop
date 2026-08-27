@@ -4,7 +4,7 @@ use ruby_prism::{CallNode, Node, YieldNode};
 use super::*;
 
 define_cops! {
-    MethodCallWithArgsParentheses => "Style/MethodCallWithArgsParentheses" => rubocop_callbacks(
+    MethodCallWithArgsParentheses => "Style/MethodCallWithArgsParentheses" => compatibility_prism_callbacks(
         MethodCallWithArgsParenthesesRule,
         [on_send, on_yield]
     ),

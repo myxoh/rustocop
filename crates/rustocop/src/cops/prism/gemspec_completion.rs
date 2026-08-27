@@ -3,12 +3,12 @@ use std::collections::HashMap;
 use super::*;
 
 define_cops! {
-    OrderedDependencies => "Gemspec/OrderedDependencies" => source(ordered_dependencies),
-    DuplicatedAssignment => "Gemspec/DuplicatedAssignment" => source(duplicated_assignment),
-    RequireMFA => "Gemspec/RequireMFA" => source(require_mfa),
+    OrderedDependencies => "Gemspec/OrderedDependencies" => compatibility_source(ordered_dependencies),
+    DuplicatedAssignment => "Gemspec/DuplicatedAssignment" => compatibility_source(duplicated_assignment),
+    RequireMFA => "Gemspec/RequireMFA" => compatibility_source(require_mfa),
 }
 
-fn require_mfa(context: &mut CopContext<'_, '_>) {
+fn require_mfa(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     if !context.path().ends_with(".gemspec") {
         return;
     }
@@ -90,7 +90,7 @@ struct Dependency {
     chunk_start: usize,
 }
 
-fn ordered_dependencies(context: &mut CopContext<'_, '_>) {
+fn ordered_dependencies(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     if !context.path().ends_with(".gemspec")
         && !context.source().contains("Gem::Specification.new")
     {
@@ -179,7 +179,7 @@ fn ordered_dependencies(context: &mut CopContext<'_, '_>) {
     }
 }
 
-fn duplicated_assignment(context: &mut CopContext<'_, '_>) {
+fn duplicated_assignment(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     if !context.path().ends_with("(string)") && !context.path().ends_with(".gemspec") {
         return;
     }

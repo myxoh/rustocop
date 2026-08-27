@@ -4,7 +4,7 @@ use ruby_prism::{BlockNode, CallNode, Node};
 use super::*;
 
 define_cops! {
-    MapIntoArray => "Style/MapIntoArray" => rubocop_callbacks(MapIntoArrayRule, [on_block]),
+    MapIntoArray => "Style/MapIntoArray" => compatibility_prism_callbacks(MapIntoArrayRule, [on_block]),
 }
 
 impl MapIntoArrayRule<'_, '_, '_> {

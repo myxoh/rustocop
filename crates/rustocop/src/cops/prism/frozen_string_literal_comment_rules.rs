@@ -1,10 +1,10 @@
 use super::*;
 
 define_cops! {
-    FrozenStringLiteralComment => "Style/FrozenStringLiteralComment" => source(check_frozen_string_literal_comment),
+    FrozenStringLiteralComment => "Style/FrozenStringLiteralComment" => compatibility_source(check_frozen_string_literal_comment),
 }
 
-fn check_frozen_string_literal_comment(context: &mut CopContext<'_, '_>) {
+fn check_frozen_string_literal_comment(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     let source = context.source();
     return_if!(source.trim().is_empty() || !context.target_ruby_version().at_least(2, 3));
     let style = context.policy().enforced_style("always");
@@ -81,7 +81,7 @@ fn magic_comment(source: &str) -> Option<MagicComment> {
     None
 }
 
-fn insert_missing(context: &mut CopContext<'_, '_>, message: &str) {
+fn insert_missing(context: &mut CompatibilityCopContext<'_, '_, '_>, message: &str) {
     let source = context.source();
     let mut insert = 0;
     let mut lines = source.split_inclusive('\n');

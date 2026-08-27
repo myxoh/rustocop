@@ -6,7 +6,7 @@ use super::source_syntax::{split_arguments, trim_range};
 define_rule!(RaiseArgsRule);
 
 define_cops! {
-    RaiseArgs => "Style/RaiseArgs" => call_rule(
+    RaiseArgs => "Style/RaiseArgs" => compatibility_prism_call_rule(
         RaiseArgsRule,
         on_send,
         restrict [b"raise", b"fail"]

@@ -469,7 +469,18 @@ impl<'source> ProcessedSource<'source> {
                 })
             })
             .min_by_key(|node| node.source_length());
-        if containing.is_some() {
+        // Parser associates comments in a protected rescue/ensure expression
+        // with that structural node. Other enclosing constructs (classes,
+        // modules, blocks) do not consume a leading comment that directly
+        // precedes a child node.
+        if containing.is_some_and(|node| {
+            matches!(node.kind(), "ensure" | "rescue")
+                || node.kind() == "kwbegin"
+                    && node
+                        .child_nodes()
+                        .iter()
+                        .any(|child| matches!(child.kind(), "ensure" | "rescue"))
+        }) {
             return containing;
         }
         let mut last_comment_line = comment.line;
@@ -481,10 +492,11 @@ impl<'source> ProcessedSource<'source> {
             .filter(|node| node.first_line() == last_comment_line + 1)
             .collect::<Vec<_>>();
         let column = following.iter().map(|node| node.column()).min()?;
-        following
+        let following = following
             .into_iter()
             .filter(|node| node.column() == column)
-            .min_by_key(|node| node.source_length())
+            .min_by_key(|node| node.source_length());
+        following.or(containing)
     }
     pub(crate) fn tokens(&self) -> &[SourceToken] {
         &self.tokens

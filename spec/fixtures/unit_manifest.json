@@ -1,12 +1,12 @@
 {
   "version": 1,
   "rubocop_version": "1.87.0",
-  "updated_at": "2026-08-27T04:48:15-04:00",
+  "updated_at": "2026-08-27T05:42:22-04:00",
   "raw_capture_sha256": "0c8bedf20723f89ab5ed012066ae0427c17c3f91f790a0a5594fbb94d270717c",
   "raw_cases": 28606,
   "lsp_exclusions": 5,
-  "controlled_cases": 29596,
-  "imported_cases": 1547,
+  "controlled_cases": 29605,
+  "imported_cases": 1556,
   "exact_duplicates_removed": 552,
   "distribution": {
     "minimum": 1,
@@ -542,9 +542,9 @@
     "Layout/MultilineAssignmentLayout": {
       "cases": "cops/Layout/MultilineAssignmentLayout/unit/cases.jsonl",
       "configs": "cops/Layout/MultilineAssignmentLayout/unit/configs.json",
-      "count": 41,
-      "sha256": "4f3b0b943731751883e094b50d2b3a3ea40c8d7bf2f66fdb95a0aaff6114d8a8",
-      "configs_sha256": "9ba2bcb8edcb3ecceea655590bfa1c9fd442d485ae8033e93cbde483fee9c1b6"
+      "count": 42,
+      "sha256": "300185f66ff23dea048341c5b2bed9b8b315e4217479fc5681a9710c9e87e28a",
+      "configs_sha256": "2c5b4658a0dc6dffd5063a2234a29c82083183268f8fe7b94e3d06bd5c9a3df6"
     },
     "Layout/MultilineBlockLayout": {
       "cases": "cops/Layout/MultilineBlockLayout/unit/cases.jsonl",
@@ -1124,7 +1124,7 @@
       "cases": "cops/Lint/EmptyFile/unit/cases.jsonl",
       "configs": "cops/Lint/EmptyFile/unit/configs.json",
       "count": 5,
-      "sha256": "332a12d133be848779875f210e9930c1d6d5a8c8473c113daaf50871639a0087",
+      "sha256": "b81c33b78aaf6094f72eed5204ac03cb8a709437c82aef33850f67f7a27ca4f9",
       "configs_sha256": "697a5a8fb05f6eec45538b52996c1b5d5954f18646a4212c33505dae1536c556"
     },
     "Lint/EmptyInPattern": {
@@ -1298,9 +1298,9 @@
     "Lint/MissingCopEnableDirective": {
       "cases": "cops/Lint/MissingCopEnableDirective/unit/cases.jsonl",
       "configs": "cops/Lint/MissingCopEnableDirective/unit/configs.json",
-      "count": 21,
-      "sha256": "23bc056769c0a440dc030948c0c54970b56b0e8110779f9c88cb2a9eac5610e2",
-      "configs_sha256": "f48022f3ac0dd17a439eaf5b75b94b0780b5a1da027139ca145c7b7e97ebd164"
+      "count": 22,
+      "sha256": "014774a8f7051d2c14f163dac35cad310040220acf04b98fad97d37ba98f34b5",
+      "configs_sha256": "6d4c758ce184ad7c4179109374bc3cf262bd78d1c55db442c8a2671dac4937a7"
     },
     "Lint/MissingSuper": {
       "cases": "cops/Lint/MissingSuper/unit/cases.jsonl",
@@ -1466,9 +1466,9 @@
     "Lint/RedundantCopEnableDirective": {
       "cases": "cops/Lint/RedundantCopEnableDirective/unit/cases.jsonl",
       "configs": "cops/Lint/RedundantCopEnableDirective/unit/configs.json",
-      "count": 33,
-      "sha256": "cc53d88315dc34b563f47678ce30676df0059d3f6f77f358e8ed522614f0ba18",
-      "configs_sha256": "b5afd7ee54d649f72c34a727f4167c1c84b06fca3783646801dad693fed072dc"
+      "count": 35,
+      "sha256": "d0abe491b1df567e2b0ea95c7c3917aa2247c624c61df9a5248d561b152a19c1",
+      "configs_sha256": "cb57dbc36454656c0bb2da98b1aab84739547e6f153f0a8927a860c4e022f665"
     },
     "Lint/RedundantDirGlobSort": {
       "cases": "cops/Lint/RedundantDirGlobSort/unit/cases.jsonl",
@@ -1544,7 +1544,7 @@
       "cases": "cops/Lint/RegexpAsCondition/unit/cases.jsonl",
       "configs": "cops/Lint/RegexpAsCondition/unit/configs.json",
       "count": 5,
-      "sha256": "21bcb40194fbc78cde7777b7c2fe493b6bc38a9a4e2e4b2812cdbd98fbdae637",
+      "sha256": "d28e2d9d5c6acc203343e2f80a0d92e4129f79a94a6a16bf038bb0ab13714d60",
       "configs_sha256": "c60d6265b7b64c11529a3f8b1e318bfce50bd23cf10e0a29cf84cb64428dd4fb"
     },
     "Lint/RequireParentheses": {
@@ -2551,9 +2551,9 @@
     "Style/DocumentationMethod": {
       "cases": "cops/Style/DocumentationMethod/unit/cases.jsonl",
       "configs": "cops/Style/DocumentationMethod/unit/configs.json",
-      "count": 99,
-      "sha256": "3848f80d9a0db7746ae086783a1093738632812185b06cf049be89d1fceab756",
-      "configs_sha256": "2fd86dff4af2d495a7040c7c27dd66e83976e8d4d277696633f1dc26fd86cd02"
+      "count": 100,
+      "sha256": "4bfbdbad78dfc13e147b3562cd9a57b14bd141c61a0947a57648ab01c347a855",
+      "configs_sha256": "2ea198242d9840feea1e0e876bcece10a67cd8b5d79b46b5f39db541cce41e62"
     },
     "Style/DoubleCopDisableDirective": {
       "cases": "cops/Style/DoubleCopDisableDirective/unit/cases.jsonl",
@@ -2789,9 +2789,9 @@
     "Style/FormatStringToken": {
       "cases": "cops/Style/FormatStringToken/unit/cases.jsonl",
       "configs": "cops/Style/FormatStringToken/unit/configs.json",
-      "count": 269,
-      "sha256": "2e108173f3a09557636dcff96558ec8a32ba62eac73889cf53277c347b7ad167",
-      "configs_sha256": "5ac7e28e2cf33c9a98b570e02ea9a116a8e498c66a513df7c1d1af9cb0d14fe7"
+      "count": 273,
+      "sha256": "6bbc14894f6f8ae5549366ed57bc0dddc4f98d42f9993fa7851cfb3bf8e1e2c9",
+      "configs_sha256": "dc5fe5f0451472ba0a4bec6f3be86a1d4c0ef1254685c9eee6334710fd97092b"
     },
     "Style/FrozenStringLiteralComment": {
       "cases": "cops/Style/FrozenStringLiteralComment/unit/cases.jsonl",
@@ -4001,7 +4001,7 @@
       "cases": "cops/Style/StringHashKeys/unit/cases.jsonl",
       "configs": "cops/Style/StringHashKeys/unit/configs.json",
       "count": 15,
-      "sha256": "93674c0e583a850b78ef9b37d3c49e20b0958092df2825a961511c9e8d4d1b4f",
+      "sha256": "b996402bcc0aa3e97cae5a614a8e6da80adc9dc8a756d183cf5c413b27de9eea",
       "configs_sha256": "c143a7330a8089e8af80a7489dc3e46d23e39d1646c8d89faebbcc4aad3f73af"
     },
     "Style/StringLiterals": {

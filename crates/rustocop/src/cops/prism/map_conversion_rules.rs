@@ -3,7 +3,7 @@ use ruby_prism::CallNode;
 use super::*;
 
 define_cops! {
-    MapToHash => "Style/MapToHash" => rubocop_callbacks(
+    MapToHash => "Style/MapToHash" => compatibility_prism_callbacks(
         MapToHashRule,
         [on_send restrict [b"to_h"]]
     ),

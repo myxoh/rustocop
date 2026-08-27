@@ -3,10 +3,10 @@ use crate::rubocop::ast::node::core::NodeRef as RubocopNodeRef;
 use crate::rubocop::ast::prism::convert as convert_rubocop_ast;
 
 define_cops! {
-    AccessorGrouping => "Style/AccessorGrouping" => source(accessor_grouping),
+    AccessorGrouping => "Style/AccessorGrouping" => compatibility_source(accessor_grouping),
 }
 
-fn accessor_grouping(context: &mut CopContext<'_, '_>) {
+fn accessor_grouping(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     let lines = context.source_file().lines().collect::<Vec<_>>();
     if context.policy().enforced_style("grouped") == "separated" {
         separated_accessors(context, &lines);
@@ -15,13 +15,13 @@ fn accessor_grouping(context: &mut CopContext<'_, '_>) {
     }
 }
 
-fn separated_accessors(context: &mut CopContext<'_, '_>, lines: &[(usize, &str)]) {
+fn separated_accessors(context: &mut CompatibilityCopContext<'_, '_, '_>, lines: &[(usize, &str)]) {
     separate_parenthesized_accessors(context);
     separate_multiline_accessors(context, lines);
     separate_inline_accessors(context, lines);
 }
 
-fn separate_parenthesized_accessors(context: &mut CopContext<'_, '_>) {
+fn separate_parenthesized_accessors(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     for accessor in ["attr_reader", "attr_writer", "attr_accessor"] {
         let needle = format!("{accessor}(");
         let mut search = 0usize;
@@ -48,7 +48,7 @@ fn separate_parenthesized_accessors(context: &mut CopContext<'_, '_>) {
     }
 }
 
-fn separate_multiline_accessors(context: &mut CopContext<'_, '_>, lines: &[(usize, &str)]) {
+fn separate_multiline_accessors(context: &mut CompatibilityCopContext<'_, '_, '_>, lines: &[(usize, &str)]) {
     for (index, (offset, line)) in lines.iter().enumerate() {
         let trimmed = line.trim_start();
         let Some(accessor) = ["attr_reader", "attr_writer", "attr_accessor"]
@@ -147,7 +147,7 @@ fn separated_multiline_replacement(source: &str, accessor: &str, indent: &str) -
         .join("\n")
 }
 
-fn separate_inline_accessors(context: &mut CopContext<'_, '_>, lines: &[(usize, &str)]) {
+fn separate_inline_accessors(context: &mut CompatibilityCopContext<'_, '_, '_>, lines: &[(usize, &str)]) {
     let mut preceding_comment = false;
     for (offset, line) in lines {
         let trimmed = line.trim_start();
@@ -236,7 +236,7 @@ fn accessor_line(
     (start, end, accessor, values.to_string())
 }
 
-fn flush_accessor_group(group: &mut Vec<AccessorLine>, context: &mut CopContext<'_, '_>) {
+fn flush_accessor_group(group: &mut Vec<AccessorLine>, context: &mut CompatibilityCopContext<'_, '_, '_>) {
     if group.len() < 2 {
         group.clear();
         return;
@@ -299,7 +299,7 @@ fn flush_accessor_group(group: &mut Vec<AccessorLine>, context: &mut CopContext<
     group.clear();
 }
 
-fn grouped_accessors(context: &mut CopContext<'_, '_>, lines: &[(usize, &str)]) {
+fn grouped_accessors(context: &mut CompatibilityCopContext<'_, '_, '_>, lines: &[(usize, &str)]) {
     let parsed = ruby_prism::parse(context.source().as_bytes());
     let (ast, root) = convert_rubocop_ast(context.source(), &parsed.node());
     let Some(root) = root.map(|root| ast.node(root)) else { return };
@@ -410,7 +410,7 @@ fn accessor_groupable(node: RubocopNodeRef<'_>, source: &str) -> bool {
 }
 
 #[allow(dead_code)]
-fn grouped_accessors_legacy(context: &mut CopContext<'_, '_>, lines: &[(usize, &str)]) {
+fn grouped_accessors_legacy(context: &mut CompatibilityCopContext<'_, '_, '_>, lines: &[(usize, &str)]) {
     let mut groups = std::collections::BTreeMap::<
         (usize, usize, usize, &'static str),
         Vec<AccessorLine>,

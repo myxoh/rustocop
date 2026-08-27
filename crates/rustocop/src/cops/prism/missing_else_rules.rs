@@ -3,7 +3,7 @@ use ruby_prism::{CaseNode, IfNode, UnlessNode};
 use super::*;
 
 define_cops! {
-    MissingElse => "Style/MissingElse" => rubocop_callbacks(MissingElseRule, [on_if, on_unless, on_case]),
+    MissingElse => "Style/MissingElse" => compatibility_prism_callbacks(MissingElseRule, [on_if, on_unless, on_case]),
 }
 
 impl MissingElseRule<'_, '_, '_> {

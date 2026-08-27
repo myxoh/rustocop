@@ -2,17 +2,17 @@ use regex::Regex;
 
 use super::*;
 
-define_rule!(MagicCommentFormatRule);
+define_compatibility_rule!(MagicCommentFormatRule);
 
 define_cops! {
-    MagicCommentFormat => "Style/MagicCommentFormat" => source(on_new_investigation),
+    MagicCommentFormat => "Style/MagicCommentFormat" => compatibility_source(on_new_investigation),
 }
 
-fn on_new_investigation(context: &mut CopContext<'_, '_>) {
+fn on_new_investigation(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     MagicCommentFormatRule::new(context).on_new_investigation();
 }
 
-impl MagicCommentFormatRule<'_, '_, '_> {
+impl MagicCommentFormatRule<'_, '_, '_, '_> {
     fn on_new_investigation(&mut self) {
         let directive = Regex::new(
             r"(?i)(coding|encoding|frozen[-_]string[-_]literal|rbs_inline|shareable[-_]constant[-_]value|typed)\s*:",

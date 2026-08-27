@@ -1,4 +1,4 @@
-use super::catalog_cop::custom;
+use super::catalog_cop::compatibility_custom;
 use super::*;
 use std::collections::HashSet;
 
@@ -12,7 +12,7 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
         Box::new(HeredocDelimiterCase) as Box<dyn Cop>,
         Box::new(BlockForwarding) as Box<dyn Cop>,
         Box::new(RescuedExceptionsVariableName) as Box<dyn Cop>,
-        custom("Lint/ConstantReassignment", constant_reassignment),
+        compatibility_custom("Lint/ConstantReassignment", constant_reassignment),
     ];
     cops.extend(naming::cops());
     cops
@@ -1387,7 +1387,7 @@ impl<'pr> ruby_prism::Visit<'pr> for AnonymousBlockForwarding {
     fn visit_def_node(&mut self, _node: &ruby_prism::DefNode<'pr>) {}
 }
 
-fn constant_reassignment(context: &mut CopContext<'_, '_>) {
+fn constant_reassignment(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     #[derive(Clone)]
     enum Scope {
         Namespace(String),

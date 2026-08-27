@@ -1255,7 +1255,7 @@ fn enforce_bracket_spacing(
 }
 
 #[allow(clippy::too_many_lines)]
-fn end_alignment(context: &mut CopContext<'_, '_>) {
+fn end_alignment(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     let parsed = ruby_prism::parse(context.source().as_bytes());
     let (ast, root) = convert_rubocop_ast(context.source(), &parsed.node());
     let Some(root) = root.map(|root| ast.node(root)) else {
@@ -3551,7 +3551,7 @@ fn report_hash_alignment(
 }
 
 #[allow(clippy::cognitive_complexity, clippy::too_many_lines)]
-fn operator_spacing(context: &mut CopContext<'_, '_>) {
+fn operator_spacing(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     let source = context.source().to_owned();
     let parsed = ruby_prism::parse(source.as_bytes());
     let exponent_space = context
@@ -4625,7 +4625,7 @@ fn operator_layouts(line: &str) -> Vec<(usize, usize, usize, usize)> {
     layouts
 }
 
-fn heredoc_indentation(context: &mut CopContext<'_, '_>) {
+fn heredoc_indentation(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     if !context.target_ruby_version().at_least(2, 3) {
         return;
     }

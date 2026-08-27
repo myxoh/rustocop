@@ -3,7 +3,7 @@ use ruby_prism::{Location, Node, UntilNode, WhileNode};
 use super::*;
 
 define_cops! {
-    InfiniteLoop => "Style/InfiniteLoop" => rubocop_callbacks(InfiniteLoopRule, [on_while, on_until]),
+    InfiniteLoop => "Style/InfiniteLoop" => compatibility_prism_callbacks(InfiniteLoopRule, [on_while, on_until]),
 }
 
 impl InfiniteLoopRule<'_, '_, '_> {

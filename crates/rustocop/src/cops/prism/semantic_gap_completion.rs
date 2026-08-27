@@ -6,11 +6,11 @@ use std::collections::HashSet;
 define_cops! {
     UnusedMethodArgument => "Lint/UnusedMethodArgument" => node(as_def_node, unused_method_argument),
     UselessMethodDefinition => "Lint/UselessMethodDefinition" => node(as_def_node, useless_method_definition),
-    RedundantAssignment => "Style/RedundantAssignment" => source(redundant_assignment),
+    RedundantAssignment => "Style/RedundantAssignment" => compatibility_source(redundant_assignment),
     ConstantResolution => "Lint/ConstantResolution" => any_node(constant_resolution),
     AmbiguousEndlessMethodDefinition => "Style/AmbiguousEndlessMethodDefinition" => node(as_def_node, ambiguous_endless_method_definition),
     NestedMethodDefinition => "Lint/NestedMethodDefinition" => node(as_def_node, nested_method_definition),
-    UselessConstantScoping => "Lint/UselessConstantScoping" => source(useless_constant_scoping),
+    UselessConstantScoping => "Lint/UselessConstantScoping" => compatibility_source(useless_constant_scoping),
     Documentation => "Style/Documentation" => any_node(style_documentation),
 }
 
@@ -633,7 +633,7 @@ fn constant_overwritten_in_rescue(
     );
 }
 
-fn redundant_assignment(context: &mut CopContext<'_, '_>) {
+fn redundant_assignment(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     let parsed = ruby_prism::parse(context.source().as_bytes());
     let (ast, root) = convert_rubocop_ast(context.source(), &parsed.node());
     let Some(root) = root.map(|root| ast.node(root)) else {
@@ -646,7 +646,7 @@ fn redundant_assignment(context: &mut CopContext<'_, '_>) {
 
 fn check_redundant_assignment_branch(
     node: Option<RubocopNodeRef<'_>>,
-    context: &mut CopContext<'_, '_>,
+    context: &mut CompatibilityCopContext<'_, '_, '_>,
 ) {
     let Some(node) = node else { return };
     match node.kind() {
@@ -670,7 +670,10 @@ fn check_redundant_assignment_branch(
     }
 }
 
-fn check_redundant_assignment_begin(node: RubocopNodeRef<'_>, context: &mut CopContext<'_, '_>) {
+fn check_redundant_assignment_begin(
+    node: RubocopNodeRef<'_>,
+    context: &mut CompatibilityCopContext<'_, '_, '_>,
+) {
     let children = node.child_nodes();
     if let [.., assignment, returned] = children.as_slice() {
         let same_name = assignment.kind() == "lvasgn"
@@ -992,7 +995,7 @@ fn nested_method_definition(node: &ruby_prism::DefNode<'_>, context: &mut CopCon
     );
 }
 
-fn useless_constant_scoping(context: &mut CopContext<'_, '_>) {
+fn useless_constant_scoping(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     let parsed = ruby_prism::parse(context.source().as_bytes());
     let (ast, root) = convert_rubocop_ast(context.source(), &parsed.node());
     let Some(root) = root.map(|root| ast.node(root)) else {

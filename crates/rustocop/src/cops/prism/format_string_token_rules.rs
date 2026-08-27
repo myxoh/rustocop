@@ -3,7 +3,7 @@ use ruby_prism::{Node, StringNode};
 use super::*;
 
 define_cops! {
-    FormatStringToken => "Style/FormatStringToken" => rubocop_callbacks(FormatStringTokenRule, [on_str]),
+    FormatStringToken => "Style/FormatStringToken" => compatibility_prism_callbacks(FormatStringTokenRule, [on_str]),
 }
 
 #[derive(Clone, Copy, PartialEq)]
@@ -26,8 +26,8 @@ impl FormatStringTokenRule<'_, '_, '_> {
         let tokens = parse_tokens(source);
         return_if!(tokens.is_empty());
         let location = (node.location().start_offset(), node.location().end_offset());
-        let typical = typical_context(location, self.ancestors());
-        let directly_typical = direct_typical_context(location, self.ancestors());
+        let typical = typical_context(self, location, self.ancestors());
+        let directly_typical = direct_typical_context(self, location, self.ancestors());
         return_if!(allowed_context(self, location));
         let target = match self.policy().enforced_style("annotated") {
             "template" => TokenStyle::Template,
@@ -156,7 +156,11 @@ fn correction(source: &str, token: &Token, target: TokenStyle) -> Option<String>
     }
 }
 
-fn typical_context(location: (usize, usize), ancestors: &[Node<'_>]) -> bool {
+fn typical_context(
+    context: &FormatStringTokenRule<'_, '_, '_>,
+    location: (usize, usize),
+    ancestors: &[Node<'_>],
+) -> bool {
     let mut subjects = vec![location];
     subjects.extend(ancestors
         .iter()
@@ -168,12 +172,21 @@ fn typical_context(location: (usize, usize), ancestors: &[Node<'_>]) -> bool {
         if matches!(call.name().as_slice(), b"format" | b"sprintf" | b"printf") {
             call.arguments().and_then(|args| args.arguments().iter().next()).is_some_and(|argument| subjects.iter().any(|subject| same_location(argument.location(), *subject)))
         } else if call.name().as_slice() == b"%" {
-            call.receiver().is_some_and(|receiver| subjects.iter().any(|subject| same_location(receiver.location(), *subject)))
+            call.receiver().is_some_and(|receiver| {
+                subjects.iter().any(|subject| {
+                    same_location(receiver.location(), *subject)
+                        && parser_exposes_percent_receiver(context, *subject)
+                })
+            })
         } else { false }
     })
 }
 
-fn direct_typical_context(location: (usize, usize), ancestors: &[Node<'_>]) -> bool {
+fn direct_typical_context(
+    context: &FormatStringTokenRule<'_, '_, '_>,
+    location: (usize, usize),
+    ancestors: &[Node<'_>],
+) -> bool {
     ancestors.iter().filter_map(Node::as_call_node).any(|call| {
         if matches!(call.name().as_slice(), b"format" | b"sprintf" | b"printf") {
             call.arguments()
@@ -181,11 +194,32 @@ fn direct_typical_context(location: (usize, usize), ancestors: &[Node<'_>]) -> b
                 .is_some_and(|argument| same_location(argument.location(), location))
         } else if call.name().as_slice() == b"%" {
             call.receiver()
-                .is_some_and(|receiver| same_location(receiver.location(), location))
+                .is_some_and(|receiver| {
+                    same_location(receiver.location(), location)
+                        && parser_exposes_percent_receiver(context, location)
+                })
         } else {
             false
         }
     })
+}
+
+/// RuboCop's `parser_prism` adapter does not make these two multiline string
+/// shapes the direct `send` receiver matched by
+/// `format_string_in_typical_context?`. Preserve that Parser-shaped contract
+/// instead of using Prism's more direct parent relationship, which would
+/// produce offenses RuboCop itself does not report.
+fn parser_exposes_percent_receiver(
+    context: &FormatStringTokenRule<'_, '_, '_>,
+    location: (usize, usize),
+) -> bool {
+    let Some(source) = context.source_file().slice(location.0..location.1) else {
+        return true;
+    };
+    if source.starts_with("<<-") && !source.starts_with("<<~") {
+        return false;
+    }
+    !(source.starts_with("%[") && source.contains('\n'))
 }
 
 fn same_location(location: ruby_prism::Location<'_>, expected: (usize, usize)) -> bool {

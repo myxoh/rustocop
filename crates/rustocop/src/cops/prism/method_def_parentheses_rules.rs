@@ -3,7 +3,7 @@ use ruby_prism::DefNode;
 use super::*;
 
 define_cops! {
-    MethodDefParentheses => "Style/MethodDefParentheses" => rubocop_callbacks(MethodDefParenthesesRule, [on_def]),
+    MethodDefParentheses => "Style/MethodDefParentheses" => compatibility_prism_callbacks(MethodDefParenthesesRule, [on_def]),
 }
 
 impl MethodDefParenthesesRule<'_, '_, '_> {

@@ -8,12 +8,12 @@ mod parameters;
 use parameters::*;
 
 define_cops! {
-    GemVersion => "Bundler/GemVersion" => source(gem_version),
+    GemVersion => "Bundler/GemVersion" => compatibility_source(gem_version),
     MultilineArrayLineBreaks => "Layout/MultilineArrayLineBreaks" => any_node(multiline_array_line_breaks),
     ErbNewArguments => "Lint/ErbNewArguments" => call(erb_new_arguments),
 }
 
-fn gem_version(context: &mut CopContext<'_, '_>) {
+fn gem_version(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     if context.related_config_value("AllCops", "DisabledByDefault") == Some("true")
         && !context.related_config_explicit("Bundler/GemVersion", "Enabled")
     {

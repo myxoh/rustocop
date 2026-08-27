@@ -4,15 +4,15 @@ mod elsif_conversion;
 use elsif_conversion::*;
 
 define_cops! {
-    IfInsideElse => "Style/IfInsideElse" => source(if_inside_else),
-    MultilineTernaryOperator => "Style/MultilineTernaryOperator" => recovery_rubocop_callbacks(
+    IfInsideElse => "Style/IfInsideElse" => compatibility_source(if_inside_else),
+    MultilineTernaryOperator => "Style/MultilineTernaryOperator" => compatibility_prism_recovery_callbacks(
         MultilineTernaryOperatorRule,
         [on_if]
     ),
-    CaseLikeIf => "Style/CaseLikeIf" => source(case_like_if),
+    CaseLikeIf => "Style/CaseLikeIf" => compatibility_source(case_like_if),
 }
 
-fn case_like_if(context: &mut CopContext<'_, '_>) {
+fn case_like_if(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     let lines = context.source_file().lines().collect::<Vec<_>>();
     let minimum = context
         .config_value("MinBranchesCount")
@@ -122,7 +122,7 @@ fn case_like_if(context: &mut CopContext<'_, '_>) {
 }
 
 fn ast_case_like_if(
-    context: &mut CopContext<'_, '_>,
+    context: &mut CompatibilityCopContext<'_, '_, '_>,
     minimum: usize,
     reported: &[std::ops::Range<usize>],
 ) {

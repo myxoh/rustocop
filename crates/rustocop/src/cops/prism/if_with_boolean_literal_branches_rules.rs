@@ -3,7 +3,7 @@ use ruby_prism::{IfNode, Node, UnlessNode};
 use super::*;
 
 define_cops! {
-    IfWithBooleanLiteralBranches => "Style/IfWithBooleanLiteralBranches" => rubocop_callbacks(
+    IfWithBooleanLiteralBranches => "Style/IfWithBooleanLiteralBranches" => compatibility_prism_callbacks(
         IfWithBooleanLiteralBranchesRule,
         [on_if, on_unless]
     ),

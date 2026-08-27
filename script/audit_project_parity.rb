@@ -104,6 +104,9 @@ unless cops
   abort "--from-position must be within 1..#{matrix.length}" unless (1..matrix.length).cover?(start)
   cops = start.downto(1).first(options[:count]).map { |position| matrix.fetch(position - 1) }
 end
+registry_context_cops = options[:refresh_rubocop_reference] ? cops : active_matrix
+registry_context_value = registry_context_cops.join(",")
+registry_context_sha256 = Digest::SHA256.hexdigest(registry_context_value)
 unknown = cops - matrix
 abort "unknown cops: #{unknown.join(', ')}" unless unknown.empty?
 abort "no cops selected" if cops.empty?
@@ -191,7 +194,8 @@ def validate_rubocop_coverage!(result, project)
         "ensure AllCops/Exclude is [] and the parity config includes external corpus paths"
 end
 
-def capture_native(native, jobs, common, corpus, cops, batch_size, cache:, cache_metadata:)
+def capture_native(native, jobs, common, corpus, cops, batch_size, registry_context:,
+                   cache:, cache_metadata:)
   Rustocop::BatchedNativeReports.capture(cops:, batch_size:, run: lambda do |batch|
     metadata = cache_metadata.merge("cops" => batch)
     cached = cache&.fetch(metadata)
@@ -203,7 +207,7 @@ def capture_native(native, jobs, common, corpus, cops, batch_size, cache:, cache
       next cached
     end
 
-    result = capture(native_command(native, jobs, common, corpus, batch))
+    result = capture(native_command(native, jobs, common, corpus, batch, registry_context))
     next result unless cache && accepted?(result)
 
     result = compact_native_result(result, corpus:, cops: batch)
@@ -213,10 +217,11 @@ def capture_native(native, jobs, common, corpus, cops, batch_size, cache:, cache
   end)
 end
 
-def native_cache_metadata(project, native_sha256:, config_sha256:)
+def native_cache_metadata(project, native_sha256:, config_sha256:, registry_context_sha256:)
   {
     "native_sha256" => native_sha256,
     "config_sha256" => config_sha256,
+    "registry_context_sha256" => registry_context_sha256,
     "project" => project.slice("name", "repository", "revision"),
     "files" => project.fetch("files")
   }
@@ -240,8 +245,11 @@ def cop_inspection_error?(result)
   stderr.include?("An error occurred while") || stderr.include?("cannot be used with --only")
 end
 
-def native_command(native, jobs, common, corpus, cops)
-  [native, "--jobs", jobs.to_s, "--format", "json", "--only", cops.join(","), *common, corpus]
+def native_command(native, jobs, common, corpus, cops, registry_context)
+  [
+    native, "--jobs", jobs.to_s, "--format", "json", "--only", cops.join(","),
+    "--registry-context", registry_context, *common, corpus
+  ]
 end
 
 def rubocop_command(rubocop, common, corpus, cops)
@@ -408,7 +416,9 @@ native_cache = if options[:native_cache]
 if native_cache
   batches = cops.each_slice(options[:native_batch_size]).to_a
   cache_entries = projects.product(batches).map do |project, batch|
-    native_cache_metadata(project, native_sha256:, config_sha256:).merge("cops" => batch)
+    native_cache_metadata(
+      project, native_sha256:, config_sha256:, registry_context_sha256:
+    ).merge("cops" => batch)
   end
   cache_hits = cache_entries.count { |metadata| native_cache.cached?(metadata) }
   cache_state = cache_hits == cache_entries.length ? "warm" : "cold"
@@ -535,10 +545,13 @@ loop do
   failure = nil
   projects.each do |project|
     warn "Rust crash gate: #{project.fetch('name')} (#{rust_survivors.length} cops)"
-    cache_metadata = native_cache_metadata(project, native_sha256:, config_sha256:)
+    cache_metadata = native_cache_metadata(
+      project, native_sha256:, config_sha256:, registry_context_sha256:
+    )
     result = capture_native(
       options[:native], options[:jobs], common, project.fetch("corpus"), rust_survivors,
-      options[:native_batch_size], cache: native_cache, cache_metadata:
+      options[:native_batch_size], registry_context: registry_context_value,
+      cache: native_cache, cache_metadata:
     )
     unless accepted?(result)
       failure = [project, result]
@@ -552,12 +565,15 @@ loop do
   end
 
   project, result = failure
-  cache_metadata = native_cache_metadata(project, native_sha256:, config_sha256:)
+  cache_metadata = native_cache_metadata(
+    project, native_sha256:, config_sha256:, registry_context_sha256:
+  )
   crash_candidates = result.fetch("failed_cops", rust_survivors)
   culprit = isolate_crash(crash_candidates) do |subset|
     probe = capture_native(
       options[:native], options[:jobs], common, project.fetch("corpus"), subset,
-      options[:native_batch_size], cache: native_cache, cache_metadata:
+      options[:native_batch_size], registry_context: registry_context_value,
+      cache: native_cache, cache_metadata:
     )
     !accepted?(probe)
   end

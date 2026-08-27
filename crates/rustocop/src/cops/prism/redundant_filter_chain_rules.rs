@@ -7,7 +7,7 @@ define_rule!(RedundantFilterChainRule);
 const MSG: &str = "Use `{prefer}` instead of `{first_method}.{second_method}`.";
 
 define_cops! {
-    RedundantFilterChain => "Style/RedundantFilterChain" => call_rule(
+    RedundantFilterChain => "Style/RedundantFilterChain" => compatibility_prism_call_rule(
         RedundantFilterChainRule,
         on_send,
         restrict [b"any?", b"empty?", b"none?", b"one?", b"many?", b"present?"]

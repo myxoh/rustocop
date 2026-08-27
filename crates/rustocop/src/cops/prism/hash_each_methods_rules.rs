@@ -4,7 +4,7 @@ use super::*;
 use super::source_syntax::split_arguments;
 
 define_cops! {
-    HashEachMethods => "Style/HashEachMethods" => rubocop_callbacks(HashEachMethodsRule, [on_block, on_send restrict [b"each"]]),
+    HashEachMethods => "Style/HashEachMethods" => compatibility_prism_callbacks(HashEachMethodsRule, [on_block, on_send restrict [b"each"]]),
 }
 
 impl HashEachMethodsRule<'_, '_, '_> {

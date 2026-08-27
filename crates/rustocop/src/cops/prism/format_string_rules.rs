@@ -3,7 +3,7 @@ use ruby_prism::{CallNode, Node};
 use super::*;
 
 define_cops! {
-    FormatString => "Style/FormatString" => rubocop_callbacks(FormatStringRule, [on_send restrict [b"format", b"sprintf", b"%"]]),
+    FormatString => "Style/FormatString" => compatibility_prism_callbacks(FormatStringRule, [on_send restrict [b"format", b"sprintf", b"%"]]),
 }
 
 impl FormatStringRule<'_, '_, '_> {

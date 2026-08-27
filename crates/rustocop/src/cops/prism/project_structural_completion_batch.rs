@@ -1,14 +1,14 @@
 use super::*;
 
 define_cops! {
-    RequiredRubyVersion => "Gemspec/RequiredRubyVersion" => source(required_ruby_version),
+    RequiredRubyVersion => "Gemspec/RequiredRubyVersion" => compatibility_source(required_ruby_version),
     ClassStructure => "Layout/ClassStructure" => any_node(class_structure),
     ModuleLength => "Metrics/ModuleLength" => any_node(module_length),
     EmptyLineAfterMultilineCondition => "Layout/EmptyLineAfterMultilineCondition" => any_node(empty_after_multiline_condition),
     DeprecatedOpenSSLConstant => "Lint/DeprecatedOpenSSLConstant" => call(deprecated_openssl),
 }
 
-fn required_ruby_version(context: &mut CopContext<'_, '_>) {
+fn required_ruby_version(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     if !context.path().ends_with("(string)") && !context.path().ends_with(".gemspec") {
         return;
     }

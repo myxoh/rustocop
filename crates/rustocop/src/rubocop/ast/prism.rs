@@ -202,12 +202,30 @@ impl Converter<'_> {
                 );
             }
             self.ast.append_child(outer, NodeValue::Node(lhs));
-            if let Some(relative) = source.find(if kind == "and_asgn" { "&&=" } else { "||=" }) {
-                let byte_start = node.location().start_offset() + relative;
-                let byte_end = byte_start + 3;
+            let operator_bytes = if kind == "and_asgn" {
+                source.find("&&=").map(|start| start..start + 3)
+            } else if kind == "or_asgn" {
+                source.find("||=").map(|start| start..start + 3)
+            } else {
+                source.find('=').map(|equal| {
+                    let mut start = equal;
+                    while start > 0
+                        && matches!(
+                            source.as_bytes()[start - 1],
+                            b'&' | b'|' | b'+' | b'-' | b'*' | b'/' | b'%' | b'^' | b'<' | b'>'
+                        )
+                    {
+                        start -= 1;
+                    }
+                    start..equal + 1
+                })
+            };
+            if let Some(operator_bytes) = operator_bytes {
+                let byte_start = node.location().start_offset() + operator_bytes.start;
+                let byte_end = node.location().start_offset() + operator_bytes.end;
                 let range = self.character_range(byte_start..byte_end);
                 self.ast
-                    .set_location(outer, "operator", range, &source[relative..relative + 3]);
+                    .set_location(outer, "operator", range, &source[operator_bytes]);
             }
             if kind == "op_asgn" {
                 let operator = source

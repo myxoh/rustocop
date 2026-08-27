@@ -3,10 +3,10 @@ use std::collections::{HashMap, HashSet};
 
 define_cops! {
     UnderscorePrefixedVariableName => "Lint/UnderscorePrefixedVariableName" => any_node(underscore_variable),
-    HeredocDelimiterNaming => "Naming/HeredocDelimiterNaming" => source(heredoc_naming),
+    HeredocDelimiterNaming => "Naming/HeredocDelimiterNaming" => compatibility_source(heredoc_naming),
     DeprecatedConstants => "Lint/DeprecatedConstants" => any_node(deprecated_constants),
-    RedundantCopEnableDirective => "Lint/RedundantCopEnableDirective" => source(redundant_enable),
-    UnreachablePatternBranch => "Lint/UnreachablePatternBranch" => source(unreachable_pattern),
+    RedundantCopEnableDirective => "Lint/RedundantCopEnableDirective" => compatibility_source(redundant_enable),
+    UnreachablePatternBranch => "Lint/UnreachablePatternBranch" => compatibility_source(unreachable_pattern),
     MethodParameterName => "Naming/MethodParameterName" => node(as_def_node, method_parameter_name),
     AccessorMethodName => "Naming/AccessorMethodName" => node(as_def_node, accessor_method_name),
 }
@@ -179,10 +179,17 @@ fn underscore_prefixed_name(name: &[u8]) -> bool {
     name.starts_with(b"_")
 }
 
-fn heredoc_naming(context: &mut CopContext<'_, '_>) {
+fn heredoc_naming(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     use crate::rubocop::ast::prism::convert as convert_rubocop_ast;
 
     let source = context.source().to_string();
+    let blank_openings = blank_heredoc_opening_ranges(&source);
+    if !blank_openings.is_empty() {
+        for range in blank_openings {
+            context.report("Use meaningful heredoc delimiters.", range);
+        }
+        return;
+    }
     let parsed = ruby_prism::parse(source.as_bytes());
     if parsed.errors().next().is_some() {
         for range in blank_heredoc_opening_ranges(&source) {
@@ -362,7 +369,10 @@ fn deprecated_constants(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
     }
 }
 
-fn redundant_enable(context: &mut CopContext<'_, '_>) {
+fn redundant_enable(context: &mut CompatibilityCopContext<'_, '_, '_>) {
+    if context.processed_source().blank() || !context.source().contains("enable") {
+        return;
+    }
     let known_cops = crate::cops::cop_names();
     let known_departments = known_cops
         .iter()
@@ -379,30 +389,30 @@ fn redundant_enable(context: &mut CopContext<'_, '_>) {
             .find('\n')
             .map_or(context.source().len(), |newline| comment_range.end + newline);
         let line = &context.source()[line_start..line_end];
-        let directive = comment.trim_start_matches('#').trim_start();
-
-        if let Some(list) = redundant_directive_list(directive, "disable")
-            .or_else(|| redundant_directive_list(directive, "todo"))
-        {
-            let list = list.split("--").next().unwrap_or_default();
-            disabled.extend(
-                list.split(',')
-                    .map(str::trim)
-                    .filter(|cop| {
-                        redundant_enable_known(cop, &known_cops, &known_departments)
-                    })
-                    .map(str::to_string),
-            );
+        let directives = redundant_directive_bodies(comment);
+        for directive in &directives {
+            if let Some(list) = redundant_directive_list(directive, "disable")
+                .or_else(|| redundant_directive_list(directive, "todo"))
+            {
+                disabled.extend(
+                    redundant_listed_cops(list)
+                        .into_iter()
+                        .filter(|cop| {
+                            redundant_enable_known(cop, &known_cops, &known_departments)
+                        })
+                        .map(str::to_string),
+                );
+            }
         }
-        let Some(list) = redundant_directive_list(directive, "enable") else {
+        let Some(list) = directives
+            .iter()
+            .find_map(|directive| redundant_directive_list(directive, "enable"))
+        else {
             continue;
         };
-        if line_start == 0 {
-            continue;
-        }
         let list = list.split("--").next().unwrap_or_default().trim_end();
         let list_start = line.find(list).unwrap_or(line.len());
-        let listed_cops = list.split(',').map(str::trim).collect::<Vec<_>>();
+        let listed_cops = redundant_listed_cops(list);
         let mut redundant = Vec::new();
         let mut necessary = Vec::new();
         let mut preserve_department_line = false;
@@ -517,6 +527,41 @@ fn redundant_directive_list<'a>(comment: &'a str, action: &str) -> Option<&'a st
         .then(|| list.trim_start())
 }
 
+fn redundant_directive_bodies(comment: &str) -> Vec<&str> {
+    let Some(marker) = comment.find("# rubocop:") else {
+        return Vec::new();
+    };
+    let start = marker + 2;
+    let prefix = &comment[..start];
+    let nested_comment_only = prefix.bytes().filter(|byte| *byte == b'#').count() > 1
+        && prefix
+            .trim_matches(|character: char| character == '#' || character.is_whitespace())
+            .is_empty();
+    if nested_comment_only {
+        Vec::new()
+    } else {
+        vec![comment[start..].trim_end()]
+    }
+}
+
+fn redundant_listed_cops(list: &str) -> Vec<&str> {
+    list.split("--")
+        .next()
+        .unwrap_or_default()
+        .split(',')
+        .filter_map(|raw| {
+            let raw = raw.trim();
+            let end = raw
+                .bytes()
+                .take_while(|byte| {
+                    byte.is_ascii_alphanumeric() || matches!(byte, b'/' | b'_')
+                })
+                .count();
+            (end > 0).then_some(&raw[..end])
+        })
+        .collect()
+}
+
 fn redundant_enable_known(
     name: &str,
     known_cops: &[&str],
@@ -541,7 +586,7 @@ fn redundant_enable_known(
     )
 }
 
-fn unreachable_pattern(context: &mut CopContext<'_, '_>) {
+fn unreachable_pattern(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     let lines = context.source_file().lines().collect::<Vec<_>>();
     let literal_ranges = context.source_file().literal_ranges();
     let mut cases = Vec::<(usize, Option<usize>)>::new();

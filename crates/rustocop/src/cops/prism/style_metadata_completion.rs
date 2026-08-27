@@ -5,14 +5,14 @@ mod literals;
 use literals::*;
 
 define_cops! {
-    Copyright => "Style/Copyright" => source(copyright),
-    CommentedKeyword => "Style/CommentedKeyword" => source(commented_keyword),
-    CommentAnnotation => "Style/CommentAnnotation" => source(comment_annotation),
+    Copyright => "Style/Copyright" => compatibility_source(copyright),
+    CommentedKeyword => "Style/CommentedKeyword" => compatibility_source(commented_keyword),
+    CommentAnnotation => "Style/CommentAnnotation" => compatibility_source(comment_annotation),
     NumericLiterals => "Style/NumericLiterals" => any_node(numeric_literals),
     CommandLiteral => "Style/CommandLiteral" => any_node(command_literal),
 }
 
-fn copyright(context: &mut CopContext<'_, '_>) {
+fn copyright(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     let notice = context.config_value("Notice").unwrap_or("Copyright");
     let visible_notice = unescape_config(notice);
     let first_code = context
@@ -132,7 +132,7 @@ fn unescape_config(value: &str) -> String {
         .replace("\\\\", "\\")
 }
 
-fn commented_keyword(context: &mut CopContext<'_, '_>) {
+fn commented_keyword(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     let source = context.source();
     for comment_range in context.source_file().comment_ranges() {
         let offset = context.source_file().line_start(comment_range.start);
@@ -194,7 +194,7 @@ fn commented_keyword(context: &mut CopContext<'_, '_>) {
     }
 }
 
-fn comment_annotation(context: &mut CopContext<'_, '_>) {
+fn comment_annotation(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     let keywords = context.config_values("Keywords").to_vec();
     let require_colon = context.config_bool("RequireColon", true);
     let mut previous_comment_line = None;
@@ -293,7 +293,7 @@ fn keyword_is_capitalized(keyword: &str) -> bool {
 }
 
 fn embedded_comment_annotation(
-    context: &mut CopContext<'_, '_>,
+    context: &mut CompatibilityCopContext<'_, '_, '_>,
     keywords: &[String],
     require_colon: bool,
 ) {

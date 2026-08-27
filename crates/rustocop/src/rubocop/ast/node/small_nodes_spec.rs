@@ -108,6 +108,21 @@
 
 use crate::rubocop::ast::processed_source::{ParserEngine, ProcessedSource};
 
+#[test]
+fn nested_operator_assignment_keeps_outer_operator_and_rhs() {
+    let source = "items += values.map do |value|\n  case value\n  when :known\n    result ||= compute(value)\n  end\n  { value: value, result: result }\nend\n";
+    let processed = ProcessedSource::new(source, 3.4, None, ParserEngine::Prism).unwrap();
+    let assignment = processed.ast().unwrap().each_node(&["op_asgn"])[0];
+
+    assert_eq!(assignment.rhs().map(|node| node.kind()), Some("block"));
+    assert_eq!(
+        assignment
+            .loc("operator")
+            .map(|(_, source)| source.as_str()),
+        Some("+=")
+    );
+}
+
 fn parse(source: &str) -> ProcessedSource<'_> {
     ProcessedSource::new(source, 3.4, None, ParserEngine::Prism).unwrap()
 }

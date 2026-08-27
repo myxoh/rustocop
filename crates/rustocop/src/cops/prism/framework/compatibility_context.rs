@@ -40,6 +40,29 @@ impl CompatibilityRange for CompatibilitySourceRange {
     }
 }
 
+/// Source-oriented RuboCop callbacks still describe ranges as byte offsets.
+/// Keeping that representation accepted by the compatibility corrector lets
+/// investigation callbacks move onto `ProcessedSource` without first
+/// rewriting otherwise source-shaped range logic. Parser-shaped node ranges
+/// continue to use character offsets through `CompatibilitySourceRange`.
+impl CompatibilityRange for Range<usize> {
+    fn byte_range(self, _buffer: &SourceBuffer<'_>) -> Option<Range<usize>> {
+        Some(self)
+    }
+}
+
+impl CompatibilityRange for ruby_prism::Location<'_> {
+    fn byte_range(self, _buffer: &SourceBuffer<'_>) -> Option<Range<usize>> {
+        Some(self.start_offset()..self.end_offset())
+    }
+}
+
+impl CompatibilityRange for &ruby_prism::Location<'_> {
+    fn byte_range(self, _buffer: &SourceBuffer<'_>) -> Option<Range<usize>> {
+        Some(self.start_offset()..self.end_offset())
+    }
+}
+
 impl CompatibilityRange for NodeRef<'_> {
     fn byte_range(self, buffer: &SourceBuffer<'_>) -> Option<Range<usize>> {
         let range = self.source_range()?;
@@ -147,6 +170,43 @@ impl<'context, 'processed, 'source> CompatibilityCopContext<'context, 'processed
 
     pub(super) fn source(&self) -> &'source str {
         self.processed_source.raw_source()
+    }
+
+    pub(super) fn path(&self) -> &str {
+        self.reporter.path()
+    }
+
+    pub(super) fn source_file(&self) -> super::SourceFile<'source> {
+        super::SourceFile::new(self.source())
+    }
+
+    pub(super) fn line_index(&self, offset: usize) -> usize {
+        self.source().as_bytes()[..offset.min(self.source().len())]
+            .iter()
+            .filter(|byte| **byte == b'\n')
+            .count()
+    }
+
+    pub(super) fn line_start_at(&self, index: usize) -> usize {
+        if index == 0 {
+            return 0;
+        }
+        self.source()
+            .match_indices('\n')
+            .nth(index - 1)
+            .map_or(self.source().len(), |(offset, _)| offset + 1)
+    }
+
+    pub(super) fn line_at(&self, index: usize) -> &'source str {
+        let start = self.line_start_at(index);
+        let end = self
+            .source()
+            .get(start..)
+            .and_then(|tail| tail.find('\n').map(|offset| start + offset))
+            .unwrap_or(self.source().len());
+        self.source()[start..end]
+            .strip_suffix('\r')
+            .unwrap_or(&self.source()[start..end])
     }
 
     pub(super) fn processed_source(&self) -> &'processed ProcessedSource<'source> {
@@ -298,6 +358,38 @@ impl<'context, 'processed, 'source> CompatibilityCopContext<'context, 'processed
         self.reporter.related_config_value(cop_name, key)
     }
 
+    pub(super) fn related_config_values(&self, cop_name: &str, key: &str) -> &[String] {
+        self.reporter.related_config_values(cop_name, key)
+    }
+
+    pub(super) fn related_config_map(
+        &self,
+        cop_name: &str,
+        key: &str,
+    ) -> Option<&std::collections::HashMap<String, String>> {
+        self.reporter.related_config_map(cop_name, key)
+    }
+
+    pub(super) fn related_config_explicit(&self, cop_name: &str, key: &str) -> bool {
+        self.reporter.related_config_explicit(cop_name, key)
+    }
+
+    pub(super) fn related_cop_normally_enabled(&self, cop_name: &str) -> bool {
+        self.reporter.related_cop_normally_enabled(cop_name)
+    }
+
+    pub(super) fn cop_enabled(&self, cop_name: &str) -> bool {
+        self.reporter.cop_enabled(cop_name)
+    }
+
+    pub(super) fn autocorrect_enabled(&self) -> bool {
+        self.reporter.autocorrect_enabled()
+    }
+
+    pub(super) fn source_encoding(&self) -> crate::config::SourceEncoding {
+        self.reporter.source_encoding()
+    }
+
     pub(super) fn config_map(
         &self,
         key: &str,
@@ -317,6 +409,92 @@ impl<'context, 'processed, 'source> CompatibilityCopContext<'context, 'processed
         if let Some(offense) = offense.byte_range(&self.buffer) {
             self.reporter.report(message, offense);
         }
+    }
+
+    pub(super) fn replace(
+        &mut self,
+        message: impl Into<String>,
+        offense: impl CompatibilityRange,
+        edit: impl CompatibilityRange,
+        replacement: impl Into<String>,
+    ) {
+        let (Some(offense), Some(edit)) = (
+            offense.byte_range(&self.buffer),
+            edit.byte_range(&self.buffer),
+        ) else {
+            return;
+        };
+        self.reporter.replace(message, offense, edit, replacement);
+    }
+
+    pub(super) fn replace_many(
+        &mut self,
+        message: impl Into<String>,
+        offense: impl CompatibilityRange,
+        edits: Vec<(Range<usize>, String)>,
+    ) {
+        let Some(offense) = offense.byte_range(&self.buffer) else {
+            return;
+        };
+        self.reporter.replace_many(message, offense, edits);
+    }
+
+    pub(super) fn remove(
+        &mut self,
+        message: impl Into<String>,
+        offense: impl CompatibilityRange,
+        edit: impl CompatibilityRange,
+    ) {
+        let (Some(offense), Some(edit)) = (
+            offense.byte_range(&self.buffer),
+            edit.byte_range(&self.buffer),
+        ) else {
+            return;
+        };
+        self.reporter.remove(message, offense, edit);
+    }
+
+    pub(super) fn insert(
+        &mut self,
+        message: impl Into<String>,
+        offense: impl CompatibilityRange,
+        offset: usize,
+        text: impl Into<String>,
+    ) {
+        let Some(offense) = offense.byte_range(&self.buffer) else {
+            return;
+        };
+        self.reporter.insert(message, offense, offset, text);
+    }
+
+    pub(super) fn replace_indirectly(
+        &mut self,
+        message: impl Into<String>,
+        offense: impl CompatibilityRange,
+        edit: impl CompatibilityRange,
+        replacement: impl Into<String>,
+    ) {
+        let (Some(offense), Some(edit)) = (
+            offense.byte_range(&self.buffer),
+            edit.byte_range(&self.buffer),
+        ) else {
+            return;
+        };
+        self.reporter
+            .replace_indirectly(message, offense, edit, replacement);
+    }
+
+    pub(super) fn apply_correction_indirectly(
+        &mut self,
+        message: impl Into<String>,
+        offense: impl CompatibilityRange,
+        correction: CorrectionPlan,
+    ) {
+        let Some(offense) = offense.byte_range(&self.buffer) else {
+            return;
+        };
+        self.reporter
+            .replace_many_indirectly(message, offense, correction.into_edits());
     }
 
     pub(super) fn add_offense(

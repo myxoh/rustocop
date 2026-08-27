@@ -3,8 +3,8 @@ use ruby_prism::{BlockNode, CallNode, Node};
 use super::*;
 
 define_cops! {
-    HashSlice => "Style/HashSlice" => rubocop_callbacks(HashSliceRule, [on_send restrict [b"reject", b"select", b"filter"]]),
-    HashExcept => "Style/HashExcept" => rubocop_callbacks(HashExceptRule, [on_send restrict [b"reject", b"select", b"filter"]]),
+    HashSlice => "Style/HashSlice" => compatibility_prism_callbacks(HashSliceRule, [on_send restrict [b"reject", b"select", b"filter"]]),
+    HashExcept => "Style/HashExcept" => compatibility_prism_callbacks(HashExceptRule, [on_send restrict [b"reject", b"select", b"filter"]]),
 }
 
 impl HashSliceRule<'_, '_, '_> {

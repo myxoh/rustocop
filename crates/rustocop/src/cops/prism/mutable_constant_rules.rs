@@ -8,7 +8,7 @@ use crate::rubocop::cop::mixin::advanced::{
 use super::*;
 
 define_cops! {
-    MutableConstant => "Style/MutableConstant" => rubocop_callbacks(MutableConstantRule, [on_casgn]),
+    MutableConstant => "Style/MutableConstant" => compatibility_prism_callbacks(MutableConstantRule, [on_casgn]),
 }
 
 impl MutableConstantRule<'_, '_, '_> {

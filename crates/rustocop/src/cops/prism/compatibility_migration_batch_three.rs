@@ -164,7 +164,11 @@ fn ruby_symbol_inspect(value: &str) -> String {
         characters
             .next()
             .is_some_and(|character| character == '_' || character.is_alphabetic())
-            && characters.all(|character| character == '_' || character.is_alphanumeric())
+            && characters.all(|character| {
+                character == '_'
+                    || character.is_alphanumeric()
+                    || character == '\u{fffd}'
+            })
     };
     let method = value
         .strip_suffix(['!', '?', '='])

@@ -2,13 +2,13 @@ use super::*;
 
 define_cops! {
     ArrayAlignment => "Layout/ArrayAlignment" => any_node(array_alignment),
-    MultilineAssignmentLayout => "Layout/MultilineAssignmentLayout" => source(multiline_assignment_layout),
+    MultilineAssignmentLayout => "Layout/MultilineAssignmentLayout" => compatibility_source(multiline_assignment_layout),
     EndAlignment => "Layout/EndAlignment" => any_node(end_alignment),
-    ExtraSpacing => "Layout/ExtraSpacing" => source(extra_spacing),
+    ExtraSpacing => "Layout/ExtraSpacing" => compatibility_source(extra_spacing),
     FirstHashElementIndentation => "Layout/FirstHashElementIndentation" => node(as_hash_node, first_hash_element_indentation),
 }
 
-fn multiline_assignment_layout(context: &mut CopContext<'_, '_>) {
+fn multiline_assignment_layout(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     use crate::rubocop::ast::prism::convert as convert_rubocop_ast;
     use crate::rubocop::cop::mixin::check_assignment::extract_rhs;
 
@@ -480,7 +480,7 @@ enum SpacingTokenKind {
 }
 
 #[allow(clippy::too_many_lines)]
-fn extra_spacing(_context: &mut CopContext<'_, '_>) {
+fn extra_spacing(_context: &mut CompatibilityCopContext<'_, '_, '_>) {
     let context = _context;
     let source = context.source();
     if source.trim().is_empty() {
@@ -1242,7 +1242,7 @@ fn assignment_operator(value: &str) -> bool {
 }
 
 fn check_forced_equal_alignment(
-    context: &mut CopContext<'_, '_>,
+    context: &mut CompatibilityCopContext<'_, '_, '_>,
     tokens: &[SpacingToken],
     lines: &[&str],
     assignments: &[usize],

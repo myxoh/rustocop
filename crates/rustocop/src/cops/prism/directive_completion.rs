@@ -1,11 +1,11 @@
 use super::*;
 
 define_cops! {
-    CopDirectiveSyntax => "Lint/CopDirectiveSyntax" => source(cop_directive_syntax),
-    MissingCopEnableDirective => "Lint/MissingCopEnableDirective" => source(missing_cop_enable_directive),
+    CopDirectiveSyntax => "Lint/CopDirectiveSyntax" => compatibility_source(cop_directive_syntax),
+    MissingCopEnableDirective => "Lint/MissingCopEnableDirective" => compatibility_source(missing_cop_enable_directive),
 }
 
-fn cop_directive_syntax(context: &mut CopContext<'_, '_>) {
+fn cop_directive_syntax(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     let comment_ranges = context.source_file().comment_ranges();
     for (offset, line) in context.source_file().lines() {
         let Some(comment_start) = line.find("# rubocop:") else {
@@ -62,7 +62,7 @@ fn cop_directive_syntax(context: &mut CopContext<'_, '_>) {
     }
 }
 
-fn missing_cop_enable_directive(context: &mut CopContext<'_, '_>) {
+fn missing_cop_enable_directive(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     let source = context.source();
     let maximum = context.config_usize("MaximumRangeSize", usize::MAX);
     let comment_ranges = context.source_file().comment_ranges();

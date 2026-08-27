@@ -1,6 +1,6 @@
 use super::*;
 
-pub(super) fn if_inside_else(context: &mut CopContext<'_, '_>) {
+pub(super) fn if_inside_else(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     let parsed = parse(context.source().as_bytes());
     let mut collector = IfInsideElseCollector {
         allow_modifier: context.config_bool("AllowIfModifier", false),
@@ -151,7 +151,7 @@ impl<'pr> Visit<'pr> for IfInsideElseCollector {
 }
 
 fn correct_modifier_form(
-    context: &mut CopContext<'_, '_>,
+    context: &mut CompatibilityCopContext<'_, '_, '_>,
     lines: &[(usize, &str)],
     valid: &std::collections::HashSet<usize>,
     reported: &mut std::collections::HashSet<usize>,
@@ -228,7 +228,7 @@ fn correct_modifier_form(
 }
 
 fn correct_then_form(
-    context: &mut CopContext<'_, '_>,
+    context: &mut CompatibilityCopContext<'_, '_, '_>,
     lines: &[(usize, &str)],
     else_offset: usize,
     if_offset: usize,

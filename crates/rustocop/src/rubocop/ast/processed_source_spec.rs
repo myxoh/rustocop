@@ -169,6 +169,27 @@ fn ast_comment_association_keeps_leading_groups_and_inline_comments_with_one_nod
 }
 
 #[test]
+fn ast_comment_association_prefers_a_documented_definition_over_its_class() {
+    let source = "class Example\n  # Documentation\n  def call\n  end\nend\n";
+    let processed = ProcessedSource::new(source, 3.4, None, ParserEngine::Prism).unwrap();
+    let definition = processed.ast().unwrap().each_descendant(&["def"])[0];
+
+    assert_eq!(
+        processed.comments_for(definition)[0].text,
+        "# Documentation"
+    );
+}
+
+#[test]
+fn ast_comment_association_keeps_protected_body_comments_on_ensure() {
+    let source = "begin\n  # Documentation\n  def call\n  end\nensure\n  cleanup\nend\n";
+    let processed = ProcessedSource::new(source, 3.4, None, ParserEngine::Prism).unwrap();
+    let definition = processed.ast().unwrap().each_descendant(&["def"])[0];
+
+    assert!(processed.comments_for(definition).is_empty());
+}
+
+#[test]
 fn lexical_tokens_cover_enumeration_and_line_navigation() {
     let processed = ProcessedSource::new("foo(1, 2)\n", 3.4, None, ParserEngine::Prism).unwrap();
     assert_eq!(processed.tokens().len(), 7);

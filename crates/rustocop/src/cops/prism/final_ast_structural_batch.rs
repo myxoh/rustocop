@@ -1,4 +1,3 @@
-use super::catalog_cop::custom;
 use super::*;
 use crate::rubocop::ast::node::core::NodeRef as RubocopNodeRef;
 use crate::rubocop::ast::prism::convert as convert_rubocop_ast;

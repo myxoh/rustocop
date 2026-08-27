@@ -1,11 +1,11 @@
 use super::*;
 
 define_cops! {
-    EndlessMethod => "Style/EndlessMethod" => source(endless_method),
+    EndlessMethod => "Style/EndlessMethod" => compatibility_source(endless_method),
 }
 
 #[allow(clippy::too_many_lines)]
-fn endless_method(context: &mut CopContext<'_, '_>) {
+fn endless_method(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     let style = context
         .policy()
         .enforced_style("allow_single_line")

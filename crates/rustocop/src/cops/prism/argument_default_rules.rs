@@ -7,7 +7,7 @@ define_rule!(RedundantArgumentRule);
 define_rule!(OptionHashRule);
 
 define_cops! {
-    RedundantArgument => "Style/RedundantArgument" => call_rule(
+    RedundantArgument => "Style/RedundantArgument" => compatibility_prism_call_rule(
         RedundantArgumentRule,
         on_send
     ),

@@ -1,14 +1,14 @@
-use super::catalog_cop::custom;
+use super::catalog_cop::compatibility_custom;
 use super::*;
 
 pub(super) fn cops() -> Vec<Box<dyn Cop>> {
     vec![
-        custom("Bundler/GemComment", gem_comment),
-        custom("Gemspec/DependencyVersion", dependency_version),
+        compatibility_custom("Bundler/GemComment", gem_comment),
+        compatibility_custom("Gemspec/DependencyVersion", dependency_version),
     ]
 }
 
-fn gem_comment(context: &mut CopContext<'_, '_>) {
+fn gem_comment(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     if !context.path().ends_with("Gemfile") {
         return;
     }
@@ -55,7 +55,7 @@ fn gem_comment(context: &mut CopContext<'_, '_>) {
     }
 }
 
-fn dependency_version(context: &mut CopContext<'_, '_>) {
+fn dependency_version(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     let required = context.policy().enforced_style("required") != "forbidden";
     let allowed = context.config_values("AllowedGems").to_vec();
     let mut specification_variable = None;

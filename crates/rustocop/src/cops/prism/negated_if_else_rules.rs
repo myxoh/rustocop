@@ -8,7 +8,7 @@ struct NegatedIfElseState {
 }
 
 define_cops! {
-    NegatedIfElseCondition => "Style/NegatedIfElseCondition" => stateful_rubocop_callbacks(
+    NegatedIfElseCondition => "Style/NegatedIfElseCondition" => compatibility_prism_stateful_callbacks(
         NegatedIfElseConditionRule,
         NegatedIfElseState,
         [on_if]

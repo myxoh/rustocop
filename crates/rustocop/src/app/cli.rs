@@ -33,6 +33,7 @@ pub(super) fn parse_args(mut args: Vec<String>) -> Result<Command, String> {
             source_encoding: SourceEncoding::Utf8,
             cop_config: Arc::new(CopConfig::default()),
             inspected_path: None,
+            registry_context: None,
         },
     };
 
@@ -81,6 +82,13 @@ pub(super) fn parse_args(mut args: Vec<String>) -> Result<Command, String> {
                     .inspection
                     .cops
                     .select_only(&take_value(&mut args, &arg)?);
+            }
+            "--registry-context" => {
+                options.inspection.registry_context = Some(Arc::new(
+                    cop_list(&take_value(&mut args, &arg)?)
+                        .into_iter()
+                        .collect(),
+                ));
             }
             "--resolved-non-native-cops" => {
                 options.non_native_cops = cop_list(&take_value(&mut args, &arg)?);
@@ -137,6 +145,13 @@ pub(super) fn parse_args(mut args: Vec<String>) -> Result<Command, String> {
                     arg.strip_prefix("--resolved-enabled-cops=")
                         .unwrap_or_default(),
                 );
+            }
+            _ if arg.starts_with("--registry-context=") => {
+                options.inspection.registry_context = Some(Arc::new(
+                    cop_list(arg.strip_prefix("--registry-context=").unwrap_or_default())
+                        .into_iter()
+                        .collect(),
+                ));
             }
             _ if arg.starts_with("--resolved-non-native-cops=") => {
                 options.non_native_cops = cop_list(
@@ -316,6 +331,25 @@ mod tests {
         );
         assert!(options.inspection.cop_enabled("Layout/LineLength"));
         assert!(!options.inspection.cop_enabled("Lint/Debugger"));
+    }
+
+    #[test]
+    fn accepts_a_separate_registry_context_for_focused_audits() {
+        let Command::Run(options) = parse_args(vec![
+            "--only=Lint/MissingCopEnableDirective".to_string(),
+            "--registry-context=Lint/MissingCopEnableDirective,Metrics/ClassLength".to_string(),
+        ])
+        .unwrap() else {
+            panic!("expected run command");
+        };
+
+        assert!(options
+            .inspection
+            .cop_enabled("Lint/MissingCopEnableDirective"));
+        assert!(!options.inspection.cop_enabled("Metrics/ClassLength"));
+        assert!(options
+            .inspection
+            .registry_cop_enabled("Metrics/ClassLength"));
     }
 
     #[test]

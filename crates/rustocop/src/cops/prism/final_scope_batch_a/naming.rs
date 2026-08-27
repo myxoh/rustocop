@@ -2,12 +2,12 @@ use super::*;
 
 pub(super) fn cops() -> Vec<Box<dyn Cop>> {
     vec![
-        custom("Lint/ShadowedArgument", shadowed_argument),
-        custom("Naming/InclusiveLanguage", inclusive_language),
+        super::super::catalog_cop::compatibility_custom("Lint/ShadowedArgument", shadowed_argument),
+        super::super::catalog_cop::compatibility_custom("Naming/InclusiveLanguage", inclusive_language),
     ]
 }
 
-fn shadowed_argument(context: &mut CopContext<'_, '_>) {
+fn shadowed_argument(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     let parsed = ruby_prism::parse(context.source().as_bytes());
     let ignore_implicit = context.config_bool("IgnoreImplicitReferences", false);
     let mut collector = ShadowedArgumentScopes {
@@ -440,7 +440,7 @@ impl<'pr> ruby_prism::Visit<'pr> for LocalReadNames {
 }
 
 #[allow(clippy::too_many_lines)]
-fn inclusive_language(context: &mut CopContext<'_, '_>) {
+fn inclusive_language(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     let terms = context
         .config_map("FlaggedTerms")
         .cloned()
@@ -696,7 +696,10 @@ fn inclusive_message(found: &str, suggestions: &[String]) -> String {
     format!("Consider replacing '{found}' with {replacement}.")
 }
 
-fn inclusive_filepath(terms: &[(String, InclusiveTermConfig)], context: &mut CopContext<'_, '_>) {
+fn inclusive_filepath(
+    terms: &[(String, InclusiveTermConfig)],
+    context: &mut CompatibilityCopContext<'_, '_, '_>,
+) {
     if !context.config_bool("CheckFilepaths", true) {
         return;
     }

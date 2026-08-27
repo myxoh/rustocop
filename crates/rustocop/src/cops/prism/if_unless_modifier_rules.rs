@@ -5,12 +5,12 @@ use crate::rubocop::cop::mixin::statement_modifier::StatementModifier;
 use super::*;
 
 define_cops! {
-    IfUnlessModifier => "Style/IfUnlessModifier" => source(if_unless_modifier),
+    IfUnlessModifier => "Style/IfUnlessModifier" => compatibility_source(if_unless_modifier),
 }
 
 const MODIFIER_MESSAGE: &str = "Favor modifier `{keyword}` usage when having a single-line body. Another good alternative is the usage of control flow `&&`/`||`.";
 
-fn if_unless_modifier(context: &mut CopContext<'_, '_>) {
+fn if_unless_modifier(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     let source = context.source().to_owned();
     if !if_unless_modifier_has_keyword(&source) {
         return;
@@ -131,7 +131,7 @@ fn if_unless_modifier_defined_argument_is_undefined(
 fn if_unless_modifier_single_line_as_modifier(
     node: RubocopNodeRef<'_>,
     statement_modifier: &StatementModifier<'_, '_>,
-    context: &CopContext<'_, '_>,
+    context: &CompatibilityCopContext<'_, '_, '_>,
     source: &str,
 ) -> bool {
     if node.ternary()
@@ -241,7 +241,7 @@ fn if_unless_modifier_containing_collection(
 
 fn if_unless_modifier_too_long(
     node: RubocopNodeRef<'_>,
-    context: &CopContext<'_, '_>,
+    context: &CompatibilityCopContext<'_, '_, '_>,
     processed: &ProcessedSource<'_>,
     max_line_length: Option<usize>,
 ) -> bool {
@@ -318,7 +318,7 @@ fn if_unless_modifier_uri_is_allowed_excess(line: &str, max: usize) -> bool {
     start < max && end == line.chars().count()
 }
 
-fn if_unless_modifier_allowed_pattern(context: &CopContext<'_, '_>, line: &str) -> bool {
+fn if_unless_modifier_allowed_pattern(context: &CompatibilityCopContext<'_, '_, '_>, line: &str) -> bool {
     ["AllowedPatterns", "IgnoredPatterns"]
         .into_iter()
         .filter_map(|key| context.related_config_value("Layout/LineLength", key))
@@ -330,7 +330,7 @@ fn if_unless_modifier_report_long(
     node: RubocopNodeRef<'_>,
     keyword: &str,
     keyword_range: std::ops::Range<usize>,
-    context: &mut CopContext<'_, '_>,
+    context: &mut CompatibilityCopContext<'_, '_, '_>,
     processed: &ProcessedSource<'_>,
     source: &str,
 ) {

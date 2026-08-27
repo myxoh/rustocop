@@ -5,9 +5,9 @@ use super::*;
 
 define_cops! {
     SafeNavigationConsistency => "Lint/SafeNavigationConsistency" => any_node(safe_navigation_consistency),
-    CombinableDefined => "Style/CombinableDefined" => source(combinable_defined),
-    For => "Style/For" => rubocop_callbacks(ForRule, [on_for, on_block]),
-    ClassAndModuleChildren => "Style/ClassAndModuleChildren" => source(class_module_children),
+    CombinableDefined => "Style/CombinableDefined" => compatibility_source(combinable_defined),
+    For => "Style/For" => compatibility_prism_callbacks(ForRule, [on_for, on_block]),
+    ClassAndModuleChildren => "Style/ClassAndModuleChildren" => compatibility_source(class_module_children),
     SafeNavigationChain => "Lint/SafeNavigationChain" => call(safe_navigation_chain),
     BlockDelimiters => "Style/BlockDelimiters" => node(as_block_node, block_delimiters),
     RedundantSafeNavigation => "Lint/RedundantSafeNavigation" => call(redundant_safe_navigation),
@@ -216,7 +216,7 @@ fn navigation_operator_method(call: &ruby_prism::CallNode<'_>) -> bool {
     )
 }
 
-fn combinable_defined(context: &mut CopContext<'_, '_>) {
+fn combinable_defined(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     let source = context.source();
     let file = context.source_file();
     let literals = file.literal_ranges();
@@ -445,7 +445,7 @@ fn for_collection_needs_parentheses(node: &Node<'_>, source: &str) -> bool {
 }
 
 #[allow(clippy::cognitive_complexity, clippy::too_many_lines)]
-fn class_module_children(context: &mut CopContext<'_, '_>) {
+fn class_module_children(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     let lines = context.source_file().lines().collect::<Vec<_>>();
     let definitions = definition_offsets(context.source());
     let mut compact_covered_until = 0usize;

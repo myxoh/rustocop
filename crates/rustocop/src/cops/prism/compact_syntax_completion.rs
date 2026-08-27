@@ -9,7 +9,7 @@ const WHILE_UNTIL_MODIFIER_MSG: &str =
 
 define_cops! {
     FileRead => "Style/FileRead" => call(file_read),
-    FileWrite => "Style/FileWrite" => rubocop_callbacks(FileWriteRule, [on_send restrict [b"open"]]),
+    FileWrite => "Style/FileWrite" => compatibility_prism_callbacks(FileWriteRule, [on_send restrict [b"open"]]),
 }
 
 fn file_read(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {

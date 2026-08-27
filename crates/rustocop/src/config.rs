@@ -40,6 +40,11 @@ pub(crate) struct InspectionConfig {
     pub(crate) source_encoding: SourceEncoding,
     pub(crate) cop_config: Arc<CopConfig>,
     pub(crate) inspected_path: Option<Arc<str>>,
+    /// Cops visible to registry-sensitive compatibility APIs. Ordinarily this
+    /// is identical to the executed selection. Focused project audits can
+    /// execute one cohort while preserving the full cached RuboCop reference's
+    /// registry semantics.
+    pub(crate) registry_context: Option<Arc<HashSet<String>>>,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -74,6 +79,12 @@ impl InspectionConfig {
 
     pub(crate) fn autocorrect_for(&self, cop: &str) -> bool {
         self.autocorrect.enabled_for(&self.cop_config, cop)
+    }
+
+    pub(crate) fn registry_cop_enabled(&self, cop: &str) -> bool {
+        self.registry_context
+            .as_ref()
+            .map_or_else(|| self.cop_enabled(cop), |cops| cops.contains(cop))
     }
 }
 

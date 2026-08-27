@@ -2,7 +2,7 @@ use super::*;
 
 define_cops! {
     ClosingHeredocIndentation => "Layout/ClosingHeredocIndentation" => any_node(closing_heredoc_indentation),
-    DisableCopsWithinSourceCodeDirective => "Style/DisableCopsWithinSourceCodeDirective" => source(disable_cops_within_source_code_directive),
+    DisableCopsWithinSourceCodeDirective => "Style/DisableCopsWithinSourceCodeDirective" => compatibility_source(disable_cops_within_source_code_directive),
 }
 
 fn redundant_heredoc_delimiter_quotes(context: &mut CopContext<'_, '_>) {
@@ -226,7 +226,7 @@ fn encoding_comment_without_encoding(text: &str, lower: &str) -> String {
     String::new()
 }
 
-fn disable_cops_within_source_code_directive(context: &mut CopContext<'_, '_>) {
+fn disable_cops_within_source_code_directive(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     let allowed = context.config_values("AllowedCops").to_vec();
     let source = context.source();
     let mut all_disabled = false;

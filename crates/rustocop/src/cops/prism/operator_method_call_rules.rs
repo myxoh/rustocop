@@ -5,15 +5,15 @@ use super::*;
 define_rule!(OperatorMethodCallRule);
 
 define_cops! {
-    SpaceAroundMethodCallOperator => "Layout/SpaceAroundMethodCallOperator" => source(space_around_method_call_operator),
-    OperatorMethodCall => "Style/OperatorMethodCall" => call_rule(
+    SpaceAroundMethodCallOperator => "Layout/SpaceAroundMethodCallOperator" => compatibility_source(space_around_method_call_operator),
+    OperatorMethodCall => "Style/OperatorMethodCall" => compatibility_prism_call_rule(
         OperatorMethodCallRule,
         on_send,
         restrict [b"|", b"^", b"&", b"<=>", b"==", b"===", b"=~", b">", b">=", b"<", b"<=", b"<<", b">>", b"+", b"-", b"*", b"/", b"%", b"**", b"~", b"!", b"!=", b"!~"]
     ),
 }
 
-fn space_around_method_call_operator(context: &mut CopContext<'_, '_>) {
+fn space_around_method_call_operator(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     let file = context.source_file();
     let source = context.source();
     let literal_ranges = file.literal_ranges();

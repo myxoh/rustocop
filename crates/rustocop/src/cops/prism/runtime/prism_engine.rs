@@ -8,13 +8,21 @@ pub struct Engine {
 }
 
 impl Engine {
-    pub fn new(enabled: &dyn Fn(&str) -> bool, legacy_cops: &[&'static str]) -> Self {
+    pub fn new(
+        enabled: &dyn Fn(&str) -> bool,
+        registry_visible: &dyn Fn(&str) -> bool,
+        legacy_cops: &[&'static str],
+    ) -> Self {
         let registry = Registry::enabled(enabled);
-        let enabled_cops = registry
-            .cops
-            .iter()
-            .map(|cop| cop.name())
-            .chain(legacy_cops.iter().copied().filter(|cop| enabled(cop)))
+        let enabled_cops = crate::cops::cop_names()
+            .into_iter()
+            .filter(|cop| registry_visible(cop))
+            .chain(
+                legacy_cops
+                    .iter()
+                    .copied()
+                    .filter(|cop| registry_visible(cop)),
+            )
             .collect();
         Self {
             registry,
@@ -75,7 +83,17 @@ impl Engine {
             }
             cop.on_source(source, &mut context);
         }
-        if has_unrecoverable_parse_errors && self.registry.phases.recovered_nodes.is_empty() {
+        let recovered_compatibility_source = has_unrecoverable_parse_errors
+            && self
+                .registry
+                .phases
+                .compatibility_nodes
+                .iter()
+                .any(|index| self.registry.cops[*index].name() == "Naming/HeredocDelimiterNaming");
+        if has_unrecoverable_parse_errors
+            && self.registry.phases.recovered_nodes.is_empty()
+            && !recovered_compatibility_source
+        {
             return context.finish(source);
         }
         let mut investigation_states: Vec<Box<dyn Any>> = self
@@ -102,7 +120,9 @@ impl Engine {
         };
         runner.visit(&parsed.node());
         drop(runner);
-        if !has_unrecoverable_parse_errors && !self.registry.phases.compatibility_nodes.is_empty() {
+        if (!has_unrecoverable_parse_errors || recovered_compatibility_source)
+            && !self.registry.phases.compatibility_nodes.is_empty()
+        {
             let processed_source =
                 crate::rubocop::ast::processed_source::ProcessedSource::from_prism_result(
                     source,
@@ -113,21 +133,28 @@ impl Engine {
                 );
             if let Ok(processed_source) = processed_source {
                 for index in &self.registry.phases.compatibility_nodes {
+                    if has_unrecoverable_parse_errors
+                        && self.registry.cops[*index].name() != "Naming/HeredocDelimiterNaming"
+                    {
+                        continue;
+                    }
                     self.registry.cops[*index].on_compatibility_investigation(
                         &processed_source,
                         &mut context,
                         investigation_states[*index].as_mut(),
                     );
                 }
-                if let Some(root) = processed_source.ast() {
-                    for node in root.each_node(&[]) {
-                        for index in &self.registry.phases.compatibility_nodes {
-                            self.registry.cops[*index].on_compatibility_node_with_state(
-                                node,
-                                &processed_source,
-                                &mut context,
-                                investigation_states[*index].as_mut(),
-                            );
+                if !has_unrecoverable_parse_errors {
+                    if let Some(root) = processed_source.ast() {
+                        for node in root.each_node(&[]) {
+                            for index in &self.registry.phases.compatibility_nodes {
+                                self.registry.cops[*index].on_compatibility_node_with_state(
+                                    node,
+                                    &processed_source,
+                                    &mut context,
+                                    investigation_states[*index].as_mut(),
+                                );
+                            }
                         }
                     }
                 }

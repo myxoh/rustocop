@@ -133,6 +133,7 @@ mod tests {
                 source_encoding: SourceEncoding::Utf8,
                 cop_config: Arc::new(CopConfig::default()),
                 inspected_path: None,
+                registry_context: None,
             },
         }
     }

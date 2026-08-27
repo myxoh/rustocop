@@ -1,11 +1,11 @@
 use super::*;
 
 define_cops! {
-    OrderedGems => "Bundler/OrderedGems" => source(ordered_gems),
-    GemFilename => "Bundler/GemFilename" => source(gem_filename),
+    OrderedGems => "Bundler/OrderedGems" => compatibility_source(ordered_gems),
+    GemFilename => "Bundler/GemFilename" => compatibility_source(gem_filename),
 }
 
-fn gem_filename(context: &mut CopContext<'_, '_>) {
+fn gem_filename(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     let path = std::env::current_dir()
         .ok()
         .and_then(|directory| {
@@ -48,7 +48,7 @@ struct GemDeclaration {
 }
 
 #[allow(clippy::too_many_lines)]
-fn ordered_gems(context: &mut CopContext<'_, '_>) {
+fn ordered_gems(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     let filename = context.path().rsplit('/').next().unwrap_or(context.path());
     if filename != "(string)"
         && !matches!(filename, "Gemfile" | "gems.rb")

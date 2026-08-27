@@ -1,4 +1,4 @@
-use super::catalog_cop::custom;
+use super::catalog_cop::compatibility_custom;
 use super::*;
 use std::collections::HashSet;
 
@@ -8,7 +8,7 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
         Box::new(RedundantRegexpQuantifiers),
         Box::new(UnescapedBracketInRegexp),
         Box::new(AmbiguousRegexpLiteral),
-        custom("Lint/OutOfRangeRegexpRef", out_of_range_ref),
+        compatibility_custom("Lint/OutOfRangeRegexpRef", out_of_range_ref),
         Box::new(SelectByRegexp),
     ]
 }
@@ -818,7 +818,7 @@ fn regexp_escape_end(bytes: &[u8], start: usize, limit: usize) -> usize {
     at
 }
 
-fn out_of_range_ref(context: &mut CopContext<'_, '_>) {
+fn out_of_range_ref(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     let parsed = parse(context.source().as_bytes());
     let mut collector = OutOfRangeRefCollector {
         source: context.source(),

@@ -1,10 +1,10 @@
 use super::*;
 
 define_cops! {
-    CombinableLoops => "Style/CombinableLoops" => source(combinable_loops),
+    CombinableLoops => "Style/CombinableLoops" => compatibility_source(combinable_loops),
 }
 
-fn combinable_loops(context: &mut CopContext<'_, '_>) {
+fn combinable_loops(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     let lines = context.source_file().lines().collect::<Vec<_>>();
     let mut non_code_ranges = context.source_file().heredoc_ranges();
     non_code_ranges.extend(context.source_file().comment_ranges());
@@ -130,7 +130,7 @@ struct MultilineCombinableLoop {
 fn report_multiline_combinable_loops(
     lines: &[(usize, &str)],
     non_code_ranges: &[std::ops::Range<usize>],
-    context: &mut CopContext<'_, '_>,
+    context: &mut CompatibilityCopContext<'_, '_, '_>,
 ) {
     let mut loops = lines
         .iter()
@@ -409,7 +409,7 @@ fn parse_combinable_loop(offset: usize, line: &str) -> Option<CombinableLoop<'_>
     })
 }
 
-fn each_for_simple_loop(context: &mut CopContext<'_, '_>) {
+fn each_for_simple_loop(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     let mut non_code_ranges = context.source_file().literal_ranges();
     non_code_ranges.extend(context.source_file().heredoc_ranges());
     non_code_ranges.extend(context.source_file().comment_ranges());

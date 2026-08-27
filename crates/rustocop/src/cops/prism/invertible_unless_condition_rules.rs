@@ -5,7 +5,7 @@ use ruby_prism::{Node, UnlessNode};
 use super::*;
 
 define_cops! {
-    InvertibleUnlessCondition => "Style/InvertibleUnlessCondition" => rubocop_callbacks(InvertibleUnlessConditionRule, [on_unless]),
+    InvertibleUnlessCondition => "Style/InvertibleUnlessCondition" => compatibility_prism_callbacks(InvertibleUnlessConditionRule, [on_unless]),
 }
 
 impl InvertibleUnlessConditionRule<'_, '_, '_> {

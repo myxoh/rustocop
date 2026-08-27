@@ -5,7 +5,7 @@ use crate::rubocop::ast::prism::convert as convert_rubocop_ast;
 define_cops! {
     ArrayCoercion => "Style/ArrayCoercion" => any_node(array_coercion),
     MultipleComparison => "Style/MultipleComparison" => node(as_or_node, multiple_comparison),
-    ExplicitBlockArgument => "Style/ExplicitBlockArgument" => source(explicit_block_argument),
+    ExplicitBlockArgument => "Style/ExplicitBlockArgument" => compatibility_source(explicit_block_argument),
 }
 
 fn array_coercion(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
@@ -192,7 +192,7 @@ fn comparison_variable(node: &Node<'_>, allow_methods: bool) -> bool {
         || allow_methods && node.as_call_node().is_some()
 }
 
-fn explicit_block_argument(context: &mut CopContext<'_, '_>) {
+fn explicit_block_argument(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     let source = context.source().to_owned();
     let parsed = ruby_prism::parse(source.as_bytes());
     let (ast, root) = convert_rubocop_ast(&source, &parsed.node());

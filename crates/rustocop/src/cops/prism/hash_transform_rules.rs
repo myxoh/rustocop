@@ -3,8 +3,8 @@ use ruby_prism::{BlockNode, CallNode, Node};
 use super::*;
 
 define_cops! {
-    HashTransformKeys => "Style/HashTransformKeys" => rubocop_callbacks(HashTransformKeysRule, [on_block, on_send]),
-    HashTransformValues => "Style/HashTransformValues" => rubocop_callbacks(HashTransformValuesRule, [on_block, on_send]),
+    HashTransformKeys => "Style/HashTransformKeys" => compatibility_prism_callbacks(HashTransformKeysRule, [on_block, on_send]),
+    HashTransformValues => "Style/HashTransformValues" => compatibility_prism_callbacks(HashTransformValuesRule, [on_block, on_send]),
 }
 
 #[derive(Clone, Copy)]

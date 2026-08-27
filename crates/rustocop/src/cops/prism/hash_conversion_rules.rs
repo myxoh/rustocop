@@ -3,7 +3,7 @@ use ruby_prism::CallNode;
 use super::*;
 
 define_cops! {
-    HashConversion => "Style/HashConversion" => rubocop_callbacks(HashConversionRule, [on_send restrict [b"[]"]]),
+    HashConversion => "Style/HashConversion" => compatibility_prism_callbacks(HashConversionRule, [on_send restrict [b"[]"]]),
 }
 
 impl HashConversionRule<'_, '_, '_> {

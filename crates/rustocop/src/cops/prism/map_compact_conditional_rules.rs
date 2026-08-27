@@ -3,7 +3,7 @@ use ruby_prism::{BlockNode, CallNode, IfNode, Node, UnlessNode};
 use super::*;
 
 define_cops! {
-    MapCompactWithConditionalBlock => "Style/MapCompactWithConditionalBlock" => rubocop_callbacks(
+    MapCompactWithConditionalBlock => "Style/MapCompactWithConditionalBlock" => compatibility_prism_callbacks(
         MapCompactWithConditionalBlockRule,
         [on_send restrict [b"compact", b"filter_map"]]
     ),

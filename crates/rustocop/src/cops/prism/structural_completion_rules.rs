@@ -12,11 +12,11 @@ define_stateful_rule!(YodaExpressionRule, YodaExpressionState);
 const YODA_EXPRESSION_MSG: &str = "Non-literal operand (`{source}`) should be first.";
 
 define_cops!(
-    MultilineMemoization => "Style/MultilineMemoization" => source(multiline_memoization),
+    MultilineMemoization => "Style/MultilineMemoization" => compatibility_source(multiline_memoization),
     StaticClass => "Style/StaticClass" => node(as_class_node, static_class),
 );
 
-fn multiline_memoization(context: &mut CopContext<'_, '_>) {
+fn multiline_memoization(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     let source = context.source();
     let parsed = parse(source.as_bytes());
     let mut collector = MultilineMemoizationCollector {

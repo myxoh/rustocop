@@ -7,12 +7,12 @@ use super::*;
 mod scope_rules;
 
 define_cops! {
-    DuplicatedGroup => "Bundler/DuplicatedGroup" => source(duplicated_group),
-    DevelopmentDependencies => "Gemspec/DevelopmentDependencies" => source(development_dependencies),
-    DeprecatedAttributeAssignment => "Gemspec/DeprecatedAttributeAssignment" => source(deprecated_gemspec_attribute),
-    DuplicateMatchPattern => "Lint/DuplicateMatchPattern" => rubocop_callbacks(DuplicateMatchPatternRule, [on_case_match]),
+    DuplicatedGroup => "Bundler/DuplicatedGroup" => compatibility_source(duplicated_group),
+    DevelopmentDependencies => "Gemspec/DevelopmentDependencies" => compatibility_source(development_dependencies),
+    DeprecatedAttributeAssignment => "Gemspec/DeprecatedAttributeAssignment" => compatibility_source(deprecated_gemspec_attribute),
+    DuplicateMatchPattern => "Lint/DuplicateMatchPattern" => compatibility_prism_callbacks(DuplicateMatchPatternRule, [on_case_match]),
     ConstantName => "Naming/ConstantName" => any_node(constant_name),
-    ConstantVisibility => "Style/ConstantVisibility" => source(constant_visibility),
+    ConstantVisibility => "Style/ConstantVisibility" => compatibility_source(constant_visibility),
     RedundantSelfAssignment => "Style/RedundantSelfAssignment" => any_node(scope_rules::redundant_self_assignment),
     TopLevelMethodDefinition => "Style/TopLevelMethodDefinition" => any_node(top_level_method_definition),
 }
@@ -36,7 +36,7 @@ fn top_level_method_definition(node: &Node<'_>, context: &mut CopContext<'_, '_>
     );
 }
 
-fn duplicated_group(context: &mut CopContext<'_, '_>) {
+fn duplicated_group(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     if context.path() != "(string)" && !context.path().ends_with("Gemfile") {
         return;
     }
@@ -98,7 +98,7 @@ fn duplicated_group(context: &mut CopContext<'_, '_>) {
     }
 }
 
-fn development_dependencies(context: &mut CopContext<'_, '_>) {
+fn development_dependencies(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     let style = context.policy().enforced_style("Gemfile").to_string();
     let gemspec = context.path().ends_with(".gemspec");
     for (offset, line) in context.source_file().lines() {
@@ -151,7 +151,7 @@ fn development_dependencies(context: &mut CopContext<'_, '_>) {
     }
 }
 
-fn deprecated_gemspec_attribute(context: &mut CopContext<'_, '_>) {
+fn deprecated_gemspec_attribute(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     if !context.path().ends_with("(string)") && !context.path().ends_with(".gemspec") {
         return;
     }
@@ -355,7 +355,7 @@ fn literal_node(node: &Node<'_>) -> bool {
         || node.as_nil_node().is_some()
 }
 
-fn constant_visibility(context: &mut CopContext<'_, '_>) {
+fn constant_visibility(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     #[derive(Default)]
     struct ClassOrModuleBodies<'pr>(Vec<ruby_prism::StatementsNode<'pr>>);
 
@@ -385,7 +385,7 @@ fn constant_visibility(context: &mut CopContext<'_, '_>) {
 
 fn inspect_constant_visibility_scope(
     statements: &ruby_prism::StatementsNode<'_>,
-    context: &mut CopContext<'_, '_>,
+    context: &mut CompatibilityCopContext<'_, '_, '_>,
 ) {
     let mut declared = HashSet::<String>::new();
     for statement in statements.body().iter() {

@@ -3,7 +3,7 @@ use ruby_prism::{CallNode, Node, RangeNode};
 use super::*;
 
 define_cops! {
-    NegativeArrayIndex => "Style/NegativeArrayIndex" => rubocop_callbacks(
+    NegativeArrayIndex => "Style/NegativeArrayIndex" => compatibility_prism_callbacks(
         NegativeArrayIndexRule,
         [on_send restrict [b"[]"]]
     ),

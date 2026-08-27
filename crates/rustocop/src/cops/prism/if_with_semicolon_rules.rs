@@ -3,7 +3,7 @@ use ruby_prism::{IfNode, Node, UnlessNode};
 use super::*;
 
 define_cops! {
-    IfWithSemicolon => "Style/IfWithSemicolon" => rubocop_callbacks(IfWithSemicolonRule, [on_if, on_unless]),
+    IfWithSemicolon => "Style/IfWithSemicolon" => compatibility_prism_callbacks(IfWithSemicolonRule, [on_if, on_unless]),
 }
 
 impl IfWithSemicolonRule<'_, '_, '_> {

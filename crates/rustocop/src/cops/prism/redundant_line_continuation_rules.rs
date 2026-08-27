@@ -1,18 +1,18 @@
 use super::*;
 
-define_rule!(RedundantLineContinuationRule);
+define_compatibility_rule!(RedundantLineContinuationRule);
 
 const MSG: &str = "Redundant line continuation.";
 
 define_cops! {
-    RedundantLineContinuation => "Style/RedundantLineContinuation" => source(on_new_investigation),
+    RedundantLineContinuation => "Style/RedundantLineContinuation" => compatibility_source(on_new_investigation),
 }
 
-fn on_new_investigation(context: &mut CopContext<'_, '_>) {
+fn on_new_investigation(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     RedundantLineContinuationRule::new(context).on_new_investigation();
 }
 
-impl RedundantLineContinuationRule<'_, '_, '_> {
+impl RedundantLineContinuationRule<'_, '_, '_, '_> {
     fn on_new_investigation(&mut self) {
         let source = self.source().to_string();
         let ruby_end = source.find("\n__END__\n").map_or(source.len(), |at| at + 1);

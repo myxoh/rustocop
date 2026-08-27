@@ -558,7 +558,11 @@ impl EmptyClassRule<'_, '_, '_, '_> {
     fn body_or_allowed_comment_lines(&self, node: NodeRef<'_>) -> bool {
         node.body().is_some()
             || self.config_bool("AllowComments", false)
-                && self.processed_source().comments_for(node).into_iter().next().is_some()
+                && node.source_range().is_some_and(|range| {
+                    self.processed_source().comments().iter().any(|comment| {
+                        range.start <= comment.range.start && comment.range.end <= range.end
+                    })
+                })
     }
 }
 

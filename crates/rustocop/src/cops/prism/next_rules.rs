@@ -3,7 +3,7 @@ use crate::rubocop::cop::mixin::policies::meets_min_body_length;
 use super::*;
 
 define_cops! {
-    Next => "Style/Next" => rubocop_callbacks(NextRule, [on_block, on_while, on_until, on_for]),
+    Next => "Style/Next" => compatibility_prism_callbacks(NextRule, [on_block, on_while, on_until, on_for]),
 }
 
 impl NextRule<'_, '_, '_> {

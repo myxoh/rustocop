@@ -13,7 +13,7 @@ const PERCENT_MSG: &str = "Use `%w` or `%W` for an array of words.";
 
 define_cops! {
     SymbolArray => "Style/SymbolArray" => node(as_array_node, symbol_array),
-    FetchEnvVar => "Style/FetchEnvVar" => source(fetch_env_var),
+    FetchEnvVar => "Style/FetchEnvVar" => compatibility_source(fetch_env_var),
     StringConcatenation => "Style/StringConcatenation" => call(string_concatenation),
     WordArray => "Style/WordArray" => stateful_node_rule(as_array_node, WordArrayRule, WordArrayState, on_array),
 }
@@ -382,7 +382,7 @@ fn bare_symbol(value: &str) -> bool {
     )
 }
 
-fn fetch_env_var(context: &mut CopContext<'_, '_>) {
+fn fetch_env_var(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     let source = context.source().to_string();
     let default_to_nil = context.config_bool("DefaultToNil", true);
     let allowed = context.config_values("AllowedVars").to_vec();

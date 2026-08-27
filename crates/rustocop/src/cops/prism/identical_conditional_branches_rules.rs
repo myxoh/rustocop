@@ -3,7 +3,7 @@ use ruby_prism::{CaseMatchNode, CaseNode, IfNode, Node, StatementsNode};
 use super::*;
 
 define_cops! {
-    IdenticalConditionalBranches => "Style/IdenticalConditionalBranches" => rubocop_callbacks(
+    IdenticalConditionalBranches => "Style/IdenticalConditionalBranches" => compatibility_prism_callbacks(
         IdenticalConditionalBranchesRule,
         [on_if, on_case, on_case_match]
     ),

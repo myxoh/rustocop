@@ -1,11 +1,11 @@
 use super::*;
 
 define_cops! {
-    SuppressedExceptionInNumberConversion => "Lint/SuppressedExceptionInNumberConversion" => source(suppressed_exception_in_number_conversion),
-    EvalWithLocation => "Style/EvalWithLocation" => source(eval_with_location),
+    SuppressedExceptionInNumberConversion => "Lint/SuppressedExceptionInNumberConversion" => compatibility_source(suppressed_exception_in_number_conversion),
+    EvalWithLocation => "Style/EvalWithLocation" => compatibility_source(eval_with_location),
 }
 
-fn suppressed_exception_in_number_conversion(context: &mut CopContext<'_, '_>) {
+fn suppressed_exception_in_number_conversion(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     if !context.target_ruby_version().at_least(2, 6) {
         return;
     }
@@ -109,11 +109,11 @@ fn suppressed_exception_in_number_conversion(context: &mut CopContext<'_, '_>) {
     }
 }
 
-fn eval_with_location(context: &mut CopContext<'_, '_>) {
+fn eval_with_location(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     eval_with_location_ast(context);
 }
 
-fn eval_with_location_ast(context: &mut CopContext<'_, '_>) {
+fn eval_with_location_ast(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     #[derive(Default)]
     struct EvalCalls<'pr>(Vec<Node<'pr>>);
     impl<'pr> ruby_prism::Visit<'pr> for EvalCalls<'pr> {
@@ -135,7 +135,7 @@ fn eval_with_location_ast(context: &mut CopContext<'_, '_>) {
     }
 }
 
-fn check_eval_call_ast(context: &mut CopContext<'_, '_>, node: &ruby_prism::CallNode<'_>) {
+fn check_eval_call_ast(context: &mut CompatibilityCopContext<'_, '_, '_>, node: &ruby_prism::CallNode<'_>) {
     let method = String::from_utf8_lossy(node.name().as_slice());
     if method == "eval" && node.receiver().is_some_and(|receiver| {
         !matches!(context.source_file().node(&receiver).trim_start_matches("::"), "Kernel")
@@ -167,7 +167,7 @@ fn check_eval_call_ast(context: &mut CopContext<'_, '_>, node: &ruby_prism::Call
 }
 
 fn check_eval_file_ast(
-    context: &mut CopContext<'_, '_>,
+    context: &mut CompatibilityCopContext<'_, '_, '_>,
     method: &str,
     file: &Node<'_>,
 ) {
@@ -184,7 +184,7 @@ fn check_eval_file_ast(
 }
 
 fn check_eval_line_ast(
-    context: &mut CopContext<'_, '_>,
+    context: &mut CompatibilityCopContext<'_, '_, '_>,
     method: &str,
     code: &Node<'_>,
     line: &Node<'_>,
@@ -210,7 +210,7 @@ fn check_eval_line_ast(
 }
 
 fn add_missing_eval_line_ast(
-    context: &mut CopContext<'_, '_>,
+    context: &mut CompatibilityCopContext<'_, '_, '_>,
     node: &ruby_prism::CallNode<'_>,
     method: &str,
     code: &Node<'_>,
@@ -229,7 +229,7 @@ fn add_missing_eval_line_ast(
 }
 
 fn add_missing_eval_location_ast(
-    context: &mut CopContext<'_, '_>,
+    context: &mut CompatibilityCopContext<'_, '_, '_>,
     node: &ruby_prism::CallNode<'_>,
     method: &str,
     code: &Node<'_>,

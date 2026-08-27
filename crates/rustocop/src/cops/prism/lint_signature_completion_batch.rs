@@ -7,10 +7,10 @@ define_cops! {
     Syntax => "Lint/Syntax" => parse_error_and_source(syntax, invalid_byte_syntax),
     FormatParameterMismatch => "Lint/FormatParameterMismatch" => node(as_call_node, format_parameter_mismatch),
     UnusedBlockArgument => "Lint/UnusedBlockArgument" => any_node(unused_block_argument),
-    AmbiguousRange => "Lint/AmbiguousRange" => source(ambiguous_range),
-    NonAtomicFileOperation => "Lint/NonAtomicFileOperation" => source(non_atomic_file_operation),
+    AmbiguousRange => "Lint/AmbiguousRange" => compatibility_source(ambiguous_range),
+    NonAtomicFileOperation => "Lint/NonAtomicFileOperation" => compatibility_source(non_atomic_file_operation),
     UnmodifiedReduceAccumulator => "Lint/UnmodifiedReduceAccumulator" => node(as_block_node, unmodified_reduce_accumulator),
-    DocumentationMethod => "Style/DocumentationMethod" => source(documentation_method),
+    DocumentationMethod => "Style/DocumentationMethod" => compatibility_source(documentation_method),
     RedundantSplatExpansion => "Lint/RedundantSplatExpansion" => node(as_splat_node, redundant_splat_expansion),
 }
 
@@ -722,7 +722,7 @@ fn unused_block_message(
     }
 }
 
-fn ambiguous_range(context: &mut CopContext<'_, '_>) {
+fn ambiguous_range(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     let source = context.source().to_string();
     let parsed = ruby_prism::parse(source.as_bytes());
     let (ast, root) = convert_rubocop_ast(&source, &parsed.node());
@@ -798,7 +798,7 @@ fn ambiguous_range_character_range_to_byte(
     offset(range.start)..offset(range.end)
 }
 
-fn non_atomic_file_operation(context: &mut CopContext<'_, '_>) {
+fn non_atomic_file_operation(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     let lines = context.source_file().lines().collect::<Vec<_>>();
     let mut literal_ranges = context.source_file().literal_ranges();
     literal_ranges.extend(context.source_file().heredoc_ranges());
@@ -1174,7 +1174,7 @@ fn non_atomic_operation(source: &str) -> Option<NonAtomicOperation<'_>> {
 }
 
 fn report_non_atomic_operation(
-    context: &mut CopContext<'_, '_>,
+    context: &mut CompatibilityCopContext<'_, '_, '_>,
     line_offset: usize,
     line: &str,
     operation: &NonAtomicOperation<'_>,
@@ -1184,7 +1184,7 @@ fn report_non_atomic_operation(
 }
 
 fn report_non_atomic_operation_at(
-    context: &mut CopContext<'_, '_>,
+    context: &mut CompatibilityCopContext<'_, '_, '_>,
     start: usize,
     source: &str,
     operation: &NonAtomicOperation<'_>,
@@ -1565,7 +1565,7 @@ fn reduce_element_modified(body: &Node<'_>, element: &[u8], accumulator: &[u8]) 
 }
 
 #[allow(clippy::too_many_lines)]
-fn documentation_method(context: &mut CopContext<'_, '_>) {
+fn documentation_method(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     fn visibility(name: &[u8]) -> Option<bool> {
         match name {
             b"public" => Some(true),
@@ -1580,6 +1580,7 @@ fn documentation_method(context: &mut CopContext<'_, '_>) {
         modifiers: HashMap<usize, std::ops::Range<usize>>,
         public: HashMap<usize, bool>,
         postfix_definitions: std::collections::HashSet<usize>,
+        protected_definitions: std::collections::HashSet<usize>,
     }
 
     impl<'pr> Visit<'pr> for DefinitionRanges {
@@ -1734,6 +1735,25 @@ fn documentation_method(context: &mut CopContext<'_, '_>) {
             ruby_prism::visit_unless_node(self, node);
         }
 
+        fn visit_begin_node(&mut self, node: &ruby_prism::BeginNode<'pr>) {
+            if node.rescue_clause().is_some() || node.ensure_clause().is_some() {
+                if let Some(statements) = node.statements() {
+                    for statement in statements.body().iter() {
+                        if let Some(definition) = statement.as_def_node() {
+                            if definition
+                                .receiver()
+                                .is_none_or(|receiver| receiver.as_local_variable_read_node().is_none())
+                            {
+                                self.protected_definitions
+                                    .insert(definition.location().start_offset());
+                            }
+                        }
+                    }
+                }
+            }
+            ruby_prism::visit_begin_node(self, node);
+        }
+
     }
 
     let parsed = parse(context.source().as_bytes());
@@ -1749,7 +1769,10 @@ fn documentation_method(context: &mut CopContext<'_, '_>) {
         let column = location.start_offset().saturating_sub(lines[line_index].0);
         comments_by_line.insert(
             line_index,
-            (column, context.source()[location.start_offset()..location.end_offset()].to_string()),
+            (
+                column,
+                context.source()[location.start_offset()..location.end_offset()].to_string(),
+            ),
         );
     }
     let require_non_public = context.config_bool("RequireForNonPublicMethods", false);
@@ -1795,6 +1818,9 @@ fn documentation_method(context: &mut CopContext<'_, '_>) {
         let postfix_definition = definition_ranges.postfix_definitions.contains(&definition_start);
         let documented = if postfix_definition
             || !prefix.is_empty() && !modifier_uses_parent
+            || definition_ranges
+                .protected_definitions
+                .contains(&definition_start)
         {
             false
         } else if index == 0 || !comments_by_line.contains_key(&(index - 1)) {

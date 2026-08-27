@@ -1,10 +1,10 @@
-use super::catalog_cop::custom;
+use super::catalog_cop::compatibility_custom;
 use super::*;
 
 pub(super) fn cops() -> Vec<Box<dyn Cop>> {
     vec![
         Box::new(MemoizedVariable),
-        custom("Naming/FileName", file_name),
+        compatibility_custom("Naming/FileName", file_name),
         Box::new(AssignmentInCondition),
         Box::new(VariableNumber),
         Box::new(VariableName),
@@ -778,7 +778,7 @@ fn check_defined_memoization(
 }
 
 #[allow(clippy::too_many_lines)]
-fn file_name(context: &mut CopContext<'_, '_>) {
+fn file_name(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     if context.source().starts_with("#!") && context.config_bool("IgnoreExecutableScripts", true) {
         return;
     }

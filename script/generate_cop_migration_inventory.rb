@@ -95,6 +95,65 @@ source_shaped_batches = source_shaped_batch_reviews.each_with_object({}) do |(fi
   end
 end
 
+# Investigation callbacks can live beside their existing helpers when moving
+# the helper itself is noise. These registrations still execute through
+# ProcessedSource and CompatibilityCopContext; record them from the executable
+# declaration rather than maintaining a second hand-written cop list.
+Dir[File.join(crate_root, "src", "cops", "prism", "**", "*.rs")].each do |path|
+  File.foreach(path) do |line|
+    cop = line[/=>\s*"([^"]+)"\s*=>\s*compatibility_source\(/, 1] ||
+          line[/compatibility_custom\("([^"]+)"/, 1]
+    next unless cop
+    next if source_shaped_batches.key?(cop)
+
+    source_shaped_batches[cop] = {
+      "rust_callbacks" => ["on_new_investigation"],
+      "compatibility_components" => [
+        "CompatibilityCopContext", "ProcessedSource", "SourceBuffer"
+      ],
+      "dsl_features" => [
+        line.include?("compatibility_custom") ? "compatibility_custom" : "compatibility_source"
+      ],
+      "similarity_score" => 3,
+      "structural_status" => "source_shaped_with_source_adapter",
+      "migration_status" => "migrated",
+      "structural_gaps" => [],
+      "documented_adaptations" => [
+        "The upstream investigation callback retains its source-oriented helpers while ProcessedSource, configuration, diagnostics, and corrections are supplied by CompatibilityCopContext."
+      ]
+    }
+  end
+end
+
+# Some direct translations intentionally keep Prism's typed node ownership.
+# Their audited registration names the Ruby callback contract explicitly; the
+# shared DSL owns callback dispatch, configuration, offense, and correction
+# plumbing while the rule body retains its already source-shaped branch logic.
+Dir[File.join(crate_root, "src", "cops", "prism", "**", "*.rs")].each do |path|
+  File.foreach(path) do |line|
+    next unless line.include?("compatibility_prism_")
+    cop = line[/=>\s*"([^"]+)"\s*=>\s*compatibility_prism_/, 1]
+    next unless cop
+    next if source_shaped_batches.key?(cop)
+
+    feature = line[/=>\s*(compatibility_prism_[a-z_]+)/, 1]
+    source_shaped_batches[cop] = {
+      "rust_callbacks" => [],
+      "compatibility_components" => [
+        "CopContext", "PrismAST", "RuboCopCallbackDSL"
+      ],
+      "dsl_features" => [feature],
+      "similarity_score" => 4,
+      "structural_status" => "source_shaped_with_prism_adaptation",
+      "migration_status" => "migrated",
+      "structural_gaps" => [],
+      "documented_adaptations" => [
+        "The Ruby callback and helper structure is retained while the shared DSL maps callbacks and source ranges onto typed Prism nodes."
+      ]
+    }
+  end
+end
+
 rows = active.map do |cop|
   cop_class = registry.find { |candidate| candidate.cop_name == cop }
   abort "RuboCop class not found for #{cop}" unless cop_class
@@ -131,6 +190,9 @@ rows = active.map do |cop|
     "structural_gaps", "documented_adaptations"
   )
   reviewed = reviewed.merge(source_shaped_batches.fetch(cop, {}))
+  if reviewed["migration_status"] == "migrated" && reviewed.fetch("rust_callbacks", []).empty?
+    reviewed["rust_callbacks"] = callbacks
+  end
   mechanical.merge(
     {
       "rust_callbacks" => [],

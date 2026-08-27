@@ -8,12 +8,12 @@ define_rule!(ReduceToHashRule);
 define_stateful_rule!(PartitionRule, PartitionState);
 
 define_cops! {
-    PredicateWithKind => "Style/PredicateWithKind" => call_rule(
+    PredicateWithKind => "Style/PredicateWithKind" => compatibility_prism_call_rule(
         PredicateWithKindRule,
         on_send,
         restrict [b"any?", b"all?", b"none?", b"one?"]
     ),
-    ReduceToHash => "Style/ReduceToHash" => call_rule(
+    ReduceToHash => "Style/ReduceToHash" => compatibility_prism_call_rule(
         ReduceToHashRule,
         on_send,
         restrict [b"each_with_object", b"inject", b"reduce"]

@@ -3,7 +3,7 @@ use ruby_prism::{CallNode, Node};
 use super::*;
 
 define_cops! {
-    ModuleMemberExistenceCheck => "Style/ModuleMemberExistenceCheck" => rubocop_callbacks(
+    ModuleMemberExistenceCheck => "Style/ModuleMemberExistenceCheck" => compatibility_prism_callbacks(
         ModuleMemberExistenceCheckRule,
         [on_send restrict [
             b"class_variables",

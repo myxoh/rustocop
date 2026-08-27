@@ -1,4 +1,4 @@
-use super::catalog_cop::custom;
+use super::catalog_cop::compatibility_custom;
 use super::*;
 define_compatibility_rule!(LineContinuationSpacingRule);
 crate::define_compatibility_investigation_rule_cop!(LayoutLineContinuationSpacing => "Layout/LineContinuationSpacing" => LineContinuationSpacingRule::on_new_investigation);
@@ -9,9 +9,9 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
     let mut cops: Vec<Box<dyn Cop>> = vec![
         Box::new(LayoutLineContinuationSpacing),
         Box::new(MultilineMethodDefinitionBraceLayout),
-        custom("Layout/SpaceInsideParens", space_inside_parens),
+        compatibility_custom("Layout/SpaceInsideParens", space_inside_parens),
         Box::new(ClosingParenthesisIndentation),
-        custom("Layout/CommentIndentation", comment_indentation),
+        compatibility_custom("Layout/CommentIndentation", comment_indentation),
         Box::new(ElseAlignment),
         Box::new(AccessModifierIndentation),
         Box::new(CaseIndentation),
@@ -222,7 +222,7 @@ fn closes_immediately_after_heredoc(source: &str, closing: usize) -> bool {
         .any(|line| line.contains("<<") && line.contains(preceding))
 }
 
-fn space_inside_parens(context: &mut CopContext<'_, '_>) {
+fn space_inside_parens(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     let style = context.policy().enforced_style("no_space");
     let no_space = style == "no_space";
     let compact = style == "compact";
@@ -760,7 +760,7 @@ fn indentation_style(context: &mut CopContext<'_, '_>) {
     }
 }
 
-fn comment_indentation(context: &mut CopContext<'_, '_>) {
+fn comment_indentation(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     let lines = context.source_file().lines().collect::<Vec<_>>();
     let data_index = lines
         .iter()

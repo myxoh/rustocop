@@ -3,7 +3,7 @@ use ruby_prism::{CallNode, Node};
 use super::*;
 
 define_cops! {
-    HashFetchChain => "Style/HashFetchChain" => rubocop_callbacks(HashFetchChainRule, [on_send restrict [b"fetch"]]),
+    HashFetchChain => "Style/HashFetchChain" => compatibility_prism_callbacks(HashFetchChainRule, [on_send restrict [b"fetch"]]),
 }
 
 impl HashFetchChainRule<'_, '_, '_> {

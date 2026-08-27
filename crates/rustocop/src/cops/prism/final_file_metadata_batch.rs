@@ -1,11 +1,11 @@
-use super::catalog_cop::custom;
+use super::catalog_cop::{compatibility_custom, custom};
 use super::*;
 use std::collections::HashSet;
 
 pub(super) fn cops() -> Vec<Box<dyn Cop>> {
     vec![
         custom("Lint/ScriptPermission", script_permission),
-        custom("Lint/RedundantCopDisableDirective", redundant_disable),
+        compatibility_custom("Lint/RedundantCopDisableDirective", redundant_disable),
     ]
 }
 
@@ -34,7 +34,7 @@ fn script_permission(context: &mut CopContext<'_, '_>) {
     }
 }
 
-fn redundant_disable(context: &mut CopContext<'_, '_>) {
+fn redundant_disable(context: &mut CompatibilityCopContext<'_, '_, '_>) {
     // RuboCop's selected-only compatibility path has no companion offenses to
     // evaluate when every cop is disabled by default, so no directive can be
     // proven redundant in that mode.
