@@ -1,4 +1,5 @@
 {
+  "5f51816b3bea3748": "---\nAllCops:\n  TargetRubyVersion: 3.4\nStyle/OneClassPerFile:\n  Enabled: true\n  AllowedClasses: []\n",
   "77c39c64bd272713": "---\nAllCops:\n  TargetRubyVersion: '2.7'\n",
   "b6f588bdaf3f6ec3": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/OneClassPerFile:\n  Description: Checks that each source file defines at most one top-level class or\n    module.\n  Enabled: true\n  VersionAdded: '1.85'\n  VersionChanged: '1.86'\n  AllowedClasses:\n  - ErrorA\n  - ErrorB\n  Exclude:\n  - \"/Users/nicco/work/rustocop/spec/**/*\"\n  - \"/Users/nicco/work/rustocop/test/**/*\"\n  AutoCorrect: always\n",
   "c2409d455b8ce77e": "---\nAllCops:\n  TargetRubyVersion: 2.7\nStyle/OneClassPerFile:\n  Description: Checks that each source file defines at most one top-level class or\n    module.\n  Enabled: true\n  VersionAdded: '1.85'\n  VersionChanged: '1.86'\n  AllowedClasses:\n  - SpecificError\n  Exclude:\n  - \"/Users/nicco/work/rustocop/spec/**/*\"\n  - \"/Users/nicco/work/rustocop/test/**/*\"\n  AutoCorrect: always\n",

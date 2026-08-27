@@ -17,7 +17,6 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
         Box::new(ConditionalAssignment),
         Box::new(Debugger),
         Box::new(UselessAccessModifier),
-        custom("Lint/DuplicateRequire", duplicate_require),
         Box::new(ArgumentsForwarding),
         Box::new(Void),
         Box::new(LiteralInInterpolation),

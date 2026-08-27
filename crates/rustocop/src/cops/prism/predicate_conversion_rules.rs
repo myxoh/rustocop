@@ -3,7 +3,6 @@ use super::*;
 define_cops! {
     BitwisePredicate => "Style/BitwisePredicate" => call(bitwise_predicate),
     ComparableBetween => "Style/ComparableBetween" => node(as_and_node, comparable_between),
-    MinMaxComparison => "Style/MinMaxComparison" => node(as_if_node, min_max_comparison),
 }
 
 fn min_max_comparison(node: &ruby_prism::IfNode<'_>, context: &mut CopContext<'_, '_>) {

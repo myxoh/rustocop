@@ -712,6 +712,10 @@ fn lex(
     while byte < limit {
         let character = source[byte..].chars().next().unwrap();
         let start = byte;
+        if start == 0 && character == '\u{feff}' {
+            byte += character.len_utf8();
+            continue;
+        }
         if character == ' ' || character == '\t' || character == '\r' {
             byte += character.len_utf8();
             continue;

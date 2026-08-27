@@ -1,8 +1,6 @@
 use super::*;
+pub(super) fn cops() -> Vec<Box<dyn Cop>> { Vec::new() }
 
-define_cops! {
-    ItWithoutArgumentsInBlock => "Lint/ItWithoutArgumentsInBlock" => node(as_it_local_variable_read_node, it_without_arguments_in_block),
-}
 
 fn it_without_arguments_in_block(
     node: &ruby_prism::ItLocalVariableReadNode<'_>,

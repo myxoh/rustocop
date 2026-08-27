@@ -1,8 +1,6 @@
 use super::*;
+pub(super) fn cops() -> Vec<Box<dyn Cop>> { Vec::new() }
 
-define_cops! {
-    NestedParenthesizedCalls => "Style/NestedParenthesizedCalls" => call(nested_parenthesized_calls),
-}
 
 
 fn nested_parenthesized_calls(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {

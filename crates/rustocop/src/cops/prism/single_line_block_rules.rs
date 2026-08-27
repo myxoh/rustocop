@@ -1,8 +1,6 @@
 use super::*;
+pub(super) fn cops() -> Vec<Box<dyn Cop>> { Vec::new() }
 
-define_cops! {
-    SingleLineDoEndBlock => "Style/SingleLineDoEndBlock" => any_node(single_line_do_end_block),
-}
 
 fn single_line_do_end_block(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
     if let Some(block) = node.as_block_node() {

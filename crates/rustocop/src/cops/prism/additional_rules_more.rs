@@ -3,7 +3,6 @@ use super::*;
 
 declare_source_cops! {
     TripleQuotes => "Lint/TripleQuotes" => triple_quotes,
-    OrderedMagicComments => "Lint/OrderedMagicComments" => ordered_magic_comments,
 }
 
 fn leading_empty_lines(source: &str, reporter: &mut Reporter<'_>) {

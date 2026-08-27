@@ -2,9 +2,7 @@ use super::*;
 
 define_cops! {
     ClosingHeredocIndentation => "Layout/ClosingHeredocIndentation" => any_node(closing_heredoc_indentation),
-    Encoding => "Style/Encoding" => source(encoding),
     DisableCopsWithinSourceCodeDirective => "Style/DisableCopsWithinSourceCodeDirective" => source(disable_cops_within_source_code_directive),
-    RedundantHeredocDelimiterQuotes => "Style/RedundantHeredocDelimiterQuotes" => source(redundant_heredoc_delimiter_quotes),
 }
 
 fn redundant_heredoc_delimiter_quotes(context: &mut CopContext<'_, '_>) {

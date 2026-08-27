@@ -7,7 +7,6 @@ define_cops! {
     DataInheritance => "Style/DataInheritance" => node(as_class_node, data_inheritance),
     RedundantInitialize => "Style/RedundantInitialize" => node(as_def_node, redundant_initialize),
     RedundantStructKeywordInit => "Style/RedundantStructKeywordInit" => call(redundant_struct_keyword_init),
-    StructInheritance => "Style/StructInheritance" => node(as_class_node, struct_inheritance),
 }
 
 fn data_inheritance(node: &ClassNode<'_>, context: &mut CopContext<'_, '_>) {

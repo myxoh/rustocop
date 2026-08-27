@@ -1,8 +1,6 @@
 use super::*;
+pub(super) fn cops() -> Vec<Box<dyn Cop>> { Vec::new() }
 
-define_cops! {
-    RedundantRequireStatement => "Lint/RedundantRequireStatement" => call(redundant_require_statement),
-}
 
 fn redundant_require_statement(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     if call_name(node) != b"require" || node.receiver().is_some() {

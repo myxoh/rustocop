@@ -1,4 +1,5 @@
 {
   "00abae05e725ec7a": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/EmptyInPattern:\n  Description: Checks for the presence of `in` pattern branches without a body.\n  Enabled: true\n  AllowComments: false\n  VersionAdded: '1.16'\n  AutoCorrect: always\n",
+  "2e877618849181db": "---\nAllCops:\n  TargetRubyVersion: 3.4\nLint/EmptyInPattern:\n  Enabled: true\n  AllowComments: true\n",
   "9d2c4a6bdf855509": "---\nAllCops:\n  TargetRubyVersion: 2.7\nLint/EmptyInPattern:\n  Description: Checks for the presence of `in` pattern branches without a body.\n  Enabled: true\n  AllowComments: true\n  VersionAdded: '1.16'\n  AutoCorrect: always\n"
 }

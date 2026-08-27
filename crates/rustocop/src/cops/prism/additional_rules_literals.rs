@@ -1,7 +1,6 @@
 use super::*;
 
 define_cops! {
-    NumericLiteralPrefix => "Style/NumericLiteralPrefix" => any_node(numeric_literal_prefix),
     NestedPercentLiteral => "Lint/NestedPercentLiteral" => node(as_array_node, nested_percent_literal),
 }
 

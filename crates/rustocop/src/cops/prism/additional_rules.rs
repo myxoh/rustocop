@@ -16,14 +16,8 @@ mod source_registry {
     }
 }
 
-define_call_cop!(InsecureProtocolSource => "Bundler/InsecureProtocolSource" => insecure_protocol_source);
-define_node_cop!(DisjunctiveAssignmentInConstructor => "Lint/DisjunctiveAssignmentInConstructor" => as_def_node => disjunctive_assignment);
-
 pub(super) fn cops() -> Vec<Box<dyn Cop>> {
-    let mut cops = source_registry::cops();
-    cops.push(Box::new(InsecureProtocolSource));
-    cops.push(Box::new(DisjunctiveAssignmentInConstructor));
-    cops
+    source_registry::cops()
 }
 
 fn ruby_version_globals(source: &str, reporter: &mut Reporter<'_>) {

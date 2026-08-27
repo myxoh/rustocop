@@ -3,7 +3,6 @@ use ruby_prism::CallNode;
 use super::*;
 
 define_cops! {
-    ConcatArrayLiterals => "Style/ConcatArrayLiterals" => call(concat_array_literals),
     CollectionCompact => "Style/CollectionCompact" => call(collection_compact),
     EachWithObject => "Style/EachWithObject" => call(each_with_object),
 }

@@ -11,8 +11,6 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
         Box::new(MultilineMethodDefinitionBraceLayout),
         custom("Layout/SpaceInsideParens", space_inside_parens),
         Box::new(ClosingParenthesisIndentation),
-        custom("Layout/IndentationStyle", indentation_style),
-        custom("Layout/LeadingCommentSpace", leading_comment_space),
         custom("Layout/CommentIndentation", comment_indentation),
         Box::new(ElseAlignment),
         Box::new(AccessModifierIndentation),

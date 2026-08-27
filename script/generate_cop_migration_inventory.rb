@@ -47,16 +47,31 @@ registry = RuboCop::Cop::Registry.global
 # examples, and the complete 50-project reference. Keeping the cohort mapping
 # beside the generator makes the structural claim reproducible instead of
 # relying on a hand-edited count in the generated JSON.
-source_shaped_batches = %w[
-  compatibility_migration_batch_four.rs
-  compatibility_migration_batch_five.rs
-  compatibility_migration_batch_six.rs
-].each_with_object({}) do |file, reviews|
+source_shaped_batch_reviews = {
+  "compatibility_migration_batch_four.rs" => nil,
+  "compatibility_migration_batch_five.rs" => nil,
+  "compatibility_migration_batch_six.rs" => nil,
+  "compatibility_migration_batch_seven.rs" => nil,
+  "compatibility_migration_batch_eight.rs" => nil,
+  "compatibility_migration_batch_nine.rs" => nil,
+  "compatibility_migration_batch_two.rs" => %w[
+    Layout/SpaceBeforeComment Layout/SpaceAfterMethodName Layout/SpaceAfterNot
+    Layout/SpaceBeforeBrackets Lint/FlipFlop Lint/RescueException
+    Lint/DuplicateCaseCondition Lint/EmptyExpression Lint/UnifiedInteger
+    Lint/OrAssignmentToConstant Lint/EmptyInterpolation Lint/BooleanSymbol
+    Lint/IdentityComparison Security/MarshalLoad Style/SymbolLiteral Style/Send
+    Style/ImplicitRuntimeError Style/SuperWithArgsParentheses Style/StringMethods
+    Style/ColonMethodDefinition
+  ]
+}
+
+source_shaped_batches = source_shaped_batch_reviews.each_with_object({}) do |(file, selected), reviews|
   path = File.join(crate_root, "src", "cops", "prism", file)
   registrations = File.read(path).split(/^}\s*$/, 2).first
   registrations.each_line do |line|
     cop = line[/=>\s*"([^"]+)"\s*=>/, 1]
     next unless cop
+    next if selected && !selected.include?(cop)
 
     callbacks = line.scan(/\bon_[a-z_]+\b/).uniq
     reviews[cop] = {

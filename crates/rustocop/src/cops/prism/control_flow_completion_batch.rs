@@ -2,7 +2,6 @@ use super::*;
 
 define_cops! {
     CombinableLoops => "Style/CombinableLoops" => source(combinable_loops),
-    EachForSimpleLoop => "Style/EachForSimpleLoop" => source(each_for_simple_loop),
 }
 
 fn combinable_loops(context: &mut CopContext<'_, '_>) {

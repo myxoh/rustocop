@@ -1,11 +1,8 @@
 use super::*;
 
 define_cops! {
-    EmptyComment => "Layout/EmptyComment" => source(empty_comment),
-    EmptyLineAfterMagicComment => "Layout/EmptyLineAfterMagicComment" => source(empty_line_after_magic_comment),
     SpaceAroundEqualsInParameterDefault => "Layout/SpaceAroundEqualsInParameterDefault" => node(as_optional_parameter_node, space_around_parameter_equals),
     SpaceInLambdaLiteral => "Layout/SpaceInLambdaLiteral" => node(as_lambda_node, space_in_lambda_literal),
-    TrailingEmptyLines => "Layout/TrailingEmptyLines" => source(trailing_empty_lines),
     SpaceInsideRangeLiteralCompatibility => "Layout/SpaceInsideRangeLiteral" => compatibility_callbacks(SpaceInsideRangeLiteralCompatibilityRule, [on_irange, on_erange]),
 }
 

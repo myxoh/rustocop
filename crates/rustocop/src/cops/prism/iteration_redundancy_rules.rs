@@ -2,8 +2,6 @@ use super::*;
 
 define_cops! {
     RedundantEach => "Style/RedundantEach" => call(redundant_each),
-    RedundantWithIndex => "Lint/RedundantWithIndex" => call(redundant_with_index),
-    RedundantWithObject => "Lint/RedundantWithObject" => call(redundant_with_object),
     UselessTimes => "Lint/UselessTimes" => call(useless_times),
 }
 

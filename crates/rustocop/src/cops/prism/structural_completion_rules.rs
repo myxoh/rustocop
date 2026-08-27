@@ -14,7 +14,6 @@ const YODA_EXPRESSION_MSG: &str = "Non-literal operand (`{source}`) should be fi
 define_cops!(
     MultilineMemoization => "Style/MultilineMemoization" => source(multiline_memoization),
     StaticClass => "Style/StaticClass" => node(as_class_node, static_class),
-    YodaExpression => "Style/YodaExpression" => stateful_call_rule(YodaExpressionRule, YodaExpressionState, on_send, restrict [b"*", b"+", b"&", b"|", b"^"]),
 );
 
 fn multiline_memoization(context: &mut CopContext<'_, '_>) {

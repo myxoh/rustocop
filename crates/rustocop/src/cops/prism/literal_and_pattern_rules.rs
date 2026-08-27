@@ -4,12 +4,10 @@ mod branch_rules;
 use branch_rules::*;
 
 define_cops! {
-    EmptyInPattern => "Lint/EmptyInPattern" => node(as_in_node, empty_in_pattern),
     EmptyCaseCondition => "Style/EmptyCaseCondition" => node(as_case_node, empty_case_condition),
     MixedCaseRange => "Lint/MixedCaseRange" => any_node(mixed_case_range),
     ExponentialNotation => "Style/ExponentialNotation" => node(as_float_node, exponential_notation),
     HashLikeCase => "Style/HashLikeCase" => node(as_case_node, hash_like_case),
-    FileNull => "Style/FileNull" => node(as_string_node, file_null),
 }
 
 const MIXED_CASE_RANGE_MESSAGE: &str = "Ranges from upper to lower case ASCII letters may include unintended characters. Instead of `A-z` (which also includes several symbols) specify each range individually: `A-Za-z` and individually specify any symbols.";

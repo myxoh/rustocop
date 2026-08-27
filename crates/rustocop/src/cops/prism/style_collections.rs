@@ -3,7 +3,6 @@ use super::*;
 pub(super) fn cops() -> Vec<Box<dyn Cop>> {
     vec![
         Box::new(ArrayFirstLast),
-        Box::new(RedundantSortBy),
     ]
 }
 

@@ -2,7 +2,6 @@ use super::*;
 
 define_cops! {
     GlobalVars => "Style/GlobalVars" => any_node(global_vars),
-    PerlBackrefs => "Style/PerlBackrefs" => any_node(perl_backrefs),
 }
 
 const BUILT_INS: &[&[u8]] = &[

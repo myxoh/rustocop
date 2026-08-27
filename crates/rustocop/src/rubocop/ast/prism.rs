@@ -1783,7 +1783,16 @@ impl<'pr> Visit<'pr> for Converter<'_> {
             unreachable!()
         };
         self.ast.clear_children(string);
+        let mut body_offsets = None;
         for part in &node.parts() {
+            let location = part.location();
+            body_offsets = Some(body_offsets.map_or(
+                location.start_offset()..location.end_offset(),
+                |current: Range<usize>| {
+                    current.start.min(location.start_offset())
+                        ..current.end.max(location.end_offset())
+                },
+            ));
             self.visit(&part);
         }
         let opening = node.opening_loc();
@@ -1793,6 +1802,17 @@ impl<'pr> Visit<'pr> for Converter<'_> {
                 .is_some_and(|source| source.starts_with("<<"))
         });
         if heredoc {
+            let body_offsets = body_offsets.unwrap_or_else(|| {
+                let start = node.closing_loc().map_or_else(
+                    || opening.as_ref().map_or(0, ruby_prism::Location::end_offset),
+                    |location| location.start_offset(),
+                );
+                start..start
+            });
+            let body_range = self.character_range(body_offsets.clone());
+            let body = self.source.get(body_offsets).unwrap_or("").to_owned();
+            self.ast
+                .set_location(string, "heredoc_body", body_range, &body);
             if let Some(closing) = node.closing_loc() {
                 self.set_heredoc_end(string, closing);
             }
@@ -1817,7 +1837,16 @@ impl<'pr> Visit<'pr> for Converter<'_> {
             unreachable!()
         };
         self.ast.clear_children(string);
+        let mut body_offsets = None;
         for part in &node.parts() {
+            let location = part.location();
+            body_offsets = Some(body_offsets.map_or(
+                location.start_offset()..location.end_offset(),
+                |current: Range<usize>| {
+                    current.start.min(location.start_offset())
+                        ..current.end.max(location.end_offset())
+                },
+            ));
             self.visit(&part);
         }
         let opening = node.opening_loc();
@@ -1826,6 +1855,14 @@ impl<'pr> Visit<'pr> for Converter<'_> {
             .get(opening.start_offset()..opening.end_offset())
             .unwrap_or("");
         if opening_source.starts_with("<<") {
+            let body_offsets = body_offsets.unwrap_or_else(|| {
+                let start = node.closing_loc().start_offset();
+                start..start
+            });
+            let body_range = self.character_range(body_offsets.clone());
+            let body = self.source.get(body_offsets).unwrap_or("").to_owned();
+            self.ast
+                .set_location(string, "heredoc_body", body_range, &body);
             self.set_heredoc_end(string, node.closing_loc());
             self.ast.set_source_range(
                 string,

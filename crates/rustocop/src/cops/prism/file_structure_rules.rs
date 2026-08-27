@@ -1,8 +1,6 @@
 use super::*;
 
-define_cops! {
-    OneClassPerFile => "Style/OneClassPerFile" => any_node(one_class_per_file),
-}
+pub(super) fn cops() -> Vec<Box<dyn Cop>> { Vec::new() }
 
 fn one_class_per_file(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
     let Some(name_node) = definition_name(node) else {

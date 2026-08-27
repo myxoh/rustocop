@@ -1,7 +1,6 @@
 use super::*;
 
 define_cops! {
-    UselessNumericOperation => "Lint/UselessNumericOperation" => any_node(useless_numeric_operation),
     FloatDivision => "Style/FloatDivision" => call(float_division),
 }
 

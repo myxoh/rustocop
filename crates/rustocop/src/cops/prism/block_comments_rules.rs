@@ -1,8 +1,6 @@
 use super::*;
+pub(super) fn cops() -> Vec<Box<dyn Cop>> { Vec::new() }
 
-define_cops! {
-    BlockComments => "Style/BlockComments" => source(on_new_investigation),
-}
 
 fn on_new_investigation(context: &mut CopContext<'_, '_>) {
     let parsed = ruby_prism::parse(context.source().as_bytes());

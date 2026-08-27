@@ -6,11 +6,7 @@ use super::*;
 mod interpolation;
 use interpolation::*;
 
-define_cops! {
-    DuplicateMagicComment => "Lint/DuplicateMagicComment" => source(duplicate_magic_comment),
-    AsciiIdentifiers => "Naming/AsciiIdentifiers" => source(ascii_identifiers),
-    ReturnNil => "Style/ReturnNil" => node(as_return_node, return_nil),
-}
+pub(super) fn cops() -> Vec<Box<dyn Cop>> { Vec::new() }
 
 fn big_decimal_new(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     if node.name().as_slice() != b"new" {

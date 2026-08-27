@@ -6,10 +6,7 @@ const YAML_FILE_READ_MSG: &str = "Use `{prefer}` instead.";
 
 define_cops! {
     CircularArgumentReference => "Lint/CircularArgumentReference" => any_node(circular_argument_reference),
-    InheritException => "Lint/InheritException" => any_node(inherit_exception),
     NumberedParameterAssignment => "Lint/NumberedParameterAssignment" => recovered_node(as_local_variable_write_node, numbered_parameter_assignment),
-    RaiseException => "Lint/RaiseException" => call(raise_exception),
-    DateTime => "Style/DateTime" => call(date_time),
 }
 
 fn numbered_parameter_assignment(

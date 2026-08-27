@@ -1,8 +1,6 @@
 use super::*;
+pub(super) fn cops() -> Vec<Box<dyn Cop>> { Vec::new() }
 
-define_cops! {
-    DigChain => "Style/DigChain" => call(dig_chain),
-}
 
 fn dig_chain(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     if call_name(node) != b"dig" || is_receiver_of_dig(node, context.parent()) {

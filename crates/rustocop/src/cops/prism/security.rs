@@ -1,10 +1,7 @@
 use super::*;
 
 pub(super) fn cops() -> Vec<Box<dyn Cop>> {
-    vec![
-        Box::new(CompoundHash),
-        Box::new(Open),
-    ]
+    vec![Box::new(Open)]
 }
 
 struct YamlLoad;

@@ -1,8 +1,6 @@
 use super::*;
+pub(super) fn cops() -> Vec<Box<dyn Cop>> { Vec::new() }
 
-define_cops! {
-    StabbyLambdaParentheses => "Style/StabbyLambdaParentheses" => node(as_lambda_node, stabby_lambda_parentheses),
-}
 
 fn stabby_lambda_parentheses(node: &ruby_prism::LambdaNode<'_>, context: &mut CopContext<'_, '_>) {
     let Some(arguments) = node

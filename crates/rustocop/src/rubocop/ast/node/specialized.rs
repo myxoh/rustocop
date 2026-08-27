@@ -374,6 +374,7 @@ impl<'ast> NodeRef<'ast> {
     }
     pub(crate) fn body(self) -> Option<Self> {
         match self.kind() {
+            "if" => self.if_branch(),
             "block" | "numblock" | "itblock" | "class" | "for" | "resbody" => self.node_child(2),
             "while" | "until" | "while_post" | "until_post" => self.node_child(1),
             "def" => self.node_child(2),

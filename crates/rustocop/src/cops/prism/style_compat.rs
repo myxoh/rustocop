@@ -5,7 +5,6 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
         Box::new(FileTouch),
         Box::new(GlobalStdStream),
         Box::new(MinMax),
-        Box::new(TrailingCommaInBlockArgs),
     ]
 }
 

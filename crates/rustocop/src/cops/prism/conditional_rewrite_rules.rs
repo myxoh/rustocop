@@ -7,10 +7,6 @@ define_rule!(ParenthesesAroundConditionRule);
 define_rule!(RedundantConditionRule);
 
 define_cops! {
-    RedundantConditional => "Style/RedundantConditional" => node_rule_aliases(
-        RedundantConditionalRule,
-        on_if => [as_if_node, as_unless_node]
-    ),
     ParenthesesAroundCondition => "Style/ParenthesesAroundCondition" => node_rule_aliases(
         ParenthesesAroundConditionRule,
         on_conditional => [as_if_node, as_unless_node, as_while_node, as_until_node]

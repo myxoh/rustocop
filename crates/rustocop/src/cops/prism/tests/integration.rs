@@ -18,17 +18,15 @@ fn partitions_cops_by_the_work_they_perform() {
             .collect::<Vec<_>>()
     };
 
-    assert_eq!(
-        indices_for(&registry.phases.source),
-        ["Lint/Syntax", "Lint/DuplicateMagicComment"]
-    );
-    assert_eq!(
-        indices_for(&registry.phases.nodes),
-        ["Security/CompoundHash"]
-    );
+    assert_eq!(indices_for(&registry.phases.source), ["Lint/Syntax"]);
+    assert!(indices_for(&registry.phases.nodes).is_empty());
     assert_eq!(
         indices_for(&registry.phases.compatibility_nodes),
-        ["Security/Eval"]
+        [
+            "Security/Eval",
+            "Security/CompoundHash",
+            "Lint/DuplicateMagicComment"
+        ]
     );
     assert_eq!(indices_for(&registry.phases.parse_errors), ["Lint/Syntax"]);
 }

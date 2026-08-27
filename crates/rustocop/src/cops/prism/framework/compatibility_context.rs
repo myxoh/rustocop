@@ -272,6 +272,14 @@ impl<'context, 'processed, 'source> CompatibilityCopContext<'context, 'processed
         self.reporter.config_value(key)
     }
 
+    pub(super) fn config_contains(&self, key: &str) -> bool {
+        self.reporter.config_contains(key)
+    }
+
+    pub(super) fn config_explicit(&self, key: &str) -> bool {
+        self.reporter.config_explicit(key)
+    }
+
     pub(super) fn config_bool(&self, key: &str, default: bool) -> bool {
         self.reporter.config_bool(key, default)
     }

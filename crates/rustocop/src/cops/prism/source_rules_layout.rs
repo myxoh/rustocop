@@ -1,12 +1,6 @@
 use super::*;
 
-declare_source_cops! {
-    EmptyLines => "Layout/EmptyLines" => empty_lines,
-    SpaceAfterSemicolon => "Layout/SpaceAfterSemicolon" => space_after_semicolon,
-    SpaceAfterComma => "Layout/SpaceAfterComma" => space_after_comma,
-    SpaceBeforeSemicolon => "Layout/SpaceBeforeSemicolon" => space_before_semicolon,
-    SpaceBeforeComma => "Layout/SpaceBeforeComma" => space_before_comma,
-}
+pub(super) fn cops() -> Vec<Box<dyn Cop>> { Vec::new() }
 
 fn empty_lines(source: &str, context: &mut Reporter<'_>) {
     let literals = SourceFile::new(source).literal_ranges();
@@ -121,7 +115,7 @@ fn spacing_after(source: &str, context: &mut Reporter<'_>, token: u8, message: &
     }
 }
 
-fn interpolation_closing_offsets(source: &str) -> Vec<usize> {
+pub(super) fn interpolation_closing_offsets(source: &str) -> Vec<usize> {
     #[derive(Default)]
     struct Closings(Vec<usize>);
     impl<'pr> Visit<'pr> for Closings {
@@ -170,7 +164,7 @@ fn spacing_before(source: &str, context: &mut Reporter<'_>, token: u8, message: 
     }
 }
 
-fn ignored_syntax_ranges(source: &str) -> Vec<std::ops::Range<usize>> {
+pub(super) fn ignored_syntax_ranges(source: &str) -> Vec<std::ops::Range<usize>> {
     #[derive(Default)]
     struct EmbeddedRuby {
         ranges: Vec<std::ops::Range<usize>>,

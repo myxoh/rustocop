@@ -41,7 +41,7 @@ fn if_unless_modifier(context: &mut CopContext<'_, '_>) {
             continue;
         };
         let keyword = node.keyword_name().unwrap_or("if");
-        if if_unless_modifier_endless_method(node.node_child(1))
+        if if_unless_modifier_endless_method(node.body())
             || node.ancestors().iter().any(|ancestor| ancestor.kind() == "dstr")
         {
             continue;
@@ -340,7 +340,7 @@ fn if_unless_modifier_report_long(
     let Some(condition) = node.condition().and_then(RubocopNodeRef::source) else {
         return;
     };
-    let Some(body) = node.node_child(1).and_then(RubocopNodeRef::source) else {
+    let Some(body) = node.body().and_then(RubocopNodeRef::source) else {
         return;
     };
     let indentation = " ".repeat(node.column());

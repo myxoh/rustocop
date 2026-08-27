@@ -1,8 +1,6 @@
 use super::*;
 
-define_cops! {
-    RequireOrder => "Style/RequireOrder" => call(require_order),
-}
+pub(super) fn cops() -> Vec<Box<dyn Cop>> { Vec::new() }
 
 fn require_order(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     if node.receiver().is_some()

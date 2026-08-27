@@ -4,7 +4,6 @@ use super::*;
 define_cops! {
     AssignmentIndentation => "Layout/AssignmentIndentation" => any_node(assignment_indentation),
     BeginEndAlignment => "Layout/BeginEndAlignment" => node(as_begin_node, begin_end_alignment),
-    EndOfLine => "Layout/EndOfLine" => source(end_of_line),
     FirstParameterIndentation => "Layout/FirstParameterIndentation" => node(as_def_node, first_parameter_indentation),
     SpaceBeforeFirstArg => "Layout/SpaceBeforeFirstArg" => call(space_before_first_arg),
     SpaceInsideStringInterpolation => "Layout/SpaceInsideStringInterpolation" => node(as_embedded_statements_node, space_inside_string_interpolation),
