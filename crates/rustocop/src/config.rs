@@ -173,6 +173,20 @@ impl CopConfig {
         }
         let patterns = Self::compile_patterns(&values);
         let path_globs = path_policy::compile_path_globs(&values);
+        let metadata_root = values
+            .get("Rustocop")
+            .and_then(|entries| entries.get("ProjectRoot"))
+            .and_then(|value| match value {
+                ConfigValue::Scalar(value) => Some(PathBuf::from(value)),
+                ConfigValue::List(_) | ConfigValue::Map { .. } => None,
+            });
+        let root = metadata_root.map_or(root.clone(), |metadata_root| {
+            if metadata_root.is_absolute() {
+                Some(metadata_root)
+            } else {
+                Some(root.unwrap_or_default().join(metadata_root))
+            }
+        });
         Self {
             values,
             explicit_sections,
@@ -465,6 +479,14 @@ impl CopConfig {
 
     pub(crate) fn explicitly_configures(&self, cop: &str) -> bool {
         self.explicit_sections.contains(cop)
+    }
+
+    pub(crate) fn is_compiled(&self) -> bool {
+        self.value("Rustocop", "SchemaVersion").is_some()
+    }
+
+    pub(crate) fn non_native_cops(&self) -> &[String] {
+        self.values("Rustocop", "NonNativeCops")
     }
 
     /// Whether RuboCop would enable this cop without an explicit `--only`

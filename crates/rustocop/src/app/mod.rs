@@ -30,6 +30,16 @@ pub(crate) fn run(args: Vec<String>) -> i32 {
 }
 
 fn run_inspection(options: &crate::config::RunOptions) -> i32 {
+    if options.inspection.cop_config.is_compiled()
+        && !options.include_non_native_cops
+        && !options.non_native_cops.is_empty()
+        && options.inspection.cops.requested().is_none()
+    {
+        eprintln!(
+            "Warning - non native cops are ignored by default, to include them use \
+             --included-non-native-cops NOTE performance is severely degraded when using non native cops."
+        );
+    }
     if let Some(custom_cops) = mixed::custom_cops(options) {
         return mixed::run(options, &custom_cops);
     }

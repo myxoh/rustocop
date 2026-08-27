@@ -1,6 +1,12 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-require_relative "../lib/rustocop"
+require_relative "../lib/rustocop/version"
+require_relative "../lib/rustocop/native_configuration"
+require_relative "../lib/rustocop/runner"
+
+module Rustocop
+  autoload :RubocopConfiguration, File.expand_path("../lib/rustocop/rubocop_configuration", __dir__)
+end
 
 exit Rustocop::Runner.call(ARGV)

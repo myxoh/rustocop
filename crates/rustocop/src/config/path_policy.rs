@@ -47,12 +47,17 @@ impl CopConfig {
         } else {
             supplied.to_path_buf()
         };
-        let absolute = normalized(&rooted.to_string_lossy());
-        let relative = self
-            .root
-            .as_deref()
-            .and_then(|root| rooted.strip_prefix(root).ok())
-            .map(|path| normalized(&path.to_string_lossy()));
+        let absolute = normalized_path(&rooted);
+        let relative = self.root.as_deref().and_then(|root| {
+            let root = normalized_path(root);
+            if absolute == root {
+                Some(String::new())
+            } else {
+                absolute
+                    .strip_prefix(&format!("{root}/"))
+                    .map(str::to_string)
+            }
+        });
         patterns.iter().any(|pattern| {
             pattern.is_match(&absolute)
                 || relative
@@ -96,6 +101,30 @@ pub(super) fn compile_path_globs(
 
 fn normalized(path: &str) -> String {
     path.replace('\\', "/")
+}
+
+fn normalized_path(path: &Path) -> String {
+    use std::path::Component;
+
+    let mut components = Vec::new();
+    let mut rooted = false;
+    for component in path.components() {
+        match component {
+            Component::Prefix(prefix) => components.push(prefix.as_os_str().to_string_lossy()),
+            Component::RootDir => rooted = true,
+            Component::CurDir => {}
+            Component::ParentDir => {
+                components.pop();
+            }
+            Component::Normal(value) => components.push(value.to_string_lossy()),
+        }
+    }
+    let body = components.join("/");
+    if rooted {
+        format!("/{body}")
+    } else {
+        body
+    }
 }
 
 #[cfg(test)]
@@ -171,5 +200,15 @@ mod tests {
         assert!(config.cop_applies_to_path("Style/StringLiterals", "/project/app/model.rb"));
         assert!(!config.cop_applies_to_path("Style/StringLiterals", "/project/db/schema.rb"));
         assert!(!config.cop_applies_to_path("Style/StringLiterals", "/project/vendor/example.rb"));
+    }
+
+    #[test]
+    fn absolute_compiled_excludes_match_dot_prefixed_discovery_paths() {
+        let mut config =
+            CopConfig::from_source("AllCops:\n  Exclude:\n    - /project/Dangerfile\n");
+        config.root = Some(std::path::PathBuf::from("/project"));
+
+        assert!(config.all_cops_excluded("./Dangerfile"));
+        assert!(config.all_cops_excluded("/project/./Dangerfile"));
     }
 }

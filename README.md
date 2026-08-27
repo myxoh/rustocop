@@ -244,6 +244,13 @@ exe/rustocop --only Style /path/to/project
 # Project .rubocop.yml files are discovered automatically. An explicit config is also supported.
 exe/rustocop --config /path/to/project/.rubocop.yml /path/to/project
 
+# From the target project's Bundler context, flatten RuboCop's effective
+# configuration into a standalone native configuration.
+bundle exec rustocop-config --config .rubocop.yml --output .rustocop.yml
+
+# Verify that a checked-in .rustocop.yml is current.
+bundle exec rustocop-config --check --config .rubocop.yml
+
 # Include enabled extension and custom cops through RuboCop (substantially slower)
 exe/rustocop --included-non-native-cops /path/to/project
 
@@ -270,18 +277,39 @@ exe/rustocop --jobs 4 /path/to/project
 exe/rustocop --show-cops
 ```
 
-For normal runs, the Ruby entrypoint asks RuboCop to resolve the effective
-configuration, including inherited configuration, plugins, department settings,
-`DisabledByDefault`, and `NewCops`. Rustocop runs the enabled cops from the base
-RuboCop package. Enabled extension and custom cops are ignored with a warning by
-default; `--included-non-native-cops` delegates those cops back to RuboCop and
-merges their results. This is substantially slower because the delegated files
-are parsed a second time in Ruby.
+The native binary discovers `.rustocop.yml`, `.config/rustocop/config.yml`, and
+`rustocop.yml` before the corresponding RuboCop configuration. A compiled
+configuration contains the flattened effective settings and explicit enabled
+state of every built-in cop, plus the names of enabled non-native cops. It is
+parsed entirely in Rust; RuboCop and Bundler are not started.
 
-Resolving a project configuration also loads RuboCop before native inspection,
-which can add several hundred milliseconds to short runs. Explicit `--only`
-runs with no discoverable project or user configuration keep the fast path and
-do not load RuboCop.
+`rustocop-config` is the deliberately slow, one-time bridge for complicated
+RuboCop configuration. It asks the project's installed RuboCop to resolve
+defaults, `inherit_from`, `inherit_gem`, plugins, department settings,
+`DisabledByDefault`, and `NewCops`, then writes the standalone Rustocop YAML.
+The default output name replaces `rubocop` with `rustocop`, so `.rubocop.yml`
+becomes `.rustocop.yml` and `.rubocop_todo.yml` becomes
+`.rustocop_todo.yml`. Regenerate with `--force` after changing RuboCop,
+plugins, or any source configuration; use `--check` in CI to reject a stale
+generated file.
+
+Run the compiler in the target project's Bundler context so every configured
+RuboCop plugin is available. When invoking it from a Rustocop source checkout,
+use the target bundle with the absolute path to `exe/rustocop-config`.
+
+Without a compiled configuration, Rustocop natively handles ordinary YAML,
+local and gem inheritance, inheritance globs, merge modes, department and cop
+selection, and path policy. The Ruby entrypoint still falls back to RuboCop's
+resolver for configuration outside that native surface. Enabled extension and
+custom cops are ignored with a warning by default;
+`--included-non-native-cops` delegates those cops back to RuboCop and merges
+their results. This is substantially slower because the delegated files are
+parsed a second time in Ruby.
+
+For the lowest startup latency from a checkout, invoke
+`libexec/rustocop-native` after `bundle exec rake build:native`. The Ruby gem
+entrypoint skips RuboCop when a compiled configuration is present, but Ruby and
+Bundler startup still add overhead.
 
 Explicit `--require`/`--plugin` plus `--only` custom-cop delegation remains
 supported. Mixed runs currently reject autocorrection and `--stdin`, because

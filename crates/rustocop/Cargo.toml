@@ -5,6 +5,7 @@ edition = "2021"
 license = "MIT"
 
 [dependencies]
+glob = "0.3.4"
 regex = "1.13.1"
 ruby-prism = "1.9.0"
 serde = { version = "1.0", features = ["derive"] }
