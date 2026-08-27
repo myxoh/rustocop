@@ -53,9 +53,8 @@ fn prism_offense(source: &str, index: &SourceIndex, finding: prism::Finding) -> 
             // before its start. RuboCop's public JSON formatter renders that
             // point at the start column, except for an insertion at the end
             // of a non-newline-terminated source.
-            if finding.cop_name == "Lint/EmptyFile"
-                || finding.cop_name == "Layout/TrailingEmptyLines"
-                    && (source.is_empty() || source.ends_with('\n'))
+            if finding.cop_name == "Layout/TrailingEmptyLines"
+                && (source.is_empty() || source.ends_with('\n'))
             {
                 (line, 0)
             } else if (finding.start_offset == source.len()
@@ -154,7 +153,7 @@ mod tests {
                 end_offset: 0,
             },
         );
-        assert_eq!((empty.last_line, empty.last_column), (1, 0));
+        assert_eq!((empty.last_line, empty.last_column), (1, 1));
         assert_eq!(empty.length, 0);
 
         let empty_at_nonterminated_eof = prism_offense(

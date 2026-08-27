@@ -1753,6 +1753,7 @@ impl<'pr> Visit<'pr> for Converter<'_> {
         let Frame::Node(string) = *self.frames.last().expect("string frame") else {
             unreachable!()
         };
+        let value = String::from_utf8_lossy(node.unescaped()).into_owned();
         let heredoc = node.opening_loc().as_ref().is_some_and(|location| {
             self.source
                 .get(location.start_offset()..location.end_offset())
@@ -1760,21 +1761,38 @@ impl<'pr> Visit<'pr> for Converter<'_> {
         });
         self.populate_literal(
             string,
-            NodeValue::String(String::from_utf8_lossy(node.unescaped()).into_owned()),
+            NodeValue::String(value.clone()),
             if heredoc { None } else { node.opening_loc() },
             if heredoc { None } else { node.closing_loc() },
         );
-        if heredoc {
-            if self.ast.node(string).parent().is_some_and(|parent| {
+        let embedded_in_interpolation = heredoc
+            && self.ast.node(string).parent().is_some_and(|parent| {
                 parent.kind() == "begin"
                     && parent
                         .source()
                         .is_some_and(|source| source.starts_with("#{"))
-            }) {
-                // Parser exposes heredocs embedded directly in interpolation
-                // as dynamic strings even when Prism emits a StringNode.
-                self.ast.replace_kind(string, "dstr");
-            }
+            });
+        let content = node.content_loc();
+        let physically_multiline = self
+            .source
+            .get(content.start_offset()..content.end_offset())
+            .is_some_and(|source| source.split_inclusive('\n').count() > 1);
+        // Parser represents any physically multi-line StringNode as a dynamic string
+        // with literal string parts, even without interpolation. Prism keeps
+        // it as one StringNode. Normalize the shared AST once so callbacks
+        // and node patterns see the Parser contract expected by RuboCop. An
+        // escaped `\n` changes the runtime value but remains a plain `str`.
+        if embedded_in_interpolation || physically_multiline {
+            self.ast.replace_kind(string, "dstr");
+            self.ast.clear_children(string);
+            let child = self.ast.add_node(
+                "str",
+                vec![NodeValue::String(value)],
+                Some(self.character_range(content.start_offset()..content.end_offset())),
+            );
+            self.ast.append_child(string, NodeValue::Node(child));
+        }
+        if heredoc {
             self.set_location(string, "heredoc_body", node.content_loc());
             if let Some(closing) = node.closing_loc() {
                 self.set_heredoc_end(string, closing);

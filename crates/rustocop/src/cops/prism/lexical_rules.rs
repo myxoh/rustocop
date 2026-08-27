@@ -17,30 +17,7 @@ define_cops! {
     InPatternThen => "Style/InPatternThen" => node(as_in_node, in_pattern_then),
     EmptyEnsure => "Lint/EmptyEnsure" => node(as_begin_node, empty_ensure),
     BigDecimalNew => "Lint/BigDecimalNew" => call(big_decimal_new),
-    EnsureReturn => "Lint/EnsureReturn" => node(as_begin_node, ensure_return),
     VariableInterpolation => "Style/VariableInterpolation" => node(as_embedded_variable_node, variable_interpolation),
-}
-
-fn ensure_return(node: &ruby_prism::BeginNode<'_>, context: &mut CopContext<'_, '_>) {
-    let Some(ensure) = node.ensure_clause() else {
-        return;
-    };
-    #[derive(Default)]
-    struct Returns(Vec<std::ops::Range<usize>>);
-    impl<'pr> Visit<'pr> for Returns {
-        fn visit_return_node(&mut self, node: &ruby_prism::ReturnNode<'pr>) {
-            self.0
-                .push(node.location().start_offset()..node.location().end_offset());
-            ruby_prism::visit_return_node(self, node);
-        }
-    }
-    let mut returns = Returns::default();
-    if let Some(statements) = ensure.statements() {
-        returns.visit(&statements.as_node());
-    }
-    for offense in returns.0 {
-        context.report("Do not return from an `ensure` block.", offense);
-    }
 }
 
 fn big_decimal_new(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {

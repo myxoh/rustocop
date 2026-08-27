@@ -121,7 +121,7 @@ correction_alternatives = cases.each_with_object(Hash.new { |hash, key| hash[key
   key = JSON.generate([
     test_case.fetch("cop"), test_case.fetch("source"), test_case.fetch("path"),
     test_case.fetch("ruby_version"), test_case.fetch("config"),
-    test_case.fetch("correction_loop", false)
+    test_case.fetch("correction_loop", true)
   ])
   grouped[key] << test_case.fetch("correction")
 end
@@ -216,7 +216,7 @@ workers = Array.new(options[:jobs]) do
           FileUtils.mkdir_p(File.dirname(source_path))
           File.binwrite(source_path, source)
           correction_command = [native, "-A", "--format", "json"]
-          correction_command << "--no-correction-loop" unless test_case.fetch("correction_loop", false)
+          correction_command << "--no-correction-loop" unless test_case.fetch("correction_loop", true)
           correction_command.concat(
             ["--only", test_case.fetch("cop"), "--config", test_case.fetch("config_path"), source_path]
           )
@@ -226,7 +226,7 @@ workers = Array.new(options[:jobs]) do
           correction_key = JSON.generate([
             test_case.fetch("cop"), test_case.fetch("source"), test_case.fetch("path"),
             test_case.fetch("ruby_version"), test_case.fetch("config"),
-            test_case.fetch("correction_loop", false)
+            test_case.fetch("correction_loop", true)
           ])
           alternatives = correction_alternatives.fetch(correction_key, []).map do |correction|
             if correction.is_a?(Hash) && correction.key?("$hex")

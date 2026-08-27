@@ -1,6 +1,6 @@
 {
   "format_version": 2,
-  "updated_at": "2026-08-26T23:27:10-04:00",
+  "updated_at": "2026-08-27T00:12:13-04:00",
   "rubocop_version": "1.87.0",
   "rubocop_commit": "e5b788dba181ad94de30cfbad661c5d6aa08a4e5",
   "sampling": {
@@ -16,8 +16,8 @@
   },
   "target_cops": 606,
   "inventory_cops": 606,
-  "audited_cops": 40,
-  "migrated_cops": 40,
+  "audited_cops": 48,
+  "migrated_cops": 48,
   "cops": [
     {
       "cop": "Bundler/DuplicatedGem",
@@ -6060,7 +6060,7 @@
       "upstream_source": "lib/rubocop/cop/lint/empty_file.rb",
       "upstream_sha256": "ff9cac1968f719752b58189245bc1b4b4ef87ba6cbacb249a7fb123e762e54c9",
       "implementations": [
-        "src/cops/prism/additional_rules_literals.rs"
+        "src/cops/prism/compatibility_migration_batch_three.rs"
       ],
       "upstream_callbacks": [
         "on_new_investigation"
@@ -6077,16 +6077,26 @@
         "exact": 25,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_new_investigation"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "SourceRange"
+      ],
+      "dsl_features": [
+        "define_cops",
+        "compatibility_investigation",
+        "define_compatibility_rule"
+      ],
+      "similarity_score": 5,
+      "structural_status": "near_source_shaped",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "Global offenses use the public formatter's point-range convention through the shared compatibility reporter."
+      ]
     },
     {
       "cop": "Lint/EmptyInPattern",
@@ -6223,7 +6233,7 @@
       "upstream_source": "lib/rubocop/cop/lint/ensure_return.rb",
       "upstream_sha256": "551784bee945dbc232fdfc92403ac0d6306cbcda5c6e86d746d40b9ceef2ccf2",
       "implementations": [
-        "src/cops/prism/lexical_rules.rs"
+        "src/cops/prism/compatibility_migration_batch_three.rs"
       ],
       "upstream_callbacks": [
         "on_ensure"
@@ -6240,16 +6250,26 @@
         "exact": 1,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_ensure"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "RuboCopAST",
+        "SourceRange"
+      ],
+      "dsl_features": [
+        "define_cops",
+        "compatibility_callbacks",
+        "define_compatibility_rule"
+      ],
+      "similarity_score": 5,
+      "structural_status": "near_source_shaped",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The RuboCop AST adapter exposes the ensure branch and recursive node traversal directly."
+      ]
     },
     {
       "cop": "Lint/ErbNewArguments",
@@ -9102,7 +9122,7 @@
       "upstream_source": "lib/rubocop/cop/lint/to_json.rb",
       "upstream_sha256": "fadcb1a38850630fb36abc3679314588f693ec887a8dfb044daa50dcfb5834ba",
       "implementations": [
-        "src/cops/prism/lint.rs"
+        "src/cops/prism/compatibility_migration_batch_three.rs"
       ],
       "upstream_callbacks": [
         "on_def"
@@ -9121,16 +9141,27 @@
         "exact": 14,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_def"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "RuboCopAST",
+        "SourceRange",
+        "Corrector"
+      ],
+      "dsl_features": [
+        "define_cops",
+        "compatibility_callbacks",
+        "define_compatibility_rule"
+      ],
+      "similarity_score": 5,
+      "structural_status": "near_source_shaped",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "Shared callback dispatch and corrector insertion preserve the upstream guard and correction sequence."
+      ]
     },
     {
       "cop": "Lint/TopLevelReturnWithArgument",
@@ -12735,7 +12766,7 @@
       "upstream_source": "lib/rubocop/cop/style/colon_method_call.rb",
       "upstream_sha256": "b51256daea0c609ad043bffb9d3ff724068cd6060daeaec2acff1250757de965",
       "implementations": [
-        "src/cops/prism/style_calls.rs"
+        "src/cops/prism/compatibility_migration_batch_three.rs"
       ],
       "upstream_callbacks": [
         "on_send"
@@ -12754,16 +12785,27 @@
         "exact": 140,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_send"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "RuboCopAST",
+        "SourceRange",
+        "Corrector"
+      ],
+      "dsl_features": [
+        "define_cops",
+        "compatibility_callbacks",
+        "define_compatibility_rule"
+      ],
+      "similarity_score": 5,
+      "structural_status": "near_source_shaped",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The Java interop node pattern is expressed through the Parser-shaped receiver tree."
+      ]
     },
     {
       "cop": "Style/ColonMethodDefinition",
@@ -17485,7 +17527,7 @@
       "upstream_source": "lib/rubocop/cop/style/nested_ternary_operator.rb",
       "upstream_sha256": "a45b06bc9f75150ddd3a162b1ca20ec29cdf3313a34919a9dc5e23c2ea223ea1",
       "implementations": [
-        "src/cops/prism/ternary_rules.rs"
+        "src/cops/prism/compatibility_migration_batch_three.rs"
       ],
       "upstream_callbacks": [
         "on_if"
@@ -17505,16 +17547,28 @@
         "exact": 374,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_if"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "RuboCopAST",
+        "RangeHelp",
+        "SourceRange",
+        "Corrector"
+      ],
+      "dsl_features": [
+        "define_cops",
+        "compatibility_callbacks",
+        "define_compatibility_rule"
+      ],
+      "similarity_score": 5,
+      "structural_status": "near_source_shaped",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "RangeHelp and corrector wrapping preserve RuboCop's iterative multi-edit correction contract."
+      ]
     },
     {
       "cop": "Style/Next",
@@ -17710,7 +17764,7 @@
       "upstream_source": "lib/rubocop/cop/style/numbered_parameters.rb",
       "upstream_sha256": "9e9354429ffef4bf77cf43499345d360c4e1971f649c091357ed250330a572f2",
       "implementations": [
-        "src/cops/prism/block_parameter_rules.rs"
+        "src/cops/prism/compatibility_migration_batch_three.rs"
       ],
       "upstream_callbacks": [
         "on_numblock"
@@ -17730,16 +17784,27 @@
         "exact": 8,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_numblock"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "RuboCopAST",
+        "ConfigurableEnforcedStyle",
+        "TargetRubyVersion"
+      ],
+      "dsl_features": [
+        "define_cops",
+        "compatibility_callbacks",
+        "define_compatibility_rule"
+      ],
+      "similarity_score": 5,
+      "structural_status": "near_source_shaped",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "Target Ruby and enforced-style access are supplied by the shared cop context."
+      ]
     },
     {
       "cop": "Style/NumberedParametersLimit",
@@ -19769,7 +19834,7 @@
       "upstream_source": "lib/rubocop/cop/style/redundant_regexp_constructor.rb",
       "upstream_sha256": "cf4f4239371403b21850df93220bf23f8559b8774e42eedfb7476124d095e4db",
       "implementations": [
-        "src/cops/prism/redundant_regexp_rules.rs"
+        "src/cops/prism/compatibility_migration_batch_three.rs"
       ],
       "upstream_callbacks": [
         "on_send"
@@ -19788,16 +19853,28 @@
         "exact": 10,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_send"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "RuboCopAST",
+        "SourceRange",
+        "Corrector"
+      ],
+      "dsl_features": [
+        "define_cops",
+        "compatibility_callbacks",
+        "restrict_on_send",
+        "define_compatibility_rule"
+      ],
+      "similarity_score": 5,
+      "structural_status": "near_source_shaped",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The Parser-shaped regexp argument already retains the literal source used by the upstream reconstruction."
+      ]
     },
     {
       "cop": "Style/RedundantRegexpEscape",
@@ -21292,7 +21369,7 @@
       "upstream_source": "lib/rubocop/cop/style/string_hash_keys.rb",
       "upstream_sha256": "8d176d20f5f124d2ba734a8e998ca318df13e5d590237daa261cc17fa520cc3d",
       "implementations": [
-        "src/cops/prism/string_conversion_rules.rs"
+        "src/cops/prism/compatibility_migration_batch_three.rs"
       ],
       "upstream_callbacks": [
         "on_pair"
@@ -21311,16 +21388,28 @@
         "exact": 131591,
         "classification": "project_exact"
       },
-      "rust_callbacks": [],
-      "compatibility_components": [],
-      "dsl_features": [],
-      "similarity_score": null,
-      "structural_status": "unaudited",
-      "migration_status": "unaudited",
-      "structural_gaps": [
-        "Structural review pending."
+      "rust_callbacks": [
+        "on_pair"
       ],
-      "documented_adaptations": []
+      "compatibility_components": [
+        "CompatibilityCopContext",
+        "ProcessedSource",
+        "RuboCopAST",
+        "SourceRange",
+        "Corrector"
+      ],
+      "dsl_features": [
+        "define_cops",
+        "compatibility_callbacks",
+        "define_compatibility_rule"
+      ],
+      "similarity_score": 5,
+      "structural_status": "near_source_shaped",
+      "migration_status": "migrated",
+      "structural_gaps": [],
+      "documented_adaptations": [
+        "The shared AST adapter normalizes physical multiline strings and heredocs; compatibility string values preserve Parser's __FILE__ behavior."
+      ]
     },
     {
       "cop": "Style/StringLiterals",

@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "fileutils"
+require "digest"
 require "json"
 require "optparse"
 require "rbconfig"
@@ -26,7 +27,9 @@ exit(cached_success ? 0 : 1) unless options[:live_rubocop]
 
 native = File.join(root, "crates/rustocop/target/debug/rustocop")
 comparison = File.join(root, "script/compare_upstream_cop_specs.rb")
-report = File.join(root, "tmp/verify-#{cop_names.join('-').tr('/', '_').downcase}.json")
+report_slug = cop_names.join("-").tr("/", "_").downcase
+report_slug = "batch-#{Digest::SHA256.hexdigest(report_slug)[0, 16]}" if report_slug.length > 120
+report = File.join(root, "tmp/verify-#{report_slug}.json")
 
 build = system("cargo", "build", "--manifest-path", manifest)
 abort "Rust build failed" unless build

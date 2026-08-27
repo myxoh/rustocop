@@ -2,39 +2,7 @@ use super::*;
 
 define_cops! {
     ItWithoutArgumentsInBlock => "Lint/ItWithoutArgumentsInBlock" => node(as_it_local_variable_read_node, it_without_arguments_in_block),
-    NumberedParameters => "Style/NumberedParameters" => any_node(numbered_parameters),
     NumberedParametersLimit => "Style/NumberedParametersLimit" => node(as_block_node, numbered_parameters_limit),
-}
-
-fn numbered_parameters(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
-    if !context.target_ruby_version().at_least(2, 7) {
-        return;
-    }
-    let (parameters, location, parent_call) = if let Some(block) = node.as_block_node() {
-        (block.parameters(), block.location(), true)
-    } else if let Some(lambda) = node.as_lambda_node() {
-        (lambda.parameters(), lambda.location(), false)
-    } else {
-        return;
-    };
-    if parameters.is_none_or(|parameters| parameters.as_numbered_parameters_node().is_none()) {
-        return;
-    }
-    let style = context.policy().enforced_style("allow_single_line");
-    let multiline = context.source_file().at(&location).contains('\n');
-    if style == "allow_single_line" && !multiline {
-        return;
-    }
-    let offense = if parent_call {
-        context.parent().filter(|parent| parent.as_call_node().is_some()).map_or(location, Node::location)
-    } else {
-        location
-    };
-    if style == "disallow" {
-        context.report("Avoid using numbered parameters.", offense);
-    } else {
-        context.report("Avoid using numbered parameters for multi-line blocks.", offense);
-    }
 }
 
 fn it_without_arguments_in_block(

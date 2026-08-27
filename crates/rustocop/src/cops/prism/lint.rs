@@ -6,7 +6,6 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
         Box::new(FloatOutOfRange),
         Box::new(RegexpAsCondition),
         Box::new(SelfAssignment),
-        Box::new(ToJson),
     ]
 }
 
@@ -258,37 +257,4 @@ fn same_node_source(source: &str, left: &Node<'_>, right: &Option<Node<'_>>) -> 
     right.as_ref().is_some_and(|right| {
         source_at(source, &left.location()) == source_at(source, &right.location())
     })
-}
-
-struct ToJson;
-
-impl Cop for ToJson {
-    fn name(&self) -> &'static str {
-        "Lint/ToJSON"
-    }
-
-    fn on_node<'pr>(
-        &self,
-        node: &Node<'pr>,
-        _ancestors: &[Node<'pr>],
-        _source: &str,
-        context: &mut Context,
-    ) {
-        let Some(definition) = node.as_def_node() else {
-            return;
-        };
-        if definition.name().as_slice() != b"to_json" || definition.parameters().is_some() {
-            return;
-        }
-
-        let name = definition.name_loc();
-        let location = definition.location();
-        context.insert(
-            self.name(),
-            "`#to_json` requires an optional argument to be parsable via JSON.generate(obj).",
-            location,
-            name.end_offset(),
-            "(*_args)",
-        );
-    }
 }

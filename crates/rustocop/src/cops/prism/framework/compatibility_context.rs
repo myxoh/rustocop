@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::ops::Range;
 
 use super::{Context, CopPolicy, CorrectionPlan, Reporter};
@@ -102,6 +103,18 @@ impl CompatibilityCorrector<'_, '_> {
         }
     }
 
+    pub(super) fn wrap(
+        &mut self,
+        range: impl CompatibilityRange,
+        prefix: impl Into<String>,
+        suffix: impl Into<String>,
+    ) {
+        if let Some(range) = range.byte_range(self.buffer) {
+            self.plan.replace(range.start..range.start, prefix);
+            self.plan.replace(range.end..range.end, suffix);
+        }
+    }
+
     pub(super) fn swap(&mut self, left: impl CompatibilityRange, right: impl CompatibilityRange) {
         let Some(left) = left.byte_range(self.buffer) else {
             return;
@@ -147,6 +160,19 @@ impl<'context, 'processed, 'source> CompatibilityCopContext<'context, 'processed
     pub(super) fn source_range(&self, node: NodeRef<'_>) -> Option<SourceRange<'_, 'source>> {
         let range = node.source_range()?;
         Some(SourceRange::new(&self.buffer, range.start, range.end))
+    }
+
+    /// Return the runtime value RuboCop's Parser-shaped AST exposes for a
+    /// plain string node. Prism retains `__FILE__` as a distinct source node,
+    /// while Parser folds it into a `str` containing the current path.
+    pub(super) fn string_content<'node>(&self, node: NodeRef<'node>) -> Option<Cow<'node, str>> {
+        if let Some(content) = node.str_content() {
+            Some(Cow::Borrowed(content))
+        } else if node.kind() == "__FILE__" {
+            Some(Cow::Owned(self.processed_source.file_path().to_owned()))
+        } else {
+            None
+        }
     }
 
     pub(super) fn location_range(

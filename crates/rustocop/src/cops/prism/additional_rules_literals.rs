@@ -1,22 +1,9 @@
 use super::*;
 
 define_cops! {
-    EmptyFile => "Lint/EmptyFile" => source(empty_file),
     NumericLiteralPrefix => "Style/NumericLiteralPrefix" => any_node(numeric_literal_prefix),
     NestedPercentLiteral => "Lint/NestedPercentLiteral" => node(as_array_node, nested_percent_literal),
     OpenStructUse => "Style/OpenStructUse" => any_node(open_struct_use),
-}
-
-fn empty_file(reporter: &mut CopContext<'_, '_>) {
-    let source = reporter.source();
-    let empty = source.is_empty()
-        || !reporter.config_bool("AllowComments", true)
-            && source
-                .lines()
-                .all(|line| line.trim().is_empty() || line.trim_start().starts_with('#'));
-    if empty {
-        reporter.report("Empty file detected.", 0..0);
-    }
 }
 
 fn numeric_literal_prefix(node: &Node<'_>, context: &mut CopContext<'_, '_>) {

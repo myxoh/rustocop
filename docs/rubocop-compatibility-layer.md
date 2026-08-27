@@ -140,6 +140,31 @@ The final scoped comparison classified all 30 cops as `project_exact` across
 the 50 pinned projects: 34,668 exact offense signatures, zero mismatch
 signatures, and zero unmatched offenses.
 
+As of `2026-08-27T00:11:24-04:00`, the migration ledger covers 48 of the 606
+built-in cops. An attempted 100-cop cohort accepted eight source-shaped
+migrations:
+
+- `Lint/EmptyFile`, `Lint/EnsureReturn`, and `Lint/ToJSON`;
+- `Style/ColonMethodCall`, `Style/NestedTernaryOperator`,
+  `Style/NumberedParameters`, `Style/RedundantRegexpConstructor`, and
+  `Style/StringHashKeys`.
+
+All eight use the compatibility callback or investigation lifecycle and the
+superseded implementations were removed. The shared layer gained Parser-shaped
+physical-multiline heredoc/string normalization, `__FILE__` string values,
+point-range formatting for global offenses, corrector wrapping, and a bounded
+report filename for large focused batches. Two project-derived
+`Style/StringHashKeys` cases were retained as controlled unit fixtures.
+
+The eight cops pass 67 cached unit contracts, 52 freshly extracted upstream
+cases, the complete 29,587-case fixture corpus, and all 50 projects with
+132,163 exact offense signatures and no mismatch signatures. Four additional
+punctuation migrations were explicitly rejected and rolled back: their unit
+and upstream cases passed, but the project gate showed that the lightweight
+compatibility token stream is not yet a complete replacement for RuboCop's
+lexer. The other 88 candidates were not relabeled or modified after that
+shared-layer boundary failed.
+
 ## Translation rules
 
 1. Mirror the RuboCop source path and module boundary where practical.
