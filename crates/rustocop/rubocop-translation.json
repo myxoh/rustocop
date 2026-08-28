@@ -1,6 +1,6 @@
 {
   "format_version": 5,
-  "updated_at": "2026-08-25T11:23:06Z",
+  "updated_at": "2026-08-28T02:55:35Z",
   "rubocop_version": "1.87.0",
   "rubocop_ast_version": "1.49.1",
   "scope": {
@@ -8630,7 +8630,9 @@
         "ownership_declared": [],
         "equivalent": 0,
         "equivalence_targets": {},
-        "exercise_required": {},
+        "exercise_required": {
+          "aligned_with_something?": "src/rubocop/cop/mixin/preceding_following_alignment.rs#aligned_with_something"
+        },
         "unexercised_targets": {},
         "unresolved": []
       }
@@ -14098,44 +14100,44 @@
               "rspec_id": "[1:14:1:1]",
               "description_sha256": "e1ee79a82bec9addb554e3c2045c351e8bce40dc46b7dce58ff1dd61fc088a1d",
               "rust": "src/rubocop/ast/node/core_spec.rs",
-              "test": "constant_and_constructor_helpers_follow_rubocop_node_patterns",
+              "test": "grouped_type_queries_match_all_rubocop_groups",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "node",
-                "pattern"
+                "match",
+                "type"
               ]
             },
             {
               "rspec_id": "[1:14:2:1]",
               "description_sha256": "e1ee79a82bec9addb554e3c2045c351e8bce40dc46b7dce58ff1dd61fc088a1d",
               "rust": "src/rubocop/ast/node/core_spec.rs",
-              "test": "constant_and_constructor_helpers_follow_rubocop_node_patterns",
+              "test": "grouped_type_queries_match_all_rubocop_groups",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "node",
-                "pattern"
+                "match",
+                "type"
               ]
             },
             {
               "rspec_id": "[1:14:3:1]",
               "description_sha256": "90f29003ed51bba91c3c3e956ddadf4a2c96614ff934c5bdaf9d4c875499210a",
               "rust": "src/rubocop/ast/node/core_spec.rs",
-              "test": "constant_and_constructor_helpers_follow_rubocop_node_patterns",
+              "test": "grouped_type_queries_match_all_rubocop_groups",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "node",
-                "pattern"
+                "match",
+                "type"
               ]
             },
             {
               "rspec_id": "[1:14:4:1]",
               "description_sha256": "66ec0d25222bafe2f74d0850ca1c514f35b1fb22026a8581a8567ff85edc21a5",
               "rust": "src/rubocop/ast/node/core_spec.rs",
-              "test": "constant_and_constructor_helpers_follow_rubocop_node_patterns",
+              "test": "grouped_type_queries_match_all_rubocop_groups",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "node",
-                "pattern"
+                "match",
+                "type"
               ]
             },
             {
@@ -15576,7 +15578,7 @@
               ]
             }
           ],
-          "contract_sha256": "055028ad1d216ad0d500782d6552ee234a5c37e41d3c0347ed260e1ccc3b9fea"
+          "contract_sha256": "2fd4b5f9ed6c6212a0f4ea98dd2aca225089b2d5d4a0fdfa5c818f210404cf21"
         }
       ],
       "api_coverage": {
@@ -16189,7 +16191,7 @@
           "status": "translated",
           "deviations": [],
           "upstream_examples": 5,
-          "rust_tests": 4,
+          "rust_tests": 2,
           "covered_upstream_examples": 5,
           "coverage_inventory": "spec/upstream/rubocop-compatibility-examples.json",
           "coverage_rust_files": [
@@ -16200,9 +16202,7 @@
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
               "tests": [
                 "alias_identifiers_keep_new_then_old_parser_order",
-                "boolean_operator_nodes_preserve_operator_and_branch_contracts",
-                "simple_assignment_nodes_expose_name_and_expression_for_every_scope",
-                "variable_nodes_expose_their_exact_names"
+                "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast"
               ]
             }
           ],
@@ -16221,48 +16221,44 @@
               "rspec_id": "[1:2:1]",
               "description_sha256": "7ba98a96860c9d12d43a9167174673c7597ceb0883a584aafad6f1d8964f5d6c",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "simple_assignment_nodes_expose_name_and_expression_for_every_scope",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "assignment",
-                "node"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:3:1]",
               "description_sha256": "d292e913eea2ebf88f990d8d7c8478c69874b3b3b0e5e50ba943ff3325b38035",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "variable_nodes_expose_their_exact_names",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "name",
-                "node"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:4:1]",
               "description_sha256": "f055711490489e6453da403e1658d4747f42ec191d9a0fc1d0f4495b23cd79a3",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "boolean_operator_nodes_preserve_operator_and_branch_contracts",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "node",
-                "operator"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:5:1]",
               "description_sha256": "62c635cba7e007a3d7f04979123440511bfe4e1339b36883233671c527712170",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "simple_assignment_nodes_expose_name_and_expression_for_every_scope",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "expression",
-                "node"
+                "ast"
               ]
             }
           ],
-          "contract_sha256": "9d4419a0a1283f7daacfe8dee80c941a0c94aae58e7c7675c3d854572178595c"
+          "contract_sha256": "ca285501b48561c329ff4d5af6f9fbd5574c05b9552e6593cd33a41384138f47"
         }
       ],
       "api_coverage": {
@@ -16305,7 +16301,7 @@
           "status": "translated",
           "deviations": [],
           "upstream_examples": 16,
-          "rust_tests": 5,
+          "rust_tests": 4,
           "covered_upstream_examples": 16,
           "coverage_inventory": "spec/upstream/rubocop-compatibility-examples.json",
           "coverage_rust_files": [
@@ -16316,10 +16312,9 @@
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
               "tests": [
                 "alias_identifiers_keep_new_then_old_parser_order",
-                "boolean_operator_nodes_preserve_operator_and_branch_contracts",
                 "logical_assignment_nodes_expose_assignment_name_operator_and_expression",
                 "multiple_lhs_flattens_splats_and_nested_targets_only",
-                "operator_assignments_expose_lhs_name_operator_and_rhs"
+                "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast"
               ]
             }
           ],
@@ -16385,11 +16380,10 @@
               "rspec_id": "[1:3:2:1]",
               "description_sha256": "6c813044217fbb25227ca1757ec08679c7cf1195801f6f1122877feee69a11e1",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "boolean_operator_nodes_preserve_operator_and_branch_contracts",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "node",
-                "operator"
+                "ast"
               ]
             },
             {
@@ -16408,11 +16402,10 @@
               "rspec_id": "[1:4:2:1]",
               "description_sha256": "cf0ec58107aa9a098d504a8a038e16e8738d386509b2c2525338b7535cdc922f",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "boolean_operator_nodes_preserve_operator_and_branch_contracts",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "node",
-                "operator"
+                "ast"
               ]
             },
             {
@@ -16431,11 +16424,10 @@
               "rspec_id": "[1:5:2:1]",
               "description_sha256": "cbe93d95915eb6db0704e56e697d093f9c7008c8dff7fb701c7de218f6f14a2d",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "boolean_operator_nodes_preserve_operator_and_branch_contracts",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "node",
-                "operator"
+                "ast"
               ]
             },
             {
@@ -16454,11 +16446,10 @@
               "rspec_id": "[1:6:2:1]",
               "description_sha256": "c3c684963fdad9dfa7aff5a5bc368997b96ea4bdfe5923abc29412ad6a167e84",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "boolean_operator_nodes_preserve_operator_and_branch_contracts",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "node",
-                "operator"
+                "ast"
               ]
             },
             {
@@ -16497,14 +16488,14 @@
               "rspec_id": "[1:8:2:1]",
               "description_sha256": "1a87ca94768c93ecd59372c622ddd9e4407039fa3172095d6fc8302bec57da52",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "operator_assignments_expose_lhs_name_operator_and_rhs",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "rhs"
+                "ast"
               ]
             }
           ],
-          "contract_sha256": "d15a7e37d30ab5d28020023a787dd63be0ab61e6df3eb00132dc69a037208232"
+          "contract_sha256": "48cadfe7daf1a6537aa972c333903a6d739a14dd63cda720af56adc90b67c1cc"
         }
       ],
       "api_coverage": {
@@ -16551,7 +16542,7 @@
           "status": "translated",
           "deviations": [],
           "upstream_examples": 45,
-          "rust_tests": 9,
+          "rust_tests": 8,
           "covered_upstream_examples": 45,
           "coverage_inventory": "spec/upstream/rubocop-compatibility-examples.json",
           "coverage_rust_files": [
@@ -16567,9 +16558,8 @@
                 "defined_is_a_parameterized_method_dispatch_node",
                 "every_argument_kind_exposes_name_and_optional_default",
                 "forwarding_arguments_follow_the_modern_builder_contract",
-                "keyword_begin_exposes_body_and_nested_rescue_ensure_nodes",
                 "lambda_literal_exposes_the_same_dispatch_and_argument_interface",
-                "variable_nodes_expose_their_exact_names"
+                "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast"
               ]
             }
           ],
@@ -16714,11 +16704,10 @@
               "rspec_id": "[1:2:11:1]",
               "description_sha256": "966d488dcdd4bc956cdaf19967fe3304af66ce3f842d2a9ea576458403b78d60",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "variable_nodes_expose_their_exact_names",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "name",
-                "node"
+                "ast"
               ]
             },
             {
@@ -16747,11 +16736,10 @@
               "rspec_id": "[1:2:1:1]",
               "description_sha256": "b285bd452136fb8ca1c1314ef797dd9c47f739a9ba933804ebccc041a1a366fe",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "variable_nodes_expose_their_exact_names",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "name",
-                "node"
+                "ast"
               ]
             },
             {
@@ -16768,23 +16756,20 @@
               "rspec_id": "[1:2:3:1]",
               "description_sha256": "b05c0a79bd985e0cdd491a2fb170a3522c78b45f4b3cec1edb7c6070a076d0eb",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "keyword_begin_exposes_body_and_nested_rescue_ensure_nodes",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "keyword",
-                "node"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:2:4:1]",
               "description_sha256": "7716169d80f91a388f93116ba91bf65e74bc8abaa4ef46eabc919c9396e2f4b7",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "every_argument_kind_exposes_name_and_optional_default",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "argument",
-                "name",
-                "optional"
+                "ast"
               ]
             },
             {
@@ -16802,44 +16787,40 @@
               "rspec_id": "[1:2:6:1]",
               "description_sha256": "3b35ea807db897dbf18d4fd3fc21869767431da9a63e74b63ee415624361f88a",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "variable_nodes_expose_their_exact_names",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "name",
-                "node"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:2:7:1]",
               "description_sha256": "c9f71d0dde9609448838ea22a58cd4979c2d546e552c9f811c976f2971f02f43",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "variable_nodes_expose_their_exact_names",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "name",
-                "node"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:2:8:1]",
               "description_sha256": "78daeacf3ebd36639c6ba7bb224f0469e50743f5dc9a9db493ffbd5f2354ee92",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "variable_nodes_expose_their_exact_names",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "name",
-                "node"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:2:9:1]",
               "description_sha256": "bbe1e8803de41fb46a77fc463c229beedefac013fec7d7b7242076fe2480a62b",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "variable_nodes_expose_their_exact_names",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "name",
-                "node"
+                "ast"
               ]
             },
             {
@@ -17065,7 +17046,7 @@
               ]
             }
           ],
-          "contract_sha256": "2101e9bb1368065f36dccd54773e54a8fd4c9bc8f995f0e549a2f0b6359aa3c1"
+          "contract_sha256": "fecf452687fa8d1c07af81d43000eb237f3e206595e4348b10a6276ffcac07c9"
         }
       ],
       "api_coverage": {
@@ -17128,7 +17109,7 @@
                 "defined_is_a_parameterized_method_dispatch_node",
                 "forwarding_arguments_follow_the_modern_builder_contract",
                 "lambda_literal_exposes_the_same_dispatch_and_argument_interface",
-                "native_scalar_nodes_and_wrapped_arguments_preserve_upstream_contracts"
+                "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast"
               ]
             }
           ],
@@ -17260,11 +17241,10 @@
               "rspec_id": "[1:3:1]",
               "description_sha256": "8a98044245a79020299b3e105340144a3f96e0ddaf8126d2d056c743c607f038",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "native_scalar_nodes_and_wrapped_arguments_preserve_upstream_contracts",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "argument",
-                "node"
+                "ast"
               ]
             },
             {
@@ -17279,7 +17259,7 @@
               ]
             }
           ],
-          "contract_sha256": "0aeed52d1eb244e11e49b5b8138ea05b51c15645afd3cbe6d33d3970dde11c09"
+          "contract_sha256": "5f13e9f5337a47f613f626585233bd2ef5650c260c1e85cb335690c22d3db81a"
         }
       ],
       "api_coverage": {
@@ -17327,7 +17307,7 @@
           "status": "translated",
           "deviations": [],
           "upstream_examples": 24,
-          "rust_tests": 2,
+          "rust_tests": 4,
           "covered_upstream_examples": 24,
           "coverage_inventory": "spec/upstream/rubocop-compatibility-examples.json",
           "coverage_rust_files": [
@@ -17338,6 +17318,8 @@
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
               "tests": [
                 "arrays_expose_values_and_delimiter_kinds",
+                "ruby_value_keys_preserve_xstr_identity_and_invalid_string_bytes",
+                "ruby_value_to_s_matches_numeric_literal_values_in_rubocop_ast",
                 "strings_preserve_quote_character_heredoc_and_percent_kinds"
               ]
             }
@@ -17368,10 +17350,11 @@
               "rspec_id": "[1:2:2:1]",
               "description_sha256": "42e8f0245633e2512fd694e6083bcd2267080b1d212381f18a845219f547557d",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "arrays_expose_values_and_delimiter_kinds",
+              "test": "ruby_value_to_s_matches_numeric_literal_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "array",
+                "ast",
+                "literal",
                 "value"
               ]
             },
@@ -17379,10 +17362,11 @@
               "rspec_id": "[1:2:2:2]",
               "description_sha256": "42e8f0245633e2512fd694e6083bcd2267080b1d212381f18a845219f547557d",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "arrays_expose_values_and_delimiter_kinds",
+              "test": "ruby_value_to_s_matches_numeric_literal_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "array",
+                "ast",
+                "literal",
                 "value"
               ]
             },
@@ -17455,40 +17439,44 @@
               "rspec_id": "[1:4:2:1]",
               "description_sha256": "4633aeb78e958386750cfdcc953f2daa1d1a346671e34d00503139b661bc3f64",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "arrays_expose_values_and_delimiter_kinds",
+              "test": "ruby_value_to_s_matches_numeric_literal_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "array"
+                "ast",
+                "literal"
               ]
             },
             {
               "rspec_id": "[1:5:1:1]",
               "description_sha256": "f44660833ca0c109bb9d58051dda4b5cac027924ed9923494c559d25641e25e2",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "arrays_expose_values_and_delimiter_kinds",
+              "test": "ruby_value_to_s_matches_numeric_literal_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "array"
+                "ast",
+                "literal"
               ]
             },
             {
               "rspec_id": "[1:5:1:2]",
               "description_sha256": "f44660833ca0c109bb9d58051dda4b5cac027924ed9923494c559d25641e25e2",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "arrays_expose_values_and_delimiter_kinds",
+              "test": "ruby_value_to_s_matches_numeric_literal_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "array"
+                "ast",
+                "literal"
               ]
             },
             {
               "rspec_id": "[1:5:1:3]",
               "description_sha256": "f44660833ca0c109bb9d58051dda4b5cac027924ed9923494c559d25641e25e2",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "arrays_expose_values_and_delimiter_kinds",
+              "test": "ruby_value_to_s_matches_numeric_literal_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "array"
+                "ast",
+                "literal"
               ]
             },
             {
@@ -17528,40 +17516,44 @@
               "rspec_id": "[1:5:3:1]",
               "description_sha256": "752f31abecb24c88b806c06aeb5d5cc1edc8541bcb12cc9bc521e86f8fd444ac",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "arrays_expose_values_and_delimiter_kinds",
+              "test": "ruby_value_to_s_matches_numeric_literal_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "array"
+                "ast",
+                "literal"
               ]
             },
             {
               "rspec_id": "[1:5:3:2]",
               "description_sha256": "752f31abecb24c88b806c06aeb5d5cc1edc8541bcb12cc9bc521e86f8fd444ac",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "arrays_expose_values_and_delimiter_kinds",
+              "test": "ruby_value_to_s_matches_numeric_literal_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "array"
+                "ast",
+                "literal"
               ]
             },
             {
               "rspec_id": "[1:5:3:3]",
               "description_sha256": "752f31abecb24c88b806c06aeb5d5cc1edc8541bcb12cc9bc521e86f8fd444ac",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "arrays_expose_values_and_delimiter_kinds",
+              "test": "ruby_value_to_s_matches_numeric_literal_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "array"
+                "ast",
+                "literal"
               ]
             },
             {
               "rspec_id": "[1:5:4:1]",
               "description_sha256": "6ed9ca3ad2acbe2a3b9a20c883f24b68c588970719c3f72786072d5553e99291",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "arrays_expose_values_and_delimiter_kinds",
+              "test": "ruby_value_keys_preserve_xstr_identity_and_invalid_string_bytes",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "array"
+                "invalid",
+                "key"
               ]
             },
             {
@@ -17578,10 +17570,11 @@
               "rspec_id": "[1:6:2:1]",
               "description_sha256": "29d67355940fc0e0b7b0fdf8d4fa0219ef8662c687ba8939830e75c2602ac534",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "arrays_expose_values_and_delimiter_kinds",
+              "test": "ruby_value_to_s_matches_numeric_literal_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "array"
+                "ast",
+                "literal"
               ]
             },
             {
@@ -17595,7 +17588,7 @@
               ]
             }
           ],
-          "contract_sha256": "93ae66985c5ef126e3139184a2b1257209d0f5d85b1e506ff8f9292f6b547924"
+          "contract_sha256": "73d153ac5b0197d8bd009af1fc2955acfc897cfe097b16e0a57465b25380e365"
         }
       ],
       "api_coverage": {
@@ -17650,7 +17643,7 @@
           "status": "translated",
           "deviations": [],
           "upstream_examples": 12,
-          "rust_tests": 3,
+          "rust_tests": 2,
           "covered_upstream_examples": 12,
           "coverage_inventory": "spec/upstream/rubocop-compatibility-examples.json",
           "coverage_rust_files": [
@@ -17661,8 +17654,7 @@
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
               "tests": [
                 "alias_identifiers_keep_new_then_old_parser_order",
-                "simple_assignment_nodes_expose_name_and_expression_for_every_scope",
-                "variable_nodes_expose_their_exact_names"
+                "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast"
               ]
             }
           ],
@@ -17711,92 +17703,84 @@
               "rspec_id": "[1:2:1:1]",
               "description_sha256": "8392a25f100f7982b10809d10873819b398e421f00a868409847268c796bbb61",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "variable_nodes_expose_their_exact_names",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "name",
-                "node"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:2:2:1]",
               "description_sha256": "855d29b1e85fd8bb0f98d157bf5027191e6eaf1c37c08cf1505e48135fa5dce6",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "variable_nodes_expose_their_exact_names",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "name",
-                "node"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:2:3:1]",
               "description_sha256": "9743ed28650774f96805b2262bf310051cc0f4aa72f2200175f7be47e50d4ede",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "variable_nodes_expose_their_exact_names",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "name",
-                "node"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:2:4:1]",
               "description_sha256": "68b410a3ef252813e30e15cabbc748966b3bc868e0db4cf385582eb09f9d733d",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "variable_nodes_expose_their_exact_names",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "name",
-                "node"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:3:1:1]",
               "description_sha256": "746f54a3f40758c4a029191f7763c3e27e77c577fa17d4a6362c10be4b8fde3e",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "simple_assignment_nodes_expose_name_and_expression_for_every_scope",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "expression",
-                "node"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:3:2:1]",
               "description_sha256": "98ccdd4c78c98dc708016d71139f87f00ba98b0d6321c83e9b5af53d2f2708ff",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "simple_assignment_nodes_expose_name_and_expression_for_every_scope",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "expression",
-                "node"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:3:3:1]",
               "description_sha256": "b3c40acc84dd58fead529ab40a261fcce39f61740c7be9f4cbab70206fecd790",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "simple_assignment_nodes_expose_name_and_expression_for_every_scope",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "expression",
-                "node"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:3:4:1]",
               "description_sha256": "19523a0837827b706b08531ebf18c022d9cdcb1f29a2da324b00104c9f1db7bc",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "simple_assignment_nodes_expose_name_and_expression_for_every_scope",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "expression",
-                "node"
+                "ast"
               ]
             }
           ],
-          "contract_sha256": "2511bd90e6629ab1cfb054f778cc2b3626c339445d99afc74a4f195dda698552"
+          "contract_sha256": "dd59b49fa2d5e94e1b3d6e84a37220530b43cb5335db027efba2e05dcd599d43"
         }
       ],
       "api_coverage": {
@@ -18570,9 +18554,9 @@
               "tests": [
                 "alias_identifiers_keep_new_then_old_parser_order",
                 "hashes_expose_pairs_keys_values_layout_and_braces",
-                "lambda_literal_exposes_the_same_dispatch_and_argument_interface",
                 "multiple_lhs_flattens_splats_and_nested_targets_only",
-                "native_scalar_nodes_and_wrapped_arguments_preserve_upstream_contracts"
+                "native_scalar_nodes_and_wrapped_arguments_preserve_upstream_contracts",
+                "ruby_value_to_s_matches_numeric_literal_values_in_rubocop_ast"
               ]
             }
           ],
@@ -18655,15 +18639,15 @@
               "rspec_id": "[1:1:2:6:1]",
               "description_sha256": "6b84dd7a2711a8d69212f30e2c820297de0242385191cec8a7217dfc12a241ad",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "lambda_literal_exposes_the_same_dispatch_and_argument_interface",
+              "test": "ruby_value_to_s_matches_numeric_literal_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "argument",
+                "ast",
                 "literal"
               ]
             }
           ],
-          "contract_sha256": "a2dbe173a56d5167749f38d6bf1890662fd7b2e0dd691338f5e80aea789ada04"
+          "contract_sha256": "2b89c40c6a3ed93a260321621b905d30b8545ee2800df9a815bb70ce2c5c9ebf"
         }
       ],
       "api_coverage": {
@@ -19195,7 +19179,7 @@
           "status": "translated",
           "deviations": [],
           "upstream_examples": 16,
-          "rust_tests": 6,
+          "rust_tests": 5,
           "covered_upstream_examples": 16,
           "coverage_inventory": "spec/upstream/rubocop-compatibility-examples.json",
           "coverage_rust_files": [
@@ -19209,8 +19193,7 @@
                 "class_exposes_identifier_optional_parent_and_body_shapes",
                 "constant_assignments_preserve_namespace_name_value_and_path_semantics",
                 "for_loop_exposes_all_parts_and_keyword_semantics",
-                "simple_assignment_nodes_expose_name_and_expression_for_every_scope",
-                "variable_nodes_expose_their_exact_names"
+                "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast"
               ]
             }
           ],
@@ -19259,33 +19242,30 @@
               "rspec_id": "[1:3:1]",
               "description_sha256": "65c516b05987dd263c12b964eacce66ae7c836c6b5f096ae1991f1059c62f4d8",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "variable_nodes_expose_their_exact_names",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "name",
-                "node"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:4:1]",
               "description_sha256": "5787b2edc11b6b4f262e1ac2e96053b756ab5903c394c94ff2c11c1ec56b5526",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "variable_nodes_expose_their_exact_names",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "name",
-                "node"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:5:1]",
               "description_sha256": "01db8ab41210f19cbd1e24f9c57563a8de5cb26be9d5697fe38c521e4a061334",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "simple_assignment_nodes_expose_name_and_expression_for_every_scope",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "expression",
-                "node"
+                "ast"
               ]
             },
             {
@@ -19382,7 +19362,7 @@
               ]
             }
           ],
-          "contract_sha256": "e1dd8ed873f352887a096b95830657c7ed4ff54eb413e218670a863ea94c8612"
+          "contract_sha256": "67b9e5fb6a4c7fa8d22c6f4bed987f98205cc100b13b2874e9a3077c60c8f7e2"
         }
       ],
       "api_coverage": {
@@ -19573,7 +19553,7 @@
           "status": "translated",
           "deviations": [],
           "upstream_examples": 4,
-          "rust_tests": 3,
+          "rust_tests": 2,
           "covered_upstream_examples": 4,
           "coverage_inventory": "spec/upstream/rubocop-compatibility-examples.json",
           "coverage_rust_files": [
@@ -19584,8 +19564,7 @@
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
               "tests": [
                 "alias_identifiers_keep_new_then_old_parser_order",
-                "arrays_expose_values_and_delimiter_kinds",
-                "variable_nodes_expose_their_exact_names"
+                "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast"
               ]
             }
           ],
@@ -19604,34 +19583,35 @@
               "rspec_id": "[1:2:1:1]",
               "description_sha256": "bc05c0727154467ec6f00ca8bcfacb112831cdcbbd76c3dd24258f6c54408bc7",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "variable_nodes_expose_their_exact_names",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "node"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:2:2:1]",
               "description_sha256": "bb345cf0339cfb367f8c1ce56a9327e6a542f3870b12ac025287b4de3ab345d7",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "variable_nodes_expose_their_exact_names",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "node"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:3:1]",
               "description_sha256": "8dd1269fd74dc26f7a6869f2fdacf4a39dbedd81b70ada5117a909ce381cee05",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "arrays_expose_values_and_delimiter_kinds",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
+                "ast",
                 "value"
               ]
             }
           ],
-          "contract_sha256": "ccef444051d818c8717d1baa3cb6002695280a612639e9dcb6c4168680a0ee9b"
+          "contract_sha256": "c73e1120951d6852f4a57671c01fe53b4770961b2cdf4a47e8ec1dabf51650de"
         }
       ],
       "api_coverage": {
@@ -19678,7 +19658,7 @@
                 "constant_assignments_preserve_namespace_name_value_and_path_semantics",
                 "for_loop_exposes_all_parts_and_keyword_semantics",
                 "module_and_singleton_class_expose_identifier_and_body_shapes",
-                "variable_nodes_expose_their_exact_names"
+                "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast"
               ]
             }
           ],
@@ -19697,11 +19677,10 @@
               "rspec_id": "[1:2:1]",
               "description_sha256": "9f94801191a5a5332956fcfef744827c5c282c61a4907e9f1f1c0d145b0e9848",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "variable_nodes_expose_their_exact_names",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "name",
-                "node"
+                "ast"
               ]
             },
             {
@@ -19729,10 +19708,10 @@
               "rspec_id": "[1:4:1]",
               "description_sha256": "d46b4e9c25e0ac179de96a22ce89d0f3ac63d9865830b1be287e97cdc6157f4a",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "variable_nodes_expose_their_exact_names",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "node"
+                "ast"
               ]
             },
             {
@@ -19777,7 +19756,7 @@
               ]
             }
           ],
-          "contract_sha256": "f22bf467049e93c96145320fe2ad54eae9f497979eb6ef26bc5bea6cfd41c650"
+          "contract_sha256": "073e0018d42fa1a2a97ddfb5c6a14169c18c44dae031ca35c4785b3325c8c340"
         }
       ],
       "api_coverage": {
@@ -19850,7 +19829,7 @@
           "status": "translated",
           "deviations": [],
           "upstream_examples": 81,
-          "rust_tests": 9,
+          "rust_tests": 7,
           "covered_upstream_examples": 81,
           "coverage_inventory": "spec/upstream/rubocop-compatibility-examples.json",
           "coverage_rust_files": [
@@ -19865,10 +19844,8 @@
                 "defined_is_a_parameterized_method_dispatch_node",
                 "definitions_expose_dispatch_arguments_receivers_body_and_endless_form",
                 "forwarding_arguments_follow_the_modern_builder_contract",
-                "keyword_begin_exposes_body_and_nested_rescue_ensure_nodes",
                 "multiple_lhs_flattens_splats_and_nested_targets_only",
-                "native_scalar_nodes_and_wrapped_arguments_preserve_upstream_contracts",
-                "simple_assignment_nodes_expose_name_and_expression_for_every_scope"
+                "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast"
               ]
             }
           ],
@@ -20271,33 +20248,30 @@
               "rspec_id": "[1:21:1:1]",
               "description_sha256": "bd804a41d523c64f4ce644bc51047986cedc983c291b7e7dff9fe442d3ada4ea",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "keyword_begin_exposes_body_and_nested_rescue_ensure_nodes",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "body",
-                "node"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:21:2:1]",
               "description_sha256": "bbbb3b458b17d09a20035fa89eeeca4557deb0007c0e838d967e3e2f4395ec5a",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "simple_assignment_nodes_expose_name_and_expression_for_every_scope",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "expression",
-                "node"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:21:3:1]",
               "description_sha256": "7bdf098f85e5a47f422c2bb588abac12633c1eee0085cfc39c47c366c452c011",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "simple_assignment_nodes_expose_name_and_expression_for_every_scope",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "expression",
-                "node"
+                "ast"
               ]
             },
             {
@@ -20381,11 +20355,12 @@
               "rspec_id": "[1:3:1:2:1]",
               "description_sha256": "cae5fca9cc8626cd74741ccf95d80fa5088e946b8674877ad20d841e089919f2",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "defined_is_a_parameterized_method_dispatch_node",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "method",
-                "node"
+                "ast",
+                "mat",
+                "string"
               ]
             },
             {
@@ -20414,33 +20389,30 @@
               "rspec_id": "[1:4:1:1]",
               "description_sha256": "5094ba0632f0060e3a0a3c45f80e0c5685affa6b59989904298ff525ce59dea8",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "native_scalar_nodes_and_wrapped_arguments_preserve_upstream_contracts",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "argument",
-                "node"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:4:2:1]",
               "description_sha256": "491d048093c87bb7ab51daf373c8414af369c938a79cc8cc4a260072972e1520",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "native_scalar_nodes_and_wrapped_arguments_preserve_upstream_contracts",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "argument",
-                "node"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:4:3:1]",
               "description_sha256": "cba621c9840c965f58019097b7d7c717f38af616390623e23718b4ad059fe964",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "native_scalar_nodes_and_wrapped_arguments_preserve_upstream_contracts",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "argument",
-                "node"
+                "ast"
               ]
             },
             {
@@ -20478,44 +20450,40 @@
               "rspec_id": "[1:5:1:1]",
               "description_sha256": "51b5c1e0a02de7451211ed8a6a32f9a7d8d7a9082a07656d31819c64b294e200",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "native_scalar_nodes_and_wrapped_arguments_preserve_upstream_contracts",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "argument",
-                "node"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:5:2:1]",
               "description_sha256": "03771fb937eaecb6f2e50f3367cd708bbaf2d7a4e34028bc8e1b42360596228d",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "native_scalar_nodes_and_wrapped_arguments_preserve_upstream_contracts",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "argument",
-                "node"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:5:3:1]",
               "description_sha256": "36e4bf08b1c54f1693d7c8f64dc4d64ee22866fce038f08df2f0a4b66a015530",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "native_scalar_nodes_and_wrapped_arguments_preserve_upstream_contracts",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "argument",
-                "node"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:5:4:1]",
               "description_sha256": "d9f2f46722c3dbfa4f329aa266c1db2230d01cf223eb03caaacfeff5a3cbeb36",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "keyword_begin_exposes_body_and_nested_rescue_ensure_nodes",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "keyword",
-                "node"
+                "ast"
               ]
             },
             {
@@ -20542,44 +20510,40 @@
               "rspec_id": "[1:6:1:1]",
               "description_sha256": "922f19ca3d2e0d54f0c08d26d063bf69b9fa1110d6ef90d1fdec9baf87ee7587",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "native_scalar_nodes_and_wrapped_arguments_preserve_upstream_contracts",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "argument",
-                "node"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:6:2:1]",
               "description_sha256": "2a606c0b88337e1021339726580efc8634c7240c9e0c3e7ba6e087b612a9de81",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "native_scalar_nodes_and_wrapped_arguments_preserve_upstream_contracts",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "argument",
-                "node"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:6:3:1]",
               "description_sha256": "10004375627d2c7ab4842162999e6b4c6c91cfbb7209789410d636e0d25c9e97",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "native_scalar_nodes_and_wrapped_arguments_preserve_upstream_contracts",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "argument",
-                "node"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:6:4:1]",
               "description_sha256": "1fe3b10b0bbb4e473fd7335fc45c6a4bf68510f3fa0374393459feaef7ec2c0a",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "keyword_begin_exposes_body_and_nested_rescue_ensure_nodes",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "keyword",
-                "node"
+                "ast"
               ]
             },
             {
@@ -20606,44 +20570,40 @@
               "rspec_id": "[1:7:1:1]",
               "description_sha256": "e4f2caa4ad43358d1c1eb820b7e59ab17cfc5a1e20811aaf14d10fcfdadbee97",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "native_scalar_nodes_and_wrapped_arguments_preserve_upstream_contracts",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "argument",
-                "node"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:7:2:1]",
               "description_sha256": "e3b132a4f86e2a7d4a20e01bbc10e3de998967c509c5d239039f7c1dd4508cd5",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "native_scalar_nodes_and_wrapped_arguments_preserve_upstream_contracts",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "argument",
-                "node"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:7:3:1]",
               "description_sha256": "9c868bf597ed0eb64f8c60321351023f6abc68a8cdb9b80d6033e6d1122ca759",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "native_scalar_nodes_and_wrapped_arguments_preserve_upstream_contracts",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "argument",
-                "node"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:7:4:1]",
               "description_sha256": "3aa6d629930ad210732856668b662853ca2250b1ab188cf45071fbb48acf3bb6",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "keyword_begin_exposes_body_and_nested_rescue_ensure_nodes",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "keyword",
-                "node"
+                "ast"
               ]
             },
             {
@@ -20670,44 +20630,40 @@
               "rspec_id": "[1:8:1:1]",
               "description_sha256": "4f8f85eac87a8ce73c4d9b44ea1fb11d0b2ade0bbc27d8df0dacd4c866382cde",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "native_scalar_nodes_and_wrapped_arguments_preserve_upstream_contracts",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "argument",
-                "node"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:8:2:1]",
               "description_sha256": "31b5578daf5fba2c5adf77a8dacf9d582439ee2ba1d9fce9746f37ddf8fbd166",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "native_scalar_nodes_and_wrapped_arguments_preserve_upstream_contracts",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "argument",
-                "node"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:8:3:1]",
               "description_sha256": "4e1d6c1da9f385cf0bb3397b4c3274acab995702830a37c3dc6841e10b7be5bb",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "native_scalar_nodes_and_wrapped_arguments_preserve_upstream_contracts",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "argument",
-                "node"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:8:4:1]",
               "description_sha256": "246ea9c600253903f417b553b34e967013954a4aa7b144b572f4b87ab2a331b5",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "native_scalar_nodes_and_wrapped_arguments_preserve_upstream_contracts",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "argument",
-                "node"
+                "ast"
               ]
             },
             {
@@ -20755,7 +20711,7 @@
               ]
             }
           ],
-          "contract_sha256": "a08741d43d409bca047879a05435e6ee1a6775bf4738234c50f4705f00eafd2c"
+          "contract_sha256": "4e171b1235b2f0beaee22e442746a7346801c2a3016798e762fec0f636932723"
         }
       ],
       "api_coverage": {
@@ -20931,7 +20887,7 @@
           "status": "translated",
           "deviations": [],
           "upstream_examples": 21,
-          "rust_tests": 4,
+          "rust_tests": 3,
           "covered_upstream_examples": 21,
           "coverage_inventory": "spec/upstream/rubocop-compatibility-examples.json",
           "coverage_rust_files": [
@@ -20941,9 +20897,8 @@
             {
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
               "tests": [
-                "arrays_expose_values_and_delimiter_kinds",
-                "dynamic_strings_join_values_and_preserve_delimiter_semantics",
                 "regexps_preserve_content_delimiters_interpolation_and_every_option",
+                "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
                 "strings_preserve_quote_character_heredoc_and_percent_kinds"
               ]
             }
@@ -20953,9 +20908,10 @@
               "rspec_id": "[1:1:1:1]",
               "description_sha256": "38e1947bd8d685a0ee152adbed084a765d3d456b57e42dd0efd75cc1fab0bec0",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "dynamic_strings_join_values_and_preserve_delimiter_semantics",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
+                "ast",
                 "string",
                 "value"
               ]
@@ -20974,9 +20930,10 @@
               "rspec_id": "[1:1:3:1]",
               "description_sha256": "f61fa153354b2367ad793a512e339e6edeef1d3f0c74721ddedc2e3fcaca3aab",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "arrays_expose_values_and_delimiter_kinds",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
+                "ast",
                 "value"
               ]
             },
@@ -20984,9 +20941,10 @@
               "rspec_id": "[1:2:1:1]",
               "description_sha256": "d88f17c885bab2ddf466ab8faf1c8322d3531050cbd674bf791d43e41b9b535e",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "strings_preserve_quote_character_heredoc_and_percent_kinds",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
+                "ast",
                 "string"
               ]
             },
@@ -20994,9 +20952,10 @@
               "rspec_id": "[1:2:2:1]",
               "description_sha256": "b1efd42d3948f5cef11dfc0a4a879365fe6171d0dd6f206e389a65637c11021a",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "strings_preserve_quote_character_heredoc_and_percent_kinds",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
+                "ast",
                 "string"
               ]
             },
@@ -21004,9 +20963,10 @@
               "rspec_id": "[1:2:3:1]",
               "description_sha256": "66982f09264590b87bcbe28d4f0ee4d7e205e0daa8b0d9002dfd85be8895618f",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "strings_preserve_quote_character_heredoc_and_percent_kinds",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
+                "ast",
                 "string"
               ]
             },
@@ -21014,9 +20974,10 @@
               "rspec_id": "[1:3:1:1]",
               "description_sha256": "f75422832f96691d644c30fc6b1a1eda23004257254c1d1d1e7d0e745ad7afde",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "strings_preserve_quote_character_heredoc_and_percent_kinds",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
+                "ast",
                 "string"
               ]
             },
@@ -21024,9 +20985,10 @@
               "rspec_id": "[1:3:2:1]",
               "description_sha256": "c8b3e48b2d520ffa493134cb06fa5c29f3b20212f23f8df1f4c99362c6b0f86a",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "strings_preserve_quote_character_heredoc_and_percent_kinds",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
+                "ast",
                 "string"
               ]
             },
@@ -21034,9 +20996,10 @@
               "rspec_id": "[1:3:3:1]",
               "description_sha256": "8f2daeee77817df07ba35c8a43cf819dad6f5d5e71ce708c750c8b99b4f7be98",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "strings_preserve_quote_character_heredoc_and_percent_kinds",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
+                "ast",
                 "string"
               ]
             },
@@ -21173,7 +21136,7 @@
               ]
             }
           ],
-          "contract_sha256": "465c9ed7b22c50a796f52c37e7b5e0397c8dea39c003f3559b0bb57db4641e8f"
+          "contract_sha256": "dac6b63ed3f8f11d493ae3de0007df87dc688b4131c0c13a9f98a035e25b1bee"
         }
       ],
       "api_coverage": {
@@ -21338,7 +21301,7 @@
           "status": "translated",
           "deviations": [],
           "upstream_examples": 4,
-          "rust_tests": 3,
+          "rust_tests": 2,
           "covered_upstream_examples": 4,
           "coverage_inventory": "spec/upstream/rubocop-compatibility-examples.json",
           "coverage_rust_files": [
@@ -21349,8 +21312,7 @@
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
               "tests": [
                 "alias_identifiers_keep_new_then_old_parser_order",
-                "arrays_expose_values_and_delimiter_kinds",
-                "variable_nodes_expose_their_exact_names"
+                "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast"
               ]
             }
           ],
@@ -21369,34 +21331,35 @@
               "rspec_id": "[1:2:1:1]",
               "description_sha256": "7b755dc0411eb7365c4578aa37ea7f36c927bb84b026102725dba28ae09fe74f",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "variable_nodes_expose_their_exact_names",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "node"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:2:2:1]",
               "description_sha256": "58aed1b8258b01565c27049c2108fe8ca3ed23af207c12eead501b5dd413363a",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "variable_nodes_expose_their_exact_names",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "node"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:3:1]",
               "description_sha256": "a1c83b44d7586c84e80721a5774bd5be3c7e41d5d54a10655485574a572d72b3",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "arrays_expose_values_and_delimiter_kinds",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
+                "ast",
                 "value"
               ]
             }
           ],
-          "contract_sha256": "d95d68b085d4be19b38082b4759878fa3230cdcaa189efc51ca998addb6dfc83"
+          "contract_sha256": "f3e73ff287a535520cb5270060e42534e63fa9efa77cf299ff2a4b6e8d5965eb"
         }
       ],
       "api_coverage": {
@@ -21451,7 +21414,7 @@
                 "argument_collections_track_delimiters_and_flatten_destructuring",
                 "ensure_exposes_branch_optional_rescue_and_void_context",
                 "for_loop_exposes_all_parts_and_keyword_semantics",
-                "keyword_begin_exposes_body_and_nested_rescue_ensure_nodes",
+                "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
                 "variable_nodes_expose_their_exact_names",
                 "while_and_until_distinguish_statement_modifier_and_do_forms"
               ]
@@ -21472,11 +21435,10 @@
               "rspec_id": "[1:2:1]",
               "description_sha256": "c79c3341abb608d7bbd275ee481e5d280197e25618010b94cec085d8e8edd68b",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "keyword_begin_exposes_body_and_nested_rescue_ensure_nodes",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "keyword",
-                "node"
+                "ast"
               ]
             },
             {
@@ -21544,11 +21506,10 @@
               "rspec_id": "[1:7:1]",
               "description_sha256": "9471b0b9af40712f6e00d4377299ede993c97b95b32f31caa4bd7aa7b46dbb9e",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "keyword_begin_exposes_body_and_nested_rescue_ensure_nodes",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "body",
-                "node"
+                "ast"
               ]
             },
             {
@@ -21573,7 +21534,7 @@
               ]
             }
           ],
-          "contract_sha256": "7478cf1c0edf2c116a9caf32da67921f24ca36910d371d74c288c52f9b2099a0"
+          "contract_sha256": "3a76098418feaff0cf089a7029f5f76cd6171d5d46e6e71c717fd3f4cc72cdf4"
         }
       ],
       "api_coverage": {
@@ -21702,7 +21663,7 @@
           "status": "translated",
           "deviations": [],
           "upstream_examples": 34,
-          "rust_tests": 8,
+          "rust_tests": 7,
           "covered_upstream_examples": 34,
           "coverage_inventory": "spec/upstream/rubocop-compatibility-examples.json",
           "coverage_rust_files": [
@@ -21713,13 +21674,12 @@
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
               "tests": [
                 "alias_identifiers_keep_new_then_old_parser_order",
-                "arrays_expose_values_and_delimiter_kinds",
                 "blocks_expose_arguments_delimiters_dispatch_and_context",
                 "for_loop_exposes_all_parts_and_keyword_semantics",
                 "hashes_expose_pairs_keys_values_layout_and_braces",
-                "lambda_literal_exposes_the_same_dispatch_and_argument_interface",
                 "multiple_lhs_flattens_splats_and_nested_targets_only",
-                "variable_nodes_expose_their_exact_names"
+                "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
+                "ruby_value_to_s_matches_numeric_literal_values_in_rubocop_ast"
               ]
             }
           ],
@@ -21808,20 +21768,22 @@
               "rspec_id": "[1:2:2:1]",
               "description_sha256": "bee73d42eebb3a73ea433ab43b194dc1c92a01a2991bed4fceaaedb1ca245a2a",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "hashes_expose_pairs_keys_values_layout_and_braces",
+              "test": "ruby_value_to_s_matches_numeric_literal_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "pair"
+                "ast",
+                "literal"
               ]
             },
             {
               "rspec_id": "[1:2:2:2]",
               "description_sha256": "bee73d42eebb3a73ea433ab43b194dc1c92a01a2991bed4fceaaedb1ca245a2a",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "hashes_expose_pairs_keys_values_layout_and_braces",
+              "test": "ruby_value_to_s_matches_numeric_literal_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "pair"
+                "ast",
+                "literal"
               ]
             },
             {
@@ -21848,10 +21810,10 @@
               "rspec_id": "[1:3:1:1]",
               "description_sha256": "ed00752669fe023db2f195e4c81153c21069a70afb23261e0beec86b767251e3",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "variable_nodes_expose_their_exact_names",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "node"
+                "ast"
               ]
             },
             {
@@ -21908,30 +21870,32 @@
               "rspec_id": "[1:4:3:1]",
               "description_sha256": "5268c63ae8ff431d2b776e383780d529296600cc8cf2c220018d2dff542547dc",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "hashes_expose_pairs_keys_values_layout_and_braces",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "key"
+                "ast",
+                "string"
               ]
             },
             {
               "rspec_id": "[1:4:3:2]",
               "description_sha256": "5268c63ae8ff431d2b776e383780d529296600cc8cf2c220018d2dff542547dc",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "hashes_expose_pairs_keys_values_layout_and_braces",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "key"
+                "ast",
+                "string"
               ]
             },
             {
               "rspec_id": "[1:5:1:1]",
               "description_sha256": "56e625f507e8b3a7b278ede825f223d0a53070d01c616289da68894326b25a87",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "hashes_expose_pairs_keys_values_layout_and_braces",
+              "test": "blocks_expose_arguments_delimiters_dispatch_and_context",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "key"
+                "block"
               ]
             },
             {
@@ -21949,9 +21913,10 @@
               "rspec_id": "[1:6:1:1]",
               "description_sha256": "05f81b201e68c3e3d7e665358537292e7629fa0401a4ed8c0736d4915118b91e",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "arrays_expose_values_and_delimiter_kinds",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
+                "ast",
                 "value"
               ]
             },
@@ -21959,30 +21924,35 @@
               "rspec_id": "[1:6:2:1]",
               "description_sha256": "886887b08a9218841ceaa2e8db382614164b3e0b4b106bf2f1120f7e57af5f7a",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "lambda_literal_exposes_the_same_dispatch_and_argument_interface",
+              "test": "ruby_value_to_s_matches_numeric_literal_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "literal"
+                "ast",
+                "literal",
+                "value"
               ]
             },
             {
               "rspec_id": "[1:6:2:2]",
               "description_sha256": "886887b08a9218841ceaa2e8db382614164b3e0b4b106bf2f1120f7e57af5f7a",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "lambda_literal_exposes_the_same_dispatch_and_argument_interface",
+              "test": "ruby_value_to_s_matches_numeric_literal_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "literal"
+                "ast",
+                "literal",
+                "value"
               ]
             },
             {
               "rspec_id": "[1:6:3:1]",
               "description_sha256": "963760a0f2facdd2e0798b8b847f17395df12c8f679585b383891f7d477973f6",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "hashes_expose_pairs_keys_values_layout_and_braces",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "key",
+                "ast",
+                "string",
                 "value"
               ]
             },
@@ -21990,10 +21960,11 @@
               "rspec_id": "[1:6:3:2]",
               "description_sha256": "963760a0f2facdd2e0798b8b847f17395df12c8f679585b383891f7d477973f6",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "hashes_expose_pairs_keys_values_layout_and_braces",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "key",
+                "ast",
+                "string",
                 "value"
               ]
             },
@@ -22069,7 +22040,7 @@
               ]
             }
           ],
-          "contract_sha256": "f571d52bbb383cc4a67be9b2e2a19e978c385cd0f11fc58c38e2ce8c4baf50e3"
+          "contract_sha256": "234bd7a4da15831f746e34cc0235f75e8e9203aa838ba75a7e79c8e0aeb3d385"
         }
       ],
       "api_coverage": {
@@ -22905,7 +22876,7 @@
           "status": "translated",
           "deviations": [],
           "upstream_examples": 15,
-          "rust_tests": 5,
+          "rust_tests": 3,
           "covered_upstream_examples": 15,
           "coverage_inventory": "spec/upstream/rubocop-compatibility-examples.json",
           "coverage_rust_files": [
@@ -22917,9 +22888,7 @@
               "tests": [
                 "alias_identifiers_keep_new_then_old_parser_order",
                 "arrays_expose_values_and_delimiter_kinds",
-                "case_match_exposes_pattern_branches_else_and_bodies",
-                "rescue_bodies_expose_exceptions_variable_body_and_branch_index",
-                "variable_nodes_expose_their_exact_names"
+                "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast"
               ]
             }
           ],
@@ -22938,41 +22907,45 @@
               "rspec_id": "[1:1:2:1:1]",
               "description_sha256": "749fa58fbe5433fc2cefaea3004ec2fa0a009d6a2c866e87c3af682995ee04bc",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "case_match_exposes_pattern_branches_else_and_bodies",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "pattern"
+                "ast",
+                "ruby",
+                "value"
               ]
             },
             {
               "rspec_id": "[1:1:2:2:1]",
               "description_sha256": "92f74f4c5465f72615d2002f27645040bbb4923b7efd1a00f2e243229aef3eeb",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "variable_nodes_expose_their_exact_names",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "node",
-                "variable"
+                "ast",
+                "ruby"
               ]
             },
             {
               "rspec_id": "[1:1:2:3:1]",
               "description_sha256": "1bea6dfc9ef998c5ae9736e062ac602909575558e57c17e84235031817a92413",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "case_match_exposes_pattern_branches_else_and_bodies",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "pattern"
+                "ast",
+                "ruby"
               ]
             },
             {
               "rspec_id": "[1:1:2:4:1]",
               "description_sha256": "1a9d200e6f7cd561e2c565eaf491065c6dbeaf20a3babc361d9e17041e470447",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "case_match_exposes_pattern_branches_else_and_bodies",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "pattern"
+                "ast",
+                "ruby"
               ]
             },
             {
@@ -22989,99 +22962,103 @@
               "rspec_id": "[1:1:2:6:1]",
               "description_sha256": "d9e2154dacd09a022c37abc0a0527e77972c1ecfbfef6085ac8bb02872d1678f",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "case_match_exposes_pattern_branches_else_and_bodies",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "pattern"
+                "ast",
+                "ruby"
               ]
             },
             {
               "rspec_id": "[1:1:2:7:1]",
               "description_sha256": "7531735c83891afe6326ab1b44f55b50e5de0dcc8821e8eed2d1d02b12c2c9ae",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "case_match_exposes_pattern_branches_else_and_bodies",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "pattern"
+                "ast",
+                "ruby"
               ]
             },
             {
               "rspec_id": "[1:1:3:1:1]",
               "description_sha256": "47af91f705227cd0530feb379c980f81dec77452444519ec108e6e99153e4187",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "case_match_exposes_pattern_branches_else_and_bodies",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "pattern"
+                "ast",
+                "ruby"
               ]
             },
             {
               "rspec_id": "[1:1:3:2:1]",
               "description_sha256": "e729b484cc0d157755e3a9189ea26994e64a6c87c45cca216d63012c6657bab7",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "case_match_exposes_pattern_branches_else_and_bodies",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "pattern"
+                "ast",
+                "ruby"
               ]
             },
             {
               "rspec_id": "[1:1:4:1:1]",
               "description_sha256": "ecc4919e3ed68e89ea3bd17c81faab609d35266810164208e4f91613e97ffecb",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "case_match_exposes_pattern_branches_else_and_bodies",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "body",
-                "pattern"
+                "ast",
+                "ruby"
               ]
             },
             {
               "rspec_id": "[1:1:4:2:1]",
               "description_sha256": "cb91d0b404d9de9555f1b47377ccc95810e49092095e92facf9f1f16a6515346",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "case_match_exposes_pattern_branches_else_and_bodies",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "body",
-                "pattern"
+                "ast",
+                "ruby"
               ]
             },
             {
               "rspec_id": "[1:1:5:1]",
               "description_sha256": "13847b22549ff43c2ef3aae9fa4787ea51b7ea5a84a875991d850504f293e3eb",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "rescue_bodies_expose_exceptions_variable_body_and_branch_index",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "branch",
-                "index"
+                "ast",
+                "ruby"
               ]
             },
             {
               "rspec_id": "[1:1:5:2]",
               "description_sha256": "13847b22549ff43c2ef3aae9fa4787ea51b7ea5a84a875991d850504f293e3eb",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "rescue_bodies_expose_exceptions_variable_body_and_branch_index",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "branch",
-                "index"
+                "ast",
+                "ruby"
               ]
             },
             {
               "rspec_id": "[1:1:5:3]",
               "description_sha256": "13847b22549ff43c2ef3aae9fa4787ea51b7ea5a84a875991d850504f293e3eb",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "rescue_bodies_expose_exceptions_variable_body_and_branch_index",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "branch",
-                "index"
+                "ast",
+                "ruby"
               ]
             }
           ],
-          "contract_sha256": "f2736cf7572e3aa2a6a8df755d28d68c46e9e432a77633993fcd629a0cd25ff9"
+          "contract_sha256": "5109621fadb1c06e640464e79b01af3a67a16d2ebbe62ef3e75ba484795727c4"
         }
       ],
       "api_coverage": {
@@ -23215,7 +23192,7 @@
           "status": "translated",
           "deviations": [],
           "upstream_examples": 4,
-          "rust_tests": 3,
+          "rust_tests": 2,
           "covered_upstream_examples": 4,
           "coverage_inventory": "spec/upstream/rubocop-compatibility-examples.json",
           "coverage_rust_files": [
@@ -23226,8 +23203,7 @@
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
               "tests": [
                 "alias_identifiers_keep_new_then_old_parser_order",
-                "arrays_expose_values_and_delimiter_kinds",
-                "variable_nodes_expose_their_exact_names"
+                "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast"
               ]
             }
           ],
@@ -23246,34 +23222,35 @@
               "rspec_id": "[1:2:1:1]",
               "description_sha256": "de530bb0b7e42a163fb715381367ed1e3e24fc71016dcbfd1350218f757f4a0b",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "variable_nodes_expose_their_exact_names",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "node"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:2:2:1]",
               "description_sha256": "35493514ae8b914ffa4e5dbcea254919c1ee3c59571c0c5502bf6f70e159a2ee",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "variable_nodes_expose_their_exact_names",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "node"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:3:1]",
               "description_sha256": "385f5ca656bfc512d186f33d6e969e7d5569f476d30a41a28afacc1a6220444a",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "arrays_expose_values_and_delimiter_kinds",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
+                "ast",
                 "value"
               ]
             }
           ],
-          "contract_sha256": "24aa67744262bee6cb04273879182262c8a19352de619124b8b0f582bfc61910"
+          "contract_sha256": "bec42e4929a224c623618aaacb3fc4bc67f3188dacad7b1fe1f3bd937674fda2"
         }
       ],
       "api_coverage": {
@@ -23697,160 +23674,160 @@
               "rspec_id": "[1:11:1:1:1:1]",
               "description_sha256": "c9e8e80b615030a68d21cef13a069b64c6bd3f5b41a8c2249a75e4cdd58d1085",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "hashes_expose_pairs_keys_values_layout_and_braces",
+              "test": "multiple_lhs_flattens_splats_and_nested_targets_only",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "key"
+                "splat"
               ]
             },
             {
               "rspec_id": "[1:11:1:1:2:1]",
               "description_sha256": "5b33bb4ba8e02cc6a51bfbc970e53a3215dc4b3845665a5da9cdc5ff1098080e",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "hashes_expose_pairs_keys_values_layout_and_braces",
+              "test": "multiple_lhs_flattens_splats_and_nested_targets_only",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "key"
+                "splat"
               ]
             },
             {
               "rspec_id": "[1:11:1:1:3:1]",
               "description_sha256": "ce91d74c790e96e91221f9c7388c77d3f8a2a5d6cd88a0fc5229217a945dfab2",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "hashes_expose_pairs_keys_values_layout_and_braces",
+              "test": "multiple_lhs_flattens_splats_and_nested_targets_only",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "key"
+                "splat"
               ]
             },
             {
               "rspec_id": "[1:11:1:1:4:1]",
               "description_sha256": "59c35d1e1e795bba3756a07c73c01a07ce1ca517c3d4509f3f9d40a49ffeec65",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "hashes_expose_pairs_keys_values_layout_and_braces",
+              "test": "multiple_lhs_flattens_splats_and_nested_targets_only",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "key"
+                "splat"
               ]
             },
             {
               "rspec_id": "[1:11:1:2:1:1]",
               "description_sha256": "084c864d415d460b0ac953714819a855e0b79d7e4c02da1e62d4133ae65429ef",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "hashes_expose_pairs_keys_values_layout_and_braces",
+              "test": "multiple_lhs_flattens_splats_and_nested_targets_only",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "key"
+                "splat"
               ]
             },
             {
               "rspec_id": "[1:11:1:2:2:1]",
               "description_sha256": "99d8b68fee37f4cc9fe8f154d801ab784ee6063c242cd65ab960ab783ab4aec9",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "hashes_expose_pairs_keys_values_layout_and_braces",
+              "test": "multiple_lhs_flattens_splats_and_nested_targets_only",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "key"
+                "splat"
               ]
             },
             {
               "rspec_id": "[1:11:1:2:3:1]",
               "description_sha256": "7f49be3a5422794e101c134ecc229e0b9c1c815367d66db1ba792854bd2d38c4",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "hashes_expose_pairs_keys_values_layout_and_braces",
+              "test": "multiple_lhs_flattens_splats_and_nested_targets_only",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "key"
+                "splat"
               ]
             },
             {
               "rspec_id": "[1:11:1:2:4:1]",
               "description_sha256": "f284c20df35ccd80f543d7b62d37d9df09c045bf3e0e4a60af5a7ec22e1833ab",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "hashes_expose_pairs_keys_values_layout_and_braces",
+              "test": "multiple_lhs_flattens_splats_and_nested_targets_only",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "key"
+                "splat"
               ]
             },
             {
               "rspec_id": "[1:11:2:1:1:1]",
               "description_sha256": "fd2d7bbbe817f4391ccdff73a091bc0777f8cd1b4830eb7925af6dc97aecbf40",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "hashes_expose_pairs_keys_values_layout_and_braces",
+              "test": "multiple_lhs_flattens_splats_and_nested_targets_only",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "key"
+                "splat"
               ]
             },
             {
               "rspec_id": "[1:11:2:1:2:1]",
               "description_sha256": "e9febce87d732be523ed108a98de13b1043261634615e2a8e9959e5e52db72f7",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "hashes_expose_pairs_keys_values_layout_and_braces",
+              "test": "multiple_lhs_flattens_splats_and_nested_targets_only",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "key"
+                "splat"
               ]
             },
             {
               "rspec_id": "[1:11:2:1:3:1]",
               "description_sha256": "2442f66ae741bbcb201a9b7ad22ddc0b9957cbcbdc478811af40be3ce5bdbf37",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "hashes_expose_pairs_keys_values_layout_and_braces",
+              "test": "multiple_lhs_flattens_splats_and_nested_targets_only",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "key"
+                "splat"
               ]
             },
             {
               "rspec_id": "[1:11:2:1:4:1]",
               "description_sha256": "b7b76f0eeed4cfd246efb12390d0317d1b3e5a970348817402b18101cd6979b1",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "hashes_expose_pairs_keys_values_layout_and_braces",
+              "test": "multiple_lhs_flattens_splats_and_nested_targets_only",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "key"
+                "splat"
               ]
             },
             {
               "rspec_id": "[1:11:2:2:1:1]",
               "description_sha256": "e16bd3ea6f821e1eacbe87f19f1cd48ae4da5af0c3988d08b2bd6ba8f2f4f24c",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "hashes_expose_pairs_keys_values_layout_and_braces",
+              "test": "multiple_lhs_flattens_splats_and_nested_targets_only",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "key"
+                "splat"
               ]
             },
             {
               "rspec_id": "[1:11:2:2:2:1]",
               "description_sha256": "edfee69e534da1468869823e32a8f79205e9be50fc5e9fef33b88a7a8da03348",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "hashes_expose_pairs_keys_values_layout_and_braces",
+              "test": "multiple_lhs_flattens_splats_and_nested_targets_only",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "key"
+                "splat"
               ]
             },
             {
               "rspec_id": "[1:11:2:2:3:1]",
               "description_sha256": "326bf593bc4f3438958ad2247365a434b417bd7e6c4405f8da6140ed6c04543a",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "hashes_expose_pairs_keys_values_layout_and_braces",
+              "test": "multiple_lhs_flattens_splats_and_nested_targets_only",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "key"
+                "splat"
               ]
             },
             {
               "rspec_id": "[1:11:2:2:4:1]",
               "description_sha256": "86bf741149f243f6cc0e43b847a0beeeb6e3cfb17a6332f05174e11447181372",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "hashes_expose_pairs_keys_values_layout_and_braces",
+              "test": "multiple_lhs_flattens_splats_and_nested_targets_only",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "key"
+                "splat"
               ]
             },
             {
@@ -23967,10 +23944,10 @@
               "rspec_id": "[1:4:1]",
               "description_sha256": "7a617fd203b26621987d38019f221c8f2d96b6c0e9c3a1edcfaeff84ce31f6cd",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "hashes_expose_pairs_keys_values_layout_and_braces",
+              "test": "multiple_lhs_flattens_splats_and_nested_targets_only",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "key"
+                "splat"
               ]
             },
             {
@@ -24102,7 +24079,7 @@
               ]
             }
           ],
-          "contract_sha256": "dc8235e0c0350b03f2a3c212aaa0188260b870c84fcbc08c0d304cf89c7e32ee"
+          "contract_sha256": "fc680fc4b30219f4aaf0f60bbecc7414cc16dfc956cddb4928f175a8d63c9f99"
         }
       ],
       "api_coverage": {
@@ -24288,10 +24265,10 @@
                 "alias_identifiers_keep_new_then_old_parser_order",
                 "arrays_expose_values_and_delimiter_kinds",
                 "defined_is_a_parameterized_method_dispatch_node",
-                "keyword_begin_exposes_body_and_nested_rescue_ensure_nodes",
                 "multiple_assignment_exposes_names_expression_and_rhs_values",
                 "multiple_lhs_flattens_splats_and_nested_targets_only",
-                "variable_nodes_expose_their_exact_names"
+                "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
+                "ruby_value_to_s_matches_numeric_literal_values_in_rubocop_ast"
               ]
             }
           ],
@@ -24310,22 +24287,20 @@
               "rspec_id": "[1:2:1]",
               "description_sha256": "f76afa0b7c973308eb2ff6d4c457420e38c184d571e950640f15bcfe1ec756e8",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "variable_nodes_expose_their_exact_names",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "name",
-                "node"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:2:2:1]",
               "description_sha256": "021d1da6fa208557333e429277865cb7a214dd5c4cc2d84b590eaaa34eb88e8c",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "keyword_begin_exposes_body_and_nested_rescue_ensure_nodes",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "nest",
-                "node"
+                "ast"
               ]
             },
             {
@@ -24378,10 +24353,10 @@
               "rspec_id": "[1:4:1:1]",
               "description_sha256": "d40ed87f6b60f08f542bd7d3be090ba9da6e3faadec60d3be9fef9090caa5ca9",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "multiple_assignment_exposes_names_expression_and_rhs_values",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "rhs",
+                "ast",
                 "value"
               ]
             },
@@ -24389,10 +24364,11 @@
               "rspec_id": "[1:4:2:1]",
               "description_sha256": "c6e3a2a4acd611b69957f86593cb65a4b96a4fbc484f6a20097eef2e002f4810",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "arrays_expose_values_and_delimiter_kinds",
+              "test": "ruby_value_to_s_matches_numeric_literal_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "array",
+                "ast",
+                "literal",
                 "value"
               ]
             },
@@ -24419,7 +24395,7 @@
               ]
             }
           ],
-          "contract_sha256": "0fcfa4e7bc3c4699e64a51fdedd3c37f78d272e70714a308cb9eab8a79b9f7f1"
+          "contract_sha256": "eee307d58fbdab8dcc55bdaec30b7e55a280e3223f34c7a93cfec8e7ab2711b0"
         }
       ],
       "api_coverage": {
@@ -29576,8 +29552,8 @@
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
               "tests": [
                 "alias_identifiers_keep_new_then_old_parser_order",
-                "keyword_begin_exposes_body_and_nested_rescue_ensure_nodes",
                 "multiple_lhs_flattens_splats_and_nested_targets_only",
+                "nested_operator_assignment_keeps_outer_operator_and_rhs",
                 "operator_assignments_expose_lhs_name_operator_and_rhs",
                 "variable_nodes_expose_their_exact_names"
               ]
@@ -29629,11 +29605,11 @@
               "rspec_id": "[1:2:4:1]",
               "description_sha256": "ce0ba1587607fbed07d94a083a2dd4574a520fa3700b243bba6a58b2e949aed4",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "keyword_begin_exposes_body_and_nested_rescue_ensure_nodes",
+              "test": "nested_operator_assignment_keeps_outer_operator_and_rhs",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "nest",
-                "node"
+                "assignment",
+                "nest"
               ]
             },
             {
@@ -29670,7 +29646,7 @@
               ]
             }
           ],
-          "contract_sha256": "5bccc436040fd13e16730bc4ebec6c57d9ee3e8b43efb522d7084696b82822d4"
+          "contract_sha256": "c283aef037cba2ed375ea44a60db22ed4de5c32372ec9a580010525761ea0e36"
         }
       ],
       "api_coverage": {
@@ -29839,9 +29815,9 @@
               "tests": [
                 "alias_identifiers_keep_new_then_old_parser_order",
                 "hashes_expose_pairs_keys_values_layout_and_braces",
-                "lambda_literal_exposes_the_same_dispatch_and_argument_interface",
                 "multiple_lhs_flattens_splats_and_nested_targets_only",
-                "native_scalar_nodes_and_wrapped_arguments_preserve_upstream_contracts"
+                "native_scalar_nodes_and_wrapped_arguments_preserve_upstream_contracts",
+                "ruby_value_to_s_matches_numeric_literal_values_in_rubocop_ast"
               ]
             }
           ],
@@ -29924,15 +29900,15 @@
               "rspec_id": "[1:1:2:6:1]",
               "description_sha256": "c7662cd29843dbcbc66f7d6e94f650cfca4a0084777493ee76119e605f572bdf",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "lambda_literal_exposes_the_same_dispatch_and_argument_interface",
+              "test": "ruby_value_to_s_matches_numeric_literal_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "argument",
+                "ast",
                 "literal"
               ]
             }
           ],
-          "contract_sha256": "e56cc458fc2c72512f60e4887348524c3c633a697f20c03bf588ce7f968d7c48"
+          "contract_sha256": "f0aa4d0c93ac51dc09e35272c2c4abba120e9b659c8b78510e492d423ba54669"
         }
       ],
       "api_coverage": {
@@ -29973,7 +29949,7 @@
           "status": "translated",
           "deviations": [],
           "upstream_examples": 16,
-          "rust_tests": 5,
+          "rust_tests": 3,
           "covered_upstream_examples": 16,
           "coverage_inventory": "spec/upstream/rubocop-compatibility-examples.json",
           "coverage_rust_files": [
@@ -29984,10 +29960,8 @@
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
               "tests": [
                 "alias_identifiers_keep_new_then_old_parser_order",
-                "boolean_operator_nodes_preserve_operator_and_branch_contracts",
                 "operator_assignments_expose_lhs_name_operator_and_rhs",
-                "simple_assignment_nodes_expose_name_and_expression_for_every_scope",
-                "variable_nodes_expose_their_exact_names"
+                "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast"
               ]
             }
           ],
@@ -30006,11 +29980,10 @@
               "rspec_id": "[1:2:1]",
               "description_sha256": "e7f2b1f3c4f0f730313d7cf71f8a8428bb3ee060b7b158887dbf6617d3125df1",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "simple_assignment_nodes_expose_name_and_expression_for_every_scope",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "assignment",
-                "node"
+                "ast"
               ]
             },
             {
@@ -30039,11 +30012,10 @@
               "rspec_id": "[1:3:1]",
               "description_sha256": "0b74443b45c4fbf39643e399b2b8505a53aada1c8558074256ae8f638f867c1a",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "variable_nodes_expose_their_exact_names",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "name",
-                "node"
+                "ast"
               ]
             },
             {
@@ -30072,103 +30044,94 @@
               "rspec_id": "[1:4:1:1]",
               "description_sha256": "71fe18fba1cb9eb578f881025d15e9b4fd9aadefb076eeef431b3cb99a8a423c",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "boolean_operator_nodes_preserve_operator_and_branch_contracts",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "node",
-                "operator"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:4:2:1]",
               "description_sha256": "10ce0f7632b9bca2d375d2891add87356a26b6d5e78524b521b8d27edc305e9a",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "boolean_operator_nodes_preserve_operator_and_branch_contracts",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "node",
-                "operator"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:4:3:1]",
               "description_sha256": "dbba1a24a9d87a8839781efee8028ecc5e51d6c96cd7eae30c75a61170bff8f1",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "boolean_operator_nodes_preserve_operator_and_branch_contracts",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "node",
-                "operator"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:4:4:1]",
               "description_sha256": "35aa79ae4240309f81fa55a7520127be9b7ce264aa51d618c3b776e6d335c593",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "boolean_operator_nodes_preserve_operator_and_branch_contracts",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "node",
-                "operator"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:4:5:1]",
               "description_sha256": "9c8ff60587c5cb95d0898a45e0b0f171cc808066799632d7039b3b5185d71e69",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "boolean_operator_nodes_preserve_operator_and_branch_contracts",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "node",
-                "operator"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:4:6:1]",
               "description_sha256": "25be0fb0cd5c239d0ed3ddb5bd2fb8602377be68eb5d41b47d059e55f5b1d101",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "boolean_operator_nodes_preserve_operator_and_branch_contracts",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "node",
-                "operator"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:4:7:1]",
               "description_sha256": "65cab00d50d7d218acafe6c5deb6838a1d09c0ffdadcbc0aa6fda90a83d5609e",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "boolean_operator_nodes_preserve_operator_and_branch_contracts",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "node",
-                "operator"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:4:8:1]",
               "description_sha256": "5a8a4dbc21179fea72c6a3448c2b2f4a39083eabc2fbda9164a8a9fd43cc1cb7",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "boolean_operator_nodes_preserve_operator_and_branch_contracts",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "node",
-                "operator"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:5:1]",
               "description_sha256": "438ac282360e37c504163d45b1e6f10a2e0ab4852b151d381df933092e19e2c1",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "simple_assignment_nodes_expose_name_and_expression_for_every_scope",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "expression",
-                "node"
+                "ast"
               ]
             }
           ],
-          "contract_sha256": "8c728410163810888964eb942e730a37a363321bce88c4f9c8bc1767601ac4c8"
+          "contract_sha256": "1215e28824b0b23cca6ae06e378dffad75826820ff86efc68efe26415848f17e"
         }
       ],
       "api_coverage": {
@@ -30224,7 +30187,7 @@
           "status": "translated",
           "deviations": [],
           "upstream_examples": 5,
-          "rust_tests": 4,
+          "rust_tests": 2,
           "covered_upstream_examples": 5,
           "coverage_inventory": "spec/upstream/rubocop-compatibility-examples.json",
           "coverage_rust_files": [
@@ -30235,9 +30198,7 @@
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
               "tests": [
                 "alias_identifiers_keep_new_then_old_parser_order",
-                "boolean_operator_nodes_preserve_operator_and_branch_contracts",
-                "simple_assignment_nodes_expose_name_and_expression_for_every_scope",
-                "variable_nodes_expose_their_exact_names"
+                "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast"
               ]
             }
           ],
@@ -30256,48 +30217,44 @@
               "rspec_id": "[1:2:1]",
               "description_sha256": "79c7a5dc9f51cfb597154b964d9087995be63f3a2334dbf7c99b53bdd47cd99c",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "simple_assignment_nodes_expose_name_and_expression_for_every_scope",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "assignment",
-                "node"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:3:1]",
               "description_sha256": "b0f1971e73da153ffc8d9e0785c43cc1058dda1e0bf99e7f878fb90fdb7e3d50",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "variable_nodes_expose_their_exact_names",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "name",
-                "node"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:4:1]",
               "description_sha256": "ccb572628c274956172ed3bcd2be20d97246eb8ee07d5f2267f09b955169f7a6",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "boolean_operator_nodes_preserve_operator_and_branch_contracts",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "node",
-                "operator"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:5:1]",
               "description_sha256": "2a6c6e1e7f1ecd8b7f17dc2f7782ab9e313f9af685360d21101d166d7cb0e808",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "simple_assignment_nodes_expose_name_and_expression_for_every_scope",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "expression",
-                "node"
+                "ast"
               ]
             }
           ],
-          "contract_sha256": "e5dbc0f74ce64ab2aa04c8d49c29c2da4da0f9289e62f480be128d0a97e6075c"
+          "contract_sha256": "2bfbbd929fe3db7d04af927aed2cea86cecc4a7d62cc6d31d4e71ec891a6ac16"
         }
       ],
       "api_coverage": {
@@ -30340,7 +30297,7 @@
           "status": "translated",
           "deviations": [],
           "upstream_examples": 16,
-          "rust_tests": 5,
+          "rust_tests": 4,
           "covered_upstream_examples": 16,
           "coverage_inventory": "spec/upstream/rubocop-compatibility-examples.json",
           "coverage_rust_files": [
@@ -30351,10 +30308,9 @@
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
               "tests": [
                 "alias_identifiers_keep_new_then_old_parser_order",
-                "boolean_operator_nodes_preserve_operator_and_branch_contracts",
                 "logical_assignment_nodes_expose_assignment_name_operator_and_expression",
                 "multiple_lhs_flattens_splats_and_nested_targets_only",
-                "operator_assignments_expose_lhs_name_operator_and_rhs"
+                "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast"
               ]
             }
           ],
@@ -30420,11 +30376,10 @@
               "rspec_id": "[1:3:2:1]",
               "description_sha256": "cceb05cbfc5e27427e258c1e4c51d3132bec01d665d59cff26151984cd3cceba",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "boolean_operator_nodes_preserve_operator_and_branch_contracts",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "node",
-                "operator"
+                "ast"
               ]
             },
             {
@@ -30443,11 +30398,10 @@
               "rspec_id": "[1:4:2:1]",
               "description_sha256": "05e89b5355ecf47c070b497836660695232e7b77e7220fdfa685f4f9393f024a",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "boolean_operator_nodes_preserve_operator_and_branch_contracts",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "node",
-                "operator"
+                "ast"
               ]
             },
             {
@@ -30466,11 +30420,10 @@
               "rspec_id": "[1:5:2:1]",
               "description_sha256": "995ab7a4ac70071d297ff1609a92e8dcd790bb849f32e0ff3fe09206941593a3",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "boolean_operator_nodes_preserve_operator_and_branch_contracts",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "node",
-                "operator"
+                "ast"
               ]
             },
             {
@@ -30489,11 +30442,10 @@
               "rspec_id": "[1:6:2:1]",
               "description_sha256": "932b8fdf77b74d15035f6b66d9fc9b5922e53e4d2cb5566ffe635369b9d673b9",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "boolean_operator_nodes_preserve_operator_and_branch_contracts",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "node",
-                "operator"
+                "ast"
               ]
             },
             {
@@ -30532,14 +30484,14 @@
               "rspec_id": "[1:8:2:1]",
               "description_sha256": "ed38b2d043b397f2acd4d29b2ef38157abd7f6a5f66b2c602e852dd45520ffac",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "operator_assignments_expose_lhs_name_operator_and_rhs",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "rhs"
+                "ast"
               ]
             }
           ],
-          "contract_sha256": "4173cb1989742a0f2d4bfc60bb914a061af63f8da1d17e94a22532b3751b452a"
+          "contract_sha256": "24fcdce0f936183d85030e64d4100645a193022b31e18d7bcf95b68d2c79deb4"
         }
       ],
       "api_coverage": {
@@ -31641,7 +31593,7 @@
           "status": "translated",
           "deviations": [],
           "upstream_examples": 4,
-          "rust_tests": 3,
+          "rust_tests": 2,
           "covered_upstream_examples": 4,
           "coverage_inventory": "spec/upstream/rubocop-compatibility-examples.json",
           "coverage_rust_files": [
@@ -31652,8 +31604,7 @@
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
               "tests": [
                 "alias_identifiers_keep_new_then_old_parser_order",
-                "arrays_expose_values_and_delimiter_kinds",
-                "variable_nodes_expose_their_exact_names"
+                "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast"
               ]
             }
           ],
@@ -31672,34 +31623,35 @@
               "rspec_id": "[1:2:1:1]",
               "description_sha256": "5136800e0d9a2e185b6b6d20eb51300effecef1fd697e70aacdc73da50510c64",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "variable_nodes_expose_their_exact_names",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "node"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:2:2:1]",
               "description_sha256": "2a83c2d8b2c0c1a10b8698a7cb2ff2ce684632bd1ec153badeaad2d5bd51f244",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "variable_nodes_expose_their_exact_names",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "node"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:3:1]",
               "description_sha256": "0f84c876c6a8306993ec6aca98bdaff7b4a1794627ad65009b45e935f7472b70",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "arrays_expose_values_and_delimiter_kinds",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
+                "ast",
                 "value"
               ]
             }
           ],
-          "contract_sha256": "4aeb3acd0cf9b57ae3299013e21f69e75e9877459efafe269d911d788b79200b"
+          "contract_sha256": "d6bc89d0d8b094870c45169424083e009f40350095c3173d2fb2899af550d99a"
         }
       ],
       "api_coverage": {
@@ -33081,8 +33033,8 @@
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
               "tests": [
                 "alias_identifiers_keep_new_then_old_parser_order",
-                "keyword_begin_exposes_body_and_nested_rescue_ensure_nodes",
-                "rescue_bodies_expose_exceptions_variable_body_and_branch_index"
+                "rescue_bodies_expose_exceptions_variable_body_and_branch_index",
+                "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast"
               ]
             }
           ],
@@ -33186,11 +33138,10 @@
               "rspec_id": "[1:4:1]",
               "description_sha256": "5cbb35d065d0d204bb4f3cd1b7e232e3a308cf5ad48c643d7cb5edd9d5be1cde",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "keyword_begin_exposes_body_and_nested_rescue_ensure_nodes",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "body",
-                "node"
+                "ast"
               ]
             },
             {
@@ -33227,7 +33178,7 @@
               ]
             }
           ],
-          "contract_sha256": "3fe8905d1c5535db09f59462f9f5adeb4004685ecadf97a76e98702616c27b1d"
+          "contract_sha256": "e170e996ebcea39c24be1dc781cf797747e07331d890236bcceb6e8bdc68d898"
         }
       ],
       "api_coverage": {
@@ -33493,9 +33444,9 @@
               "tests": [
                 "alias_identifiers_keep_new_then_old_parser_order",
                 "hashes_expose_pairs_keys_values_layout_and_braces",
-                "lambda_literal_exposes_the_same_dispatch_and_argument_interface",
                 "multiple_lhs_flattens_splats_and_nested_targets_only",
-                "native_scalar_nodes_and_wrapped_arguments_preserve_upstream_contracts"
+                "native_scalar_nodes_and_wrapped_arguments_preserve_upstream_contracts",
+                "ruby_value_to_s_matches_numeric_literal_values_in_rubocop_ast"
               ]
             }
           ],
@@ -33578,15 +33529,15 @@
               "rspec_id": "[1:1:2:6:1]",
               "description_sha256": "4039d4dec6352a5f07d5267323f2e2c8a78ee44aa9b84335d347962d9509d38c",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "lambda_literal_exposes_the_same_dispatch_and_argument_interface",
+              "test": "ruby_value_to_s_matches_numeric_literal_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "argument",
+                "ast",
                 "literal"
               ]
             }
           ],
-          "contract_sha256": "1633fdd7c85d4e7add320ebd199e0abef112de9122845411e66d1e2b28511652"
+          "contract_sha256": "dff7fc5b93daa8eaa0d85dc7fb43653b8133ec20120e086238019519f21bd5ac"
         }
       ],
       "api_coverage": {
@@ -33782,7 +33733,7 @@
           "status": "translated",
           "deviations": [],
           "upstream_examples": 52,
-          "rust_tests": 3,
+          "rust_tests": 5,
           "covered_upstream_examples": 52,
           "coverage_inventory": "spec/upstream/rubocop-compatibility-examples.json",
           "coverage_rust_files": [
@@ -33793,7 +33744,9 @@
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
               "tests": [
                 "alias_identifiers_keep_new_then_old_parser_order",
-                "hashes_expose_pairs_keys_values_layout_and_braces",
+                "ruby_value_keys_preserve_xstr_identity_and_invalid_string_bytes",
+                "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
+                "ruby_value_to_s_matches_numeric_literal_values_in_rubocop_ast",
                 "strings_preserve_quote_character_heredoc_and_percent_kinds"
               ]
             }
@@ -33833,9 +33786,10 @@
               "rspec_id": "[1:2:1:1]",
               "description_sha256": "685e704969f03079279b947f6394643d4d408bc37f870c3ee4eb43e991ef7b17",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "strings_preserve_quote_character_heredoc_and_percent_kinds",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
+                "ast",
                 "string"
               ]
             },
@@ -33843,9 +33797,10 @@
               "rspec_id": "[1:2:2:1]",
               "description_sha256": "cf7de42a77cc685604893a15213fe8af10d9f20b05317db6ec52aea93af8ca8b",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "strings_preserve_quote_character_heredoc_and_percent_kinds",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
+                "ast",
                 "string"
               ]
             },
@@ -33853,9 +33808,10 @@
               "rspec_id": "[1:2:3:1]",
               "description_sha256": "4ff7dc8feac7b4862bf031072d24baba34cba52513202fb537997d17a47be860",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "strings_preserve_quote_character_heredoc_and_percent_kinds",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
+                "ast",
                 "string"
               ]
             },
@@ -33863,9 +33819,10 @@
               "rspec_id": "[1:2:4:1]",
               "description_sha256": "6b64eb870152785b32e5ae1df88326ca95faeb04a374882a7319a94a6c1a8093",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "strings_preserve_quote_character_heredoc_and_percent_kinds",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
+                "ast",
                 "string"
               ]
             },
@@ -33873,9 +33830,10 @@
               "rspec_id": "[1:2:5:1]",
               "description_sha256": "f47ba27133365319bb88ea73b39e30b85c51b25fb5af5abbf4f879715203dd49",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "strings_preserve_quote_character_heredoc_and_percent_kinds",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
+                "ast",
                 "string"
               ]
             },
@@ -33883,19 +33841,21 @@
               "rspec_id": "[1:2:6:1]",
               "description_sha256": "e7f0eded38435670754e314bed23a45ceadde64d13cc088a3a92c6ff25c25bc2",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "strings_preserve_quote_character_heredoc_and_percent_kinds",
+              "test": "ruby_value_to_s_matches_numeric_literal_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "character"
+                "ast",
+                "literal"
               ]
             },
             {
               "rspec_id": "[1:2:7:1]",
               "description_sha256": "d59086dae715496cd617a3c3c82e68f193a082ca40dfb6a8f2076f791184d783",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "strings_preserve_quote_character_heredoc_and_percent_kinds",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
+                "ast",
                 "string"
               ]
             },
@@ -33903,9 +33863,10 @@
               "rspec_id": "[1:3:1:1]",
               "description_sha256": "c13bcd4d88c6fe7ec0d93e8f08d169221400bbc7d6a6a98c84db0fac8cbc9588",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "strings_preserve_quote_character_heredoc_and_percent_kinds",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
+                "ast",
                 "string"
               ]
             },
@@ -33913,9 +33874,10 @@
               "rspec_id": "[1:3:2:1]",
               "description_sha256": "fea97bd47bd4505d958f64498e72761df89d44fcf8488ad2d7da719018c750d2",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "strings_preserve_quote_character_heredoc_and_percent_kinds",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
+                "ast",
                 "string"
               ]
             },
@@ -33923,9 +33885,10 @@
               "rspec_id": "[1:3:3:1]",
               "description_sha256": "55944ae593c22fb4d81b8edd7da862c8106d9ff6cd6c449ddf1fe4ae7683c5d6",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "strings_preserve_quote_character_heredoc_and_percent_kinds",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
+                "ast",
                 "string"
               ]
             },
@@ -33933,9 +33896,10 @@
               "rspec_id": "[1:3:4:1]",
               "description_sha256": "e4e5189d506a71a1fcfdd2fdb4217c2b5c8a88e87fc6008875355338bdb0be91",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "strings_preserve_quote_character_heredoc_and_percent_kinds",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
+                "ast",
                 "string"
               ]
             },
@@ -33943,9 +33907,10 @@
               "rspec_id": "[1:3:5:1]",
               "description_sha256": "18b5c5c9843d3e5bf1c60f64bf75132d8c8d1214985e75b1cebf5c71f145a61f",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "strings_preserve_quote_character_heredoc_and_percent_kinds",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
+                "ast",
                 "string"
               ]
             },
@@ -33953,19 +33918,21 @@
               "rspec_id": "[1:3:6:1]",
               "description_sha256": "67d3f50f633f605aace3494397d7895d1fcedecdbdb739ea58a097384626ea00",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "strings_preserve_quote_character_heredoc_and_percent_kinds",
+              "test": "ruby_value_to_s_matches_numeric_literal_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "character"
+                "ast",
+                "literal"
               ]
             },
             {
               "rspec_id": "[1:3:7:1]",
               "description_sha256": "797803f307303b8fa4a64ae32b2f99032bb1a34348f6793807be9cd90ed73f0a",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "strings_preserve_quote_character_heredoc_and_percent_kinds",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
+                "ast",
                 "string"
               ]
             },
@@ -33973,10 +33940,11 @@
               "rspec_id": "[1:4:1:1]",
               "description_sha256": "74cdd5d3450116b6d3b89b6764177a2327f7783e8362b94ca6e12d826d9d9a92",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "strings_preserve_quote_character_heredoc_and_percent_kinds",
+              "test": "ruby_value_to_s_matches_numeric_literal_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "character"
+                "ast",
+                "literal"
               ]
             },
             {
@@ -34345,14 +34313,15 @@
               "rspec_id": "[1:6:8:1]",
               "description_sha256": "ea583220ba24e0e327b8260deb2637a1d276a3019c91ea4ab61593bfd9213b0e",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "hashes_expose_pairs_keys_values_layout_and_braces",
+              "test": "ruby_value_keys_preserve_xstr_identity_and_invalid_string_bytes",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
+                "invalid",
                 "key"
               ]
             }
           ],
-          "contract_sha256": "8137561a3d016ab73958cf85a4425cbf523235d734953a8016b9941e398dc642"
+          "contract_sha256": "25860ae437092a8ca67448ee6321c5543f03139528287e6bfeb24ca297979ca9"
         }
       ],
       "api_coverage": {
@@ -34403,7 +34372,7 @@
           "status": "translated",
           "deviations": [],
           "upstream_examples": 62,
-          "rust_tests": 9,
+          "rust_tests": 7,
           "covered_upstream_examples": 62,
           "coverage_inventory": "spec/upstream/rubocop-compatibility-examples.json",
           "coverage_rust_files": [
@@ -34417,11 +34386,9 @@
                 "blocks_expose_arguments_delimiters_dispatch_and_context",
                 "defined_is_a_parameterized_method_dispatch_node",
                 "definitions_expose_dispatch_arguments_receivers_body_and_endless_form",
-                "lambda_literal_exposes_the_same_dispatch_and_argument_interface",
                 "multiple_lhs_flattens_splats_and_nested_targets_only",
-                "native_scalar_nodes_and_wrapped_arguments_preserve_upstream_contracts",
-                "strings_preserve_quote_character_heredoc_and_percent_kinds",
-                "variable_nodes_expose_their_exact_names"
+                "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
+                "ruby_value_to_s_matches_numeric_literal_values_in_rubocop_ast"
               ]
             }
           ],
@@ -34452,20 +34419,20 @@
               "rspec_id": "[1:12:1]",
               "description_sha256": "9b3371c43dfab2cba4d64b1a14acfe4d291c1642145a3d899018ac20e2b2dc14",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "variable_nodes_expose_their_exact_names",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "node"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:13:1]",
               "description_sha256": "d513db4ea87f6810fb6d7009bfe11659662846da04c8e9ce23e88ef74b4f52f0",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "variable_nodes_expose_their_exact_names",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "node"
+                "ast"
               ]
             },
             {
@@ -34492,10 +34459,10 @@
               "rspec_id": "[1:16:1]",
               "description_sha256": "56fc7abe9097909064750cf8b13a1442830d2b24fe3c6e17d85e508df9ed6185",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "variable_nodes_expose_their_exact_names",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "node"
+                "ast"
               ]
             },
             {
@@ -34555,44 +34522,40 @@
               "rspec_id": "[1:20:1:1:1]",
               "description_sha256": "5c741aa66c6ca6045494a75fd0cf312db957224cd6b9a13ffc301fe0415769b9",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "native_scalar_nodes_and_wrapped_arguments_preserve_upstream_contracts",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "argument",
-                "node"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:20:1:2:1]",
               "description_sha256": "66bdfa27cd3b2846b2651f2630250b5eac466c9d37d09da3040788866e951828",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "native_scalar_nodes_and_wrapped_arguments_preserve_upstream_contracts",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "argument",
-                "node"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:20:2:1:1]",
               "description_sha256": "e525bf4de2ffd50cb23545ed53918f4f6043e6912f235b3608f41946d05d936a",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "native_scalar_nodes_and_wrapped_arguments_preserve_upstream_contracts",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "argument",
-                "node"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:20:2:2:1]",
               "description_sha256": "15cee07e10402bd4746f511b18ee79d646124620eadb279c884c2dbd53c2d53f",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "native_scalar_nodes_and_wrapped_arguments_preserve_upstream_contracts",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "argument",
-                "node"
+                "ast"
               ]
             },
             {
@@ -34643,10 +34606,11 @@
               "rspec_id": "[1:22:1:1]",
               "description_sha256": "ce4686b2bf980afd90f1d01899678abd440d6c5c8b2e4256797d4506aa1110a8",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "blocks_expose_arguments_delimiters_dispatch_and_context",
+              "test": "ruby_value_to_s_matches_numeric_literal_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "block"
+                "ast",
+                "literal"
               ]
             },
             {
@@ -34664,20 +34628,22 @@
               "rspec_id": "[1:22:3:1]",
               "description_sha256": "8d4a2437d2f2fd4d3058c70b582f123902e3ff3002ba010aadc8635f5c537b2e",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "blocks_expose_arguments_delimiters_dispatch_and_context",
+              "test": "ruby_value_to_s_matches_numeric_literal_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "block"
+                "ast",
+                "literal"
               ]
             },
             {
               "rspec_id": "[1:23:1:1]",
               "description_sha256": "a99c6e5fe02bbbaefcab7c3394754e6417781a01065ef8bdb8d695c02162c93c",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "blocks_expose_arguments_delimiters_dispatch_and_context",
+              "test": "ruby_value_to_s_matches_numeric_literal_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "block"
+                "ast",
+                "literal"
               ]
             },
             {
@@ -34705,21 +34671,20 @@
               "rspec_id": "[1:24:1:1]",
               "description_sha256": "63838bf747479a875be873b82b67b275d214a88555ef24473f81ede150d50ee7",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "native_scalar_nodes_and_wrapped_arguments_preserve_upstream_contracts",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "argument",
-                "node"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:24:2:1]",
               "description_sha256": "0a58c862d394f96f3d2ca85eb4c1870fbf96bc1169f8efa5157d158a3ef0645b",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "lambda_literal_exposes_the_same_dispatch_and_argument_interface",
+              "test": "ruby_value_to_s_matches_numeric_literal_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "argument",
+                "ast",
                 "literal"
               ]
             },
@@ -34737,10 +34702,10 @@
               "rspec_id": "[1:24:4:1]",
               "description_sha256": "091cfee42ff3a3b2316be53b2e3140bebe653653d6b8d62bc6e55d8422492c6a",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "lambda_literal_exposes_the_same_dispatch_and_argument_interface",
+              "test": "ruby_value_to_s_matches_numeric_literal_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "argument",
+                "ast",
                 "literal"
               ]
             },
@@ -34758,21 +34723,20 @@
               "rspec_id": "[1:25:1:1]",
               "description_sha256": "b971c4dbfe6b0924d65812b116dfbdcefc4e7ab07fa23fdb070e004d489e7959",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "native_scalar_nodes_and_wrapped_arguments_preserve_upstream_contracts",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "argument",
-                "node"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:25:2:1]",
               "description_sha256": "e9a6c46b735b0d4281bb418fc7c5bd79926aae4efb9d2ba7bc74f8d13dcd6486",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "lambda_literal_exposes_the_same_dispatch_and_argument_interface",
+              "test": "ruby_value_to_s_matches_numeric_literal_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "argument",
+                "ast",
                 "literal"
               ]
             },
@@ -34790,10 +34754,10 @@
               "rspec_id": "[1:25:4:1]",
               "description_sha256": "ef0de68a5f3e4df9d778236af57e7944b10a9872e7f2f54323819260358e24e2",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "lambda_literal_exposes_the_same_dispatch_and_argument_interface",
+              "test": "ruby_value_to_s_matches_numeric_literal_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "argument",
+                "ast",
                 "literal"
               ]
             },
@@ -34811,21 +34775,20 @@
               "rspec_id": "[1:26:1:1]",
               "description_sha256": "3206d698e27ffc97e12349f31f355b559e32b757d4fe1f641dd326f2453108cf",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "native_scalar_nodes_and_wrapped_arguments_preserve_upstream_contracts",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "argument",
-                "node"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:26:2:1]",
               "description_sha256": "06a28f75c98bc7b1e8e294b7f09b5462db02312acddb1ee96c0f8a03380c73ea",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "lambda_literal_exposes_the_same_dispatch_and_argument_interface",
+              "test": "ruby_value_to_s_matches_numeric_literal_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "argument",
+                "ast",
                 "literal"
               ]
             },
@@ -34843,10 +34806,10 @@
               "rspec_id": "[1:26:4:1]",
               "description_sha256": "73a459968de6dfff0cd1562574919a7c9e9c39c717f38d9206c8f2d874688294",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "lambda_literal_exposes_the_same_dispatch_and_argument_interface",
+              "test": "ruby_value_to_s_matches_numeric_literal_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "argument",
+                "ast",
                 "literal"
               ]
             },
@@ -34864,21 +34827,20 @@
               "rspec_id": "[1:27:1:1]",
               "description_sha256": "e0f359dbc0eb8f5f12c06ab0323b93ed3cf2b2a3d9865dfd393e75006d9af0e5",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "native_scalar_nodes_and_wrapped_arguments_preserve_upstream_contracts",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "argument",
-                "node"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:27:2:1]",
               "description_sha256": "2067523d46a9e7a1b11cafb67adeeeebc7a3e1a10d24ce8f2533ee2377134196",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "lambda_literal_exposes_the_same_dispatch_and_argument_interface",
+              "test": "ruby_value_to_s_matches_numeric_literal_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "argument",
+                "ast",
                 "literal"
               ]
             },
@@ -34896,10 +34858,10 @@
               "rspec_id": "[1:27:4:1]",
               "description_sha256": "786ce71605a11d36d162dc75d6d8edd24994391b84f22401aee2c65b5953833f",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "lambda_literal_exposes_the_same_dispatch_and_argument_interface",
+              "test": "ruby_value_to_s_matches_numeric_literal_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "argument",
+                "ast",
                 "literal"
               ]
             },
@@ -34978,10 +34940,10 @@
               "rspec_id": "[1:4:1]",
               "description_sha256": "be0badc128f51a6e271c8fc4272446d86c8e314f77784d0af0b328dd3b9d284e",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "variable_nodes_expose_their_exact_names",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "node"
+                "ast"
               ]
             },
             {
@@ -34999,11 +34961,12 @@
               "rspec_id": "[1:5:1:2:1]",
               "description_sha256": "3e3f05c218b7cde5ce30dcedccec4365f4a44f16071c658eac3f3d1c23efd662",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "defined_is_a_parameterized_method_dispatch_node",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "method",
-                "node"
+                "ast",
+                "mat",
+                "string"
               ]
             },
             {
@@ -35032,30 +34995,30 @@
               "rspec_id": "[1:6:1]",
               "description_sha256": "9310899a671c814301edbe1b8808d2ca781b5872c64048913e8888586acd4eb6",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "variable_nodes_expose_their_exact_names",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "node"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:7:1:1]",
               "description_sha256": "04e9b63be1429d73ff4bcc2c9e09ebd621be2dfe620d3fd896b99d6380d0ad5e",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "native_scalar_nodes_and_wrapped_arguments_preserve_upstream_contracts",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "argument",
-                "node"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:7:2:1]",
               "description_sha256": "c09b9512963d6b0a8a20e45bdef999b7fb322cd272e8473a0017b3b85ec4b144",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "strings_preserve_quote_character_heredoc_and_percent_kinds",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
+                "ast",
                 "string"
               ]
             },
@@ -35082,7 +35045,7 @@
               ]
             }
           ],
-          "contract_sha256": "4d4ed908c01c879c91a63ee114899cb6b5f5f4e86dfb968233bdb7a798704268"
+          "contract_sha256": "fc867d99ef3dad60a751c3c6d3466daa347d2304bd553ab33dfc246dfa9739e6"
         }
       ],
       "api_coverage": {
@@ -35136,7 +35099,7 @@
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
               "tests": [
                 "alias_identifiers_keep_new_then_old_parser_order",
-                "arrays_expose_values_and_delimiter_kinds"
+                "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast"
               ]
             }
           ],
@@ -35155,14 +35118,15 @@
               "rspec_id": "[1:2:1]",
               "description_sha256": "f497317013442ffe0b0f13426431df7a37955a2cac66176814f8de87b27cb136",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "arrays_expose_values_and_delimiter_kinds",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
+                "ast",
                 "value"
               ]
             }
           ],
-          "contract_sha256": "09dd85a850b47f91ebf4a5c156275eb68352776f0cedf8eb96f60f0d415465af"
+          "contract_sha256": "55933fb57c5bd0f3f772109ff9a21ecdedd02fc1ed4428ff42a4035f47cdd720"
         }
       ],
       "api_coverage": {
@@ -35382,7 +35346,7 @@
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
               "tests": [
                 "alias_identifiers_keep_new_then_old_parser_order",
-                "variable_nodes_expose_their_exact_names"
+                "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast"
               ]
             }
           ],
@@ -35431,48 +35395,44 @@
               "rspec_id": "[1:2:1:1]",
               "description_sha256": "a05a7fd59d7cd0eaa0763aab1bad1b0db5826dcd38f7ba5dde5121d739a8d4b1",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "variable_nodes_expose_their_exact_names",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "name",
-                "node"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:2:2:1]",
               "description_sha256": "baa1ea8a63f28d62a8742e67bac8cee672ce26ad7c23d1772a174a9a21dc5a62",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "variable_nodes_expose_their_exact_names",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "name",
-                "node"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:2:3:1]",
               "description_sha256": "d46bc844b4f6a896c74249003f25aef8e470b6070080fe804bbac7a0e169c0a6",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "variable_nodes_expose_their_exact_names",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "name",
-                "node"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:2:4:1]",
               "description_sha256": "6a9ddeaeb902f681dd759a9a157e7354067da08a87e64bf4a60720f6ef20dece",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "variable_nodes_expose_their_exact_names",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "name",
-                "node"
+                "ast"
               ]
             }
           ],
-          "contract_sha256": "bd2490e166710b78fca5b55bb47580dc5f15f1c17743bd227054b08ff159e0c7"
+          "contract_sha256": "7fe07fc589f9b541cba470b5eb531bec25331d2882d5d6656aab039b9e0e75f0"
         }
       ],
       "api_coverage": {
@@ -35518,7 +35478,7 @@
           "status": "translated",
           "deviations": [],
           "upstream_examples": 14,
-          "rust_tests": 5,
+          "rust_tests": 6,
           "covered_upstream_examples": 14,
           "coverage_inventory": "spec/upstream/rubocop-compatibility-examples.json",
           "coverage_rust_files": [
@@ -35532,6 +35492,7 @@
                 "for_loop_exposes_all_parts_and_keyword_semantics",
                 "keyword_begin_exposes_body_and_nested_rescue_ensure_nodes",
                 "rescue_bodies_expose_exceptions_variable_body_and_branch_index",
+                "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
                 "when_branches_expose_conditions_then_body_and_index"
               ]
             }
@@ -35611,22 +35572,20 @@
               "rspec_id": "[1:4:1:1]",
               "description_sha256": "cca1d279f4e901f977ea0978fd22b291fa7976b88bfac2dd6f8c6957e4f46f19",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "keyword_begin_exposes_body_and_nested_rescue_ensure_nodes",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "keyword",
-                "node"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:4:2:1]",
               "description_sha256": "a9b286f3ecd510fc1cd5a9b26c19c84a134a4ffbb5d483bef22e168a56f81c92",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "keyword_begin_exposes_body_and_nested_rescue_ensure_nodes",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "keyword",
-                "node"
+                "ast"
               ]
             },
             {
@@ -35687,7 +35646,7 @@
               ]
             }
           ],
-          "contract_sha256": "5abbe3dcbfe4d09545ab8d2e5128f05b23404913990a73c3b5e49be84e5043e8"
+          "contract_sha256": "54f6e20d76b0f83579c993736e184144ebd93eb4953e2696a94c3dfa9d3591f4"
         }
       ],
       "api_coverage": {
@@ -35913,7 +35872,7 @@
           "status": "translated",
           "deviations": [],
           "upstream_examples": 54,
-          "rust_tests": 9,
+          "rust_tests": 7,
           "covered_upstream_examples": 54,
           "coverage_inventory": "spec/upstream/rubocop-compatibility-examples.json",
           "coverage_rust_files": [
@@ -35927,11 +35886,9 @@
                 "blocks_expose_arguments_delimiters_dispatch_and_context",
                 "defined_is_a_parameterized_method_dispatch_node",
                 "definitions_expose_dispatch_arguments_receivers_body_and_endless_form",
-                "lambda_literal_exposes_the_same_dispatch_and_argument_interface",
                 "multiple_lhs_flattens_splats_and_nested_targets_only",
-                "native_scalar_nodes_and_wrapped_arguments_preserve_upstream_contracts",
-                "strings_preserve_quote_character_heredoc_and_percent_kinds",
-                "variable_nodes_expose_their_exact_names"
+                "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
+                "ruby_value_to_s_matches_numeric_literal_values_in_rubocop_ast"
               ]
             }
           ],
@@ -35940,21 +35897,20 @@
               "rspec_id": "[1:10:1:1]",
               "description_sha256": "8886a6459f9c86562868359b518274ebaf2e96b99b2680c604e87938c27f1b6d",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "native_scalar_nodes_and_wrapped_arguments_preserve_upstream_contracts",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "argument",
-                "node"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:10:2:1]",
               "description_sha256": "20203ebe0c6f22626005374bb2799241a46255d3259bdfc30b0936c266763e3e",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "lambda_literal_exposes_the_same_dispatch_and_argument_interface",
+              "test": "ruby_value_to_s_matches_numeric_literal_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "argument",
+                "ast",
                 "literal"
               ]
             },
@@ -35972,10 +35928,10 @@
               "rspec_id": "[1:10:4:1]",
               "description_sha256": "6851b0795f9eed66bb1a83eefa807fdc0273537746c68fdde0351577c6904822",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "lambda_literal_exposes_the_same_dispatch_and_argument_interface",
+              "test": "ruby_value_to_s_matches_numeric_literal_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "argument",
+                "ast",
                 "literal"
               ]
             },
@@ -35993,21 +35949,20 @@
               "rspec_id": "[1:11:1:1]",
               "description_sha256": "cb763731bfe699ba18eece5575853f3e3a748b81032ea20c5a437c191b43c504",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "native_scalar_nodes_and_wrapped_arguments_preserve_upstream_contracts",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "argument",
-                "node"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:11:2:1]",
               "description_sha256": "08171a53a25f2e86b83c7b8acdb1ccbfed139d5620ed5b4d3a3fe385d3d369e0",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "lambda_literal_exposes_the_same_dispatch_and_argument_interface",
+              "test": "ruby_value_to_s_matches_numeric_literal_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "argument",
+                "ast",
                 "literal"
               ]
             },
@@ -36025,10 +35980,10 @@
               "rspec_id": "[1:11:4:1]",
               "description_sha256": "1dfffd684260616a3745d324a7afedd6af31f3930d4ce73e246363385022ace6",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "lambda_literal_exposes_the_same_dispatch_and_argument_interface",
+              "test": "ruby_value_to_s_matches_numeric_literal_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "argument",
+                "ast",
                 "literal"
               ]
             },
@@ -36046,44 +36001,40 @@
               "rspec_id": "[1:12:1:1:1]",
               "description_sha256": "25d9b338a7497c7fa4cbbea0b5215bbf6c0582d29e454a240f6819aaf0e2ac3d",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "native_scalar_nodes_and_wrapped_arguments_preserve_upstream_contracts",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "argument",
-                "node"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:12:1:2:1]",
               "description_sha256": "961a59565f4b6776c005346b0743a5b63fd3776ab58d204f3407d38aa1e5335b",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "native_scalar_nodes_and_wrapped_arguments_preserve_upstream_contracts",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "argument",
-                "node"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:12:2:1:1]",
               "description_sha256": "d25c11c83aaf4fb70b6c4146e32a0b70dc57f72a5390063e5a9f59d8ebcabc21",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "native_scalar_nodes_and_wrapped_arguments_preserve_upstream_contracts",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "argument",
-                "node"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:12:2:2:1]",
               "description_sha256": "ed670e94d264b1a2da6e108accfb67326eb075ac8415083d552e3ca8e56b4ca6",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "native_scalar_nodes_and_wrapped_arguments_preserve_upstream_contracts",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "argument",
-                "node"
+                "ast"
               ]
             },
             {
@@ -36134,20 +36085,20 @@
               "rspec_id": "[1:17:1]",
               "description_sha256": "9a2315c0090a1a18d595ba9afe3adf78afa84907c5e95cef18cd65b9c864342d",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "variable_nodes_expose_their_exact_names",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "node"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:18:1]",
               "description_sha256": "ce822ffe3bccaeab8357408c67b8c95628c20ca3e8c7ea9e4a14d975715f4256",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "variable_nodes_expose_their_exact_names",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "node"
+                "ast"
               ]
             },
             {
@@ -36184,10 +36135,10 @@
               "rspec_id": "[1:21:1]",
               "description_sha256": "622f68c6e00c65a7be27d73f2a66562954dedd2465aaaf8709ca48c5f0265ca2",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "variable_nodes_expose_their_exact_names",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "node"
+                "ast"
               ]
             },
             {
@@ -36238,10 +36189,11 @@
               "rspec_id": "[1:26:1]",
               "description_sha256": "35a1415b682e5b30e4e16d88354ed91bb991be973ed8a623aab1c45c9820f66f",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "blocks_expose_arguments_delimiters_dispatch_and_context",
+              "test": "ruby_value_to_s_matches_numeric_literal_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "block"
+                "ast",
+                "literal"
               ]
             },
             {
@@ -36319,10 +36271,10 @@
               "rspec_id": "[1:4:1]",
               "description_sha256": "383a788ccdfe527a0990c838f548d1f215f59e1035718824877174f48295d65f",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "variable_nodes_expose_their_exact_names",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "node"
+                "ast"
               ]
             },
             {
@@ -36340,11 +36292,12 @@
               "rspec_id": "[1:5:1:2:1]",
               "description_sha256": "cc9628ac58aa0c7554b9e042f2d12fba5abc9057017f51cd995d170d7f993db6",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "defined_is_a_parameterized_method_dispatch_node",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "method",
-                "node"
+                "ast",
+                "mat",
+                "string"
               ]
             },
             {
@@ -36373,30 +36326,30 @@
               "rspec_id": "[1:6:1]",
               "description_sha256": "082ae3ed0970c521133767d24498e081536f32b09f4e52ec8168a436ea4f636f",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "variable_nodes_expose_their_exact_names",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "node"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:7:1:1]",
               "description_sha256": "66ccf1e6e05870c9e69a7d51974004f790b8e76704624c80c1fccab65e22b180",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "native_scalar_nodes_and_wrapped_arguments_preserve_upstream_contracts",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "argument",
-                "node"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:7:2:1]",
               "description_sha256": "f5ae7417d95b87064e4bdfa9887fe1a52737344b9972d433b0b826fe6f9a265e",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "strings_preserve_quote_character_heredoc_and_percent_kinds",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
+                "ast",
                 "string"
               ]
             },
@@ -36404,21 +36357,20 @@
               "rspec_id": "[1:8:1:1]",
               "description_sha256": "13bcaf925d008fb3b44c27d5cf81b39037ca8647826bd4be856504d9c8e6be53",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "native_scalar_nodes_and_wrapped_arguments_preserve_upstream_contracts",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "argument",
-                "node"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:8:2:1]",
               "description_sha256": "f42041e96809a77f8bb669d1a18652348552634e62007c6e240f99a4879839ca",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "lambda_literal_exposes_the_same_dispatch_and_argument_interface",
+              "test": "ruby_value_to_s_matches_numeric_literal_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "argument",
+                "ast",
                 "literal"
               ]
             },
@@ -36436,10 +36388,10 @@
               "rspec_id": "[1:8:4:1]",
               "description_sha256": "18034f7c5f8fb5e79f1c085d31b4fc5f994edb6db693217d7208fddbe5362789",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "lambda_literal_exposes_the_same_dispatch_and_argument_interface",
+              "test": "ruby_value_to_s_matches_numeric_literal_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "argument",
+                "ast",
                 "literal"
               ]
             },
@@ -36457,21 +36409,20 @@
               "rspec_id": "[1:9:1:1]",
               "description_sha256": "8bcced4485ec8de3a91c7135e938ea61c752807b5d84b43d94230608e206f2a0",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "native_scalar_nodes_and_wrapped_arguments_preserve_upstream_contracts",
+              "test": "ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "argument",
-                "node"
+                "ast"
               ]
             },
             {
               "rspec_id": "[1:9:2:1]",
               "description_sha256": "1d0c72ea63ac9cf5528ef2ba4b55c3c9bd6a3673099d257f3881bcd3a2b86be1",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "lambda_literal_exposes_the_same_dispatch_and_argument_interface",
+              "test": "ruby_value_to_s_matches_numeric_literal_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "argument",
+                "ast",
                 "literal"
               ]
             },
@@ -36489,10 +36440,10 @@
               "rspec_id": "[1:9:4:1]",
               "description_sha256": "259398faaae1d69ff3235ff8f4e2c6b8812c15144dcdbb053f16e0b6dc6617fd",
               "rust": "src/rubocop/ast/node/small_nodes_spec.rs",
-              "test": "lambda_literal_exposes_the_same_dispatch_and_argument_interface",
+              "test": "ruby_value_to_s_matches_numeric_literal_values_in_rubocop_ast",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "argument",
+                "ast",
                 "literal"
               ]
             },
@@ -36507,7 +36458,7 @@
               ]
             }
           ],
-          "contract_sha256": "f38e4f8cb64130128038e675048f13f7e670d934edf46eb8cf44a91ae9788005"
+          "contract_sha256": "8c682840b9c3001b12ab87e568841f5d930e708997fb6f22199d884716f4e155"
         }
       ],
       "api_coverage": {
@@ -43664,7 +43615,7 @@
           "status": "translated",
           "deviations": [],
           "upstream_examples": 69,
-          "rust_tests": 6,
+          "rust_tests": 9,
           "covered_upstream_examples": 69,
           "coverage_inventory": "spec/upstream/rubocop-compatibility-examples.json",
           "coverage_rust_files": [
@@ -43677,9 +43628,12 @@
                 "ast_comment_association_keeps_leading_groups_and_inline_comments_with_one_node",
                 "blank_start_indentation_checksum_and_end_marker_match_contracts",
                 "invalid_syntax_has_no_ast_comments_or_tokens",
+                "line_slices_and_deprecated_find_contracts_match_collection_operations",
                 "normalizes_default_and_explicit_parser_engines",
                 "owned_processed_source_reads_and_parses_a_file_with_its_path",
-                "syntax_diagnostics_distinguish_valid_and_invalid_source"
+                "source_file_keyword_uses_the_parser_path_string_node_contract",
+                "syntax_diagnostics_distinguish_valid_and_invalid_source",
+                "tokens_within_use_sorted_character_ranges"
               ]
             }
           ],
@@ -43817,12 +43771,11 @@
               "rspec_id": "[1:12:2:2]",
               "description_sha256": "715473658f552a909da7f76e020e838bb9fe80afd9fa8ae182b4e0946296faea",
               "rust": "src/rubocop/ast/processed_source_spec.rs",
-              "test": "invalid_syntax_has_no_ast_comments_or_tokens",
+              "test": "line_slices_and_deprecated_find_contracts_match_collection_operations",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "ast",
-                "comment",
-                "no"
+                "find",
+                "match"
               ]
             },
             {
@@ -43963,12 +43916,11 @@
               "rspec_id": "[1:13:2:2]",
               "description_sha256": "810e9c048e4b06d717875dcb32eceb09705a33d9f518bb92815a3d0f75452cb4",
               "rust": "src/rubocop/ast/processed_source_spec.rs",
-              "test": "invalid_syntax_has_no_ast_comments_or_tokens",
+              "test": "line_slices_and_deprecated_find_contracts_match_collection_operations",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "ast",
-                "no",
-                "token"
+                "find",
+                "match"
               ]
             },
             {
@@ -44065,55 +44017,55 @@
               "rspec_id": "[1:19:1]",
               "description_sha256": "17170fcde6218521b25a8ba980210b8767bfa843c1428a37d0ea9a3590e2b004",
               "rust": "src/rubocop/ast/processed_source_spec.rs",
-              "test": "owned_processed_source_reads_and_parses_a_file_with_its_path",
+              "test": "tokens_within_use_sorted_character_ranges",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "proces",
-                "source"
+                "token",
+                "within"
               ]
             },
             {
               "rspec_id": "[1:19:2]",
               "description_sha256": "1b606c34649a65e34af80341c54aef9df7e0de58ea3aba7c4d1de58332cdb2e8",
               "rust": "src/rubocop/ast/processed_source_spec.rs",
-              "test": "owned_processed_source_reads_and_parses_a_file_with_its_path",
+              "test": "tokens_within_use_sorted_character_ranges",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "proces",
-                "source"
+                "token",
+                "within"
               ]
             },
             {
               "rspec_id": "[1:19:3:1]",
               "description_sha256": "249d9cc8056765e703d9c1c5b26ba4bcdea341e11fe080aa9017185fa6ff981b",
               "rust": "src/rubocop/ast/processed_source_spec.rs",
-              "test": "owned_processed_source_reads_and_parses_a_file_with_its_path",
+              "test": "tokens_within_use_sorted_character_ranges",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "proces",
-                "source"
+                "token",
+                "within"
               ]
             },
             {
               "rspec_id": "[1:19:3:2]",
               "description_sha256": "d4530ad0417b5f6a4ba70826e692b94e2ffeda0608e1b77684f8dc38154e92ec",
               "rust": "src/rubocop/ast/processed_source_spec.rs",
-              "test": "owned_processed_source_reads_and_parses_a_file_with_its_path",
+              "test": "tokens_within_use_sorted_character_ranges",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "proces",
-                "source"
+                "token",
+                "within"
               ]
             },
             {
               "rspec_id": "[1:19:3:3]",
               "description_sha256": "426cdc91fe6c13db1f90f17d0bc676ab5d9321813966453f942deb36fbefd346",
               "rust": "src/rubocop/ast/processed_source_spec.rs",
-              "test": "owned_processed_source_reads_and_parses_a_file_with_its_path",
+              "test": "tokens_within_use_sorted_character_ranges",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "proces",
-                "source"
+                "token",
+                "within"
               ]
             },
             {
@@ -44155,11 +44107,12 @@
               "rspec_id": "[1:1:4:1:1]",
               "description_sha256": "3ce14a0f238bab66885415c4684d6e8c99f7e4e61972f921c9e078f9a55a53a7",
               "rust": "src/rubocop/ast/processed_source_spec.rs",
-              "test": "owned_processed_source_reads_and_parses_a_file_with_its_path",
+              "test": "source_file_keyword_uses_the_parser_path_string_node_contract",
               "mapping_basis": "semantic_terms",
               "matched_terms": [
-                "proces",
-                "source"
+                "parser",
+                "source",
+                "string"
               ]
             },
             {
@@ -44471,7 +44424,7 @@
               ]
             }
           ],
-          "contract_sha256": "f35f8fed739f1a2767fae35742ad62985d3bc3345be183080a5198c1ee7976af"
+          "contract_sha256": "2d02456d4ea821ddccf1c3bed268144a958fbb5844c8ba194dbbfe948ae3babc"
         }
       ],
       "api_coverage": {

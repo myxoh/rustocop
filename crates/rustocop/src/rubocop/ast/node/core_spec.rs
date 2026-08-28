@@ -200,6 +200,29 @@ fn updated_nodes_preserve_locations_and_replace_requested_parts() {
 }
 
 #[test]
+fn structural_equality_uses_ruby_numeric_values_instead_of_storage_or_spelling() {
+    let distinct_bignums = parse(
+        "[99999999999999999999999999999999999999, 88899999999999999999999999999999999999]",
+    );
+    let nodes = distinct_bignums.ast().unwrap().child_nodes();
+    assert!(!nodes[0].structurally_equal(nodes[1]));
+    assert!(!nodes[0].rubocop_hash_equivalent(nodes[1]));
+
+    for source in ["[1.0, 1e0]", "[1.0r, 1r]", "[1.0i, 1e0i]"] {
+        let parsed = parse(source);
+        let nodes = parsed.ast().unwrap().child_nodes();
+        assert!(
+            nodes[0].structurally_equal(nodes[1]),
+            "numeric values should be equal for {source}"
+        );
+        assert!(
+            nodes[0].rubocop_hash_equivalent(nodes[1]),
+            "numeric hash inputs should be equal for {source}"
+        );
+    }
+}
+
+#[test]
 fn source_line_and_location_helpers_use_character_offsets() {
     let mut ast = Ast::new("é\n  value\n");
     let node = ast.add_node("send", vec![], Some(4..9));

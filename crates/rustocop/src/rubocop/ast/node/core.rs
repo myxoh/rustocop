@@ -230,6 +230,11 @@ impl<'ast> NodeRef<'ast> {
         self.id
     }
     pub(crate) fn structurally_equal(self, other: Self) -> bool {
+        if matches!(self.kind(), "int" | "float" | "rational" | "complex") {
+            if let Some(equal) = self.ruby_numeric_semantically_equal(other) {
+                return equal;
+            }
+        }
         if self.kind() == other.kind() && matches!(self.kind(), "str" | "sym") {
             let (Some(left), Some(right)) = (self.scalar_value_bytes(), other.scalar_value_bytes())
             else {
@@ -259,6 +264,11 @@ impl<'ast> NodeRef<'ast> {
     /// has cached its hash, so equal completed nodes can remain in different
     /// Hash buckets.
     pub(crate) fn rubocop_hash_equivalent(self, other: Self) -> bool {
+        if matches!(self.kind(), "int" | "float" | "rational" | "complex") {
+            if let Some(equal) = self.ruby_numeric_semantically_equal(other) {
+                return equal;
+            }
+        }
         if self.kind() != other.kind() || self.children().len() != other.children().len() {
             return false;
         }

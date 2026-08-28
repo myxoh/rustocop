@@ -8,6 +8,7 @@
 
 pub(crate) mod ast;
 pub(crate) mod cop;
+pub(crate) mod dependencies;
 
 #[cfg(test)]
 mod translation_spec;

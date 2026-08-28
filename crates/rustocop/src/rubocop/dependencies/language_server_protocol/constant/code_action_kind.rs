@@ -1,0 +1,9 @@
+pub(crate) const EMPTY: &str = "";
+pub(crate) const QUICK_FIX: &str = "quickfix";
+pub(crate) const REFACTOR: &str = "refactor";
+pub(crate) const REFACTOR_EXTRACT: &str = "refactor.extract";
+pub(crate) const REFACTOR_INLINE: &str = "refactor.inline";
+pub(crate) const REFACTOR_REWRITE: &str = "refactor.rewrite";
+pub(crate) const SOURCE: &str = "source";
+pub(crate) const SOURCE_ORGANIZE_IMPORTS: &str = "source.organizeImports";
+pub(crate) const SOURCE_FIX_ALL: &str = "source.fixAll";

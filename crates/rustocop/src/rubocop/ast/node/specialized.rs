@@ -360,6 +360,25 @@ impl<'ast> NodeRef<'ast> {
         }
     }
 
+    /// Compares the semantic numeric child values carried by Parser AST
+    /// nodes. `AST::Node#eql?` compares those Ruby values rather than their
+    /// source spelling, so this must be independent of the compact
+    /// `NodeValue` representation used by the arena.
+    pub(crate) fn ruby_numeric_semantically_equal(self, other: Self) -> Option<bool> {
+        if self.kind() != other.kind() {
+            return Some(false);
+        }
+        let left = self.source()?;
+        let right = other.source()?;
+        match self.kind() {
+            "int" => Some(normalize_integer_literal(left)? == normalize_integer_literal(right)?),
+            "float" => Some(parse_ruby_float(left)? == parse_ruby_float(right)?),
+            "rational" => Some(ruby_rational_to_s(left)? == ruby_rational_to_s(right)?),
+            "complex" => ruby_complex_semantically_equal(left, right),
+            _ => None,
+        }
+    }
+
     pub(crate) fn send_node(self) -> Option<Self> {
         matches!(self.kind(), "block" | "numblock" | "itblock")
             .then(|| self.node_child(0))
@@ -1227,7 +1246,7 @@ fn normalize_integer_literal(source: &str) -> Option<String> {
 }
 
 fn ruby_float_to_s(source: &str) -> Option<String> {
-    let value = source.replace('_', "").parse::<f64>().ok()?;
+    let value = parse_ruby_float(source)?;
     if value.is_nan() {
         return Some("NaN".to_string());
     }
@@ -1270,6 +1289,10 @@ fn ruby_float_to_s(source: &str) -> Option<String> {
             format!("{rendered}.0")
         })
     }
+}
+
+fn parse_ruby_float(source: &str) -> Option<f64> {
+    source.replace('_', "").parse::<f64>().ok()
 }
 
 fn dynamic_string_value_bytes(node: NodeRef<'_>) -> Vec<u8> {
@@ -1467,6 +1490,21 @@ fn ruby_complex_to_s(source: &str) -> Option<String> {
     } else {
         format!("0+{value}i")
     })
+}
+
+fn ruby_complex_semantically_equal(left: &str, right: &str) -> Option<bool> {
+    let left = left.strip_suffix('i')?;
+    let right = right.strip_suffix('i')?;
+    match (left.ends_with('r'), right.ends_with('r')) {
+        (true, true) => Some(ruby_rational_to_s(left)? == ruby_rational_to_s(right)?),
+        (false, false) if left.contains(['.', 'e', 'E']) && right.contains(['.', 'e', 'E']) => {
+            Some(parse_ruby_float(left)? == parse_ruby_float(right)?)
+        }
+        (false, false) if !left.contains(['.', 'e', 'E']) && !right.contains(['.', 'e', 'E']) => {
+            Some(normalize_integer_literal(left)? == normalize_integer_literal(right)?)
+        }
+        _ => Some(false),
+    }
 }
 
 fn trim_decimal_leading_zeros(value: &str) -> String {

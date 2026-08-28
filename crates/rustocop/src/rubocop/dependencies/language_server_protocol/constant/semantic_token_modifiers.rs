@@ -1,0 +1,10 @@
+pub(crate) const DECLARATION: &str = "declaration";
+pub(crate) const DEFINITION: &str = "definition";
+pub(crate) const READONLY: &str = "readonly";
+pub(crate) const STATIC: &str = "static";
+pub(crate) const DEPRECATED: &str = "deprecated";
+pub(crate) const ABSTRACT: &str = "abstract";
+pub(crate) const ASYNC: &str = "async";
+pub(crate) const MODIFICATION: &str = "modification";
+pub(crate) const DOCUMENTATION: &str = "documentation";
+pub(crate) const DEFAULT_LIBRARY: &str = "defaultLibrary";

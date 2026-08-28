@@ -1,0 +1,17 @@
+pub(crate) const PARSE_ERROR: i64 = -32700;
+pub(crate) const INVALID_REQUEST: i64 = -32600;
+pub(crate) const METHOD_NOT_FOUND: i64 = -32601;
+pub(crate) const INVALID_PARAMS: i64 = -32602;
+pub(crate) const INTERNAL_ERROR: i64 = -32603;
+pub(crate) const JSONRPC_RESERVED_ERROR_RANGE_START: i64 = -32099;
+pub(crate) const SERVER_ERROR_START: i64 = JSONRPC_RESERVED_ERROR_RANGE_START;
+pub(crate) const SERVER_NOT_INITIALIZED: i64 = -32002;
+pub(crate) const UNKNOWN_ERROR_CODE: i64 = -32001;
+pub(crate) const JSONRPC_RESERVED_ERROR_RANGE_END: i64 = -32000;
+pub(crate) const SERVER_ERROR_END: i64 = JSONRPC_RESERVED_ERROR_RANGE_END;
+pub(crate) const LSP_RESERVED_ERROR_RANGE_START: i64 = -32899;
+pub(crate) const REQUEST_FAILED: i64 = -32803;
+pub(crate) const SERVER_CANCELLED: i64 = -32802;
+pub(crate) const CONTENT_MODIFIED: i64 = -32801;
+pub(crate) const REQUEST_CANCELLED: i64 = -32800;
+pub(crate) const LSP_RESERVED_ERROR_RANGE_END: i64 = -32800;

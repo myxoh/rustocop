@@ -4,6 +4,7 @@ pub(crate) mod native;
 pub(crate) mod node;
 pub(crate) mod node_pattern;
 pub(crate) mod prism;
+pub(crate) mod processor;
 pub(crate) mod processed_source;
 pub(crate) mod source;
 mod source_position;
@@ -14,6 +15,8 @@ pub(crate) mod traversal;
 mod builder_spec;
 #[cfg(test)]
 mod processed_source_spec;
+#[cfg(test)]
+mod processor_spec;
 #[cfg(test)]
 mod token_spec;
 #[cfg(test)]

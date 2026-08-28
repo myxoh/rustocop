@@ -1,6 +1,6 @@
 # RuboCop compatibility implementation progress
 
-Updated at: `2026-08-25T11:23:06Z`
+Updated at: `2026-08-28T02:55:35Z`
 
 Target: RuboCop 1.87.0 and rubocop-ast 1.49.1.
 Existing cops are not consumers of this layer yet.
@@ -21,7 +21,7 @@ Registered upstream spec ports are tracked independently from component code:
 - Fully ported spec files: 83/83
 - Partially ported spec files: 0
 - Upstream examples in registered files: 3139
-- Focused Rust test functions for those files: 256
+- Focused Rust test functions for those files: 270
 - Discovered RuboCop shared spec files: 18
 - Registered RuboCop shared spec files: 18
 - Unregistered RuboCop shared spec files: 0
