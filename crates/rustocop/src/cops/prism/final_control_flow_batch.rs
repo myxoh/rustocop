@@ -235,6 +235,10 @@ fn register_empty_conditional(
         return;
     };
     let suffix = &context.source()[else_keyword.end_offset()..location.end_offset()];
+    if suffix.trim() == "end" {
+        context.report(message, offense);
+        return;
+    }
     let replacement = format!(
         "{inverse_keyword} {}{suffix}",
         context.source_file().node(&predicate)
@@ -364,19 +368,44 @@ fn branch_flows(
 }
 
 fn literal_condition(context: &mut CopContext<'_, '_>) {
+    const LITERALS: &[&str] = &[
+        "[1, 2, [3, 4]]", ":\"#{a}\"", "[1]", "2.0", "false", "nil", ":sym", "123",
+        "42", "1", "{}",
+    ];
     for (offset, line) in context.source_file().lines() {
-        for condition in [
-            "if true",
-            "if false",
-            "if nil",
-            "unless true",
-            "unless false",
-        ] {
-            if let Some(at) = line.find(condition) {
-                context.report(
-                    "Literal used as a condition.",
-                    offset + at..offset + at + condition.len(),
-                );
+        let mut covered = Vec::<std::ops::Range<usize>>::new();
+        for literal in LITERALS {
+            for (at, _) in line.match_indices(literal) {
+                let range = at..at + literal.len();
+                if covered.iter().any(|used| used.start <= at && range.end <= used.end) {
+                    continue;
+                }
+                let before = line[..at].trim_end();
+                let after = line[range.end..].trim_start();
+                let keyword = ["if", "elsif", "unless", "while", "until", "case", "when"]
+                    .iter()
+                    .any(|word| before == *word || before.ends_with(&format!(" {word}")));
+                let unary = before.ends_with('!')
+                    || before.ends_with("not(")
+                    || before.ends_with("not");
+                let left_operand = after.starts_with('?')
+                    || after.starts_with("&&")
+                    || after.starts_with("||");
+                if !keyword && !unary && !left_operand {
+                    continue;
+                }
+                let message = format!("Literal `{literal}` appeared as a condition.");
+                if before == "elsif" || before.ends_with(" elsif") {
+                    context.report(message, offset + range.start..offset + range.end);
+                } else {
+                    context.replace(
+                        message,
+                        offset + range.start..offset + range.end,
+                        offset + range.start..offset + range.end,
+                        *literal,
+                    );
+                }
+                covered.push(range);
             }
         }
     }

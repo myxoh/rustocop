@@ -1,4 +1,4 @@
-use super::catalog_cop::{custom, report};
+use super::catalog_cop::custom;
 use super::*;
 use std::collections::{HashMap, HashSet};
 
@@ -6,11 +6,7 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
     vec![
         custom("Naming/MemoizedInstanceVariableName", memoized_variable),
         custom("Naming/FileName", file_name),
-        report(
-            "Lint/AssignmentInCondition",
-            "if value = ",
-            "Assignment in condition detected.",
-        ),
+        custom("Lint/AssignmentInCondition", assignment_in_condition),
         custom("Naming/VariableNumber", variable_number),
         custom("Naming/VariableName", variable_name),
         custom("Lint/UselessAssignment", useless_assignment),
@@ -18,6 +14,40 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
         custom("Naming/MethodName", method_name),
         custom("Naming/PredicateMethod", predicate_method),
     ]
+}
+
+fn assignment_in_condition(context: &mut CopContext<'_, '_>) {
+    const MESSAGE: &str = "Use `==` if you meant to do a comparison or wrap the expression in parentheses to indicate you meant to assign in a condition.";
+    let allow_safe = context.config_bool("AllowSafeAssignment", true);
+    for (offset, line) in context.source_file().lines() {
+        if !["if ", "unless ", "while ", "until "]
+            .iter()
+            .any(|keyword| line.contains(keyword))
+        {
+            continue;
+        }
+        let bytes = line.as_bytes();
+        for index in 0..bytes.len() {
+            if bytes[index] != b'='
+                || bytes.get(index.wrapping_sub(1)) == Some(&b'=')
+                || bytes.get(index + 1) == Some(&b'=')
+                || matches!(bytes.get(index.wrapping_sub(1)), Some(b'<' | b'>' | b'!' | b'~' | b'|' | b'&' | b'+' | b'-' | b'*' | b'/'))
+                || bytes.get(index + 1) == Some(&b'>')
+            {
+                continue;
+            }
+            if allow_safe {
+                let before = line[..index].trim_end();
+                let after = line[index + 1..].trim_start();
+                if before.rfind('(').is_some_and(|open| {
+                    !before[open + 1..].contains(['&', '|']) && after.contains(')')
+                }) {
+                    continue;
+                }
+            }
+            context.replace(MESSAGE, offset + index..offset + index + 1, offset + index..offset + index + 1, "=");
+        }
+    }
 }
 
 struct SelfAssignment;

@@ -66,8 +66,14 @@ fn constant_in_block(context: &mut CopContext<'_, '_>) {
             {
                 let start = offset + line.find(name).unwrap_or(0);
                 context.report(
-                    "Do not define constants inside a block.",
-                    start..start + name.len(),
+                    "Do not define constants this way within a block.",
+                    start..offset + line.len(),
+                );
+            } else if trimmed.starts_with("class ") || trimmed.starts_with("module ") {
+                let start = offset + line.len() - trimmed.len();
+                context.report(
+                    "Do not define constants this way within a block.",
+                    start..offset + line.len(),
                 );
             }
         }

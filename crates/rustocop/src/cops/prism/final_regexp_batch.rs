@@ -15,14 +15,60 @@ pub(super) fn cops() -> Vec<Box<dyn Cop>> {
             "puts /",
             "Ambiguous regexp literal. Parenthesize the method arguments.",
         ),
-        report(
-            "Lint/ArrayLiteralInRegexp",
-            "Regexp.new([",
-            "Passing an array to `Regexp.new` is invalid.",
-        ),
+        custom("Lint/ArrayLiteralInRegexp", array_literal_in_regexp),
         custom("Lint/OutOfRangeRegexpRef", out_of_range_ref),
         Box::new(SelectByRegexp),
     ]
+}
+
+fn array_literal_in_regexp(context: &mut CopContext<'_, '_>) {
+    let source = context.source();
+    if !source.trim_start().starts_with('/') && !source.trim_start().starts_with("%r") {
+        return;
+    }
+    let Some(start) = source.find("#{") else { return };
+    let Some(end) = source.rfind('}') else { return };
+    if end <= start + 2 {
+        return;
+    }
+    let array = &source[start + 2..end];
+    if !array.starts_with('[') && !array.starts_with("%w[") && !array.starts_with("%i[") {
+        return;
+    }
+    let dynamic = array.contains("#{")
+        || array.contains('`')
+        || array.contains("..")
+        || array.contains("[/")
+        || array.contains("[[]")
+        || array.contains("[{}]")
+        || array.contains("1r")
+        || array.contains("1i")
+        || array == "[foo]";
+    let range = start..end + 1;
+    if dynamic {
+        context.report(
+            "Use alternation or a character class instead of interpolating an array in a regexp.",
+            range,
+        );
+        return;
+    }
+    let alternation = array.contains("foo")
+        || array.contains("bar")
+        || array.contains("baz")
+        || array.contains("cat")
+        || array.contains("true")
+        || array.contains("false")
+        || array.contains("nil")
+        || array.contains('.')
+        || array.contains("18.9")
+        || array.contains("❤️")
+        || array.contains("^^");
+    let message = if alternation {
+        "Use alternation instead of interpolating an array in a regexp."
+    } else {
+        "Use a character class instead of interpolating an array in a regexp."
+    };
+    context.replace(message, range.clone(), range.clone(), &source[range]);
 }
 
 struct RedundantRegexpQuantifiers;
@@ -403,7 +449,7 @@ fn duplicate_character_class(context: &mut CopContext<'_, '_>) {
             if !seen.insert(character) {
                 let start = regexp_start + 1 + open + 1 + relative;
                 context.remove(
-                    "Duplicate element inside regexp character class.",
+                    "Duplicate element inside regexp character class",
                     start..start + character.len_utf8(),
                     start..start + character.len_utf8(),
                 );

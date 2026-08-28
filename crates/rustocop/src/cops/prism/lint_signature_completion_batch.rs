@@ -20,24 +20,56 @@ fn syntax(error: &Diagnostic<'_>, context: &mut CopContext<'_, '_>) {
 
 fn format_parameter_mismatch(context: &mut CopContext<'_, '_>) {
     for (offset, line) in context.source_file().lines() {
-        let unescaped = line.replace("%%", "");
-        let placeholders = unescaped.matches("%s").count()
-            + unescaped.matches("%d").count()
-            + unescaped.matches("%f").count();
-        if placeholders == 0 {
+        if let Some((method, method_start)) = ["format", "sprintf"].iter().find_map(|method| {
+            line.find(&format!("{method}(")).map(|at| (*method, at))
+        }) {
+            let call = &line[method_start + method.len() + 1..];
+            let Some(quote_start) = call.find(['\'', '"']) else { continue };
+            let quote = call.as_bytes()[quote_start];
+            let Some(quote_end) = call[quote_start + 1..]
+                .bytes().position(|byte| byte == quote).map(|at| quote_start + 1 + at)
+            else { continue };
+            let format = &call[quote_start + 1..quote_end];
+            let arguments = call[quote_end + 1..].trim_end_matches(')').trim();
+            let supplied = arguments.strip_prefix(',').map_or(0, |rest| rest.split(',').count());
+            let numbered = format.contains("$s");
+            let unnumbered = ["%s", "%d", "%f", "%*d"].iter().any(|field| format.contains(field));
+            let invalid = numbered && unnumbered;
+            let fields = if format.contains("%{") || format.contains("%<") {
+                1
+            } else if numbered {
+                (1..=9).rev().find(|number| format.contains(&format!("%{number}$"))).unwrap_or(0)
+            } else {
+                ["%s", "%d", "%i", "%f", "%o", "%x", "%X", "%e", "%E", "%g", "%G", "%c", "%p", "%u"]
+                    .iter().map(|field| format.matches(field).count()).sum::<usize>()
+                    + format.matches("%*d").count() * 2
+            };
+            if invalid {
+                context.report(
+                    "Format string is invalid because formatting sequence types (numbered, named or unnumbered) are mixed.",
+                    offset + method_start..offset + method_start + method.len(),
+                );
+            } else if fields != supplied {
+                context.report(
+                    format!("Number of arguments ({supplied}) to `{method}` doesn't match the number of fields ({fields})."),
+                    offset + method_start..offset + method_start + method.len(),
+                );
+            }
             continue;
         }
-        let Some(percent) = line.find(" % ") else {
-            continue;
-        };
-        let arguments = line[percent + 3..].trim();
-        let supplied = if arguments.starts_with('[') {
-            arguments.split(',').count()
-        } else {
-            1
-        };
-        if placeholders != supplied {
-            context.report(format!("Number of arguments ({supplied}) to format string differs from number of fields ({placeholders})."), offset + percent..offset + line.len());
+        let Some(operator) = line.find(" % [") else { continue };
+        let before = &line[..operator];
+        let Some(first_quote) = before.find(['\'', '"']) else { continue };
+        let format = &before[first_quote + 1..before.len().saturating_sub(1)];
+        let fields = ["%s", "%d", "%i", "%f", "%o", "%x", "%X", "%e", "%E", "%g", "%G", "%c", "%p", "%u"]
+            .iter().map(|field| format.matches(field).count()).sum::<usize>();
+        let supplied = line[operator + 4..].trim_end_matches(']').split(',').count();
+        if fields != supplied {
+            let percent = operator + 1;
+            context.report(
+                format!("Number of arguments ({supplied}) to `String#%` doesn't match the number of fields ({fields})."),
+                offset + percent..offset + percent + 1,
+            );
         }
     }
 }

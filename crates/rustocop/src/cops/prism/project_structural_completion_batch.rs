@@ -161,6 +161,7 @@ fn deprecated_openssl(node: &CallNode<'_>, context: &mut CopContext<'_, '_>) {
     if path.len() != 3
         || path[0] != b"OpenSSL"
         || !matches!(path[1], b"Cipher" | b"Digest")
+        || path[1] == b"Digest" && path[2] == b"Digest"
         || rejected_openssl_argument(node)
     {
         return;
