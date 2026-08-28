@@ -84,6 +84,7 @@ impl InspectionPlan {
         }
         Ok(InspectionResult {
             path: absolute_path,
+            source: content.as_str().to_string(),
             offenses,
         })
     }
@@ -198,5 +199,6 @@ pub(crate) fn expanded_path(path: &str) -> String {
 #[derive(Debug)]
 pub(crate) struct InspectionResult {
     pub(crate) path: String,
+    pub(crate) source: String,
     pub(crate) offenses: Vec<Offense>,
 }

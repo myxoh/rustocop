@@ -43,46 +43,54 @@ fn prism_offense(source: &str, index: &SourceIndex, finding: prism::Finding) -> 
     while last_offset > finding.start_offset && !source.is_char_boundary(last_offset) {
         last_offset -= 1;
     }
-    let (last_line, last_column) =
-        if reversed_empty && finding.start_offset == source.len() && source.ends_with('\n') {
+    let (last_line, last_column) = if reversed_empty {
+        // Parser retains a descending Range as an empty location at its
+        // beginning. RuboCop's JSON view renders the inclusive endpoint one
+        // column before that one-based start, independent of how far the
+        // original column range descended.
+        (line, column.saturating_sub(1))
+    } else if empty_location {
+        // Parser represents an empty source range as ending immediately
+        // before its start. RuboCop's public JSON formatter renders that
+        // point at the start column, except for an insertion at the end
+        // of a non-newline-terminated source.
+        if finding.cop_name == "Lint/EmptyFile"
+            || finding.cop_name == "Layout/TrailingEmptyLines"
+                && (source.is_empty() || source.ends_with('\n'))
+        {
             (line, 0)
-        } else if reversed_empty {
-            index.position(source, finding.end_offset)
-        } else if empty_location {
-            // Parser represents an empty source range as ending immediately
-            // before its start. RuboCop's public JSON formatter renders that
-            // point at the start column, except for an insertion at the end
-            // of a non-newline-terminated source.
-            if finding.cop_name == "Lint/EmptyFile"
-                || finding.cop_name == "Layout/TrailingEmptyLines"
-                    && (source.is_empty() || source.ends_with('\n'))
-            {
-                (line, 0)
-            } else if finding.start_offset == source.len()
-                && !source.is_empty()
-                && !source.ends_with('\n')
-            {
-                (line, column.saturating_sub(1))
-            } else if finding.cop_name == "Layout/IndentationWidth"
-                && finding.message.ends_with(" spaces for indentation.")
-                && column > 1
-            {
-                (line, column - 1)
-            } else {
-                (line, column)
-            }
-        } else if ends_at_newline {
-            let (line, _) = index.position(source, finding.end_offset);
-            // RuboCop's JSON formatter reports the beginning of the following
-            // line as column one even though Parser's internal range column is
-            // zero for a range ending exactly at a newline.
-            (line, 1)
+        } else if finding.start_offset == source.len()
+            && !source.is_empty()
+            && !source.ends_with('\n')
+        {
+            (line, column.saturating_sub(1))
+        } else if finding.cop_name == "Layout/IndentationWidth"
+            && finding.message.ends_with(" spaces for indentation.")
+            && column > 1
+        {
+            (line, column - 1)
+        } else if finding.cop_name == "Bundler/DuplicatedGem" && column > 1 {
+            // Parser's zero-length range retains its zero-based end
+            // column in RuboCop's JSON location while start_column is
+            // one-based.
+            (line, column - 1)
         } else {
-            index.position(source, last_offset)
-        };
+            (line, column)
+        }
+    } else if ends_at_newline {
+        let (line, _) = index.position(source, finding.end_offset);
+        // RuboCop's JSON formatter reports the beginning of the following
+        // line as column one even though Parser's internal range column is
+        // zero for a range ending exactly at a newline.
+        (line, 1)
+    } else {
+        index.position(source, last_offset)
+    };
     Offense {
         cop_name: finding.cop_name.to_string(),
+        severity: finding.severity,
         message: finding.message,
+        message_bytes: finding.message_bytes,
         corrected: finding.corrected,
         correctable: finding.correctable,
         line,
@@ -150,7 +158,9 @@ mod tests {
             &SourceIndex::new(""),
             prism::Finding {
                 cop_name: "Lint/EmptyFile",
+                severity: "warning".to_string(),
                 message: "Empty file detected.".to_string(),
+                message_bytes: None,
                 correctable: false,
                 corrected: false,
                 start_offset: 0,
@@ -165,7 +175,9 @@ mod tests {
             &SourceIndex::new("source"),
             prism::Finding {
                 cop_name: "Layout/TrailingEmptyLines",
+                severity: "convention".to_string(),
                 message: "Final newline missing.".to_string(),
+                message_bytes: None,
                 correctable: true,
                 corrected: false,
                 start_offset: 6,
@@ -186,7 +198,9 @@ mod tests {
             &SourceIndex::new("source\n"),
             prism::Finding {
                 cop_name: "Bundler/GemFilename",
+                severity: "warning".to_string(),
                 message: "Wrong filename.".to_string(),
+                message_bytes: None,
                 correctable: false,
                 corrected: false,
                 start_offset: 0,
@@ -201,12 +215,62 @@ mod tests {
             (1, 1)
         );
 
+        let duplicated_gem_empty_range = prism_offense(
+            "          gem(\n  'rubocop'\n)\n",
+            &SourceIndex::new("          gem(\n  'rubocop'\n)\n"),
+            prism::Finding {
+                cop_name: "Bundler/DuplicatedGem",
+                severity: "error".to_string(),
+                message: "duplicate".to_string(),
+                message_bytes: None,
+                correctable: false,
+                corrected: false,
+                start_offset: 10,
+                end_offset: 10,
+            },
+        );
+        assert_eq!(
+            (
+                duplicated_gem_empty_range.line,
+                duplicated_gem_empty_range.column,
+                duplicated_gem_empty_range.last_column,
+                duplicated_gem_empty_range.length
+            ),
+            (1, 11, 10, 0)
+        );
+
+        let descending_multiline_columns = prism_offense(
+            "    group(\n      :development\n) do\n",
+            &SourceIndex::new("    group(\n      :development\n) do\n"),
+            prism::Finding {
+                cop_name: "Bundler/DuplicatedGroup",
+                severity: "warning".to_string(),
+                message: "duplicate".to_string(),
+                message_bytes: None,
+                correctable: false,
+                corrected: false,
+                start_offset: 4,
+                end_offset: 1,
+            },
+        );
+        assert_eq!(
+            (
+                descending_multiline_columns.line,
+                descending_multiline_columns.column,
+                descending_multiline_columns.last_column,
+                descending_multiline_columns.length
+            ),
+            (1, 5, 4, 0)
+        );
+
         let inserted_blank_line = prism_offense(
             "# frozen_string_literal: true\nvalue\n",
             &SourceIndex::new("# frozen_string_literal: true\nvalue\n"),
             prism::Finding {
                 cop_name: "Layout/EmptyLineAfterMagicComment",
+                severity: "convention".to_string(),
                 message: "Add an empty line after magic comments.".to_string(),
+                message_bytes: None,
                 correctable: true,
                 corrected: false,
                 start_offset: 30,
@@ -220,7 +284,9 @@ mod tests {
             &SourceIndex::new("comment\n"),
             prism::Finding {
                 cop_name: "Style/BlockComments",
+                severity: "convention".to_string(),
                 message: "Block comment.".to_string(),
+                message_bytes: None,
                 correctable: false,
                 corrected: false,
                 start_offset: 0,
@@ -234,7 +300,9 @@ mod tests {
             &SourceIndex::new("value\n"),
             prism::Finding {
                 cop_name: "Layout/TrailingEmptyLines",
+                severity: "convention".to_string(),
                 message: "Trailing blank line missing.".to_string(),
+                message_bytes: None,
                 correctable: true,
                 corrected: false,
                 start_offset: 6,

@@ -4,6 +4,7 @@
 // Source: lib/rubocop/ast/node/mixin/descendence.rb
 // Source SHA-256: ab0f800f4e1411b58baa49533cae3b321935b3798b73a49c93be33c18f501cee
 
+use std::borrow::Cow;
 use std::collections::HashMap;
 use std::ops::Range;
 
@@ -20,10 +21,30 @@ pub(crate) enum NodeValue {
     Nil,
 }
 
+/// The encoding identity carried by a Ruby `String`. Ruby's `String#eql?`
+/// and `String#hash` consider this identity for non-ASCII content, while
+/// allowing byte-identical ASCII-only strings across ASCII-compatible
+/// encodings to compare and hash equally.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum RubyStringEncoding {
+    Utf8,
+    UsAscii,
+    Binary,
+}
+
+impl RubyStringEncoding {
+    fn compatible_for_bytes(self, other: Self, bytes: &[u8]) -> bool {
+        self == other || bytes.is_ascii()
+    }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 struct NodeData {
     kind: String,
     children: Vec<NodeValue>,
+    decoded_bytes: Option<Vec<u8>>,
+    precomputed_hash_bytes: Option<Vec<u8>>,
+    string_encoding: Option<RubyStringEncoding>,
     parent: Option<NodeId>,
     source_range: Option<Range<usize>>,
     locations: HashMap<String, (Range<usize>, String)>,
@@ -33,6 +54,7 @@ struct NodeData {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct Ast {
     source: String,
+    binary_source: bool,
     char_byte_offsets: Vec<usize>,
     line_starts: Vec<usize>,
     nodes: Vec<NodeData>,
@@ -41,6 +63,7 @@ pub(crate) struct Ast {
 impl Ast {
     pub(crate) fn new(source: impl Into<String>) -> Self {
         let source = source.into();
+        let binary_source = has_binary_magic_encoding(&source);
         let mut char_byte_offsets = Vec::with_capacity(source.len() + 1);
         let mut line_starts = vec![0];
         for (character_offset, (byte_offset, character)) in source.char_indices().enumerate() {
@@ -52,6 +75,7 @@ impl Ast {
         char_byte_offsets.push(source.len());
         Self {
             source,
+            binary_source,
             char_byte_offsets,
             line_starts,
             nodes: Vec::new(),
@@ -94,6 +118,9 @@ impl Ast {
         self.nodes.push(NodeData {
             kind: kind.into(),
             children: children.clone(),
+            decoded_bytes: None,
+            precomputed_hash_bytes: None,
+            string_encoding: None,
             parent: None,
             source_range,
             locations: HashMap::new(),
@@ -120,6 +147,15 @@ impl Ast {
             .locations
             .insert(name.into(), (range, source.into()));
     }
+    pub(crate) fn set_decoded_bytes(&mut self, node: NodeId, bytes: &[u8]) {
+        self.nodes[node.0].decoded_bytes = Some(bytes.to_vec());
+    }
+    pub(crate) fn set_precomputed_hash_bytes(&mut self, node: NodeId, bytes: &[u8]) {
+        self.nodes[node.0].precomputed_hash_bytes = Some(bytes.to_vec());
+    }
+    pub(crate) fn set_string_encoding(&mut self, node: NodeId, encoding: RubyStringEncoding) {
+        self.nodes[node.0].string_encoding = Some(encoding);
+    }
     pub(crate) fn append_child(&mut self, node: NodeId, child: NodeValue) {
         if let NodeValue::Node(child_id) = child {
             if !self.nodes[child_id.0].complete {
@@ -144,6 +180,9 @@ impl Ast {
             original.source_range,
         );
         self.nodes[updated.0].locations = original.locations;
+        self.nodes[updated.0].decoded_bytes = original.decoded_bytes;
+        self.nodes[updated.0].precomputed_hash_bytes = original.precomputed_hash_bytes;
+        self.nodes[updated.0].string_encoding = original.string_encoding;
         updated
     }
     pub(crate) fn clear_children(&mut self, node: NodeId) {
@@ -191,13 +230,14 @@ impl<'ast> NodeRef<'ast> {
         self.id
     }
     pub(crate) fn structurally_equal(self, other: Self) -> bool {
-        if matches!(self.kind(), "str" | "sym")
-            && self
-                .scalar_value_text()
-                .is_some_and(|value| value.contains('\u{fffd}'))
-            && self.source() != other.source()
-        {
-            return false;
+        if self.kind() == other.kind() && matches!(self.kind(), "str" | "sym") {
+            let (Some(left), Some(right)) = (self.scalar_value_bytes(), other.scalar_value_bytes())
+            else {
+                return false;
+            };
+            if left != right || !self.string_encodings_compatible(other, left) {
+                return false;
+            }
         }
         self.kind() == other.kind()
             && self.children().len() == other.children().len()
@@ -212,6 +252,79 @@ impl<'ast> NodeRef<'ast> {
                         .structurally_equal(other.ast.node(*right)),
                     _ => left == right,
                 })
+    }
+    /// Whether two nodes have the same input to `AST::Node`'s precomputed
+    /// Ruby hash. This is deliberately separate from structural equality:
+    /// Parser dedents a squiggly heredoc's mutable string child after the node
+    /// has cached its hash, so equal completed nodes can remain in different
+    /// Hash buckets.
+    pub(crate) fn rubocop_hash_equivalent(self, other: Self) -> bool {
+        if self.kind() != other.kind() || self.children().len() != other.children().len() {
+            return false;
+        }
+        if self.kind() == "str" {
+            let (Some(left), Some(right)) = (
+                self.precomputed_string_hash_bytes(),
+                other.precomputed_string_hash_bytes(),
+            ) else {
+                return false;
+            };
+            if left != right || !self.string_encodings_compatible(other, left) {
+                return false;
+            }
+        }
+        self.children()
+            .iter()
+            .zip(other.children())
+            .all(|(left, right)| match (left, right) {
+                (NodeValue::Node(left), NodeValue::Node(right)) => self
+                    .ast
+                    .node(*left)
+                    .rubocop_hash_equivalent(other.ast.node(*right)),
+                (NodeValue::String(left), NodeValue::String(right)) if self.kind() == "str" => {
+                    self.precomputed_string_hash_input(left).as_ref()
+                        == other.precomputed_string_hash_input(right).as_ref()
+                }
+                _ => left == right,
+            })
+    }
+    pub(crate) fn scalar_value_bytes(self) -> Option<&'ast [u8]> {
+        self.data().decoded_bytes.as_deref().or_else(|| {
+            self.children().first().and_then(|child| match child {
+                NodeValue::String(value) | NodeValue::Symbol(value) => Some(value.as_bytes()),
+                _ => None,
+            })
+        })
+    }
+    fn precomputed_string_hash_input(self, value: &'ast str) -> std::borrow::Cow<'ast, [u8]> {
+        if let Some(bytes) = self.data().precomputed_hash_bytes.as_deref() {
+            std::borrow::Cow::Borrowed(bytes)
+        } else if let Some(bytes) = self.data().decoded_bytes.as_deref() {
+            std::borrow::Cow::Borrowed(bytes)
+        } else {
+            std::borrow::Cow::Borrowed(value.as_bytes())
+        }
+    }
+    fn precomputed_string_hash_bytes(self) -> Option<&'ast [u8]> {
+        self.data()
+            .precomputed_hash_bytes
+            .as_deref()
+            .or(self.data().decoded_bytes.as_deref())
+            .or_else(|| {
+                self.children().first().and_then(|child| match child {
+                    NodeValue::String(value) => Some(value.as_bytes()),
+                    _ => None,
+                })
+            })
+    }
+    fn string_encodings_compatible(self, other: Self, bytes: &[u8]) -> bool {
+        match (self.data().string_encoding, other.data().string_encoding) {
+            (Some(left), Some(right)) => left.compatible_for_bytes(right, bytes),
+            // Nodes constructed by compatibility tests and non-string parser
+            // adapters predate explicit encoding metadata. Preserve their
+            // existing byte semantics unless both sides carry Ruby encodings.
+            _ => true,
+        }
     }
     pub(crate) fn kind(self) -> &'ast str {
         &self.data().kind
@@ -264,6 +377,23 @@ impl<'ast> NodeRef<'ast> {
     pub(crate) fn source(self) -> Option<&'ast str> {
         let range = self.data().source_range.as_ref()?;
         self.ast.char_slice(range.clone())
+    }
+    pub(crate) fn source_bytes(self) -> Option<Cow<'ast, [u8]>> {
+        let source = self.source()?;
+        if !self.ast.binary_source {
+            return Some(Cow::Borrowed(source.as_bytes()));
+        }
+        let mut bytes = Vec::with_capacity(source.len());
+        for character in source.chars() {
+            let value = u32::from(character);
+            if (0xe080..=0xe0ff).contains(&value) {
+                bytes.push((value - 0xe000) as u8);
+            } else {
+                let mut buffer = [0; 4];
+                bytes.extend_from_slice(character.encode_utf8(&mut buffer).as_bytes());
+            }
+        }
+        Some(Cow::Owned(bytes))
     }
     pub(crate) fn source_length(self) -> usize {
         self.data()
@@ -597,6 +727,11 @@ impl<'ast> NodeRef<'ast> {
             .then(|| self.string_child(0))
             .flatten()
     }
+    pub(crate) fn str_content_bytes(self) -> Option<&'ast [u8]> {
+        (self.kind() == "str")
+            .then(|| self.scalar_value_bytes())
+            .flatten()
+    }
     pub(crate) fn const_name(self) -> Option<String> {
         if !matches!(self.kind(), "const" | "casgn") {
             return None;
@@ -882,6 +1017,34 @@ impl<'ast> NodeRef<'ast> {
             .rev()
             .find_map(|value| node_value(self.ast, value))
     }
+}
+
+fn has_binary_magic_encoding(source: &str) -> bool {
+    let mut lines = source.lines();
+    let first = lines.next().unwrap_or("");
+    let candidate = if first.starts_with("#!") {
+        lines.next().unwrap_or("")
+    } else {
+        first
+    };
+    let lower = candidate.to_ascii_lowercase();
+    ["coding", "encoding"].into_iter().any(|marker| {
+        let Some(start) = lower.find(marker) else {
+            return false;
+        };
+        let after = &candidate[start + marker.len()..];
+        let Some(separator) = after.find([':', '=']) else {
+            return false;
+        };
+        let name = after[separator + 1..]
+            .trim_start()
+            .split(|character: char| {
+                !(character.is_ascii_alphanumeric() || matches!(character, '-' | '_'))
+            })
+            .next()
+            .unwrap_or("");
+        name.eq_ignore_ascii_case("ASCII-8BIT") || name.eq_ignore_ascii_case("BINARY")
+    })
 }
 
 impl PartialEq for NodeRef<'_> {

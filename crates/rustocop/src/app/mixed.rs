@@ -35,10 +35,13 @@ pub(super) fn run(options: &RunOptions, custom_cops: &[String]) -> i32 {
     }
 
     match inspect(options, custom_cops) {
-        Ok(results) => {
-            report::write(options, &results);
-            report::exit_status(options, &results)
-        }
+        Ok(results) => match report::write(options, &results) {
+            Ok(()) => report::exit_status(options, &results),
+            Err(error) => {
+                eprintln!("{error}");
+                2
+            }
+        },
         Err(error) => fail(error),
     }
 }
@@ -97,6 +100,7 @@ fn merge_custom_report(results: &mut Vec<InspectionResult>, report: ExternalRepo
         let index = *indices.entry(path.clone()).or_insert_with(|| {
             results.push(InspectionResult {
                 path: path.clone(),
+                source: std::fs::read_to_string(&path).unwrap_or_default(),
                 offenses: Vec::new(),
             });
             results.len() - 1
@@ -134,6 +138,7 @@ struct ExternalFile {
 
 #[derive(Deserialize)]
 struct ExternalOffense {
+    severity: String,
     message: String,
     cop_name: String,
     corrected: bool,
@@ -145,7 +150,9 @@ impl ExternalOffense {
     fn into_offense(self) -> Offense {
         Offense {
             cop_name: self.cop_name,
+            severity: self.severity,
             message: self.message,
+            message_bytes: None,
             corrected: self.corrected,
             correctable: self.correctable,
             line: self.location.start_line,

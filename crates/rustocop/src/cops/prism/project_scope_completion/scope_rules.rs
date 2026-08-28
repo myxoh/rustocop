@@ -35,7 +35,10 @@ pub(super) fn redundant_self_assignment(node: &Node<'_>, context: &mut CopContex
         Some((write.name_loc(), write.value(), write.location()))
     } else if let Some(write) = node.as_class_variable_write_node() {
         Some((write.name_loc(), write.value(), write.location()))
-    } else { node.as_global_variable_write_node().map(|write| (write.name_loc(), write.value(), write.location())) };
+    } else {
+        node.as_global_variable_write_node()
+            .map(|write| (write.name_loc(), write.value(), write.location()))
+    };
     let (lhs, rhs, assignment, equals) = if let Some((name, value, assignment)) = variable {
         let between = &source[name.end_offset()..value.location().start_offset()];
         let Some(relative_equals) = between.find('=') else {
@@ -81,7 +84,9 @@ pub(super) fn redundant_self_assignment(node: &Node<'_>, context: &mut CopContex
         return;
     }
     context.replace(
-        format!("Redundant self assignment detected. Method `{method}` modifies its receiver in place."),
+        format!(
+            "Redundant self assignment detected. Method `{method}` modifies its receiver in place."
+        ),
         equals..equals + 1,
         assignment,
         context.source_file().node(&rhs),

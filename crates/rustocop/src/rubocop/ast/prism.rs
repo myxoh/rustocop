@@ -4,6 +4,7 @@
 //! direct node-for-node copy.
 
 use std::ops::Range;
+use std::path::Path;
 
 use ruby_prism::{
     AndNode, AssocNode, AssocSplatNode, BeginNode, BlockNode, BlockParametersNode, BreakNode,
@@ -17,7 +18,7 @@ use ruby_prism::{
     WhenNode, WhileNode, XStringNode, YieldNode,
 };
 
-use super::node::core::{Ast, NodeId, NodeValue};
+use super::node::core::{Ast, NodeId, NodeValue, RubyStringEncoding};
 use super::source_position::SourcePositionIndex;
 
 #[derive(Clone, Copy)]
@@ -28,10 +29,17 @@ enum Frame {
     Super { outer: NodeId, super_node: NodeId },
 }
 
-pub(crate) fn convert(source: &str, root: &Node<'_>) -> (Ast, Option<NodeId>) {
+pub(crate) fn convert(
+    source: &str,
+    root: &Node<'_>,
+    file_path: Option<&Path>,
+) -> (Ast, Option<NodeId>) {
+    let source_encoding = source_string_encoding(source);
     let mut converter = Converter {
         ast: Ast::new(source),
         source,
+        file_path: file_path.map(|path| path.to_string_lossy().into_owned()),
+        source_encoding,
         positions: SourcePositionIndex::new(source),
         frames: Vec::new(),
         roots: Vec::new(),
@@ -67,11 +75,100 @@ pub(crate) fn convert(source: &str, root: &Node<'_>) -> (Ast, Option<NodeId>) {
 struct Converter<'source> {
     ast: Ast,
     source: &'source str,
+    file_path: Option<String>,
+    source_encoding: RubyStringEncoding,
     positions: SourcePositionIndex,
     frames: Vec<Frame>,
     roots: Vec<NodeId>,
     pattern_depth: usize,
     multiple_assignment_depth: usize,
+}
+
+fn source_string_encoding(source: &str) -> RubyStringEncoding {
+    let mut lines = source.lines();
+    let first = lines.next().unwrap_or("");
+    let candidates: Vec<&str> = if first.starts_with("#!") {
+        lines.next().into_iter().collect()
+    } else {
+        vec![first]
+    };
+
+    for line in candidates {
+        let lower = line.to_ascii_lowercase();
+        for marker in ["coding", "encoding"] {
+            let Some(marker_start) = lower.find(marker) else {
+                continue;
+            };
+            let after_marker = &line[marker_start + marker.len()..];
+            let Some(separator) = after_marker.find([':', '=']) else {
+                continue;
+            };
+            let name = after_marker[separator + 1..]
+                .trim_start()
+                .split(|character: char| {
+                    !(character.is_ascii_alphanumeric() || matches!(character, '-' | '_'))
+                })
+                .next()
+                .unwrap_or("");
+            if name.eq_ignore_ascii_case("ASCII-8BIT") || name.eq_ignore_ascii_case("BINARY") {
+                return RubyStringEncoding::Binary;
+            }
+            if name.eq_ignore_ascii_case("US-ASCII") {
+                return RubyStringEncoding::UsAscii;
+            }
+            return RubyStringEncoding::Utf8;
+        }
+    }
+    RubyStringEncoding::Utf8
+}
+
+#[derive(Default)]
+struct FirstStringValue {
+    value: Option<Vec<u8>>,
+}
+
+impl<'pr> Visit<'pr> for FirstStringValue {
+    fn visit_string_node(&mut self, node: &StringNode<'pr>) {
+        if self.value.is_none() {
+            self.value = Some(node.unescaped().to_vec());
+        }
+    }
+}
+
+/// Parser constructs a squiggly-heredoc string node from its decoded body and
+/// only dedents that mutable child after `AST::Node` has cached its hash. Prism
+/// exposes the completed, dedented value. Reparse only escaped static bodies as
+/// a non-squiggly heredoc so the compatibility AST can retain Parser's exact
+/// construction-time hash input without maintaining a second Ruby escape
+/// decoder.
+fn pre_dedent_string_value(opening: &str, body: &str) -> Vec<u8> {
+    if opening.contains('\'') || !body.contains('\\') {
+        return body.as_bytes().to_vec();
+    }
+
+    let mut marker = String::from("RUSTOCOP_PRE_DEDENT");
+    while body
+        .lines()
+        .any(|line| line.trim_start_matches([' ', '\t']).trim_end_matches('\r') == marker)
+    {
+        marker.push('_');
+    }
+    let quoted_marker = if opening.contains('"') {
+        format!("\"{marker}\"")
+    } else {
+        marker.clone()
+    };
+    let mut synthetic = format!("<<-{quoted_marker}\n{body}");
+    if !body.ends_with('\n') {
+        synthetic.push('\n');
+    }
+    synthetic.push_str(&marker);
+    synthetic.push('\n');
+
+    let parsed = ruby_prism::parse(synthetic.as_bytes());
+    let mut visitor = FirstStringValue::default();
+    visitor.visit(&parsed.node());
+    visitor.value.unwrap_or_else(|| body.as_bytes().to_vec())
 }
 
 impl Converter<'_> {
@@ -371,10 +468,21 @@ impl Converter<'_> {
         } else {
             kind
         };
-        let children = scalar_children(raw, kind, self.source_for(&node));
+        let children = if let Some(source_file) = node.as_source_file_node() {
+            vec![NodeValue::String(self.file_path.clone().unwrap_or_else(
+                || String::from_utf8_lossy(source_file.filepath()).into_owned(),
+            ))]
+        } else {
+            scalar_children(raw, kind, self.source_for(&node))
+        };
         let id = self
             .ast
             .add_node(kind, children, Some(self.location(&node)));
+        if node.as_source_file_node().is_some() {
+            // Parser materializes __FILE__ as a UTF-8 path string even when
+            // the surrounding source uses an ASCII-8BIT magic encoding.
+            self.ast.set_string_encoding(id, RubyStringEncoding::Utf8);
+        }
         self.attach(id);
         let node_source = self.source_for(&node).to_owned();
         self.set_delimiter_locations(id, raw, &node_source);
@@ -1917,7 +2025,15 @@ impl<'pr> Visit<'pr> for Converter<'_> {
         let Frame::Node(string) = *self.frames.last().expect("string frame") else {
             unreachable!()
         };
-        let value = String::from_utf8_lossy(node.unescaped()).into_owned();
+        let decoded_bytes = decoded_string_bytes(node.unescaped(), self.source_encoding);
+        let string_encoding = if node.is_forced_utf8_encoding() {
+            RubyStringEncoding::Utf8
+        } else if node.is_forced_binary_encoding() {
+            RubyStringEncoding::Binary
+        } else {
+            self.source_encoding
+        };
+        let value = String::from_utf8_lossy(&decoded_bytes).into_owned();
         let heredoc = node.opening_loc().as_ref().is_some_and(|location| {
             self.source
                 .get(location.start_offset()..location.end_offset())
@@ -1954,10 +2070,36 @@ impl<'pr> Visit<'pr> for Converter<'_> {
                 vec![NodeValue::String(value)],
                 Some(self.character_range(content.start_offset()..content.end_offset())),
             );
+            self.ast.set_decoded_bytes(child, &decoded_bytes);
+            self.ast.set_string_encoding(child, string_encoding);
             self.ast.append_child(string, NodeValue::Node(child));
+        } else {
+            self.ast.set_decoded_bytes(string, &decoded_bytes);
+            self.ast.set_string_encoding(string, string_encoding);
         }
         if heredoc {
             self.set_location(string, "heredoc_body", node.content_loc());
+            if let Some(opening) = node.opening_loc() {
+                let opening_source = self
+                    .source
+                    .get(opening.start_offset()..opening.end_offset())
+                    .unwrap_or("");
+                if opening_source.starts_with("<<~") {
+                    let content = node.content_loc();
+                    let body = self
+                        .source
+                        .get(content.start_offset()..content.end_offset())
+                        .unwrap_or("");
+                    let pre_dedent = pre_dedent_string_value(opening_source, body);
+                    self.ast.set_precomputed_hash_bytes(string, &pre_dedent);
+                    self.ast.set_location(
+                        string,
+                        "precomputed_hash_input",
+                        self.character_range(content.start_offset()..content.end_offset()),
+                        &String::from_utf8_lossy(&pre_dedent),
+                    );
+                }
+            }
             if let Some(closing) = node.closing_loc() {
                 self.set_heredoc_end(string, closing);
             }
@@ -2097,6 +2239,26 @@ impl<'pr> Visit<'pr> for Converter<'_> {
             self.set_location(string, "end", node.closing_loc());
         }
     }
+}
+
+fn decoded_string_bytes(bytes: &[u8], encoding: RubyStringEncoding) -> Vec<u8> {
+    if encoding != RubyStringEncoding::Binary {
+        return bytes.to_vec();
+    }
+    let Ok(text) = std::str::from_utf8(bytes) else {
+        return bytes.to_vec();
+    };
+    let mut decoded = Vec::with_capacity(bytes.len());
+    for character in text.chars() {
+        let value = u32::from(character);
+        if (0xe080..=0xe0ff).contains(&value) {
+            decoded.push((value - 0xe000) as u8);
+        } else {
+            let mut buffer = [0; 4];
+            decoded.extend_from_slice(character.encode_utf8(&mut buffer).as_bytes());
+        }
+    }
+    decoded
 }
 
 fn implicit_block_kind(parameters: Option<Node<'_>>) -> &'static str {
@@ -2421,7 +2583,7 @@ fn parser_kind(raw: &str, source: &str) -> &'static str {
         "SelfNode" => "self",
         "SingletonClassNode" => "sclass",
         "SourceEncodingNode" => "__ENCODING__",
-        "SourceFileNode" => "__FILE__",
+        "SourceFileNode" => "str",
         "SourceLineNode" => "__LINE__",
         "SplatNode" => "splat",
         "StringNode" => "str",

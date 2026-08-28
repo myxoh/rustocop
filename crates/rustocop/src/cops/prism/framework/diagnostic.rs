@@ -14,7 +14,9 @@ pub(super) use reporter::Reporter;
 #[derive(Debug)]
 pub struct Finding {
     pub cop_name: &'static str,
+    pub severity: String,
     pub message: String,
+    pub message_bytes: Option<Vec<u8>>,
     pub correctable: bool,
     pub corrected: bool,
     pub start_offset: usize,
@@ -198,6 +200,23 @@ impl Context {
         self.record(cop_name, message.into(), offense.offsets(), None);
     }
 
+    pub(super) fn report_bytes(
+        &mut self,
+        cop_name: &'static str,
+        message: Vec<u8>,
+        offense: impl ByteRange,
+    ) {
+        let display = String::from_utf8_lossy(&message).into_owned();
+        self.record_with_correctability(
+            cop_name,
+            display,
+            Some(message),
+            offense.offsets(),
+            None,
+            false,
+        );
+    }
+
     pub(super) fn replace(
         &mut self,
         cop_name: &'static str,
@@ -266,13 +285,14 @@ impl Context {
         correction: Option<Vec<Edit>>,
     ) {
         let correctable = correction.is_some();
-        self.record_with_correctability(cop_name, message, offense, correction, correctable);
+        self.record_with_correctability(cop_name, message, None, offense, correction, correctable);
     }
 
     fn record_with_correctability(
         &mut self,
         cop_name: &'static str,
         message: String,
+        message_bytes: Option<Vec<u8>>,
         offense: Range<usize>,
         correction: Option<Vec<Edit>>,
         correctable: bool,
@@ -283,6 +303,7 @@ impl Context {
         if self.findings.iter().any(|finding| {
             finding.cop_name == cop_name
                 && finding.message == message
+                && finding.message_bytes == message_bytes
                 && finding.start_offset == offense.start
                 && finding.end_offset == offense.end
         }) {
@@ -291,7 +312,12 @@ impl Context {
         let finding_index = self.findings.len();
         self.findings.push(Finding {
             cop_name,
+            severity: crate::model::effective_severity(
+                cop_name,
+                self.cop_config.value(cop_name, "Severity"),
+            ),
             message,
+            message_bytes,
             correctable,
             corrected: false,
             start_offset: offense.start,
@@ -319,6 +345,7 @@ impl Context {
         self.record_with_correctability(
             cop_name,
             message.into(),
+            None,
             offense.offsets(),
             Some(vec![Edit {
                 range: edit.offsets(),
@@ -338,6 +365,7 @@ impl Context {
         self.record_with_correctability(
             cop_name,
             message.into(),
+            None,
             offense.offsets(),
             Some(
                 edits

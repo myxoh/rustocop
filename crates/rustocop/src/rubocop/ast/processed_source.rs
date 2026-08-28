@@ -341,7 +341,7 @@ impl<'source> ProcessedSource<'source> {
                 .as_program_node()
                 .is_some_and(|program| program.statements().body().is_empty());
         let (ast, ast_root) = if valid_syntax {
-            prism::convert(source, &parsed.node())
+            prism::convert(source, &parsed.node(), path.as_deref())
         } else {
             (Ast::new(source), None)
         };

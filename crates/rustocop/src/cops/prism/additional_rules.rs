@@ -265,7 +265,7 @@ fn useless_defined(node: &ruby_prism::DefinedNode<'_>, context: &mut CopContext<
 
 fn auto_resource_cleanup(source: &str, reporter: &mut Reporter<'_>) {
     let parsed = ruby_prism::parse(source.as_bytes());
-    let (ast, root) = convert_rubocop_ast(source, &parsed.node());
+    let (ast, root) = convert_rubocop_ast(source, &parsed.node(), None);
     let Some(root) = root.map(|root| ast.node(root)) else {
         return;
     };

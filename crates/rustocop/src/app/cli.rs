@@ -17,7 +17,12 @@ pub(super) enum Command {
 pub(super) fn parse_args(mut args: Vec<String>) -> Result<Command, String> {
     let mut options = RunOptions {
         files: Vec::new(),
-        format: "simple".to_string(),
+        formats: Vec::new(),
+        explicit_message_format: None,
+        display_cop_names: None,
+        extra_details: false,
+        display_style_guide: false,
+        debug: false,
         stdin_path: None,
         parallelism: Parallelism::Sequential,
         rubocop_loaders: Vec::new(),
@@ -50,7 +55,16 @@ pub(super) fn parse_args(mut args: Vec<String>) -> Result<Command, String> {
             "-A" | "--autocorrect-all" | "--auto-correct-all" => {
                 options.inspection.autocorrect = AutocorrectMode::All;
             }
-            "--format" | "-f" => options.format = take_value(&mut args, &arg)?,
+            "--format" | "-f" => {
+                let format = take_value(&mut args, &arg)?;
+                options.explicit_message_format = Some(format.clone());
+                options.formats.push(format);
+            }
+            "-D" | "--display-cop-names" => options.display_cop_names = Some(true),
+            "--no-display-cop-names" => options.display_cop_names = Some(false),
+            "-E" | "--extra-details" => options.extra_details = true,
+            "-S" | "--display-style-guide" => options.display_style_guide = true,
+            "-d" | "--debug" => options.debug = true,
             "--only" => {
                 options
                     .inspection
@@ -96,7 +110,7 @@ pub(super) fn parse_args(mut args: Vec<String>) -> Result<Command, String> {
             }
             "--force-exclusion" => options.force_exclusion = true,
             "--no-correction-loop" => options.correction_loop = false,
-            "--no-server" | "--display-cop-names" | "--extra-details" => {}
+            "--no-server" => {}
             "--cache" => {
                 if args.first().is_some_and(|value| !value.starts_with('-')) {
                     args.remove(0);
@@ -107,10 +121,12 @@ pub(super) fn parse_args(mut args: Vec<String>) -> Result<Command, String> {
                 break;
             }
             _ if arg.starts_with("--format=") => {
-                options.format = arg
+                let format = arg
                     .strip_prefix("--format=")
                     .unwrap_or_default()
                     .to_string();
+                options.explicit_message_format = Some(format.clone());
+                options.formats.push(format);
             }
             _ if arg.starts_with("--only=") => {
                 options
@@ -181,10 +197,32 @@ pub(super) fn parse_args(mut args: Vec<String>) -> Result<Command, String> {
         );
     }
 
-    if options.format != "json" && options.format != "simple" {
-        return Err(format!("unsupported formatter {}", options.format));
+    if options.formats.is_empty() {
+        options.formats.push(
+            options
+                .inspection
+                .cop_config
+                .value("AllCops", "DefaultFormatter")
+                .unwrap_or("progress")
+                .to_string(),
+        );
+    }
+    for format in &mut options.formats {
+        *format = canonical_formatter(format)
+            .ok_or_else(|| format!("unsupported formatter {format}"))?
+            .to_string();
     }
     Ok(Command::Run(Box::new(options)))
+}
+
+fn canonical_formatter(format: &str) -> Option<&'static str> {
+    match format {
+        "j" | "json" => Some("json"),
+        "s" | "simple" => Some("simple"),
+        "c" | "clang" => Some("clang"),
+        "p" | "progress" => Some("progress"),
+        _ => None,
+    }
 }
 
 fn cop_list(value: &str) -> Vec<String> {

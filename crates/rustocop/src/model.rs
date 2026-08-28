@@ -1,7 +1,9 @@
 #[derive(Debug)]
 pub(crate) struct Offense {
     pub(crate) cop_name: String,
+    pub(crate) severity: String,
     pub(crate) message: String,
+    pub(crate) message_bytes: Option<Vec<u8>>,
     pub(crate) corrected: bool,
     pub(crate) correctable: bool,
     pub(crate) line: usize,
@@ -56,7 +58,9 @@ pub(crate) fn push_offense(
     let (correctable, corrected) = correction.flags();
     offenses.push(Offense {
         cop_name: cop_name.to_string(),
+        severity: default_severity(cop_name).to_string(),
         message: message.to_string(),
+        message_bytes: None,
         corrected,
         correctable,
         line,
@@ -67,6 +71,66 @@ pub(crate) fn push_offense(
     });
 }
 
+pub(crate) fn default_severity(cop_name: &str) -> &'static str {
+    if cop_name == "Lint/Syntax" {
+        "fatal"
+    } else if cop_name.starts_with("Lint/")
+        || matches!(
+            cop_name,
+            "Bundler/DuplicatedGem"
+                | "Bundler/DuplicatedGroup"
+                | "Gemspec/RequireMFA"
+                | "Bundler/InsecureProtocolSource"
+                | "Gemspec/RubyVersionGlobalsUsage"
+                | "Gemspec/DuplicatedAssignment"
+                | "Gemspec/DeprecatedAttributeAssignment"
+                | "Gemspec/RequiredRubyVersion"
+                | "Layout/BeginEndAlignment"
+                | "Layout/DefEndAlignment"
+                | "Layout/EndAlignment"
+        )
+    {
+        "warning"
+    } else {
+        "convention"
+    }
+}
+
+pub(crate) fn effective_severity(cop_name: &str, configured: Option<&str>) -> String {
+    // Lint/Syntax overrides Base#find_severity and always reports fatal,
+    // including when a configured or caller-provided severity is present.
+    if cop_name == "Lint/Syntax" {
+        return "fatal".to_string();
+    }
+    const NAMES: &[&str] = &[
+        "info",
+        "refactor",
+        "convention",
+        "warning",
+        "error",
+        "fatal",
+    ];
+    match configured {
+        Some(severity) if NAMES.contains(&severity) => severity.to_string(),
+        Some(severity) => {
+            eprintln!(
+                "Warning: Invalid severity '{severity}'. Valid severities are {}.",
+                NAMES.join(", ")
+            );
+            base_default_severity(cop_name).to_string()
+        }
+        None => base_default_severity(cop_name).to_string(),
+    }
+}
+
+fn base_default_severity(cop_name: &str) -> &'static str {
+    if cop_name.starts_with("Lint/") {
+        "warning"
+    } else {
+        "convention"
+    }
+}
+
 #[derive(Clone, Debug)]
 pub(crate) struct SourceLine {
     pub(crate) body: String,
@@ -75,7 +139,7 @@ pub(crate) struct SourceLine {
 
 #[cfg(test)]
 mod tests {
-    use super::CorrectionStatus;
+    use super::{effective_severity, CorrectionStatus};
 
     #[test]
     fn correction_status_preserves_the_two_output_flags() {
@@ -90,5 +154,20 @@ mod tests {
             CorrectionStatus::correctable(true),
             CorrectionStatus::Applied
         );
+    }
+
+    #[test]
+    fn effective_severity_accepts_rubocop_names_and_rejects_invalid_values() {
+        assert_eq!(effective_severity("Style/Example", Some("error")), "error");
+        assert_eq!(
+            effective_severity("Bundler/DuplicatedGem", Some("invalid")),
+            "convention"
+        );
+        assert_eq!(
+            effective_severity("Bundler/DuplicatedGem", None),
+            "convention"
+        );
+        assert_eq!(effective_severity("Lint/Syntax", None), "fatal");
+        assert_eq!(effective_severity("Lint/Syntax", Some("error")), "fatal");
     }
 }

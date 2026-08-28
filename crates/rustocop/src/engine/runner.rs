@@ -116,7 +116,12 @@ mod tests {
     fn options(parallelism: Parallelism) -> RunOptions {
         RunOptions {
             files: Vec::new(),
-            format: "json".to_string(),
+            formats: vec!["json".to_string()],
+            explicit_message_format: Some("json".to_string()),
+            display_cop_names: None,
+            extra_details: false,
+            display_style_guide: false,
+            debug: false,
             stdin_path: None,
             parallelism,
             rubocop_loaders: Vec::new(),

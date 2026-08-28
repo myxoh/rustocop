@@ -1,6 +1,6 @@
 {
   "format_version": 2,
-  "updated_at": "2026-08-27T13:03:56-04:00",
+  "updated_at": "2026-08-27T19:53:22-04:00",
   "rubocop_version": "1.87.0",
   "rubocop_commit": "e5b788dba181ad94de30cfbad661c5d6aa08a4e5",
   "sampling": {
@@ -24,13 +24,179 @@
       "upstream_source": "lib/rubocop/cop/bundler/duplicated_gem.rb",
       "upstream_sha256": "f1586a904317be0b0299874c2d5da063e5b2997d9dbbfaa241f7e46babb72b17",
       "implementations": [
-        "src/cops/prism/source_rules.rs"
+        "src/cops/prism/source_rules.rs",
+        "src/cops/prism/source_rules/project_files.rs",
+        "src/cops/prism/framework/diagnostic/reporter.rs",
+        "src/cops/prism/runtime/prism_engine.rs",
+        "src/rubocop/ast/node/core.rs",
+        "src/rubocop/cop/mixin/range_help.rs",
+        "src/config.rs",
+        "src/config/path_policy.rs",
+        "src/engine/mod.rs",
+        "src/engine/source.rs",
+        "src/engine/diagnostic.rs",
+        "src/model.rs",
+        "src/app/report.rs",
+        "src/app/mod.rs",
+        "src/app/cli.rs",
+        "src/rubocop/cop/message_annotator.rs",
+        "src/rubocop/ast/processed_source.rs",
+        "src/rubocop/ast/prism.rs",
+        "src/rubocop/ast/source.rs",
+        "src/rubocop/ast/source_position.rs",
+        "src/rubocop/ast/node/specialized.rs"
       ],
       "upstream_callbacks": [
         "on_new_investigation"
       ],
       "upstream_mixins": [
         "RangeHelp"
+      ],
+      "upstream_dependencies": [
+        {
+          "gem": "ast",
+          "version": "2.4.3",
+          "path": "lib/ast/node.rb",
+          "sha256": "f5af4b71ca8c7436e521ac8274e0b66abe95eba8917715cbad40c7f88053cab8"
+        },
+        {
+          "gem": "rubocop",
+          "version": "1.87.0",
+          "path": "lib/rubocop/cop/base.rb",
+          "sha256": "aaa6f74be5b160ac7132c63e63293d59f8d0516ef00eb1266c54940671e14bd3"
+        },
+        {
+          "gem": "rubocop",
+          "version": "1.87.0",
+          "path": "lib/rubocop/path_util.rb",
+          "sha256": "daf716c5cb6eb9fbb9a687ef63195b96bdd511e0fbe31a563544e0c23e47c271"
+        },
+        {
+          "gem": "rubocop",
+          "version": "1.87.0",
+          "path": "lib/rubocop/cop/commissioner.rb",
+          "sha256": "152961ea12a39721a0ea78297f7bd6507111d3a02a3718dbcbcfe2afbd0b31dd"
+        },
+        {
+          "gem": "rubocop-ast",
+          "version": "1.49.1",
+          "path": "lib/rubocop/ast/node_pattern/method_definer.rb",
+          "sha256": "0c8e1931b95945abcbca56cc38897877e79fe66a3cf6b3828ce102d9f4dc3861"
+        },
+        {
+          "gem": "rubocop-ast",
+          "version": "1.49.1",
+          "path": "lib/rubocop/ast/node/mixin/descendence.rb",
+          "sha256": "ab0f800f4e1411b58baa49533cae3b321935b3798b73a49c93be33c18f501cee"
+        },
+        {
+          "gem": "rubocop-ast",
+          "version": "1.49.1",
+          "path": "lib/rubocop/ast/node.rb",
+          "sha256": "7f45751649ede4bc247096c1506394fd0055ebf933ba1268f23f2dc5eac17358"
+        },
+        {
+          "gem": "rubocop-ast",
+          "version": "1.49.1",
+          "path": "lib/rubocop/ast/node/mixin/parameterized_node.rb",
+          "sha256": "996f74f46cf9a70a118d78642932ec33a5edc3bd567b5ba0e87cbd0b7a14f392"
+        },
+        {
+          "gem": "rubocop-ast",
+          "version": "1.49.1",
+          "path": "lib/rubocop/ast/node/mixin/method_dispatch_node.rb",
+          "sha256": "1d32445b6f24b01f566b311e31652debd32a5c7e12a6c5067bcc63b4063c4aeb"
+        },
+        {
+          "gem": "rubocop-ast",
+          "version": "1.49.1",
+          "path": "lib/rubocop/ast/node/if_node.rb",
+          "sha256": "df73e874454099164e1e43cb9c06c1eda9c9fb9e558406d0863284e27106ce39"
+        },
+        {
+          "gem": "rubocop-ast",
+          "version": "1.49.1",
+          "path": "lib/rubocop/ast/node/case_node.rb",
+          "sha256": "dca0996d0d56869781428fa0194d6bc30b9e2babf43c6e8ddff1f4d0df1045b1"
+        },
+        {
+          "gem": "rubocop-ast",
+          "version": "1.49.1",
+          "path": "lib/rubocop/ast/node/when_node.rb",
+          "sha256": "494c59862a3c46c0a95cffec6f7c21e323cfa0484d2693eb86a3c67a6c9c7fc8"
+        },
+        {
+          "gem": "parser",
+          "version": "3.3.11.1",
+          "path": "lib/parser/builders/default.rb",
+          "sha256": "df74c093bbfceeb6491ca3fe7e638c1405afbfc8cc99f2d571357379710a1219"
+        },
+        {
+          "gem": "parser",
+          "version": "3.3.11.1",
+          "path": "lib/parser/source/buffer.rb",
+          "sha256": "00b14f43b24c7112ef683ba02054946e053a50f6b667760d70de1c43db317b12"
+        },
+        {
+          "gem": "rubocop",
+          "version": "1.87.0",
+          "path": "lib/rubocop/cop/offense.rb",
+          "sha256": "dd34d19e99f1f94adcda2eeb4ff9cf943b91e23a93d437644624f9fa03340339"
+        },
+        {
+          "gem": "rubocop",
+          "version": "1.87.0",
+          "path": "lib/rubocop/formatter/json_formatter.rb",
+          "sha256": "7d84c31ac3176caead93df74ddc6283cf69e040fc45d9679bfbafc35df3e519a"
+        },
+        {
+          "gem": "rubocop",
+          "version": "1.87.0",
+          "path": "lib/rubocop/formatter/simple_text_formatter.rb",
+          "sha256": "e2e21303fb0752dfe15a767757b67109511b0b11ddd28f5f1d5c01c85592ae83"
+        },
+        {
+          "gem": "rubocop",
+          "version": "1.87.0",
+          "path": "lib/rubocop/formatter/progress_formatter.rb",
+          "sha256": "b99dd890265457397ce32830375c2fd15038a70447e03a0f519ec0da74595b98"
+        },
+        {
+          "gem": "rubocop",
+          "version": "1.87.0",
+          "path": "lib/rubocop/formatter/clang_style_formatter.rb",
+          "sha256": "d83eb88fde3b0daaf74d439499f3f90bf9471e4c82af9ac11f8ee36bf55c5377"
+        },
+        {
+          "gem": "rubocop",
+          "version": "1.87.0",
+          "path": "lib/rubocop/formatter/formatter_set.rb",
+          "sha256": "37507d81f02fb8a3e5e67e5a79296b588a5181f381009652ff2f324b3a9767a9"
+        },
+        {
+          "gem": "rubocop",
+          "version": "1.87.0",
+          "path": "lib/rubocop/runner.rb",
+          "sha256": "807185cb258d13ab22ed5732baa22578dc19cf9b20e758b3d9c57ec504a57236"
+        },
+        {
+          "gem": "rubocop",
+          "version": "1.87.0",
+          "path": "lib/rubocop/cli.rb",
+          "sha256": "7a097a2918f7bf4b03b71a49d868910f243b78aa26e31035520822709d33e933"
+        },
+        {
+          "gem": "rubocop",
+          "version": "1.87.0",
+          "path": "lib/rubocop/cop/message_annotator.rb",
+          "sha256": "c1fc65fad14bcd11da2f8d266a74e0f2493d74aaa9db32eb5e9b8d82eb4fd502"
+        },
+        {
+          "gem": "rubocop",
+          "version": "1.87.0",
+          "path": "lib/rubocop/options.rb",
+          "sha256": "adfe551344fc98ea2d13f21852b56ff1cd445a6fdf36cd0bde8cd2a154a4d8c4"
+        }
       ],
       "fixtures": {
         "passed": 10,
@@ -67,7 +233,159 @@
       "upstream_source": "lib/rubocop/cop/bundler/duplicated_group.rb",
       "upstream_sha256": "afcc26a3dca108d60683181d4ab60ae4abc00e588aca456446e9da68a413c61b",
       "implementations": [
-        "src/cops/prism/project_scope_completion.rs"
+        "src/cops/prism/project_scope_completion.rs",
+        "src/cops/prism/project_scope_completion/duplicated_group.rs",
+        "src/cops/prism/runtime/prism_engine.rs",
+        "src/cops/prism/framework/diagnostic.rs",
+        "src/cops/prism/framework/diagnostic/reporter.rs",
+        "src/rubocop/ast/processed_source.rs",
+        "src/rubocop/ast/prism.rs",
+        "src/rubocop/ast/source.rs",
+        "src/rubocop/ast/source_position.rs",
+        "src/rubocop/ast/node/core.rs",
+        "src/rubocop/ast/node/specialized.rs",
+        "src/rubocop/cop/mixin/range_help.rs",
+        "src/config.rs",
+        "src/config/path_policy.rs",
+        "src/engine/mod.rs",
+        "src/engine/diagnostic.rs",
+        "src/engine/source.rs",
+        "src/app/report.rs",
+        "src/model.rs"
+      ],
+      "upstream_dependencies": [
+        {
+          "gem": "rubocop",
+          "version": "1.87.0",
+          "path": "lib/rubocop/cop/mixin/range_help.rb",
+          "sha256": "5662cc556c28cbf79b0613c9f1bb4764aa1b72b7d41b7bdd816b902021eb5660"
+        },
+        {
+          "gem": "rubocop",
+          "version": "1.87.0",
+          "path": "lib/rubocop/cop/base.rb",
+          "sha256": "aaa6f74be5b160ac7132c63e63293d59f8d0516ef00eb1266c54940671e14bd3"
+        },
+        {
+          "gem": "rubocop",
+          "version": "1.87.0",
+          "path": "lib/rubocop/path_util.rb",
+          "sha256": "daf716c5cb6eb9fbb9a687ef63195b96bdd511e0fbe31a563544e0c23e47c271"
+        },
+        {
+          "gem": "rubocop",
+          "version": "1.87.0",
+          "path": "lib/rubocop/cop/commissioner.rb",
+          "sha256": "152961ea12a39721a0ea78297f7bd6507111d3a02a3718dbcbcfe2afbd0b31dd"
+        },
+        {
+          "gem": "rubocop",
+          "version": "1.87.0",
+          "path": "lib/rubocop/cop/team.rb",
+          "sha256": "e7d2a5c11c922d13bc693fde2d9ae225d41317ecbb46f4a3f5356c63ef2fc840"
+        },
+        {
+          "gem": "rubocop",
+          "version": "1.87.0",
+          "path": "lib/rubocop/config.rb",
+          "sha256": "95087dd3ba3e1fa32dcab71ef3fa83bfe7d7c0132354f712769f266a833ab429"
+        },
+        {
+          "gem": "rubocop",
+          "version": "1.87.0",
+          "path": "lib/rubocop/file_patterns.rb",
+          "sha256": "a5fbefd0ed2913bca1e107ea3e38e631236f5eae9d07f980f95e72c69150d9b9"
+        },
+        {
+          "gem": "rubocop",
+          "version": "1.87.0",
+          "path": "config/default.yml",
+          "sha256": "a837a2d22ff256d4ca0398b38c0c5f2e9a325a169eb364d9c66bbacaa9a8f27a"
+        },
+        {
+          "gem": "rubocop-ast",
+          "version": "1.49.1",
+          "path": "lib/rubocop/ast/node_pattern/method_definer.rb",
+          "sha256": "0c8e1931b95945abcbca56cc38897877e79fe66a3cf6b3828ce102d9f4dc3861"
+        },
+        {
+          "gem": "rubocop-ast",
+          "version": "1.49.1",
+          "path": "lib/rubocop/ast/node/mixin/descendence.rb",
+          "sha256": "ab0f800f4e1411b58baa49533cae3b321935b3798b73a49c93be33c18f501cee"
+        },
+        {
+          "gem": "rubocop-ast",
+          "version": "1.49.1",
+          "path": "lib/rubocop/ast/node.rb",
+          "sha256": "7f45751649ede4bc247096c1506394fd0055ebf933ba1268f23f2dc5eac17358"
+        },
+        {
+          "gem": "rubocop-ast",
+          "version": "1.49.1",
+          "path": "lib/rubocop/ast/node/mixin/parameterized_node.rb",
+          "sha256": "996f74f46cf9a70a118d78642932ec33a5edc3bd567b5ba0e87cbd0b7a14f392"
+        },
+        {
+          "gem": "rubocop-ast",
+          "version": "1.49.1",
+          "path": "lib/rubocop/ast/node/mixin/method_dispatch_node.rb",
+          "sha256": "1d32445b6f24b01f566b311e31652debd32a5c7e12a6c5067bcc63b4063c4aeb"
+        },
+        {
+          "gem": "rubocop-ast",
+          "version": "1.49.1",
+          "path": "lib/rubocop/ast/node/mixin/basic_literal_node.rb",
+          "sha256": "9fab7928d9a744735dd180f2da2c0f5c83ea8ab27dc19b5d95c98502b42999e4"
+        },
+        {
+          "gem": "rubocop-ast",
+          "version": "1.49.1",
+          "path": "lib/rubocop/ast/builder.rb",
+          "sha256": "c66b4e9c5f5b8ddd8af742c3111554b6f4454314351b96bd7818f74a229c1362"
+        },
+        {
+          "gem": "rubocop-ast",
+          "version": "1.49.1",
+          "path": "lib/rubocop/ast/node/dstr_node.rb",
+          "sha256": "b2394e1e2adf4decea31eea29eb13c3b3e40c9895f38fbe2cae740ec21ac3e96"
+        },
+        {
+          "gem": "rubocop-ast",
+          "version": "1.49.1",
+          "path": "lib/rubocop/ast/node/str_node.rb",
+          "sha256": "2b65f4beba1548acb4065498c058554ee04bd71fd425c265a5b77f654e0631c3"
+        },
+        {
+          "gem": "rubocop-ast",
+          "version": "1.49.1",
+          "path": "lib/rubocop/ast/node/block_node.rb",
+          "sha256": "5e8e86face9b598f3fc020a9678634e30e8efba07ef4897963b71e0df36202c9"
+        },
+        {
+          "gem": "rubocop-ast",
+          "version": "1.49.1",
+          "path": "lib/rubocop/ast/node/hash_node.rb",
+          "sha256": "e8259f69526d678baa305fa413bba56175c84c40057cec50dd8312d8da95790e"
+        },
+        {
+          "gem": "parser",
+          "version": "3.3.11.1",
+          "path": "lib/parser/builders/default.rb",
+          "sha256": "df74c093bbfceeb6491ca3fe7e638c1405afbfc8cc99f2d571357379710a1219"
+        },
+        {
+          "gem": "parser",
+          "version": "3.3.11.1",
+          "path": "lib/parser/source/buffer.rb",
+          "sha256": "00b14f43b24c7112ef683ba02054946e053a50f6b667760d70de1c43db317b12"
+        },
+        {
+          "gem": "rubocop",
+          "version": "1.87.0",
+          "path": "lib/rubocop/cop/offense.rb",
+          "sha256": "dd34d19e99f1f94adcda2eeb4ff9cf943b91e23a93d437644624f9fa03340339"
+        }
       ],
       "upstream_callbacks": [
         "on_new_investigation"
@@ -76,8 +394,8 @@
         "RangeHelp"
       ],
       "fixtures": {
-        "passed": 21,
-        "total": 21,
+        "passed": 41,
+        "total": 41,
         "status": "compatible"
       },
       "projects": {

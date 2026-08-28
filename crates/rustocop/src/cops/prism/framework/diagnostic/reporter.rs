@@ -119,6 +119,10 @@ impl Reporter<'_> {
         self.context.report(self.cop_name, message, offense);
     }
 
+    pub(in super::super) fn report_bytes(&mut self, message: Vec<u8>, offense: impl ByteRange) {
+        self.context.report_bytes(self.cop_name, message, offense);
+    }
+
     pub(in super::super) fn replace(
         &mut self,
         message: impl Into<String>,

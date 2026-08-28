@@ -1,11 +1,11 @@
 {
   "version": 1,
   "kind": "fixture_compatibility",
-  "updated_at": "2026-08-27T13:03:29-04:00",
+  "updated_at": "2026-08-27T22:05:49-04:00",
   "rust_commit": null,
-  "cop_source_sha256": "7b783b34c545fd1673c5be226a501f69066829b78e1ca4c4fa05c376caed09ac",
-  "native_sha256": "4efae3b72476bbfdfd924aaee96de900cf0d4173ba41d13bd76600872b75c4c9",
-  "fixture_corpus_sha256": "4cca1a0c3e74623a23aee69580bb1cc4e5d5129c088e7691c11708f88cc39e7f",
+  "cop_source_sha256": "7befd25fe062a3e01fcbd6eac719c909d0df327d2244678a09dd3b02ae65ef20",
+  "native_sha256": "f720c23042c4208c5a7c2a381507a8db762e89ef545fd37b4c3e038c66e254a5",
+  "fixture_corpus_sha256": "40ae1e9fab61b58bfb2b1faacc1ded7effec9a195e8645328db2c21877de1c0d",
   "rubocop_version": "1.87.0",
   "results": {
     "Bundler/DuplicatedGem": {
@@ -14,8 +14,8 @@
       "status": "compatible"
     },
     "Bundler/DuplicatedGroup": {
-      "passed": 21,
-      "total": 21,
+      "passed": 41,
+      "total": 41,
       "status": "compatible"
     },
     "Bundler/GemComment": {

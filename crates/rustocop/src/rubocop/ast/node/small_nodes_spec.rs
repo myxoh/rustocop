@@ -1320,6 +1320,116 @@ fn native_scalar_nodes_and_wrapped_arguments_preserve_upstream_contracts() {
 }
 
 #[test]
+fn ruby_value_to_s_matches_numeric_literal_values_in_rubocop_ast() {
+    for (source, expected) in [
+        ("0x10", "16"),
+        (
+            "123456789012345678901234567890",
+            "123456789012345678901234567890",
+        ),
+        ("1.50", "1.5"),
+        ("1e20", "1.0e+20"),
+        ("1e-6", "1.0e-06"),
+        ("1e400", "Infinity"),
+        ("1e401", "Infinity"),
+        ("-1e400", "-Infinity"),
+        ("1.50r", "3/2"),
+        ("0x10r", "16/1"),
+        (
+            "99999999999999999999999999999999999999.0r",
+            "99999999999999999999999999999999999999/1",
+        ),
+        (
+            "99999999999999999999999999999999999999.0ri",
+            "0+99999999999999999999999999999999999999/1i",
+        ),
+        ("2.00i", "0+2.0i"),
+        ("1e400i", "0+Infinity*i"),
+        ("-1e400i", "0-Infinity*i"),
+    ] {
+        let parsed = parse(source);
+        assert_eq!(
+            parsed.ast().unwrap().ruby_value_to_s().as_deref(),
+            Some(expected),
+            "{source}"
+        );
+    }
+}
+
+#[test]
+fn ruby_value_to_s_matches_dynamic_string_values_in_rubocop_ast() {
+    for source in [r#""foo#{bar}""#, r#"%Q(foo#{bar})"#] {
+        let parsed = parse(source);
+        let node = parsed.ast().unwrap();
+        assert_eq!(node.kind(), "dstr", "{source}");
+        assert_eq!(
+            node.ruby_value_to_s().as_deref(),
+            Some("foo#{bar}"),
+            "{source}"
+        );
+    }
+}
+
+#[test]
+fn ruby_value_keys_preserve_xstr_identity_and_invalid_string_bytes() {
+    let backticks = parse("`foo`");
+    let percent_x = parse("%x(foo)");
+    let string = parse("'foo'");
+    let backticks_key = backticks.ast().unwrap().ruby_value_to_s_bytes().unwrap();
+    assert_eq!(backticks_key, br#"(str "foo")"#);
+    assert_eq!(
+        backticks_key,
+        percent_x.ast().unwrap().ruby_value_to_s_bytes().unwrap()
+    );
+    assert_ne!(
+        backticks_key,
+        string.ast().unwrap().ruby_value_to_s_bytes().unwrap()
+    );
+    assert_eq!(
+        backticks_key,
+        parse(r#"'(str "foo")'"#)
+            .ast()
+            .unwrap()
+            .ruby_value_to_s_bytes()
+            .unwrap()
+    );
+
+    let interpolated_backticks = parse(r#"`foo#{bar}`"#);
+    let interpolated_percent_x = parse(r#"%x(foo#{baz})"#);
+    assert_eq!(
+        interpolated_backticks
+            .ast()
+            .unwrap()
+            .ruby_value_to_s_bytes(),
+        interpolated_percent_x
+            .ast()
+            .unwrap()
+            .ruby_value_to_s_bytes()
+    );
+
+    let call_parentheses = parse(r#"`#{foo(1)}`"#);
+    let call_command = parse(r#"%x(#{foo 1})"#);
+    assert_eq!(
+        call_parentheses.ast().unwrap().ruby_value_to_s_bytes(),
+        call_command.ast().unwrap().ruby_value_to_s_bytes()
+    );
+
+    assert_eq!(
+        parse("``").ast().unwrap().ruby_value_to_s_bytes(),
+        parse("''").ast().unwrap().ruby_value_to_s_bytes()
+    );
+
+    for (source, expected) in [(r#""\xFF""#, vec![0xff]), (r#""\xFE""#, vec![0xfe])] {
+        let parsed = parse(source);
+        assert_eq!(
+            parsed.ast().unwrap().ruby_value_to_s_bytes(),
+            Some(expected),
+            "{source}"
+        );
+    }
+}
+
+#[test]
 fn blocks_expose_arguments_delimiters_dispatch_and_context() {
     for (source, count, first, last) in [
         ("foo { }", 0, None, None),

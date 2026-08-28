@@ -306,7 +306,10 @@ impl CopPhase {
     }
 
     const fn visits_nodes(self) -> bool {
-        matches!(self, Self::Node | Self::SourceAndNode | Self::NodeAndCompatibility)
+        matches!(
+            self,
+            Self::Node | Self::SourceAndNode | Self::NodeAndCompatibility
+        )
     }
 
     const fn visits_compatibility_nodes(self) -> bool {

@@ -1,14 +1,15 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 
 use ruby_prism::{CaseMatchNode, Node};
 
 use super::*;
 
+mod duplicated_group;
 mod scope_rules;
 
 define_cops! {
     DeprecatedAttributeAssignment => "Gemspec/DeprecatedAttributeAssignment" => compatibility_source(deprecated_gemspec_attribute),
-    DuplicatedGroup => "Bundler/DuplicatedGroup" => compatibility_source(duplicated_group),
+    DuplicatedGroup => "Bundler/DuplicatedGroup" => compatibility_source(duplicated_group::on_new_investigation),
     DevelopmentDependencies => "Gemspec/DevelopmentDependencies" => compatibility_source(development_dependencies),
     DuplicateMatchPattern => "Lint/DuplicateMatchPattern" => compatibility_prism_callbacks(DuplicateMatchPatternRule, [on_case_match]),
     ConstantName => "Naming/ConstantName" => compatibility_prism_any_node(constant_name),
@@ -29,72 +30,7 @@ fn top_level_method_definition(node: &Node<'_>, context: &mut CopContext<'_, '_>
     }) {
         return;
     }
-    context.report(
-        "Do not define methods at the top-level.",
-        node.location(),
-    );
-}
-
-fn duplicated_group(context: &mut CompatibilityCopContext<'_, '_, '_>) {
-    if context.path() != "(string)" && !context.path().ends_with("Gemfile") {
-        return;
-    }
-    let mut seen = HashMap::<String, usize>::new();
-    let mut scopes = Vec::<String>::new();
-    for (line_number, (offset, line)) in context.source_file().lines().enumerate() {
-        let trimmed = line.trim_start();
-        if trimmed.trim() == "end" {
-            scopes.pop();
-            continue;
-        }
-        let Some((call, _)) = trimmed.split_once(" do") else { continue };
-        let (method, raw_arguments) = if let Some(arguments) = call.strip_prefix("group ") {
-            ("group", arguments)
-        } else if let Some(arguments) = call
-            .strip_prefix("group(")
-            .and_then(|arguments| arguments.strip_suffix(')'))
-        {
-            ("group", arguments)
-        } else {
-            let Some((method, arguments)) = call.split_once(' ') else { continue };
-            if matches!(method, "source" | "git" | "platforms" | "path") {
-                scopes.push(format!("{method}:{}", arguments.trim()));
-            }
-            continue;
-        };
-        debug_assert_eq!(method, "group");
-        let arguments = raw_arguments.trim();
-        let parts = arguments.split(',').map(str::trim).collect::<Vec<_>>();
-        let option_start = parts
-            .iter()
-            .position(|part| !part.starts_with(':') && !part.starts_with(['\'', '"']))
-            .unwrap_or(parts.len());
-        let mut groups = parts[..option_start]
-            .iter()
-            .map(|group| group.trim_start_matches(':').trim_matches(['\'', '"']))
-            .collect::<Vec<_>>();
-        groups.sort_unstable();
-        let mut options = parts[option_start..].to_vec();
-        options.sort_unstable();
-        let identity = format!(
-            "{}|groups:{}|options:{}",
-            scopes.join("/"),
-            groups.join(","),
-            options.join(",")
-        );
-        if let Some(first) = seen.get(&identity) {
-            let indent = line.len() - trimmed.len();
-            context.report(
-                format!(
-                    "Gem group `{arguments}` already defined on line {first} of the Gemfile."
-                ),
-                offset + indent..offset + line.find(" do").unwrap_or(line.len()),
-            );
-        } else {
-            seen.insert(identity, line_number + 1);
-        }
-        scopes.push(format!("group:{arguments}"));
-    }
+    context.report("Do not define methods at the top-level.", node.location());
 }
 
 fn development_dependencies(context: &mut CompatibilityCopContext<'_, '_, '_>) {
@@ -179,8 +115,7 @@ fn deprecated_gemspec_attribute(context: &mut CompatibilityCopContext<'_, '_, '_
             trimmed
                 .split_once(operator)
                 .map(|parts| (parts.0, operator))
-        })
-        else {
+        }) else {
             continue;
         };
         if !left.starts_with(&format!("{block_variable}.")) {
@@ -271,7 +206,11 @@ fn constant_name(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
         let target = write.target();
         (target.name_loc(), write.value())
     } else if let Some(target) = node.as_constant_target_node() {
-        let Some(value) = context.parent().and_then(Node::as_multi_write_node).map(|write| write.value()) else {
+        let Some(value) = context
+            .parent()
+            .and_then(Node::as_multi_write_node)
+            .map(|write| write.value())
+        else {
             return;
         };
         (target.location(), value)
@@ -282,9 +221,10 @@ fn constant_name(node: &Node<'_>, context: &mut CopContext<'_, '_>) {
         return;
     }
     let name = context.source_file().at(&location);
-    if name.chars().all(|character| {
-        character.is_uppercase() || character.is_numeric() || character == '_'
-    }) {
+    if name
+        .chars()
+        .all(|character| character.is_uppercase() || character.is_numeric() || character == '_')
+    {
         return;
     }
     context.report("Use SCREAMING_SNAKE_CASE for constants.", location);
@@ -305,11 +245,14 @@ fn constant_name_allowed_assignment(value: &Node<'_>) -> bool {
             return true;
         }
         if call_name(&call) == b"new"
-            && (root_constant(call.receiver(), b"Class") || root_constant(call.receiver(), b"Struct"))
+            && (root_constant(call.receiver(), b"Class")
+                || root_constant(call.receiver(), b"Struct"))
         {
             return true;
         }
-        return call.receiver().is_none_or(|receiver| !literal_node(&receiver));
+        return call
+            .receiver()
+            .is_none_or(|receiver| !literal_node(&receiver));
     }
     value.as_if_node().is_some_and(|conditional| {
         let branch_has_constant = |statements: Option<ruby_prism::StatementsNode<'_>>| {
@@ -332,8 +275,9 @@ fn constant_name_allowed_assignment(value: &Node<'_>) -> bool {
 fn literal_node(node: &Node<'_>) -> bool {
     if let Some(parentheses) = node.as_parentheses_node() {
         return parentheses.body().is_some_and(|body| {
-            body.as_statements_node()
-                .is_some_and(|statements| only_statement(Some(statements)).is_some_and(|inner| literal_node(&inner)))
+            body.as_statements_node().is_some_and(|statements| {
+                only_statement(Some(statements)).is_some_and(|inner| literal_node(&inner))
+            })
         });
     }
     node.as_integer_node().is_some()

@@ -44,10 +44,13 @@ fn run_inspection(options: &crate::config::RunOptions) -> i32 {
         return mixed::run(options, &custom_cops);
     }
     match targets::inspect(options) {
-        Ok(results) => {
-            report::write(options, &results);
-            report::exit_status(options, &results)
-        }
+        Ok(results) => match report::write(options, &results) {
+            Ok(()) => report::exit_status(options, &results),
+            Err(error) => {
+                eprintln!("{error}");
+                2
+            }
+        },
         Err(error) => fail(error),
     }
 }

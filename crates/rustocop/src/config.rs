@@ -19,7 +19,12 @@ pub(crate) enum Parallelism {
 #[derive(Clone, Debug)]
 pub(crate) struct RunOptions {
     pub(crate) files: Vec<String>,
-    pub(crate) format: String,
+    pub(crate) formats: Vec<String>,
+    pub(crate) explicit_message_format: Option<String>,
+    pub(crate) display_cop_names: Option<bool>,
+    pub(crate) extra_details: bool,
+    pub(crate) display_style_guide: bool,
+    pub(crate) debug: bool,
     pub(crate) stdin_path: Option<String>,
     pub(crate) parallelism: Parallelism,
     pub(crate) rubocop_loaders: Vec<(String, String)>,
@@ -96,7 +101,7 @@ pub(crate) struct CopConfig {
     // Precompiled once per run for the authoring policy API.
     #[allow(dead_code)]
     patterns: HashMap<String, HashMap<String, Vec<Regex>>>,
-    path_globs: HashMap<String, HashMap<String, Vec<Regex>>>,
+    path_globs: HashMap<String, HashMap<String, Vec<path_policy::PathGlob>>>,
     root: Option<PathBuf>,
 }
 
@@ -593,7 +598,17 @@ fn config_section(line: &str) -> Option<String> {
 }
 
 fn clean_config_scalar(value: &str) -> String {
-    value.trim().trim_matches(['\'', '"']).to_string()
+    let value = value.trim();
+    if value.starts_with('"') && value.ends_with('"') {
+        return serde_json::from_str(value).unwrap_or_else(|_| value.trim_matches('"').to_string());
+    }
+    if let Some(value) = value
+        .strip_prefix('\'')
+        .and_then(|value| value.strip_suffix('\''))
+    {
+        return value.replace("''", "'");
+    }
+    value.to_string()
 }
 
 impl InspectionConfig {

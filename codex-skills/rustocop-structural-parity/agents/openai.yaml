@@ -1,5 +1,4 @@
 interface:
   display_name: "Rustocop Structural Parity"
-  short_description: "Advance one independently verified RuboCop parity item"
-  default_prompt: "Use $rustocop-structural-parity to advance exactly one eligible Rustocop structural-parity item by one state transition."
-
+  short_description: "Continuously drain independently verified RuboCop parity work"
+  default_prompt: "Use $rustocop-structural-parity to continuously drain the Rustocop structural-parity queue. Keep working across cops, use fresh independent reviewer subagents, and stop only when all cops are accepted or genuinely blocked."

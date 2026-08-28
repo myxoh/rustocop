@@ -1,0 +1,18 @@
+{
+  "format_version": 1,
+  "cop": "Bundler/DuplicatedGem",
+  "decision": "accepted",
+  "reviewer": "codex-independent-reviewer-18",
+  "reviewed_at": "2026-08-27T20:23:58-04:00",
+  "fingerprints": {
+    "upstream_sha256": "f1586a904317be0b0299874c2d5da063e5b2997d9dbbfaa241f7e46babb72b17",
+    "rust_sha256": "14693558b939e18c09207b199740516c79f4375169fd65f8e85a3140945c07ea",
+    "shared_runtime_sha256": "eee7d1d2027afb902c7a0827b39ea78d91fdc7bc0d93cf8f561180e9cd5b3e09",
+    "behavioral_evidence_sha256": "ded9cba98bf56468ffc3a5fa7d6584b872e6e149e7db0b97fe24001f0fdef22e",
+    "standard_sha256": "61c0a9d7484f15c47caf4fe737a1437c334f536f2fe5dfc5812809c3318cc7aa",
+    "upstream_dependencies_sha256": "ebb94cc645616fc586372c5a517533dad660d42669fe9c88c74b9beee5f5ec21"
+  },
+  "dossier_sha256": "9c08950bb0c073792fc9773f609841b8b0fc14ba203193a5482ea38ea0f6bede",
+  "statement": "Independently reconstructed the complete upstream and Rust inventories and verified every bidirectional correspondence. The implementation preserves the source-wide callback lifecycle, complete implicit-receiver static-string gem search, Ruby Hash hash-plus-eql grouping semantics, conditional ancestor and branch topology, duplicate-after-first offense construction, path and severity configuration, exact ranges, non-correctability, and reporting lifecycle. All adaptations are specifically necessary and preserve their stated invariants. The focused cached and freshly captured 10/10 upstream contracts, live formatter and invalid-byte differentials, focused Rust unit, complete dossier validation, and an additional 40-case adversarial live RuboCop 1.87.0 differential passed with no findings.",
+  "findings": []
+}

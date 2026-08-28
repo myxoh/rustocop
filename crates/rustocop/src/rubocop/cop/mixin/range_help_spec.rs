@@ -133,6 +133,18 @@ fn source_range_and_column_helpers_match_rubocop_contracts() {
 }
 
 #[test]
+fn descending_source_range_columns_match_rubocops_empty_range_contract() {
+    let buffer = SourceBuffer::new("first\n  second\n");
+    let helper = RangeHelp::new(&buffer);
+
+    let range = helper.source_range_columns(&buffer, 2, 2..0);
+
+    assert_eq!(range.source(), "");
+    assert_eq!((range.begin_pos(), range.end_pos()), (8, 6));
+    assert_eq!(range.len(), 0);
+}
+
+#[test]
 fn source_ranges_use_parser_character_offsets_for_unicode() {
     let buffer = SourceBuffer::new("éclair\n🍒 pie\n");
     let helper = RangeHelp::new(&buffer);

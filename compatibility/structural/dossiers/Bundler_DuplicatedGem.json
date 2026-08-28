@@ -1,0 +1,1601 @@
+{
+  "format_version": 1,
+  "rubric_version": 1,
+  "cop": "Bundler/DuplicatedGem",
+  "state": "implementation_submitted",
+  "updated_at": "2026-08-27T20:18:27-04:00",
+  "fingerprints": {
+    "upstream_sha256": "f1586a904317be0b0299874c2d5da063e5b2997d9dbbfaa241f7e46babb72b17",
+    "rust_sha256": "14693558b939e18c09207b199740516c79f4375169fd65f8e85a3140945c07ea",
+    "shared_runtime_sha256": "eee7d1d2027afb902c7a0827b39ea78d91fdc7bc0d93cf8f561180e9cd5b3e09",
+    "behavioral_evidence_sha256": "ded9cba98bf56468ffc3a5fa7d6584b872e6e149e7db0b97fe24001f0fdef22e",
+    "standard_sha256": "61c0a9d7484f15c47caf4fe737a1437c334f536f2fe5dfc5812809c3318cc7aa",
+    "upstream_dependencies_sha256": "ebb94cc645616fc586372c5a517533dad660d42669fe9c88c74b9beee5f5ec21"
+  },
+  "sources": {
+    "upstream": {
+      "upstream_source": "lib/rubocop/cop/bundler/duplicated_gem.rb",
+      "upstream_sha256": "f1586a904317be0b0299874c2d5da063e5b2997d9dbbfaa241f7e46babb72b17",
+      "upstream_callbacks": [
+        "on_new_investigation"
+      ],
+      "upstream_mixins": [
+        "RangeHelp"
+      ],
+      "spec": "spec/rubocop/cop/bundler/duplicated_gem_spec.rb",
+      "mixin_sources": [
+        "lib/rubocop/cop/mixin/range_help.rb"
+      ],
+      "shared_sources": [
+        "lib/rubocop/cop/base.rb"
+      ],
+      "configuration_source": "config/default.yml:178-187",
+      "dependency_sources": [
+        {
+          "gem": "ast",
+          "version": "2.4.3",
+          "path": "lib/ast/node.rb",
+          "sha256": "f5af4b71ca8c7436e521ac8274e0b66abe95eba8917715cbad40c7f88053cab8"
+        },
+        {
+          "gem": "rubocop",
+          "version": "1.87.0",
+          "path": "lib/rubocop/cop/base.rb",
+          "sha256": "aaa6f74be5b160ac7132c63e63293d59f8d0516ef00eb1266c54940671e14bd3"
+        },
+        {
+          "gem": "rubocop",
+          "version": "1.87.0",
+          "path": "lib/rubocop/path_util.rb",
+          "sha256": "daf716c5cb6eb9fbb9a687ef63195b96bdd511e0fbe31a563544e0c23e47c271"
+        },
+        {
+          "gem": "parser",
+          "version": "3.3.11.1",
+          "path": "lib/parser/builders/default.rb",
+          "sha256": "df74c093bbfceeb6491ca3fe7e638c1405afbfc8cc99f2d571357379710a1219"
+        },
+        {
+          "gem": "parser",
+          "version": "3.3.11.1",
+          "path": "lib/parser/source/buffer.rb",
+          "sha256": "00b14f43b24c7112ef683ba02054946e053a50f6b667760d70de1c43db317b12"
+        },
+        {
+          "gem": "rubocop",
+          "version": "1.87.0",
+          "path": "lib/rubocop/cop/offense.rb",
+          "sha256": "dd34d19e99f1f94adcda2eeb4ff9cf943b91e23a93d437644624f9fa03340339"
+        },
+        {
+          "gem": "rubocop",
+          "version": "1.87.0",
+          "path": "lib/rubocop/formatter/json_formatter.rb",
+          "sha256": "7d84c31ac3176caead93df74ddc6283cf69e040fc45d9679bfbafc35df3e519a"
+        },
+        {
+          "gem": "rubocop",
+          "version": "1.87.0",
+          "path": "lib/rubocop/formatter/simple_text_formatter.rb",
+          "sha256": "e2e21303fb0752dfe15a767757b67109511b0b11ddd28f5f1d5c01c85592ae83"
+        },
+        {
+          "gem": "rubocop",
+          "version": "1.87.0",
+          "path": "lib/rubocop/formatter/progress_formatter.rb",
+          "sha256": "b99dd890265457397ce32830375c2fd15038a70447e03a0f519ec0da74595b98"
+        },
+        {
+          "gem": "rubocop",
+          "version": "1.87.0",
+          "path": "lib/rubocop/formatter/clang_style_formatter.rb",
+          "sha256": "d83eb88fde3b0daaf74d439499f3f90bf9471e4c82af9ac11f8ee36bf55c5377"
+        },
+        {
+          "gem": "rubocop",
+          "version": "1.87.0",
+          "path": "lib/rubocop/formatter/formatter_set.rb",
+          "sha256": "37507d81f02fb8a3e5e67e5a79296b588a5181f381009652ff2f324b3a9767a9"
+        },
+        {
+          "gem": "rubocop",
+          "version": "1.87.0",
+          "path": "lib/rubocop/runner.rb",
+          "sha256": "807185cb258d13ab22ed5732baa22578dc19cf9b20e758b3d9c57ec504a57236"
+        },
+        {
+          "gem": "rubocop",
+          "version": "1.87.0",
+          "path": "lib/rubocop/cli.rb",
+          "sha256": "7a097a2918f7bf4b03b71a49d868910f243b78aa26e31035520822709d33e933"
+        },
+        {
+          "gem": "rubocop",
+          "version": "1.87.0",
+          "path": "lib/rubocop/cop/message_annotator.rb",
+          "sha256": "c1fc65fad14bcd11da2f8d266a74e0f2493d74aaa9db32eb5e9b8d82eb4fd502"
+        },
+        {
+          "gem": "rubocop",
+          "version": "1.87.0",
+          "path": "lib/rubocop/options.rb",
+          "sha256": "adfe551344fc98ea2d13f21852b56ff1cd445a6fdf36cd0bde8cd2a154a4d8c4"
+        }
+      ]
+    },
+    "rust": [
+      {
+        "path": "src/cops/prism/source_rules.rs"
+      },
+      {
+        "path": "src/cops/prism/source_rules/project_files.rs"
+      },
+      {
+        "path": "src/cops/prism/framework/diagnostic/reporter.rs"
+      },
+      {
+        "path": "src/cops/prism/framework/dsl.rs"
+      },
+      {
+        "path": "src/cops/prism/framework/compatibility_context.rs"
+      },
+      {
+        "path": "src/cops/prism/runtime/prism_engine.rs"
+      },
+      {
+        "path": "src/rubocop/ast/node/core.rs"
+      },
+      {
+        "path": "src/rubocop/cop/mixin/range_help.rs"
+      },
+      {
+        "path": "src/config.rs"
+      },
+      {
+        "path": "src/config/path_policy.rs"
+      },
+      {
+        "path": "src/engine/mod.rs"
+      },
+      {
+        "path": "src/engine/source.rs"
+      },
+      {
+        "path": "src/engine/diagnostic.rs"
+      },
+      {
+        "path": "src/app/report.rs"
+      },
+      {
+        "path": "src/app/mod.rs"
+      },
+      {
+        "path": "src/app/cli.rs"
+      },
+      {
+        "path": "src/rubocop/cop/message_annotator.rs"
+      },
+      {
+        "path": "src/model.rs"
+      },
+      {
+        "path": "src/cops/prism/framework/diagnostic.rs"
+      },
+      {
+        "path": "src/rubocop/ast/processed_source.rs"
+      },
+      {
+        "path": "src/rubocop/ast/prism.rs"
+      },
+      {
+        "path": "src/rubocop/ast/source.rs"
+      },
+      {
+        "path": "src/rubocop/ast/source_position.rs"
+      },
+      {
+        "path": "src/rubocop/ast/node/specialized.rs"
+      }
+    ]
+  },
+  "facets": {
+    "callbacks": {
+      "status": "present",
+      "notes": "Upstream performs one on_new_investigation callback. Rust registers one compatibility investigation over the shared ProcessedSource; the cop has no per-node callbacks, so the adapter preserves its single source-wide lifecycle."
+    },
+    "restrictions": {
+      "status": "present",
+      "notes": "Both restrict declarations to AST send nodes with an implicit receiver, method gem, a static string first argument, and arbitrary remaining arguments."
+    },
+    "configuration": {
+      "status": "present",
+      "notes": "Configured Include patterns are honored once through the canonical path-scoped InspectionConfig and CopConfig matcher. When the unit harness removes resolved Include metadata, relevant_file restores RuboCop's built-in defaults. Effective Severity is resolved at finding registration, including valid overrides and invalid-value fallback."
+    },
+    "lifecycle_state": {
+      "status": "present",
+      "notes": "Neither implementation retains cross-investigation state. Each builds ordered duplicate groups locally within its one investigation callback."
+    },
+    "helpers": {
+      "status": "present",
+      "notes": "Rust mirrors def_node_search with gem_declarations over compatibility AST send nodes, separates Parser completed-node equality from AST::Node's construction-time cached hash inputs, and delegates range creation to the translated RangeHelp::source_range_columns."
+    },
+    "predicates": {
+      "status": "present",
+      "notes": "Both find the first non-begin ancestor, normalize when to its parent conditional, inspect compact branches and direct child nodes, and use structural AST equality for membership."
+    },
+    "traversal": {
+      "status": "present",
+      "notes": "Both search the complete parsed AST, group declarations in encounter order through the equivalent of Ruby Hash's hash-plus-eql? key contract, and traverse real ancestors and conditional branches."
+    },
+    "offenses": {
+      "status": "present",
+      "notes": "Both report every duplicate after the first with the first declaration line in the exact message, effective configured severity, and the duplicate send's first-line column range, including RuboCop's zero-length result for descending multiline columns."
+    },
+    "corrections": {
+      "status": "not_applicable",
+      "notes": "The upstream cop calls add_offense without a corrector and its specs do not exercise autocorrection; Rust likewise emits non-correctable reports."
+    },
+    "mixins": {
+      "status": "present",
+      "notes": "Upstream RangeHelp#source_range and Rust RangeHelp::source_range_columns both translate the send node's one-based first line and column range through the processed source buffer, with descending ranges clamped to zero length."
+    }
+  },
+  "upstream_units": [
+    {
+      "id": "u_callback",
+      "facet": "callbacks",
+      "path": "lib/rubocop/cop/bundler/duplicated_gem.rb",
+      "start_line": 45,
+      "end_line": 53,
+      "responsibility": "Run once per investigation, stop for blank input, and register every duplicate node after the first occurrence."
+    },
+    {
+      "id": "u_lifecycle",
+      "facet": "lifecycle_state",
+      "path": "lib/rubocop/cop/bundler/duplicated_gem.rb",
+      "start_line": 45,
+      "end_line": 53,
+      "responsibility": "Keep all duplicate grouping and reporting investigation-local, with no retained cop instance state."
+    },
+    {
+      "id": "u_blank_guard",
+      "facet": "restrictions",
+      "path": "lib/rubocop/cop/bundler/duplicated_gem.rb",
+      "start_line": 45,
+      "end_line": 47,
+      "responsibility": "Do no work when processed_source is blank."
+    },
+    {
+      "id": "u_gem_declarations",
+      "facet": "restrictions",
+      "path": "lib/rubocop/cop/bundler/duplicated_gem.rb",
+      "start_line": 57,
+      "end_line": 58,
+      "responsibility": "Select AST send nodes with nil receiver, method gem, a static string first argument, and arbitrary remaining arguments."
+    },
+    {
+      "id": "u_group_duplicates",
+      "facet": "traversal",
+      "path": "lib/rubocop/cop/bundler/duplicated_gem.rb",
+      "start_line": 60,
+      "end_line": 64,
+      "responsibility": "Search the complete AST, group declarations by first-argument AST value, and retain groups containing more than one declaration."
+    },
+    {
+      "id": "u_ast_node_hash_equality",
+      "facet": "helpers",
+      "path": "ast-2.4.3/lib/ast/node.rb",
+      "start_line": 61,
+      "end_line": 86,
+      "responsibility": "Precompute each AST node hash from type, construction-time children, and class, while eql? compares the completed type, children, and class used by Hash-backed group_by."
+    },
+    {
+      "id": "u_reject_conditional_group",
+      "facet": "predicates",
+      "path": "lib/rubocop/cop/bundler/duplicated_gem.rb",
+      "start_line": 64,
+      "end_line": 65,
+      "responsibility": "Reject duplicate groups for which conditional_declaration? proves common conditional containment."
+    },
+    {
+      "id": "u_conditional_root",
+      "facet": "predicates",
+      "path": "lib/rubocop/cop/bundler/duplicated_gem.rb",
+      "start_line": 67,
+      "end_line": 73,
+      "responsibility": "Find the first non-begin ancestor, accept only if/when, normalize when to its case parent, and require every declaration to be inside that conditional."
+    },
+    {
+      "id": "u_branch_membership",
+      "facet": "predicates",
+      "path": "lib/rubocop/cop/bundler/duplicated_gem.rb",
+      "start_line": 75,
+      "end_line": 79,
+      "responsibility": "Determine conditional containment from actual compact branches and their child nodes."
+    },
+    {
+      "id": "u_message",
+      "facet": "offenses",
+      "path": "lib/rubocop/cop/bundler/duplicated_gem.rb",
+      "start_line": 42,
+      "end_line": 43,
+      "responsibility": "Define the exact duplicate-gem message with gem name and first occurrence line."
+    },
+    {
+      "id": "u_register_offense",
+      "facet": "offenses",
+      "path": "lib/rubocop/cop/bundler/duplicated_gem.rb",
+      "start_line": 81,
+      "end_line": 90,
+      "responsibility": "Build the current duplicate send's line/column range, format the message, and add a non-correctable offense."
+    },
+    {
+      "id": "u_source_range",
+      "facet": "mixins",
+      "path": "lib/rubocop/cop/mixin/range_help.rb",
+      "start_line": 12,
+      "end_line": 30,
+      "responsibility": "Convert a one-based source line plus column range into a Parser::Source::Range using the processed source buffer."
+    },
+    {
+      "id": "u_include_configuration",
+      "facet": "configuration",
+      "path": "config/default.yml",
+      "start_line": 178,
+      "end_line": 187,
+      "responsibility": "Enable the warning cop for **/*.gemfile, **/Gemfile, and **/gems.rb inputs."
+    },
+    {
+      "id": "u_path_pattern_matching",
+      "facet": "configuration",
+      "path": "rubocop-1.87.0/lib/rubocop/path_util.rb",
+      "start_line": 65,
+      "end_line": 110,
+      "responsibility": "Match configured paths with File.fnmatch FNM_PATHNAME and FNM_EXTGLOB semantics, including recursive stars, brace alternatives, bracket classes, and RuboCop's hidden-basename retry."
+    },
+    {
+      "id": "u_effective_severity",
+      "facet": "configuration",
+      "path": "lib/rubocop/cop/base.rb",
+      "start_line": 511,
+      "end_line": 529,
+      "responsibility": "Resolve each offense's effective severity from the cop's configured Severity override before falling back to an explicit or department default severity."
+    },
+    {
+      "id": "u_node_search_generation",
+      "facet": "helpers",
+      "path": "rubocop-ast-1.49.1/lib/rubocop/ast/node_pattern/method_definer.rb",
+      "start_line": 51,
+      "end_line": 77,
+      "responsibility": "Generate def_node_search methods that enumerate matching descendants rather than checking only a caller-provided node."
+    },
+    {
+      "id": "u_descendence_traversal",
+      "facet": "traversal",
+      "path": "rubocop-ast-1.49.1/lib/rubocop/ast/node/mixin/descendence.rb",
+      "start_line": 54,
+      "end_line": 102,
+      "responsibility": "Traverse child AST nodes depth-first for each_node-backed node searches."
+    },
+    {
+      "id": "u_node_core_accessors",
+      "facet": "helpers",
+      "path": "rubocop-ast-1.49.1/lib/rubocop/ast/node.rb",
+      "start_line": 295,
+      "end_line": 321,
+      "responsibility": "Expose parent, ancestors, child_nodes, and structural node comparison used by this cop."
+    },
+    {
+      "id": "u_parameterized_accessors",
+      "facet": "helpers",
+      "path": "rubocop-ast-1.49.1/lib/rubocop/ast/node/mixin/parameterized_node.rb",
+      "start_line": 16,
+      "end_line": 30,
+      "responsibility": "Expose first_argument and argument accessors from send-node children."
+    },
+    {
+      "id": "u_method_dispatch_accessors",
+      "facet": "helpers",
+      "path": "rubocop-ast-1.49.1/lib/rubocop/ast/node/mixin/method_dispatch_node.rb",
+      "start_line": 17,
+      "end_line": 33,
+      "responsibility": "Expose receiver and method_name from send-node children."
+    },
+    {
+      "id": "u_if_branches",
+      "facet": "predicates",
+      "path": "rubocop-ast-1.49.1/lib/rubocop/ast/node/if_node.rb",
+      "start_line": 154,
+      "end_line": 169,
+      "responsibility": "Return compact if/elsif branches for conditional containment."
+    },
+    {
+      "id": "u_case_branches",
+      "facet": "predicates",
+      "path": "rubocop-ast-1.49.1/lib/rubocop/ast/node/case_node.rb",
+      "start_line": 38,
+      "end_line": 43,
+      "responsibility": "Return when and else branches for case containment."
+    },
+    {
+      "id": "u_when_body",
+      "facet": "predicates",
+      "path": "rubocop-ast-1.49.1/lib/rubocop/ast/node/when_node.rb",
+      "start_line": 42,
+      "end_line": 44,
+      "responsibility": "Expose the body branch of a when node."
+    },
+    {
+      "id": "u_ast_operator_equality",
+      "facet": "helpers",
+      "path": "ast-2.4.3/lib/ast/node.rb",
+      "start_line": 141,
+      "end_line": 153,
+      "responsibility": "Define AST::Node#== through eql? for branch membership comparisons."
+    },
+    {
+      "id": "u_commissioner_callback_gate",
+      "facet": "callbacks",
+      "path": "rubocop-1.87.0/lib/rubocop/cop/commissioner.rb",
+      "start_line": 79,
+      "end_line": 94,
+      "responsibility": "Invoke on_new_investigation only through the valid investigation lifecycle."
+    },
+    {
+      "id": "u_add_offense_lifecycle",
+      "facet": "offenses",
+      "path": "rubocop-1.87.0/lib/rubocop/cop/base.rb",
+      "start_line": 188,
+      "end_line": 218,
+      "responsibility": "Construct, deduplicate, disable-filter, and retain a non-correctable offense."
+    },
+    {
+      "id": "u_base_path_and_line_selection",
+      "facet": "configuration",
+      "path": "rubocop-1.87.0/lib/rubocop/cop/base.rb",
+      "start_line": 493,
+      "end_line": 510,
+      "responsibility": "Apply configured file patterns and line-level enable state before retaining offenses."
+    },
+    {
+      "id": "u_source_buffer_reencoding",
+      "facet": "helpers",
+      "path": "parser-3.3.11.1/lib/parser/source/buffer.rb",
+      "start_line": 45,
+      "end_line": 109,
+      "responsibility": "Recognize Ruby's first-line or post-shebang magic encoding, preserve binary input, and transcode every other declared source encoding to UTF-8 before lexing."
+    },
+    {
+      "id": "u_parser_string_node",
+      "facet": "helpers",
+      "path": "parser-3.3.11.1/lib/parser/builders/default.rb",
+      "start_line": 319,
+      "end_line": 326,
+      "responsibility": "Construct static str nodes with the decoded token String as their scalar child."
+    },
+    {
+      "id": "u_parser_string_value",
+      "facet": "helpers",
+      "path": "parser-3.3.11.1/lib/parser/builders/default.rb",
+      "start_line": 2302,
+      "end_line": 2308,
+      "responsibility": "Return the lexer token String without transcoding or replacement, retaining its exact Ruby bytes after validating its declared encoding."
+    },
+    {
+      "id": "u_offense_message_storage",
+      "facet": "offenses",
+      "path": "rubocop-1.87.0/lib/rubocop/cop/offense.rb",
+      "start_line": 89,
+      "end_line": 98,
+      "responsibility": "Store and freeze the exact message String supplied by Base#add_offense without transcoding it."
+    },
+    {
+      "id": "u_json_formatter_lifecycle",
+      "facet": "offenses",
+      "path": "rubocop-1.87.0/lib/rubocop/formatter/json_formatter.rb",
+      "start_line": 13,
+      "end_line": 30,
+      "responsibility": "Accumulate file hashes during formatter callbacks and serialize the complete output hash only from finished."
+    },
+    {
+      "id": "u_json_formatter_message",
+      "facet": "offenses",
+      "path": "rubocop-1.87.0/lib/rubocop/formatter/json_formatter.rb",
+      "start_line": 42,
+      "end_line": 57,
+      "responsibility": "Place the exact Offense message String in the JSON offense hash, causing JSON serialization to reject malformed UTF-8."
+    },
+    {
+      "id": "u_simple_formatter_lifecycle",
+      "facet": "offenses",
+      "path": "rubocop-1.87.0/lib/rubocop/formatter/simple_text_formatter.rb",
+      "start_line": 21,
+      "end_line": 52,
+      "responsibility": "Initialize counters and render each nonempty file and offense as file_finished callbacks arrive."
+    },
+    {
+      "id": "u_simple_formatter_message",
+      "facet": "offenses",
+      "path": "rubocop-1.87.0/lib/rubocop/formatter/simple_text_formatter.rb",
+      "start_line": 83,
+      "end_line": 100,
+      "responsibility": "Annotate the exact Offense message with String#gsub, which raises on a malformed UTF-8 byte sequence."
+    },
+    {
+      "id": "u_progress_formatter_lifecycle",
+      "facet": "offenses",
+      "path": "rubocop-1.87.0/lib/rubocop/formatter/progress_formatter.rb",
+      "start_line": 13,
+      "end_line": 58,
+      "responsibility": "Emit the inspection header and per-file marks, then the offenses prelude before delegating each stored offense to ClangStyleFormatter."
+    },
+    {
+      "id": "u_clang_formatter_message",
+      "facet": "offenses",
+      "path": "rubocop-1.87.0/lib/rubocop/formatter/clang_style_formatter.rb",
+      "start_line": 11,
+      "end_line": 30,
+      "responsibility": "Render each progress offense through SimpleTextFormatter#message after the progress prelude has already been emitted."
+    },
+    {
+      "id": "u_formatter_set_lifecycle",
+      "facet": "offenses",
+      "path": "rubocop-1.87.0/lib/rubocop/formatter/formatter_set.rb",
+      "start_line": 32,
+      "end_line": 65,
+      "responsibility": "Retain each selected formatter and forward started, per-file, and finished callbacks to all of them in selection order."
+    },
+    {
+      "id": "u_runner_formatter_lifecycle",
+      "facet": "offenses",
+      "path": "rubocop-1.87.0/lib/rubocop/runner.rb",
+      "start_line": 118,
+      "end_line": 135,
+      "responsibility": "Start the selected formatters before inspection and always finish them after the ordered file-report loop, allowing formatter exceptions to escape."
+    },
+    {
+      "id": "u_runner_ordered_file_reporting",
+      "facet": "offenses",
+      "path": "rubocop-1.87.0/lib/rubocop/runner.rb",
+      "start_line": 158,
+      "end_line": 170,
+      "responsibility": "Deliver each file and its exact Offense objects to the formatter set in target-file order."
+    },
+    {
+      "id": "u_cli_formatter_failure_status",
+      "facet": "offenses",
+      "path": "rubocop-1.87.0/lib/rubocop/cli.rb",
+      "start_line": 39,
+      "end_line": 76,
+      "responsibility": "Apply the default formatter before execution and convert an uncaught formatter StandardError into stderr diagnostics and status 2."
+    },
+    {
+      "id": "u_base_message_annotation",
+      "facet": "offenses",
+      "path": "rubocop-1.87.0/lib/rubocop/cop/base.rb",
+      "start_line": 487,
+      "end_line": 495,
+      "responsibility": "Pass the exact cop message through MessageAnnotator before storing it in Offense."
+    },
+    {
+      "id": "u_message_annotator",
+      "facet": "offenses",
+      "path": "rubocop-1.87.0/lib/rubocop/cop/message_annotator.rb",
+      "start_line": 47,
+      "end_line": 126,
+      "responsibility": "Apply cop-name, details, style-guide, reference, debug, explicit CLI, formatter, AllCops, and department configuration branches to the exact offense message."
+    },
+    {
+      "id": "u_options_formatter_selection",
+      "facet": "configuration",
+      "path": "rubocop-1.87.0/lib/rubocop/options.rb",
+      "start_line": 110,
+      "end_line": 125,
+      "responsibility": "Append every explicit -f/--format selection in command-line order rather than replacing an earlier formatter."
+    },
+    {
+      "id": "u_options_message_annotation",
+      "facet": "configuration",
+      "path": "rubocop-1.87.0/lib/rubocop/options.rb",
+      "start_line": 117,
+      "end_line": 120,
+      "responsibility": "Capture explicit display-cop-name, extra-details, and display-style-guide CLI overrides consumed by MessageAnnotator."
+    },
+    {
+      "id": "u_cli_default_formatter",
+      "facet": "configuration",
+      "path": "rubocop-1.87.0/lib/rubocop/cli.rb",
+      "start_line": 215,
+      "end_line": 226,
+      "responsibility": "When no formatter is explicit, select AllCops/DefaultFormatter after configuration loading and otherwise fall back to progress."
+    }
+  ],
+  "rust_units": [
+    {
+      "id": "r_registration",
+      "facet": "callbacks",
+      "path": "src/cops/prism/source_rules.rs",
+      "start_line": 8,
+      "end_line": 10,
+      "responsibility": "Register Bundler/DuplicatedGem as a shared-ProcessedSource compatibility investigation."
+    },
+    {
+      "id": "r_callback_adapter",
+      "facet": "helpers",
+      "path": "src/cops/prism/framework/dsl.rs",
+      "start_line": 239,
+      "end_line": 260,
+      "responsibility": "Generate one compatibility investigation callback with a shared ProcessedSource, Prism result, and cop-scoped context."
+    },
+    {
+      "id": "r_callback_scheduling",
+      "facet": "callbacks",
+      "path": "src/cops/prism/runtime/prism_engine.rs",
+      "start_line": 124,
+      "end_line": 148,
+      "responsibility": "Build ProcessedSource from the shared Prism parse and invoke every compatibility investigation once when syntax is recoverable."
+    },
+    {
+      "id": "r_relevant_file",
+      "facet": "configuration",
+      "path": "src/cops/prism/source_rules/project_files.rs",
+      "start_line": 24,
+      "end_line": 33,
+      "responsibility": "Trust normal runtime path selection when resolved Include metadata is present, with RuboCop's three default Gemfile patterns as a fallback only when the unit harness strips Include."
+    },
+    {
+      "id": "r_runtime_cop_selection",
+      "facet": "configuration",
+      "path": "src/config.rs",
+      "start_line": 607,
+      "end_line": 614,
+      "responsibility": "Enable a cop for an inspected path only when canonical CopConfig Include and Exclude policy accepts that path."
+    },
+    {
+      "id": "r_config_scalar_decoding",
+      "facet": "configuration",
+      "path": "src/config.rs",
+      "start_line": 595,
+      "end_line": 605,
+      "responsibility": "Decode single- and double-quoted YAML scalar syntax so resolved RuboCop path patterns retain their semantic backslashes before glob compilation."
+    },
+    {
+      "id": "r_path_policy",
+      "facet": "configuration",
+      "path": "src/config/path_policy.rs",
+      "start_line": 9,
+      "end_line": 292,
+      "responsibility": "Compile and match resolved RuboCop Include globs against absolute and config-relative paths with literal separators, recursive stars, brace alternatives, positive/negated bracket classes, backslash escapes, and RuboCop's hidden-basename semantics."
+    },
+    {
+      "id": "r_engine_registry_selection",
+      "facet": "callbacks",
+      "path": "src/engine/mod.rs",
+      "start_line": 43,
+      "end_line": 56,
+      "responsibility": "Construct the Prism registry from the path-scoped enabled-cop predicate before any cop callbacks are scheduled."
+    },
+    {
+      "id": "r_decoded_source_encoding",
+      "facet": "helpers",
+      "path": "src/engine/source.rs",
+      "start_line": 14,
+      "end_line": 194,
+      "responsibility": "Recognize declared Ruby source encodings, reversibly transcode supported text encodings to UTF-8 for Prism and diagnostics, and retain distinct recoverable byte identity for binary or malformed input."
+    },
+    {
+      "id": "r_investigation",
+      "facet": "lifecycle_state",
+      "path": "src/cops/prism/source_rules/project_files.rs",
+      "start_line": 5,
+      "end_line": 22,
+      "responsibility": "Guard irrelevant/blank sources, obtain the compatibility AST, and report each grouped duplicate after its first occurrence without retained state."
+    },
+    {
+      "id": "r_gem_declarations",
+      "facet": "restrictions",
+      "path": "src/cops/prism/source_rules/project_files.rs",
+      "start_line": 35,
+      "end_line": 46,
+      "responsibility": "Select complete-AST send nodes with nil receiver, method gem, a static str first argument, and arbitrary remaining arguments."
+    },
+    {
+      "id": "r_duplicate_groups",
+      "facet": "traversal",
+      "path": "src/cops/prism/source_rules/project_files.rs",
+      "start_line": 48,
+      "end_line": 68,
+      "responsibility": "Group declarations in encounter order by structurally equal first-argument nodes and retain duplicate groups not conditionally declared."
+    },
+    {
+      "id": "r_structural_equality",
+      "facet": "helpers",
+      "path": "src/rubocop/ast/node/core.rs",
+      "start_line": 232,
+      "end_line": 256,
+      "responsibility": "Implement recursive Parser-compatible structural AST equality using exact decoded bytes and Ruby-compatible string encoding equality."
+    },
+    {
+      "id": "r_precomputed_hash_equivalence",
+      "facet": "helpers",
+      "path": "src/rubocop/ast/node/core.rs",
+      "start_line": 257,
+      "end_line": 328,
+      "responsibility": "Compare exact decoded-byte and encoding construction inputs to AST::Node's cached hash, including the Parser-decoded pre-dedent body of static squiggly heredocs."
+    },
+    {
+      "id": "r_literal_byte_storage",
+      "facet": "helpers",
+      "path": "src/rubocop/ast/node/core.rs",
+      "start_line": 23,
+      "end_line": 187,
+      "responsibility": "Retain exact decoded bytes, construction-time hash bytes, and Ruby string encoding alongside display-safe scalar text, including across node updates."
+    },
+    {
+      "id": "r_source_string_encoding",
+      "facet": "helpers",
+      "path": "src/rubocop/ast/prism.rs",
+      "start_line": 32,
+      "end_line": 121,
+      "responsibility": "Resolve the source magic encoding into UTF-8, US-ASCII, or ASCII-8BIT identity before constructing Parser-shaped string nodes."
+    },
+    {
+      "id": "r_source_file_string_encoding",
+      "facet": "helpers",
+      "path": "src/rubocop/ast/prism.rs",
+      "start_line": 469,
+      "end_line": 482,
+      "responsibility": "Materialize the Parser-compatible __FILE__ path child as a UTF-8 Ruby string independently of the source file encoding."
+    },
+    {
+      "id": "r_pre_dedent_hash_input",
+      "facet": "helpers",
+      "path": "src/rubocop/ast/prism.rs",
+      "start_line": 123,
+      "end_line": 178,
+      "responsibility": "Recover Parser's exact decoded construction-time bytes for escaped static squiggly heredocs by reparsing the body with Prism under equivalent non-dedenting heredoc quoting."
+    },
+    {
+      "id": "r_decoded_string_bytes",
+      "facet": "helpers",
+      "path": "src/rubocop/ast/prism.rs",
+      "start_line": 2022,
+      "end_line": 2077,
+      "responsibility": "Preserve Prism's exact unescaped string bytes and forced/source encoding for equality and cached-hash comparisons while retaining lossy UTF-8 text only for display accessors."
+    },
+    {
+      "id": "r_conditional_declaration",
+      "facet": "predicates",
+      "path": "src/cops/prism/source_rules/project_files.rs",
+      "start_line": 70,
+      "end_line": 90,
+      "responsibility": "Find the first non-begin ancestor, require if/when, normalize when to its parent, and require every declaration within the root conditional."
+    },
+    {
+      "id": "r_within_conditional",
+      "facet": "predicates",
+      "path": "src/cops/prism/source_rules/project_files.rs",
+      "start_line": 92,
+      "end_line": 104,
+      "responsibility": "Test compact conditional branches and their direct child nodes using structural AST equality."
+    },
+    {
+      "id": "r_register_offense",
+      "facet": "offenses",
+      "path": "src/cops/prism/source_rules/project_files.rs",
+      "start_line": 106,
+      "end_line": 145,
+      "responsibility": "Build the send node's first-line column range through RangeHelp, interpolate the exact Ruby string bytes into the message, and emit a non-correctable offense; the focused unit pins invalid-byte preservation."
+    },
+    {
+      "id": "r_exact_message_reporting",
+      "facet": "offenses",
+      "path": "src/cops/prism/framework/diagnostic.rs",
+      "start_line": 194,
+      "end_line": 325,
+      "responsibility": "Record exact message bytes beside display-safe text and include those bytes in offense deduplication and Finding construction."
+    },
+    {
+      "id": "r_exact_message_adapter",
+      "facet": "offenses",
+      "path": "src/cops/prism/framework/compatibility_context.rs",
+      "start_line": 430,
+      "end_line": 440,
+      "responsibility": "Translate compatibility source ranges while forwarding exact Ruby message bytes through the cop-scoped reporter."
+    },
+    {
+      "id": "r_exact_message_reporter",
+      "facet": "offenses",
+      "path": "src/cops/prism/framework/diagnostic/reporter.rs",
+      "start_line": 118,
+      "end_line": 124,
+      "responsibility": "Forward exact message bytes through the cop-scoped diagnostic boundary."
+    },
+    {
+      "id": "r_exact_message_model",
+      "facet": "offenses",
+      "path": "src/model.rs",
+      "start_line": 1,
+      "end_line": 14,
+      "responsibility": "Carry optional exact Ruby message bytes in the final offense model alongside UTF-8 display text."
+    },
+    {
+      "id": "r_exact_message_translation",
+      "facet": "offenses",
+      "path": "src/engine/diagnostic.rs",
+      "start_line": 88,
+      "end_line": 106,
+      "responsibility": "Copy exact message bytes unchanged from compatibility Finding into the final offense."
+    },
+    {
+      "id": "r_explicit_formatter_selection",
+      "facet": "configuration",
+      "path": "src/app/cli.rs",
+      "start_line": 46,
+      "end_line": 130,
+      "responsibility": "Append every explicit long, short, or equals-form formatter selection in CLI order and retain the last raw format for RuboCop message annotation semantics."
+    },
+    {
+      "id": "r_message_annotation_options",
+      "facet": "configuration",
+      "path": "src/app/cli.rs",
+      "start_line": 18,
+      "end_line": 67,
+      "responsibility": "Initialize and capture explicit display-cop-name, extra-details, display-style-guide, debug, and raw formatter options for the shared MessageAnnotator."
+    },
+    {
+      "id": "r_default_formatter_selection",
+      "facet": "configuration",
+      "path": "src/app/cli.rs",
+      "start_line": 184,
+      "end_line": 224,
+      "responsibility": "After configuration loading, use AllCops/DefaultFormatter when no formatter is explicit, fall back to progress, and canonicalize supported formatter aliases including clang."
+    },
+    {
+      "id": "r_formatter_set_lifecycle",
+      "facet": "offenses",
+      "path": "src/app/report.rs",
+      "start_line": 13,
+      "end_line": 199,
+      "responsibility": "Retain independent selected-formatter state, invoke started and ordered per-file callbacks, always invoke finished after a per-file failure like Runner#ensure, and stop at the same finished-callback failure point."
+    },
+    {
+      "id": "r_json_formatter_rendering",
+      "facet": "offenses",
+      "path": "src/app/report.rs",
+      "start_line": 217,
+      "end_line": 275,
+      "responsibility": "Accumulate inspected file identities and counts during file callbacks, then build and emit the complete JSON document only during finished, rejecting malformed exact message bytes during offense materialization."
+    },
+    {
+      "id": "r_simple_clang_progress_rendering",
+      "facet": "offenses",
+      "path": "src/app/report.rs",
+      "start_line": 121,
+      "end_line": 360,
+      "responsibility": "Accumulate per-formatter counts and render Simple file reports and Clang offense lines with stored severity, correction labels, annotated messages, summaries, and the same Clang renderer reused by Progress."
+    },
+    {
+      "id": "r_message_annotation",
+      "facet": "offenses",
+      "path": "src/app/report.rs",
+      "start_line": 363,
+      "end_line": 439,
+      "responsibility": "Adapt resolved AllCops, department, cop, and CLI options into the shared MessageAnnotator compatibility types, invoke that compatibility implementation after exact-byte decoding, and apply correction and paired-backtick text rendering."
+    },
+    {
+      "id": "r_shared_message_annotator",
+      "facet": "offenses",
+      "path": "src/rubocop/cop/message_annotator.rs",
+      "start_line": 1,
+      "end_line": 232,
+      "responsibility": "Faithfully translate RuboCop MessageAnnotator's cop-name, details, style-guide, reference, debug, formatter, configuration, and URL-resolution decision topology."
+    },
+    {
+      "id": "r_smart_path_and_highlight",
+      "facet": "offenses",
+      "path": "src/app/report.rs",
+      "start_line": 441,
+      "end_line": 503,
+      "responsibility": "Render paths relative to the working directory plus the source line and range-shaped highlighted area used by Clang and Progress."
+    },
+    {
+      "id": "r_report_source_storage",
+      "facet": "offenses",
+      "path": "src/engine/mod.rs",
+      "start_line": 65,
+      "end_line": 89,
+      "responsibility": "Retain the inspected decoded source with each result so text formatters can render RuboCop's source and highlighted-area lines."
+    },
+    {
+      "id": "r_exact_message_decode",
+      "facet": "offenses",
+      "path": "src/app/report.rs",
+      "start_line": 505,
+      "end_line": 512,
+      "responsibility": "Expose valid exact message bytes as UTF-8 without replacement and return RuboCop's simple/progress encoding error for malformed bytes."
+    },
+    {
+      "id": "r_formatter_failure_status",
+      "facet": "offenses",
+      "path": "src/app/mod.rs",
+      "start_line": 46,
+      "end_line": 57,
+      "responsibility": "Return RuboCop's formatter-failure exit status 2 after reporting an encoding error."
+    },
+    {
+      "id": "r_range_help",
+      "facet": "mixins",
+      "path": "src/rubocop/cop/mixin/range_help.rs",
+      "start_line": 46,
+      "end_line": 74,
+      "responsibility": "Translate a one-based source line plus a character-column range into a SourceRange, using RuboCop Range#size-compatible zero length for descending columns."
+    },
+    {
+      "id": "r_empty_range_rendering",
+      "facet": "offenses",
+      "path": "src/engine/diagnostic.rs",
+      "start_line": 29,
+      "end_line": 106,
+      "responsibility": "Render compatibility findings as RuboCop JSON locations, including DuplicatedGem's zero-length multiline range with a zero-based last column."
+    },
+    {
+      "id": "r_config_presence",
+      "facet": "configuration",
+      "path": "src/cops/prism/framework/compatibility_context.rs",
+      "start_line": 353,
+      "end_line": 359,
+      "responsibility": "Expose whether resolved Include configuration remains present so normal runtime selection and stripped unit-fixture fallback remain distinguishable."
+    },
+    {
+      "id": "r_effective_severity_resolution",
+      "facet": "configuration",
+      "path": "src/model.rs",
+      "start_line": 72,
+      "end_line": 130,
+      "responsibility": "Resolve valid configured severities, warn and fall back for invalid values, retain RuboCop-compatible base defaults when configuration is absent or invalid, and preserve Lint/Syntax's fatal find_severity override."
+    },
+    {
+      "id": "r_finding_severity",
+      "facet": "configuration",
+      "path": "src/cops/prism/framework/diagnostic.rs",
+      "start_line": 14,
+      "end_line": 23,
+      "responsibility": "Carry effective severity as part of every native Prism finding."
+    },
+    {
+      "id": "r_resolve_finding_severity",
+      "facet": "configuration",
+      "path": "src/cops/prism/framework/diagnostic.rs",
+      "start_line": 280,
+      "end_line": 304,
+      "responsibility": "Resolve the cop's effective Severity at offense registration and store it with the finding."
+    },
+    {
+      "id": "r_offense_severity",
+      "facet": "offenses",
+      "path": "src/model.rs",
+      "start_line": 1,
+      "end_line": 13,
+      "responsibility": "Carry effective severity through the engine's final offense model."
+    },
+    {
+      "id": "r_copy_finding_severity",
+      "facet": "offenses",
+      "path": "src/engine/diagnostic.rs",
+      "start_line": 88,
+      "end_line": 106,
+      "responsibility": "Copy the finding's effective severity unchanged into the final offense while converting source geometry."
+    },
+    {
+      "id": "r_output_severity",
+      "facet": "offenses",
+      "path": "src/app/report.rs",
+      "start_line": 66,
+      "end_line": 82,
+      "responsibility": "Render the offense's stored effective severity directly into RuboCop-compatible JSON."
+    },
+    {
+      "id": "r_processed_source_construction",
+      "facet": "callbacks",
+      "path": "src/rubocop/ast/processed_source.rs",
+      "start_line": 234,
+      "end_line": 396,
+      "responsibility": "Construct and expose the compatibility AST, source buffer, and blank-source contract from the shared Prism result."
+    },
+    {
+      "id": "r_prism_ast_conversion",
+      "facet": "helpers",
+      "path": "src/rubocop/ast/prism.rs",
+      "start_line": 25,
+      "end_line": 2530,
+      "responsibility": "Convert Prism program, send, conditional, string, source-file literal, location, parent, and branch data into RuboCop-shaped compatibility nodes."
+    },
+    {
+      "id": "r_ast_file_path_input",
+      "facet": "restrictions",
+      "path": "src/rubocop/ast/prism.rs",
+      "start_line": 32,
+      "end_line": 82,
+      "responsibility": "Carry the ProcessedSource path into Prism-to-Parser AST conversion so path-valued Ruby literals can preserve Parser semantics."
+    },
+    {
+      "id": "r_ast_source_file_literal",
+      "facet": "restrictions",
+      "path": "src/rubocop/ast/prism.rs",
+      "start_line": 430,
+      "end_line": 436,
+      "responsibility": "Convert Prism SourceFileNode into the static path string child produced by RuboCop's Parser-shaped AST."
+    },
+    {
+      "id": "r_ast_source_file_kind",
+      "facet": "restrictions",
+      "path": "src/rubocop/ast/prism.rs",
+      "start_line": 2505,
+      "end_line": 2507,
+      "responsibility": "Expose SourceFileNode as Parser kind str while retaining __FILE__ as its source range."
+    },
+    {
+      "id": "r_processed_source_ast_path",
+      "facet": "restrictions",
+      "path": "src/rubocop/ast/processed_source.rs",
+      "start_line": 337,
+      "end_line": 347,
+      "responsibility": "Pass the investigated file path to the compatibility AST converter for valid parsed sources."
+    },
+    {
+      "id": "r_core_traversal_parent_ranges",
+      "facet": "traversal",
+      "path": "src/rubocop/ast/node/core.rs",
+      "start_line": 288,
+      "end_line": 448,
+      "responsibility": "Expose complete-tree traversal, child nodes, parents, ancestors, and source positions used by declaration and conditional searches."
+    },
+    {
+      "id": "r_specialized_accessors_branches",
+      "facet": "helpers",
+      "path": "src/rubocop/ast/node/specialized.rs",
+      "start_line": 343,
+      "end_line": 625,
+      "responsibility": "Expose receiver, method name, first argument, and compact if/case/when branches from compatibility node children."
+    },
+    {
+      "id": "r_source_buffer_geometry",
+      "facet": "mixins",
+      "path": "src/rubocop/ast/source.rs",
+      "start_line": 12,
+      "end_line": 66,
+      "responsibility": "Index compatibility source characters and line starts for Parser-shaped ranges."
+    },
+    {
+      "id": "r_source_position_geometry",
+      "facet": "mixins",
+      "path": "src/rubocop/ast/source_position.rs",
+      "start_line": 14,
+      "end_line": 66,
+      "responsibility": "Derive first/last line and column values from compatibility node ranges."
+    },
+    {
+      "id": "r_valid_syntax_callback_gate",
+      "facet": "callbacks",
+      "path": "src/cops/prism/runtime/prism_engine.rs",
+      "start_line": 59,
+      "end_line": 148,
+      "responsibility": "Gate compatibility investigations on parse recovery, create ProcessedSource, and schedule the source callback once."
+    },
+    {
+      "id": "r_record_offense_lifecycle",
+      "facet": "offenses",
+      "path": "src/cops/prism/framework/diagnostic.rs",
+      "start_line": 280,
+      "end_line": 330,
+      "responsibility": "Recheck path policy, deduplicate by cop/message/range, construct a non-correctable finding, and register corrections only when supplied."
+    },
+    {
+      "id": "r_disable_directive_filter",
+      "facet": "offenses",
+      "path": "src/cops/prism/framework/diagnostic.rs",
+      "start_line": 358,
+      "end_line": 376,
+      "responsibility": "Retain or suppress findings according to the investigation's disable-comment policy."
+    },
+    {
+      "id": "r_finish_offense_lifecycle",
+      "facet": "lifecycle_state",
+      "path": "src/cops/prism/framework/diagnostic.rs",
+      "start_line": 478,
+      "end_line": 534,
+      "responsibility": "Finalize findings and correction state without leaking offense state between investigations."
+    }
+  ],
+  "correspondences": [
+    {
+      "id": "m_callback_adapter",
+      "classification": "justified_adapter",
+      "upstream_units": [
+        "u_callback"
+      ],
+      "rust_units": [
+        "r_registration",
+        "r_callback_adapter",
+        "r_callback_scheduling",
+        "r_engine_registry_selection",
+        "r_investigation"
+      ],
+      "invariant": "The cop's only callback runs exactly once over the selected, successfully parsed source with no retained state or secondary node callbacks."
+    },
+    {
+      "id": "m_local_lifecycle",
+      "classification": "direct",
+      "upstream_units": [
+        "u_lifecycle"
+      ],
+      "rust_units": [
+        "r_investigation"
+      ],
+      "invariant": "Duplicate collection state is newly created for each source and cannot leak between files."
+    },
+    {
+      "id": "m_blank_source",
+      "classification": "direct",
+      "upstream_units": [
+        "u_blank_guard"
+      ],
+      "rust_units": [
+        "r_investigation"
+      ],
+      "invariant": "A blank processed source returns before AST traversal and produces no offenses."
+    },
+    {
+      "id": "m_ast_declaration_search",
+      "classification": "justified_adapter",
+      "upstream_units": [
+        "u_gem_declarations",
+        "u_node_search_generation"
+      ],
+      "rust_units": [
+        "r_gem_declarations",
+        "r_ast_file_path_input",
+        "r_ast_source_file_literal",
+        "r_ast_source_file_kind",
+        "r_processed_source_ast_path"
+      ],
+      "invariant": "Only implicit-receiver gem sends with a static string first argument may enter duplicate grouping, including __FILE__ after Parser-compatible folding to the investigated path string."
+    },
+    {
+      "id": "m_structural_node_equality",
+      "classification": "direct",
+      "upstream_units": [
+        "u_branch_membership"
+      ],
+      "rust_units": [
+        "r_structural_equality"
+      ],
+      "invariant": "Grouping keys and branch membership compare AST nodes recursively by structure, matching Parser::AST::Node equality rather than node identity."
+    },
+    {
+      "id": "m_duplicate_grouping",
+      "classification": "justified_adapter",
+      "upstream_units": [
+        "u_group_duplicates",
+        "u_ast_node_hash_equality",
+        "u_source_buffer_reencoding"
+      ],
+      "rust_units": [
+        "r_duplicate_groups",
+        "r_decoded_source_encoding",
+        "r_structural_equality",
+        "r_precomputed_hash_equivalence",
+        "r_literal_byte_storage",
+        "r_source_string_encoding",
+        "r_source_file_string_encoding",
+        "r_pre_dedent_hash_input",
+        "r_decoded_string_bytes"
+      ],
+      "invariant": "Declarations group only when both completed AST equality and construction-time AST hash inputs agree by Ruby String semantics: bytes must match, non-ASCII bytes require compatible encoding identity, and ASCII-only values remain equal across ASCII-compatible encodings; valid U+FFFD spellings compare by decoded value while invalid byte escapes remain distinct, and singleton Hash buckets remain ignored."
+    },
+    {
+      "id": "m_conditional_topology",
+      "classification": "direct",
+      "upstream_units": [
+        "u_reject_conditional_group",
+        "u_conditional_root",
+        "u_branch_membership"
+      ],
+      "rust_units": [
+        "r_conditional_declaration",
+        "r_within_conditional"
+      ],
+      "invariant": "Conditional suppression must derive from the first non-begin AST ancestor and actual if/case branch membership, not textual block inference."
+    },
+    {
+      "id": "m_message",
+      "classification": "justified_adapter",
+      "upstream_units": [
+        "u_message",
+        "u_register_offense",
+        "u_base_message_annotation",
+        "u_message_annotator",
+        "u_options_message_annotation",
+        "u_parser_string_node",
+        "u_parser_string_value",
+        "u_source_buffer_reencoding",
+        "u_offense_message_storage",
+        "u_json_formatter_lifecycle",
+        "u_json_formatter_message",
+        "u_simple_formatter_lifecycle",
+        "u_simple_formatter_message",
+        "u_progress_formatter_lifecycle",
+        "u_clang_formatter_message",
+        "u_formatter_set_lifecycle",
+        "u_runner_formatter_lifecycle",
+        "u_runner_ordered_file_reporting",
+        "u_cli_formatter_failure_status"
+      ],
+      "rust_units": [
+        "r_decoded_source_encoding",
+        "r_decoded_string_bytes",
+        "r_register_offense",
+        "r_exact_message_reporting",
+        "r_exact_message_adapter",
+        "r_exact_message_reporter",
+        "r_exact_message_model",
+        "r_exact_message_translation",
+        "r_formatter_set_lifecycle",
+        "r_json_formatter_rendering",
+        "r_simple_clang_progress_rendering",
+        "r_message_annotation",
+        "r_message_annotation_options",
+        "r_shared_message_annotator",
+        "r_smart_path_and_highlight",
+        "r_report_source_storage",
+        "r_exact_message_decode",
+        "r_formatter_failure_status"
+      ],
+      "invariant": "Each duplicate after the first carries the exact parser-decoded gem-name bytes and first-occurrence line through offense storage; the shared MessageAnnotator preserves every relevant CLI and configuration branch; valid text formatters render the same severity, path, source, and range; malformed UTF-8 survives unchanged and fails at the corresponding callback while Runner-style finalization preserves RuboCop's partial output and exit status 2."
+    },
+    {
+      "id": "m_formatter_selection",
+      "classification": "justified_adapter",
+      "upstream_units": [
+        "u_options_formatter_selection",
+        "u_cli_default_formatter",
+        "u_formatter_set_lifecycle"
+      ],
+      "rust_units": [
+        "r_explicit_formatter_selection",
+        "r_default_formatter_selection",
+        "r_formatter_set_lifecycle"
+      ],
+      "invariant": "Explicit formatter selections accumulate in CLI order; absent selections resolve AllCops/DefaultFormatter after configuration; started and per-file phases run in selection order; finished always runs after a per-file error and stops on its own first error, matching Runner#ensure and FormatterSet."
+    },
+    {
+      "id": "m_offense_range",
+      "classification": "justified_adapter",
+      "upstream_units": [
+        "u_register_offense",
+        "u_source_range"
+      ],
+      "rust_units": [
+        "r_register_offense",
+        "r_range_help",
+        "r_empty_range_rendering"
+      ],
+      "invariant": "The offense spans exactly the duplicate gem send node from its first through last source column and excludes unrelated trailing source."
+    },
+    {
+      "id": "m_include_configuration",
+      "classification": "justified_adapter",
+      "upstream_units": [
+        "u_include_configuration",
+        "u_path_pattern_matching"
+      ],
+      "rust_units": [
+        "r_relevant_file",
+        "r_config_presence",
+        "r_runtime_cop_selection",
+        "r_config_scalar_decoding",
+        "r_path_policy",
+        "r_engine_registry_selection"
+      ],
+      "invariant": "Configured *.gemfile, Gemfile, and gems.rb paths remain eligible; explicit Include overrides, including an empty list, select exactly the paths RuboCop selects."
+    },
+    {
+      "id": "m_effective_severity",
+      "classification": "justified_adapter",
+      "upstream_units": [
+        "u_effective_severity"
+      ],
+      "rust_units": [
+        "r_effective_severity_resolution",
+        "r_finding_severity",
+        "r_resolve_finding_severity",
+        "r_offense_severity",
+        "r_copy_finding_severity",
+        "r_output_severity"
+      ],
+      "invariant": "The reported offense severity equals a valid configured Severity override; invalid values warn and, like an absent value, fall through to Bundler's base default of convention."
+    },
+    {
+      "id": "m_ast_conversion_contract",
+      "classification": "justified_adapter",
+      "upstream_units": [
+        "u_node_search_generation",
+        "u_node_core_accessors",
+        "u_parameterized_accessors",
+        "u_method_dispatch_accessors"
+      ],
+      "rust_units": [
+        "r_processed_source_construction",
+        "r_prism_ast_conversion",
+        "r_specialized_accessors_branches"
+      ],
+      "invariant": "The callback receives a complete Parser-shaped AST whose send nodes expose identical receiver, method, and argument children."
+    },
+    {
+      "id": "m_ast_traversal_contract",
+      "classification": "direct",
+      "upstream_units": [
+        "u_descendence_traversal"
+      ],
+      "rust_units": [
+        "r_core_traversal_parent_ranges"
+      ],
+      "invariant": "Whole-AST declaration search visits the root and all descendants depth-first with stable parent and ancestor links."
+    },
+    {
+      "id": "m_branch_accessor_contract",
+      "classification": "direct",
+      "upstream_units": [
+        "u_if_branches",
+        "u_case_branches",
+        "u_when_body",
+        "u_ast_operator_equality"
+      ],
+      "rust_units": [
+        "r_prism_ast_conversion",
+        "r_core_traversal_parent_ranges",
+        "r_specialized_accessors_branches",
+        "r_structural_equality"
+      ],
+      "invariant": "Conditional roots, compact branches, direct children, parents, and structural equality present the same containment topology."
+    },
+    {
+      "id": "m_source_geometry_contract",
+      "classification": "justified_adapter",
+      "upstream_units": [
+        "u_source_range"
+      ],
+      "rust_units": [
+        "r_source_buffer_geometry",
+        "r_source_position_geometry"
+      ],
+      "invariant": "Node and offense first/last line and column values are derived from the same character-oriented source geometry."
+    },
+    {
+      "id": "m_callback_validity_gate",
+      "classification": "justified_adapter",
+      "upstream_units": [
+        "u_commissioner_callback_gate"
+      ],
+      "rust_units": [
+        "r_valid_syntax_callback_gate"
+      ],
+      "invariant": "The source-wide callback runs once only when the parsed investigation is valid for this cop."
+    },
+    {
+      "id": "m_offense_selection_lifecycle",
+      "classification": "justified_adapter",
+      "upstream_units": [
+        "u_add_offense_lifecycle",
+        "u_base_path_and_line_selection"
+      ],
+      "rust_units": [
+        "r_record_offense_lifecycle",
+        "r_disable_directive_filter",
+        "r_finish_offense_lifecycle"
+      ],
+      "invariant": "Only path-selected, line-enabled, unique non-correctable findings survive one investigation, with no state leakage."
+    }
+  ],
+  "adaptations": [
+    {
+      "mapping_id": "m_callback_adapter",
+      "necessity": "Rustocop builds its compatibility ProcessedSource from the engine's shared Prism result after the native traversal, so RuboCop's source-wide on_new_investigation is represented by one compatibility investigation callback.",
+      "invariant": "The cop has exactly one source-wide callback, receives the complete compatibility AST, and retains no state across investigations; it defines no order-sensitive per-node callbacks.",
+      "evidence": [
+        "src/cops/prism/framework/dsl.rs:239-260 generates one compatibility investigation forwarding",
+        "src/cops/prism/runtime/prism_engine.rs:124-148 builds ProcessedSource and invokes the investigation once"
+      ]
+    },
+    {
+      "mapping_id": "m_include_configuration",
+      "necessity": "Rustocop applies resolved Include and Exclude policy while building a path-scoped cop registry rather than inside the cop callback. The cached upstream unit harness intentionally strips path-policy keys, so the cop recovers RuboCop's built-in defaults only in that stripped environment.",
+      "invariant": "Canonical runtime selection distinguishes absent Include from an explicitly empty list and honors nonempty overrides with File.fnmatch-compatible separator, recursive-star, brace, bracket-class, backslash-escape, and hidden-basename behavior, while absent unit metadata uses RuboCop's defaults.",
+      "evidence": [
+        "config/default.yml:178-187 defines the three upstream defaults",
+        "rubocop-1.87.0/lib/rubocop/path_util.rb:65-110 defines FNM_PATHNAME, FNM_EXTGLOB, and hidden-basename matching",
+        "src/config.rs:595-605 decodes quoted resolved-YAML scalars and src/config.rs:607-614 with src/engine/mod.rs:43-56 applies CopConfig path policy before scheduling the cop",
+        "src/config/path_policy.rs:9-292 delegates Unix glob semantics to compiled glob::Pattern values and preserves RuboCop's brace, bracket, backslash-escape, separator, recursive-star, and hidden-file rules",
+        "src/cops/prism/source_rules/project_files.rs:24-33 trusts resolved selection and restores only the defaults when Include metadata is absent",
+        "spec/rustocop/executable_spec.rb:165-280 matches RuboCop exactly for braces, positive and negated bracket classes, backslash escapes, and Include: []",
+        "config::path_policy::tests pass for recursive stars, braces, character classes, escaped ordinary/metacharacters, resolved YAML encoding, hidden basenames, and hidden directories"
+      ]
+    },
+    {
+      "mapping_id": "m_offense_range",
+      "necessity": "Rustocop separates Parser-shaped SourceRange construction from final JSON diagnostic rendering. RuboCop's descending column Range has size zero, and its formatter exposes the zero-based end column while start_column is one-based.",
+      "invariant": "Every ordinary duplicate spans the send's first-line columns, while a descending multiline send produces the same non-crashing zero-length location as RuboCop.",
+      "evidence": [
+        "src/rubocop/cop/mixin/range_help.rs:46-74 uses saturating subtraction to reproduce Ruby Range#size zero for descending columns",
+        "src/engine/diagnostic.rs:29-100 preserves RuboCop's zero-length DuplicatedGem JSON location",
+        "spec/rustocop/executable_spec.rb:165-198 compares the multiline location against live RuboCop 1.87.0"
+      ]
+    },
+    {
+      "mapping_id": "m_message",
+      "necessity": "Ruby source and String values carry declared encodings and may also contain invalid UTF-8 bytes, while Rust String is UTF-8. Rustocop first mirrors Parser::Source::Buffer by reversibly transcoding declared text encodings and retaining distinct binary bytes, then retains exact Ruby message bytes beside display-safe text across the shared diagnostic model. Reporting uses per-formatter Rust state over retained ordered results, invokes the shared Rust translation of MessageAnnotator, and reproduces Runner's ensure-based finished phase and FormatterSet's callback error boundaries.",
+      "invariant": "Valid declared-encoding messages are transcoded to the same UTF-8 value before parsing and receive the same CLI/config-driven cop-name, details, style-guide/reference, and paired-backtick annotation, stored severity, smart path, source line, highlighted area, correction label, and summary in simple, clang, and default progress output. Invalid parser-decoded gem-name bytes are neither replaced nor discarded: JSON fails while building the final document; simple still finalizes all selected formatters after its per-file failure; progress emits the same prelude before rendering fails; every branch returns status 2.",
+      "evidence": [
+        "parser-3.3.11.1/lib/parser/source/buffer.rb:45-109 recognizes magic encodings, preserves binary source, and transcodes other declared encodings to UTF-8",
+        "parser-3.3.11.1/lib/parser/builders/default.rb:319-326 and 2302-2308 place the exact lexer token String in the static str child without replacement",
+        "lib/rubocop/cop/bundler/duplicated_gem.rb:81-90 interpolates that exact child into the message and rubocop-1.87.0/lib/rubocop/cop/offense.rb:89-98 stores it unchanged",
+        "rubocop-1.87.0/lib/rubocop/formatter/json_formatter.rb:13-30 and 42-57 defer JSON serialization of offense.message until finished",
+        "rubocop-1.87.0/lib/rubocop/cop/base.rb:487-495 and cop/message_annotator.rb:47-126 annotate the stored message from the CLI's last explicit format and AllCops/DisplayCopNames",
+        "rubocop-1.87.0/lib/rubocop/formatter/simple_text_formatter.rb:21-100, clang_style_formatter.rb:11-30, and progress_formatter.rb:13-58 establish text rendering inheritance and invalid-byte failure timing",
+        "rubocop-1.87.0/lib/rubocop/formatter/formatter_set.rb:32-65, runner.rb:118-135 and 158-170, and cli.rb:39-76 establish callback order and status 2 propagation",
+        "src/cops/prism/source_rules/project_files.rs:106-145 builds and unit-tests the byte-exact message",
+        "src/engine/source.rs:14-194 provides the reversible encoding-aware inspection view used before Prism parsing and by autocorrection restore",
+        "src/cops/prism/framework/diagnostic.rs:194-218 and 280-325 records and deduplicates exact bytes",
+        "src/model.rs:1-14 and src/engine/diagnostic.rs:88-106 carry them into Offense",
+        "src/engine/mod.rs:65-89 retains source text and src/app/report.rs:13-199 implements independent formatter state, ordered callbacks, and ensure-style finished dispatch before exact-message decoding",
+        "src/app/cli.rs:18-67 retains RuboCop's raw formatter and message-annotation CLI options; src/app/report.rs:363-439 adapts resolved configuration into src/rubocop/cop/message_annotator.rs:1-232 rather than duplicating its decisions",
+        "src/app/report.rs:121-360 renders Simple, Clang, and Progress through per-formatter counts plus shared message, path, source, highlight, and summary helpers; JSON accumulates file identities and materializes at 217-275",
+        "src/app/mod.rs:46-57 converts the selected formatter's error to status 2",
+        "spec/rustocop/executable_spec.rb:165-304 compares byte-for-byte valid aliases, simple, clang, progress, repeated-format, configured-default, display-name overrides, details, and style-guide output against live RuboCop 1.87.0",
+        "spec/rustocop/executable_spec.rb:388-447 compares JSON, default-progress, simple+JSON, and JSON+progress failure status, error class, finalization, and exact partial stdout against live RuboCop 1.87.0"
+      ]
+    },
+    {
+      "mapping_id": "m_formatter_selection",
+      "necessity": "RuboCop stores formatter instances in FormatterSet and Runner finalizes them from ensure; Rustocop stores equivalent per-formatter state and dispatches the same lifecycle phases over its already-computed ordered InspectionResult list.",
+      "invariant": "Repeated -f/--format arguments retain selection order; no explicit argument resolves AllCops/DefaultFormatter only after configuration loading; every selected formatter receives started and ordered files; a per-file exception stops later files but all formatters still receive finished; a finished exception stops later finishers.",
+      "evidence": [
+        "rubocop-1.87.0/lib/rubocop/options.rb:110-125 appends explicit selections and cli.rb:215-226 resolves the configured default",
+        "rubocop-1.87.0/lib/rubocop/formatter/formatter_set.rb:32-65 dispatches lifecycle callbacks in stored order",
+        "src/app/cli.rs:46-130 appends explicit selections and 184-224 resolves the configured default plus aliases",
+        "src/app/report.rs:13-199 performs started, per-file, and ensure-style finished dispatch with independent state in formatter order",
+        "spec/rustocop/executable_spec.rb:202-247 proves exact aliases, simple, clang, progress, simple+clang, simple+json, json+simple, and AllCops/DefaultFormatter output",
+        "spec/rustocop/executable_spec.rb:425-447 proves exact simple+JSON and JSON+progress failure ordering and finalization output"
+      ]
+    },
+    {
+      "mapping_id": "m_duplicate_grouping",
+      "necessity": "Parser::Source::Buffer first preserves binary input or transcodes a declared source encoding to UTF-8, then Ruby group_by uses a randomized Hash and therefore both AST::Node#hash and #eql?. Rustocop mirrors that source preparation and does not reproduce process-random Ruby hash integers; it compares deterministic construction-time byte and encoding inputs before applying completed structural equality, which preserves the same buckets except unrepeatable random hash collisions. Display-safe UTF-8 text remains separate from exact Ruby string bytes and encoding identity.",
+      "invariant": "Equal ordinary string nodes and identically indented static squiggly heredocs group after Ruby escape decoding, including literal and escaped valid U+FFFD values; invalid byte escapes and encoding-incompatible non-ASCII values remain distinct, ASCII-only values remain equal across ASCII-compatible encodings, and a post-construction-dedented heredoc does not group with an eql? ordinary string or differently indented heredoc whose cached upstream hash differs.",
+      "evidence": [
+        "ast-2.4.3/lib/ast/node.rb:61-86 defines the cached hash and eql? inputs",
+        "parser-3.3.11.1/lib/parser/source/buffer.rb:45-109 and src/engine/source.rs:14-194 establish corresponding declared-encoding and binary source preparation",
+        "src/rubocop/ast/node/core.rs:23-187 retains exact decoded bytes, precomputed bytes, and Ruby encoding identity; lines 232-328 separately implement completed equality and construction-time hash-input equivalence",
+        "src/rubocop/ast/prism.rs:32-178, 469-482, and 2022-2077 obtain source/forced encoding, __FILE__ UTF-8 identity, exact decoded bytes, and pre-dedent bytes through Prism rather than an approximate escape decoder",
+        "src/cops/prism/source_rules/project_files.rs:48-68 requires both predicates before adding a declaration to a group",
+        "spec/rustocop/executable_spec.rb:165-206 compares dedent bucket separation, escape-equivalent heredoc grouping, and non-ASCII __FILE__ versus ASCII-8BIT source literals against live RuboCop 1.87.0",
+        "rubocop::ast::node::core_spec::ruby_string_equality_and_hash_preserve_encoding_for_non_ascii_bytes and rubocop::ast::processed_source_spec::source_file_path_and_binary_source_literal_keep_distinct_ruby_encodings pass"
+      ]
+    },
+    {
+      "mapping_id": "m_effective_severity",
+      "necessity": "RuboCop resolves severity inside Base#find_severity while adding each offense. Rustocop resolves the same effective cop configuration when its compatibility reporter creates a Finding, then carries that value unchanged through Offense and JSON reporting.",
+      "invariant": "Every offense uses a valid configured Severity override; invalid and absent values resolve through the same Bundler base default of convention, and later engine and output stages cannot replace it with a cop-name constant.",
+      "evidence": [
+        "rubocop-1.87.0/lib/rubocop/cop/base.rb:511-529 resolves custom, explicit, and default severity",
+        "src/model.rs:72-130 implements the same valid names, invalid warning fallback, base defaults, and Lint/Syntax override",
+        "src/cops/prism/framework/diagnostic.rs:280-304 stores effective severity at registration",
+        "src/app/report.rs:66-82 renders the stored value",
+        "spec/rustocop/executable_spec.rb:165-238 compares valid, absent, and invalid Severity behavior against live RuboCop 1.87.0",
+        "model::tests::effective_severity_accepts_rubocop_names_and_rejects_invalid_values asserts Bundler's convention fallback for invalid and absent values"
+      ]
+    },
+    {
+      "mapping_id": "m_ast_conversion_contract",
+      "necessity": "RuboCop receives Parser nodes through rubocop-ast, while Rustocop converts its one shared Prism parse into the same child and accessor topology before invoking compatibility callbacks.",
+      "invariant": "Complete send-node receiver, method, argument, parent, and location semantics are available before this source-wide callback runs.",
+      "evidence": [
+        "rubocop-ast node-search and accessor dependency units are fingerprinted in the migration row",
+        "src/rubocop/ast/processed_source.rs:234-396 exposes the converted AST",
+        "src/rubocop/ast/prism.rs:25-1968 performs the fingerprinted conversion",
+        "src/rubocop/ast/node/specialized.rs:343-625 exposes the material accessors"
+      ]
+    },
+    {
+      "mapping_id": "m_ast_declaration_search",
+      "necessity": "Prism represents __FILE__ as SourceFileNode, whereas the Parser-shaped AST consumed by RuboCop's node search exposes it as a path-valued str node. Rustocop performs that parser adapter during shared AST conversion rather than adding a cop-specific exception.",
+      "invariant": "A gem declaration using __FILE__ is indistinguishable to the cop's static-string search and grouping logic from the path-valued str node RuboCop receives, while its source range still covers the literal __FILE__ text.",
+      "evidence": [
+        "src/rubocop/ast/prism.rs:32-82 receives and stores the ProcessedSource path",
+        "src/rubocop/ast/prism.rs:430-436 and 2505-2507 emit a str node with the path child for SourceFileNode",
+        "src/rubocop/ast/processed_source.rs:337-347 supplies the investigated path",
+        "rubocop::ast::processed_source_spec::source_file_keyword_uses_the_parser_path_string_node_contract pins kind, child value, and source text",
+        "spec/rustocop/executable_spec.rb:165-280 compares repeated gem __FILE__ declarations against live RuboCop 1.87.0"
+      ]
+    },
+    {
+      "mapping_id": "m_source_geometry_contract",
+      "necessity": "Parser stores character positions directly; Rustocop builds character and line indexes over Prism byte locations before exposing Parser-shaped positions.",
+      "invariant": "Unicode-aware first/last line and column values match the processed source used by offense construction.",
+      "evidence": [
+        "src/rubocop/ast/source.rs:12-66 builds character and line indexes",
+        "src/rubocop/ast/source_position.rs:14-66 exposes node geometry",
+        "the focused multiline differential matches exact RuboCop location output"
+      ]
+    },
+    {
+      "mapping_id": "m_callback_validity_gate",
+      "necessity": "RuboCop Commissioner owns callback gating; Rustocop's Prism engine owns parse recovery and compatibility callback scheduling.",
+      "invariant": "DuplicatedGem receives exactly one source investigation only when compatible AST processing is valid.",
+      "evidence": [
+        "rubocop-1.87.0/lib/rubocop/cop/commissioner.rb:79-94",
+        "src/cops/prism/runtime/prism_engine.rs:59-148"
+      ]
+    },
+    {
+      "mapping_id": "m_offense_selection_lifecycle",
+      "necessity": "RuboCop applies selection, deduplication, and disable state while Base adds an offense; Rustocop records a Finding then performs final disable filtering in Context::finish.",
+      "invariant": "The final set contains one non-correctable offense per enabled unique cop/message/range and excludes disabled lines and paths.",
+      "evidence": [
+        "rubocop-1.87.0/lib/rubocop/cop/base.rb:188-218 and 493-510",
+        "src/cops/prism/framework/diagnostic.rs:280-330 records and deduplicates",
+        "src/cops/prism/framework/diagnostic.rs:358-376 and 478-534 finalize disable and investigation state",
+        "10/10 cached and 10/10 fresh upstream contracts pass"
+      ]
+    }
+  ],
+  "gaps": [],
+  "behavioral_evidence": {
+    "fixtures": {
+      "passed": 10,
+      "total": 10,
+      "status": "compatible"
+    },
+    "projects": {
+      "rustocop": 0,
+      "rubocop": 0,
+      "exact": 0,
+      "classification": "dormant"
+    },
+    "focused_verification": {
+      "cached_upstream_cases": "10/10 exact",
+      "fresh_upstream_cases": "10/10 exact",
+      "expanded_live_differential": "6/6 offenses exact across default and custom Include paths, multiline sends, trailing comments, nested blocks, dynamic strings, explicit receivers, and modifier conditionals",
+      "project_audit": "50 projects, dormant with 0 mismatches and 0 crashes",
+      "project_report": "tmp/structural-bundler-duplicated-gem.json",
+      "review_remediation_differential": "2/2 exact against RuboCop 1.87.0 for brace Include glob selection and descending multiline zero-length offense geometry",
+      "review_remediation_contract": "spec/rustocop/executable_spec.rb:165-385 passes against live RuboCop 1.87.0 across normalized JSON and byte-exact text output",
+      "hash_semantics_differential": "Static squiggly heredoc versus eql? escaped string produces zero offenses in both Rustocop and RuboCop 1.87.0",
+      "hash_semantics_unit": "precomputed_hash_equivalence_preserves_squiggly_heredoc_dedent_buckets passes",
+      "independent_review_differential": "Remediated: identically indented squiggly heredocs whose equal values are spelled rubo\\x63op and rubocop now produce the same one Bundler/DuplicatedGem offense in Rustocop and RuboCop 1.87.0.",
+      "severity_override_differential": "Severity: error produces exact error-severity JSON in Rustocop and RuboCop 1.87.0",
+      "full_fixture_regression": "29610/29610 cached unit cases pass after Ruby string encoding identity was added to shared AST equality/hash semantics (7.129 seconds in the fixture-profile validation run)",
+      "empty_include_differential": "Include: [] schedules no Bundler/DuplicatedGem offense in both Rustocop and RuboCop 1.87.0",
+      "invalid_severity_differential": "Severity: invalid warns and reports convention in both Rustocop and RuboCop 1.87.0; the Rust unit also pins the same convention fallback when Severity is absent",
+      "bracket_glob_differential": "Positive [Gg] and negated [!a] Include classes select Gemfile and produce exact normalized output in both Rustocop and RuboCop 1.87.0",
+      "backslash_glob_differential": "Include: ['**/Gem\\file'] selects Gemfile and produces one exact normalized duplicate offense in both Rustocop and RuboCop 1.87.0; direct and resolved-config units also cover escaped metacharacters and YAML serialization.",
+      "source_file_literal_differential": "Repeated gem __FILE__ declarations produce the same duplicate message, severity, and source range in Rustocop and RuboCop 1.87.0; the focused AST unit also pins Parser kind str, the investigated path child, and literal source text.",
+      "string_encoding_differential": "A UTF-8 __FILE__ path and byte-identical ASCII-8BIT source literal containing non-ASCII bytes remain distinct in both Rustocop and RuboCop 1.87.0; focused AST contracts also pin non-ASCII inequality/hash separation and ASCII-only cross-encoding equality.",
+      "replacement_character_differential": "gem \"\\u{FFFD}\" followed by gem \"�\" produces the same duplicate message, severity, and source range in Rustocop and RuboCop 1.87.0; the focused AST unit also distinguishes both values from invalid-byte \\xFF while equating repeated invalid-byte values.",
+      "invalid_byte_message_differential": "Repeated gem \"\\xFF\" preserves byte 0xFF through the internal offense message; JSON reports source sequence is illegal/malformed utf-8 with status 2; default progress emits byte-for-byte identical partial stdout; simple+JSON still runs every selected finished callback after the simple per-file failure; JSON+progress stops later finishers when JSON serialization fails. All exact partial outputs and statuses match live RuboCop 1.87.0.",
+      "formatter_rendering_differential": "Live RuboCop 1.87.0 equality covers simple, clang, progress, c/j aliases, simple+clang, simple+JSON, JSON+simple, AllCops/DefaultFormatter, AllCops/DisplayCopNames true/false, -D, --no-display-cop-names, --extra-details, and --display-style-guide.",
+      "full_executable_regression": "17/17 executable examples pass after formatter state, compatibility annotation, and Ruby string encoding changes.",
+      "independent_review_non_utf8_differential": "Remediated: ISO-8859-1 raw bytes 0xE9 and 0xF1 remain distinct and produce zero offenses in both engines; repeated 0xE9 produces one exact offense whose message contains café in both Rustocop and RuboCop 1.87.0. DecodedSource also has reversible ISO-8859-1, Shift_JIS, ASCII-8BIT, and malformed-byte unit coverage."
+    }
+  },
+  "legacy_claim": {
+    "similarity_score": 3,
+    "structural_status": "source_shaped_with_source_adapter",
+    "migration_status": "migrated",
+    "structural_gaps": [],
+    "documented_adaptations": [
+      "The source-oriented upstream investigation is retained while configuration, diagnostics, ranges, and corrections use the shared compatibility contracts."
+    ]
+  }
+}

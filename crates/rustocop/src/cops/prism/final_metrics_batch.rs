@@ -18,7 +18,7 @@ impl Cop for BlockNesting {
     fn on_source(&self, source: &str, context: &mut Context) {
         if source.trim().is_empty() { return; }
         let parsed = ruby_prism::parse(source.as_bytes());
-        let (ast, root) = convert_rubocop_ast(source, &parsed.node());
+        let (ast, root) = convert_rubocop_ast(source, &parsed.node(), None);
         let Some(root) = root.map(|root| ast.node(root)) else { return };
         let mut cop = context.cop_context(self.name(), source, &[]);
         let max = cop.config_usize("Max", 3);

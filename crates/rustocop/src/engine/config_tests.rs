@@ -116,8 +116,8 @@ fn preserves_symbol_map_entries_separately_from_string_entries() {
 #[test]
 fn reads_typed_scalars_and_block_or_inline_lists() {
     let config = CopConfig::from_source(
-            "Style/Example:\n  Enabled: true\n  Max: 12\n  AllowedMethods:\n    - map\n    - 'each'\n  AllowedPatterns: [foo, 'bar']\n  PreferredMethods:\n    intern: to_sym\n",
-        );
+        "Style/Example:\n  Enabled: true\n  Max: 12\n  AllowedMethods:\n    - map\n    - 'each'\n  AllowedPatterns: [foo, 'bar']\n  PreferredMethods:\n    intern: to_sym\n",
+    );
 
     assert_eq!(config.bool("Style/Example", "Enabled"), Some(true));
     assert_eq!(config.usize("Style/Example", "Max"), Some(12));
@@ -150,8 +150,8 @@ fn reads_serialized_regexp_lists() {
 #[test]
 fn preserves_block_scalars_blank_lines_and_quoted_hash_values() {
     let config = CopConfig::from_source(
-            "Style/Copyright:\n  Notice: |\n    Copyright 2026\n\n    Acme Inc\n  AutocorrectNotice: '# Copyright 2026'\n",
-        );
+        "Style/Copyright:\n  Notice: |\n    Copyright 2026\n\n    Acme Inc\n  AutocorrectNotice: '# Copyright 2026'\n",
+    );
 
     assert_eq!(
         config.value("Style/Copyright", "Notice"),

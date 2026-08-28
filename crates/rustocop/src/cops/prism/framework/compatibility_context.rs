@@ -433,6 +433,12 @@ impl<'context, 'processed, 'source> CompatibilityCopContext<'context, 'processed
         }
     }
 
+    pub(super) fn report_bytes(&mut self, message: Vec<u8>, offense: impl CompatibilityRange) {
+        if let Some(offense) = offense.byte_range(&self.buffer) {
+            self.reporter.report_bytes(message, offense);
+        }
+    }
+
     pub(super) fn replace(
         &mut self,
         message: impl Into<String>,

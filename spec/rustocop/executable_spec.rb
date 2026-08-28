@@ -162,6 +162,540 @@ RSpec.describe "rustocop executable" do
     end
   end
 
+  it "matches DuplicatedGem path, range, and AST hash edge cases" do
+    Dir.mktmpdir("rustocop-duplicated-gem-") do |directory|
+      File.write(File.join(directory, ".rubocop.yml"), <<~YAML)
+        AllCops:
+          NewCops: enable
+          TargetRubyVersion: 2.7
+
+        Bundler/DuplicatedGem:
+          Enabled: true
+          Severity: error
+          Include:
+            - '**/*.{rb,rake}'
+      YAML
+      paths = {
+        "brace.rb" => "gem 'rubocop'\ngem 'rubocop'\n",
+        "multiline.rb" => "gem 'rubocop'\n          gem(\n            'rubocop'\n)\n",
+        "heredoc.rb" => "gem <<~GEM\n  rubocop\nGEM\ngem \"rubocop\\n\"\n",
+        "escaped_heredoc.rb" => "gem <<~FIRST\n  rubo\\x63op\nFIRST\ngem <<~SECOND\n  rubocop\nSECOND\n",
+        "source_file.rb" => "gem __FILE__\ngem __FILE__\n",
+        "replacement_character.rb" => "gem \"\\u{FFFD}\"\ngem \"�\"\n"
+      }.map do |name, source|
+        File.join(directory, name).tap { |path| File.write(path, source) }
+      end
+      binary_path = File.join(directory, "Gémefile.rb")
+      File.binwrite(
+        binary_path,
+        "# encoding: ASCII-8BIT\ngem __FILE__\ngem '#{binary_path}'\n".b
+      )
+      paths << binary_path
+      latin1_distinct_path = File.join(directory, "latin1_distinct.rb")
+      File.binwrite(
+        latin1_distinct_path,
+        "# encoding: ISO-8859-1\ngem 'caf\xE9'\ngem 'caf\xF1'\n".b
+      )
+      paths << latin1_distinct_path
+      latin1_duplicate_path = File.join(directory, "latin1_duplicate.rb")
+      File.binwrite(
+        latin1_duplicate_path,
+        "# encoding: ISO-8859-1\ngem 'caf\xE9'\ngem 'caf\xE9'\n".b
+      )
+      paths << latin1_duplicate_path
+      arguments = ["--format", "json", "--only", "Bundler/DuplicatedGem", *paths]
+
+      rustocop = run_rustocop(
+        *arguments,
+        chdir: directory,
+        env: { "RUSTOCOP_NATIVE_PATH" => File.join(ROOT, "crates/rustocop/target/debug/rustocop") }
+      )
+      rubocop = run_rubocop(*arguments, chdir: directory)
+
+      expect(rustocop.stderr).to eq("")
+      expect(rustocop.status.exitstatus).to eq(rubocop.status.exitstatus)
+      expect(normalize_rubocop_report(parsed_json(rustocop)))
+        .to eq(normalize_rubocop_report(parsed_json(rubocop)))
+
+      [
+        ["--format", "simple"],
+        ["--format", "clang"],
+        ["-f", "c"],
+        ["-f", "j"],
+        [],
+        ["--format", "simple", "--format", "clang"],
+        ["--format", "simple", "--format", "json"],
+        ["--format", "json", "--format", "simple"]
+      ].each do |formatter_arguments|
+        arguments = [*formatter_arguments, "--only", "Bundler/DuplicatedGem", paths.first]
+        rustocop = run_rustocop(
+          *arguments,
+          chdir: directory,
+          env: { "RUSTOCOP_NATIVE_PATH" => File.join(ROOT, "crates/rustocop/target/debug/rustocop") }
+        )
+        rubocop = run_rubocop(*arguments, chdir: directory)
+
+        expect(rustocop.status.exitstatus).to eq(rubocop.status.exitstatus)
+        expect(rustocop.stderr).to eq(rubocop.stderr)
+        normalize_versions = lambda do |output|
+          output.gsub(/"rubocop_version":"[^"]+"/, '"rubocop_version":"normalized"')
+        end
+        expect(normalize_versions.call(rustocop.stdout)).to eq(normalize_versions.call(rubocop.stdout))
+      end
+
+      File.write(File.join(directory, ".rubocop.yml"), <<~YAML)
+        AllCops:
+          NewCops: enable
+          DefaultFormatter: clang
+        Bundler/DuplicatedGem:
+          Enabled: true
+          Include:
+            - '**/*.rb'
+      YAML
+      default_arguments = ["--only", "Bundler/DuplicatedGem", paths.first]
+      rustocop = run_rustocop(
+        *default_arguments,
+        chdir: directory,
+        env: { "RUSTOCOP_NATIVE_PATH" => File.join(ROOT, "crates/rustocop/target/debug/rustocop") }
+      )
+      rubocop = run_rubocop(*default_arguments, chdir: directory)
+
+      expect(rustocop.status.exitstatus).to eq(rubocop.status.exitstatus)
+      expect(rustocop.stderr).to eq(rubocop.stderr)
+      expect(rustocop.stdout).to eq(rubocop.stdout)
+
+      [
+        ["false", []],
+        ["false", ["-D"]],
+        ["true", ["--no-display-cop-names"]]
+      ].each do |configured_display, display_arguments|
+        File.write(File.join(directory, ".rubocop.yml"), <<~YAML)
+          AllCops:
+            NewCops: enable
+            DisplayCopNames: #{configured_display}
+          Bundler/DuplicatedGem:
+            Enabled: true
+            Severity: error
+            Include:
+              - '**/*.rb'
+        YAML
+        arguments = ["--format", "clang", *display_arguments, "--only", "Bundler/DuplicatedGem", paths.first]
+        rustocop = run_rustocop(
+          *arguments,
+          chdir: directory,
+          env: { "RUSTOCOP_NATIVE_PATH" => File.join(ROOT, "crates/rustocop/target/debug/rustocop") }
+        )
+        rubocop = run_rubocop(*arguments, chdir: directory)
+
+        expect(rustocop.status.exitstatus).to eq(rubocop.status.exitstatus)
+        expect(rustocop.stderr).to eq(rubocop.stderr)
+        expect(rustocop.stdout).to eq(rubocop.stdout)
+      end
+
+      File.write(File.join(directory, ".rubocop.yml"), <<~YAML)
+        AllCops:
+          NewCops: enable
+          StyleGuideBaseURL: https://example.test/style/
+        Bundler/DuplicatedGem:
+          Enabled: true
+          Severity: error
+          Details: Read the dependency declaration carefully.
+          StyleGuide: duplicated-gem.html
+          References:
+            - https://example.test/reference
+          Include:
+            - '**/*.rb'
+      YAML
+      annotation_arguments = [
+        "--format", "clang", "--extra-details", "--display-style-guide",
+        "--only", "Bundler/DuplicatedGem", paths.first
+      ]
+      rustocop = run_rustocop(
+        *annotation_arguments,
+        chdir: directory,
+        env: { "RUSTOCOP_NATIVE_PATH" => File.join(ROOT, "crates/rustocop/target/debug/rustocop") }
+      )
+      rubocop = run_rubocop(*annotation_arguments, chdir: directory)
+
+      expect(rustocop.status.exitstatus).to eq(rubocop.status.exitstatus)
+      expect(rustocop.stdout).to eq(rubocop.stdout)
+
+      File.write(File.join(directory, ".rubocop.yml"), <<~YAML)
+        AllCops:
+          NewCops: enable
+        Bundler/DuplicatedGem:
+          Enabled: true
+          Include: []
+      YAML
+      empty_arguments = ["--format", "json", "--only", "Bundler/DuplicatedGem", paths.first]
+      rustocop = run_rustocop(
+        *empty_arguments,
+        chdir: directory,
+        env: { "RUSTOCOP_NATIVE_PATH" => File.join(ROOT, "crates/rustocop/target/debug/rustocop") }
+      )
+      rubocop = run_rubocop(*empty_arguments, chdir: directory)
+
+      expect(normalize_rubocop_report(parsed_json(rustocop)))
+        .to eq(normalize_rubocop_report(parsed_json(rubocop)))
+
+      File.write(File.join(directory, ".rubocop.yml"), <<~YAML)
+        AllCops:
+          NewCops: enable
+        Bundler/DuplicatedGem:
+          Enabled: true
+          Severity: invalid
+          Include:
+            - '**/*.rb'
+      YAML
+      invalid_arguments = ["--format", "json", "--only", "Bundler/DuplicatedGem", paths.first]
+      rustocop = run_rustocop(
+        *invalid_arguments,
+        chdir: directory,
+        env: { "RUSTOCOP_NATIVE_PATH" => File.join(ROOT, "crates/rustocop/target/debug/rustocop") }
+      )
+      rubocop = run_rubocop(*invalid_arguments, chdir: directory)
+
+      expect(normalize_rubocop_report(parsed_json(rustocop)))
+        .to eq(normalize_rubocop_report(parsed_json(rubocop)))
+      expect(rustocop.stderr).to include("Invalid severity 'invalid'")
+      expect(rubocop.stderr).to include("Invalid severity 'invalid'")
+
+      File.write(File.join(directory, ".rubocop.yml"), <<~YAML)
+        AllCops:
+          NewCops: enable
+        Bundler/DuplicatedGem:
+          Enabled: true
+          Include:
+            - '**/[Gg]emfile'
+            - '**/[!a]emfile'
+      YAML
+      bracket_path = File.join(directory, "Gemfile")
+      File.write(bracket_path, "gem 'rubocop'\ngem 'rubocop'\n")
+      bracket_arguments = ["--format", "json", "--only", "Bundler/DuplicatedGem", bracket_path]
+      rustocop = run_rustocop(
+        *bracket_arguments,
+        chdir: directory,
+        env: { "RUSTOCOP_NATIVE_PATH" => File.join(ROOT, "crates/rustocop/target/debug/rustocop") }
+      )
+      rubocop = run_rubocop(*bracket_arguments, chdir: directory)
+
+      expect(normalize_rubocop_report(parsed_json(rustocop)))
+        .to eq(normalize_rubocop_report(parsed_json(rubocop)))
+
+      File.write(File.join(directory, ".rubocop.yml"), <<~'YAML')
+        AllCops:
+          NewCops: enable
+        Bundler/DuplicatedGem:
+          Enabled: true
+          Include:
+            - '**/Gem\file'
+      YAML
+      escape_arguments = ["--format", "json", "--only", "Bundler/DuplicatedGem", bracket_path]
+      rustocop = run_rustocop(
+        *escape_arguments,
+        chdir: directory,
+        env: { "RUSTOCOP_NATIVE_PATH" => File.join(ROOT, "crates/rustocop/target/debug/rustocop") }
+      )
+      rubocop = run_rubocop(*escape_arguments, chdir: directory)
+
+      expect(normalize_rubocop_report(parsed_json(rustocop)))
+        .to eq(normalize_rubocop_report(parsed_json(rubocop)))
+
+    end
+  end
+
+  it "preserves DuplicatedGem invalid message bytes through formatter failure" do
+    Dir.mktmpdir("rustocop-duplicated-gem-invalid-byte-") do |directory|
+      File.write(File.join(directory, ".rubocop.yml"), <<~YAML)
+        AllCops:
+          NewCops: enable
+        Bundler/DuplicatedGem:
+          Enabled: true
+      YAML
+      path = File.join(directory, "Gemfile")
+      File.write(path, "gem \"\\xFF\"\ngem \"\\xFF\"\n")
+      arguments = ["--format", "json", "--only", "Bundler/DuplicatedGem", path]
+
+      rustocop = run_rustocop(
+        *arguments,
+        chdir: directory,
+        env: { "RUSTOCOP_NATIVE_PATH" => File.join(ROOT, "crates/rustocop/target/debug/rustocop") }
+      )
+      rubocop = run_rubocop(*arguments, chdir: directory)
+
+      expect(rustocop.status.exitstatus).to eq(rubocop.status.exitstatus)
+      expect(rustocop.status).not_to be_success
+      expect(rustocop.stderr).to include("source sequence is illegal/malformed utf-8")
+      expect(rubocop.stderr).to include("source sequence is illegal/malformed utf-8")
+
+      progress_arguments = ["--only", "Bundler/DuplicatedGem", path]
+      rustocop = run_rustocop(
+        *progress_arguments,
+        chdir: directory,
+        env: { "RUSTOCOP_NATIVE_PATH" => File.join(ROOT, "crates/rustocop/target/debug/rustocop") }
+      )
+      rubocop = run_rubocop(*progress_arguments, chdir: directory)
+
+      expect(rustocop.status.exitstatus).to eq(rubocop.status.exitstatus)
+      expect(rustocop.stdout).to eq(rubocop.stdout)
+      expect(rustocop.stderr).to include("invalid byte sequence in UTF-8")
+      expect(rubocop.stderr).to include("invalid byte sequence in UTF-8")
+
+      [
+        [["--format", "simple", "--format", "json"], "invalid byte sequence in UTF-8"],
+        [["--format", "json", "--format", "progress"], "source sequence is illegal/malformed utf-8"]
+      ].each do |formatter_arguments, expected_error|
+        arguments = [*formatter_arguments, "--only", "Bundler/DuplicatedGem", path]
+        rustocop = run_rustocop(
+          *arguments,
+          chdir: directory,
+          env: {
+            "RUSTOCOP_NATIVE_PATH" => File.join(ROOT, "crates/rustocop/target/debug/rustocop"),
+            "RUSTOCOP_VERSION" => Gem.loaded_specs.fetch("rubocop").version.to_s
+          }
+        )
+        rubocop = run_rubocop(*arguments, chdir: directory)
+
+        expect(rustocop.status.exitstatus).to eq(rubocop.status.exitstatus)
+        normalize_versions = lambda do |output|
+          output.gsub(/"rubocop_version":"[^"]+"/, '"rubocop_version":"normalized"')
+        end
+        expect(normalize_versions.call(rustocop.stdout)).to eq(normalize_versions.call(rubocop.stdout))
+        expect(rustocop.stderr).to include(expected_error)
+        expect(rubocop.stderr).to include(expected_error)
+      end
+    end
+  end
+
+  it "matches DuplicatedGroup AST traversal and grouping edge cases" do
+    Dir.mktmpdir("rustocop-duplicated-group-") do |directory|
+      File.write(File.join(directory, ".rubocop.yml"), <<~YAML)
+        AllCops:
+          NewCops: enable
+          TargetRubyVersion: 2.7
+
+        Bundler/DuplicatedGroup:
+          Enabled: true
+          Include:
+            - '**/*.rb'
+      YAML
+      paths = {
+        "multiline.rb" => <<~RUBY,
+          group(
+            :development
+          ) do
+            gem 'one'
+          end
+          group(
+            :development
+          ) do
+            gem 'two'
+          end
+        RUBY
+        "explicit_receiver.rb" => <<~RUBY,
+          self.group :development do
+            gem 'one'
+          end
+          self.group :development do
+            gem 'two'
+          end
+        RUBY
+        "ordinary_block.rb" => <<~RUBY,
+          2.times do
+            group :development do
+              gem 'one'
+            end
+          end
+          group :development do
+            gem 'two'
+          end
+        RUBY
+        "nested_groups.rb" => <<~RUBY,
+          group :first do
+            group :shared do
+              gem 'one'
+            end
+          end
+          group :second do
+            group :shared do
+              gem 'two'
+            end
+          end
+        RUBY
+        "nearest_source.rb" => <<~RUBY,
+          source 'one' do
+            git 'same' do
+              group :development do
+                gem 'one'
+              end
+            end
+          end
+          source 'two' do
+            git 'same' do
+              group :development do
+                gem 'two'
+              end
+            end
+          end
+        RUBY
+        "first_source_argument.rb" => <<~RUBY,
+          source 'same', foo: 1 do
+            group :development do
+              gem 'one'
+            end
+          end
+          source 'same', foo: 2 do
+            group :development do
+              gem 'two'
+            end
+          end
+        RUBY
+        "composite_arguments.rb" => <<~RUBY,
+          group [:development, :test], foo: [1, 2] do
+            gem 'one'
+          end
+          group [:development, :test], foo: [1, 2] do
+            gem 'two'
+          end
+        RUBY
+        "numeric_values.rb" => <<~RUBY,
+          group 1.50 do
+            gem 'one'
+          end
+          group 1.5 do
+            gem 'two'
+          end
+          group 1.50r do
+            gem 'three'
+          end
+          group 1.5r do
+            gem 'four'
+          end
+          group 2.00i do
+            gem 'five'
+          end
+          group 2.0i do
+            gem 'six'
+          end
+        RUBY
+        "big_integer_values.rb" => <<~RUBY,
+          group 0x100000000000000000000000000000000 do
+            gem 'one'
+          end
+          group 340282366920938463463374607431768211456 do
+            gem 'two'
+          end
+          group 340282366920938463463374607431768211457 do
+            gem 'three'
+          end
+        RUBY
+        "huge_rational_values.rb" => <<~RUBY,
+          group 99999999999999999999999999999999999999.0r do
+            gem 'one'
+          end
+          group 99999999999999999999999999999999999999r do
+            gem 'two'
+          end
+        RUBY
+        "huge_complex_rational_values.rb" => <<~RUBY,
+          group 99999999999999999999999999999999999999.0ri do
+            gem 'one'
+          end
+          group 99999999999999999999999999999999999999ri do
+            gem 'two'
+          end
+        RUBY
+        "descending_multiline_range.rb" => <<~RUBY,
+              group(
+                :development
+          ) do
+            gem 'one'
+          end
+              group(
+                :development
+          ) do
+            gem 'two'
+          end
+        RUBY
+        "dynamic_string_values.rb" => <<~'RUBY',
+          group "foo#{bar}" do
+            gem 'one'
+          end
+          group %Q(foo#{bar}) do
+            gem 'two'
+          end
+        RUBY
+        "non_finite_float_values.rb" => <<~RUBY,
+          group 1e400 do
+            gem 'one'
+          end
+          group 1e401 do
+            gem 'two'
+          end
+        RUBY
+        "complex_infinity_values.rb" => <<~RUBY,
+          group "0+Infinity*i" do
+            gem 'one'
+          end
+          group 1e400i do
+            gem 'two'
+          end
+        RUBY
+        "xstr_first_child_values.rb" => <<~'RUBY'
+          group `foo#{bar}` do
+            gem 'one'
+          end
+          group %x(foo#{baz}) do
+            gem 'two'
+          end
+          group "" do
+            gem 'three'
+          end
+          group `` do
+            gem 'four'
+          end
+          group '(str "foo")' do
+            gem 'five'
+          end
+          group `foo` do
+            gem 'six'
+          end
+        RUBY
+      }.map do |name, source|
+        File.join(directory, name).tap { |path| File.write(path, source) }
+      end
+      arguments = ["--format", "json", "--only", "Bundler/DuplicatedGroup", *paths]
+
+      rustocop = run_rustocop(
+        *arguments,
+        chdir: directory,
+        env: { "RUSTOCOP_NATIVE_PATH" => File.join(ROOT, "crates/rustocop/target/debug/rustocop") }
+      )
+      rubocop = run_rubocop(*arguments, chdir: directory)
+
+      expect(rustocop.stderr).to eq("")
+      expect(rustocop.status.exitstatus).to eq(rubocop.status.exitstatus)
+      expect(normalize_rubocop_report(parsed_json(rustocop)))
+        .to eq(normalize_rubocop_report(parsed_json(rubocop)))
+
+      binary_path = File.join(directory, "binary.rb")
+      binary_source = "# encoding: ASCII-8BIT\n\ngroup \"".b + "\xFF".b + "\" do\n  gem 'one'\nend\n".b +
+        "group \"".b + "\xFF".b + "\" do\n  gem 'two'\nend\n".b
+      File.binwrite(binary_path, binary_source)
+      binary_arguments = ["--format", "progress", "--only", "Bundler/DuplicatedGroup", binary_path]
+      binary_rustocop = run_rustocop(
+        *binary_arguments,
+        chdir: directory,
+        env: { "RUSTOCOP_NATIVE_PATH" => File.join(ROOT, "crates/rustocop/target/debug/rustocop") }
+      )
+      binary_rubocop = run_rubocop(*binary_arguments, chdir: directory)
+
+      expect(binary_rustocop.status.exitstatus).to eq(binary_rubocop.status.exitstatus)
+      expect(binary_rustocop.stdout.b).to eq(binary_rubocop.stdout.b)
+      expect(binary_rustocop.stderr.b).to eq(binary_rubocop.stderr.b)
+    end
+  end
+
   it "prefers a compiled Rustocop configuration" do
     Dir.mktmpdir("rustocop-compiled-config") do |directory|
       File.write(File.join(directory, ".rubocop.yml"), <<~YAML)

@@ -324,6 +324,42 @@ impl<'ast> NodeRef<'ast> {
         }
     }
 
+    /// Mirrors `value.to_s` for RuboCop AST literal nodes that expose
+    /// `#value`. This is intentionally distinct from source text: Ruby
+    /// canonicalizes numeric bases, float spellings, rationals, and imaginary
+    /// values before cops compare them.
+    pub(crate) fn ruby_value_to_s(self) -> Option<String> {
+        match self.kind() {
+            "str" | "sym" => self.scalar_value_text(),
+            "dstr" => self.string_content(),
+            "int" => normalize_integer_literal(self.source()?),
+            "float" => ruby_float_to_s(self.source()?),
+            "rational" => ruby_rational_to_s(self.source()?),
+            "complex" => ruby_complex_to_s(self.source()?),
+            _ => None,
+        }
+    }
+
+    /// Byte-exact form of RuboCop AST literal `value.to_s`. Ruby strings may
+    /// contain invalid UTF-8, so cops that use literal values as identity keys
+    /// must not pass through the lossy compatibility `String` child.
+    pub(crate) fn ruby_value_to_s_bytes(self) -> Option<Vec<u8>> {
+        match self.kind() {
+            "str" | "sym" => self.scalar_value_bytes().map(<[u8]>::to_vec),
+            "dstr" => Some(dynamic_string_value_bytes(self)),
+            // RuboCop maps xstr to StrNode, whose BasicLiteralNode#value is
+            // exactly node_parts[0]. `group_attributes` then compares that
+            // first child's AST rendering and deliberately ignores every
+            // later interpolation child.
+            "xstr" => Some(xstr_value_to_s_bytes(self)),
+            "int" => normalize_integer_literal(self.source()?).map(String::into_bytes),
+            "float" => ruby_float_to_s(self.source()?).map(String::into_bytes),
+            "rational" => ruby_rational_to_s(self.source()?).map(String::into_bytes),
+            "complex" => ruby_complex_to_s(self.source()?).map(String::into_bytes),
+            _ => None,
+        }
+    }
+
     pub(crate) fn send_node(self) -> Option<Self> {
         matches!(self.kind(), "block" | "numblock" | "itblock")
             .then(|| self.node_child(0))
@@ -1119,6 +1155,379 @@ impl<'ast> NodeRef<'ast> {
             .into_iter()
             .find(|node| node.id() == *id)
     }
+}
+
+fn normalize_integer_literal(source: &str) -> Option<String> {
+    let source = source.replace('_', "");
+    let (sign, unsigned) = source
+        .strip_prefix('-')
+        .map_or(("", source.as_str()), |rest| ("-", rest));
+    let unsigned = unsigned.strip_prefix('+').unwrap_or(unsigned);
+    let (base, digits) = if let Some(digits) = unsigned
+        .strip_prefix("0x")
+        .or_else(|| unsigned.strip_prefix("0X"))
+    {
+        (16, digits)
+    } else if let Some(digits) = unsigned
+        .strip_prefix("0b")
+        .or_else(|| unsigned.strip_prefix("0B"))
+    {
+        (2, digits)
+    } else if let Some(digits) = unsigned
+        .strip_prefix("0o")
+        .or_else(|| unsigned.strip_prefix("0O"))
+    {
+        (8, digits)
+    } else if let Some(digits) = unsigned
+        .strip_prefix("0d")
+        .or_else(|| unsigned.strip_prefix("0D"))
+    {
+        (10, digits)
+    } else if unsigned.len() > 1
+        && unsigned.starts_with('0')
+        && unsigned
+            .chars()
+            .all(|character| matches!(character, '0'..='7'))
+    {
+        (8, unsigned)
+    } else {
+        (10, unsigned)
+    };
+    if digits.is_empty() {
+        return None;
+    }
+
+    let mut decimal = vec![0_u8];
+    for character in digits.chars() {
+        let value = character.to_digit(base)?;
+        let mut carry = value;
+        for digit in &mut decimal {
+            let next = u32::from(*digit) * base + carry;
+            *digit = (next % 10) as u8;
+            carry = next / 10;
+        }
+        while carry > 0 {
+            decimal.push((carry % 10) as u8);
+            carry /= 10;
+        }
+    }
+    while decimal.len() > 1 && decimal.last() == Some(&0) {
+        decimal.pop();
+    }
+    let value = decimal
+        .into_iter()
+        .rev()
+        .map(|digit| char::from(b'0' + digit))
+        .collect::<String>();
+    Some(if value == "0" {
+        value
+    } else {
+        format!("{sign}{value}")
+    })
+}
+
+fn ruby_float_to_s(source: &str) -> Option<String> {
+    let value = source.replace('_', "").parse::<f64>().ok()?;
+    if value.is_nan() {
+        return Some("NaN".to_string());
+    }
+    if value.is_infinite() {
+        return Some(
+            if value.is_sign_negative() {
+                "-Infinity"
+            } else {
+                "Infinity"
+            }
+            .to_string(),
+        );
+    }
+    if value == 0.0 {
+        return Some(
+            if value.is_sign_negative() {
+                "-0.0"
+            } else {
+                "0.0"
+            }
+            .to_string(),
+        );
+    }
+    let magnitude = value.abs();
+    if !(1.0e-4..1.0e15).contains(&magnitude) {
+        let scientific = format!("{value:e}");
+        let (mantissa, exponent) = scientific.split_once('e')?;
+        let mantissa = if mantissa.contains('.') {
+            mantissa.to_string()
+        } else {
+            format!("{mantissa}.0")
+        };
+        let exponent = exponent.parse::<i32>().ok()?;
+        Some(format!("{mantissa}e{exponent:+03}"))
+    } else {
+        let rendered = value.to_string();
+        Some(if rendered.contains('.') {
+            rendered
+        } else {
+            format!("{rendered}.0")
+        })
+    }
+}
+
+fn dynamic_string_value_bytes(node: NodeRef<'_>) -> Vec<u8> {
+    node.child_nodes()
+        .into_iter()
+        .flat_map(dynamic_string_child_value_bytes)
+        .collect()
+}
+
+fn dynamic_string_child_value_bytes(node: NodeRef<'_>) -> Vec<u8> {
+    match node.kind() {
+        "str" | "sym" => node.scalar_value_bytes().unwrap_or_default().to_vec(),
+        "dstr" => dynamic_string_value_bytes(node),
+        _ => node
+            .source_bytes()
+            .map_or_else(Vec::new, |source| source.into_owned()),
+    }
+}
+
+fn xstr_value_to_s_bytes(node: NodeRef<'_>) -> Vec<u8> {
+    let children = node.child_nodes();
+    let first_child = match children.as_slice() {
+        // Prism retains a synthetic empty StringNode before a leading
+        // interpolation (and inside an empty xstr); Parser omits it.
+        [first, rest @ ..]
+            if first.kind() == "str"
+                && first.scalar_value_bytes().is_some_and(<[u8]>::is_empty) =>
+        {
+            rest.first().copied()
+        }
+        [first, ..] => Some(*first),
+        [] => None,
+    };
+    let Some(first_child) = first_child else {
+        // An empty xstr has a nil first part, and nil.to_s is the empty string.
+        return Vec::new();
+    };
+    let mut value = Vec::new();
+    append_parser_node_sexp(first_child, 0, &mut value);
+    value
+}
+
+// Exact shape of AST::Node#to_sexp, which Parser aliases as Node#to_s. The
+// textual form matters: RuboCop intentionally lets an xstr key collide with
+// an ordinary string containing the same s-expression.
+fn append_parser_node_sexp(node: NodeRef<'_>, indent: usize, output: &mut Vec<u8>) {
+    output.extend(std::iter::repeat_n(b' ', indent * 2));
+    output.push(b'(');
+    output.extend_from_slice(node.kind().replace('_', "-").as_bytes());
+    for (index, child) in node.children().iter().enumerate() {
+        match child {
+            NodeValue::Node(_) => {
+                output.push(b'\n');
+                if let Some(child) = node.node_from_value(child) {
+                    append_parser_node_sexp(child, indent + 1, output);
+                }
+            }
+            NodeValue::Symbol(value) => {
+                output.push(b' ');
+                output.extend_from_slice(ruby_symbol_inspect_text(value).as_bytes());
+            }
+            NodeValue::String(value) => {
+                output.push(b' ');
+                let bytes = if index == 0 && matches!(node.kind(), "str" | "sym") {
+                    node.scalar_value_bytes().unwrap_or(value.as_bytes())
+                } else {
+                    value.as_bytes()
+                };
+                append_ruby_string_inspect(bytes, output);
+            }
+            NodeValue::Integer(value) => {
+                output.push(b' ');
+                output.extend_from_slice(value.to_string().as_bytes());
+            }
+            NodeValue::Boolean(value) => {
+                output.push(b' ');
+                output.extend_from_slice(if *value { b"true" } else { b"false" });
+            }
+            NodeValue::Nil => output.extend_from_slice(b" nil"),
+        }
+    }
+    output.push(b')');
+}
+
+fn ruby_symbol_inspect_text(value: &str) -> String {
+    let identifier = |text: &str| {
+        let mut characters = text.chars();
+        characters
+            .next()
+            .is_some_and(|character| character == '_' || character.is_alphabetic())
+            && characters.all(|character| character == '_' || character.is_alphanumeric())
+    };
+    let method = value
+        .strip_suffix(['!', '?', '='])
+        .filter(|method| identifier(method));
+    let bare = identifier(value)
+        || method.is_some()
+        || matches!(
+            value,
+            "|" | "^" | "&" | "<=>" | "==" | "===" | "=~" | ">" | ">=" | "<" | "<="
+                | "<<" | ">>" | "+" | "-" | "*" | "/" | "%" | "**" | "~" | "+@" | "-@"
+                | "[]" | "[]=" | "`" | "!" | "!=" | "!~"
+        );
+    if bare {
+        format!(":{value}")
+    } else {
+        let mut inspected = Vec::new();
+        append_ruby_string_inspect(value.as_bytes(), &mut inspected);
+        format!(":{}", String::from_utf8_lossy(&inspected))
+    }
+}
+
+fn append_ruby_string_inspect(value: &[u8], output: &mut Vec<u8>) {
+    let valid_utf8 = std::str::from_utf8(value).is_ok();
+    output.push(b'"');
+    for (index, byte) in value.iter().copied().enumerate() {
+        match byte {
+            b'\\' => output.extend_from_slice(b"\\\\"),
+            b'"' => output.extend_from_slice(b"\\\""),
+            b'\n' => output.extend_from_slice(b"\\n"),
+            b'\r' => output.extend_from_slice(b"\\r"),
+            b'\t' => output.extend_from_slice(b"\\t"),
+            0x07 => output.extend_from_slice(b"\\a"),
+            0x08 => output.extend_from_slice(b"\\b"),
+            0x0b => output.extend_from_slice(b"\\v"),
+            0x0c => output.extend_from_slice(b"\\f"),
+            0x1b => output.extend_from_slice(b"\\e"),
+            b'#' if value.get(index + 1).is_some_and(|next| matches!(next, b'{' | b'$' | b'@')) => {
+                output.extend_from_slice(b"\\#");
+            }
+            0x20..=0x7e => output.push(byte),
+            0x80..=0xff if valid_utf8 => output.push(byte),
+            other => output.extend_from_slice(format!("\\x{other:02X}").as_bytes()),
+        }
+    }
+    output.push(b'"');
+}
+
+fn ruby_rational_to_s(source: &str) -> Option<String> {
+    let source = source.strip_suffix('r')?.replace('_', "");
+    if !source.contains(['.', 'e', 'E']) {
+        return Some(format!("{}/1", normalize_integer_literal(&source)?));
+    }
+    let (mantissa, exponent) = if let Some((mantissa, exponent)) = source.split_once(['e', 'E']) {
+        (mantissa, exponent.parse::<i32>().ok()?)
+    } else {
+        (source.as_str(), 0_i32)
+    };
+    let (sign, mantissa) = mantissa
+        .strip_prefix('-')
+        .map_or(("", mantissa), |rest| ("-", rest));
+    let mantissa = mantissa.strip_prefix('+').unwrap_or(mantissa);
+    let (whole, fraction) = mantissa.split_once('.').unwrap_or((mantissa, ""));
+    let digits = trim_decimal_leading_zeros(&format!("{whole}{fraction}"));
+    let scale = i32::try_from(fraction.len()).ok()? - exponent;
+    if digits == "0" {
+        return Some("0/1".to_string());
+    }
+    if scale <= 0 {
+        let zeros = usize::try_from(scale.unsigned_abs()).ok()?;
+        return Some(format!("{sign}{digits}{}/1", "0".repeat(zeros)));
+    }
+
+    let scale = usize::try_from(scale).ok()?;
+    let mut numerator = digits;
+    let twos = remove_decimal_factors(&mut numerator, 2, scale);
+    let fives = remove_decimal_factors(&mut numerator, 5, scale);
+    let mut denominator = "1".to_string();
+    for _ in 0..scale - twos {
+        multiply_decimal_by_small(&mut denominator, 2);
+    }
+    for _ in 0..scale - fives {
+        multiply_decimal_by_small(&mut denominator, 5);
+    }
+    Some(format!("{sign}{numerator}/{denominator}"))
+}
+
+fn ruby_complex_to_s(source: &str) -> Option<String> {
+    let numeric = source.strip_suffix('i')?;
+    let value = if numeric.ends_with('r') {
+        ruby_rational_to_s(numeric)?
+    } else if numeric.contains(['.', 'e', 'E']) {
+        ruby_float_to_s(numeric)?
+    } else {
+        normalize_integer_literal(numeric)?
+    };
+    if value == "Infinity" {
+        return Some("0+Infinity*i".to_string());
+    }
+    if value == "-Infinity" {
+        return Some("0-Infinity*i".to_string());
+    }
+    Some(if value.starts_with('-') {
+        format!("0{value}i")
+    } else {
+        format!("0+{value}i")
+    })
+}
+
+fn trim_decimal_leading_zeros(value: &str) -> String {
+    let trimmed = value.trim_start_matches('0');
+    if trimmed.is_empty() {
+        "0".to_string()
+    } else {
+        trimmed.to_string()
+    }
+}
+
+fn remove_decimal_factors(value: &mut String, factor: u8, limit: usize) -> usize {
+    let mut removed = 0;
+    while removed < limit {
+        let Some(quotient) = divide_decimal_by_small(value, factor) else {
+            break;
+        };
+        *value = quotient;
+        removed += 1;
+    }
+    removed
+}
+
+fn divide_decimal_by_small(value: &str, divisor: u8) -> Option<String> {
+    let mut quotient = String::with_capacity(value.len());
+    let mut remainder = 0_u16;
+    for byte in value.bytes() {
+        let digit = byte.checked_sub(b'0')?;
+        if digit > 9 {
+            return None;
+        }
+        let current = remainder * 10 + u16::from(digit);
+        let next = current / u16::from(divisor);
+        remainder = current % u16::from(divisor);
+        if !quotient.is_empty() || next != 0 {
+            quotient.push(char::from(b'0' + next as u8));
+        }
+    }
+    if remainder != 0 {
+        return None;
+    }
+    if quotient.is_empty() {
+        quotient.push('0');
+    }
+    Some(quotient)
+}
+
+fn multiply_decimal_by_small(value: &mut String, factor: u8) {
+    let mut carry = 0_u16;
+    let mut digits = Vec::with_capacity(value.len() + 1);
+    for byte in value.bytes().rev() {
+        let product = u16::from(byte - b'0') * u16::from(factor) + carry;
+        digits.push(b'0' + (product % 10) as u8);
+        carry = product / 10;
+    }
+    while carry != 0 {
+        digits.push(b'0' + (carry % 10) as u8);
+        carry /= 10;
+    }
+    digits.reverse();
+    *value = String::from_utf8(digits).expect("decimal multiplication produces ASCII digits");
 }
 
 fn flatten_assignments<'ast>(node: NodeRef<'ast>) -> Vec<NodeRef<'ast>> {

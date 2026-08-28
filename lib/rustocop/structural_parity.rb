@@ -152,7 +152,7 @@ module Rustocop
 
     def eligible?(cop, role)
       case role
-      when "prepare" then state(cop) == "legacy_unverified"
+      when "prepare" then %w[legacy_unverified obligations_extracted].include?(state(cop))
       when "implement" then %w[dossier_ready review_rejected].include?(state(cop))
       when "review" then state(cop) == "implementation_submitted"
       when "remediate" then state(cop) == "review_rejected"
@@ -168,13 +168,16 @@ module Rustocop
     def fingerprints(row)
       files = row.fetch("implementations").map { |path| File.join(@root, "crates", "rustocop", path) }
       framework = Dir[File.join(@root, "crates", "rustocop", "src", "cops", "prism", "framework", "**", "*.rs")]
-      {
+      result = {
         "upstream_sha256" => row.fetch("upstream_sha256"),
         "rust_sha256" => combined_digest(files),
         "shared_runtime_sha256" => combined_digest(framework),
         "behavioral_evidence_sha256" => Digest::SHA256.hexdigest(JSON.generate(row.slice("fixtures", "projects"))),
         "standard_sha256" => digest_file(File.join(@base, "standard.md"))
       }
+      dependencies = Array(row["upstream_dependencies"])
+      result["upstream_dependencies_sha256"] = Digest::SHA256.hexdigest(JSON.generate(dependencies)) if dependencies.any?
+      result
     end
 
     def validate_units(units, side, errors)

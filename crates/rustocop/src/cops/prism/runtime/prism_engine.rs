@@ -45,6 +45,12 @@ impl Engine {
         cop_config: Arc<CopConfig>,
     ) -> Inspection {
         let parsed = parse(source.as_bytes());
+        let active_cops = self
+            .registry
+            .cops
+            .iter()
+            .map(|cop| cop_config.cop_applies_to_path(cop.name(), path))
+            .collect::<Vec<_>>();
         let mut context = Context::new(
             autocorrect,
             ignore_disable_comments,
@@ -65,6 +71,7 @@ impl Engine {
                 .phases
                 .parse_errors
                 .iter()
+                .filter(|index| active_cops[**index])
                 .map(|index| &self.registry.cops[*index])
             {
                 cop.on_parse_error(&error, source, &mut context);
@@ -75,6 +82,7 @@ impl Engine {
             .phases
             .source
             .iter()
+            .filter(|index| active_cops[**index])
             .map(|index| &self.registry.cops[*index])
         {
             if has_unrecoverable_parse_errors
@@ -90,7 +98,10 @@ impl Engine {
                 .phases
                 .compatibility_nodes
                 .iter()
-                .any(|index| self.registry.cops[*index].name() == "Naming/HeredocDelimiterNaming");
+                .any(|index| {
+                    active_cops[*index]
+                        && self.registry.cops[*index].name() == "Naming/HeredocDelimiterNaming"
+                });
         if has_unrecoverable_parse_errors
             && self.registry.phases.recovered_nodes.is_empty()
             && !recovered_compatibility_source
@@ -101,28 +112,36 @@ impl Engine {
             .registry
             .cops
             .iter()
-            .map(|cop| {
-                let mut state = cop.investigation_state();
-                cop.on_new_investigation(state.as_mut());
-                state
-            })
+            .zip(&active_cops)
+            .map(|(cop, active)| begin_investigation(cop.as_ref(), *active))
             .collect();
+        let selected_node_cops = if has_unrecoverable_parse_errors {
+            &self.registry.phases.recovered_nodes
+        } else {
+            &self.registry.phases.nodes
+        };
+        let active_node_cops = selected_node_cops
+            .iter()
+            .copied()
+            .filter(|index| active_cops[*index])
+            .collect::<Vec<_>>();
         let mut runner = Runner {
             registry: &self.registry,
             context: &mut context,
             source,
             ancestors: Vec::new(),
             investigation_states: &mut investigation_states,
-            node_cops: if has_unrecoverable_parse_errors {
-                &self.registry.phases.recovered_nodes
-            } else {
-                &self.registry.phases.nodes
-            },
+            node_cops: &active_node_cops,
         };
         runner.visit(&parsed.node());
         drop(runner);
         if (!has_unrecoverable_parse_errors || recovered_compatibility_source)
-            && !self.registry.phases.compatibility_nodes.is_empty()
+            && self
+                .registry
+                .phases
+                .compatibility_nodes
+                .iter()
+                .any(|index| active_cops[*index])
         {
             let processed_source =
                 crate::rubocop::ast::processed_source::ProcessedSource::from_prism_result(
@@ -134,6 +153,9 @@ impl Engine {
                 );
             if let Ok(processed_source) = processed_source {
                 for index in &self.registry.phases.compatibility_nodes {
+                    if !active_cops[*index] {
+                        continue;
+                    }
                     if has_unrecoverable_parse_errors
                         && self.registry.cops[*index].name() != "Naming/HeredocDelimiterNaming"
                     {
@@ -158,6 +180,9 @@ impl Engine {
                                 continue;
                             };
                             for index in indices {
+                                if !active_cops[*index] {
+                                    continue;
+                                }
                                 self.registry.cops[*index].on_compatibility_node_with_state(
                                     node,
                                     &processed_source,
@@ -174,6 +199,14 @@ impl Engine {
     }
 }
 
+fn begin_investigation(cop: &dyn Cop, active: bool) -> Box<dyn Any> {
+    let mut state = cop.investigation_state();
+    if active {
+        cop.on_new_investigation(state.as_mut());
+    }
+    state
+}
+
 fn is_context_only_parse_error(message: &str) -> bool {
     matches!(
         message,
@@ -183,4 +216,34 @@ fn is_context_only_parse_error(message: &str) -> bool {
             | "Invalid retry without rescue"
             | "Invalid yield"
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    struct CountingCop<'count>(&'count AtomicUsize);
+
+    impl Cop for CountingCop<'_> {
+        fn name(&self) -> &'static str {
+            "Test/CountingCop"
+        }
+
+        fn on_new_investigation(&self, _state: &mut dyn Any) {
+            self.0.fetch_add(1, Ordering::Relaxed);
+        }
+    }
+
+    #[test]
+    fn excluded_cops_do_not_receive_investigation_callbacks() {
+        let calls = AtomicUsize::new(0);
+        let cop = CountingCop(&calls);
+
+        begin_investigation(&cop, false);
+        assert_eq!(calls.load(Ordering::Relaxed), 0);
+
+        begin_investigation(&cop, true);
+        assert_eq!(calls.load(Ordering::Relaxed), 1);
+    }
 }

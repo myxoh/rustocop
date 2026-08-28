@@ -345,7 +345,9 @@ fn check_line_length(
             };
             offenses.push(Offense {
                 cop_name: cop.to_string(),
+                severity: crate::model::default_severity(cop).to_string(),
                 message,
+                message_bytes: None,
                 corrected,
                 correctable,
                 line: index + 1,

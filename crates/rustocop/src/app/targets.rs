@@ -41,7 +41,11 @@ fn inspect_stdin(
     let content = crate::engine::source::DecodedSource::from_bytes(&bytes)?;
     let path = engine::expanded_path(path);
     let (offenses, _) = plan.inspect_content(&path, content.as_str(), &options.inspection);
-    let mut result = InspectionResult { path, offenses };
+    let mut result = InspectionResult {
+        path,
+        source: content.as_str().to_string(),
+        offenses,
+    };
     collapse_cli_duplicate_locations(&mut result);
     Ok(vec![result])
 }

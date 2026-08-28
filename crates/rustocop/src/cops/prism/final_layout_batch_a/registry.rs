@@ -58,7 +58,7 @@ impl Cop for LineEndStringConcatenationIndentation {
     fn on_source(&self,source:&str,context:&mut Context){
         let mut cop=context.cop_context(self.name(),source,&[]);let style=cop.policy().enforced_style("aligned").to_string();let related=cop.related_config_value("Layout/IndentationWidth","Width").and_then(|value|value.parse().ok()).unwrap_or(2);let width=cop.config_usize("IndentationWidth",related);
         let parsed = ruby_prism::parse(source.as_bytes());
-        let (ast, root) = crate::rubocop::ast::prism::convert(source, &parsed.node());
+        let (ast, root) = crate::rubocop::ast::prism::convert(source, &parsed.node(), None);
         let mut dstr_rules = std::collections::HashMap::new();
         if let Some(root) = root.map(|root| ast.node(root)) {
             for dstr in root.each_node(&["dstr"]) {

@@ -65,11 +65,15 @@ impl<'buffer, 'source> RangeHelp<'buffer, 'source> {
         line_number: usize,
         columns: Range<usize>,
     ) -> SourceRange<'buffer, 'source> {
-        self.source_range(
+        let line_begin_pos = if line_number == 0 {
+            0
+        } else {
+            source_buffer.line_start(line_number)
+        };
+        SourceRange::new(
             source_buffer,
-            line_number,
-            columns.start,
-            columns.end - columns.start,
+            line_begin_pos + columns.start,
+            line_begin_pos + columns.end,
         )
     }
 

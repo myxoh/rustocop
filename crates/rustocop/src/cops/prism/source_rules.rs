@@ -5,8 +5,8 @@ use super::*;
 mod project_files;
 use project_files::*;
 
-declare_source_cops! {
-    DuplicatedGem => "Bundler/DuplicatedGem" => duplicated_gem,
+define_cops! {
+    DuplicatedGem => "Bundler/DuplicatedGem" => compatibility_source(duplicated_gem),
 }
 
 fn add_runtime_dependency(source: &str, context: &mut Reporter<'_>) {
@@ -167,8 +167,8 @@ fn duplicate_elsif(source: &str, context: &mut Reporter<'_>) {
                         break;
                     }
                     let predicate = elsif.predicate().location();
-                    let source = self.source[predicate.start_offset()..predicate.end_offset()]
-                        .to_string();
+                    let source =
+                        self.source[predicate.start_offset()..predicate.end_offset()].to_string();
                     if !seen.insert(source) {
                         self.offenses
                             .push(predicate.start_offset()..predicate.end_offset());

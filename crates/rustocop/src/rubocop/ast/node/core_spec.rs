@@ -3,7 +3,7 @@
 // Spec SHA-256: 8bc7277f33d3bc5d4b0e1f2821c3520b4700f5822ee60ed99a765e13613bde53
 
 use super::super::processed_source::{ParserEngine, ProcessedSource};
-use super::core::{Ast, NodeValue};
+use super::core::{Ast, NodeValue, RubyStringEncoding};
 
 #[test]
 fn assigns_parents_roots_completion_and_siblings() {
@@ -60,6 +60,104 @@ fn traverses_children_descendants_nodes_and_ancestors_depth_first() {
             .map(|node| node.kind())
             .collect::<Vec<_>>(),
         ["array", "array"]
+    );
+}
+
+#[test]
+fn precomputed_hash_equivalence_preserves_squiggly_heredoc_dedent_buckets() {
+    let source = "gem <<~A\n  rubocop\nA\ngem \"rubocop\\n\"\ngem <<~B\n  rubocop\nB\n";
+    let parsed = parse(source);
+    let arguments = parsed
+        .ast()
+        .unwrap()
+        .each_node(&["send"])
+        .into_iter()
+        .filter_map(|send| send.first_argument())
+        .collect::<Vec<_>>();
+
+    assert!(arguments[0].structurally_equal(arguments[1]));
+    assert!(!arguments[0].rubocop_hash_equivalent(arguments[1]));
+    assert!(arguments[0].structurally_equal(arguments[2]));
+    assert!(arguments[0].rubocop_hash_equivalent(arguments[2]));
+}
+
+#[test]
+fn precomputed_hash_equivalence_decodes_squiggly_heredoc_escapes_before_dedent() {
+    let source = "gem <<~A\n  rubo\\x63op\nA\ngem <<~B\n  rubocop\nB\n";
+    let parsed = parse(source);
+    let arguments = parsed
+        .ast()
+        .unwrap()
+        .each_node(&["send"])
+        .into_iter()
+        .filter_map(|send| send.first_argument())
+        .collect::<Vec<_>>();
+
+    assert!(arguments[0].structurally_equal(arguments[1]));
+    assert!(arguments[0].rubocop_hash_equivalent(arguments[1]));
+}
+
+#[test]
+fn static_string_equality_preserves_bytes_without_special_casing_replacement_characters() {
+    let source = "gem \"\\u{FFFD}\"\ngem \"�\"\ngem \"\\xFF\"\ngem \"\\xFF\"\n";
+    let parsed = parse(source);
+    let arguments = parsed
+        .ast()
+        .unwrap()
+        .each_node(&["send"])
+        .into_iter()
+        .filter_map(|send| send.first_argument())
+        .collect::<Vec<_>>();
+
+    assert!(arguments[0].structurally_equal(arguments[1]));
+    assert!(arguments[0].rubocop_hash_equivalent(arguments[1]));
+    assert!(!arguments[0].structurally_equal(arguments[2]));
+    assert!(!arguments[0].rubocop_hash_equivalent(arguments[2]));
+    assert!(arguments[2].structurally_equal(arguments[3]));
+    assert!(arguments[2].rubocop_hash_equivalent(arguments[3]));
+}
+
+#[test]
+fn ruby_string_equality_and_hash_preserve_encoding_for_non_ascii_bytes() {
+    let mut ast = Ast::new("");
+    let utf8 = ast.add_node("str", vec![NodeValue::String("é".into())], None);
+    ast.set_decoded_bytes(utf8, "é".as_bytes());
+    ast.set_string_encoding(utf8, RubyStringEncoding::Utf8);
+    let binary = ast.add_node("str", vec![NodeValue::String("é".into())], None);
+    ast.set_decoded_bytes(binary, "é".as_bytes());
+    ast.set_string_encoding(binary, RubyStringEncoding::Binary);
+
+    assert!(!ast.node(utf8).structurally_equal(ast.node(binary)));
+    assert!(!ast.node(utf8).rubocop_hash_equivalent(ast.node(binary)));
+
+    let ascii_utf8 = ast.add_node("str", vec![NodeValue::String("gem".into())], None);
+    ast.set_string_encoding(ascii_utf8, RubyStringEncoding::Utf8);
+    let ascii_binary = ast.add_node("str", vec![NodeValue::String("gem".into())], None);
+    ast.set_string_encoding(ascii_binary, RubyStringEncoding::Binary);
+
+    assert!(ast
+        .node(ascii_utf8)
+        .structurally_equal(ast.node(ascii_binary)));
+    assert!(ast
+        .node(ascii_utf8)
+        .rubocop_hash_equivalent(ast.node(ascii_binary)));
+}
+
+#[test]
+fn binary_node_source_bytes_restore_the_original_source_spelling() {
+    let prefix = "# encoding: ASCII-8BIT\n";
+    let source = format!("{prefix}:caf\u{e0e9}");
+    let start = prefix.chars().count();
+    let mut ast = Ast::new(source);
+    let symbol = ast.add_node(
+        "sym",
+        vec![NodeValue::Symbol("caf\u{e0e9}".into())],
+        Some(start..start + 5),
+    );
+
+    assert_eq!(
+        ast.node(symbol).source_bytes().as_deref(),
+        Some(&b":caf\xe9"[..])
     );
 }
 

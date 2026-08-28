@@ -1,12 +1,12 @@
 {
   "version": 1,
   "rubocop_version": "1.87.0",
-  "updated_at": "2026-08-27T07:05:00-04:00",
+  "updated_at": "2026-08-27T22:05:49-04:00",
   "raw_capture_sha256": "0c8bedf20723f89ab5ed012066ae0427c17c3f91f790a0a5594fbb94d270717c",
   "raw_cases": 28606,
   "lsp_exclusions": 5,
-  "controlled_cases": 29608,
-  "imported_cases": 1557,
+  "controlled_cases": 29628,
+  "imported_cases": 1570,
   "exact_duplicates_removed": 552,
   "distribution": {
     "minimum": 1,
@@ -24,8 +24,8 @@
     "Bundler/DuplicatedGroup": {
       "cases": "cops/Bundler/DuplicatedGroup/unit/cases.jsonl",
       "configs": "cops/Bundler/DuplicatedGroup/unit/configs.json",
-      "count": 21,
-      "sha256": "850d255a2d4445553f22f3d6403662b8a4f0479f8fe8ab62fe446a17e973b525",
+      "count": 41,
+      "sha256": "c29a1b874b76c5a7bd650dcd9addfdaeb464031b75fa05037693781a98db8862",
       "configs_sha256": "9f70f7f5f31aaebe55f2bc5d39ad514a59a168ca0abb476a866279cdebe2229f"
     },
     "Bundler/GemComment": {

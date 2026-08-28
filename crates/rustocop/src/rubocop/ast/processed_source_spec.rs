@@ -95,6 +95,45 @@ fn exposes_path_buffer_lines_and_indexing() {
 }
 
 #[test]
+fn source_file_keyword_uses_the_parser_path_string_node_contract() {
+    let processed = ProcessedSource::new(
+        "gem __FILE__\n",
+        3.4,
+        Some("Gemfile".into()),
+        ParserEngine::Default,
+    )
+    .unwrap();
+    let file = processed
+        .ast()
+        .unwrap()
+        .each_node(&["str"])
+        .into_iter()
+        .find(|node| node.string_child(0) == Some("Gemfile"))
+        .expect("Parser-shaped __FILE__ string node");
+
+    assert_eq!(file.source(), Some("__FILE__"));
+}
+
+#[test]
+fn source_file_path_and_binary_source_literal_keep_distinct_ruby_encodings() {
+    let path = "Gémefile";
+    let source = format!("# encoding: ASCII-8BIT\ngem __FILE__\ngem '{path}'\n");
+    let processed =
+        ProcessedSource::new(&source, 3.4, Some(path.into()), ParserEngine::Default).unwrap();
+    let arguments = processed
+        .ast()
+        .unwrap()
+        .each_node(&["send"])
+        .into_iter()
+        .filter_map(|send| send.first_argument())
+        .collect::<Vec<_>>();
+
+    assert_eq!(arguments.len(), 2);
+    assert!(!arguments[0].structurally_equal(arguments[1]));
+    assert!(!arguments[0].rubocop_hash_equivalent(arguments[1]));
+}
+
+#[test]
 fn syntax_diagnostics_distinguish_valid_and_invalid_source() {
     let valid =
         ProcessedSource::new("def valid_code; end", 3.4, None, ParserEngine::Prism).unwrap();

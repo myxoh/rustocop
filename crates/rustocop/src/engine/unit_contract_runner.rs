@@ -379,37 +379,12 @@ fn expected_offense(offense: &Offense) -> ExpectedOffense {
     };
     ExpectedOffense {
         message: offense.message.clone(),
-        severity: offense_severity(&offense.cop_name).to_string(),
+        severity: offense.severity.clone(),
         correctable: offense.correctable,
         line: offense.line,
         column: offense.column,
         last_line: offense.last_line,
         last_column,
-    }
-}
-
-fn offense_severity(cop: &str) -> &'static str {
-    if cop == "Lint/Syntax" {
-        "fatal"
-    } else if cop.starts_with("Lint/")
-        || matches!(
-            cop,
-            "Bundler/DuplicatedGem"
-                | "Bundler/DuplicatedGroup"
-                | "Gemspec/RequireMFA"
-                | "Bundler/InsecureProtocolSource"
-                | "Gemspec/RubyVersionGlobalsUsage"
-                | "Gemspec/DuplicatedAssignment"
-                | "Gemspec/DeprecatedAttributeAssignment"
-                | "Gemspec/RequiredRubyVersion"
-                | "Layout/BeginEndAlignment"
-                | "Layout/DefEndAlignment"
-                | "Layout/EndAlignment"
-        )
-    {
-        "warning"
-    } else {
-        "convention"
     }
 }
 

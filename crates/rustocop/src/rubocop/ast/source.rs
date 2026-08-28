@@ -132,7 +132,7 @@ impl<'buffer, 'source> SourceRange<'buffer, 'source> {
         begin_pos: usize,
         end_pos: usize,
     ) -> Self {
-        assert!(begin_pos <= end_pos, "source range must be ordered");
+        assert!(begin_pos <= buffer.len(), "source range exceeds buffer");
         assert!(end_pos <= buffer.len(), "source range exceeds buffer");
         Self {
             buffer,
@@ -177,21 +177,24 @@ impl<'buffer, 'source> SourceRange<'buffer, 'source> {
     }
 
     pub(crate) fn is_empty(self) -> bool {
-        self.begin_pos == self.end_pos
+        self.begin_pos >= self.end_pos
     }
 
     pub(crate) fn len(self) -> usize {
-        self.end_pos - self.begin_pos
+        self.end_pos.saturating_sub(self.begin_pos)
     }
 
     pub(crate) fn overlaps(self, other: Self) -> bool {
         assert!(std::ptr::eq(self.buffer, other.buffer));
-        self.begin_pos < other.end_pos && other.begin_pos < self.end_pos
+        !self.is_empty()
+            && !other.is_empty()
+            && self.begin_pos < other.end_pos
+            && other.begin_pos < self.end_pos
     }
 
     pub(crate) fn contains(self, other: Self) -> bool {
         assert!(std::ptr::eq(self.buffer, other.buffer));
-        self.begin_pos <= other.begin_pos && self.end_pos >= other.end_pos
+        !self.is_empty() && self.begin_pos <= other.begin_pos && self.end_pos >= other.end_pos
     }
 
     pub(crate) fn resize(self, size: usize) -> Self {

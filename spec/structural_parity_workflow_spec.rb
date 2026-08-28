@@ -17,6 +17,7 @@ RSpec.describe Rustocop::StructuralParity do
       manifest = {"cops" => [{
         "cop" => "Style/Example", "upstream_source" => "lib/example.rb", "upstream_sha256" => "pinned",
         "upstream_callbacks" => ["on_send"], "upstream_mixins" => [],
+        "upstream_dependencies" => [{"gem" => "ast", "version" => "2.4.3", "sha256" => "dependency"}],
         "implementations" => ["src/cops/prism/example.rs"],
         "fixtures" => {"status" => "compatible"}, "projects" => {"classification" => "dormant"},
         "similarity_score" => 5, "structural_status" => "near_source_shaped",
@@ -35,8 +36,10 @@ RSpec.describe Rustocop::StructuralParity do
   end
 
   it "does not accept a dossier without an attestation" do
-    @workflow.init_dossier("Style/Example")
+    path = @workflow.init_dossier("Style/Example")
     expect(@workflow.state("Style/Example")).to eq("obligations_extracted")
+    expect(@workflow.next_cop).to eq(["prepare", "Style/Example"])
+    expect(JSON.parse(File.read(path)).dig("fingerprints", "upstream_dependencies_sha256")).not_to be_nil
   end
 
   it "rejects an incomplete dossier before ready" do
@@ -59,4 +62,3 @@ RSpec.describe Rustocop::StructuralParity do
     expect(@workflow.state("Style/Example")).to eq("invalidated")
   end
 end
-

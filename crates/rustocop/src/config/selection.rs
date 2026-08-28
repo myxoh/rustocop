@@ -127,11 +127,7 @@ impl CopSelection {
                 .collect::<Vec<_>>()
         });
         Self {
-            requested_lookup: requested
-                .iter()
-                .flatten()
-                .cloned()
-                .collect::<HashSet<_>>(),
+            requested_lookup: requested.iter().flatten().cloned().collect::<HashSet<_>>(),
             requested,
             excluded: Vec::new(),
             excluded_lookup: HashSet::new(),
